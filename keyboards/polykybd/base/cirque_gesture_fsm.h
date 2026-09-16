@@ -96,8 +96,8 @@
 /* How far out a dial must START, of 448 on-axis (633 into a corner).
  *
  * 405 of 448 on-axis, and that is close to the hard limit rather than a free choice.
- * The pad reaches 448 pad units on the axes and 634 diagonally, so the annulus a
- * touchdown can land in is 33 units wide on an axis (7% of the half-width) and 219
+ * The pad reaches 448 pad units on the axes and 633 diagonally, so the annulus a
+ * touchdown can land in is 43 units wide on an axis (10% of the half-width) and 228
  * wide toward a corner. Pushing past ~440 makes the axes unreachable outright and
  * the dial becomes a corners-only gesture. 220 was far too generous: a finger that
  * lands anywhere but the middle starts a dial, so the pad scrolls when it should
@@ -122,9 +122,22 @@
  * where dialling first worked was "11 o'clock".
  *
  * Angles are integer slope ratios, the same 29..61 degrees the right-click sector
- * uses, mirrored: tan(29) and tan(61) are 554 and 1804 per 1000. */
+ * uses, mirrored: tan(29) and tan(61) are 554 and 1804 per 1000.
+ *
+ * ⚠️ The inner radius is the ACCIDENTAL-SCROLL knob, and the wedge -- not the ring --
+ * is what fires by accident. The ring sits at 405 of the 448 the pad reaches on an
+ * axis, so starting a dial there means touching the rim deliberately. The wedge runs
+ * up the 45 degree diagonal, where the pad reaches 633, so its inner radius is a
+ * fraction of a much longer run: at 200 it armed from 32% of the way out, i.e. it
+ * owned the outer TWO THIRDS of that diagonal and a finger resting at the top left
+ * scrolled instead of pointing (field report, 2026-09-16). 320 is 51% of 633, so the
+ * wedge is now the outer half of its diagonal and still 313 units deep -- a target
+ * far bigger than the 43-unit annulus the ring gets on an axis.
+ *
+ * Raise it further if it still trips; the tests derive their sample radii from this
+ * constant rather than hardcoding, so moving it does not silently invalidate them. */
 #ifndef POLY_GEST_DIAL_WEDGE_R
-#    define POLY_GEST_DIAL_WEDGE_R 200
+#    define POLY_GEST_DIAL_WEDGE_R 320
 #endif
 
 #ifndef POLY_GEST_SCROLL_COMMIT

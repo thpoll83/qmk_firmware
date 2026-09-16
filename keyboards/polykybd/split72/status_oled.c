@@ -660,9 +660,14 @@ void oled_update_buffer_fw_update(void) {
     } else {
         if(is_keyboard_master()) {
             // Firmware, master half: static notice (its bar can't move mid-stream).
+            // "Staging", not "Update": this phase writes the image into the STAGING
+            // area and nothing has been installed yet — the install is the separate
+            // "Applying Firmware" screen that follows. Using the firmware's own
+            // vocabulary (fw_staging_* / apply) makes the two phases tellable apart,
+            // which matters because only the second one is the multi-second one.
             kdisp_write_gfx_text(small, 1, 0, 14, U"PolyKybd");
             kdisp_write_gfx_text(small, 1, 0, 36, U"Firmware");
-            kdisp_write_gfx_text(small, 1, 0, 58, U"Update...");
+            kdisp_write_gfx_text(small, 1, 0, 58, U"Staging...");
             return;
         }
         kdisp_write_gfx_text(small, 1, 0, 14, U"Progress:");

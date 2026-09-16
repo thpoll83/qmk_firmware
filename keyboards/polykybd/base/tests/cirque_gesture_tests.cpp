@@ -555,9 +555,28 @@ TEST(CirqueGesture, AccelerationIsCapped) {
     EXPECT_LT(r.step_max, 90) << "one sample moved " << r.step_max << " units";
 }
 
+/* Sample radii DERIVED from the wedge constant, not hardcoded.
+ *
+ * These used to be a literal 260 (arms) and 140 (does not arm), which pinned the
+ * suite to one particular POLY_GEST_DIAL_WEDGE_R. Moving the wedge outward to stop
+ * accidental scrolling then broke TheWedgeArmsADialWellInsideTheRing for the right
+ * reason, and -- worse -- would have left the two NEGATIVE tests below passing for
+ * the WRONG one: their sample would have fallen inside the new minimum radius, so
+ * they would have been asserting "too close to the centre" while claiming to assert
+ * "wrong quadrant" and "wrong angle".
+ *
+ * WEDGE_IN is inside the wedge but still inside the ring, so a dial that arms there
+ * can only have come from the wedge. The static_assert is what keeps that true if
+ * either constant moves again. */
+static constexpr int WEDGE_IN  = POLY_GEST_DIAL_WEDGE_R + 40;
+static constexpr int WEDGE_OUT = POLY_GEST_DIAL_WEDGE_R - 60;
+static_assert(WEDGE_IN < POLY_GEST_RING_R,
+              "WEDGE_IN must stay inside the ring or the wedge tests prove nothing");
+static_assert(WEDGE_OUT > 0, "WEDGE_OUT must be a reachable radius");
+
 TEST(CirqueGesture, TheWedgeArmsADialWellInsideTheRing) {
     /* The point of the wedge: a dial can start at 10-11 o'clock without reaching the
-     * rim. 260 is well inside POLY_GEST_RING_R. */
+     * rim. WEDGE_IN is inside the wedge and still inside POLY_GEST_RING_R. */
     const double A = POLY_GEST_PX_A / (double)POLY_GEST_Q, B = POLY_GEST_PX_B / (double)POLY_GEST_Q, C = POLY_GEST_PX_C / (double)POLY_GEST_Q;
     const double D = POLY_GEST_PY_A / (double)POLY_GEST_Q, E = POLY_GEST_PY_B / (double)POLY_GEST_Q, F = POLY_GEST_PY_C / (double)POLY_GEST_Q;
     const double det = A * E - B * D;
@@ -565,7 +584,7 @@ TEST(CirqueGesture, TheWedgeArmsADialWellInsideTheRing) {
         Runner r;
         for (int i = 0; i <= 40; i++) {
             const double th = (deg + i * 3.0) * M_PI / 180.0;
-            const double px = POLY_GEST_CENTRE + 260 * std::cos(th), py = POLY_GEST_CENTRE + 260 * std::sin(th);
+            const double px = POLY_GEST_CENTRE + WEDGE_IN * std::cos(th), py = POLY_GEST_CENTRE + WEDGE_IN * std::sin(th);
             r.feed((uint16_t)std::lround((E * (px - C) - B * (py - F)) / det), (uint16_t)std::lround((A * (py - F) - D * (px - C)) / det), 40);
         }
         EXPECT_GT(r.wheel_pos + r.wheel_neg, 3) << "no dial from the wedge at " << deg << " degrees";
@@ -581,7 +600,7 @@ TEST(CirqueGesture, TheWedgeDoesNotReachTheCentre) {
     Runner r;
     for (int i = 0; i <= 40; i++) {
         const double th = (225 + i * 3.0) * M_PI / 180.0;
-        const double px = POLY_GEST_CENTRE + 140 * std::cos(th), py = POLY_GEST_CENTRE + 140 * std::sin(th);
+        const double px = POLY_GEST_CENTRE + WEDGE_OUT * std::cos(th), py = POLY_GEST_CENTRE + WEDGE_OUT * std::sin(th);
         r.feed((uint16_t)std::lround((E * (px - C) - B * (py - F)) / det), (uint16_t)std::lround((A * (py - F) - D * (px - C)) / det), 40);
     }
     EXPECT_EQ(r.wheel_total, 0) << "the wedge armed a dial inside its own minimum radius";
@@ -597,7 +616,7 @@ TEST(CirqueGesture, TheOppositeCornerIsNotAWedge) {
         Runner r;
         for (int i = 0; i <= 40; i++) {
             const double th = (deg + i * 3.0) * M_PI / 180.0;
-            const double px = POLY_GEST_CENTRE + 260 * std::cos(th), py = POLY_GEST_CENTRE + 260 * std::sin(th);
+            const double px = POLY_GEST_CENTRE + WEDGE_IN * std::cos(th), py = POLY_GEST_CENTRE + WEDGE_IN * std::sin(th);
             r.feed((uint16_t)std::lround((E * (px - C) - B * (py - F)) / det), (uint16_t)std::lround((A * (py - F) - D * (px - C)) / det), 40);
         }
         EXPECT_EQ(r.wheel_total, 0) << "a dial armed at " << deg << " degrees, inside the ring and outside the wedge";
@@ -616,7 +635,7 @@ TEST(CirqueGesture, TheWedgeIsAWedgeNotAQuadrant) {
         Runner r;
         for (int i = 0; i <= 40; i++) {
             const double th = (deg + i * 3.0) * M_PI / 180.0;
-            const double px = POLY_GEST_CENTRE + 260 * std::cos(th), py = POLY_GEST_CENTRE + 260 * std::sin(th);
+            const double px = POLY_GEST_CENTRE + WEDGE_IN * std::cos(th), py = POLY_GEST_CENTRE + WEDGE_IN * std::sin(th);
             r.feed((uint16_t)std::lround((E * (px - C) - B * (py - F)) / det), (uint16_t)std::lround((A * (py - F) - D * (px - C)) / det), 40);
         }
         EXPECT_EQ(r.wheel_total, 0) << "a dial armed at " << deg << " degrees — the wedge is acting as a quadrant";

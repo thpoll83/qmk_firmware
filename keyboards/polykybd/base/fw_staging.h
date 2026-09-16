@@ -113,10 +113,27 @@ bool fw_staging_refused_unsigned(void);
 void fw_staging_core1_lockout_begin(void);
 void fw_staging_core1_lockout_end(void);
 
+// Why an apply was refused. The two failures are genuinely different events and the
+// user can act on the difference: NO_IMAGE means nothing ever reached the staging
+// area (the transfer did not run, or was cancelled), while BAD_CRC means bytes DID
+// arrive and are damaged -- a re-send is worth trying for the second and pointless
+// without a fresh upload for the first. They used to collapse into one `false`, so
+// the board could only say "it did not work".
+typedef enum {
+    FW_APPLY_OK = 0,      // header magic present and the flashed bytes match their CRC
+    FW_APPLY_NO_IMAGE,    // no FW_STAGING_MAGIC: nothing is staged
+    FW_APPLY_BAD_CRC,     // image present, CRC mismatch: truncated or corrupt
+} fw_apply_verdict_t;
+
 // Re-CRC the staged image AS IT SITS IN FLASH. COMMIT only checks the bytes as they
 // arrived in RAM, so it says nothing about what actually landed -- and the applier is
 // about to erase the only working firmware on the strength of it.
-bool fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expect_crc, uint32_t *actual_crc);
+//
+// ⚠️ On FW_APPLY_NO_IMAGE the out-params are left UNTOUCHED (there is no header to
+// read them from), so initialise them before the call rather than reading a size of
+// zero as a fact about the image.
+fw_apply_verdict_t fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expect_crc, uint32_t *actual_crc);
+
 
 // Disarm an armed apply without applying it.
 void fw_staging_cancel_apply(void);
@@ -329,6 +346,28 @@ void fw_staging_arm_apply(void);
 // reboots, so both halves can restart together when the master reboots.
 void fw_staging_arm_reboot(void);
 bool fw_staging_reboot_pending(void);
+
+// True while the board has stopped being usable because a staged image is being
+// applied, or a reset is imminent. This is the DISPLAY gate for that phase: the
+// orange RGB cue, the blanked keycaps and the "Applying Firmware" notice all belong
+// to it, and every one of them is painted from a path that then blocks or never
+// returns.
+//
+// ⚠️ It is a SEPARATE question from fw_staging_fw_up_active(), which covers only the
+// chunk TRANSFER. The apply is a distinct state — the transfer has finished by then,
+// so fw_up_active is already false — and the apply sequence deliberately RETURNS
+// between its stages so each console marker can go out. Every one of those returns
+// hands the main loop a pass in which oled_task_user() and update_displays() run, and
+// they happily repainted the ordinary status screen and the full legend set straight
+// over the cue. The frozen picture during the multi-second copy was then the STATUS
+// screen, not the notice (reported from hardware 2026-09-16).
+//
+// So both walkers must ask THIS, not fw_up_active: the status OLED in
+// oled_task_user() and the keycaps in update_displays(). One predicate, so they
+// cannot answer the question differently.
+static inline bool fw_staging_board_is_flashing(void) {
+    return fw_staging_commit_pending() || fw_staging_reboot_pending();
+}
 
 // ---------------------------------------------------------------------------
 // Diagnostic snapshot — populated by the slave's handlers so the master can

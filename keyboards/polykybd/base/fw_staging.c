@@ -1326,9 +1326,9 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
 // Affordable here (~25 ms over ~490 KB) precisely because this runs from housekeeping.
 // The same scan inside COMMIT overflowed the split-transaction window on the slave,
 // which is why finalize keeps the O(1) running CRC -- do not move this there.
-bool fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expect_crc, uint32_t *actual_crc) {
+fw_apply_verdict_t fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expect_crc, uint32_t *actual_crc) {
     const uint32_t *hdr = (const uint32_t *)(XIP_BASE + FW_STAGING_OFFSET);
-    if (hdr[0] != FW_STAGING_MAGIC) return false;
+    if (hdr[0] != FW_STAGING_MAGIC) return FW_APPLY_NO_IMAGE;
     // ⚠️ crc32_large(), NOT crc32_1byte(): that one takes a uint16_t length, so a
     // ~490 KB image silently truncates to (size & 0xFFFF) and the CRC is computed over
     // the first few percent of the file. It then never matches, so the verify below
@@ -1340,7 +1340,7 @@ bool fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expect_crc, uint32
     if (size)       *size       = hdr[1];
     if (expect_crc) *expect_crc = hdr[2];
     if (actual_crc) *actual_crc = crc;
-    return crc == hdr[2];
+    return (crc == hdr[2]) ? FW_APPLY_OK : FW_APPLY_BAD_CRC;
 }
 
 void fw_staging_cancel_apply(void) {
@@ -1367,7 +1367,7 @@ void fw_staging_apply_and_reboot(void) {
     // line that follows is not decoration: QMK's console only ships FULL 32-byte HID
     // reports and the remainder waits for a main loop that is about to stop existing,
     // so without it the tail of the real line is lost.
-    if (!fw_staging_verify_staged_flash(NULL, NULL, NULL)) {
+    if (fw_staging_verify_staged_flash(NULL, NULL, NULL) != FW_APPLY_OK) {
         uprintf("FWAPPLY refused: staged image FAILED its flash CRC - not overwriting\n");
         s_commit_pending = false;
         return;

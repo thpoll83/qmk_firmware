@@ -16,6 +16,7 @@
 #include "quantum/keymap_introspection.h"   // keycode_at_keymap_location_raw()
 #include "base/fw_staging.h"   // fw_staging_apply_breadcrumb()
 #include "base/crash_record.h" // crash_record_emit_lines()
+#include "oled_helper.h"       // oled_boot_progress()
 #include "base/update.h"       // enum refresh_mode / ALL_AT_ONCE
 #include "base/disp_array.h"   // GFXfont type
 // Only the single splash font is needed. Don't pull in gfx_used_fonts.h — the
@@ -339,6 +340,27 @@ void splash_progress(uint8_t step) {
     uint8_t solid_count = final ? total_vis : (step >= 1 ? (uint8_t)(step - 1) : 0);
     if (solid_count > total_vis) {
         solid_count = total_vis;
+    }
+
+    // ⚠️ Breadcrumb the MILESTONE, not just "somewhere in boot". The whole of
+    // post_init runs with the watchdog OFF on purpose — crash_watchdog_start() is the
+    // LAST line of keyboard_post_init_user(), because the steps above it may block
+    // for seconds — so a hang here is a PERMANENT hang: no reset, no record, and the
+    // only evidence is how many splash letters went solid, which is a two-letter
+    // guess read off a keycap. Stamping the step means that whenever a reset DOES
+    // happen (a later fault, a RUN-pin reset, the next crash), the archived record
+    // names how far this boot got instead of just CRASH_PHASE_BOOT.
+    //
+    // Deliberately not paired with crash_phase_leave(): boot is a straight line, each
+    // milestone supersedes the last, and crash_watchdog_start() resets the phase to
+    // CRASH_PHASE_LOOP when post_init completes.
+    (void)crash_phase_enter(CRASH_PHASE_BOOT, step);
+
+    // ...and put the same milestone somewhere a human can read off a wedged board.
+    // Skipped for step 1: that one runs in keyboard_pre_init_user(), and QMK does not
+    // call oled_init() until later in keyboard_init(), so there is no panel yet.
+    if (step != 1) {
+        oled_boot_progress(final ? POLY_SPLASH_STEPS : step, POLY_SPLASH_STEPS);
     }
 
     clear_all_displays();

@@ -10,3 +10,4 @@ TEST_LIST += polykybd_font_bbox
 TEST_LIST += polykybd_macro_record
 TEST_LIST += polykybd_hand_stamp
 TEST_LIST += polykybd_cirque_gesture
+TEST_LIST += polykybd_status_brightness

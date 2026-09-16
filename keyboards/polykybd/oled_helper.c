@@ -9,6 +9,7 @@
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/fw_staging.h"
+#include "poly_keymap.h"         // poly_fw_screen() / poly_fw_hold_active()
 #include "poly_macro.h"          // POLY_MACRO_COUNT
 #include "poly_macro_record.h"   // enum poly_rec_state + the recording read-outs
 #ifdef POLYKYBD_DOOM
@@ -242,20 +243,33 @@ void oled_fw_confirm_screen(void) {
     oled_render_dirty(true);
 }
 
-// Shown on BOTH halves the instant a staged firmware image is applied (reboot
-// imminent). Reads across the two status OLEDs as "⟳Applying  Firmware⟳": the
-// LEFT half shows the resident circular refresh arrow U+2B6F + "Applying", the
-// RIGHT half "Firmware" + the arrow, each horizontally and vertically centered.
-// It is fully flushed synchronously (oled_render_dirty(true)) so the screen is
-// complete before fw_staging_apply_and_reboot()'s blocking self-flash + hard reset
-// (which never returns) — the last thing the user sees is a finished, un-torn notice.
-void oled_fw_apply_screen(void) {
+// The shared two-word firmware notice. Reads across the PAIR of status OLEDs —
+// this half draws `word`, the other draws its own — with the resident circular
+// refresh arrow U+2B6F on the outside when `icon` is true, each element
+// horizontally and vertically centered.
+//
+// ⚠️ It is flushed SYNCHRONOUSLY (oled_render_dirty(true)) because every caller is
+// about to do something that does not come back — the blocking self-flash, the hard
+// reset — or has just blanked the keycaps. A notice queued for the next
+// oled_render() tick on any of those paths is a notice nobody ever sees; that is
+// the same trap poly_flash_rgb_now() exists to dodge on the RGB side.
+//
+// `icon` is false for the failure notice on purpose: the arrow means "in progress"
+// and is the wrong thing to leave on screen when nothing is progressing. A dedicated
+// warning glyph would need a font-pack round for one screen, so the word carries it.
+//
+// One word, centred, and nothing else. A small-font second line carrying the staged
+// size was tried here and removed: on the screen that is FROZEN for the whole copy,
+// the state is the message, and a number beside it only competes with it. The size is
+// still in the console line, and the failure screen — which genuinely has something to
+// say — carries its detail in its own band layout rather than bolting a line onto this
+// one.
+static void oled_fw_notice(const uint32_t* word, bool icon) {
     const GFXfont*  mid[]     = { &NotoSans_Regular_Mid_19px7b };
     const GFXfont*  arrow[]   = { &NotoSansSymbols2_Regular_Arrows_20pt16b };
-    const uint32_t* icon      = U"\U00002B6F";   // resident circular "refresh" arrow ⭯
-    const uint32_t* word      = is_left_side() ? U"Applying" : U"Firmware";
+    const uint32_t* icon_txt  = U"\U00002B6F";   // resident circular "refresh" arrow ⭯
     const bool      icon_left = is_left_side();
-    const int8_t    gap       = 3;               // px between icon and word
+    const int8_t    gap       = icon ? 3 : 0;    // px between icon and word
 
     oled_on();
     kdisp_set_buffer(0);   // clear the scratch to black
@@ -265,9 +279,9 @@ void oled_fw_apply_screen(void) {
     // element be centered independently on the panel despite different heights.
     int8_t ix0 = 0, ix1 = 0, iy0 = 0, iy1 = 0;
     int8_t tx0 = 0, tx1 = 0, ty0 = 0, ty1 = 0;
-    kdisp_gfx_text_bbox(arrow, 1, icon, &ix0, &ix1, &iy0, &iy1);
+    if (icon) kdisp_gfx_text_bbox(arrow, 1, icon_txt, &ix0, &ix1, &iy0, &iy1);
     kdisp_gfx_text_bbox(mid,   1, word, &tx0, &tx1, &ty0, &ty1);
-    const int8_t iw = (int8_t)(ix1 - ix0 + 1);
+    const int8_t iw = icon ? (int8_t)(ix1 - ix0 + 1) : 0;
     const int8_t tw = (int8_t)(tx1 - tx0 + 1);
     int16_t gx = (int16_t)((OLED_DISPLAY_WIDTH - (iw + gap + tw)) / 2);
     if (gx < 0) gx = 0;
@@ -278,16 +292,203 @@ void oled_fw_apply_screen(void) {
     const int8_t iBase = (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (iy0 + iy1) / 2);
     const int8_t tBase = (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (ty0 + ty1) / 2);
 
-    if (icon_left) {
-        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx - ix0),            iBase, icon);
+    if (!icon) {
+        kdisp_write_gfx_text(mid, 1, (int8_t)(gx - tx0), tBase, word);
+    } else if (icon_left) {
+        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx - ix0),            iBase, icon_txt);
         kdisp_write_gfx_text(mid,   1, (int8_t)(gx + iw + gap - tx0), tBase, word);
     } else {
         kdisp_write_gfx_text(mid,   1, (int8_t)(gx - tx0),            tBase, word);
-        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx + tw + gap - ix0), iBase, icon);
+        kdisp_write_gfx_text(arrow, 1, (int8_t)(gx + tw + gap - ix0), iBase, icon_txt);
     }
 
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
     oled_render_dirty(true);   // one synchronous full flush before the reboot
+}
+
+// Boot progress, drawn straight onto the status OLED at every splash milestone.
+//
+// ⚠️ This exists because a boot HANG leaves no other evidence. The whole of post_init
+// runs with the watchdog off on purpose (crash_watchdog_start() is its last line), so
+// a stall there is permanent: no reset, no crash record, and the board sits there
+// until it is unplugged. The only thing that survived was the keycap splash's
+// solidify count — "how many letters went solid" — which is a field report of the
+// form "it was stuck with PO" and localises the stall to one of seven gaps only if
+// the letters are counted exactly. A number cannot be miscounted.
+//
+// Costs a couple of hundred ms of I2C across the whole boot: the first paint is a
+// full frame, the rest change only the digit, and oled_write_raw diffs.
+void oled_boot_progress(uint8_t step, uint8_t total) {
+    // ⚠️ The 19 px face does NOT fit two bands on the 32 px panel — measured, 2 px of
+    // "Booting...."'s ascenders land at y = -1 and the hardware clips them away.
+    // split42 uses the 15 px face instead; it still fits comfortably across 128 px
+    // (74 px for the label, 39 for the percent).
+    const GFXfont* face[]  = { (OLED_DISPLAY_HEIGHT >= 64) ? &NotoSans_Regular_Mid_19px7b
+                                                           : &NotoSans_Regular_Small_15px7b };
+    uint32_t       buf[12];
+    char           txt[20];
+
+    // ⚠️ TWO lines, not one. "Booting.... 100%" measures 143 of the 128 px in this
+    // font, and 119 in the small one — 4 px of margin, the fit-by-a-hair shape that
+    // already sent "Restarting" and "no image staged" back for a second pass. Split,
+    // the widest parts are 88 px and 48 px.
+    const uint32_t* label = U"Booting....";
+    // Round to nearest so the steps read 25 / 38 / 50 / 63 / 75 / 88 / 100 rather than
+    // truncating three of them a point low. The percent is the HUMAN form of the
+    // milestone; the machine-readable one is the CRASH_PHASE_BOOT argument, which stays
+    // the step number, so "stuck at 38%" and phase=1:0x0003 name the same place.
+    const uint8_t pct = (uint8_t)(((uint16_t)step * 100u + total / 2u) / total);
+    snprintf(txt, sizeof(txt), "%u%%", (unsigned)pct);
+    ascii_to_u32_string(buf, sizeof(buf), txt);
+
+    oled_on();
+    kdisp_set_buffer(0);
+
+    // Each line centred in its own half of the panel, from its own bbox — the same
+    // band shape oled_fw_confirm_screen() uses, so a descender does not push the other
+    // line. Works unchanged on the 32 px panel: two bands of 16.
+    const uint32_t* lines[2] = { label, buf };
+    const int8_t    band     = (int8_t)(OLED_DISPLAY_HEIGHT / 2);
+    for (uint8_t i = 0; i < 2; ++i) {
+        int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+        kdisp_gfx_text_bbox(face, 1, lines[i], &x0, &x1, &y0, &y1);
+        int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - (x1 - x0 + 1)) / 2 - x0);
+        if (x < 0) x = 0;
+        kdisp_write_gfx_text(face, 1, (int8_t)x,
+                             (int8_t)(band * i + band / 2 - (y0 + y1) / 2), lines[i]);
+    }
+
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    // Synchronous, for the usual reason: the step this announces may be the one that
+    // never returns, and a frame left for the next oled_render() tick is a frame the
+    // hung board never shows.
+    oled_render_dirty(true);
+}
+
+// "⭯Applying  Restarts⭯" — ONE screen for the whole apply, and the one frozen on the
+// panel for the entire multi-second copy.
+//
+// ⚠️ It names the LONG operation, because there is no way to change it part-way and
+// the erase+rewrite of ~490 KB sits under it for SECONDS. "Restart Now" was tried here
+// and read as a hang for exactly that reason — a word promising something instant
+// makes a multi-second wait feel broken. This pairs with the transfer screen's
+// "Staging...": the two phases now use the firmware's own vocabulary (fw_staging_* /
+// apply), so which one you are in is readable rather than inferred.
+//
+// The reboot is deliberately NOT named. It cannot be shown when it happens (see
+// below), and naming it on the screen that covers the copy is what caused the "feels
+// very long" report. The board coming back on "Booting.... 25%" is the restart.
+//
+// ⚠️ A timed hand-off between two screens is NOT available here, and the SSD1306's
+// hardware scroll cannot fake it: on a 128x64 panel OLED_MATRIX_SIZE is the whole
+// GDDRAM (64/8 * 128 = 1024 B) and every byte of it is displayed, so there is no
+// off-screen region to scroll a second frame in from — and QMK drives SCROLL_LEFT /
+// SCROLL_RIGHT, the horizontal continuous scroll, which wraps the same 128 columns.
+// (It would work on a 128x32 panel, where half the GDDRAM is hidden.) Nothing else
+// can run either: the copy holds the core with interrupts off and never returns.
+void oled_fw_apply_screen(void) {
+    oled_fw_notice(is_left_side() ? U"Applying" : U"Firmware", true);
+}
+
+// "⭯Restart  Now⭯" — the QK_REBOOT / staged-reset path. It clears the keyboard,
+// latches the orange cue and calls mcu_reset(), which never returns, so this had no
+// status-OLED state at all: the panel kept showing the ordinary status screen right
+// up to the reset.
+//
+// "Restart", not the more natural "Restarting": measured through the real committed
+// font, arrow + gap + "Restarting" is 125 px of the 128 px panel, i.e. 1 px of left
+// margin. It does not clip, but a word that only just fits is a word that clips the
+// next time the font is regenerated. "Restart" is 96 px, 16 px a side.
+void oled_fw_restart_screen(void) {
+    oled_fw_notice(is_left_side() ? U"Restart" : U"Now", true);
+}
+
+// "Update  FAILED" — the staged image did not match its CRC, so the apply was
+// REFUSED and the board is still running the old firmware.
+//
+// This is the one firmware state the user could previously only discover from a
+// console nobody has open: the RGB went orange, the keycaps blanked, and then
+// everything silently came back with the update not applied. Held on the panel by
+// the POLY_FW_NOTICE_MS deadline in poly_keymap.c, because unlike every other
+// caller here this path DOES return — without the hold, oled_task_user() repaints
+// the status screen over it on the next 66 ms tick.
+void oled_fw_failed_screen(void) {
+    // Band layout rather than the two-word notice: this is the one firmware screen
+    // with something to SAY, and "it did not work" is what the board could already
+    // manage. It borrows oled_fw_confirm_screen()'s shape — three lines on the 64 px
+    // panel, two on the 32 px one, each centred in its own band from its own bbox —
+    // because that shape is already proven on both heights.
+    //
+    // The pair splits the job: the LEFT half says what happened and why, the RIGHT
+    // half carries the numbers a support round asks for. The reason matters because
+    // the two failures are different events — NO_IMAGE means nothing ever arrived, so
+    // re-sending the apply will fail identically and the UPLOAD has to be redone;
+    // BAD_CRC means bytes did arrive and are damaged, which a re-send usually fixes.
+    const GFXfont*     fonts[] = { &NotoSans_Regular_Small_15px7b };
+    const bool         tall    = OLED_DISPLAY_HEIGHT >= 64;
+    uint32_t           size = 0, want = 0, got = 0;
+    const fw_apply_verdict_t why = poly_fw_failure_detail(&size, &want, &got);
+    const bool         no_image  = (why == FW_APPLY_NO_IMAGE);
+
+    uint32_t b1[16], b2[16], b3[16];
+    char     t1[24], t2[24], t3[24];
+    const uint32_t* lines[3] = { NULL, NULL, NULL };
+
+    if (is_left_side()) {
+        lines[0] = U"Update";
+        lines[1] = U"FAILED";
+        // "no image staged" measures 123 of the 128 px, i.e. 2 px of margin — the
+        // same one-pixel-fit trap that sent "Restarting" back to "Restart".
+        lines[2] = no_image ? U"not staged" : U"bad checksum";
+    } else if (no_image) {
+        // Nothing to quote, so say what to DO instead of printing three zeroes that
+        // would read as measurements of an image that does not exist.
+        // ⚠️ No em dash here: U+2014 is absent from NotoSans_Regular_Small_15px7b, and
+        // kdisp_write_gfx_text SKIPS a glyph the font does not carry — so it renders as
+        // nothing at all rather than as a missing-glyph box. Caught by measuring, not
+        // by looking: "staged —" and "staged" come back 2 px apart.
+        lines[0] = U"Nothing was";
+        lines[1] = U"staged";
+        lines[2] = U"upload again";
+    } else {
+        snprintf(t1, sizeof(t1), "%lu KB", (unsigned long)((size + 1023u) / 1024u));
+        snprintf(t2, sizeof(t2), "want %08lx", (unsigned long)want);
+        ascii_to_u32_string(b1, sizeof(b1), t1);
+        ascii_to_u32_string(b2, sizeof(b2), t2);
+        lines[0] = b1;
+        lines[1] = b2;
+        // The third line is the CRC actually read back. Both numbers together are what
+        // separates "the host sent the wrong thing" from "the flash did not take".
+        snprintf(t3, sizeof(t3), "got  %08lx", (unsigned long)got);
+        ascii_to_u32_string(b3, sizeof(b3), t3);
+        lines[2] = b3;
+    }
+
+    // On the 32 px panel only two lines fit, so drop the MIDDLE one: the first names
+    // the screen and the last carries the payload, and losing either would leave a
+    // line that cannot be read on its own.
+    const uint32_t* show[3];
+    uint8_t count = 0;
+    if (tall) {
+        for (uint8_t i = 0; i < 3; ++i) show[count++] = lines[i];
+    } else {
+        show[count++] = lines[0];
+        show[count++] = lines[2];
+    }
+
+    oled_on();
+    kdisp_set_buffer(0);
+    const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / count);
+    for (uint8_t i = 0; i < count; ++i) {
+        int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+        kdisp_gfx_text_bbox(fonts, 1, show[i], &x0, &x1, &y0, &y1);
+        int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - (x1 - x0 + 1)) / 2 - x0);
+        if (x < 0) x = 0;
+        kdisp_write_gfx_text(fonts, 1, (int8_t)x,
+                             (int8_t)(band * i + band / 2 - (y0 + y1) / 2), show[i]);
+    }
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    oled_render_dirty(true);
 }
 
 // ---------------------------------------------------------------------------
@@ -507,17 +708,34 @@ const uint8_t wpm_gauge_bitmap[] PROGMEM = {
 };
 
 bool oled_task_user(void) {
-    // FW-2: the unsigned-image question outranks everything else — the board is a
-    // modal dialog and nothing else it could show is actionable. Checked before the
-    // flash screen because by the time the prompt goes up finalize has already
-    // cleared fw_up_active, so this would otherwise fall through to the idle/status
-    // screen and leave the keycaps asking a question the panel never states.
-    if (get_local_state()->fw_confirm) {
+    // A firmware episode owns the panel outright: ONE selector decides which screen,
+    // so the dispatch cannot fall through to the status screen between two phases.
+    // It used to be three separate conditions here, and the seams between them were
+    // visible on hardware as a flash of the status screen — see poly_fw_screen().
+    //
+    // Re-asserting the same screen every tick is nearly free: oled_write_raw diffs,
+    // so once it is up nothing is dirty and oled_render_dirty(true) early-returns.
+    const poly_fw_screen_t fw = poly_fw_screen();
+    if (fw != POLY_FW_SCREEN_NONE) {
         oled_scroll_off();
-        oled_fw_confirm_screen();
-    } else if (fw_staging_fw_up_active()) {
-        oled_scroll_off();
-        oled_fw_update_screen();
+        switch (fw) {
+            // FW-2: the unsigned-image question outranks everything else — the board
+            // is a modal dialog and nothing else it could show is actionable.
+            case POLY_FW_SCREEN_CONFIRM: oled_fw_confirm_screen(); break;
+            case POLY_FW_SCREEN_UPDATE:  oled_fw_update_screen();  break;
+            case POLY_FW_SCREEN_APPLY:   oled_fw_apply_screen();   break;
+            case POLY_FW_SCREEN_RESTART: oled_fw_restart_screen(); break;
+            case POLY_FW_SCREEN_FAILED:  oled_fw_failed_screen();  break;
+            default: break;
+        }
+    } else if (poly_fw_hold_active()) {
+        // In the GAP between two phases. Deliberately draws NOTHING: the SSD1306 keeps
+        // its GDDRAM, so the last firmware screen simply stays on the glass until the
+        // next phase takes over. That is why this is a hold and not a "busy" screen —
+        // re-rendering the update screen here would read its progress out of state
+        // that has already gone idle and show 0%, which is worse than the flash it is
+        // meant to fix.
+        return false;
 #ifdef POLYKYBD_DOOM
     } else if (doom_mode_active() || get_local_state()->doom_ctl) {
         // Game mode status OLED — master directly, slave via the synced

@@ -24,6 +24,7 @@
 #include QMK_KEYBOARD_H
 
 #include "base/update.h" // enum refresh_mode
+#include "base/fw_staging.h" // fw_apply_verdict_t
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -133,3 +134,33 @@ bool display_wakeup(keyrecord_t* record);
 // still type plain characters and the keycaps show legible legends while the flash
 // holds the main loop. Must run before fw_up freezes display updates.
 void poly_prepare_for_flash(void);
+// True while a HELD firmware notice (today: the refused-apply "Update FAILED") still
+// owns the status OLED. oled_task_user() must draw that notice instead of the status
+// screen for as long as it is set — every other firmware notice is followed by a
+// reboot, so only this one can be repainted over.
+// Which firmware screen the status OLED owes right now, or POLY_FW_SCREEN_NONE.
+// One selector for every phase, so the panel cannot fall through to the status screen
+// between two of them — see poly_fw_hold_active() for the gaps this does NOT cover.
+typedef enum {
+    POLY_FW_SCREEN_NONE = 0,
+    POLY_FW_SCREEN_CONFIRM,   // FW-2 unsigned-image prompt
+    POLY_FW_SCREEN_UPDATE,    // chunk transfer + progress bar
+    POLY_FW_SCREEN_APPLY,     // staged image being written
+    POLY_FW_SCREEN_RESTART,   // deferred reset about to run
+    POLY_FW_SCREEN_FAILED,    // apply refused; held, then expires
+} poly_fw_screen_t;
+
+poly_fw_screen_t poly_fw_screen(void);
+
+// True for POLY_FW_HOLD_MS after the last live phase — i.e. in the GAP between two of
+// them: the transfer has ended but the confirm prompt is not up yet, or the prompt was
+// answered and the host's FW_UP_APPLY has not arrived. oled_task_user() must then
+// leave the panel ALONE (the SSD1306 keeps its GDDRAM, so the last firmware screen
+// simply stays up) rather than repaint the status screen for a few ticks.
+bool poly_fw_hold_active(void);
+// Why the last apply was refused, plus the numbers behind it (staged size, the CRC the
+// header promised, the CRC actually read back). FW_APPLY_OK when no apply has been
+// refused. Read by oled_fw_failed_screen(), which repaints from it on every tick the
+// notice is held, so the values have to outlive the housekeeping pass that recorded
+// them rather than being passed down the call.
+fw_apply_verdict_t poly_fw_failure_detail(uint32_t *size, uint32_t *want, uint32_t *got);

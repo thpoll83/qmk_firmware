@@ -36,7 +36,19 @@ void oled_fw_confirm_screen(void);
 /* "⭯Applying / Firmware⭯" notice (resident circular refresh arrow U+2B6F) drawn +
    fully flushed on both halves the moment a staged firmware image is applied, right
    before the blocking self-flash + reboot. */
+/* "Booting...." + a percent on the status OLED at each splash milestone — the only
+   evidence a boot HANG leaves, since post_init runs with the watchdog off and never
+   resets itself. `step`/`total` are the milestone; the percent is derived. */
+void oled_boot_progress(uint8_t step, uint8_t total);
 void oled_fw_apply_screen(void);
+/* "⭯Restarting / Now⭯" — the QK_REBOOT / staged-reset path, which also latches the
+   orange "you cannot type" cue and then never returns. */
+void oled_fw_restart_screen(void);
+/* "Update / FAILED" — the staged image failed its CRC, the apply was REFUSED and the
+   board keeps running the OLD firmware. No arrow: nothing is in progress. Unlike the
+   two above this path RETURNS, so poly_keymap.c holds it on screen (POLY_FW_NOTICE_MS)
+   instead of letting the next status tick repaint over it. */
+void oled_fw_failed_screen(void);
 /* Flash progress bar with its top row at `top_y`: a 6 px bar over a 1 px track,
    `pct` (0..100) filling the full width of EACH status OLED (both halves move). */
 void oled_fw_update_progress_bar(int8_t top_y, int8_t bottom_y, uint8_t pct);

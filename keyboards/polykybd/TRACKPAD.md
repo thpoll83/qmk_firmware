@@ -41,6 +41,37 @@ and the release workflow both build the *default*, so every hardware round ran a
 no automated build produced and no release would have shipped. A flavour that only a
 hand-typed `-e` reaches is not covered by anything.
 
+## Where a dial can START, and the accidental-scroll knob
+
+Two zones arm a dial, and they are not equally easy to hit by mistake:
+
+- the **ring**, `POLY_GEST_RING_R` (405), tested against the touchdown radius in the
+  896-unit pad frame;
+- a **wedge** at 10–11 o'clock, `POLY_GEST_DIAL_WEDGE_R`, which reaches INWARD from
+  its radius over the 29..61° band of the top-left quadrant.
+
+⚠️ **The wedge is what fires by accident, and its radius is the knob — not the ring's.**
+The pad reaches 448 units on an axis and 633 into a corner, so the same number means
+very different things in the two zones. The ring at 405 leaves a 43-unit annulus on an
+axis: starting a dial there means touching the rim on purpose. The wedge runs up the
+45° diagonal, so its radius is a fraction of a run half as long again — at 200 it armed
+from 32 % of the way out and owned the **outer two thirds** of that diagonal, and a
+finger resting at the top left scrolled instead of pointing (field report 2026-09-16).
+Raised to **320**, i.e. 51 % of 633, so the wedge is the outer half of its own diagonal
+and is still 313 units deep.
+
+Pushing the RING outward instead does not work: past ~440 the axes become unreachable
+and the dial degenerates into a corners-only gesture. That asymmetry is the whole reason
+the wedge exists.
+
+⚠️ **The gesture tests DERIVE their sample radii from the constant** (`WEDGE_IN` /
+`WEDGE_OUT` in `cirque_gesture_tests.cpp`, with a `static_assert` that `WEDGE_IN` stays
+inside the ring). They used to hardcode 260 and 140, and moving the wedge outward would
+have left the two NEGATIVE tests passing for the **wrong reason** — their sample would
+have fallen inside the new minimum radius, so "a dial armed at the wrong angle" and "at
+the wrong quadrant" would silently have become "too close to the centre". A test that
+still passes after the change it should have caught is worse than no test.
+
 ## One image for either side — analysed 2026-09-15, NOT implemented
 
 Question: now that the gesture layer is ours, can the pad be soldered to either half

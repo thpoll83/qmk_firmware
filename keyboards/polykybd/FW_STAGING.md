@@ -42,6 +42,176 @@ Two things that made this diagnosable, and are worth keeping:
   Only the `uint32_t *`-typed helper got word instructions. So "flash writes work
   here but that one copy dies" was pointing at alignment the whole time.
 
+## What the board SHOWS during an update, and the one path that comes back
+
+Four states, each with its own cue. Two of them were added 2026-09-16; the notice
+screens are previewable without flashing via
+`tools/status_oled_preview.py --fw-notice {apply,restart,failed}`.
+
+| state | RGB | keycaps | status OLED |
+|---|---|---|---|
+| staging / transfer | breathing **cyan** | legible base legends | `PolyKybd / Firmware / Staging...` + progress bar |
+| FW-2 confirm prompt | breathing **orange** | blank except **A** / **R** | `oled_fw_confirm_screen()` |
+| applying (all of it, incl. the copy) | solid **orange** | **blank** | `⭯Applying  Firmware⭯` |
+| reboot / staged reset | solid **orange** | **blank** | `⭯Restart  Now⭯` |
+| apply REFUSED | orange fades out | legends restored | `Update FAILED / <reason>` + the numbers, held 5 s |
+
+**The applying screen stays two words and nothing else.** A small-font line carrying
+the staged size was tried under the headline and removed: on the screen that is FROZEN
+for the whole copy the state IS the message, and a number beside it only competes with
+it. The size stays in the `APPLY 3/4` console line. The failure screen, which genuinely
+has something to say, carries its detail in its own band layout rather than bolting a
+second line onto the notice.
+
+**A refused apply names WHICH failure**, via `fw_apply_verdict_t`. The two are
+different events and the user can act on the difference:
+
+- `FW_APPLY_NO_IMAGE` — no `FW_STAGING_MAGIC`, nothing ever reached the staging area.
+  Re-sending the apply fails identically; the UPLOAD has to be redone. Left half reads
+  `Update / FAILED / not staged`, right half `Nothing was / staged / upload again`.
+- `FW_APPLY_BAD_CRC` — bytes DID arrive and are damaged. A re-send usually fixes it.
+  Left half `Update / FAILED / bad checksum`, right half the size and both CRCs
+  (`want …` / `got …`) — together those separate "the host sent the wrong thing" from
+  "the flash did not take".
+
+⚠️ `fw_staging_verify_staged_flash()` leaves its out-params **untouched** on
+`FW_APPLY_NO_IMAGE` (there is no header to read them from), so initialise them at the
+call site rather than reading a size of zero as a fact about the image.
+
+⚠️ **The failure screen's values are kept in statics, not passed down the call.** It
+repaints on every tick the notice is held, and the housekeeping pass that computed
+them is long gone by the second repaint — `poly_fw_failure_detail()` is that record.
+
+⚠️ **Orange means "you cannot type", and until 2026-09-16 the keycaps did not say
+so.** The cue was on the LEDs alone while 72 displays went on showing a full, inviting
+legend set through the whole multi-second copy — the one moment the keys genuinely do
+nothing. `poly_board_unusable_cue()` now latches the orange AND calls
+`clear_all_displays()`, one broadcast write over the shift-register chip-select rather
+than 72 of them. Cyan is deliberately left alone: the board still runs during staging,
+and `poly_prepare_for_flash()` has just drawn legible legends so you CAN keep typing.
+
+⚠️ **Everything on the apply path is pushed out SYNCHRONOUSLY, for the same reason.**
+`poly_flash_rgb_now()` exists because `rgb_matrix_indicators_kb()` only runs from the
+next `rgb_matrix_task()` and there is no next one; the notice screens end in
+`oled_render_dirty(true)` because the stock one-block-per-call flush would dribble; and
+the keycap blank is a direct SPI write for the same reason. **A cue queued on a path
+that never returns is a cue nobody ever sees.**
+
+⚠️ **The SEAMS between phases flashed the status screen, and each one is a different
+hole.** Reported from hardware after the overpaint fix: "for a very brief moment I saw
+the status screen between the percent update / accept-reject / apply screens". Three
+separate conditions used to select these screens, and nothing owned the gaps:
+
+- **transfer → prompt.** `fw_staging_finalize()` clears `s_fw_up_active` when it raises
+  the prompt, but the synced `poly_sync_t.fw_confirm` is only set from housekeeping a
+  pass later — and on the slave, a split sync later still. `fw_screen_live()` now tests
+  `fw_staging_awaiting_confirm()` as well, which is true from the moment COMMIT raises
+  it.
+- **prompt answered → apply.** `s_confirm` goes `ACCEPTED`, `fw_confirm` clears, and
+  `commit_pending` is not set until the host sends `FW_UP_APPLY` — a whole HID round
+  trip. Nothing describes the board during it.
+
+`poly_fw_screen()` is now the ONE selector, and `poly_fw_hold_active()` covers the gaps
+by drawing **nothing at all** for `POLY_FW_HOLD_MS` (2500, the same constant the RGB
+cue bridges them with). The SSD1306 keeps its GDDRAM, so the last firmware screen stays
+on the glass. ⚠️ Re-rendering the update screen there instead would read its progress
+out of state that has already gone idle (`fw_staging_active_target()` returns `0xFF`,
+`fw_staging_image_size()` returns 0) and draw the wrong screen at 0 % — worse than the
+flash it is meant to fix.
+
+⚠️ **`fw_staging_confirm_in_progress()` must NOT extend the hold**, tempting as it is:
+it is exactly the second gap, but it clears only inside `fw_staging_finalize()`, i.e.
+only when the host sends another COMMIT. A host that disappears after the user presses
+**A** leaves it true forever, and holding on it would freeze the status OLED on the
+confirm screen permanently. The last CONFIRM pass has already stamped the clock, so the
+plain window bridges that gap and cannot latch.
+
+⚠️ **Name the two phases with the firmware's OWN vocabulary: `Staging...` then
+`⭯Applying  Firmware⭯`.** The transfer writes into the STAGING area and installs
+nothing; the apply is the separate, multi-second install. Calling the first one
+"Update..." made them indistinguishable, and only the second is the long one.
+
+⚠️ **ONE screen covers the whole apply and it cannot change part-way**:
+`fw_staging_do_apply()` holds the core with interrupts off and resets from inside
+itself, so there is no window after the copy and before the reboot. The reboot is
+therefore NOT named on it — that was tried (`Restart Now`, then `Applying Restarts`)
+and **read as a hang**, because the erase+rewrite of ~490 KB sits under the screen for
+seconds and a word promising something instant makes the wait feel broken (reported
+from hardware, 2026-09-16). The restart is what the user sees as the board coming back
+on `Booting.... 25%`.
+
+⚠️ **The SSD1306 hardware scroll CANNOT fake a timed hand-off between two screens**,
+which is the obvious idea since the panel would run it with no CPU. On a **128×64**
+panel `OLED_MATRIX_SIZE` is `64/8 * 128` = 1024 B — the whole GDDRAM, every byte of it
+displayed — so there is no off-screen region to scroll a second frame in from. QMK also
+drives `SCROLL_LEFT`/`SCROLL_RIGHT`, the *horizontal* continuous scroll, which wraps the
+same 128 columns. It WOULD work on a 128×32 panel, where half the GDDRAM is hidden,
+which is the trick's usual home. Nothing else can run during the copy either.
+
+⚠️ **`fw_staging_apply_and_reboot()` RETURNS on either of its two refusals** (missing
+header, failed re-verify), and the board is then alive with the apply screen up and
+keycaps still blanked from stage 0. That path re-verifies to learn WHICH refusal it was
+— the extra ~25 ms only ever runs on a path that has already failed — then raises the
+failure notice and hands the legends back, exactly like the stage-2 refusal.
+
+⚠️ **Measure every line; two of them did not fit and one glyph was not there.**
+`tools/status_oled_preview.py --fw-notice {apply,restart,failed,failed-none}` renders
+these from the real committed fonts. It caught `"Restarting"` at 125 of 128 px,
+`"no image staged"` at 123 (now `"not staged"`, 80) — and that **U+2014 is absent from
+`NotoSans_Regular_Small_15px7b`**, where `kdisp_write_gfx_text()` SKIPS a glyph the
+font does not carry rather than drawing a missing-glyph box. So `"staged —"` renders
+as `"staged"`, silently, and only measuring shows it: the two strings come back 2 px
+apart. A word that merely fits is a word that clips the next time the font is
+regenerated.
+
+⚠️ **Painting a cue is not the same as KEEPING it, and `fw_up_active` does not cover
+the apply.** The first version of all of this painted correctly and was then wiped
+within one 66 ms tick — reported from hardware as "the messages are right away
+overpainted with the normal status screen during the orange phase". Two things
+combine:
+
+- the **apply is a separate state from the transfer**. `fw_staging_fw_up_active()` is
+  already false by then, so the `oled_task_user()` branch that guards the transfer
+  does not fire and the dispatch falls through to the ordinary status screen;
+- the apply sequence **deliberately RETURNS between its four stages**, so each console
+  marker gets a main loop to go out on. Every one of those returns hands the main loop
+  a pass in which `oled_task_user()` and `update_displays()` run.
+
+So the picture actually FROZEN for the whole multi-second copy was the status screen
+and a full legend set — the exact opposite of the intent. The keycap half had a second
+trigger of its own: `clear_keyboard()` on the way in moves the mods, so the very next
+`sync_and_refresh_displays()` sees a layer diff and requests a refresh.
+
+**`fw_staging_board_is_flashing()` is the one predicate both walkers ask** — the status
+OLED in `oled_task_user()`, the keycaps in `update_displays()` — so they cannot answer
+it differently. This is the same two-walkers shape as the display-list op and the
+render/measure pair: a cue is only as good as every path that can overwrite it.
+
+⚠️ **Three other writers own the keycaps outright, and stopping them is part of the
+cue.** `update_displays()` early-returns for DOOM and for the startup animation, which
+is exactly the sign that each is a writer in its own right; the idle pulse is a third
+and does not go through `update_displays()` at all
+(`set_displays(contrast, idle)` → `kdisp_idle()`). A standalone "apply staged image"
+can arrive on an idling board with no preceding transfer, so `poly_board_unusable_cue()`
+tears all three down before blanking — the counterpart to the identical teardown
+`poly_prepare_for_flash()` does at the START of an update, and for the same reason.
+
+⚠️ **The refused apply is the ONE firmware path that RETURNS, so it is the only one
+that has to undo its own cue — and the only one that can be repainted over.** A staged
+image that fails its CRC is refused (rather than erasing a working firmware with an
+image we cannot vouch for), and that used to exist only as a console line on a console
+nobody has open: from the outside the update simply did nothing, and after the keycap
+blanking above it would have looked worse still. It now paints `Update FAILED`, restores
+the legends, and is held for `POLY_FW_NOTICE_MS` (5 s) by `poly_fw_screen()` — without
+the hold, `oled_task_user()`'s 66 ms status tick erases it before it can be read.
+
+**Why there is no separate "Verifying" state**, though the apply has four internal
+stages: only stage 3 is long. Stages 0–2 (clear keys, flush EEPROM, CRC the staged
+image) complete in milliseconds, so a screen for them would be a flicker, and the panel
+that matters is the one FROZEN for the whole copy — which must therefore name the copy.
+The stage markers stay in the console (`APPLY n/4`), where they answer "which stage
+wedged".
+
 ## Firmware signing enforcement & the on-keycap confirmation (FW-2)
 
 `rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so `fw_staging_finalize()` only stamps the

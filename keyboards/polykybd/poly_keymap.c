@@ -68,6 +68,7 @@
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
+#include "base/status_brightness.h"      // one brightness scale for keycaps + status OLED
 #include "usb_util.h"                     // usb_vbus_state() — the suspend-time power check
 #include "crash_test.h"                   // POLYKYBD_CRASH_TEST: deliberate faults (no-op inlines otherwise)
 #include "slave_data.h"                   // slave_data_register(), slave_data_crash_pull_tick()
@@ -202,6 +203,8 @@ void set_selected_displays(int8_t old_value, int8_t new_value);
 void toggle_stagger(bool new_state);
 void oled_update_buffer(void);
 void oled_fw_apply_screen(void);   // oled_helper.c — firmware-apply status screen
+void oled_fw_restart_screen(void); // oled_helper.c — "Restart Now" before mcu_reset()
+void oled_fw_failed_screen(void);  // oled_helper.c — "Update FAILED", the apply was refused
 void poly_suspend(void);
 
 
@@ -338,6 +341,121 @@ static void poly_flash_rgb_now(void) {
 #endif
 }
 
+// How long a firmware notice that does NOT end in a reboot stays on the status OLED.
+// Only the failure notice needs it: every other caller is followed by a self-flash or
+// a reset, so the panel simply stops being repainted. 5 s is long enough to read two
+// words and short enough that the board does not look wedged.
+#define POLY_FW_NOTICE_MS 5000
+
+// How long the panel is left UNTOUCHED after a firmware phase ends, so the gap before
+// the next phase does not show as a flash of the status screen. Deliberately equal to
+// FLASH_RGB_HOLD_MS: the LEDs already bridge these gaps with exactly this timer, and a
+// panel that went back to normal while the matrix was still orange was the visible
+// half of that asymmetry.
+#define POLY_FW_HOLD_MS 2500
+
+static uint16_t s_fw_notice_at = 0;
+static bool     s_fw_notice_armed = false;
+static uint16_t s_fw_phase_at   = 0;
+static bool     s_fw_phase_seen = false;
+
+// Why the last apply was refused, and the numbers behind it. Kept here rather than
+// passed down the call because oled_fw_failed_screen() repaints from them on EVERY
+// tick the notice is held — the housekeeping pass that recorded them is long gone by
+// the second repaint.
+static fw_apply_verdict_t s_fw_fail_why  = FW_APPLY_OK;
+static uint32_t           s_fw_fail_size = 0;
+static uint32_t           s_fw_fail_want = 0;
+static uint32_t           s_fw_fail_got  = 0;
+
+fw_apply_verdict_t poly_fw_failure_detail(uint32_t *size, uint32_t *want, uint32_t *got) {
+    if (size) *size = s_fw_fail_size;
+    if (want) *want = s_fw_fail_want;
+    if (got)  *got  = s_fw_fail_got;
+    return s_fw_fail_why;
+}
+
+// The phase that is live RIGHT NOW, in priority order.
+//
+// ⚠️ CONFIRM is tested first and from TWO sources. The synced poly_sync_t.fw_confirm
+// is what both halves agree on, but the MASTER only sets it from housekeeping — one
+// pass AFTER fw_staging_awaiting_confirm() goes true, and COMMIT has already cleared
+// fw_up_active by then. That one-pass hole put a status screen between the progress
+// bar and the prompt, which is exactly how this was reported from hardware.
+static poly_fw_screen_t fw_screen_live(void) {
+    if (get_local_state()->fw_confirm || fw_staging_awaiting_confirm()) return POLY_FW_SCREEN_CONFIRM;
+    if (fw_staging_fw_up_active())                                      return POLY_FW_SCREEN_UPDATE;
+    if (fw_staging_reboot_pending())                                    return POLY_FW_SCREEN_RESTART;
+    if (fw_staging_commit_pending())                                    return POLY_FW_SCREEN_APPLY;
+    return POLY_FW_SCREEN_NONE;
+}
+
+// Stamp the "a firmware phase was live" clock; runs every housekeeping pass.
+//
+// ⚠️ fw_staging_confirm_in_progress() is deliberately NOT stamped here, though it is
+// exactly the second gap (answered prompt -> the host's FW_UP_APPLY). It clears only
+// inside fw_staging_finalize(), i.e. only when the host sends another COMMIT — so a
+// host that disappears right after the user presses A leaves it true FOREVER, and
+// stamping on it would freeze the status OLED on the confirm screen for good. The
+// last CONFIRM pass already stamped, so the plain POLY_FW_HOLD_MS window bridges that
+// gap anyway, and it cannot latch.
+static void fw_screen_tick(void) {
+    if (fw_screen_live() != POLY_FW_SCREEN_NONE) {
+        s_fw_phase_at   = timer_read();
+        s_fw_phase_seen = true;
+    }
+}
+
+poly_fw_screen_t poly_fw_screen(void) {
+    const poly_fw_screen_t live = fw_screen_live();
+    if (live != POLY_FW_SCREEN_NONE) return live;
+    // The refusal notice is LATCHED rather than derived: commit_pending is already
+    // clear by the time it is raised, so nothing in the live state describes it.
+    if (s_fw_notice_armed && timer_elapsed(s_fw_notice_at) < POLY_FW_NOTICE_MS) {
+        return POLY_FW_SCREEN_FAILED;
+    }
+    s_fw_notice_armed = false;
+    return POLY_FW_SCREEN_NONE;
+}
+
+bool poly_fw_hold_active(void) {
+    if (!s_fw_phase_seen) return false;
+    if (timer_elapsed(s_fw_phase_at) < POLY_FW_HOLD_MS) return true;
+    s_fw_phase_seen = false;
+    return false;
+}
+
+// The board is about to stop being usable: latch the orange cue AND blank every
+// keycap, so the two halves say the same thing at once.
+//
+// ⚠️ The keycaps are the half that used to be missing. The orange RGB says "you
+// cannot type", while 72 displays went on showing a full, inviting legend set for
+// the whole apply — the one moment the keys genuinely do nothing. Both are pushed
+// out SYNCHRONOUSLY here for the same reason: the callers are about to enter a
+// blocking self-flash or a reset, so anything left to the next housekeeping pass is
+// never painted (see poly_flash_rgb_now()'s own note). clear_all_displays() is one
+// broadcast write over the shift-register chip-select, not 72 of them.
+//
+// NOT used for the staging transfer: the board still runs there, the cue is cyan
+// rather than orange, and poly_prepare_for_flash() has deliberately just drawn
+// legible base legends so you CAN keep typing.
+static void poly_board_unusable_cue(void) {
+    // Take the keycaps off whatever else owns them FIRST, or that writer paints the
+    // blank straight back. update_displays() early-returns for both of these, which
+    // is precisely the sign that they are writers in their own right — and the idle
+    // pulse is a third, reached through set_displays(contrast, idle) -> kdisp_idle()
+    // rather than through update_displays() at all. A standalone "apply staged image"
+    // can arrive on an idling board with no preceding transfer, so none of this is
+    // hypothetical: poly_prepare_for_flash() does the same teardown for the same
+    // reason at the START of an update, and this is its counterpart at the end.
+    doom_screensaver_stop();   // self-guards: only an active attract demo
+    startup_anim_stop();       // looping Eden (and a one-shot mid-flight)
+    poly_sync_t* local_state = access_local_state();
+    local_state->flags &= ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);
+    poly_flash_rgb_now();
+    clear_all_displays();
+}
+
 #ifdef RGB_MATRIX_ENABLE
 #define RGB_REPEAT_INITIAL_DELAY_MS 400
 #define RGB_REPEAT_RATE_MS          40
@@ -365,6 +483,33 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
     return RGB_REPEAT_RATE_MS;
 }
 #endif
+
+// Status OLED contrast register for the current moment. Dark while idling (the
+// panel is handed to oled_render_logos() with its hardware scroll running, and
+// that faint scrolling logo is the idle look), otherwise the SAME contrast the
+// keycaps are on, mapped onto this panel's range by base/status_brightness.h.
+//
+// ⚠️ The input is the SYNCED local_state->contrast — the one value both halves
+// already agree on — NOT get_active_brightness(). That was the first attempt and
+// it left the SLAVE's panel stuck at full: get_active_brightness() reads
+// g_user_brightness, which on the slave is only a shadow maintained by one
+// conditional in split_sync.c's sync handler. That conditional is an EDGE
+// (`incoming->contrast != current->contrast`) that is skipped whenever the sync
+// also carries DISP_IDLE or IDLE_TRANSITION — and copy_local_state() advances
+// current->contrast on that very same sync, so the skipped change can never be
+// seen again. Unlike the periodic state syncs, where the diff IS the retry queue,
+// a missed note is missed for good, and the slave keeps the FULL_BRIGHT the
+// static initialiser gave it.
+//
+// The strobe this was guarding against is already handled by `idle`: the pulse
+// style cycles contrast 0..49 with DISP_IDLE SET for the whole time, and Eden
+// holds EDEN_IDLE_BRIGHTNESS with DISP_IDLE set too, so both return the idle
+// level and never see the cycling value. What the synced contrast does add is the
+// fade-out: the panel now dims WITH the keycaps over FADE_TRANSITION_TIME instead
+// of holding full until the pulse starts, identically on both halves.
+static uint8_t status_oled_level(bool idle) {
+    return idle ? POLY_STATUS_IDLE_BRIGHT : poly_status_brightness(get_local_state()->contrast);
+}
 
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
 // Global variables: flags, overlay_flags
@@ -539,15 +684,26 @@ void sync_and_refresh_displays(void) {
         const bool status_disp_changed  = has_flag_changed(local_flags, global_flags, STATUS_DISP_ON);
         const bool status_disp_on       = test_flag(local_flags, STATUS_DISP_ON);
 
-        if(idle_changed) {
-            if(in_idle_mode) {
-                oled_set_brightness(0);
+        // ⚠️ This used to be an idle-ENTRY-only oled_set_brightness(0) with no
+        // restore on idle EXIT. The only code that raised the panel again was the
+        // status_disp_changed branch below, and the idle block in housekeeping sets
+        // STATUS_DISP_ON on every pass — so that flag never flips across an
+        // idle->wake cycle and the status OLED stayed at contrast register 0 (on an
+        // SSD1306 that is "barely visible", not off) until the status display was
+        // toggled or the board rebooted. A LONGER absence hid the bug, because
+        // poly_suspend() does clear STATUS_DISP_ON and the resume path did restore
+        // the brightness: hence "dim for no reason", but only sometimes.
+        // Keying the restore off contrast_changed as well as idle_changed fixes it —
+        // waking moves contrast from the pulse value back to the active brightness.
+        if(idle_changed || contrast_changed) {
+            if(status_disp_on) {
+                oled_set_brightness(status_oled_level(in_idle_mode));
             }
         }
 
         if(status_disp_changed) {
             if(status_disp_on) {
-                oled_set_brightness(OLED_BRIGHTNESS);
+                oled_set_brightness(status_oled_level(in_idle_mode));
 #ifdef RGB_MATRIX_ENABLE
                 if(test_flag(local_flags, RGB_ON)) {
                     rgb_matrix_enable_noeeprom();
@@ -818,6 +974,7 @@ void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif
+    fw_screen_tick();   // ...and keep the status OLED on the matching firmware screen
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
     slave_data_crash_pull_tick();      // master: fetch + print the slave's crash record once per link-up
@@ -869,14 +1026,17 @@ void housekeeping_task_user(void) {
                 // reported — the host keeps it registered and auto-repeats until USB
                 // drops at the reboot (field: hundreds of repetitions).
                 clear_keyboard();
-                poly_flash_rgb_now();
+                // Orange cue AND 72 blanked keycaps. From here the matrix is never
+                // scanned again, so a keycap still showing its legend is advertising a
+                // key that does nothing — for the whole multi-second copy.
+                poly_board_unusable_cue();
                 // Paint the "⟳Applying / Firmware⟳" notice and flush it fully BEFORE the
                 // blocking self-flash below (which never returns), so the status OLED is
                 // completely refreshed — not torn mid-transition — as the apply begins.
                 // Runs on both halves; each draws its own side's word. Its ~26 ms of I2C
                 // also gives the clear_keyboard() report time to leave over USB.
                 oled_fw_apply_screen();
-                uprintf("APPLY 1/4: keys cleared, RGB + OLED flushed\n");
+                uprintf("APPLY 1/4: keys cleared, RGB + keycaps blanked, OLED flushed\n");
                 apply_step = 1;
                 return;
             case 1:
@@ -911,23 +1071,53 @@ void housekeeping_task_user(void) {
                 // a marker printed immediately before it is simply lost, which is how
                 // "did it enter the copy?" stayed unanswerable for several rounds.
                 uint32_t size = 0, want = 0, got = 0;
-                const bool good = fw_staging_verify_staged_flash(&size, &want, &got);
+                // ⚠️ The out-params stay UNTOUCHED on FW_APPLY_NO_IMAGE (there is no
+                // header to read), which is why they are initialised above.
+                const fw_apply_verdict_t why = fw_staging_verify_staged_flash(&size, &want, &got);
                 uprintf("APPLY 3/4: staged %lu B (%lu sectors) crc want=%08lx got=%08lx -> %s\n",
                         (unsigned long)size,
                         (unsigned long)((size + 4095u) / 4096u),
-                        (unsigned long)want, (unsigned long)got, good ? "OK" : "MISMATCH");
-                if (!good) {
+                        (unsigned long)want, (unsigned long)got,
+                        why == FW_APPLY_OK      ? "OK"
+                        : why == FW_APPLY_NO_IMAGE ? "NO IMAGE"
+                                                   : "MISMATCH");
+                if (why != FW_APPLY_OK) {
                     // Refuse rather than erase a working firmware with an image we
                     // cannot vouch for. The board stays usable and the host can retry.
                     uprintf("APPLY: refusing to overwrite firmware from a bad staged image\n");
                     fw_staging_cancel_apply();
                     apply_step = 0;
+                    // ⚠️ This is the ONE apply path that comes back, so it is the one
+                    // that has to undo the "board is unusable" cue it just put up.
+                    // Say WHY on the panel — until now the refusal existed only as the
+                    // console line above, so from the outside the update simply did
+                    // nothing — and hand the keycaps their legends back, since stage 0
+                    // blanked them for an apply that is not going to happen.
+                    s_fw_fail_why  = why;
+                    s_fw_fail_size = size;
+                    s_fw_fail_want = want;
+                    s_fw_fail_got  = got;
+                    oled_fw_failed_screen();
+                    s_fw_notice_at = timer_read();
+                    s_fw_notice_armed = true;
+                    set_displays(get_local_state()->contrast, false);
+                    request_disp_refresh();
                     return;
                 }
                 apply_step = 3;
                 return;
             }
             default:
+                // ⚠️ THE LAST PAINTABLE INSTANT. fw_staging_do_apply() below runs with
+                // interrupts off for SECONDS and resets from inside itself, so there is
+                // no window after the copy and before the reboot — the panel keeps
+                // whatever is on it right now for the whole write and then the board is
+                // gone. That is why "Restart Now" was never seen on an update: it lived
+                // on fw_staging_arm_reboot()'s path, which an APPLY does not take.
+                //
+                // So the reboot is named on the apply screen itself, which is already
+                // up and stays up for the whole copy — no second paint is needed here,
+                // and none is possible after the copy. See oled_fw_apply_screen().
                 // Nothing but the call: if the 3/4 line above is the last thing in the
                 // log, the copy was entered and did not come back.
                 apply_step = 0;
@@ -939,6 +1129,23 @@ void housekeeping_task_user(void) {
                 // kept because it is the one path where a future halt-then-refuse
                 // would otherwise leave the RLE service down for good.
                 fw_staging_core1_lockout_end();
+                // ...and it is now also the path that has to take the screen back. The
+                // board is alive and the panel is showing a restart that is not coming,
+                // with the keycaps still blanked from stage 0.
+                // Ask which of its two refusals it was rather than assuming. It returns
+                // on a missing header OR a failed re-verify, and stage 2 passed moments
+                // ago, so whichever it is the user needs the real one. The extra ~25 ms
+                // CRC only ever runs on a path that has already failed.
+                s_fw_fail_size = s_fw_fail_want = s_fw_fail_got = 0;
+                s_fw_fail_why  = fw_staging_verify_staged_flash(&s_fw_fail_size,
+                                                               &s_fw_fail_want,
+                                                               &s_fw_fail_got);
+                if (s_fw_fail_why == FW_APPLY_OK) s_fw_fail_why = FW_APPLY_NO_IMAGE;
+                oled_fw_failed_screen();
+                s_fw_notice_at    = timer_read();
+                s_fw_notice_armed = true;
+                set_displays(get_local_state()->contrast, false);
+                request_disp_refresh();
                 break;
         }
     } else if (apply_step != 0) {
@@ -949,7 +1156,11 @@ void housekeeping_task_user(void) {
     }
     if (fw_staging_reboot_pending()) {
         clear_keyboard();   // same as above: no further matrix scan before the reset
-        poly_flash_rgb_now();
+        poly_board_unusable_cue();
+        // This path had no status-OLED state at all: it went orange and reset while the
+        // panel still showed the ordinary status screen. Flushed synchronously, like the
+        // apply notice, because mcu_reset() below never returns.
+        oled_fw_restart_screen();
         // A handedness change arrives on this path (the reset-sync carrier). The
         // handler only records it -- it runs inside a split-transaction callback
         // with a ~20 ms budget, and this write can erase a sector.
@@ -3428,6 +3639,19 @@ void update_displays(enum refresh_mode mode) {
         s_disp_render_active = false;
         return;
     }
+    // ⚠️ And for the apply / imminent-reset phase: the keycaps were deliberately
+    // blanked by poly_board_unusable_cue() because the matrix is never scanned again,
+    // and a re-render here paints the full legend set straight back over that blank.
+    // It is reachable because the apply sequence RETURNS between stages, and because
+    // clear_keyboard() on the way in moves the mods, which makes the very next
+    // sync_and_refresh_displays() see a layer diff and request a refresh.
+    // s_disp_render_active = false is what makes a REFUSED apply repaint correctly:
+    // the blank was an untracked write, so the next awake pass must invalidate every
+    // dirty-window bbox rather than diff against a stale one.
+    if (fw_staging_board_is_flashing()) {
+        s_disp_render_active = false;
+        return;
+    }
     const poly_sync_t* local_state = get_local_state();
     const bool idle = (local_state->flags & DISP_IDLE) != 0;
     // While idle we never full-re-render here: kdisp_idle() pulses the existing
@@ -5282,6 +5506,12 @@ void keyboard_post_init_user(void) {
     splash_progress(7);                 // EEPROM config (brightness/lang/OS/MRU) loaded
 
     set_displays(local_state->contrast, false);   // active brightness (auto value if restored, else manual)
+    // …and bring the status panel up on the same scale (local_state->contrast was
+    // just loaded from EEPROM above). QMK's oled_init() programs the contrast
+    // register to OLED_BRIGHTNESS unconditionally, so without this a board that
+    // booted with a stored brightness of 2 would light its status OLED at full
+    // until the first contrast change moved it.
+    oled_set_brightness(status_oled_level(false));
 
     // One-time startup animation: on the very first boot (fresh EEPROM), play the
     // procedural intro once, then persist BOOT_INTRO_DONE (in the housekeeping
@@ -5525,6 +5755,23 @@ void suspend_power_down_kb(void) {
 // here too — without this, a reboot/bootloader jump that isn't preceded by a USB
 // suspend would discard any MRU/settings/layer changes still held in RAM.
 bool shutdown_user(bool jump_to_bootloader) {
+    // ⚠️ Do NOT paint a "Restart" screen here, though shutdown_quantum makes this the
+    // one hook that catches every deliberate reset. It was tried (2026-09-16) and
+    // backed out, for two reasons that compound:
+    //
+    //  * it is not visible. mcu_reset() follows within microseconds and the board is
+    //    back in keyboard_pre_init_user()'s splash — which opens with
+    //    clear_all_displays() — inside a couple of hundred ms. The user reported
+    //    seeing nothing, which is what the timing predicts.
+    //  * the cost is a 72-panel SPI broadcast plus a blocking ~26 ms I2C flush added
+    //    to the reset path, and the reset path is the ONE place where a stall leaves
+    //    a dead board: the watchdog is deliberately not armed until the END of
+    //    post_init (crash_watchdog_start()), so nothing recovers a board that does
+    //    not make it back through boot.
+    //
+    // A restart genuinely worth announcing announces itself from a path that DWELLS —
+    // the slave's reboot_pending branch in housekeeping still does, because it holds
+    // the screen while it flushes handedness and EEPROM before mcu_reset().
     save_all_dirty();
     // Disarm the watchdog before any deliberate reset / bootloader jump. Left
     // armed across a BOOTSEL entry it would reset the bootrom out from under a

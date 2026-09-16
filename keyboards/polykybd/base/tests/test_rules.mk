@@ -150,3 +150,14 @@ polykybd_cirque_gesture_INC := \
 	$(POLY_BASE_PATH) \
 	$(POLY_BASE_PATH)/tests \
 	keyboards/polykybd
+
+# status_brightness.h is header-only (static inline over config.h macros), so the
+# suite is just the tests -- the same shape as mode_byte and map_codec. It pins the
+# keycap-scale -> status-panel-register map that both oled_set_brightness() call
+# sites in poly_keymap.c go through.
+polykybd_status_brightness_SRC := \
+	$(POLY_BASE_PATH)/tests/status_brightness_tests.cpp
+
+polykybd_status_brightness_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

@@ -71,36 +71,41 @@ Apply these four rules on top of the base skill's per-version gathering:
 1. **Newest version first.** Reverse-chronological: lead with the most recent version,
    older ones below. (The plain notes skill defaults oldest-first; a *release* leads
    with what's new.)
-2. **Skip maintenance-only bumps.** Omit versions whose changes have **no obvious
-   owner-facing benefit**: pure docs, internal refactors, CI/test-only, dependency
-   housekeeping, cleanups, version plumbing. Judge each interval by *"would a keyboard
-   owner care?"* If a whole interval is maintenance, drop its header entirely (at most
-   fold a single trailing "Plus maintenance releases 0.9.x–0.9.y 🧹" line — don't give
-   each one a section). The version numbers still increment through them; you're
-   trimming the *notes*, not renumbering.
+2. **THREE TIERS, not two.** Sort every interval in the range into one of these, and
+   give it the weight the tier says — this is the rule the whole format hangs on:
+   - **Customer-facing** (a feature, a fix an owner would notice, anything that changes
+     what the keyboard or the app does for them) → its own `## X.Y.Z — theme <emoji>`
+     section with 2–5 bullets. This is where the detail goes.
+   - **Everything else that is still real** (a developer tool, an internal artifact that
+     had drifted, a minor UI slip) → **collapse to a minimum**: a section with **no
+     emoji** and one short paragraph, or a single bullet. The published `v0.19.1` does
+     exactly this for its lesser entries.
+   - **Pure maintenance** (docs, refactors, CI, test-only, dependency and version
+     plumbing) → **no section at all**; fold the numbers into the single trailing
+     "Plus maintenance releases 0.9.x–0.9.y 🧹" line. The versions still increment;
+     you are trimming the *notes*, not renumbering.
    ⚠️ **Judge the interval by its DIFF, not by its commit subjects.** An interval whose
    log reads like docs can still carry a user-facing fix in the same merge — a clipped
-   UI label and a stale preview stamp were both folded into "maintenance" on the strength
-   of their subject lines alone (2026-09-16), and both were things an owner would notice.
-   Read the commit BODIES of every interval before consigning it to the trailing line.
-3. ⚠️ **DETAILED, not terse — the published releases are the format, not this list.**
-   This rule used to say "concise, 1–3 tight bullets" and that is **wrong**: it produced
-   a draft the user rejected on sight as "not the agreed format" (2026-09-16). Read the
-   last published release of the artifact you are cutting **before drafting** — `v0.19.1`
-   and `PolyKybd-fw-v0.23.0` are the reference — and match what you find there:
-   - **5–6 per-version sections**, not two or three. Every version with any owner-facing
-     content gets its own `##` header.
-   - **A one-sentence sub-headline under the header**, before the bullets, saying what
-     the version is about ("A half can no longer come up on the wrong side because the
-     settings store was lost.").
-   - **3–5 substantial bullets per section.** Each carries the real mechanism, the real
-     numbers and identifiers, and — for a bug — **how it presented**, which is what makes
-     a reader recognise their own symptom ("reported as two unexplained reboots with no
-     crash record — because nothing had crashed"; "a fully-lit matrix reported 39%").
-   - **Inline ⚠️ on anything the reader must act on or could be bitten by**, mid-section,
-     not collected at the end.
-   A release note here is closer to a well-written changelog entry than to a tweet. Cut
-   filler, never mechanism.
+   UI label and a stale preview stamp were both dropped into the maintenance line on the
+   strength of their subject lines alone (2026-09-16), and both were things an owner
+   would notice. Read the commit BODIES before consigning an interval to the 🧹 line.
+3. ⚠️ **LESS IS MORE. One to two lines per bullet.** This rule has now been wrong in
+   both directions on the same release (2026-09-16): first "concise, 1–3 tight bullets"
+   produced something the user rejected as under-detailed, then the correction produced
+   four- and five-line bullets and was rejected as "too much details overall". The
+   published releases are the calibration — go and read the newest one before drafting.
+   - A bullet is **one or two lines**. It names the change, what it does for the user,
+     and the one load-bearing identifier or number (`cmd 30`, `protocol v9`, "reported
+     39% at full brightness", "no log line").
+   - **Keep the symptom, cut the forensics.** "The daemon died with no log line, taking
+     the keyboard connection with it" earns its place — a reader recognises that. The
+     COM error code, the crash-dump contents, the test that now guards it and the
+     tap-hold constants do not; they belong in the commit and the docs.
+   - A section may open with **one sub-headline sentence** before its bullets when the
+     version has a theme worth naming. It is optional, not a slot to fill.
+   - **Inline ⚠️ only on something the reader must act on or could be bitten by.**
+   If you cannot say it in two lines, the bullet is carrying development detail. Cut
+   until it is the change and its consequence.
 4. **Informative over funny.** A short theme + a single on-brand emoji is fine and
    matches past releases ("OS Shortcuts", "Glyph Script control", "Full Duplex Split
    Sync") — but don't force jokes or a punny "theme in quotes". Lead each line with
@@ -110,17 +115,19 @@ Still **honest and correct**: when a change bumps `PROTOCOL_VERSION`, say so and
 that host and firmware must be updated **together** (the connect gate is exact-match) —
 that's the one piece of deep detail a user genuinely needs.
 
-Per-version shape (see the last published release for a full worked example):
+Per-version shape (read the last published release for a full worked example):
 
 ```
 ## 0.9.NN — <short theme> <emoji>
-<One sentence saying what this version is about, before any bullet.>
+<Optional single sentence naming the theme.>
 
-- **<The change, in bold>** — what it does for the user, then the real mechanism with
-  its identifiers and numbers.
-- ⚠️ **<A caveat the reader must act on>** — why, and what to do instead.
-- **<A bug fix>** — what it did, HOW IT PRESENTED (the symptom they'd have seen), and
-  what it does now.
+- **<The change>** — what it does for the user, plus the one identifier or number.
+- ⚠️ **<A caveat>** — what to watch for, in a line.
+
+## 0.9.MM — <lesser thing, NO emoji>
+One short paragraph. No bullets.
+
+Plus maintenance releases 0.9.x–0.9.y 🧹
 ```
 
 **Lead the whole body with the compatibility line**, before the first `##`: whether the
@@ -164,11 +171,18 @@ include them in what you show the user at the review gate.
 
 ## 3. REVIEW GATE — get sign-off before creating anything
 
-⚠️ **PASTE THE WHOLE NOTES INTO CHAT, AS MARKDOWN. A summary is not the gate.**
+⚠️ **PASTE THE WHOLE NOTES INTO CHAT — RENDERED, NOT FENCED. A summary is not the gate.**
 This step was performed as a metadata table plus a prose summary of what the notes
 covered, with the files already staged — the user had to ask twice to see them
 (2026-09-16). What they are approving is the **text**, so the text is what goes in the
-message: both artifacts' bodies in full, in fenced blocks, exactly as staged.
+message: every artifact's body in full, exactly as staged.
+
+⚠️ **Write it as ordinary markdown in the message, NOT inside a ``` fence.** The chat
+renders markdown, so an unfenced paste shows the headings, bold and emoji as the reader
+will see them on GitHub, which is what they are judging. Fenced, they get the raw source
+and have to decode it — tried both on the same release, and the rendered one was the one
+that worked. Separate it from your own prose with a `---` rule above and below so the
+boundary is obvious.
 
 ⚠️ **The gate comes BEFORE step 5's staging, not alongside it.** Step 5 says "write the
 **approved** notes" — running its flow first and presenting afterwards inverts the one

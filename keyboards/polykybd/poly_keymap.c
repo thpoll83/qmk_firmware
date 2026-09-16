@@ -346,8 +346,18 @@ static void poly_flash_rgb_now(void) {
 // a reset, so the panel simply stops being repainted. 5 s is long enough to read two
 // words and short enough that the board does not look wedged.
 #define POLY_FW_NOTICE_MS 5000
+
+// How long the panel is left UNTOUCHED after a firmware phase ends, so the gap before
+// the next phase does not show as a flash of the status screen. Deliberately equal to
+// FLASH_RGB_HOLD_MS: the LEDs already bridge these gaps with exactly this timer, and a
+// panel that went back to normal while the matrix was still orange was the visible
+// half of that asymmetry.
+#define POLY_FW_HOLD_MS 2500
+
 static uint16_t s_fw_notice_at = 0;
 static bool     s_fw_notice_armed = false;
+static uint16_t s_fw_phase_at   = 0;
+static bool     s_fw_phase_seen = false;
 
 // Why the last apply was refused, and the numbers behind it. Kept here rather than
 // passed down the call because oled_fw_failed_screen() repaints from them on EVERY
@@ -365,14 +375,53 @@ fw_apply_verdict_t poly_fw_failure_detail(uint32_t *size, uint32_t *want, uint32
     return s_fw_fail_why;
 }
 
-// True while a held firmware notice still owns the status OLED. Read by
-// oled_task_user() (oled_helper.c), which must draw the notice INSTEAD of the status
-// screen for as long as this is set.
-bool poly_fw_notice_active(void) {
+// The phase that is live RIGHT NOW, in priority order.
+//
+// ⚠️ CONFIRM is tested first and from TWO sources. The synced poly_sync_t.fw_confirm
+// is what both halves agree on, but the MASTER only sets it from housekeeping — one
+// pass AFTER fw_staging_awaiting_confirm() goes true, and COMMIT has already cleared
+// fw_up_active by then. That one-pass hole put a status screen between the progress
+// bar and the prompt, which is exactly how this was reported from hardware.
+static poly_fw_screen_t fw_screen_live(void) {
+    if (get_local_state()->fw_confirm || fw_staging_awaiting_confirm()) return POLY_FW_SCREEN_CONFIRM;
+    if (fw_staging_fw_up_active())                                      return POLY_FW_SCREEN_UPDATE;
+    if (fw_staging_reboot_pending())                                    return POLY_FW_SCREEN_RESTART;
+    if (fw_staging_commit_pending())                                    return POLY_FW_SCREEN_APPLY;
+    return POLY_FW_SCREEN_NONE;
+}
+
+// Stamp the "a firmware phase was live" clock; runs every housekeeping pass.
+//
+// ⚠️ fw_staging_confirm_in_progress() is deliberately NOT stamped here, though it is
+// exactly the second gap (answered prompt -> the host's FW_UP_APPLY). It clears only
+// inside fw_staging_finalize(), i.e. only when the host sends another COMMIT — so a
+// host that disappears right after the user presses A leaves it true FOREVER, and
+// stamping on it would freeze the status OLED on the confirm screen for good. The
+// last CONFIRM pass already stamped, so the plain POLY_FW_HOLD_MS window bridges that
+// gap anyway, and it cannot latch.
+static void fw_screen_tick(void) {
+    if (fw_screen_live() != POLY_FW_SCREEN_NONE) {
+        s_fw_phase_at   = timer_read();
+        s_fw_phase_seen = true;
+    }
+}
+
+poly_fw_screen_t poly_fw_screen(void) {
+    const poly_fw_screen_t live = fw_screen_live();
+    if (live != POLY_FW_SCREEN_NONE) return live;
+    // The refusal notice is LATCHED rather than derived: commit_pending is already
+    // clear by the time it is raised, so nothing in the live state describes it.
     if (s_fw_notice_armed && timer_elapsed(s_fw_notice_at) < POLY_FW_NOTICE_MS) {
-        return true;
+        return POLY_FW_SCREEN_FAILED;
     }
     s_fw_notice_armed = false;
+    return POLY_FW_SCREEN_NONE;
+}
+
+bool poly_fw_hold_active(void) {
+    if (!s_fw_phase_seen) return false;
+    if (timer_elapsed(s_fw_phase_at) < POLY_FW_HOLD_MS) return true;
+    s_fw_phase_seen = false;
     return false;
 }
 
@@ -925,6 +974,7 @@ void housekeeping_task_user(void) {
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
 #endif
+    fw_screen_tick();   // ...and keep the status OLED on the matching firmware screen
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
     slave_data_crash_pull_tick();      // master: fetch + print the slave's crash record once per link-up
@@ -5678,6 +5728,23 @@ void suspend_power_down_kb(void) {
 // here too — without this, a reboot/bootloader jump that isn't preceded by a USB
 // suspend would discard any MRU/settings/layer changes still held in RAM.
 bool shutdown_user(bool jump_to_bootloader) {
+    // ⚠️ "Restart Now" existed but was unreachable from a firmware update, and on the
+    // MASTER it was unreachable full stop. fw_staging_arm_reboot() — the only thing
+    // that sets reboot_pending — is called from ONE place: split_fw_up.c's reset-sync
+    // handler, i.e. the SLAVE being told to restart. The master's own QK_REBOOT
+    // returns true and lets QMK reset it, and the firmware apply ends in
+    // fw_staging_apply_and_reboot()'s watchdog reset, which is a different function
+    // again. So the screen only ever appeared on one half, of a reset nobody was
+    // watching for.
+    //
+    // shutdown_quantum calls this before EVERY deliberate reset, which makes it the
+    // one place that covers them all. The bootloader jump is excluded: it has its own
+    // message (display_bootloader_message(), teal + "BOOT-LOADER!" on the keycaps),
+    // and overwriting that with "Restart Now" would be a downgrade.
+    if (!jump_to_bootloader) {
+        poly_board_unusable_cue();
+        oled_fw_restart_screen();
+    }
     save_all_dirty();
     // Disarm the watchdog before any deliberate reset / bootloader jump. Left
     // armed across a BOOTSEL entry it would reset the bootrom out from under a

@@ -9,7 +9,7 @@
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/fw_staging.h"
-#include "poly_keymap.h"         // poly_fw_notice_active()
+#include "poly_keymap.h"         // poly_fw_screen() / poly_fw_hold_active()
 #include "poly_macro.h"          // POLY_MACRO_COUNT
 #include "poly_macro_record.h"   // enum poly_rec_state + the recording read-outs
 #ifdef POLYKYBD_DOOM
@@ -631,35 +631,34 @@ const uint8_t wpm_gauge_bitmap[] PROGMEM = {
 };
 
 bool oled_task_user(void) {
-    // FW-2: the unsigned-image question outranks everything else — the board is a
-    // modal dialog and nothing else it could show is actionable. Checked before the
-    // flash screen because by the time the prompt goes up finalize has already
-    // cleared fw_up_active, so this would otherwise fall through to the idle/status
-    // screen and leave the keycaps asking a question the panel never states.
-    if (get_local_state()->fw_confirm) {
+    // A firmware episode owns the panel outright: ONE selector decides which screen,
+    // so the dispatch cannot fall through to the status screen between two phases.
+    // It used to be three separate conditions here, and the seams between them were
+    // visible on hardware as a flash of the status screen — see poly_fw_screen().
+    //
+    // Re-asserting the same screen every tick is nearly free: oled_write_raw diffs,
+    // so once it is up nothing is dirty and oled_render_dirty(true) early-returns.
+    const poly_fw_screen_t fw = poly_fw_screen();
+    if (fw != POLY_FW_SCREEN_NONE) {
         oled_scroll_off();
-        oled_fw_confirm_screen();
-    } else if (fw_staging_fw_up_active()) {
-        oled_scroll_off();
-        oled_fw_update_screen();
-    } else if (fw_staging_board_is_flashing()) {
-        // ⚠️ The apply is NOT covered by fw_up_active above — the chunk transfer has
-        // finished by then. Without this branch the sequence's deliberate returns
-        // between stages each handed the main loop a pass that repainted the ordinary
-        // status screen over the notice, so the picture FROZEN for the whole copy was
-        // the status screen. Re-asserting it every tick is nearly free: oled_write_raw
-        // diffs, so once the notice is up nothing is dirty and oled_render_dirty(true)
-        // early-returns.
-        oled_scroll_off();
-        // Name the phase we are actually in. Re-asserting the RESTART screen matters
-        // less (that path calls mcu_reset() in the same pass and never returns), but
-        // having the branch answer with "Applying Firmware" during a reboot would be a
-        // lie waiting for the first time that path ever yields.
-        if (fw_staging_reboot_pending()) {
-            oled_fw_restart_screen();
-        } else {
-            oled_fw_apply_screen();
+        switch (fw) {
+            // FW-2: the unsigned-image question outranks everything else — the board
+            // is a modal dialog and nothing else it could show is actionable.
+            case POLY_FW_SCREEN_CONFIRM: oled_fw_confirm_screen(); break;
+            case POLY_FW_SCREEN_UPDATE:  oled_fw_update_screen();  break;
+            case POLY_FW_SCREEN_APPLY:   oled_fw_apply_screen();   break;
+            case POLY_FW_SCREEN_RESTART: oled_fw_restart_screen(); break;
+            case POLY_FW_SCREEN_FAILED:  oled_fw_failed_screen();  break;
+            default: break;
         }
+    } else if (poly_fw_hold_active()) {
+        // In the GAP between two phases. Deliberately draws NOTHING: the SSD1306 keeps
+        // its GDDRAM, so the last firmware screen simply stays on the glass until the
+        // next phase takes over. That is why this is a hold and not a "busy" screen —
+        // re-rendering the update screen here would read its progress out of state
+        // that has already gone idle and show 0%, which is worse than the flash it is
+        // meant to fix.
+        return false;
 #ifdef POLYKYBD_DOOM
     } else if (doom_mode_active() || get_local_state()->doom_ctl) {
         // Game mode status OLED — master directly, slave via the synced
@@ -682,14 +681,6 @@ bool oled_task_user(void) {
         }
         // face == 1: the panel already shows the current face — leave it be.
 #endif
-    } else if (poly_fw_notice_active()) {
-        // A firmware notice that outlived the operation that raised it: today only the
-        // refused apply, which is the one firmware path that RETURNS. Held above the
-        // recorder and the idle logos because it is the answer to "I pressed update and
-        // nothing happened", and the 66 ms status tick would otherwise erase it before
-        // it could be read. It expires by itself (POLY_FW_NOTICE_MS).
-        oled_scroll_off();
-        oled_fw_failed_screen();
     } else if (get_local_state()->rec_state != POLY_REC_IDLE) {
         // ABOVE the idle branch on purpose: the idle timer would otherwise swap the
         // panel to the logos mid-recording and take the only indicator with it. The

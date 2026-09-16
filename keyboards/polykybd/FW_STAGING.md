@@ -97,6 +97,44 @@ next `rgb_matrix_task()` and there is no next one; the notice screens end in
 the keycap blank is a direct SPI write for the same reason. **A cue queued on a path
 that never returns is a cue nobody ever sees.**
 
+⚠️ **The SEAMS between phases flashed the status screen, and each one is a different
+hole.** Reported from hardware after the overpaint fix: "for a very brief moment I saw
+the status screen between the percent update / accept-reject / apply screens". Three
+separate conditions used to select these screens, and nothing owned the gaps:
+
+- **transfer → prompt.** `fw_staging_finalize()` clears `s_fw_up_active` when it raises
+  the prompt, but the synced `poly_sync_t.fw_confirm` is only set from housekeeping a
+  pass later — and on the slave, a split sync later still. `fw_screen_live()` now tests
+  `fw_staging_awaiting_confirm()` as well, which is true from the moment COMMIT raises
+  it.
+- **prompt answered → apply.** `s_confirm` goes `ACCEPTED`, `fw_confirm` clears, and
+  `commit_pending` is not set until the host sends `FW_UP_APPLY` — a whole HID round
+  trip. Nothing describes the board during it.
+
+`poly_fw_screen()` is now the ONE selector, and `poly_fw_hold_active()` covers the gaps
+by drawing **nothing at all** for `POLY_FW_HOLD_MS` (2500, the same constant the RGB
+cue bridges them with). The SSD1306 keeps its GDDRAM, so the last firmware screen stays
+on the glass. ⚠️ Re-rendering the update screen there instead would read its progress
+out of state that has already gone idle (`fw_staging_active_target()` returns `0xFF`,
+`fw_staging_image_size()` returns 0) and draw the wrong screen at 0 % — worse than the
+flash it is meant to fix.
+
+⚠️ **`fw_staging_confirm_in_progress()` must NOT extend the hold**, tempting as it is:
+it is exactly the second gap, but it clears only inside `fw_staging_finalize()`, i.e.
+only when the host sends another COMMIT. A host that disappears after the user presses
+**A** leaves it true forever, and holding on it would freeze the status OLED on the
+confirm screen permanently. The last CONFIRM pass has already stamped the clock, so the
+plain window bridges that gap and cannot latch.
+
+⚠️ **"Restart Now" was unreachable from an update, and on the MASTER unreachable at
+all.** `fw_staging_arm_reboot()` — the only thing that sets `reboot_pending` — is called
+from exactly one place, `split_fw_up.c`'s reset-sync handler, i.e. the SLAVE being told
+to restart. The master's own `QK_REBOOT` returns true and lets QMK reset it, and the
+firmware apply ends in `fw_staging_apply_and_reboot()`'s watchdog reset, a different
+function again. `shutdown_user()` now paints it: `shutdown_quantum` calls that before
+every deliberate reset, which is the one place covering all of them. The bootloader jump
+is excluded — it has its own message and overwriting that would be a downgrade.
+
 ⚠️ **Measure every line; two of them did not fit and one glyph was not there.**
 `tools/status_oled_preview.py --fw-notice {apply,restart,failed,failed-none}` renders
 these from the real committed fonts. It caught `"Restarting"` at 125 of 128 px,
@@ -145,8 +183,8 @@ image that fails its CRC is refused (rather than erasing a working firmware with
 image we cannot vouch for), and that used to exist only as a console line on a console
 nobody has open: from the outside the update simply did nothing, and after the keycap
 blanking above it would have looked worse still. It now paints `Update FAILED`, restores
-the legends, and is held for `POLY_FW_NOTICE_MS` (5 s) by `poly_fw_notice_active()` —
-without the hold, `oled_task_user()`'s 66 ms status tick erases it before it can be read.
+the legends, and is held for `POLY_FW_NOTICE_MS` (5 s) by `poly_fw_screen()` — without
+the hold, `oled_task_user()`'s 66 ms status tick erases it before it can be read.
 
 **Why there is no separate "Verifying" state**, though the apply has four internal
 stages: only stage 3 is long. Stages 0–2 (clear keys, flush EEPROM, CRC the staged

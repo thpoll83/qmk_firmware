@@ -368,11 +368,16 @@ void oled_boot_progress(uint8_t step, uint8_t total) {
 // "⭯Applying  Restarts⭯" — ONE screen for the whole apply, and the one frozen on the
 // panel for the entire multi-second copy.
 //
-// ⚠️ It has to name the LONG operation and the outcome at once, because there is no
-// way to change it part-way. "Restart Now" alone was tried and read as a hang: the
-// erase+rewrite of ~490 KB sits under it for seconds, so a word promising something
-// instant made the wait feel broken. "Applying Firmware" alone never mentioned the
-// reboot, which is what was being asked for. Both words, one paint.
+// ⚠️ It names the LONG operation, because there is no way to change it part-way and
+// the erase+rewrite of ~490 KB sits under it for SECONDS. "Restart Now" was tried here
+// and read as a hang for exactly that reason — a word promising something instant
+// makes a multi-second wait feel broken. This pairs with the transfer screen's
+// "Staging...": the two phases now use the firmware's own vocabulary (fw_staging_* /
+// apply), so which one you are in is readable rather than inferred.
+//
+// The reboot is deliberately NOT named. It cannot be shown when it happens (see
+// below), and naming it on the screen that covers the copy is what caused the "feels
+// very long" report. The board coming back on "Booting.... 25%" is the restart.
 //
 // ⚠️ A timed hand-off between two screens is NOT available here, and the SSD1306's
 // hardware scroll cannot fake it: on a 128x64 panel OLED_MATRIX_SIZE is the whole
@@ -382,7 +387,7 @@ void oled_boot_progress(uint8_t step, uint8_t total) {
 // (It would work on a 128x32 panel, where half the GDDRAM is hidden.) Nothing else
 // can run either: the copy holds the core with interrupts off and never returns.
 void oled_fw_apply_screen(void) {
-    oled_fw_notice(is_left_side() ? U"Applying" : U"Restarts", true);
+    oled_fw_notice(is_left_side() ? U"Applying" : U"Firmware", true);
 }
 
 // "⭯Restart  Now⭯" — the QK_REBOOT / staged-reset path. It clears the keyboard,

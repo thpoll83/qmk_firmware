@@ -246,7 +246,7 @@ void oled_update_buffer_fw_update(void) {
     if (!fonts && is_keyboard_master()) {
         // Firmware, master half: static notice (only 32 px tall → two lines).
         kdisp_write_gfx_text(smallFont, 1, 0, 12, U"PolyKybd");
-        kdisp_write_gfx_text(smallFont, 1, 0, 28, U"FW Update...");
+        kdisp_write_gfx_text(smallFont, 1, 0, 28, U"FW Staging...");
         return;
     }
 

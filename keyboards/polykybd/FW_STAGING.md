@@ -50,9 +50,9 @@ screens are previewable without flashing via
 
 | state | RGB | keycaps | status OLED |
 |---|---|---|---|
-| staging / transfer | breathing **cyan** | legible base legends | `oled_fw_update_screen()` + progress bar |
+| staging / transfer | breathing **cyan** | legible base legends | `PolyKybd / Firmware / Staging...` + progress bar |
 | FW-2 confirm prompt | breathing **orange** | blank except **A** / **R** | `oled_fw_confirm_screen()` |
-| applying (all of it, incl. the copy) | solid **orange** | **blank** | `⭯Applying  Restarts⭯` |
+| applying (all of it, incl. the copy) | solid **orange** | **blank** | `⭯Applying  Firmware⭯` |
 | reboot / staged reset | solid **orange** | **blank** | `⭯Restart  Now⭯` |
 | apply REFUSED | orange fades out | legends restored | `Update FAILED / <reason>` + the numbers, held 5 s |
 
@@ -126,15 +126,19 @@ only when the host sends another COMMIT. A host that disappears after the user p
 confirm screen permanently. The last CONFIRM pass has already stamped the clock, so the
 plain window bridges that gap and cannot latch.
 
-⚠️ **ONE screen covers the whole apply, and it has to name the long operation AND the
-outcome at once — because there is no way to change it part-way.** The apply screen is
-frozen on the panel for the entire multi-second copy: `fw_staging_do_apply()` holds the
-core with interrupts off and resets from inside itself, so there is no window after the
-copy and before the reboot. Two labels were tried and each failed in its own direction:
-`Applying Firmware` never mentioned the reboot, which is what was being asked for; and
-`Restart Now` alone **read as a hang**, because the erase+rewrite of ~490 KB sits under
-it for seconds and a word promising something instant makes the wait feel broken
-(reported from hardware, 2026-09-16). `⭯Applying  Restarts⭯` says both in one paint.
+⚠️ **Name the two phases with the firmware's OWN vocabulary: `Staging...` then
+`⭯Applying  Firmware⭯`.** The transfer writes into the STAGING area and installs
+nothing; the apply is the separate, multi-second install. Calling the first one
+"Update..." made them indistinguishable, and only the second is the long one.
+
+⚠️ **ONE screen covers the whole apply and it cannot change part-way**:
+`fw_staging_do_apply()` holds the core with interrupts off and resets from inside
+itself, so there is no window after the copy and before the reboot. The reboot is
+therefore NOT named on it — that was tried (`Restart Now`, then `Applying Restarts`)
+and **read as a hang**, because the erase+rewrite of ~490 KB sits under the screen for
+seconds and a word promising something instant makes the wait feel broken (reported
+from hardware, 2026-09-16). The restart is what the user sees as the board coming back
+on `Booting.... 25%`.
 
 ⚠️ **The SSD1306 hardware scroll CANNOT fake a timed hand-off between two screens**,
 which is the obvious idea since the panel would run it with no CPU. On a **128×64**

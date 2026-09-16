@@ -1326,11 +1326,6 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
 // Affordable here (~25 ms over ~490 KB) precisely because this runs from housekeeping.
 // The same scan inside COMMIT overflowed the split-transaction window on the slave,
 // which is why finalize keeps the O(1) running CRC -- do not move this there.
-uint32_t fw_staging_staged_size(void) {
-    const uint32_t *hdr = (const uint32_t *)(XIP_BASE + FW_STAGING_OFFSET);
-    return (hdr[0] == FW_STAGING_MAGIC) ? hdr[1] : 0u;
-}
-
 fw_apply_verdict_t fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expect_crc, uint32_t *actual_crc) {
     const uint32_t *hdr = (const uint32_t *)(XIP_BASE + FW_STAGING_OFFSET);
     if (hdr[0] != FW_STAGING_MAGIC) return FW_APPLY_NO_IMAGE;

@@ -210,7 +210,7 @@ def build_fw_confirm_panel(side, small):
     return pts
 
 
-def build_fw_notice_panel(side, disp, arrow, word, icon=True, detail=None, small=None):
+def build_fw_notice_panel(side, disp, arrow, word, icon=True):
     """The two-word firmware notice — mirror of oled_helper.c's oled_fw_notice(),
     behind oled_fw_apply_screen() / oled_fw_restart_screen() / oled_fw_failed_screen().
 
@@ -236,9 +236,8 @@ def build_fw_notice_panel(side, disp, arrow, word, icon=True, detail=None, small
     gx = (P_W - (iw + gap + tw)) // 2
     if gx < 0:
         gx = 0
-    hband = (P_H * 2) // 3 if detail else P_H
-    i_base = hband // 2 - (iy0 + iy1) // 2
-    t_base = hband // 2 - (ty0 + ty1) // 2
+    i_base = P_H // 2 - (iy0 + iy1) // 2
+    t_base = P_H // 2 - (ty0 + ty1) // 2
     if not icon:
         draw(setp, disp, gx - tx0, t_base, s2cp(word))
     elif side == 'L':
@@ -247,14 +246,6 @@ def build_fw_notice_panel(side, disp, arrow, word, icon=True, detail=None, small
     else:
         draw(setp, disp, gx - tx0, t_base, s2cp(word))
         draw(setp, arrow, gx + tw + gap - ix0, i_base, [0x2B6F])
-    if detail:
-        dcp = s2cp(detail)
-        dx0, dx1, dy0, dy1 = text_bbox(small, dcp)
-        dx = (P_W - (dx1 - dx0 + 1)) // 2 - dx0
-        if dx < 0:
-            dx = 0
-        dband = P_H - hband
-        draw(setp, small, dx, hband + dband // 2 - (dy0 + dy1) // 2, dcp)
     return pts
 
 
@@ -821,9 +812,8 @@ def main():
         arrow = load_notice_font()
         words = {'apply':   ('Applying', 'Firmware'),
                  'restart': ('Restart',  'Now')}[args.fw_notice]
-        dets = ('482 KB', 'do not unplug') if args.fw_notice == 'apply' else (None, None)
-        L = build_fw_notice_panel('L', disp, arrow, words[0], True, dets[0], small)
-        R = build_fw_notice_panel('R', disp, arrow, words[1], True, dets[1], small)
+        L = build_fw_notice_panel('L', disp, arrow, words[0])
+        R = build_fw_notice_panel('R', disp, arrow, words[1])
     elif args.telemetry:
         L = build_telemetry_panel(True,  small, uptime=args.uptime, link=args.link)
         R = build_telemetry_panel(False, small, uptime=args.uptime, link=args.link)

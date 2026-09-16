@@ -134,12 +134,6 @@ typedef enum {
 // zero as a fact about the image.
 fw_apply_verdict_t fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expect_crc, uint32_t *actual_crc);
 
-// The staged image's size straight out of the header -- O(1), no CRC scan, so it is
-// safe to call on the apply path BEFORE the ~25 ms verify. 0 when nothing is staged.
-// Exists so the "Applying" notice can say how much work is about to happen: the copy
-// blocks for seconds with no way to update the panel, and a size is the only progress
-// information that can be shown at all.
-uint32_t fw_staging_staged_size(void);
 
 // Disarm an armed apply without applying it.
 void fw_staging_cancel_apply(void);

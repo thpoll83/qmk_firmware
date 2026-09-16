@@ -258,12 +258,13 @@ void oled_fw_confirm_screen(void) {
 // and is the wrong thing to leave on screen when nothing is progressing. A dedicated
 // warning glyph would need a font-pack round for one screen, so the word carries it.
 //
-// `detail` is an optional small-font line under the headline. It is dropped on the
-// 32 px panel, where the headline alone is already 20 of the 32 rows — the same
-// accommodation oled_fw_confirm_screen() makes for its third line. Pass NULL when
-// there is nothing to add.
-static void oled_fw_notice(const uint32_t* word, bool icon, const uint32_t* detail) {
-    const bool show_detail = detail && (OLED_DISPLAY_HEIGHT >= 64);
+// One word, centred, and nothing else. A small-font second line carrying the staged
+// size was tried here and removed: on the screen that is FROZEN for the whole copy,
+// the state is the message, and a number beside it only competes with it. The size is
+// still in the console line, and the failure screen — which genuinely has something to
+// say — carries its detail in its own band layout rather than bolting a line onto this
+// one.
+static void oled_fw_notice(const uint32_t* word, bool icon) {
     const GFXfont*  mid[]     = { &NotoSans_Regular_Mid_19px7b };
     const GFXfont*  arrow[]   = { &NotoSansSymbols2_Regular_Arrows_20pt16b };
     const uint32_t* icon_txt  = U"\U00002B6F";   // resident circular "refresh" arrow ⭯
@@ -288,12 +289,8 @@ static void oled_fw_notice(const uint32_t* word, bool icon, const uint32_t* deta
     // Per-element vertical centre: a baseline B lands lit pixels at [B+min, B+max],
     // so B = H/2 - (min+max)/2. The x origin is offset by -bbox_min so the leftmost
     // lit pixel lands exactly at the group position (side bearings don't shift it).
-    // The headline owns the whole panel on its own, or the top band when a detail
-    // line joins it — centred in the band either way, so adding the line moves the
-    // headline up instead of letting the two collide.
-    const int8_t hband = (int8_t)(show_detail ? (OLED_DISPLAY_HEIGHT * 2) / 3 : OLED_DISPLAY_HEIGHT);
-    const int8_t iBase = (int8_t)(hband / 2 - (iy0 + iy1) / 2);
-    const int8_t tBase = (int8_t)(hband / 2 - (ty0 + ty1) / 2);
+    const int8_t iBase = (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (iy0 + iy1) / 2);
+    const int8_t tBase = (int8_t)(OLED_DISPLAY_HEIGHT / 2 - (ty0 + ty1) / 2);
 
     if (!icon) {
         kdisp_write_gfx_text(mid, 1, (int8_t)(gx - tx0), tBase, word);
@@ -305,17 +302,6 @@ static void oled_fw_notice(const uint32_t* word, bool icon, const uint32_t* deta
         kdisp_write_gfx_text(arrow, 1, (int8_t)(gx + tw + gap - ix0), iBase, icon_txt);
     }
 
-    if (show_detail) {
-        const GFXfont* small[] = { &NotoSans_Regular_Small_15px7b };
-        int8_t dx0 = 0, dx1 = 0, dy0 = 0, dy1 = 0;
-        kdisp_gfx_text_bbox(small, 1, detail, &dx0, &dx1, &dy0, &dy1);
-        int16_t dx = (int16_t)((OLED_DISPLAY_WIDTH - (dx1 - dx0 + 1)) / 2 - dx0);
-        if (dx < 0) dx = 0;
-        const int8_t dband = (int8_t)(OLED_DISPLAY_HEIGHT - hband);
-        kdisp_write_gfx_text(small, 1, (int8_t)dx,
-                             (int8_t)(hband + dband / 2 - (dy0 + dy1) / 2), detail);
-    }
-
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
     oled_render_dirty(true);   // one synchronous full flush before the reboot
 }
@@ -324,25 +310,7 @@ static void oled_fw_notice(const uint32_t* word, bool icon, const uint32_t* deta
 // will reboot out of it. This is the screen frozen on the panel for the whole copy,
 // so it must name the LONG operation, not the millisecond one that precedes it.
 void oled_fw_apply_screen(void) {
-    // The size is the ONLY progress information this screen can carry: the copy
-    // blocks for seconds with interrupts off and never returns, so nothing can update
-    // the panel once it starts. Saying how much is about to be written at least
-    // distinguishes "this will take a moment" from "this is wedged".
-    // Header-only read (no CRC scan), so it is free to do on every repaint.
-    uint32_t       buf[12];
-    char           txt[20];
-    const uint32_t kb = (fw_staging_staged_size() + 1023u) / 1024u;
-    snprintf(txt, sizeof(txt), "%lu KB", (unsigned long)kb);
-    ascii_to_u32_string(buf, sizeof(buf), txt);
-    // The two halves carry DIFFERENT detail. Printing the size on both wastes the
-    // second panel on a number the user has already read, and the other thing worth
-    // saying here is the one that matters most: the copy erases the only working
-    // firmware, so losing power part-way through is exactly how a board bricks.
-    if (is_left_side()) {
-        oled_fw_notice(U"Applying", true, kb ? buf : NULL);
-    } else {
-        oled_fw_notice(U"Firmware", true, U"do not unplug");
-    }
+    oled_fw_notice(is_left_side() ? U"Applying" : U"Firmware", true);
 }
 
 // "⭯Restart  Now⭯" — the QK_REBOOT / staged-reset path. It clears the keyboard,
@@ -355,7 +323,7 @@ void oled_fw_apply_screen(void) {
 // margin. It does not clip, but a word that only just fits is a word that clips the
 // next time the font is regenerated. "Restart" is 96 px, 16 px a side.
 void oled_fw_restart_screen(void) {
-    oled_fw_notice(is_left_side() ? U"Restart" : U"Now", true, NULL);
+    oled_fw_notice(is_left_side() ? U"Restart" : U"Now", true);
 }
 
 // "Update  FAILED" — the staged image did not match its CRC, so the apply was

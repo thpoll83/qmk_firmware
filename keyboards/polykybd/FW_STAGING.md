@@ -52,17 +52,16 @@ screens are previewable without flashing via
 |---|---|---|---|
 | staging / transfer | breathing **cyan** | legible base legends | `oled_fw_update_screen()` + progress bar |
 | FW-2 confirm prompt | breathing **orange** | blank except **A** / **R** | `oled_fw_confirm_screen()` |
-| applying | solid **orange** | **blank** | `⭯Applying / 482 KB` · `Firmware⭯ / do not unplug` |
+| applying | solid **orange** | **blank** | `⭯Applying  Firmware⭯` |
 | reboot / staged reset | solid **orange** | **blank** | `⭯Restart  Now⭯` |
 | apply REFUSED | orange fades out | legends restored | `Update FAILED / <reason>` + the numbers, held 5 s |
 
-**The two halves carry DIFFERENT detail**, because printing the same number twice
-wastes the second panel. The size is the only progress information the apply screen
-can carry at all — the copy blocks for seconds with interrupts off and never returns,
-so nothing can update the panel once it starts, and a size at least separates "this
-will take a moment" from "this is wedged". The right half spends its line on the thing
-that matters most instead: the copy erases the only working firmware, so losing power
-part-way through is exactly how a board bricks.
+**The applying screen stays two words and nothing else.** A small-font line carrying
+the staged size was tried under the headline and removed: on the screen that is FROZEN
+for the whole copy the state IS the message, and a number beside it only competes with
+it. The size stays in the `APPLY 3/4` console line. The failure screen, which genuinely
+has something to say, carries its detail in its own band layout rather than bolting a
+second line onto the notice.
 
 **A refused apply names WHICH failure**, via `fw_apply_verdict_t`. The two are
 different events and the user can act on the difference:

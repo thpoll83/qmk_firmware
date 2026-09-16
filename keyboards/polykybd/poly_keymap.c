@@ -68,6 +68,7 @@
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
+#include "base/status_brightness.h"      // one brightness scale for keycaps + status OLED
 #include "usb_util.h"                     // usb_vbus_state() — the suspend-time power check
 #include "crash_test.h"                   // POLYKYBD_CRASH_TEST: deliberate faults (no-op inlines otherwise)
 #include "slave_data.h"                   // slave_data_register(), slave_data_crash_pull_tick()
@@ -366,6 +367,20 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 }
 #endif
 
+// Status OLED contrast register for the current moment. Dark while idling (the
+// panel is handed to oled_render_logos() with its hardware scroll running, and
+// that faint scrolling logo is the idle look), otherwise the SAME brightness the
+// keycaps are on, mapped onto this panel's range by base/status_brightness.h.
+//
+// The input is the ACTIVE brightness (host-auto value when auto is engaged, else
+// the stored manual one), NOT local_state->contrast: the pulse idle style cycles
+// contrast 0..49 every housekeeping pass, which would strobe the panel. Both
+// halves can answer it — the slave's g_user_brightness is kept current by
+// note_user_brightness() in split_sync.c.
+static uint8_t status_oled_level(bool idle) {
+    return idle ? POLY_STATUS_IDLE_BRIGHT : poly_status_brightness(get_active_brightness());
+}
+
 // Synchronizes local and global display state, handling idle transitions, contrast changes, and display updates.
 // Global variables: flags, overlay_flags
 // Force the master to push the default layer / layer state to the slave after boot,
@@ -539,15 +554,26 @@ void sync_and_refresh_displays(void) {
         const bool status_disp_changed  = has_flag_changed(local_flags, global_flags, STATUS_DISP_ON);
         const bool status_disp_on       = test_flag(local_flags, STATUS_DISP_ON);
 
-        if(idle_changed) {
-            if(in_idle_mode) {
-                oled_set_brightness(0);
+        // ⚠️ This used to be an idle-ENTRY-only oled_set_brightness(0) with no
+        // restore on idle EXIT. The only code that raised the panel again was the
+        // status_disp_changed branch below, and the idle block in housekeeping sets
+        // STATUS_DISP_ON on every pass — so that flag never flips across an
+        // idle->wake cycle and the status OLED stayed at contrast register 0 (on an
+        // SSD1306 that is "barely visible", not off) until the status display was
+        // toggled or the board rebooted. A LONGER absence hid the bug, because
+        // poly_suspend() does clear STATUS_DISP_ON and the resume path did restore
+        // the brightness: hence "dim for no reason", but only sometimes.
+        // Keying the restore off contrast_changed as well as idle_changed fixes it —
+        // waking moves contrast from the pulse value back to the active brightness.
+        if(idle_changed || contrast_changed) {
+            if(status_disp_on) {
+                oled_set_brightness(status_oled_level(in_idle_mode));
             }
         }
 
         if(status_disp_changed) {
             if(status_disp_on) {
-                oled_set_brightness(OLED_BRIGHTNESS);
+                oled_set_brightness(status_oled_level(in_idle_mode));
 #ifdef RGB_MATRIX_ENABLE
                 if(test_flag(local_flags, RGB_ON)) {
                     rgb_matrix_enable_noeeprom();
@@ -5282,6 +5308,11 @@ void keyboard_post_init_user(void) {
     splash_progress(7);                 // EEPROM config (brightness/lang/OS/MRU) loaded
 
     set_displays(local_state->contrast, false);   // active brightness (auto value if restored, else manual)
+    // …and bring the status panel up on the same scale. QMK's oled_init() programs
+    // the contrast register to OLED_BRIGHTNESS unconditionally, so without this a
+    // board that booted with a stored brightness of 2 would light its status OLED at
+    // full until the first contrast change moved it.
+    oled_set_brightness(status_oled_level(false));
 
     // One-time startup animation: on the very first boot (fresh EEPROM), play the
     // procedural intro once, then persist BOOT_INTRO_DONE (in the housekeeping

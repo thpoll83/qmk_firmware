@@ -67,6 +67,52 @@ landed; revisit only if a full swap still looks slow on hardware): raise
 `OLED_UPDATE_PROCESS_LIMIT`, or bump I2C to Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`,
 above SSD1306 spec — A/B on real hardware).
 
+## Brightness: ONE scale with the keycaps (`base/status_brightness.h`)
+
+The status panel used to sit at a fixed `OLED_BRIGHTNESS` (60) while the per-keycap
+panels ran on `poly_sync_t.contrast` (1..`FULL_BRIGHT`, written as `contrast - 1`).
+So `KC_DMIN`, the host slider (cmd 13) and the LTR-559 auto value all dimmed the
+keycaps while the status OLED kept blaring, and nothing on the keyboard or in the
+host could turn it down.
+
+`poly_status_brightness()` now maps the keycap scale onto this panel's register:
+`FULL_BRIGHT` lands exactly on `OLED_BRIGHTNESS`, so the top of the scale looks the
+way it always has, and every level below it tracks the keycaps. `POLY_STATUS_MIN_BRIGHT`
+is the FLOOR of the mapped range, not a clamp applied after it — the two panels differ
+in size and multiplex ratio, so the bottom of the keycap scale is not guaranteed to be
+readable as thin text on 128×64. Raising it rescales the map without moving the
+`FULL_BRIGHT` end. Unit-tested (`make test:polykybd_status_brightness`).
+
+- ⚠️ **Feed the map `get_active_brightness()`, NEVER `local_state->contrast`.** The
+  pulse idle style cycles contrast 0..49 every housekeeping pass; the panel would
+  strobe. `status_oled_level()` in `poly_keymap.c` is the one place that decides.
+- Both halves can answer it — the slave's `g_user_brightness` is kept current by
+  `note_user_brightness()` in `split_sync.c`, which deliberately skips idle/fade
+  values, so the status panel also holds steady through the keycap fade-out.
+- **No new synced field, EEPROM byte or HID command.** Cmd 13 and the `KC_D*` keys
+  already carry the value, so the brightness sun gauge drawn ON this panel now
+  describes the panel it is drawn on.
+- `keyboard_post_init_user()` sets it at boot: QMK's `oled_init()` programs the
+  contrast register to `OLED_BRIGHTNESS` unconditionally, so a board with a stored
+  brightness of 2 would otherwise come up at full until the first contrast change.
+
+⚠️ **The "dim for no reason, but only sometimes" bug (fixed 2026-09-16).** Idle ENTRY
+called `oled_set_brightness(0)` and nothing restored it on idle EXIT. The only code
+that raised the panel again was the `STATUS_DISP_ON` branch, and the idle block in
+housekeeping sets `STATUS_DISP_ON` on **every pass** — so that flag never flips across
+an idle→wake cycle, and the panel stayed at contrast register 0 until the status
+display was toggled or the board rebooted. Register 0 on an SSD1306 is "barely
+visible", **not off**, which is why it read as a brightness fault rather than a dead
+panel. A *longer* absence hid it: `poly_suspend()` does clear `STATUS_DISP_ON`, so the
+resume path restored 60. **The lesson generalises — a flag that a periodic task
+re-asserts every pass can never be used as a change EDGE.** The restore is now keyed
+off `contrast_changed || idle_changed`.
+
+⚠️ **Idle is a dim contrast register, NOT `oled_off()`** (`POLY_STATUS_IDLE_BRIGHT`,
+0). `oled_task_user()` hands the panel to `oled_render_logos()` during `DISP_IDLE` and
+its **hardware scroll** keeps running; switching the panel off would stop the scroll,
+which is the idle look this board is supposed to have.
+
 **Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
 `oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced
 `poly_sync_t.settings_more`). Four lines on the 64 px panel, two on the 32 px one:

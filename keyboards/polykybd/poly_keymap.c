@@ -892,8 +892,9 @@ void poly_prepare_for_flash(void) {
     reset_idle_jitter();       // fresh centred legends, not jittered offsets
     // Restart the idle countdown from the start of the flash — a deliberate host
     // command, so this is real activity by update.h's rule. Unconditional matters:
-    // a keyboard 100 s into its 120 s FADE_OUT_TIME was awake (so the old gated
-    // stamp never ran) and would fade out 20 s into the transfer.
+    // a keyboard 100 s into a 120 s idle timeout was awake (so the old gated
+    // stamp never ran) and would fade out 20 s into the transfer. Shorter presets
+    // (cmd 40 goes down to 15 s) make that window tighter, not wider.
     update_performed();
     // Momentary/toggle layers off, then back onto the PolyKybd default layout.
     // A bare layer_clear() falls through to QMK's *saved* default layer
@@ -1204,7 +1205,7 @@ void housekeeping_task_user(void) {
         // Hold the idle countdown off for the whole gesture, the same way the FW-2
         // prompt below does. The panel IS the only indicator a recording has, and
         // update_displays() early-returns once DISP_IDLE is set — so a slow-typed
-        // macro that crossed FADE_OUT_TIME would dim the picker and the REC readout
+        // macro that crossed the idle timeout would dim the picker and the REC readout
         // out from under the user, with no way back short of a keypress that the
         // recorder would then capture.
         if (rs != (uint8_t)POLY_REC_IDLE) {
@@ -1240,7 +1241,7 @@ void housekeeping_task_user(void) {
     // Hold the idle countdown off for the whole transfer, the same way the
     // confirmation prompt above does. The idle state machine below is NOT behind
     // the !fw_up_active gate (only the refresh that would act on it is), so a
-    // flash long enough to cross FADE_OUT_TIME with nobody typing flips the state
+    // flash long enough to cross the idle timeout with nobody typing flips the state
     // to idle mid-transfer — the keycaps poly_prepare_for_flash() just made
     // legible then go dark the moment the flash releases the display path (a
     // font-pack flash, which does not reboot, shows this plainly). A flash is a
@@ -1386,8 +1387,13 @@ void housekeeping_task_user(void) {
             flags |= STATUS_DISP_ON;
             flags &= ~((uint8_t)IDLE_TRANSITION);
 
-            if(elapsed_time_since_update > FADE_OUT_TIME && contrast >= MIN_BRIGHT && (flags & DISP_IDLE)==0) {
-                int32_t time_after = elapsed_time_since_update - FADE_OUT_TIME;
+            // The idle delay is a per-board SETTING now (enum poly_idle_timeout, HID
+            // cmd 40), read fresh every pass rather than latched: a host that shortens
+            // it below the time already elapsed must drop the board into idle on the
+            // very next pass, not at the next key press.
+            const uint32_t idle_after_ms = get_idle_timeout_ms();
+            if(elapsed_time_since_update > idle_after_ms && contrast >= MIN_BRIGHT && (flags & DISP_IDLE)==0) {
+                int32_t time_after = elapsed_time_since_update - idle_after_ms;
                 int16_t brightness = ((FADE_TRANSITION_TIME - time_after) * get_active_brightness()) / FADE_TRANSITION_TIME;
 
                 //transition to pulsing mode
@@ -1451,7 +1457,7 @@ void housekeeping_task_user(void) {
                     // would call kdisp_idle() and fight the animation).
                     contrast = EDEN_IDLE_BRIGHTNESS;
                 } else {
-                    int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
+                    int32_t time_after = PK_MAX(elapsed_time_since_update - idle_after_ms - FADE_TRANSITION_TIME, 0)/300;
                     contrast = time_after%50;
                     // In JITTER style each key relocates its own legend independently as
                     // it pulses dark (kdisp_idle) — there is no shared per-cycle offset
@@ -5364,6 +5370,7 @@ void keyboard_post_init_user(void) {
     // the host re-engages). Overrides local_state->contrast when auto was on.
     load_auto_brightness(ee.auto_brightness);
     note_idle_style(ee.idle_style);
+    note_idle_timeout(ee.idle_timeout);   // BEFORE the banner below, which prints it
     emit_idle_config();   // the style is only known here — the banner tick re-emits it
     note_glyph_script(ee.glyph_script);
     note_glyph_size(ee.glyph_size);
@@ -5651,6 +5658,12 @@ void eeconfig_init_user(void) {
     // migrated, and the zero that {0} leaves here means PULSE, not "unset".
     ee.idle_style     = POLY_DEFAULT_IDLE_STYLE;
     ee.idle_style_fmt = IDLE_STYLE_FMT_OK;
+    // Likewise born with a real choice recorded. ⚠️ Through idle_timeout_pack(), not
+    // raw: the stored form is biased by one, and the zero {0} leaves here is the
+    // "never written" value — writing the enum directly would store IDLE_TIMEOUT_15S
+    // as a 0 that the loader then reads back as unset. Same class of trap as the
+    // latin_assign memset two blocks down, opposite direction.
+    ee.idle_timeout   = idle_timeout_pack(POLY_DEFAULT_IDLE_TIMEOUT);
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.

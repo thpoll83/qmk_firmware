@@ -338,6 +338,14 @@ contrast with their neighbour that the wire format does not show. The
   `*_set_user` being CALLED rather than implemented.
 - **Cmd `32` (profiler) is present ONLY in a `POLYKYBD_LOOP_PROFILE` build and bumps no
   `PROTOCOL_VERSION`.** Its NACK on a normal build is the deliberate capability signal.
+- ⚠️ **v18's idle TIMEOUT (cmd 40) deletes `FADE_OUT_TIME`** — the delay before the
+  idle style engages is a per-board setting now (`enum poly_idle_timeout`,
+  `base/idle_timeout.h`, six presets 15 s…5 min), read through
+  `get_idle_timeout_ms()`. The constant is GONE rather than left to rot, because a
+  stale `> FADE_OUT_TIME` would compile and then silently ignore the user's choice.
+  `TURN_OFF_TIME` is unchanged and deliberately not scaled by it. It is persisted as
+  the enum **biased by one**, so a zero byte means "never chosen" — the property
+  `idle_style_fmt` needed a whole second byte to provide.
 - ⚠️ **The flat overlay index is the only ADDRESS an upload has, resolved through
   `overlay_map[]` — so `reset_overlay_mapping()`'s identity default is LOAD-BEARING FOR
   WRITES**, not a display convenience. Zeroing it sent every image to slot 0: nearly

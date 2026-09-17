@@ -29,6 +29,13 @@ void save_user_settings(void) {
     const uint8_t idle_marker = IDLE_STYLE_FMT_OK;
     eeconfig_update_user_datablock(&idle_marker, offsetof(poly_eeconf_t, idle_style_fmt),
                                    sizeof(idle_marker));
+    // The idle TIMEOUT is a tail byte, so it needs its own write — the block above
+    // stops at latin_ex. It carries no separate marker: the stored form is the enum
+    // biased by one, so the byte is its own "was this ever written" evidence (see
+    // poly_eeconf_t.idle_timeout in state.h).
+    const uint8_t idle_timeout_stored = idle_timeout_pack(get_idle_timeout());
+    eeconfig_update_user_datablock(&idle_timeout_stored, offsetof(poly_eeconf_t, idle_timeout),
+                                   sizeof(idle_timeout_stored));
 }
 
 // Writes only the packed latin variation picks to EEPROM.
@@ -140,6 +147,12 @@ poly_eeconf_t load_user_eeconf(void) {
     if(ee.glyph_size >= GLYPH_SIZE_COUNT) {
         ee.glyph_size = GLYPH_SIZE_S;       // unwritten/garbage EEPROM -> the original face
     }
+    // Decode the biased idle timeout in place, so every caller sees a plain enum
+    // value and the +1 encoding never escapes this file's boundary. Unset (0, the
+    // wear-levelled read of a byte no build ever wrote) and any out-of-range byte
+    // both resolve to POLY_DEFAULT_IDLE_TIMEOUT, which is the 2 minutes the
+    // compile-time FADE_OUT_TIME always gave — so an existing board is unchanged.
+    ee.idle_timeout = idle_timeout_unpack(ee.idle_timeout);
     return ee;
 }
 

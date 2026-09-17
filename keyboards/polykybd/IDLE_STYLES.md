@@ -18,6 +18,59 @@ on — so a default whose renderer is not in the image is not expressible.
 
 ---
 
+## How long before idle: the timeout preset (HID cmd 40, protocol v18+)
+
+The delay between the last key event and the start of the idle fade was the
+compile-time **`FADE_OUT_TIME` (2 minutes)** on every board. Since protocol v18 it is
+a per-board setting: **`enum poly_idle_timeout`** in `base/idle_timeout.h`, six
+presets — 15 s, 30 s, 45 s, 1 min, 2 min, 5 min — read through
+`get_idle_timeout_ms()` and set over HID cmd 40 (`polyctl idle-timeout`, or the tray's
+*Idle Display → Idle After*).
+
+- **`FADE_OUT_TIME` is deleted, not deprecated.** A stale `> FADE_OUT_TIME` left
+  anywhere would compile and then silently ignore the user's choice, which is the
+  quietest possible failure for a setting. Its four runtime readers all moved:
+  the housekeeping engage and the pulse-phase base (`poly_keymap.c`), the HID
+  "start idle" backdate (`hid_com.c` case 15 — it must backdate by the CONFIGURED
+  interval, or "start idle" on a 5-minute board does nothing visible for three
+  minutes), and the doom screensaver's runtime (`doom_saver_max_ms()`, now a
+  function: its window is what is LEFT of the suspend deadline, so it grows as the
+  idle delay shrinks).
+- ⚠️ **`TURN_OFF_TIME` (10 min, displays off + suspend) is NOT scaled by it**, and
+  that is deliberate — when the screensaver starts and when the panels give up are
+  different questions. `state.c` `_Static_assert`s **per preset** that it still
+  leaves `FADE_TRANSITION_TIME` inside that deadline: the housekeeping chain tests
+  the fade branch before the suspend branch, so a preset at or past `TURN_OFF_TIME`
+  would reach suspend having never entered the idle style, and every `IDLE_STYLE_*`
+  would silently do nothing. Mutation-checked — a 21-minute preset fails the build
+  by name.
+- **Setting it does NOT reset the activity timestamp.** The new delay is measured
+  against the `last_update` that is already running, so picking a timeout shorter
+  than the time since the last keypress idles the board on the next housekeeping
+  pass. That is what makes the setting feel like it took effect.
+- ⚠️ **Persisted as the enum BIASED BY ONE** (`poly_eeconf_t.idle_timeout`,
+  `idle_timeout_pack()` / `idle_timeout_unpack()`), so a byte reading 0 — what QMK's
+  wear levelling hands back for a byte no build ever wrote — is unambiguously "never
+  chosen" and resolves to the 2-minute default. **This deliberately replaces a second
+  sentinel byte of the `idle_style_fmt` kind.** That one had to exist because
+  `IDLE_STYLE_PULSE` is 0, so an explicit choice and an unwritten byte were the same
+  value and no scheme could separate them *afterwards*; biasing removes the collision
+  *at the source*. It costs one byte instead of two, and a future change of
+  `POLY_DEFAULT_IDLE_TIMEOUT` cannot overwrite a real choice, because a real choice
+  was never stored as zero. `eeconfig_init_user()` must write it through
+  `idle_timeout_pack()` — storing the enum raw would save `IDLE_TIMEOUT_15S` as a 0
+  the loader then reads back as unset.
+- **The encoding is host-testable** (`base/idle_timeout.h` is header-only and pure:
+  no `quantum.h`, no `config.h`), `make test:polykybd_idle_timeout`. The
+  keyboard-config half — the ceiling assert — cannot live there and stays in
+  `state.c` over the same `POLY_IDLE_TIMEOUT_LIST`.
+- **The SET range is CLOSED** (an unknown preset NACKs) while the QUERY reply carries
+  the duration in seconds, so a host older than a firmware that adds a preset can
+  still label what it reads back. See `PROTOCOL_HISTORY.md` → v18 for why those two
+  are not in tension.
+
+---
+
 ## Idle anti-burn-in styles (`poly_keymap.c`)
 When the keyboard idles, the keycap legends would otherwise burn the **same**
 pixels in. **Four** styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum

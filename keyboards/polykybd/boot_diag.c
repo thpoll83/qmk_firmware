@@ -165,10 +165,14 @@ void emit_boot_banner(void) {
 // happen without also seeing which style was actually selected.
 void emit_idle_config(void) {
     const uint8_t style = get_idle_style();
-    uprintf("   idle: style=%s (%u) fade_out=%ums fade=%ums turn_off=%ums\n",
+    // fade_out is the ACTIVE value (cmd 40 / poly_eeconf_t.idle_timeout), not a
+    // compile-time constant any more — printing FADE_OUT_TIME here would report the
+    // default on a board that has chosen something else, which is exactly the class
+    // of console line that sends a reader looking in the wrong place.
+    uprintf("   idle: style=%s (%u) fade_out=%ums (preset %u) fade=%ums turn_off=%ums\n",
             idle_style_name(style), (unsigned int)style,
-            (unsigned int)FADE_OUT_TIME, (unsigned int)FADE_TRANSITION_TIME,
-            (unsigned int)TURN_OFF_TIME);
+            (unsigned int)get_idle_timeout_ms(), (unsigned int)get_idle_timeout(),
+            (unsigned int)FADE_TRANSITION_TIME, (unsigned int)TURN_OFF_TIME);
 }
 
 // The stored dynamic-keymap format version and whether this boot had to discard the

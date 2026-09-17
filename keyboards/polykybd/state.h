@@ -7,6 +7,10 @@
 #include "quantum.h"
 #include "mru.h"
 #include "layers.h"
+// The idle-timeout presets + the EEPROM bias encoding. A separate, PURE header so
+// the encoding is host-testable (make test:polykybd_idle_timeout); re-exported here
+// so every consumer of state.h is unchanged, the same seam as base/sync_ack.h.
+#include "base/idle_timeout.h"
 
 // Idle (anti-burn-in) display style, persisted in poly_eeconf_t.idle_style and
 // toggled over HID (cmd 28). PULSE is the legacy contrast-only breathing; JITTER
@@ -461,6 +465,11 @@ typedef struct _poly_eeconf_t {
     // block it guards, so from the first save onwards the stored style is verbatim
     // and a LATER default change cannot silently overwrite a real choice.
     uint8_t  idle_style_fmt;
+    // Persisted idle TIMEOUT (enum poly_idle_timeout, HID cmd 40), stored BIASED BY
+    // ONE so that zero means "never chosen" — idle_timeout_pack() /
+    // idle_timeout_unpack() in base/idle_timeout.h, which is also where the reason
+    // it is a bias rather than a second sentinel byte is written down.
+    uint8_t  idle_timeout;
 } poly_eeconf_t;
 
 #define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
@@ -660,6 +669,23 @@ void note_idle_style(uint8_t style);
 // Human-readable name of an idle style, for console logs ("pulse"/"jitter"/…).
 // Never NULL — an unknown value reads as "?".
 const char* idle_style_name(uint8_t style);
+
+// ---- Idle TIMEOUT (enum poly_idle_timeout) — see the enum comment above. ----
+
+// The active idle timeout PRESET (an enum value, not milliseconds).
+uint8_t get_idle_timeout(void);
+
+// The active idle timeout in MILLISECONDS — what the housekeeping fade, the HID
+// "start idle" backdate and the doom screensaver deadline all measure against.
+// This is the runtime replacement for the old compile-time FADE_OUT_TIME.
+uint32_t get_idle_timeout_ms(void);
+
+// Sets the idle timeout and marks settings dirty (deferred EEPROM write).
+// Out-of-range values are ignored. Used by the HID command (cmd 40).
+void set_idle_timeout(uint8_t value);
+
+// Records the idle timeout without marking settings dirty (boot-time EEPROM load).
+void note_idle_timeout(uint8_t value);
 
 // ---- Glyph-script override (enum poly_glyph_script) — see enum comment above. ----
 

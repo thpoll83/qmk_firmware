@@ -24,7 +24,7 @@ bool doom_mode_active(void);
 // press dismisses it (both edges swallowed — a screensaver key is never
 // typed). Returns false when a session can't start (fw staging active, zone
 // too small, or a game already running) — the caller then falls back to the
-// pulse. doom_tick() ends the screensaver at DOOM_SAVER_MAX_MS and suspends,
+// pulse. doom_tick() ends the screensaver at doom_saver_max_ms() and suspends,
 // mirroring where the pulse's TURN_OFF_TIME would have landed.
 bool doom_screensaver_start(void);
 // True while the active session is the screensaver (master side).

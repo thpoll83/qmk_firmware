@@ -110,6 +110,37 @@ reading before you change either one.
   store, which is precisely the transient value the flag exists to keep out of
   EEPROM — so the host gates it (`FEATURE_MIN_PROTOCOL["unicode_mode_volatile"]`) and
   falls back to withholding the ambiguous reading entirely.
+  **v18** adds the **idle TIMEOUT** (cmd `40` / `0x28`): `data[2]` 0xFF queries,
+  otherwise it is a preset index from `enum poly_idle_timeout`
+  (`base/idle_timeout.h`) — 15 s / 30 s / 45 s / 1 min / 2 min / 5 min. The reply is
+  `data[3]` = the preset and `data[4..5]` = its duration in SECONDS, little-endian.
+  It replaces what was the compile-time `FADE_OUT_TIME`, 2 minutes on every board,
+  which is `IDLE_TIMEOUT_2MIN` and the default — so an untouched keyboard behaves
+  exactly as it always did.
+  - ⚠️ **The SET range is CLOSED, the deliberate opposite of the glyph SCRIPT one
+    command family over (v10).** An unknown script degrades to the normal legend, so
+    accepting it costs nothing and lets the host offer faces a keyboard lacks; an
+    unknown timeout would be stored, synced and persisted while the board silently
+    resolved it to some other duration. Same reasoning as v13's `GlyphSize`.
+  - **The reply carries SECONDS for exactly one reason**: a firmware NEWER than the
+    host can add a preset, and the menu should read "10 min" rather than "preset 6".
+    That is the only forward-compatibility concession — reading is open, writing is
+    not, and the two are not in tension because the host can only offer what it can
+    also name.
+  - ⚠️ **TURN_OFF_TIME is NOT scaled by it.** They answer different questions: when
+    the screensaver starts, and when the panels give up entirely (10 min, still
+    fixed). `state.c` `_Static_assert`s per preset that the longest one still leaves
+    `FADE_TRANSITION_TIME` inside that deadline — the housekeeping chain tests the
+    fade branch before the suspend branch, so a preset past it would reach suspend
+    having never entered the idle style at all, and every `IDLE_STYLE_*` would
+    silently do nothing.
+  - **Persisted as the enum BIASED BY ONE** (`poly_eeconf_t.idle_timeout`), so a
+    byte reading 0 — what wear levelling hands back for a byte no build ever wrote —
+    is unambiguously "never chosen". That deliberately replaces a second sentinel
+    byte of the `idle_style_fmt` kind: that one had to exist because `PULSE` is 0 and
+    an explicit choice was indistinguishable from an unwritten byte. Biasing removes
+    the collision at the source, costs one byte instead of two, and means a future
+    change of the default cannot overwrite a real choice.
   ⚠️ QMK has **no `set_unicode_input_mode_noeeprom()`**; `unicode_config` is `extern`
   and `unicode_input_mode_set_kb()` is the notification the keycap legend rides on,
   so `apply_unicode_mode()` in `hid_com.c` is the persisting path minus one call —

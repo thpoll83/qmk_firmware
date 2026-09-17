@@ -712,12 +712,15 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     }
                     uprint("Stop idle.\n");
                 } else {
-                    // Backdate the activity timestamp by a full fade-out interval so
-                    // the idle fade begins on the next housekeeping pass. Modular
-                    // uint32 arithmetic makes this correct even in the first
-                    // FADE_OUT_TIME ms after boot — the old signed subtraction
-                    // underflowed there, was clamped to 0, and idle never started.
-                    backdate_last_update(FADE_OUT_TIME);
+                    // Backdate the activity timestamp by a full idle interval so the
+                    // fade begins on the next housekeeping pass. It must be the
+                    // CONFIGURED interval (cmd 40), not a constant: backdating by a
+                    // fixed 120 s on a board set to 5 minutes would leave the fade
+                    // three minutes away and read as "start idle did nothing".
+                    // Modular uint32 arithmetic makes this correct even in the first
+                    // interval after boot — the old signed subtraction underflowed
+                    // there, was clamped to 0, and idle never started.
+                    backdate_last_update(get_idle_timeout_ms());
                     uprint("Start idle.\n");
                 }
                 memset(data, 0, length);
@@ -1319,6 +1322,51 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     hid_reply(data, 0x27, true);
                     if (which <= 1) {
                         crash_record_hid_body(which, &data[3], (uint8_t)(length - 3));
+                    }
+                    raw_hid_send(data, length);
+                }
+                break;
+            case 40: //get/set the idle timeout preset (protocol v18+)
+                {
+                    // data[HID_DATA_IDX] == 0xFF -> query. Otherwise set the preset
+                    // (enum poly_idle_timeout: 0=15s 1=30s 2=45s 3=1min 4=2min 5=5min);
+                    // persisted at the next EEPROM flush (suspend / store key).
+                    //
+                    // Reply on success: data[3] = the preset, data[4..5] = its duration
+                    // in SECONDS, little-endian. The duration is there so a host that is
+                    // OLDER than a firmware which added a preset can still label what it
+                    // reads back, instead of showing a bare index it has no name for.
+                    // That is the only concession to forward compatibility here: the
+                    // SET range stays CLOSED and NACKs anything it does not know, the
+                    // deliberate opposite of the glyph-script index one command family
+                    // over (v10), because an unknown script degrades to the normal
+                    // legend while an unknown timeout would be stored, persisted and
+                    // then quietly resolved to some other duration.
+                    uint8_t arg = data[HID_DATA_IDX];
+                    memset(data, 0, length);
+                    if (arg == 0xFF) {
+                        hid_reply(data, 0x28, true);
+                        data[3] = get_idle_timeout();
+                        const uint16_t secs = (uint16_t)(get_idle_timeout_ms() / 1000u);
+                        data[4] = (uint8_t)(secs & 0xFFu);
+                        data[5] = (uint8_t)(secs >> 8);
+                    } else if (arg < IDLE_TIMEOUT_COUNT) {
+                        set_idle_timeout(arg);
+                        // No last_update reset: the new delay is measured against the
+                        // activity timestamp that is already running, so picking a
+                        // shorter timeout than the time since the last keypress idles
+                        // the board on the next housekeeping pass — which is what makes
+                        // the setting feel like it took effect.
+                        hid_reply(data, 0x28, true);
+                        data[3] = arg;
+                        const uint16_t secs = (uint16_t)(get_idle_timeout_ms() / 1000u);
+                        data[4] = (uint8_t)(secs & 0xFFu);
+                        data[5] = (uint8_t)(secs >> 8);
+                        uprintf("Set idle timeout to preset %u (%ums).\n", arg,
+                                (unsigned int)get_idle_timeout_ms());
+                    } else {
+                        hid_reply(data, 0x28, false);
+                        uprintf("Refused idle timeout %u.\n", arg);
                     }
                     raw_hid_send(data, length);
                 }

@@ -89,6 +89,17 @@ polykybd_layer_names_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# idle_timeout.h is header-only and pure (no config.h, no quantum.h), so the suite
+# is the test file alone — there is no .c to list. The keyboard-config half of the
+# feature (that every preset fits inside TURN_OFF_TIME) is a _Static_assert in
+# state.c and is covered by the firmware build, not here.
+polykybd_idle_timeout_SRC := \
+	$(POLY_BASE_PATH)/tests/idle_timeout_tests.cpp
+
+polykybd_idle_timeout_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
 # legend_plan.c is pure by construction — the font lookup and the bbox
 # measurement arrive through callbacks — so the size planner links with no fonts,
 # no display and no keyboard config. The firmware binding lives in poly_keymap.c.

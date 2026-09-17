@@ -309,14 +309,25 @@ static const uint16_t TRIGGER_SEQ[]   = {KC_I, KC_D, KC_D, KC_Q, KC_D};
 // Attract-screensaver runtime: the demo plays for the same wall-clock window
 // the idle pulse would have covered (fade end -> TURN_OFF suspend), then
 // doom_tick tears down and suspends exactly like the pulse path would.
-#define DOOM_SAVER_MAX_MS (TURN_OFF_TIME - FADE_OUT_TIME - FADE_TRANSITION_TIME)
+//
+// ⚠️ RUNTIME, not a #define, since the idle delay became a setting (enum
+// poly_idle_timeout, HID cmd 40): the window is what is LEFT of the fixed suspend
+// deadline after the configured idle delay, so it grows as the delay shrinks. The
+// subtraction cannot go negative — state.c static_asserts that the longest preset
+// plus the fade still fits inside TURN_OFF_TIME — but these are unsigned, where an
+// underflow would hand the demo a ~49-day deadline rather than a short one, so the
+// guard is cheap insurance against a preset added without reading that assert.
+static uint32_t doom_saver_max_ms(void) {
+    const uint32_t spent = get_idle_timeout_ms() + (uint32_t)FADE_TRANSITION_TIME;
+    return (spent < (uint32_t)TURN_OFF_TIME) ? ((uint32_t)TURN_OFF_TIME - spent) : 0u;
+}
 
 // poly_keymap.c — the shared suspend path (displays off, state flushed); the
 // screensaver deadline hands over to it so its end state matches the pulse's.
 
 static bool     s_active;
 static bool     s_screensaver;  // this session is the attract screensaver
-static uint32_t s_saver_start;  // for the DOOM_SAVER_MAX_MS deadline
+static uint32_t s_saver_start;  // for the doom_saver_max_ms() deadline
 static bool     s_egg_armed; // master-local; see the trigger comment above
 
 // IDDQD screensaver anti-burn-in placement: the 5x4 attract block (bottom UI
@@ -1607,7 +1618,7 @@ void doom_tick(void) {
         doom_exit();
         return;
     }
-    if (s_screensaver && timer_elapsed32(s_saver_start) > DOOM_SAVER_MAX_MS) {
+    if (s_screensaver && timer_elapsed32(s_saver_start) > doom_saver_max_ms()) {
         // The screensaver has run the window the idle pulse would have covered
         // — tear down and suspend, landing in the same end state the pulse's
         // TURN_OFF_TIME branch produces (doom_exit's fresh last_update is

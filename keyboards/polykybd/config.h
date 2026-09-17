@@ -238,7 +238,7 @@
 //      only and live in the `latinbig` font-pack bundle; without it (or for a
 //      non-latin legend) the render falls back to small, so the setting is
 //      always safe to accept.
-#define PROTOCOL_VERSION 17
+#define PROTOCOL_VERSION 18
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -247,10 +247,20 @@
 
 //10 sec
 #define FADE_TRANSITION_TIME 10000
-//2 min
-#define FADE_OUT_TIME 120000
 //10 min
 #define TURN_OFF_TIME 1200000
+
+// ⚠️ FADE_OUT_TIME is GONE. The delay before the idle fade starts is a per-board
+// SETTING now — enum poly_idle_timeout in state.h, six presets from 15 s to 5 min,
+// read through get_idle_timeout_ms() and set over HID cmd 40 (protocol v18+). The
+// old constant was 120000, which is IDLE_TIMEOUT_2MIN, the default; deleting it
+// rather than leaving it to rot is deliberate, because a stale `> FADE_OUT_TIME`
+// anywhere would compile and then silently ignore the user's choice.
+//
+// TURN_OFF_TIME (displays off + suspend) stays a constant and is NOT scaled by the
+// idle timeout: they answer different questions — when the screensaver starts, and
+// when the panels give up entirely. state.c static_asserts that the longest preset
+// still leaves the fade room inside this deadline.
 
 // Idle "jitter" style: while pulsing, each key independently relocates its own legend
 // to a fresh random spot the moment that key's out-of-phase pulse dims it to black

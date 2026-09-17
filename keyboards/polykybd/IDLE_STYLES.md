@@ -64,6 +64,13 @@ presets — 15 s, 30 s, 45 s, 1 min, 2 min, 5 min — read through
   no `quantum.h`, no `config.h`), `make test:polykybd_idle_timeout`. The
   keyboard-config half — the ceiling assert — cannot live there and stays in
   `state.c` over the same `POLY_IDLE_TIMEOUT_LIST`.
+- **There is a KEY for it on the board**, `KC_IDLE_TIMEOUT`, on the settings layer's
+  advanced row beside `KC_IDLE_STYLE` — one picks which animation, the other when.
+  It cycles with wrap (no skipped value, unlike the style key, which steps over
+  `IDLE_STYLE_IDDQD` to keep the easter egg off a settings key) and is gated behind
+  `KC_SETTINGS_MORE` like the rest of that row. ⚠️ Cycling past `15s` on a board that
+  has been quiet can idle it under your finger; the press itself is activity, so the
+  next housekeeping pass restarts the countdown.
 - **The SET range is CLOSED** (an unknown preset NACKs) while the QUERY reply carries
   the duration in seconds, so a host older than a firmware that adds a preset can
   still label what it reads back. See `PROTOCOL_HISTORY.md` → v18 for why those two

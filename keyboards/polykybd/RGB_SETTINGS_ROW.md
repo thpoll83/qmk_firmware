@@ -61,6 +61,23 @@ same split with the halves reversed).
     is an `OSL()` layer, which re-dispatches a release-edge action up to three times
     (§ *A release-edge action fires up to THREE times*), i.e. the macro plays twice
     or three times over.
+- ⚠️ **A settings key whose legend comes from a HELPER CALL renders as its raw
+  keycode name in the HOST's layout editor until the helper is registered there.**
+  `keycode_to_static_text()` may `return idle_style_legend();`, but the host parses
+  that switch statically (`PolyKybdHost/tools/lang_demo.py`,
+  `parse_static_text_map`) and cannot execute a call — so it looks the expression up
+  in a hand-kept `STATIC_CALL_DEFAULTS` map and, missing an entry, falls back to the
+  token text. **Nothing flags it**: the firmware build is green, the keycap on
+  hardware is correct, and only the editor is wrong. `KC_IDLE_TIMEOUT` first
+  rendered as `idle_t…` exactly this way. ⚠️ The substituted value is the setting's
+  BOOT value, which is **not always index 0** — the idle timeout defaults to
+  `IDLE_TIMEOUT_2MIN`, so the first row would show a state no keyboard boots with.
+- ⚠️ **Measure a new label's WIDTH; do not eyeball it.** `IDLE IN:` put its last lit
+  pixel at x=71 of the 72 px window — no margin at all, against 68 for `SCRIPT:` —
+  so the colon was dropped. Render it through the real draw model (the
+  `keycap-layout-preview` skill, or `lang_demo.py`'s model directly) and read the ink
+  box before believing a two-line settings label fits.
+
   - ⚠️ **A new custom keycode with NO legend renders a BLANK KEYCAP**, which is
     indistinguishable from "the feature did not ship" — `KC_MACRO_REC` reached the
     field that way. The build is green either way: a missing legend is a missing

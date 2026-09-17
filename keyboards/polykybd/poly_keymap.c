@@ -1570,6 +1570,7 @@ const uint32_t* poly_lang_code(uint8_t lang) {
 static bool settings_key_is_gated(uint16_t keycode) {
     switch (keycode) {
         case KC_IDLE_STYLE:
+        case KC_IDLE_TIMEOUT:
         case KC_GLYPH_SCRIPT:
         case LBL_TEXT:
         case KC_TOGMODS:
@@ -4401,6 +4402,20 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             request_disp_refresh();
             break;
         }
+        // Cycle the idle TIMEOUT. No skipped value, unlike the style above: every
+        // preset is a legitimate choice and none of them hides an easter egg. The
+        // activity timestamp is deliberately NOT reset — the new delay is measured
+        // against the one already running, so cycling down to a timeout shorter than
+        // the time since the last keypress idles the board on the next housekeeping
+        // pass. ⚠️ That means walking past 15s while the board has been quiet can
+        // idle it under your finger; the press itself is activity, so the very next
+        // pass restarts the countdown and it wakes again — which is the behaviour a
+        // person testing "how short can I make this" expects to see.
+        case KC_IDLE_TIMEOUT:
+            if (!act) break;
+            set_idle_timeout((uint8_t)((get_idle_timeout() + 1u) % IDLE_TIMEOUT_COUNT));
+            request_disp_refresh();
+            break;
         case KC_GLYPH_SCRIPT:
             if (!act) break;
             // Wrap on GLYPH_SCRIPT_COUNT (what THIS firmware can draw), not on 0xFF:

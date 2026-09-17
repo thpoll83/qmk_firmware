@@ -90,6 +90,50 @@ void legend_plan_clamp(const legend_plan_env_t* env, int8_t* x, int8_t* y,
     if (*y + ymax > env->win_y1) *y = (int8_t)(env->win_y1 - ymax);
 }
 
+// Spend `need` px of shortfall on the two sides of one axis. The high side is
+// filled first — for y that is the ONLY side with any budget — but an axis with
+// room on both gets an even split, so a legend hangs a little off each edge
+// rather than a lot off one. Whatever a capped side cannot take falls back to the
+// other; both capped just leaves the axis short, which is correct (there is no
+// more buffer to borrow).
+static void widen_travel(int16_t* lo, int16_t* hi, int16_t want, int16_t lo_budget, int16_t hi_budget) {
+    int16_t need = (int16_t)(want - (int16_t)(*hi - *lo));
+    if (need <= 0) return;
+    int16_t add_hi = (int16_t)((need + 1) / 2);
+    if (add_hi > hi_budget) add_hi = hi_budget;
+    int16_t add_lo = (int16_t)(need - add_hi);
+    if (add_lo > lo_budget) add_lo = lo_budget;
+    const int16_t residue = (int16_t)(need - add_hi - add_lo);
+    if (residue > 0) {
+        const int16_t room = (int16_t)(hi_budget - add_hi);
+        add_hi = (int16_t)(add_hi + ((residue > room) ? room : residue));
+    }
+    *hi = (int16_t)(*hi + add_hi);
+    *lo = (int16_t)(*lo - add_lo);
+}
+
+// ⚠️ The widening is gated on `hi >= lo`, i.e. on the legend FITTING. An over-size
+// one (ink taller than the window) already clips at the edge legend_plan_clamp
+// chose, and its range is inverted by exactly the overflow; widening that range
+// does not open travel, it just relocates the clip to the opposite edge and pins
+// it there. Leaving it alone keeps the documented "south edge wins" behaviour.
+void legend_plan_idle_travel(const legend_plan_env_t* env,
+                             int8_t ink_xmin, int8_t ink_xmax, int8_t ink_ymin, int8_t ink_ymax,
+                             uint8_t overhang,
+                             int8_t* dx_lo, int8_t* dx_hi, int8_t* dy_lo, int8_t* dy_hi) {
+    int16_t xlo = (int16_t)((int16_t)env->win_x0 - ink_xmin);   // keep the left edge >= win_x0
+    int16_t xhi = (int16_t)((int16_t)env->win_x1 - ink_xmax);   // keep the right edge on-screen
+    int16_t ylo = (int16_t)(-(int16_t)ink_ymin);                // keep the top >= row 0
+    int16_t yhi = (int16_t)((int16_t)env->win_y1 - ink_ymax);   // keep the bottom on-screen
+    const int16_t over = (int16_t)overhang;
+    if (over > 0) {
+        if (xhi >= xlo) widen_travel(&xlo, &xhi, over, over, over);
+        if (yhi >= ylo) widen_travel(&ylo, &yhi, over, 0, over);   // 0: no buffer north of row 0
+    }
+    *dx_lo = (int8_t)xlo; *dx_hi = (int8_t)xhi;
+    *dy_lo = (int8_t)ylo; *dy_hi = (int8_t)yhi;
+}
+
 // Nominal baseline for each size, chosen so the cap height sits where the small
 // face's does (top of a capital ~1 px below the top of the panel): cap 20 -> 21,
 // 24 -> 25, 27 -> 28. The caller then draws at the CLAMPED baseline this planner

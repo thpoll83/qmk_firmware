@@ -146,9 +146,47 @@ change generalise well beyond this setting:
     clipping — each uses all *and only* the room it has, for any script. A fixed cap
     would be counter-productive: it would throttle the slim glyph and edge-bias the
     wide one (most rolls clamping to the same boundary). A glyph with no slack in an
-    axis simply doesn't move in it — no clipping, no special-casing. `SET_PIXEL_CLIPPED`
-    in `disp_array.c` remains the memory-safety backstop, but is not relied on for
-    visibility.
+    axis borrows a few px off the window edge rather than freezing — see the next two
+    bullets; everything with room of its own still moves only inside it, so ordinary
+    legends never clip. `SET_PIXEL_CLIPPED` in `disp_array.c` remains the
+    memory-safety backstop, but is not relied on for visibility.
+  - ⚠️ **"No slack" used to mean "does not move", which is silent total failure on
+    exactly the keycaps that need an idle style most.** A legend is clamped into the
+    72×40 window, so a **40 px tall icon has zero vertical travel** and held the same
+    pixels for the entire idle session — the burn this feature exists to prevent —
+    while still looking like it was working, because it drifted horizontally. Measured
+    over the resident fonts: **9 of 1130 glyphs have ≤3 px of vertical travel and 2
+    have none** (🌐 `U+1F310` 40×40, `U+2756` 39×40; then 😀 🔧 🐐 at 1 px, `U+0095`
+    🖳 at 2, ⎈ ⎙ at 3). **Horizontally nothing is even close** — the widest glyph in
+    the tree is 68 px against a 72 px window — so this is a vertical problem, and the
+    west/east budget is a safety net for a future wide legend rather than something
+    that fires today.
+  - **Those glyphs now BORROW travel off the window edge** (`IDLE_TRAVEL_OVERHANG_PX`,
+    3 px, spent by `legend_plan_idle_travel()` in `base/legend_plan.c`, unit-tested by
+    `make test:polykybd_legend_plan`). The clipping costs nothing in memory: the
+    scratch buffer is **128×64** against a 72×40 window at `BUFFER_X`, so there is
+    real storage 28 px west, 28 px east and 24 px south — and `kdisp_send_window()`
+    streams the window and nothing else, so ink in the slack is simply never shown
+    (`disp_array.h`'s `BUFFER_SLACK_*`, which the `_Static_assert`s beside
+    `IDLE_TRAVEL_OVERHANG_PX` check the constant against).
+    - ⚠️ **NORTH is not on offer**: row 0 is the first row of storage, so a glyph
+      needing vertical room takes it all from the south. A negative y is not a cheaper
+      clip — besides being outside the array it drops the glyph out of both in-buffer
+      draw paths in `disp_array.c` onto the per-pixel clipped one.
+    - **Only the SHORTFALL is borrowed**, and only up to 3 px of travel: a legend that
+      already has room is untouched. Borrowing unconditionally was rejected — 3 px off
+      the west edge *deletes the stem of an `i`*, which is a 4 px glyph.
+    - **An OVER-SIZE legend is left alone** (`hi >= lo` gates the widening): he-IL's
+      43 px nikud already clips at the edge `legend_plan_clamp()` chose, and widening
+      its range cannot open travel, only move the clip to the other edge and pin it
+      there.
+    - **What it buys, measured on the glyph bitmaps**: the globe at `dy=3` loses 33 of
+      its 502 lit px (6.6%, a slightly flattened bottom cap) and `U+2756` loses 6 —
+      and across the four positions only **35%** of the globe's shape (69% of
+      `U+2756`'s) still has a 100% duty cycle, against 100% of it before.
+    - It applies to **both** animated idle paths, because they share
+      `roll_idle_offset()` and the defect is identical in each: JITTER's
+      `render_idle_key()` and EDEN's `eden_idle_erase_legend()`.
   - The per-key latch is cleared by **`reset_idle_jitter()`** on every wake/suspend
     path (`display_wakeup`, `poly_suspend`, `suspend_wakeup_init_kb`, cmd 15
     stop-idle), so a fresh idle session starts from the centred awake legend and

@@ -1964,6 +1964,16 @@ _Static_assert(LEGEND_PLAN_SIZE_S == GLYPH_SIZE_S && LEGEND_PLAN_SIZE_M == GLYPH
                LEGEND_PLAN_SIZE_L == GLYPH_SIZE_L,
                "legend_plan's size indices drifted from poly_glyph_size");
 
+// How far an idle legend with no free space of its own may hang OFF the visible
+// window to win itself some anti-burn-in travel (legend_plan_idle_travel). The
+// scratch buffer really extends there and kdisp_send_window() streams the window
+// only, so the ink is clipped by the panel edge, not by an array bound — but that
+// is a property of the geometry, so assert it rather than trusting the number.
+#define IDLE_TRAVEL_OVERHANG_PX 3
+_Static_assert(IDLE_TRAVEL_OVERHANG_PX <= BUFFER_SLACK_W, "idle travel would run off the west of the buffer");
+_Static_assert(IDLE_TRAVEL_OVERHANG_PX <= BUFFER_SLACK_E, "idle travel would run off the east of the buffer");
+_Static_assert(IDLE_TRAVEL_OVERHANG_PX <= BUFFER_SLACK_S, "idle travel would run off the south of the buffer");
+
 static bool legend_has_glyph_cb(uint32_t cp, void* ctx) {
     (void)ctx;
     return kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL;
@@ -3393,9 +3403,15 @@ static uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col) {
 // width while a wide "w" stays within its small margin, each using all (and only) the
 // space it actually has. A global ±N envelope would be counter-productive here: it
 // would throttle the slim glyph (lots of slack, but capped) and edge-bias the wide one
-// (most rolls clamp to the same boundary). A glyph with no slack in an axis simply
-// doesn't move in it. The result is always fully on-screen for any script, so no
-// separate clamp step is needed.
+// (most rolls clamp to the same boundary).
+//
+// A glyph with NO slack in an axis used to simply not move in it — which is silent
+// and complete failure for exactly the legends that need an idle style most: a 40 px
+// tall icon fills the window, so it held the same pixels for the whole idle session.
+// Those now borrow up to IDLE_TRAVEL_OVERHANG_PX px of travel by hanging off the
+// bottom/left/right edges into the scratch buffer's own slack, which is never sent;
+// legend_plan_idle_travel() holds the rule and the reasons. Everything that already
+// had room is unaffected, so a legend only ever clips because it had no alternative.
 static void roll_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, uint32_t seed,
                              int8_t* dx, int8_t* dy) {
     // ⚠️ The ABSOLUTE box, not the relative one. The whole display list moves as a
@@ -3408,21 +3424,19 @@ static void roll_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, uint32_
     // an empty box and would allow the lot.
     int8_t xmin, xmax, ymin, ymax;
     kdisp_gfx_text_bbox_abs(g_all_fonts, g_all_font_count, ox, oy, text, &xmin, &xmax, &ymin, &ymax);
-    int16_t axmin = xmin, axmax = xmax;   // glyph extent at the un-jittered origin
-    int16_t aymin = ymin, aymax = ymax;
-    int16_t xlo = (int16_t)BUFFER_X - axmin;                      // keep left edge >= BUFFER_X
-    int16_t xhi = (int16_t)(BUFFER_X + SCREEN_WIDTH - 1) - axmax; // keep right edge on-screen
-    int16_t ylo = -aymin;                                         // keep top >= 0
-    int16_t yhi = (int16_t)(SCREEN_HEIGHT - 1) - aymax;           // keep bottom on-screen
-    *dx = (xhi < xlo) ? 0 : jitter_axis(seed, 0x0000u, (int8_t)xlo, (int8_t)xhi);
-    *dy = (yhi < ylo) ? 0 : jitter_axis(seed, 0x1000u, (int8_t)ylo, (int8_t)yhi);
+    int8_t xlo, xhi, ylo, yhi;
+    legend_plan_idle_travel(&legend_plan_env, xmin, xmax, ymin, ymax, IDLE_TRAVEL_OVERHANG_PX,
+                            &xlo, &xhi, &ylo, &yhi);
+    *dx = (xhi < xlo) ? 0 : jitter_axis(seed, 0x0000u, xlo, xhi);
+    *dy = (yhi < ylo) ? 0 : jitter_axis(seed, 0x1000u, ylo, yhi);
 }
 
 // Idle (anti-burn-in) per-key relocation: redraws ONLY the resting normal legend — no
 // shift/AltGr preview, no overlay image, no tab/MRU chrome — at a fresh random spot
-// within THIS glyph's own slack (roll_idle_offset, seeded by `seed`), always fully
-// visible. Renders into the currently selected display's buffer, so it works from
-// inside kdisp_idle()'s shift-register walk (the caller selects the key, with the panel
+// within THIS glyph's own slack (roll_idle_offset, seeded by `seed`) — fully visible
+// unless the legend had no slack at all, in which case it borrows a few px off the
+// window's bottom/left/right edges. Renders into the currently selected display's
+// buffer, so it works from inside kdisp_idle()'s shift-register walk (the caller selects the key, with the panel
 // switched OFF, so the move is invisible). Returns false WITHOUT touching the buffer
 // when the keycode has no plain-text legend (a language flag, emoji, region tab, MRU
 // control, …): those can't be jittered (full-bleed images), so we leave their current
@@ -3460,7 +3474,9 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     kdisp_set_draw_offset(dx, dy);
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, plan.x, plan.y, plan.text);
     kdisp_set_draw_offset(0, 0);
-    kdisp_send_window();   // idle jitter draws within the 72x40 window (roll_idle_offset clamps to it)
+    // The draw may land up to IDLE_TRAVEL_OVERHANG_PX px outside the 72x40 window
+    // (roll_idle_offset); that ink is inside the scratch buffer and this send ignores it.
+    kdisp_send_window();
     return true;
 }
 
@@ -3519,8 +3535,9 @@ bool eden_idle_erase_legend(uint8_t disp_idx) {
     // Draw the legend LIT but with a scanline half-brightness effect (every other buffer
     // row lit) so it reads lighter over the comet field, at a slowly-drifting position
     // within its own on-screen slack. roll_idle_offset() picks a uniform random offset
-    // inside the glyph's free space (fully on-screen, per-glyph — the same helper the
-    // jitter idle style uses); the seed changes once per EDEN_LEGEND_DRIFT_MS so every
+    // inside the glyph's free space (per-glyph — the same helper the jitter idle style
+    // uses, including the few px of off-window travel it lends a legend that has no free
+    // space of its own); the seed changes once per EDEN_LEGEND_DRIFT_MS so every
     // ~7 s the letter jumps to a fresh spot. Per-key phase (disp_idx) so they don't all
     // move in lockstep.
     // Same glyph-size plan as render_idle_key() — this is the second idle draw path

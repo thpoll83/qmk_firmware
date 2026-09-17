@@ -66,15 +66,9 @@ static const GFXfont *const s_mid_font[] = { &NotoSans_Regular_Mid_19px7b };
 #define SSD1306_ACTIVATE_SCROLL 0x2F                      ///< Start scroll
 #define SSD1306_SET_VERTICAL_SCROLL_AREA 0xA3             ///< Set scroll range
 
-// display specific constants
-#define BUFFER_BYTE_VIS_HEIGHT 5
-#define BUFFER_BYTE_HEIGHT 8
-#define BUFFER_BYTE_VIS_WIDTH 72
-#define BUFFER_BYTE_WIDTH 128
-#define BUFFER_PIXEL_HEIGHT 40
-#define BUFFER_PIXEL_WIDTH 128
-//#define VISIBLE_PIXEL_X_FIRST ((BUFFER_BYTE_WIDTH - SCREEN_WIDTH) >> 1)
-//#define VISIBLE_PIXEL_X_LAST_PLUS_ONE (VISIBLE_PIXEL_X_FIRST + SCREEN_WIDTH)
+// The scratch-buffer geometry (BUFFER_BYTE_* / BUFFER_PIXEL_* / BUFFER_SLACK_*)
+// moved to disp_array.h: the off-window slack is load-bearing outside this file
+// now that the idle styles slide a legend into it.
 
 #define SPI_MODE 3
 

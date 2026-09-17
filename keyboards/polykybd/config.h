@@ -259,7 +259,10 @@
 // range is derived per glyph from its own on-screen slack (roll_idle_offset), so a slim
 // "i" roams its full free width while a wide "w" or a full-width CJK legend moves only
 // as far as it can without clipping. A fixed ±N cap would be counter-productive here
-// (it would throttle the slim glyph and edge-bias the wide one).
+// (it would throttle the slim glyph and edge-bias the wide one). A legend with NO slack
+// of its own -- the 40 px tall icons, which fill the window exactly -- borrows
+// IDLE_TRAVEL_OVERHANG_PX px of travel off the window's bottom/left/right edges rather
+// than freezing; see legend_plan_idle_travel().
 // How often a key relocates: the breathing curve dips dark ~twice per ~15 s pulse
 // cycle, so we'd otherwise move each key ~every 7.5 s. Relocate only every Nth dark
 // episode to slow the drift (3 -> ~every 22 s per key). Raise for a calmer display.

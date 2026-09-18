@@ -66,6 +66,9 @@ presets — 15 s, 30 s, 45 s, 1 min, 2 min, 5 min — read through
   `state.c` over the same `POLY_IDLE_TIMEOUT_LIST`.
 - **There is a KEY for it on the board**, `KC_IDLE_TIMEOUT`, on the settings layer's
   advanced row beside `KC_IDLE_STYLE` — one picks which animation, the other when.
+  Its legend is `IDLE` over the active duration, with a half-scale 🕑 in the label
+  line's right margin (`HINT_HALF` + `HINT_POS_IDLECLK`; the glyph is a pack one, so
+  the words carry the meaning without it).
   It cycles with wrap (no skipped value, unlike the style key, which steps over
   `IDLE_STYLE_IDDQD` to keep the easter egg off a settings key) and is gated behind
   `KC_SETTINGS_MORE` like the rest of that row. ⚠️ Cycling past `15s` on a board that

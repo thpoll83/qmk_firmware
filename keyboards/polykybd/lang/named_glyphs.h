@@ -2096,6 +2096,14 @@
 #define HINT_FRAME(sz)   U"\x12" sz    // 2px nested rounded rect of size (w,h) = sz at cursor
 #define HINT_RESET       U"\x18"       // reset cursor to the text origin
 // Fixed buffer positions / sizes (two bytes each; decimal in the comment):
+#define HINT_POS_IDLECLK U"\x4C\x01"   // (76, 1)  half-scale 🕑 beside the idle-timeout label
+                                    //   = local (48,1) in the 72x40 window, so the 20x20
+                                    //   halved clock spans x 48..67 / y 1..20: 4px clear of
+                                    //   the east edge, and clear of the value line, which
+                                    //   ends at x=46. ⚠️ y CANNOT be 0 — HINT_MOVE's two
+                                    //   argument bytes are skipped by `if (text[1] && text[2])`,
+                                    //   so a zero coordinate is silently ignored and the glyph
+                                    //   lands at the cursor instead.
 #define HINT_POS_SCREEN  U"\x46\x07"   // (70, 7)  reload glyph in the monitor's screen cavity
 #define HINT_POS_ZOOMIN  U"\x3B\x19"   // (59,25)  cursor so a base-font '+' centres in the lens
 #define HINT_POS_ZOOMOUT U"\x3E\x16"   // (62,22)  cursor so a base-font '-' centres in the lens
@@ -2187,6 +2195,7 @@
 #define ICON_SLIDERS                	U"\x1F39B"  // Win+Pause system properties (🎛 knobs, symbol font pack)
 #define ICON_GFX_RESTART            	U"\x1F5B5"  // Win+Ctrl+Shift+B restart graphics: monitor 🖵 (symbol font pack); the 🗘 reload glyph is half-composited into its screen by the HINT_HALF op in the hint string
 #define ICON_GFX_RELOAD             	U"\x1F5D8"  // 🗘 clockwise reload — half-scaled into ICON_GFX_RESTART's screen (see HINT_HALF)
+#define ICON_CLOCK_2                	U"\x1F551"  // 🕑 clock face two o'clock (emoji font pack, _EmjClocks_) — half-scaled beside the idle-timeout label, see SETTING_LBL_CLOCK in keycode_helper.c
 #define ICON_MAGNIFIER              	U"\x1F50D"  // Win + '+'/'-' magnifier 🔍 (emoji font pack); a base-font +/- is MOVE-positioned into the lens by the hint string
 #define ICON_SCREENSHOT             	U"\x1F4F7"  // Win+PrtScn full-screen screenshot (camera)
 #define ICON_NET                    	U"\x1F5A7"  // Win+Ctrl+F networked computers 🖧 (symbol font pack, _Network_)

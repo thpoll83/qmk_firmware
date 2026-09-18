@@ -112,31 +112,38 @@ static const uint32_t* idle_style_legend(void) {
     return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("IDLE:", "?");
 }
 
-// Same shape, for the idle TIMEOUT. The label is "IDLE IN" rather than "IDLE:"
-// because the keycap sits one slot from KC_IDLE_STYLE, whose label IS "IDLE:" — two
-// neighbours both reading "IDLE:" over a short value would be a coin flip to tell
-// apart at a glance, which defeats the point of naming the setting at all.
+// Same shape, for the idle TIMEOUT — except the label is "IDLE" plus a half-scale
+// clock face rather than a word, because two neighbours both reading "IDLE:" over a
+// short value would be a coin flip to tell apart at a glance.
 //
-// ⚠️ No colon, and that is MEASURED, not a slip: rendered through the firmware's own
-// draw model, "IDLE IN:" puts its last lit pixel at x=71 of the 72 px window — no
-// margin at all, where "IDLE:" ends at 50 and "SCRIPT:" at 68. Dropping the colon
-// ends it at 67. Don't add it back for consistency; check the render first
-// (host: tools/lang_demo.py's draw model, or the keycap-layout-preview skill).
+// ⚠️ The clock is drawn by HINT_HALF (\x0F), which composites the NEXT glyph at
+// half scale at the literal cursor and does NOT advance — so it needs its own
+// HINT_MOVE, exactly like the mod-tap badges. Full size it is 39x39, taller than
+// this whole two-line legend; halved it is 20x20 and sits in the label line's right
+// margin. HINT_POS_IDLECLK carries the measured position and why y cannot be 0.
 //
-// The durations are spelled from the ACTIVE value like the two above, so the row
-// reads "which animation" / "after how long" without pressing anything. An
-// out-of-range value cannot normally happen here (the range is closed, unlike the
-// glyph script) but falls back to "?" for the same reason the others do — a legend
-// must never index past its table.
+// ⚠️ ICON_CLOCK_2 lives in the EMOJI FONT PACK (_EmjClocks_), not the resident set,
+// so a keyboard with no pack flashed draws this keycap without its clock. The word
+// "IDLE" and the value carry the meaning on their own for exactly that reason —
+// don't let the glyph become the only thing that says what the key is.
+//
+// The durations are spelled from the ACTIVE value like the two legends around it, so
+// the row reads "which animation" / "after how long" without pressing anything. An
+// out-of-range value cannot normally happen (the range is closed, unlike the glyph
+// script) but falls back to "?" for the same reason the others do — a legend must
+// never index past its table.
+#define IDLE_TIMEOUT_LBL(value) \
+    SETTING_LBL("IDLE", value) HINT_MOVE(HINT_POS_IDLECLK) HINT_HALF ICON_CLOCK_2
+
 static const uint32_t* idle_timeout_legend(void) {
-    static const uint32_t* const names[] = { SETTING_LBL("IDLE IN", "15s"),
-                                             SETTING_LBL("IDLE IN", "30s"),
-                                             SETTING_LBL("IDLE IN", "45s"),
-                                             SETTING_LBL("IDLE IN", "1min"),
-                                             SETTING_LBL("IDLE IN", "2min"),
-                                             SETTING_LBL("IDLE IN", "5min") };
+    static const uint32_t* const names[] = { IDLE_TIMEOUT_LBL("15s"),
+                                             IDLE_TIMEOUT_LBL("30s"),
+                                             IDLE_TIMEOUT_LBL("45s"),
+                                             IDLE_TIMEOUT_LBL("1min"),
+                                             IDLE_TIMEOUT_LBL("2min"),
+                                             IDLE_TIMEOUT_LBL("5min") };
     const uint8_t v = get_idle_timeout();
-    return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("IDLE IN", "?");
+    return (v < ARRAY_SIZE(names)) ? names[v] : IDLE_TIMEOUT_LBL("?");
 }
 
 static const uint32_t* glyph_script_legend(void) {

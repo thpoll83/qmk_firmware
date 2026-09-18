@@ -98,16 +98,30 @@ static inline enum doom_pack_verdict doom_pack_gate(enum doom_pack_sig   sig,
 // 0xFF, and a pack that stops at image_size leaves whatever the slot held. Both
 // mean "no signature", which is a different verdict from a wrong one — so this
 // classification is load-bearing, not a logging nicety.
+//
+// ⚠️ Ask this BEFORE spending any crypto. A blank trailer cannot verify, so
+// running Ed25519 (a SHA-512 over ~210 KB, ~0.4 s) to discover that is pure
+// waste — and it is waste on the half that must answer split transactions
+// promptly. On hardware that cost an 8-second split-link outage: the slave
+// retried the load every housekeeping pass, each retry blocked it for ~0.5 s,
+// and the transactions that failed included the very sync carrying the
+// authorisation that would have ended the loop.
+static inline bool doom_pack_trailer_is_blank(const uint8_t *sig, uint32_t len) {
+    for (uint32_t i = 0; i < len; i++) {
+        if (sig[i] != 0x00 && sig[i] != 0xFF) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// `ok` is the verifier's verdict, and callers only need to compute it when the
+// trailer is not blank.
 static inline enum doom_pack_sig doom_pack_classify(bool ok, const uint8_t *sig, uint32_t len) {
     if (ok) {
         return DOOM_PACK_SIG_VALID;
     }
-    for (uint32_t i = 0; i < len; i++) {
-        if (sig[i] != 0x00 && sig[i] != 0xFF) {
-            return DOOM_PACK_SIG_INVALID;
-        }
-    }
-    return DOOM_PACK_SIG_BLANK;
+    return doom_pack_trailer_is_blank(sig, len) ? DOOM_PACK_SIG_BLANK : DOOM_PACK_SIG_INVALID;
 }
 
 // A valid signature outranks everything, including the entry path: a release pack

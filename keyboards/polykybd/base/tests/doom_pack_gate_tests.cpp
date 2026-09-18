@@ -137,6 +137,39 @@ TEST(DoomPackGate, OneRealByteMakesItInvalidRatherThanUnsigned) {
     }
 }
 
+// ── The cheap path: a blank trailer must be decidable without crypto ────────
+
+TEST(DoomPackGate, BlankTrailerIsRecognisedWithoutTheVerifier) {
+    // This is a performance contract, not a cosmetic split. The loader runs the
+    // Ed25519 check ONLY when this returns false, because a SHA-512 over ~210 KB
+    // on the slave costs it the window in which it must answer split
+    // transactions — which on hardware read as "the slave rebooted".
+    const uint8_t erased[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    const uint8_t zeros[8]  = {0};
+    EXPECT_TRUE(doom_pack_trailer_is_blank(erased, sizeof erased));
+    EXPECT_TRUE(doom_pack_trailer_is_blank(zeros, sizeof zeros));
+}
+
+TEST(DoomPackGate, AWrittenTrailerStillGoesToTheVerifier) {
+    const uint8_t written[8] = {0xFF, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    EXPECT_FALSE(doom_pack_trailer_is_blank(written, sizeof written));
+}
+
+TEST(DoomPackGate, ClassifyAgreesWithTheCheapTestOnEveryFailedCheck) {
+    // The two must not drift: whatever the cheap test calls blank is what
+    // classify() must call BLANK when the verifier said no.
+    const uint8_t cases[][4] = {
+        {0xFF, 0xFF, 0xFF, 0xFF}, {0x00, 0x00, 0x00, 0x00},
+        {0x00, 0xFF, 0x00, 0xFF}, {0x00, 0xFF, 0x7F, 0xFF},
+        {0x01, 0x00, 0x00, 0x00}, {0xFF, 0xFF, 0xFF, 0xFE},
+    };
+    for (const auto &c : cases) {
+        const bool blank = doom_pack_trailer_is_blank(c, 4);
+        EXPECT_EQ(doom_pack_classify(false, c, 4),
+                  blank ? DOOM_PACK_SIG_BLANK : DOOM_PACK_SIG_INVALID);
+    }
+}
+
 // ── The end-to-end shape, as the loader sees it ─────────────────────────────
 
 TEST(DoomPackGate, TheRefusedPackDeliveredThisSessionWouldNowPrompt) {

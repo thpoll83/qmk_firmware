@@ -159,6 +159,36 @@ static uint32_t         s_pack_confirm_at = 0;
 static uint32_t         s_pack_confirm_crc = 0;   // which pack the dialog is about
 static doom_pack_auth_t s_auth             = {0}; // what was accepted this boot
 
+// ── The refusal is STICKY until an input changes ────────────────────────────
+// ⚠️ doom_slave_tick() calls this every housekeeping pass while doom_ctl is set,
+// and before FW-9 could prompt, that loop was unreachable with an unsigned pack:
+// the master refused, so doom_ctl was never set and the slave never tried. Now
+// the master CAN enter, so a slave that refuses re-derives the same answer every
+// pass — a 210 KB CRC walk each time, and the memset of the whole pool before it.
+//
+// On hardware that presented as "the slave rebooted while the master was already
+// running DOOM": ~8 s of split-link failures (transport_fail 9 -> 35), including
+// the syncs carrying the very authorisation that would have ended the loop, so it
+// sustained itself until one got through. Same pack + same authorisation = same
+// verdict, so derive it once and latch it.
+static bool     s_refused_valid = false;
+static uint32_t s_refused_crc   = 0;
+static uint8_t  s_refused_auth  = 0;
+
+static void pack_refusal_latch(uint32_t image_crc, uint8_t auth_byte) {
+    s_refused_valid = true;
+    s_refused_crc   = image_crc;
+    s_refused_auth  = auth_byte;
+}
+
+static bool pack_refusal_still_stands(uint32_t image_crc, uint8_t auth_byte) {
+    return s_refused_valid && s_refused_crc == image_crc && s_refused_auth == auth_byte;
+}
+
+static void pack_refusal_clear(void) {
+    s_refused_valid = false;
+}
+
 void doom_pack_confirm_arm(uint32_t image_crc) {
     if (s_pack_confirm == PACK_CONFIRM_PENDING) return;  // already asking about this one
     s_pack_confirm     = PACK_CONFIRM_PENDING;
@@ -178,6 +208,7 @@ void doom_pack_confirm_answer(bool accept) {
         s_auth.valid     = true;
         s_auth.image_crc = s_pack_confirm_crc;
         s_pack_confirm   = PACK_CONFIRM_ACCEPTED;
+        pack_refusal_clear();   // the answer is exactly the input that changed
     } else {
         s_pack_confirm = PACK_CONFIRM_IDLE;
     }
@@ -228,6 +259,16 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
         printf("doom: pack size %lu overflows the slot — refuse\n", (unsigned long)hdr->image_size);
         return false;
     }
+    // Everything above is a constant-time header test. From here on the work is
+    // proportional to the image (a ~210 KB CRC walk, and the signature check
+    // behind it), so this is where a repeated call has to stop. The auth byte is
+    // part of the key because it is the one input that can change underneath an
+    // otherwise identical retry.
+    const uint8_t auth_byte = is_usb_host_side() ? (s_auth.valid ? 1u : 0u)
+                                                 : get_local_state()->doom_pack_auth;
+    if (pack_refusal_still_stands(hdr->image_crc, auth_byte)) {
+        return false;   // same pack, same answer — already logged the first time
+    }
     if (hdr->ram_base != (uint32_t)(uintptr_t)pool || hdr->ram_size > pool_size ||
         hdr->arena_off >= hdr->ram_size) {
         // The pack was linked for a different firmware build (the pool
@@ -235,6 +276,7 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
         printf("doom: pack RAM %08lx+%lu != pool %p+%lu — stale pack, refuse\n",
                (unsigned long)hdr->ram_base, (unsigned long)hdr->ram_size,
                (void *)pool, (unsigned long)pool_size);
+        pack_refusal_latch(hdr->image_crc, auth_byte);
         return false;
     }
     // crc32_1byte takes a uint16_t length — chain it over the ~230 KB image
@@ -252,6 +294,7 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
     if (crc != hdr->image_crc) {
         printf("doom: pack CRC %08lx != %08lx — refuse\n",
                (unsigned long)crc, (unsigned long)hdr->image_crc);
+        pack_refusal_latch(hdr->image_crc, auth_byte);
         return false;
     }
 
@@ -272,9 +315,18 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
         return false;
     }
     const uint8_t *sig = slot + sizeof(*hdr) + hdr->image_size;
-    const bool     ok  = crypto_ed25519_check(sig, FW_SIGNING_PUBKEY, slot,
-                                              sizeof(*hdr) + hdr->image_size) == 0;
-    const enum doom_pack_sig sig_state = doom_pack_classify(ok, sig, DOOM_PACK_SIG_SIZE);
+    // ⚠️ The cheap question first. A blank trailer cannot verify, so paying a
+    // SHA-512 over ~210 KB to learn that is waste — and on the SLAVE it is waste
+    // taken out of the window in which it must answer split transactions. The
+    // 64-byte scan settles the unsigned case, which is precisely the case this
+    // prompt exists for. Only a trailer that was actually written gets the crypto.
+    enum doom_pack_sig sig_state = DOOM_PACK_SIG_BLANK;
+    if (!doom_pack_trailer_is_blank(sig, DOOM_PACK_SIG_SIZE)) {
+        sig_state = crypto_ed25519_check(sig, FW_SIGNING_PUBKEY, slot,
+                                         sizeof(*hdr) + hdr->image_size) == 0
+                        ? DOOM_PACK_SIG_VALID
+                        : DOOM_PACK_SIG_INVALID;
+    }
 
     // The answer is given on the MASTER's keycaps; the slave hears it over the
     // split link (poly_sync_t.doom_pack_auth) because its own RAM never saw the
@@ -305,11 +357,13 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
             // once the answer lands.
             printf("doom: pack is unsigned — asking on the keycaps (A = accept, R = reject)\n");
             doom_pack_confirm_arm(hdr->image_crc);
+            pack_refusal_latch(hdr->image_crc, auth_byte);
             return false;
         case DOOM_PACK_REFUSE:
         default:
             printf("doom: pack %s — refuse (FW-9: flash a release-signed .plyx)\n",
                    sig_state == DOOM_PACK_SIG_BLANK ? "is unsigned" : "signature is INVALID");
+            pack_refusal_latch(hdr->image_crc, auth_byte);
             return false;
     }
 #else
@@ -330,6 +384,7 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
     }
     s_api       = api;
     s_arena_off = hdr->arena_off;
+    pack_refusal_clear();   // it loaded; a later refusal must be derived afresh
     printf("doom: pack v%lu loaded (%lu B, arena_off %lu)\n",
            (unsigned long)hdr->version, (unsigned long)hdr->image_size,
            (unsigned long)s_arena_off);

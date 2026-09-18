@@ -161,3 +161,15 @@ polykybd_status_brightness_SRC := \
 polykybd_status_brightness_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# display_common.c tests the shared matrix scan logic. It needs the weak
+# function implementations (get_key_disp_bitmask, key_has_display, etc.) which
+# are provided by the variant headers. We link against a minimal mock
+# environment that provides these symbols.
+polykybd_display_common_SRC := \
+	keyboards/polykybd/display_common.c \
+	$(POLY_BASE_PATH)/tests/display_common_tests.cpp
+
+polykybd_display_common_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

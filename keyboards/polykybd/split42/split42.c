@@ -12,6 +12,8 @@
 #include "base/shift_reg.h"
 #include "base/text_helper.h"
 
+#include "display_common.h"
+
 #include <string.h>
 
 /*
@@ -87,29 +89,9 @@ void invert_display(uint8_t r, uint8_t c, bool state) {
 
 /* invert displays directly on key press/release (no split sync needed) */
 extern matrix_row_t matrix[MATRIX_ROWS];
-static matrix_row_t last_matrix[MATRIX_ROWS_PER_SIDE];
 
 void matrix_scan_kb(void) {
-    const uint8_t first = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
-    bool changed = false;
-    for (uint8_t r = first; r < first + MATRIX_ROWS_PER_SIDE; r++) {
-        if (last_matrix[r - first] != matrix[r]) {
-            changed = true;
-            for (uint8_t c = 0; c < MATRIX_COLS; c++) {
-                bool old     = ((last_matrix[r - first] >> c) & 1) == 1;
-                bool current = ((matrix[r] >> c) & 1) == 1;
-                if (!old && current) {
-                    invert_display(r, c, true);
-                } else if (old && !current) {
-                    invert_display(r, c, false);
-                }
-            }
-        }
-    }
-    if (changed) {
-        memcpy(last_matrix, &matrix[first], sizeof(last_matrix));
-    }
-    matrix_scan_user();
+    matrix_scan_display_common();
 }
 
 void matrix_slave_scan_kb(void) {

@@ -49,6 +49,9 @@ struct display_info {
 #define POLY_SPLASH_R2    U" 7 2"
 #define POLY_SPLASH_R2_ROW 3
 
+// Column adjustment: rows >= 5 need c-- due to asymmetric layout
+#define POLY_DISPLAY_COL_ADJUST 5
+
 // The picker row is 7 positions per half.  The page arrows take the OUTER ENDS —
 // prev at the far left, next at the far right — the same arrangement as the emoji
 // and language layers, leaving 6 variation slots per block.  Rows longer than this

@@ -1215,7 +1215,17 @@ void housekeeping_task_user(void) {
 
     if (is_keyboard_master()) {
         fw_staging_confirm_tick();
-        const uint8_t want = fw_staging_awaiting_confirm() ? 1 : 0;
+        // Which dialog the board IS right now. FW-2's unsigned image outranks
+        // FW-9's unsigned pack: a flash in flight is the more consequential
+        // question, and doom_session_start() refuses to take the pool while the
+        // stager owns the link anyway, so the two cannot really coincide.
+        const uint8_t want = fw_staging_awaiting_confirm() ? POLY_CONFIRM_FW_IMAGE
+                           : doom_pack_confirm_pending()   ? POLY_CONFIRM_DOOM_PACK
+                                                           : POLY_CONFIRM_NONE;
+        // The slave never sees the keypress, so the master's answer travels with
+        // the rest of the synced state (state.h explains why delegating it is
+        // sound, and what stays local).
+        access_local_state()->doom_pack_auth = doom_pack_auth_granted() ? 1 : 0;
         poly_sync_t *cfm_state = access_local_state();
         if (cfm_state->fw_confirm != want) {
             cfm_state->fw_confirm = want;
@@ -4502,17 +4512,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // and only the two prompt keys mean anything. Only the master runs
     // process_record — the slave's matrix is pulled over the split link — so a
     // press on EITHER half arrives here, and the matrix row is what says which.
-    if (fw_staging_awaiting_confirm()) {
+    if (fw_staging_awaiting_confirm() || doom_pack_confirm_pending()) {
         // Answer on the RELEASE, not the press. split72.c's matrix_scan_kb inverts a
         // keycap on press and un-inverts it on release, entirely independently of
         // process_record — so acting on the press tears the prompt down and redraws
         // the normal legend while that keycap is still inverted, and it stays
         // inverted until the finger lifts.
         if (!record->event.pressed && record->event.key.col == FW_CONFIRM_COL) {
+            // Route to whichever dialog is up. Both answer functions ignore a
+            // call while they are not pending, so the pair is safe even in the
+            // window where one has just resolved.
             if (record->event.key.row == FW_CONFIRM_ROW) {
                 fw_staging_confirm_answer(true);    // left half  -> A / ACCEPT
+                doom_pack_confirm_answer(true);
             } else if (record->event.key.row == FW_CONFIRM_ROW + MATRIX_ROWS_PER_SIDE) {
                 fw_staging_confirm_answer(false);   // right half -> R / REJECT
+                doom_pack_confirm_answer(false);
             }
         }
         return false;

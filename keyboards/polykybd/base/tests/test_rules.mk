@@ -100,6 +100,17 @@ polykybd_idle_timeout_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# doom_pack_gate.h is header-only and pure — no flash reads, no monocypher, no
+# keyboard config — so the FW-9 policy (unsigned vs invalid, interactive vs idle,
+# and what an accepted pack authorises) is testable without a device. The crypto
+# itself is Monocypher's and is not retested here.
+polykybd_doom_pack_gate_SRC := \
+	$(POLY_BASE_PATH)/tests/doom_pack_gate_tests.cpp
+
+polykybd_doom_pack_gate_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
 # legend_plan.c is pure by construction — the font lookup and the bbox
 # measurement arrive through callbacks — so the size planner links with no fonts,
 # no display and no keyboard config. The firmware binding lives in poly_keymap.c.

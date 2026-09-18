@@ -444,7 +444,7 @@ static void doom_rgb_task(void);             // ditto, called every doom_tick on
 // Pool take + engine boot, shared by the master's doom_enter and the slave's
 // mirror session. False when blocked (fw flash in flight) or unviable — the
 // caller retries / stays out.
-static bool doom_session_start(void) {
+static bool doom_session_start(enum doom_pack_entry entry) {
     // Never take the pool while the fw/font-pack stager owns the split link and
     // flash — the two "exclusive" modes don't compose.
     if (fw_staging_fw_up_active() || fw_staging_commit_pending()) {
@@ -462,7 +462,7 @@ static bool doom_session_start(void) {
     // approximates. A refused pack (missing/stale/corrupt — already logged)
     // leaves the stub table: doom_engine_start then runs the fire demo.
     memset(s_fb, 0, DOOM_POOL_BYTES);
-    if (!doom_pack_load(s_fb, DOOM_POOL_BYTES)) {
+    if (!doom_pack_load(s_fb, DOOM_POOL_BYTES, entry)) {
         // No valid engine pack flashed (missing/stale/corrupt — already logged).
         // On the pack flavour there is nothing to run without it, so REFUSE the
         // whole session: doom_screensaver_start() then returns false and the idle
@@ -500,7 +500,12 @@ static bool doom_session_start(void) {
 static void doom_exit(void); // defined below; doom_screensaver_stop tears down early
 
 static bool doom_begin(bool screensaver) {
-    if (s_active || !doom_session_start()) {
+    // The screensaver is the automatic path — nobody is at the keyboard to
+    // answer a prompt, so an unsigned pack is refused there rather than asked
+    // about. A KC_IDDQD press is a finger on the board. (doom_pack_gate.h)
+    const enum doom_pack_entry entry =
+        screensaver ? DOOM_PACK_ENTRY_AUTOMATIC : DOOM_PACK_ENTRY_INTERACTIVE;
+    if (s_active || !doom_session_start(entry)) {
         return false;
     }
     // Release anything still registered host-side (the trigger letters have
@@ -1242,7 +1247,7 @@ static void doom_slave_tick(void) {
     if (want && !s_slave) {
         // Without game data this half stays a plain control pad (flash the
         // WHX to the slave over BOOTSEL like the master, see README.md).
-        if (!doom_whx_present() || !doom_session_start()) {
+        if (!doom_whx_present() || !doom_session_start(DOOM_PACK_ENTRY_AUTOMATIC)) {
             return; // blocked (fw flash) -> retried while doom_ctl stays set
         }
         s_slave       = true;
@@ -1604,6 +1609,17 @@ void doom_tick(void) {
         doom_slave_tick();
         return;
     }
+#ifdef POLYKYBD_DOOM_PACK
+    // FW-9: age out the unsigned-pack prompt, and re-enter once it is accepted.
+    // The load that raised the prompt could not wait for the answer — it runs on
+    // the loop that scans the matrix — so the retry lands here instead, one pass
+    // later, with the authorisation now in hand. take_accepted() is one-shot, so
+    // a rejected or timed-out prompt simply never re-enters.
+    doom_pack_confirm_tick();
+    if (doom_pack_confirm_take_accepted() && !s_active) {
+        doom_enter();
+    }
+#endif
     if (!s_active) {
         return;
     }

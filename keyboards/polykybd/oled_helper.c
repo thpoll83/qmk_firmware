@@ -211,8 +211,13 @@ void oled_fw_confirm_screen(void) {
     // Three lines on the 64px panel; the 32px one only has room for the verdict
     // and the key, so it drops the "firmware!" continuation.
     const bool      tall  = OLED_DISPLAY_HEIGHT >= 64;
+    // WHAT is unsigned — the one thing that differs between the two prompts, and
+    // the thing a user needs to tell them apart. A firmware image replaces the
+    // board's code; a DOOM pack is an easter-egg engine that only runs while the
+    // game does. Agreeing to one is not agreeing to the other.
+    const bool      pack  = get_local_state()->fw_confirm == POLY_CONFIRM_DOOM_PACK;
     const uint32_t* l0    = tall ? U"Unsigned" : U"Unsigned!";
-    const uint32_t* l1    = tall ? U"firmware!" : NULL;
+    const uint32_t* l1    = !tall ? NULL : (pack ? U"DOOM pack!" : U"firmware!");
     const uint32_t* l2    = is_left_side() ? U"A = ACCEPT" : U"R = REJECT";
 
     oled_on();

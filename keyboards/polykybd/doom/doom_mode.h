@@ -12,6 +12,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+// Pure, and unconditional on purpose: enum doom_pack_entry types
+// doom_session_start(), which the MONOLITH flavour compiles too even though it
+// has no pack to gate. Behind the POLYKYBD_DOOM_PACK include below it built the
+// pack flavour and broke the monolith — the flavour PR CI never builds.
+#include "doom_pack_gate.h"
+
 #ifdef POLYKYBD_DOOM
 
 // True while game mode owns the keycap displays and the borrowed overlay pool.
@@ -247,10 +253,32 @@ static inline bool doom_rgb_indicators(void) { return true; }
 #include "doom_pack_abi.h"
 
 const doom_pack_api_t *doom_pack(void);       // live table, or the stub
-bool     doom_pack_load(uint8_t *pool, uint32_t pool_size); // validate+init the flashed pack
+// Validate+init the flashed pack. `entry` decides what an UNSIGNED pack gets:
+// a prompt on a deliberate entry, an outright refusal on the idle path. See
+// doom_pack_gate.h for the whole table.
+bool     doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entry);
 void     doom_pack_unload(void);              // back to the stub (session exit)
 bool     doom_pack_loaded(void);
 uint32_t doom_pack_arena_off(void);           // hdr.arena_off, 0 while unloaded
+
+// ── FW-9 unsigned-pack prompt ───────────────────────────────────────────────
+// The same physical-presence dialog as FW-2's unsigned image, reusing its whole
+// presentation: poly_sync_t.fw_confirm carries the KIND, update_displays blanks
+// the board and draws A/ACCEPT — R/REJECT, process_record_user swallows
+// everything else, and the answer arrives off the matrix. Only the state machine
+// is separate, because the two have unrelated lifecycles: FW-2's is driven by the
+// host re-polling COMMIT, this one by a game entry.
+void     doom_pack_confirm_arm(uint32_t image_crc);  // raise it (from the refused load)
+bool     doom_pack_confirm_pending(void);            // the dialog is up
+void     doom_pack_confirm_answer(bool accept);      // the physical answer; first one wins
+void     doom_pack_confirm_tick(void);               // times it out; once per housekeeping pass
+// One-shot: true exactly once after an ACCEPT, for the caller that re-enters the
+// game. The load itself could not wait for the answer — it runs on the loop that
+// scans the matrix — so the retry is driven from housekeeping instead.
+bool     doom_pack_confirm_take_accepted(void);
+// An unsigned pack was accepted on this (master) board this boot. Housekeeping
+// publishes it to the slave through poly_sync_t.doom_pack_auth.
+bool     doom_pack_auth_granted(void);
 
 // The declarations above stay for signature documentation; the call sites
 // (doom_mode.c / doom_blit.c / split_sync.c) expand to table calls.
@@ -279,11 +307,27 @@ uint32_t doom_pack_arena_off(void);           // hdr.arena_off, 0 while unloaded
 #define doom_shim_progress              (*doom_pack()->progress)
 #define doom_shim_snd_fire              (*doom_pack()->snd_fire)
 #define doom_shim_snd_world             (*doom_pack()->snd_world)
+#else  // !POLYKYBD_DOOM_PACK
+// The monolith embeds the engine, so there is no pack and nothing to authorise.
+// Inline no-ops keep the ungated call sites in poly_keymap.c (housekeeping, the
+// render gate, process_record_user) compiling on every flavour — the same shape
+// the doom_shim_* stubs above use, for the same reason.
+static inline bool doom_pack_confirm_pending(void) { return false; }
+static inline void doom_pack_confirm_answer(bool accept) { (void)accept; }
+static inline void doom_pack_confirm_tick(void) {}
+static inline bool doom_pack_confirm_take_accepted(void) { return false; }
+static inline bool doom_pack_auth_granted(void) { return false; }
 #endif // POLYKYBD_DOOM_PACK
 
 #else
 
 static inline bool doom_mode_active(void) { return false; }
+// No pack without the game compiled in, so nothing can ask to be authorised.
+static inline bool doom_pack_confirm_pending(void) { return false; }
+static inline void doom_pack_confirm_answer(bool accept) { (void)accept; }
+static inline void doom_pack_confirm_tick(void) {}
+static inline bool doom_pack_confirm_take_accepted(void) { return false; }
+static inline bool doom_pack_auth_granted(void) { return false; }
 // No screensaver without the game compiled in — IDLE_STYLE_IDDQD then falls
 // back to the pulse (the idle pipeline checks the start's return value).
 static inline bool doom_screensaver_start(void) { return false; }

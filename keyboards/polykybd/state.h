@@ -137,6 +137,18 @@ enum poly_latin_remap {
     LATIN_REMAP_PICKLTR = 2,   // target chosen (drawn inverted); waiting for the letter
 };
 
+// Which physical-presence dialog the board is currently BEING (poly_sync_t.fw_confirm).
+//
+// Both prompts exist for the same reason: signing defends against any process that
+// can talk the flash protocol, and such a process could forge a reply on that same
+// channel — so the answer has to come off the matrix, where it cannot be produced
+// remotely. They differ only in what is being authorised, hence only in the caption.
+enum poly_confirm_kind {
+    POLY_CONFIRM_NONE     = 0,
+    POLY_CONFIRM_FW_IMAGE = 1,  // FW-2: an unsigned firmware image at COMMIT
+    POLY_CONFIRM_DOOM_PACK = 2, // FW-9: an unsigned .plyx engine pack at a deliberate game entry
+};
+
 typedef struct _poly_sync_t {
     uint32_t crc32;
     uint8_t  lang;
@@ -189,12 +201,35 @@ typedef struct _poly_sync_t {
     // when it sees the value change (see user_sync_poly_data_handler). It is a
     // nonce, not a state — any change triggers exactly one replay.
     uint8_t  anim_nonce;
-    // FW-2 unsigned-image confirmation prompt active on the master (0/1). Synced so
-    // BOTH halves turn their keycaps into the prompt: update_displays blanks every
-    // key and draws A/ACCEPT (left half) or R/REJECT (right half) on the home-row
-    // middle key. The answer comes back over the normal matrix pull — only the
-    // master runs process_record, so it sees either half's press.
+    // Which physical-presence prompt is up on the master (enum poly_confirm_kind,
+    // 0 = none). Synced so BOTH halves turn their keycaps into the prompt:
+    // update_displays blanks every key and draws A/ACCEPT (left half) or R/REJECT
+    // (right half) on the home-row middle key. The answer comes back over the
+    // normal matrix pull — only the master runs process_record, so it sees either
+    // half's press.
+    //
+    // ⚠️ A KIND, not a bool, since FW-9 gave the unsigned DOOM pack the same
+    // dialog. It was already a uint8_t, so this costs no bytes and cannot push
+    // poly_sync_t past RPC_M2S_BUFFER_SIZE. The two prompts share this field, the
+    // render gate, the key swallow and the clear_keyboard() that precedes it —
+    // only the caption differs. Two hand-written copies of "the board becomes a
+    // dialog" is exactly the drift this repo keeps getting caught by.
     uint8_t  fw_confirm;
+    // FW-9: the master has accepted an UNSIGNED DOOM pack on the keycaps this boot
+    // (0/1). The slave loads the pack too — its mirror session runs the same engine
+    // — and its own RAM never saw the answer, so without this it would refuse and
+    // then retry on every housekeeping pass, burning a ~230 KB SHA-512 each time
+    // while the right half stayed a plain control pad.
+    //
+    // ⚠️ The slave trusts this rather than re-deciding, and that is sound for one
+    // reason: install_doompack writes BOTH halves from a single host command, so
+    // the two slots hold the same bytes. Making them differ means flashing one half
+    // over BOOTSEL — physical access, which is exactly what the prompt asks for.
+    // An INVALID signature is still refused independently on each half; only the
+    // "unsigned developer build" verdict is delegated.
+    //
+    // Master-authoritative, RAM-only, never persisted: a reboot is a fresh decision.
+    uint8_t  doom_pack_auth;
     // The settings layer's advanced half is revealed (0/1) — see KC_SETTINGS_MORE.
     // Synced because the SLAVE draws its own half of that row and only ever sees
     // this struct; without it the two halves would disagree about what is visible.

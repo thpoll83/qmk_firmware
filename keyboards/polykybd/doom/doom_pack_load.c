@@ -12,8 +12,11 @@
 #include "doom_mode.h"
 #include "doom_arena.h" // doom_arena_at (the pool carve handed to the pack)
 #include "doom_pack_abi.h"
+#include "doom_pack_gate.h" // the unsigned/invalid x interactive/automatic decision
 
 #include "base/fw_staging.h"
+#include "bridge_helper.h"   // is_usb_host_side()
+#include "state.h"           // get_local_state() -> the synced doom_pack_auth
 #include "polymod_crc32.h"
 
 #ifdef FW_REQUIRE_SIGNATURE
@@ -141,12 +144,72 @@ void doom_pack_unload(void) {
     s_arena_off = 0;
 }
 
+// ── FW-9 unsigned-pack prompt ───────────────────────────────────────────────
+// A state machine, never a wait. doom_pack_load() runs on the loop that scans the
+// matrix, so blocking for the answer would guarantee the keypress is never seen —
+// the same trap FW_UP_COMMIT avoids by answering '?' until resolved.
+//
+// The window matches FW-2's (FW_CONFIRM_WINDOW_MS): long enough to read the
+// keycaps and decide, short enough that an unattended board falls back to
+// refusing. RAM-only and re-armed per attempt.
+enum { PACK_CONFIRM_IDLE = 0, PACK_CONFIRM_PENDING, PACK_CONFIRM_ACCEPTED };
+
+static uint8_t          s_pack_confirm    = PACK_CONFIRM_IDLE;
+static uint32_t         s_pack_confirm_at = 0;
+static uint32_t         s_pack_confirm_crc = 0;   // which pack the dialog is about
+static doom_pack_auth_t s_auth             = {0}; // what was accepted this boot
+
+void doom_pack_confirm_arm(uint32_t image_crc) {
+    if (s_pack_confirm == PACK_CONFIRM_PENDING) return;  // already asking about this one
+    s_pack_confirm     = PACK_CONFIRM_PENDING;
+    s_pack_confirm_at  = timer_read32();
+    s_pack_confirm_crc = image_crc;
+}
+
+bool doom_pack_confirm_pending(void) {
+    return s_pack_confirm == PACK_CONFIRM_PENDING;
+}
+
+void doom_pack_confirm_answer(bool accept) {
+    if (s_pack_confirm != PACK_CONFIRM_PENDING) return;  // first answer wins; ignore stray keys
+    if (accept) {
+        // Bind the authorisation to the pack it was given for, so re-flashing a
+        // different unsigned pack asks again (doom_pack_gate.h).
+        s_auth.valid     = true;
+        s_auth.image_crc = s_pack_confirm_crc;
+        s_pack_confirm   = PACK_CONFIRM_ACCEPTED;
+    } else {
+        s_pack_confirm = PACK_CONFIRM_IDLE;
+    }
+    printf("doom: unsigned pack %s on the keyboard\n", accept ? "ACCEPTED" : "REJECTED");
+}
+
+void doom_pack_confirm_tick(void) {
+    // timer_elapsed32() is modular, so this stays correct across the 49.7-day
+    // wrap — the trap that once disabled idle for a 25-day window.
+    if (s_pack_confirm == PACK_CONFIRM_PENDING &&
+        timer_elapsed32(s_pack_confirm_at) >= FW_CONFIRM_WINDOW_MS) {
+        s_pack_confirm = PACK_CONFIRM_IDLE;
+        printf("doom: unsigned-pack confirmation timed out — refusing\n");
+    }
+}
+
+bool doom_pack_auth_granted(void) {
+    return s_auth.valid;
+}
+
+bool doom_pack_confirm_take_accepted(void) {
+    if (s_pack_confirm != PACK_CONFIRM_ACCEPTED) return false;
+    s_pack_confirm = PACK_CONFIRM_IDLE;   // one-shot: the retry happens once
+    return true;
+}
+
 // Validate the flashed pack against THIS build's pool and call its init.
 // `pool`/`pool_size` are the live borrowed pool — the pack must have been
 // linked against exactly this address range (PACK_DESIGN.md §4). Every
 // refusal prints its reason once per attempt; the caller falls back to the
 // fire demo.
-bool doom_pack_load(uint8_t *pool, uint32_t pool_size) {
+bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entry) {
     doom_pack_unload();
 
     const uint8_t         *slot = (const uint8_t *)(XIP_BASE + FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF);
@@ -195,30 +258,62 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size) {
 #ifdef FW_REQUIRE_SIGNATURE
     // FW-9: authenticate before branching into the image. The CRC above is an
     // integrity check anyone crafting a pack satisfies; this is the authorship
-    // check, over header + image so no signed field can be re-targeted. There
-    // is deliberately NO on-keycap escape hatch here (unlike an unsigned
-    // FIRMWARE image): the load runs at idle, when nobody is present to answer
-    // a prompt — an unsigned pack is simply refused and the fire demo runs.
+    // check, over header + image so no signed field can be re-targeted.
+    //
+    // What happens when it does NOT check out is doom_pack_gate()'s call, and it
+    // is a table rather than an `if` — see doom_pack_gate.h. In short: a valid
+    // pack loads; a TAMPERED one is refused on every path, because offering a
+    // keypress there hands an attacker the one thing the physical gate exists to
+    // withhold; an UNSIGNED one (a developer build) may raise the same on-keycap
+    // A/ACCEPT — R/REJECT dialog the firmware image has had since FW-2, but only
+    // on a deliberate entry, since the idle path has nobody to answer it.
     if (hdr->image_size > FW_DOOMPACK_SLOT_SIZE - sizeof(*hdr) - DOOM_PACK_SIG_SIZE) {
         printf("doom: pack leaves no room for its signature — refuse\n");
         return false;
     }
     const uint8_t *sig = slot + sizeof(*hdr) + hdr->image_size;
-    if (crypto_ed25519_check(sig, FW_SIGNING_PUBKEY, slot, sizeof(*hdr) + hdr->image_size) != 0) {
-        // Erased flash reads 0xFF; a pre-signing pack ends at image_size — both
-        // present as a blank signature. Distinguish for the log only: the
-        // decision is the same refusal either way.
-        bool blank = true;
-        for (uint32_t i = 0; i < DOOM_PACK_SIG_SIZE; i++) {
-            if (sig[i] != 0x00 && sig[i] != 0xFF) {
-                blank = false;
-                break;
-            }
-        }
-        printf("doom: pack %s — refuse (FW-9: flash a release-signed .plyx)\n",
-               blank ? "is unsigned" : "signature is INVALID");
-        return false;
+    const bool     ok  = crypto_ed25519_check(sig, FW_SIGNING_PUBKEY, slot,
+                                              sizeof(*hdr) + hdr->image_size) == 0;
+    const enum doom_pack_sig sig_state = doom_pack_classify(ok, sig, DOOM_PACK_SIG_SIZE);
+
+    // The answer is given on the MASTER's keycaps; the slave hears it over the
+    // split link (poly_sync_t.doom_pack_auth) because its own RAM never saw the
+    // keypress. state.h carries why delegating that verdict is sound — and note
+    // the gate still judges an INVALID signature locally on both halves, so this
+    // widens nothing but the "unsigned developer build" case.
+    doom_pack_auth_t auth = s_auth;
+    if (!is_usb_host_side() && get_local_state()->doom_pack_auth) {
+        auth.valid     = true;
+        auth.image_crc = hdr->image_crc;
     }
+
+    switch (doom_pack_gate(sig_state, entry, &auth, hdr->image_crc)) {
+        case DOOM_PACK_LOAD:
+            if (sig_state != DOOM_PACK_SIG_VALID) {
+                // Say it every session, not just at the prompt. An authorised
+                // unsigned pack is a developer state, and a log that only
+                // mentions it once is how it gets forgotten on a board that is
+                // later handed to somebody else.
+                printf("doom: unsigned pack ACCEPTED on the keyboard this boot — running it\n");
+            }
+            break;
+        case DOOM_PACK_PROMPT:
+            // Refuse THIS attempt and raise the dialog. The answer cannot be
+            // waited for here: this runs on the loop that scans the matrix, so a
+            // busy-wait guarantees the keypress is never seen — the same reason
+            // FW_UP_COMMIT answers '?' instead of blocking. doom_mode.c re-enters
+            // once the answer lands.
+            printf("doom: pack is unsigned — asking on the keycaps (A = accept, R = reject)\n");
+            doom_pack_confirm_arm(hdr->image_crc);
+            return false;
+        case DOOM_PACK_REFUSE:
+        default:
+            printf("doom: pack %s — refuse (FW-9: flash a release-signed .plyx)\n",
+                   sig_state == DOOM_PACK_SIG_BLANK ? "is unsigned" : "signature is INVALID");
+            return false;
+    }
+#else
+    (void)entry;
 #endif
 
     // Entry: image offset -> XIP address, Thumb bit set. init runs the pack

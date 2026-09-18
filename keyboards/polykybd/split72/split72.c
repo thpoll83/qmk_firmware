@@ -58,23 +58,6 @@ void invert_display(uint8_t r, uint8_t c, bool state) {
     kdisp_invert(state);
 }
 
-// Variant configuration - registered at init time
-static const display_config_t split72_display_config = {
-    .get_key_disp_bitmask = get_key_disp_bitmask,
-    .get_disp_bitmask_size = get_disp_bitmask_size,
-    .key_has_display = key_has_display,
-    .invert_display = invert_display,
-    .matrix_rows_per_side = MATRIX_ROWS_PER_SIDE,
-    .matrix_cols = MATRIX_COLS,
-    .needs_col_adjustment = true,
-    .col_adjustment_start_row = 5,  // Rows 5-8 need c--
-};
-
-void matrix_init_kb(void) {
-    display_register_config(&split72_display_config);
-    matrix_init_user();
-}
-
 // invert displays directly when pressed (no need to do split sync)
 extern matrix_row_t matrix[MATRIX_ROWS];
 

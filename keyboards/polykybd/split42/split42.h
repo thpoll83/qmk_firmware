@@ -64,6 +64,10 @@ struct display_info {
 #define POLY_SPLASH_R2     U" 4 2"
 #define POLY_SPLASH_R2_ROW 2
 
+// Column adjustment: symmetric layout, no adjustment needed
+// Define to a value that will never be >= r (which starts at 0)
+#define POLY_DISPLAY_COL_ADJUST 255
+
 // The picker row is only 6 positions per half (12 total).  The page arrows take the
 // OUTER ENDS — prev at the far left, next at the far right — as on split72 and on
 // the emoji / language layers, leaving 5 variation slots per block, 10 vs split72's

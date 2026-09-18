@@ -13,6 +13,8 @@
 #include "base/shift_reg.h"
 #include "base/text_helper.h"
 
+#include "display_common.h"
+
 #include <string.h>
 
 static const struct display_info key_display[] = {
@@ -56,31 +58,28 @@ void invert_display(uint8_t r, uint8_t c, bool state) {
     kdisp_invert(state);
 }
 
+// Variant configuration - registered at init time
+static const display_config_t split72_display_config = {
+    .get_key_disp_bitmask = get_key_disp_bitmask,
+    .get_disp_bitmask_size = get_disp_bitmask_size,
+    .key_has_display = key_has_display,
+    .invert_display = invert_display,
+    .matrix_rows_per_side = MATRIX_ROWS_PER_SIDE,
+    .matrix_cols = MATRIX_COLS,
+    .needs_col_adjustment = true,
+    .col_adjustment_start_row = 5,  // Rows 5-8 need c--
+};
+
+void matrix_init_kb(void) {
+    display_register_config(&split72_display_config);
+    matrix_init_user();
+}
+
 // invert displays directly when pressed (no need to do split sync)
 extern matrix_row_t matrix[MATRIX_ROWS];
-static matrix_row_t last_matrix[MATRIX_ROWS_PER_SIDE];
 
 void matrix_scan_kb(void) {
-    const uint8_t first   = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
-    bool    changed = false;
-    for (uint8_t r = first; r < first + MATRIX_ROWS_PER_SIDE; r++) {
-        if (last_matrix[r - first] != matrix[r]) {
-            changed = true;
-            for (uint8_t c = 0; c < MATRIX_COLS; c++) {
-                bool old     = ((last_matrix[r - first] >> c) & 1) == 1;
-                bool current = ((matrix[r] >> c) & 1) == 1;
-                // Unchanged, or a key with no OLED behind it (see key_has_display).
-                if (old == current || !key_has_display(r, c)) {
-                    continue;
-                }
-                invert_display(r, c, current);
-            }
-        }
-    }
-    if (changed) {
-        memcpy(last_matrix, &matrix[first], sizeof(last_matrix));
-    }
-    matrix_scan_user();
+    matrix_scan_display_common();
 }
 
 void matrix_slave_scan_kb(void) {

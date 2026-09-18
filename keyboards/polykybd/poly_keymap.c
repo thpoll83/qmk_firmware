@@ -5365,6 +5365,13 @@ void keyboard_post_init_user(void) {
 #endif
     splash_progress(5);                 // core1 up
 
+    // ⚠️ Sub-steps, because 63% -> 75% is the gap a boot hang has repeatedly landed
+    // in and "somewhere in these four calls" is as far as the milestone can narrow
+    // it. Everything here is cheap on paper — array writes and XIP reads — which is
+    // exactly why the hang is interesting: it points at core1, launched immediately
+    // above, rather than at the calls themselves. The sub-step is what turns the
+    // next occurrence into a name instead of a photograph of a percentage.
+    boot_substep(1);                    // core1 launched, about to register RPCs
     transaction_register_rpc(USER_SYNC_POLY_DATA,           user_sync_poly_data_handler);
     transaction_register_rpc(USER_SYNC_LAYER_DATA,          user_sync_layer_data_handler);
     transaction_register_rpc(USER_SYNC_LASTKEY_DATA,        user_sync_lastkey_data_handler);
@@ -5376,6 +5383,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
     transaction_register_rpc(USER_SYNC_FLASH_STAGE,         user_sync_flash_stage_handler);
     transaction_register_rpc(USER_SYNC_RESET,               user_sync_reset_handler);
+    boot_substep(2);         // the 11 poly RPCs are registered
     slave_data_register();   // USER_SYNC_SLAVE_DATA: LTR-559 sensor pull + the slave crash record
 #ifdef POLY_DUMMY_TXN_TEST
     // Root-cause experiment: register 3 no-op transactions so NUM_TOTAL_TRANSACTIONS
@@ -5386,7 +5394,9 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_DUMMY3, user_sync_dummy_handler);
 #endif
 
+    boot_substep(3);                    // slave_data_register() returned
     fw_staging_init();
+    boot_substep(4);                    // fw_staging_init() returned (apply-log + done-record read)
     splash_progress(6);                 // split RPCs registered, fw-staging up
 
     poly_eeconf_t ee = load_user_eeconf();

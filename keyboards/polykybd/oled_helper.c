@@ -323,7 +323,7 @@ static void oled_fw_notice(const uint32_t* word, bool icon) {
 //
 // Costs a couple of hundred ms of I2C across the whole boot: the first paint is a
 // full frame, the rest change only the digit, and oled_write_raw diffs.
-void oled_boot_progress(uint8_t step, uint8_t total) {
+void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub) {
     // ⚠️ The 19 px face does NOT fit two bands on the 32 px panel — measured, 2 px of
     // "Booting...."'s ascenders land at y = -1 and the hardware clips them away.
     // split42 uses the 15 px face instead; it still fits comfortably across 128 px
@@ -343,7 +343,16 @@ void oled_boot_progress(uint8_t step, uint8_t total) {
     // milestone; the machine-readable one is the CRASH_PHASE_BOOT argument, which stays
     // the step number, so "stuck at 38%" and phase=1:0x0003 name the same place.
     const uint8_t pct = (uint8_t)(((uint16_t)step * 100u + total / 2u) / total);
-    snprintf(txt, sizeof(txt), "%u%%", (unsigned)pct);
+    // ⚠️ A sub-step APPENDS; it never renumbers. The percentages are a vocabulary
+    // this board's boot hangs have been reported in for longer than the splash
+    // letters have existed, and the same number is the CRASH_PHASE_BOOT argument —
+    // so "63%" has to keep meaning step 5 for every report already collected.
+    // Splitting a milestone finer therefore reads "63%.2", not a new percentage.
+    if (sub) {
+        snprintf(txt, sizeof(txt), "%u%%.%u", (unsigned)pct, (unsigned)sub);
+    } else {
+        snprintf(txt, sizeof(txt), "%u%%", (unsigned)pct);
+    }
     ascii_to_u32_string(buf, sizeof(buf), txt);
 
     oled_on();

@@ -194,6 +194,12 @@ skill; the mechanics, the `release-notes` branch and `scripts/publish_release.py
   which bypasses `fw_staging` entirely. It walks back through ancestors and proves the
   delta to the release commit is **only** the auto-bump. Recovery when it refuses:
   dispatch *Build and HIL Test* on that commit with `tier: fwapply`, then re-run release.
+  ⚠️ **A docs-only merge in the way no longer costs that round-trip**: the delta may
+  also carry files the build and the rig never read, decided by replaying
+  `qmk-test.yml`'s own `paths:` filter rather than a second copy of it, and failing
+  closed if that filter cannot be read. `PolyKybd-fw-v0.27.1` published with zero
+  assets before this existed. `bump:none` additionally skips the version bump for such
+  a PR — a convenience, since the gate no longer depends on anyone remembering it.
 - ⚠️ **A `PROTOCOL_VERSION` bump means BOTH artifacts get released, and the check is the
   PUBLISHED versions, not the in-tree ones.** The source-lockstep rule can be perfectly
   satisfied while the releases sit a protocol apart, and nothing downstream catches it —

@@ -171,22 +171,40 @@ static doom_pack_auth_t s_auth             = {0}; // what was accepted this boot
 // the syncs carrying the very authorisation that would have ended the loop, so it
 // sustained itself until one got through. Same pack + same authorisation = same
 // verdict, so derive it once and latch it.
-static bool     s_refused_valid = false;
-static uint32_t s_refused_crc   = 0;
-static uint8_t  s_refused_auth  = 0;
+static bool                 s_refused_valid = false;
+static uint32_t             s_refused_crc   = 0;
+static uint32_t             s_refused_auth  = 0;
+static enum doom_pack_entry s_refused_entry = DOOM_PACK_ENTRY_INTERACTIVE;
 
-static void pack_refusal_latch(uint32_t image_crc, uint8_t auth_byte) {
+// ⚠️ The key must carry EVERY input doom_pack_gate() reads, and `entry` is one of
+// them — an unsigned pack is REFUSED automatically and PROMPTED interactively.
+// Leaving it out latched the screensaver's refusal under the deliberate entry's
+// key, so on a board whose idle style is the DOOM attract demo the very first
+// idle timeout silently disarmed the prompt for the rest of the boot: pressing
+// KC_IDDQD returned here and never reached the gate. Caught in review of #298.
+static void pack_refusal_latch(uint32_t image_crc, uint32_t auth_crc, enum doom_pack_entry entry) {
     s_refused_valid = true;
     s_refused_crc   = image_crc;
-    s_refused_auth  = auth_byte;
+    s_refused_auth  = auth_crc;
+    s_refused_entry = entry;
 }
 
-static bool pack_refusal_still_stands(uint32_t image_crc, uint8_t auth_byte) {
-    return s_refused_valid && s_refused_crc == image_crc && s_refused_auth == auth_byte;
+static bool pack_refusal_still_stands(uint32_t image_crc, uint32_t auth_crc, enum doom_pack_entry entry) {
+    return s_refused_valid && s_refused_crc == image_crc && s_refused_auth == auth_crc &&
+           s_refused_entry == entry;
 }
 
 static void pack_refusal_clear(void) {
     s_refused_valid = false;
+}
+
+// ⚠️ The latch is keyed on the pack's declared image_crc, and the SIGNATURE
+// TRAILER sits outside it — so re-flashing the same image with a signature
+// attached leaves the key identical and a cached refusal would outlive the thing
+// it was about. Anything that rewrites the slot therefore drops the latch, and the
+// staging finalize calls this on both halves. Also caught in review of #298.
+void doom_pack_slot_rewritten(void) {
+    pack_refusal_clear();
 }
 
 void doom_pack_confirm_arm(uint32_t image_crc) {
@@ -225,8 +243,11 @@ void doom_pack_confirm_tick(void) {
     }
 }
 
-bool doom_pack_auth_granted(void) {
-    return s_auth.valid;
+// 0 means "nothing accepted this boot". A pack whose image_crc is genuinely 0
+// therefore reads as unaccepted on the slave and is refused — fail-closed, which
+// is the only direction this may fail in.
+uint32_t doom_pack_auth_crc(void) {
+    return s_auth.valid ? s_auth.image_crc : 0u;
 }
 
 bool doom_pack_confirm_take_accepted(void) {
@@ -264,10 +285,10 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
     // behind it), so this is where a repeated call has to stop. The auth byte is
     // part of the key because it is the one input that can change underneath an
     // otherwise identical retry.
-    const uint8_t auth_byte = is_usb_host_side() ? (s_auth.valid ? 1u : 0u)
-                                                 : get_local_state()->doom_pack_auth;
-    if (pack_refusal_still_stands(hdr->image_crc, auth_byte)) {
-        return false;   // same pack, same answer — already logged the first time
+    const uint32_t auth_crc = is_usb_host_side() ? doom_pack_auth_crc()
+                                                : get_local_state()->doom_pack_auth_crc;
+    if (pack_refusal_still_stands(hdr->image_crc, auth_crc, entry)) {
+        return false;   // same pack, same answer, same entry — logged the first time
     }
     if (hdr->ram_base != (uint32_t)(uintptr_t)pool || hdr->ram_size > pool_size ||
         hdr->arena_off >= hdr->ram_size) {
@@ -276,7 +297,7 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
         printf("doom: pack RAM %08lx+%lu != pool %p+%lu — stale pack, refuse\n",
                (unsigned long)hdr->ram_base, (unsigned long)hdr->ram_size,
                (void *)pool, (unsigned long)pool_size);
-        pack_refusal_latch(hdr->image_crc, auth_byte);
+        pack_refusal_latch(hdr->image_crc, auth_crc, entry);
         return false;
     }
     // crc32_1byte takes a uint16_t length — chain it over the ~230 KB image
@@ -294,7 +315,7 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
     if (crc != hdr->image_crc) {
         printf("doom: pack CRC %08lx != %08lx — refuse\n",
                (unsigned long)crc, (unsigned long)hdr->image_crc);
-        pack_refusal_latch(hdr->image_crc, auth_byte);
+        pack_refusal_latch(hdr->image_crc, auth_crc, entry);
         return false;
     }
 
@@ -334,8 +355,16 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
     // the gate still judges an INVALID signature locally on both halves, so this
     // widens nothing but the "unsigned developer build" case.
     doom_pack_auth_t auth = s_auth;
-    if (!is_usb_host_side() && get_local_state()->doom_pack_auth) {
-        auth.valid     = true;
+    if (!is_usb_host_side()) {
+        // ⚠️ The master's answer names the pack it was given for, and this half
+        // honours it only for the pack IT holds. The two slots are written by one
+        // host command, but that write can land here and fail there (or the
+        // reverse) with nothing downstream reporting it — and a bare "something
+        // was accepted" then ran whatever this half happened to hold. A mismatch
+        // falls through to the gate as "not authorised", which on the slave's
+        // automatic entry means refuse.
+        const uint32_t accepted = get_local_state()->doom_pack_auth_crc;
+        auth.valid     = (accepted != 0u && accepted == hdr->image_crc);
         auth.image_crc = hdr->image_crc;
     }
 
@@ -357,13 +386,13 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
             // once the answer lands.
             printf("doom: pack is unsigned — asking on the keycaps (A = accept, R = reject)\n");
             doom_pack_confirm_arm(hdr->image_crc);
-            pack_refusal_latch(hdr->image_crc, auth_byte);
+            pack_refusal_latch(hdr->image_crc, auth_crc, entry);
             return false;
         case DOOM_PACK_REFUSE:
         default:
             printf("doom: pack %s — refuse (FW-9: flash a release-signed .plyx)\n",
                    sig_state == DOOM_PACK_SIG_BLANK ? "is unsigned" : "signature is INVALID");
-            pack_refusal_latch(hdr->image_crc, auth_byte);
+            pack_refusal_latch(hdr->image_crc, auth_crc, entry);
             return false;
     }
 #else

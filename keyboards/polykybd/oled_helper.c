@@ -208,15 +208,22 @@ void oled_fw_update_screen(void) {
 void oled_fw_confirm_screen(void) {
     const GFXfont*  small = &NotoSans_Regular_Small_15px7b;
     const GFXfont*  fonts[] = { small };
-    // Three lines on the 64px panel; the 32px one only has room for the verdict
-    // and the key, so it drops the "firmware!" continuation.
+    // Three lines on the 64px panel; the 32px one has room for two, so it folds
+    // the object into the first line rather than dropping it.
     const bool      tall  = OLED_DISPLAY_HEIGHT >= 64;
     // WHAT is unsigned — the one thing that differs between the two prompts, and
     // the thing a user needs to tell them apart. A firmware image replaces the
     // board's code; a DOOM pack is an easter-egg engine that only runs while the
     // game does. Agreeing to one is not agreeing to the other.
+    //
+    // ⚠️ So it must survive the short panel too. The 32px path used to read a bare
+    // "Unsigned!" over the key, which asks for a physical yes/no without saying to
+    // what — on split42, every one of these prompts looked identical. Both folded
+    // forms are measured against the 128px width in this font (99 px and 112 px of
+    // advance, and the drawn bbox is narrower still). Caught in review of #298.
     const bool      pack  = get_local_state()->fw_confirm == POLY_CONFIRM_DOOM_PACK;
-    const uint32_t* l0    = tall ? U"Unsigned" : U"Unsigned!";
+    const uint32_t* l0    = tall ? U"Unsigned"
+                                 : (pack ? U"Unsigned pack!" : U"Unsigned FW!");
     const uint32_t* l1    = !tall ? NULL : (pack ? U"DOOM pack!" : U"firmware!");
     const uint32_t* l2    = is_left_side() ? U"A = ACCEPT" : U"R = REJECT";
 

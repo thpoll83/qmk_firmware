@@ -1225,7 +1225,7 @@ void housekeeping_task_user(void) {
         // The slave never sees the keypress, so the master's answer travels with
         // the rest of the synced state (state.h explains why delegating it is
         // sound, and what stays local).
-        access_local_state()->doom_pack_auth = doom_pack_auth_granted() ? 1 : 0;
+        access_local_state()->doom_pack_auth_crc = doom_pack_auth_crc();
         poly_sync_t *cfm_state = access_local_state();
         if (cfm_state->fw_confirm != want) {
             cfm_state->fw_confirm = want;

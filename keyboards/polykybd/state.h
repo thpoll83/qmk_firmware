@@ -151,6 +151,33 @@ enum poly_confirm_kind {
 
 typedef struct _poly_sync_t {
     uint32_t crc32;
+    // FW-9: the image_crc of the UNSIGNED DOOM pack the master accepted on its
+    // keycaps this boot, or 0 for none. The slave loads the pack too — its mirror
+    // session runs the same engine — and its own RAM never saw the answer, so
+    // without this it would refuse and then retry on every housekeeping pass,
+    // burning a ~230 KB SHA-512 each time while the right half stayed a plain
+    // control pad.
+    //
+    // ⚠️ The CRC, not a bool, and the slave requires it to match ITS OWN header
+    // before honouring it. A bool delegates the verdict "something unsigned was
+    // accepted", and the slave then applied that to whatever pack it happened to
+    // hold. One host command writes both halves, but that write can land on the
+    // master and fail on the slave — the GET_ID slot block reports the MASTER's
+    // slots only, so nothing downstream notices — and then accepting pack B ran
+    // the slave's older pack A, which nobody had accepted. Carrying the CRC makes
+    // the answer name the pack it was given for, which is the binding s_auth
+    // already has on the master. Caught in review of #298.
+    //
+    // ⚠️ It sits HERE, directly after crc32, to keep the struct padding-free: the
+    // split CRC runs over every byte from offset 4, and a 4-byte member dropped
+    // into the uint8_t run below would put alignment padding inside the
+    // checksummed range.
+    //
+    // A pack whose image_crc is genuinely 0 reads as "not accepted" and is refused
+    // on the slave — fail-closed, which is the direction a signature gate should
+    // fail in. Master-authoritative, RAM-only, never persisted: a reboot is a
+    // fresh decision.
+    uint32_t doom_pack_auth_crc;
     uint8_t  lang;
     uint8_t  contrast;
     uint8_t  flags;
@@ -215,21 +242,6 @@ typedef struct _poly_sync_t {
     // only the caption differs. Two hand-written copies of "the board becomes a
     // dialog" is exactly the drift this repo keeps getting caught by.
     uint8_t  fw_confirm;
-    // FW-9: the master has accepted an UNSIGNED DOOM pack on the keycaps this boot
-    // (0/1). The slave loads the pack too — its mirror session runs the same engine
-    // — and its own RAM never saw the answer, so without this it would refuse and
-    // then retry on every housekeeping pass, burning a ~230 KB SHA-512 each time
-    // while the right half stayed a plain control pad.
-    //
-    // ⚠️ The slave trusts this rather than re-deciding, and that is sound for one
-    // reason: install_doompack writes BOTH halves from a single host command, so
-    // the two slots hold the same bytes. Making them differ means flashing one half
-    // over BOOTSEL — physical access, which is exactly what the prompt asks for.
-    // An INVALID signature is still refused independently on each half; only the
-    // "unsigned developer build" verdict is delegated.
-    //
-    // Master-authoritative, RAM-only, never persisted: a reboot is a fresh decision.
-    uint8_t  doom_pack_auth;
     // The settings layer's advanced half is revealed (0/1) — see KC_SETTINGS_MORE.
     // Synced because the SLAVE draws its own half of that row and only ever sees
     // this struct; without it the two halves would disagree about what is visible.

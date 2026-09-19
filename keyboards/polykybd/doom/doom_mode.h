@@ -276,9 +276,15 @@ void     doom_pack_confirm_tick(void);               // times it out; once per h
 // game. The load itself could not wait for the answer — it runs on the loop that
 // scans the matrix — so the retry is driven from housekeeping instead.
 bool     doom_pack_confirm_take_accepted(void);
-// An unsigned pack was accepted on this (master) board this boot. Housekeeping
-// publishes it to the slave through poly_sync_t.doom_pack_auth.
-bool     doom_pack_auth_granted(void);
+// The image_crc of the unsigned pack accepted on this (master) board this boot,
+// or 0 if none. Housekeeping publishes it to the slave through
+// poly_sync_t.doom_pack_auth_crc, which NAMES the pack rather than merely
+// asserting that something was accepted.
+uint32_t doom_pack_auth_crc(void);
+// Anything that rewrites the DOOMPACK slot drops the loader's refusal latch. The
+// latch is keyed on the declared image_crc and the signature trailer lies OUTSIDE
+// it, so signing the same image leaves that key identical.
+void     doom_pack_slot_rewritten(void);
 
 // The declarations above stay for signature documentation; the call sites
 // (doom_mode.c / doom_blit.c / split_sync.c) expand to table calls.
@@ -316,7 +322,8 @@ static inline bool doom_pack_confirm_pending(void) { return false; }
 static inline void doom_pack_confirm_answer(bool accept) { (void)accept; }
 static inline void doom_pack_confirm_tick(void) {}
 static inline bool doom_pack_confirm_take_accepted(void) { return false; }
-static inline bool doom_pack_auth_granted(void) { return false; }
+static inline uint32_t doom_pack_auth_crc(void) { return 0; }
+static inline void doom_pack_slot_rewritten(void) {}
 #endif // POLYKYBD_DOOM_PACK
 
 #else
@@ -327,7 +334,8 @@ static inline bool doom_pack_confirm_pending(void) { return false; }
 static inline void doom_pack_confirm_answer(bool accept) { (void)accept; }
 static inline void doom_pack_confirm_tick(void) {}
 static inline bool doom_pack_confirm_take_accepted(void) { return false; }
-static inline bool doom_pack_auth_granted(void) { return false; }
+static inline uint32_t doom_pack_auth_crc(void) { return 0; }
+static inline void doom_pack_slot_rewritten(void) {}
 // No screensaver without the game compiled in — IDLE_STYLE_IDDQD then falls
 // back to the pulse (the idle pipeline checks the start's return value).
 static inline bool doom_screensaver_start(void) { return false; }

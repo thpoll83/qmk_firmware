@@ -183,4 +183,92 @@ TEST(DoomPackGate, TheRefusedPackDeliveredThisSessionWouldNowPrompt) {
     EXPECT_EQ(doom_pack_gate(sig, DOOM_PACK_ENTRY_INTERACTIVE, &a, kCrcA), DOOM_PACK_PROMPT);
 }
 
+
+// ── The refusal latch's key (the loader's, modelled here) ───────────────────
+//
+// doom_pack_load() caches one refusal so a retry does not re-walk ~210 KB of CRC
+// on every housekeeping pass. The cache is only sound while its key carries every
+// input the gate reads — and `entry` is one of them, because the same unsigned
+// pack is REFUSED automatically and PROMPTED interactively. These pin the gate
+// half of that; the latch itself lives in doom_pack_load.c, which needs flash.
+
+TEST(DoomPackGate, TheSamePackGivesOppositeVerdictsOnTheTwoEntries) {
+    // The property the latch key has to respect: entry alone flips the answer, so
+    // a cache keyed on (crc, auth) would serve one entry's verdict to the other.
+    // That is what silently disarmed the prompt for a whole boot — the idle
+    // screensaver refused first, and the deliberate KC_IDDQD press then never
+    // reached this function.
+    auto a = none();
+    EXPECT_NE(doom_pack_gate(DOOM_PACK_SIG_BLANK, DOOM_PACK_ENTRY_AUTOMATIC, &a, kCrcA),
+              doom_pack_gate(DOOM_PACK_SIG_BLANK, DOOM_PACK_ENTRY_INTERACTIVE, &a, kCrcA));
+}
+
+TEST(DoomPackGate, EntryIsIrrelevantOnceTheAnswerIsIn) {
+    // …and the converse, which is why the auth is in the key too: with an
+    // authorisation for this pack both entries agree, so a latch from before the
+    // answer must not outlive it.
+    auto a = accepted(kCrcA);
+    EXPECT_EQ(doom_pack_gate(DOOM_PACK_SIG_BLANK, DOOM_PACK_ENTRY_AUTOMATIC, &a, kCrcA),
+              doom_pack_gate(DOOM_PACK_SIG_BLANK, DOOM_PACK_ENTRY_INTERACTIVE, &a, kCrcA));
+}
+
+// ── The SLAVE's delegated authorisation ─────────────────────────────────────
+//
+// The slave never sees the keypress; it receives poly_sync_t.doom_pack_auth_crc,
+// the image_crc the master accepted. These model what doom_pack_load() builds
+// from it, so the binding is pinned by a test rather than by the call site alone.
+
+// What the slave constructs: the master's accepted CRC, honoured only for the
+// pack THIS half is holding.
+static doom_pack_auth_t slave_auth(uint32_t synced_crc, uint32_t local_crc) {
+    doom_pack_auth_t a;
+    a.valid     = (synced_crc != 0u && synced_crc == local_crc);
+    a.image_crc = local_crc;
+    return a;
+}
+
+TEST(DoomPackGate, SlaveRunsTheAcceptedPackWhenBothHalvesHoldIt) {
+    auto a = slave_auth(kCrcA, kCrcA);
+    EXPECT_EQ(doom_pack_gate(DOOM_PACK_SIG_BLANK, DOOM_PACK_ENTRY_AUTOMATIC, &a, kCrcA),
+              DOOM_PACK_LOAD);
+}
+
+TEST(DoomPackGate, SlaveRefusesADIFFERENTPackFromTheOneAccepted) {
+    // The case a bare "something was accepted" boolean got wrong. One host command
+    // writes both halves, but it can land on the master and fail on the slave with
+    // nothing downstream reporting it — so accepting pack B on the keycaps must not
+    // run the slave's leftover pack A, which nobody accepted.
+    auto a = slave_auth(kCrcB, kCrcA);
+    EXPECT_FALSE(a.valid);
+    EXPECT_EQ(doom_pack_gate(DOOM_PACK_SIG_BLANK, DOOM_PACK_ENTRY_AUTOMATIC, &a, kCrcA),
+              DOOM_PACK_REFUSE);
+}
+
+TEST(DoomPackGate, SlaveRefusesWhenNothingWasAccepted) {
+    auto a = slave_auth(0u, kCrcA);
+    EXPECT_FALSE(a.valid);
+    EXPECT_EQ(doom_pack_gate(DOOM_PACK_SIG_BLANK, DOOM_PACK_ENTRY_AUTOMATIC, &a, kCrcA),
+              DOOM_PACK_REFUSE);
+}
+
+TEST(DoomPackGate, AZeroCrcPackFailsClosedRatherThanOpen) {
+    // 0 is the "nothing accepted" encoding, so a pack whose image_crc is genuinely
+    // 0 reads as unaccepted and is refused. Deliberate: of the two ways to be
+    // wrong about a 1-in-4-billion collision, refusing is the survivable one.
+    auto a = slave_auth(0u, 0u);
+    EXPECT_FALSE(a.valid);
+    EXPECT_EQ(doom_pack_gate(DOOM_PACK_SIG_BLANK, DOOM_PACK_ENTRY_AUTOMATIC, &a, 0u),
+              DOOM_PACK_REFUSE);
+}
+
+TEST(DoomPackGate, ADelegatedAuthorisationStillDoesNotExcuseAWrongSignature) {
+    // The delegation widens exactly one verdict — "unsigned developer build".
+    // INVALID is still judged locally on each half.
+    auto a = slave_auth(kCrcA, kCrcA);
+    EXPECT_EQ(doom_pack_gate(DOOM_PACK_SIG_INVALID, DOOM_PACK_ENTRY_AUTOMATIC, &a, kCrcA),
+              DOOM_PACK_REFUSE);
+    EXPECT_EQ(doom_pack_gate(DOOM_PACK_SIG_INVALID, DOOM_PACK_ENTRY_INTERACTIVE, &a, kCrcA),
+              DOOM_PACK_REFUSE);
+}
+
 }  // namespace

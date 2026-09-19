@@ -7,6 +7,10 @@
 #include "quantum.h"
 #include "mru.h"
 #include "layers.h"
+// The idle-timeout presets + the EEPROM bias encoding. A separate, PURE header so
+// the encoding is host-testable (make test:polykybd_idle_timeout); re-exported here
+// so every consumer of state.h is unchanged, the same seam as base/sync_ack.h.
+#include "base/idle_timeout.h"
 
 // Idle (anti-burn-in) display style, persisted in poly_eeconf_t.idle_style and
 // toggled over HID (cmd 28). PULSE is the legacy contrast-only breathing; JITTER
@@ -133,8 +137,47 @@ enum poly_latin_remap {
     LATIN_REMAP_PICKLTR = 2,   // target chosen (drawn inverted); waiting for the letter
 };
 
+// Which physical-presence dialog the board is currently BEING (poly_sync_t.fw_confirm).
+//
+// Both prompts exist for the same reason: signing defends against any process that
+// can talk the flash protocol, and such a process could forge a reply on that same
+// channel — so the answer has to come off the matrix, where it cannot be produced
+// remotely. They differ only in what is being authorised, hence only in the caption.
+enum poly_confirm_kind {
+    POLY_CONFIRM_NONE     = 0,
+    POLY_CONFIRM_FW_IMAGE = 1,  // FW-2: an unsigned firmware image at COMMIT
+    POLY_CONFIRM_DOOM_PACK = 2, // FW-9: an unsigned .plyx engine pack at a deliberate game entry
+};
+
 typedef struct _poly_sync_t {
     uint32_t crc32;
+    // FW-9: the image_crc of the UNSIGNED DOOM pack the master accepted on its
+    // keycaps this boot, or 0 for none. The slave loads the pack too — its mirror
+    // session runs the same engine — and its own RAM never saw the answer, so
+    // without this it would refuse and then retry on every housekeeping pass,
+    // burning a ~230 KB SHA-512 each time while the right half stayed a plain
+    // control pad.
+    //
+    // ⚠️ The CRC, not a bool, and the slave requires it to match ITS OWN header
+    // before honouring it. A bool delegates the verdict "something unsigned was
+    // accepted", and the slave then applied that to whatever pack it happened to
+    // hold. One host command writes both halves, but that write can land on the
+    // master and fail on the slave — the GET_ID slot block reports the MASTER's
+    // slots only, so nothing downstream notices — and then accepting pack B ran
+    // the slave's older pack A, which nobody had accepted. Carrying the CRC makes
+    // the answer name the pack it was given for, which is the binding s_auth
+    // already has on the master. Caught in review of #298.
+    //
+    // ⚠️ It sits HERE, directly after crc32, to keep the struct padding-free: the
+    // split CRC runs over every byte from offset 4, and a 4-byte member dropped
+    // into the uint8_t run below would put alignment padding inside the
+    // checksummed range.
+    //
+    // A pack whose image_crc is genuinely 0 reads as "not accepted" and is refused
+    // on the slave — fail-closed, which is the direction a signature gate should
+    // fail in. Master-authoritative, RAM-only, never persisted: a reboot is a
+    // fresh decision.
+    uint32_t doom_pack_auth_crc;
     uint8_t  lang;
     uint8_t  contrast;
     uint8_t  flags;
@@ -185,11 +228,19 @@ typedef struct _poly_sync_t {
     // when it sees the value change (see user_sync_poly_data_handler). It is a
     // nonce, not a state — any change triggers exactly one replay.
     uint8_t  anim_nonce;
-    // FW-2 unsigned-image confirmation prompt active on the master (0/1). Synced so
-    // BOTH halves turn their keycaps into the prompt: update_displays blanks every
-    // key and draws A/ACCEPT (left half) or R/REJECT (right half) on the home-row
-    // middle key. The answer comes back over the normal matrix pull — only the
-    // master runs process_record, so it sees either half's press.
+    // Which physical-presence prompt is up on the master (enum poly_confirm_kind,
+    // 0 = none). Synced so BOTH halves turn their keycaps into the prompt:
+    // update_displays blanks every key and draws A/ACCEPT (left half) or R/REJECT
+    // (right half) on the home-row middle key. The answer comes back over the
+    // normal matrix pull — only the master runs process_record, so it sees either
+    // half's press.
+    //
+    // ⚠️ A KIND, not a bool, since FW-9 gave the unsigned DOOM pack the same
+    // dialog. It was already a uint8_t, so this costs no bytes and cannot push
+    // poly_sync_t past RPC_M2S_BUFFER_SIZE. The two prompts share this field, the
+    // render gate, the key swallow and the clear_keyboard() that precedes it —
+    // only the caption differs. Two hand-written copies of "the board becomes a
+    // dialog" is exactly the drift this repo keeps getting caught by.
     uint8_t  fw_confirm;
     // The settings layer's advanced half is revealed (0/1) — see KC_SETTINGS_MORE.
     // Synced because the SLAVE draws its own half of that row and only ever sees
@@ -461,6 +512,11 @@ typedef struct _poly_eeconf_t {
     // block it guards, so from the first save onwards the stored style is verbatim
     // and a LATER default change cannot silently overwrite a real choice.
     uint8_t  idle_style_fmt;
+    // Persisted idle TIMEOUT (enum poly_idle_timeout, HID cmd 40), stored BIASED BY
+    // ONE so that zero means "never chosen" — idle_timeout_pack() /
+    // idle_timeout_unpack() in base/idle_timeout.h, which is also where the reason
+    // it is a bias rather than a second sentinel byte is written down.
+    uint8_t  idle_timeout;
 } poly_eeconf_t;
 
 #define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
@@ -660,6 +716,23 @@ void note_idle_style(uint8_t style);
 // Human-readable name of an idle style, for console logs ("pulse"/"jitter"/…).
 // Never NULL — an unknown value reads as "?".
 const char* idle_style_name(uint8_t style);
+
+// ---- Idle TIMEOUT (enum poly_idle_timeout) — see the enum comment above. ----
+
+// The active idle timeout PRESET (an enum value, not milliseconds).
+uint8_t get_idle_timeout(void);
+
+// The active idle timeout in MILLISECONDS — what the housekeeping fade, the HID
+// "start idle" backdate and the doom screensaver deadline all measure against.
+// This is the runtime replacement for the old compile-time FADE_OUT_TIME.
+uint32_t get_idle_timeout_ms(void);
+
+// Sets the idle timeout and marks settings dirty (deferred EEPROM write).
+// Out-of-range values are ignored. Used by the HID command (cmd 40).
+void set_idle_timeout(uint8_t value);
+
+// Records the idle timeout without marking settings dirty (boot-time EEPROM load).
+void note_idle_timeout(uint8_t value);
 
 // ---- Glyph-script override (enum poly_glyph_script) — see enum comment above. ----
 

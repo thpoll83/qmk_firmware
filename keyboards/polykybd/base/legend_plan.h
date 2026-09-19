@@ -73,6 +73,39 @@ typedef struct {
 void legend_plan_clamp(const legend_plan_env_t* env, int8_t* x, int8_t* y,
                        int8_t xmin, int8_t xmax, int8_t ymin, int8_t ymax);
 
+// Anti-burn-in travel range for an idle legend, as an INCLUSIVE offset range per
+// axis to add to the draw origin (kdisp_set_draw_offset). `ink_*` is the legend's
+// ABSOLUTE ink box — the box of everything the display list draws, at the origin
+// the planner already clamped — and the returned range is what keeps that box on
+// the panel. An axis whose `lo` exceeds its `hi` has no usable range; the caller
+// leaves that axis at 0.
+//
+// The range is derived per glyph and is never a fixed +/-N envelope: a slim "i"
+// roams its whole free width while a wide "w" moves only as far as it can. A cap
+// would throttle the slim glyph and edge-bias the wide one.
+//
+// `overhang` is what a legend with NO free space of its own is allowed to borrow.
+// A 40 px tall icon fills the window exactly, so its own slack is zero and it
+// cannot move a single row — it lights the same pixels for the whole idle session,
+// which is the burn an idle style exists to prevent. Letting it hang `overhang` px
+// off an edge buys it that many pixels of travel for `overhang` px of clipping, and
+// the clipping costs nothing in memory: the scratch buffer really extends there and
+// kdisp_send_window() sends the window only (see disp_array.h's BUFFER_SLACK_*).
+//
+// Two limits on that borrowing, both deliberate:
+//   * Only the SHORTFALL is borrowed, and only up to `overhang` px of travel. A
+//     legend that already has room is untouched — it must not start clipping just
+//     because a rule exists, and 3 px off the west edge deletes the stem of an "i".
+//   * NORTH is not on offer (BUFFER_SLACK_N is 0), so a glyph that needs vertical
+//     room takes it all from the south.
+// An OVER-SIZE legend — ink taller or wider than the window, which legend_plan_clamp
+// has already decided an edge for — is left alone: its range is empty in that axis
+// and widening it would only move the clip from one edge to the other.
+void legend_plan_idle_travel(const legend_plan_env_t* env,
+                             int8_t ink_xmin, int8_t ink_xmax, int8_t ink_ymin, int8_t ink_ymax,
+                             uint8_t overhang,
+                             int8_t* dx_lo, int8_t* dx_hi, int8_t* dy_lo, int8_t* dy_hi);
+
 // Rewrites `text` into `out` at the requested size, returning false — leaving the
 // caller on the normal face — if the size is S, the legend is too long, or ANY of
 // its glyphs is missing at that size. All-or-nothing on purpose; see the comment

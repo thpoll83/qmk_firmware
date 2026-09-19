@@ -208,11 +208,23 @@ void oled_fw_update_screen(void) {
 void oled_fw_confirm_screen(void) {
     const GFXfont*  small = &NotoSans_Regular_Small_15px7b;
     const GFXfont*  fonts[] = { small };
-    // Three lines on the 64px panel; the 32px one only has room for the verdict
-    // and the key, so it drops the "firmware!" continuation.
+    // Three lines on the 64px panel; the 32px one has room for two, so it folds
+    // the object into the first line rather than dropping it.
     const bool      tall  = OLED_DISPLAY_HEIGHT >= 64;
-    const uint32_t* l0    = tall ? U"Unsigned" : U"Unsigned!";
-    const uint32_t* l1    = tall ? U"firmware!" : NULL;
+    // WHAT is unsigned — the one thing that differs between the two prompts, and
+    // the thing a user needs to tell them apart. A firmware image replaces the
+    // board's code; a DOOM pack is an easter-egg engine that only runs while the
+    // game does. Agreeing to one is not agreeing to the other.
+    //
+    // ⚠️ So it must survive the short panel too. The 32px path used to read a bare
+    // "Unsigned!" over the key, which asks for a physical yes/no without saying to
+    // what — on split42, every one of these prompts looked identical. Both folded
+    // forms are measured against the 128px width in this font (99 px and 112 px of
+    // advance, and the drawn bbox is narrower still). Caught in review of #298.
+    const bool      pack  = get_local_state()->fw_confirm == POLY_CONFIRM_DOOM_PACK;
+    const uint32_t* l0    = tall ? U"Unsigned"
+                                 : (pack ? U"Unsigned pack!" : U"Unsigned FW!");
+    const uint32_t* l1    = !tall ? NULL : (pack ? U"DOOM pack!" : U"firmware!");
     const uint32_t* l2    = is_left_side() ? U"A = ACCEPT" : U"R = REJECT";
 
     oled_on();
@@ -318,7 +330,7 @@ static void oled_fw_notice(const uint32_t* word, bool icon) {
 //
 // Costs a couple of hundred ms of I2C across the whole boot: the first paint is a
 // full frame, the rest change only the digit, and oled_write_raw diffs.
-void oled_boot_progress(uint8_t step, uint8_t total) {
+void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub) {
     // ⚠️ The 19 px face does NOT fit two bands on the 32 px panel — measured, 2 px of
     // "Booting...."'s ascenders land at y = -1 and the hardware clips them away.
     // split42 uses the 15 px face instead; it still fits comfortably across 128 px
@@ -338,7 +350,16 @@ void oled_boot_progress(uint8_t step, uint8_t total) {
     // milestone; the machine-readable one is the CRASH_PHASE_BOOT argument, which stays
     // the step number, so "stuck at 38%" and phase=1:0x0003 name the same place.
     const uint8_t pct = (uint8_t)(((uint16_t)step * 100u + total / 2u) / total);
-    snprintf(txt, sizeof(txt), "%u%%", (unsigned)pct);
+    // ⚠️ A sub-step APPENDS; it never renumbers. The percentages are a vocabulary
+    // this board's boot hangs have been reported in for longer than the splash
+    // letters have existed, and the same number is the CRASH_PHASE_BOOT argument —
+    // so "63%" has to keep meaning step 5 for every report already collected.
+    // Splitting a milestone finer therefore reads "63%.2", not a new percentage.
+    if (sub) {
+        snprintf(txt, sizeof(txt), "%u%%.%u", (unsigned)pct, (unsigned)sub);
+    } else {
+        snprintf(txt, sizeof(txt), "%u%%", (unsigned)pct);
+    }
     ascii_to_u32_string(buf, sizeof(buf), txt);
 
     oled_on();

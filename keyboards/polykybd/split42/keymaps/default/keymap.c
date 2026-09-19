@@ -157,7 +157,10 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
     /* Settings layer */
     [_SL] = POLY_LAYOUT(
-        KC_IDLE_STYLE, KC_GLYPH_SCRIPT, KC_NO, KC_NO, KC_NO, KC_NO,
+        // KC_IDLE_TIMEOUT beside KC_IDLE_STYLE, as on split72. It is a GATED keycode
+        // and every gated keycode must be mapped on this variant too, or it is blank
+        // and unreachable here — split42 shares _SL's gated set but not its layout.
+        KC_IDLE_STYLE, KC_IDLE_TIMEOUT, KC_GLYPH_SCRIPT, KC_NO, KC_NO, KC_NO,
         KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
         KC_NO,   KC_L0,   KC_L1,   KC_L2,   KC_L3,   KC_L4,
         KC_BASE, KC_TOGMODS, KC_NO,

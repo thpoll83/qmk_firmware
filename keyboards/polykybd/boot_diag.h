@@ -47,3 +47,27 @@ void boot_banner_housekeeping_tick(void);
 // Draws the boot-splash frame for milestone `step` (1..7); SPLASH_DONE draws the
 // finished splash then dwells and hands the keycaps over to the real legends.
 void splash_progress(uint8_t step);
+
+// A SUB-milestone inside the current step, for a gap that turned out to be too
+// coarse to localise a hang in.
+//
+// ⚠️ It does NOT renumber the percentages, and that is the whole point. "63%" has
+// named step 5 for longer than the splash letters have existed, the same number is
+// the CRASH_PHASE_BOOT argument, and this board's boot hangs are reported in that
+// vocabulary — so a finer split has to append rather than renumber. The panel shows
+// "63%.2"; the breadcrumb becomes 0x0502 (step<<8 | sub), which a bare milestone
+// never produces because it stamps the step alone (0x0005). So old records keep
+// their meaning and new ones are distinguishable by the high byte.
+//
+// Cheap: it repaints the status OLED's percent line only, and does not touch the
+// keycaps (the splash letters stay where the step left them).
+void boot_substep(uint8_t sub);
+
+// Per-milestone elapsed times for THIS boot, printed once the boot completes.
+//
+// ⚠️ This is what has to exist before anyone arms a watchdog across post_init. The
+// watchdog is off through the whole of it because "the steps above it may block for
+// seconds" — and nobody has ever measured WHICH steps, or how close to
+// CRASH_WATCHDOG_MS the worst one runs. Arming it on a guess turns an occasional
+// hang into a permanent boot loop, which is far worse than the hang.
+void emit_boot_timing_line(void);

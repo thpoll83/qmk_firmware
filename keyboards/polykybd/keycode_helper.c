@@ -112,6 +112,40 @@ static const uint32_t* idle_style_legend(void) {
     return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("IDLE:", "?");
 }
 
+// Same shape, for the idle TIMEOUT — except the label is "IDLE" plus a half-scale
+// clock face rather than a word, because two neighbours both reading "IDLE:" over a
+// short value would be a coin flip to tell apart at a glance.
+//
+// ⚠️ The clock is drawn by HINT_HALF (\x0F), which composites the NEXT glyph at
+// half scale at the literal cursor and does NOT advance — so it needs its own
+// HINT_MOVE, exactly like the mod-tap badges. Full size it is 39x39, taller than
+// this whole two-line legend; halved it is 20x20 and sits in the label line's right
+// margin. HINT_POS_IDLECLK carries the measured position and why y cannot be 0.
+//
+// ⚠️ ICON_CLOCK_2 lives in the EMOJI FONT PACK (_EmjClocks_), not the resident set,
+// so a keyboard with no pack flashed draws this keycap without its clock. The word
+// "IDLE" and the value carry the meaning on their own for exactly that reason —
+// don't let the glyph become the only thing that says what the key is.
+//
+// The durations are spelled from the ACTIVE value like the two legends around it, so
+// the row reads "which animation" / "after how long" without pressing anything. An
+// out-of-range value cannot normally happen (the range is closed, unlike the glyph
+// script) but falls back to "?" for the same reason the others do — a legend must
+// never index past its table.
+#define IDLE_TIMEOUT_LBL(value) \
+    SETTING_LBL("IDLE", value) HINT_MOVE(HINT_POS_IDLECLK) HINT_HALF ICON_CLOCK_2
+
+static const uint32_t* idle_timeout_legend(void) {
+    static const uint32_t* const names[] = { IDLE_TIMEOUT_LBL("15s"),
+                                             IDLE_TIMEOUT_LBL("30s"),
+                                             IDLE_TIMEOUT_LBL("45s"),
+                                             IDLE_TIMEOUT_LBL("1min"),
+                                             IDLE_TIMEOUT_LBL("2min"),
+                                             IDLE_TIMEOUT_LBL("5min") };
+    const uint8_t v = get_idle_timeout();
+    return (v < ARRAY_SIZE(names)) ? names[v] : IDLE_TIMEOUT_LBL("?");
+}
+
 static const uint32_t* glyph_script_legend(void) {
     static const uint32_t* const names[] = { SETTING_LBL("SCRIPT:", "Std"),
                                              SETTING_LBL("SCRIPT:", "Teng"),
@@ -192,6 +226,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         // The two host-only settings that now have a key each. Both show the
         // ACTIVE value, so the keycap answers "what is it set to" without a press.
         case KC_IDLE_STYLE:                 return idle_style_legend();
+        case KC_IDLE_TIMEOUT:               return idle_timeout_legend();
         case KC_GLYPH_SCRIPT:               return glyph_script_legend();
         // ⚠️ This legend used to be DEAD: update_displays() carried a bespoke
         // `else if (keycode == KC_EDEN)` branch that drew its own hardcoded strings

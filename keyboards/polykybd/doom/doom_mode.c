@@ -309,14 +309,25 @@ static const uint16_t TRIGGER_SEQ[]   = {KC_I, KC_D, KC_D, KC_Q, KC_D};
 // Attract-screensaver runtime: the demo plays for the same wall-clock window
 // the idle pulse would have covered (fade end -> TURN_OFF suspend), then
 // doom_tick tears down and suspends exactly like the pulse path would.
-#define DOOM_SAVER_MAX_MS (TURN_OFF_TIME - FADE_OUT_TIME - FADE_TRANSITION_TIME)
+//
+// ⚠️ RUNTIME, not a #define, since the idle delay became a setting (enum
+// poly_idle_timeout, HID cmd 40): the window is what is LEFT of the fixed suspend
+// deadline after the configured idle delay, so it grows as the delay shrinks. The
+// subtraction cannot go negative — state.c static_asserts that the longest preset
+// plus the fade still fits inside TURN_OFF_TIME — but these are unsigned, where an
+// underflow would hand the demo a ~49-day deadline rather than a short one, so the
+// guard is cheap insurance against a preset added without reading that assert.
+static uint32_t doom_saver_max_ms(void) {
+    const uint32_t spent = get_idle_timeout_ms() + (uint32_t)FADE_TRANSITION_TIME;
+    return (spent < (uint32_t)TURN_OFF_TIME) ? ((uint32_t)TURN_OFF_TIME - spent) : 0u;
+}
 
 // poly_keymap.c — the shared suspend path (displays off, state flushed); the
 // screensaver deadline hands over to it so its end state matches the pulse's.
 
 static bool     s_active;
 static bool     s_screensaver;  // this session is the attract screensaver
-static uint32_t s_saver_start;  // for the DOOM_SAVER_MAX_MS deadline
+static uint32_t s_saver_start;  // for the doom_saver_max_ms() deadline
 static bool     s_egg_armed; // master-local; see the trigger comment above
 
 // IDDQD screensaver anti-burn-in placement: the 5x4 attract block (bottom UI
@@ -433,7 +444,7 @@ static void doom_rgb_task(void);             // ditto, called every doom_tick on
 // Pool take + engine boot, shared by the master's doom_enter and the slave's
 // mirror session. False when blocked (fw flash in flight) or unviable — the
 // caller retries / stays out.
-static bool doom_session_start(void) {
+static bool doom_session_start(enum doom_pack_entry entry) {
     // Never take the pool while the fw/font-pack stager owns the split link and
     // flash — the two "exclusive" modes don't compose.
     if (fw_staging_fw_up_active() || fw_staging_commit_pending()) {
@@ -451,7 +462,7 @@ static bool doom_session_start(void) {
     // approximates. A refused pack (missing/stale/corrupt — already logged)
     // leaves the stub table: doom_engine_start then runs the fire demo.
     memset(s_fb, 0, DOOM_POOL_BYTES);
-    if (!doom_pack_load(s_fb, DOOM_POOL_BYTES)) {
+    if (!doom_pack_load(s_fb, DOOM_POOL_BYTES, entry)) {
         // No valid engine pack flashed (missing/stale/corrupt — already logged).
         // On the pack flavour there is nothing to run without it, so REFUSE the
         // whole session: doom_screensaver_start() then returns false and the idle
@@ -489,7 +500,12 @@ static bool doom_session_start(void) {
 static void doom_exit(void); // defined below; doom_screensaver_stop tears down early
 
 static bool doom_begin(bool screensaver) {
-    if (s_active || !doom_session_start()) {
+    // The screensaver is the automatic path — nobody is at the keyboard to
+    // answer a prompt, so an unsigned pack is refused there rather than asked
+    // about. A KC_IDDQD press is a finger on the board. (doom_pack_gate.h)
+    const enum doom_pack_entry entry =
+        screensaver ? DOOM_PACK_ENTRY_AUTOMATIC : DOOM_PACK_ENTRY_INTERACTIVE;
+    if (s_active || !doom_session_start(entry)) {
         return false;
     }
     // Release anything still registered host-side (the trigger letters have
@@ -1231,7 +1247,7 @@ static void doom_slave_tick(void) {
     if (want && !s_slave) {
         // Without game data this half stays a plain control pad (flash the
         // WHX to the slave over BOOTSEL like the master, see README.md).
-        if (!doom_whx_present() || !doom_session_start()) {
+        if (!doom_whx_present() || !doom_session_start(DOOM_PACK_ENTRY_AUTOMATIC)) {
             return; // blocked (fw flash) -> retried while doom_ctl stays set
         }
         s_slave       = true;
@@ -1593,6 +1609,17 @@ void doom_tick(void) {
         doom_slave_tick();
         return;
     }
+#ifdef POLYKYBD_DOOM_PACK
+    // FW-9: age out the unsigned-pack prompt, and re-enter once it is accepted.
+    // The load that raised the prompt could not wait for the answer — it runs on
+    // the loop that scans the matrix — so the retry lands here instead, one pass
+    // later, with the authorisation now in hand. take_accepted() is one-shot, so
+    // a rejected or timed-out prompt simply never re-enters.
+    doom_pack_confirm_tick();
+    if (doom_pack_confirm_take_accepted() && !s_active) {
+        doom_enter();
+    }
+#endif
     if (!s_active) {
         return;
     }
@@ -1607,7 +1634,7 @@ void doom_tick(void) {
         doom_exit();
         return;
     }
-    if (s_screensaver && timer_elapsed32(s_saver_start) > DOOM_SAVER_MAX_MS) {
+    if (s_screensaver && timer_elapsed32(s_saver_start) > doom_saver_max_ms()) {
         // The screensaver has run the window the idle pulse would have covered
         // — tear down and suspend, landing in the same end state the pulse's
         // TURN_OFF_TIME branch produces (doom_exit's fresh last_update is

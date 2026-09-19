@@ -264,4 +264,118 @@ TEST(LegendPlanMainTest, SmallPathKeepsTheLanguagesOwnOrigin) {
     EXPECT_EQ(plan.text, text);
 }
 
+// ── legend_plan_idle_travel: the idle anti-burn-in travel range ──────────────
+//
+// The failure this closes is silent by construction: a legend with no free space
+// simply did not move, on the exact keycaps (the 40 px icons) where a frozen
+// legend burns in. The window here is 72x40 at x 28, so the numbers below are the
+// firmware's own.
+constexpr uint8_t kOver = 3;   // IDLE_TRAVEL_OVERHANG_PX
+
+struct Travel { int8_t xlo, xhi, ylo, yhi; };
+
+Travel travel_of(const legend_plan_env_t& env, int8_t xmin, int8_t xmax, int8_t ymin, int8_t ymax,
+                 uint8_t overhang = kOver) {
+    Travel t{};
+    legend_plan_idle_travel(&env, xmin, xmax, ymin, ymax, overhang, &t.xlo, &t.xhi, &t.ylo, &t.yhi);
+    return t;
+}
+
+TEST(LegendPlanIdleTravel, RoomySlimGlyphIsUntouchedByTheOverhang) {
+    FakeFonts f;
+    auto      env = env_for(&f);
+    // A 4x10 "i" sitting at the window's top-left: 68 px of width and 29 of height
+    // to roam, all of it on-screen. Nothing may push it off an edge — 3 px west
+    // would delete its stem.
+    const Travel t = travel_of(env, 28, 31, 0, 9);
+    EXPECT_EQ(t.xlo, 0);
+    EXPECT_EQ(t.xhi, 68);
+    EXPECT_EQ(t.ylo, 0);
+    EXPECT_EQ(t.yhi, 30);
+}
+
+TEST(LegendPlanIdleTravel, FullHeightIconGetsItsTravelFromTheSouthOnly) {
+    FakeFonts f;
+    auto      env = env_for(&f);
+    // The 40x40 globe (U+1F310): zero vertical slack, so it could not move a row.
+    // North is not on offer — row -1 is outside the scratch buffer — so the whole
+    // shortfall is spent hanging off the BOTTOM.
+    const Travel t = travel_of(env, 30, 69, 0, 39);
+    EXPECT_EQ(t.ylo, 0);
+    EXPECT_EQ(t.yhi, kOver);
+    // Its width is untouched: 32 px of real slack, no borrowing.
+    EXPECT_EQ(t.xlo, -2);
+    EXPECT_EQ(t.xhi, 30);
+}
+
+TEST(LegendPlanIdleTravel, AlmostFullHeightBorrowsOnlyTheShortfall) {
+    FakeFonts f;
+    auto      env = env_for(&f);
+    // 39 px tall (the 😀 / 🔧 case): 1 px of its own, so it borrows 2 more, not 3.
+    const Travel t = travel_of(env, 40, 59, 0, 38);
+    EXPECT_EQ(t.ylo, 0);
+    EXPECT_EQ(t.yhi, 3);
+    EXPECT_EQ(t.yhi - t.ylo, kOver);
+}
+
+TEST(LegendPlanIdleTravel, FullWidthGlyphSplitsItsBorrowingAcrossBothSides) {
+    FakeFonts f;
+    auto      env = env_for(&f);
+    // Horizontally BOTH edges have buffer behind them, so the shortfall is split
+    // rather than hung off one side — half as much clipped ink on either edge.
+    const Travel t = travel_of(env, 28, 99, 10, 20);
+    EXPECT_EQ(t.xlo, -1);
+    EXPECT_EQ(t.xhi, 2);
+    EXPECT_EQ(t.xhi - t.xlo, kOver);
+}
+
+TEST(LegendPlanIdleTravel, OverSizeLegendIsLeftWhereTheClampPutIt) {
+    FakeFonts f;
+    auto      env = env_for(&f);
+    // he-IL's 43 px nikud, already clamped south-edge-wins so its top is off-panel.
+    // Widening cannot buy travel here, only move the clip to the other edge, so the
+    // range stays empty (lo > hi) and roll_idle_offset() leaves the axis at 0.
+    const Travel t = travel_of(env, 40, 59, -3, 39);
+    EXPECT_GT(t.ylo, t.yhi);
+}
+
+TEST(LegendPlanIdleTravel, ZeroOverhangReproducesTheOldFullyOnScreenRule) {
+    FakeFonts f;
+    auto      env = env_for(&f);
+    const Travel t = travel_of(env, 30, 69, 0, 39, 0);
+    EXPECT_EQ(t.ylo, 0);
+    EXPECT_EQ(t.yhi, 0);
+    EXPECT_EQ(t.xlo, -2);
+    EXPECT_EQ(t.xhi, 30);
+}
+
+TEST(LegendPlanIdleTravel, TravelNeverCarriesInkOutsideTheScratchBuffer) {
+    FakeFonts f;
+    auto      env = env_for(&f);
+    // The contract poly_keymap.c's _Static_asserts rest on: whatever the box, the
+    // offset range keeps the ink inside [win_x0-overhang, win_x1+overhang] x
+    // [0, win_y1+overhang] — the slack the buffer actually has.
+    for (int xmin = 20; xmin <= 100; ++xmin) {
+        for (int w = 1; w <= 80; ++w) {
+            const int xmax = xmin + w - 1;
+            if (xmax > 110) continue;
+            for (int ymin = -6; ymin <= 39; ++ymin) {
+                for (int h = 1; h <= 46; ++h) {
+                    const int ymax = ymin + h - 1;
+                    if (ymax > 45) continue;
+                    const Travel t = travel_of(env, (int8_t)xmin, (int8_t)xmax, (int8_t)ymin, (int8_t)ymax);
+                    if (t.xhi >= t.xlo) {
+                        EXPECT_GE(xmin + t.xlo, kWinX0 - kOver);
+                        EXPECT_LE(xmax + t.xhi, kWinX1 + kOver);
+                    }
+                    if (t.yhi >= t.ylo) {
+                        EXPECT_GE(ymin + t.ylo, 0);            // never north of row 0
+                        EXPECT_LE(ymax + t.yhi, kWinY1 + kOver);
+                    }
+                }
+            }
+        }
+    }
+}
+
 }  // namespace

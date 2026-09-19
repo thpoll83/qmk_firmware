@@ -18,6 +18,69 @@ on — so a default whose renderer is not in the image is not expressible.
 
 ---
 
+## How long before idle: the timeout preset (HID cmd 40, protocol v18+)
+
+The delay between the last key event and the start of the idle fade was the
+compile-time **`FADE_OUT_TIME` (2 minutes)** on every board. Since protocol v18 it is
+a per-board setting: **`enum poly_idle_timeout`** in `base/idle_timeout.h`, six
+presets — 15 s, 30 s, 45 s, 1 min, 2 min, 5 min — read through
+`get_idle_timeout_ms()` and set over HID cmd 40 (`polyctl idle-timeout`, or the tray's
+*Idle Display → Idle After*).
+
+- **`FADE_OUT_TIME` is deleted, not deprecated.** A stale `> FADE_OUT_TIME` left
+  anywhere would compile and then silently ignore the user's choice, which is the
+  quietest possible failure for a setting. Its four runtime readers all moved:
+  the housekeeping engage and the pulse-phase base (`poly_keymap.c`), the HID
+  "start idle" backdate (`hid_com.c` case 15 — it must backdate by the CONFIGURED
+  interval, or "start idle" on a 5-minute board does nothing visible for three
+  minutes), and the doom screensaver's runtime (`doom_saver_max_ms()`, now a
+  function: its window is what is LEFT of the suspend deadline, so it grows as the
+  idle delay shrinks).
+- ⚠️ **`TURN_OFF_TIME` (10 min, displays off + suspend) is NOT scaled by it**, and
+  that is deliberate — when the screensaver starts and when the panels give up are
+  different questions. `state.c` `_Static_assert`s **per preset** that it still
+  leaves `FADE_TRANSITION_TIME` inside that deadline: the housekeeping chain tests
+  the fade branch before the suspend branch, so a preset at or past `TURN_OFF_TIME`
+  would reach suspend having never entered the idle style, and every `IDLE_STYLE_*`
+  would silently do nothing. Mutation-checked — a 21-minute preset fails the build
+  by name.
+- **Setting it does NOT reset the activity timestamp.** The new delay is measured
+  against the `last_update` that is already running, so picking a timeout shorter
+  than the time since the last keypress idles the board on the next housekeeping
+  pass. That is what makes the setting feel like it took effect.
+- ⚠️ **Persisted as the enum BIASED BY ONE** (`poly_eeconf_t.idle_timeout`,
+  `idle_timeout_pack()` / `idle_timeout_unpack()`), so a byte reading 0 — what QMK's
+  wear levelling hands back for a byte no build ever wrote — is unambiguously "never
+  chosen" and resolves to the 2-minute default. **This deliberately replaces a second
+  sentinel byte of the `idle_style_fmt` kind.** That one had to exist because
+  `IDLE_STYLE_PULSE` is 0, so an explicit choice and an unwritten byte were the same
+  value and no scheme could separate them *afterwards*; biasing removes the collision
+  *at the source*. It costs one byte instead of two, and a future change of
+  `POLY_DEFAULT_IDLE_TIMEOUT` cannot overwrite a real choice, because a real choice
+  was never stored as zero. `eeconfig_init_user()` must write it through
+  `idle_timeout_pack()` — storing the enum raw would save `IDLE_TIMEOUT_15S` as a 0
+  the loader then reads back as unset.
+- **The encoding is host-testable** (`base/idle_timeout.h` is header-only and pure:
+  no `quantum.h`, no `config.h`), `make test:polykybd_idle_timeout`. The
+  keyboard-config half — the ceiling assert — cannot live there and stays in
+  `state.c` over the same `POLY_IDLE_TIMEOUT_LIST`.
+- **There is a KEY for it on the board**, `KC_IDLE_TIMEOUT`, on the settings layer's
+  advanced row beside `KC_IDLE_STYLE` — one picks which animation, the other when.
+  Its legend is `IDLE` over the active duration, with a half-scale 🕑 in the label
+  line's right margin (`HINT_HALF` + `HINT_POS_IDLECLK`; the glyph is a pack one, so
+  the words carry the meaning without it).
+  It cycles with wrap (no skipped value, unlike the style key, which steps over
+  `IDLE_STYLE_IDDQD` to keep the easter egg off a settings key) and is gated behind
+  `KC_SETTINGS_MORE` like the rest of that row. ⚠️ Cycling past `15s` on a board that
+  has been quiet can idle it under your finger; the press itself is activity, so the
+  next housekeeping pass restarts the countdown.
+- **The SET range is CLOSED** (an unknown preset NACKs) while the QUERY reply carries
+  the duration in seconds, so a host older than a firmware that adds a preset can
+  still label what it reads back. See `PROTOCOL_HISTORY.md` → v18 for why those two
+  are not in tension.
+
+---
+
 ## Idle anti-burn-in styles (`poly_keymap.c`)
 When the keyboard idles, the keycap legends would otherwise burn the **same**
 pixels in. **Four** styles (EEPROM `poly_eeconf_t.idle_style`, HID cmd 28, enum
@@ -146,9 +209,47 @@ change generalise well beyond this setting:
     clipping — each uses all *and only* the room it has, for any script. A fixed cap
     would be counter-productive: it would throttle the slim glyph and edge-bias the
     wide one (most rolls clamping to the same boundary). A glyph with no slack in an
-    axis simply doesn't move in it — no clipping, no special-casing. `SET_PIXEL_CLIPPED`
-    in `disp_array.c` remains the memory-safety backstop, but is not relied on for
-    visibility.
+    axis borrows a few px off the window edge rather than freezing — see the next two
+    bullets; everything with room of its own still moves only inside it, so ordinary
+    legends never clip. `SET_PIXEL_CLIPPED` in `disp_array.c` remains the
+    memory-safety backstop, but is not relied on for visibility.
+  - ⚠️ **"No slack" used to mean "does not move", which is silent total failure on
+    exactly the keycaps that need an idle style most.** A legend is clamped into the
+    72×40 window, so a **40 px tall icon has zero vertical travel** and held the same
+    pixels for the entire idle session — the burn this feature exists to prevent —
+    while still looking like it was working, because it drifted horizontally. Measured
+    over the resident fonts: **9 of 1130 glyphs have ≤3 px of vertical travel and 2
+    have none** (🌐 `U+1F310` 40×40, `U+2756` 39×40; then 😀 🔧 🐐 at 1 px, `U+0095`
+    🖳 at 2, ⎈ ⎙ at 3). **Horizontally nothing is even close** — the widest glyph in
+    the tree is 68 px against a 72 px window — so this is a vertical problem, and the
+    west/east budget is a safety net for a future wide legend rather than something
+    that fires today.
+  - **Those glyphs now BORROW travel off the window edge** (`IDLE_TRAVEL_OVERHANG_PX`,
+    3 px, spent by `legend_plan_idle_travel()` in `base/legend_plan.c`, unit-tested by
+    `make test:polykybd_legend_plan`). The clipping costs nothing in memory: the
+    scratch buffer is **128×64** against a 72×40 window at `BUFFER_X`, so there is
+    real storage 28 px west, 28 px east and 24 px south — and `kdisp_send_window()`
+    streams the window and nothing else, so ink in the slack is simply never shown
+    (`disp_array.h`'s `BUFFER_SLACK_*`, which the `_Static_assert`s beside
+    `IDLE_TRAVEL_OVERHANG_PX` check the constant against).
+    - ⚠️ **NORTH is not on offer**: row 0 is the first row of storage, so a glyph
+      needing vertical room takes it all from the south. A negative y is not a cheaper
+      clip — besides being outside the array it drops the glyph out of both in-buffer
+      draw paths in `disp_array.c` onto the per-pixel clipped one.
+    - **Only the SHORTFALL is borrowed**, and only up to 3 px of travel: a legend that
+      already has room is untouched. Borrowing unconditionally was rejected — 3 px off
+      the west edge *deletes the stem of an `i`*, which is a 4 px glyph.
+    - **An OVER-SIZE legend is left alone** (`hi >= lo` gates the widening): he-IL's
+      43 px nikud already clips at the edge `legend_plan_clamp()` chose, and widening
+      its range cannot open travel, only move the clip to the other edge and pin it
+      there.
+    - **What it buys, measured on the glyph bitmaps**: the globe at `dy=3` loses 33 of
+      its 502 lit px (6.6%, a slightly flattened bottom cap) and `U+2756` loses 6 —
+      and across the four positions only **35%** of the globe's shape (69% of
+      `U+2756`'s) still has a 100% duty cycle, against 100% of it before.
+    - It applies to **both** animated idle paths, because they share
+      `roll_idle_offset()` and the defect is identical in each: JITTER's
+      `render_idle_key()` and EDEN's `eden_idle_erase_legend()`.
   - The per-key latch is cleared by **`reset_idle_jitter()`** on every wake/suspend
     path (`display_wakeup`, `poly_suspend`, `suspend_wakeup_init_kb`, cmd 15
     stop-idle), so a fresh idle session starts from the centred awake legend and

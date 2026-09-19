@@ -9,6 +9,8 @@
 #include "monocypher-ed25519.h"   // FW-2: Ed25519 image signature verify (polymod_monocypher)
 #include "fw_pubkey.h"                    // FW-2: FW_SIGNING_PUBKEY (image signing key)
 #include "crash_record.h"                 // crash_watchdog_stop() before the self-apply
+#include "doom/doom_mode.h"               // DOOMPACK target: drop the loader's refusal latch
+                                          // (no-op stubs when the game is not compiled in)
 
 #include "hardware/flash.h"
 #include "hardware/sync.h"
@@ -885,6 +887,14 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
         const uint32_t *hdr = (const uint32_t *)(const void *)p;
         ok = p[0] == 'P' && p[1] == 'l' && p[2] == 'y' && p[3] == 'X' &&
              hdr[2] <= s_fontpack_slot_size - 64u; // image_size fits the slot (64 = DOOM_PACK_HDR_SIZE)
+        // The slot's bytes just changed, so whatever the loader last decided about
+        // it no longer describes what is there. ⚠️ Unconditional, and not keyed on
+        // `ok`: a half-written slot invalidates a cached verdict just as thoroughly
+        // as a good one. O(1) — finalize runs inside the split-transaction window on
+        // the slave. (The refusal latch keys on the pack's DECLARED image_crc, and
+        // the signature trailer sits outside it, so signing the same image leaves
+        // that key identical and a stale refusal would outlive its subject.)
+        doom_pack_slot_rewritten();
     } else if (ok && !target_has_header()) {
         // FONTPACK: the pack is now fully written in place. Re-load it from XIP —
         // this independently re-validates the pack's own header CRC32 and rebuilds

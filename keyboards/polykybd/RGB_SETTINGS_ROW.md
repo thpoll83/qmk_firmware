@@ -61,6 +61,42 @@ same split with the halves reversed).
     is an `OSL()` layer, which re-dispatches a release-edge action up to three times
     (§ *A release-edge action fires up to THREE times*), i.e. the macro plays twice
     or three times over.
+- ⚠️ **A settings key whose legend comes from a HELPER CALL renders as its raw
+  keycode name in the HOST's layout editor until the helper is registered there.**
+  `keycode_to_static_text()` may `return idle_style_legend();`, but the host parses
+  that switch statically (`PolyKybdHost/tools/lang_demo.py`,
+  `parse_static_text_map`) and cannot execute a call — so it looks the expression up
+  in a hand-kept `STATIC_CALL_DEFAULTS` map and, missing an entry, falls back to the
+  token text. **Nothing flags it**: the firmware build is green, the keycap on
+  hardware is correct, and only the editor is wrong. `KC_IDLE_TIMEOUT` first
+  rendered as `idle_t…` exactly this way. ⚠️ The substituted value is the setting's
+  BOOT value, which is **not always index 0** — the idle timeout defaults to
+  `IDLE_TIMEOUT_2MIN`, so the first row would show a state no keyboard boots with.
+- ⚠️ **Measure a new label's WIDTH; do not eyeball it.** `IDLE IN:` put its last lit
+  pixel at x=71 of the 72 px window — no margin at all, against 68 for `SCRIPT:`.
+  (That label is gone: `KC_IDLE_TIMEOUT` reads `IDLE` plus a half-scale 🕑 now. The
+  measuring rule is what generalises.) Render through the real draw model (the
+  `keycap-layout-preview` skill, or `lang_demo.py`'s model directly) and read the ink
+  box before believing a two-line settings label fits.
+- **An ICON can go on a settings label line, but only through `HINT_HALF` + its own
+  `HINT_MOVE`.** `HINT_HALF` (`\x0F`) composites the next glyph at half scale at the
+  literal cursor and does **not** advance, so it needs an absolute position — the
+  mod-tap badge pattern (`MTB_ALT`). 🕑 `U+1F551` is 39x39 full size, taller than the
+  whole two-line legend; halved it is 20x20 and fits the label line's right margin
+  (`HINT_POS_IDLECLK`, local 48,1 → x 48..67, 4 px clear of the east edge).
+  - ⚠️ **`HINT_MOVE` cannot express a ZERO coordinate.** Its two argument bytes are
+    guarded by `if (text[1] && text[2])`, so a `y` of 0 makes the whole op a no-op
+    and the glyph lands at the wandering cursor instead. Start at 1.
+  - ⚠️ **Write the codepoint as a NAMED glyph, never inline.** The host's preview
+    parser resolves named macros by name but decodes a raw inline `U"\x1F551"` as
+    `\x1F` followed by the literal characters `551` — four glyphs, silently. The
+    named-glyph table bypasses that path entirely. The hand-written half of
+    `lang/named_glyphs.h` (everything after the cog `[[[end]]]` at line ~1927) takes a
+    new `#define` with no xlsx edit and no cog run.
+  - ⚠️ **A pack glyph is not resident.** `_EmjClocks_` ships in the `emoji` bundle, so
+    a keyboard with no font pack draws this keycap without its clock. Keep the words
+    carrying the meaning; the icon decorates.
+
   - ⚠️ **A new custom keycode with NO legend renders a BLANK KEYCAP**, which is
     indistinguishable from "the feature did not ship" — `KC_MACRO_REC` reached the
     field that way. The build is green either way: a missing legend is a missing

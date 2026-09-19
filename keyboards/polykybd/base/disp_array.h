@@ -13,9 +13,33 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// The VISIBLE window of one keycap OLED, and where it sits in the scratch buffer.
 #define SCREEN_WIDTH 72
 #define SCREEN_HEIGHT 40
 #define BUFFER_X 28
+
+// The scratch buffer itself — 128x64 px (8 SSD1306 pages of 8 rows), deliberately
+// LARGER than the window, which occupies columns BUFFER_X..BUFFER_X+71 of pages
+// 0..4. kdisp_send_window() streams that window and nothing else, so ink written
+// into the surrounding slack is addressable, harmless and simply never shown.
+//
+// ⚠️ The slack is NOT symmetric: 28 px west, 28 px east, 24 px south and NOTHING
+// north, because row 0 is the first row of storage. That is why the idle styles'
+// off-window travel (legend_plan_idle_travel) may hang a legend off the bottom,
+// left and right edges but never off the top — a negative y is not a cheaper
+// clip, it is outside the array, and it also drops the glyph out of the two
+// in-buffer draw paths in disp_array.c onto the per-pixel clipped one.
+#define BUFFER_BYTE_VIS_WIDTH SCREEN_WIDTH
+#define BUFFER_BYTE_VIS_HEIGHT 5
+#define BUFFER_BYTE_WIDTH 128
+#define BUFFER_BYTE_HEIGHT 8
+#define BUFFER_PIXEL_WIDTH BUFFER_BYTE_WIDTH
+#define BUFFER_PIXEL_HEIGHT (BUFFER_BYTE_HEIGHT * 8)
+
+#define BUFFER_SLACK_N 0
+#define BUFFER_SLACK_S (BUFFER_PIXEL_HEIGHT - SCREEN_HEIGHT)
+#define BUFFER_SLACK_W BUFFER_X
+#define BUFFER_SLACK_E (BUFFER_PIXEL_WIDTH - BUFFER_X - SCREEN_WIDTH)
 
 // Courtyard radius (Chebyshev) for the glyph-mask dilation behind a glyph.
 // `cy_radius` 0 disables the courtyard clear; KDISP_CY_DEFAULT is the standard

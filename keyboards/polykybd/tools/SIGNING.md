@@ -207,10 +207,29 @@ execution on the next idle (SECURITY_AUDIT.md FW-9). The same key now covers it:
   pointer — not at flash COMMIT, because flash can be rewritten after a COMMIT
   succeeds. Cost is one SHA-512 over ~230 KB once per game session, the same
   order of work as the CRC walk beside it.
-- **No escape hatch, deliberately**: an unsigned *firmware* image raises the
-  on-keycap ACCEPT/REJECT prompt; an unsigned *pack* is refused outright (the
-  fire demo runs instead), because the load happens at idle when nobody is
-  present to answer a prompt. Developers iterating on the engine use the
-  monolithic `POLYKYBD_DOOM=yes` flavour, which embeds the engine and needs no
-  pack at all; a locally built pack can be signed with a locally generated key
-  pair (`gen_signing_key.py` + rebuild with the matching `fw_pubkey.h`).
+- **The escape hatch is the same prompt, on the entries that can answer it.**
+  An unsigned pack raises the on-keycap A/ACCEPT — R/REJECT dialog the firmware
+  image has had since FW-2, but only when the game was started deliberately (the
+  armed `KC_IDDQD` item — a keypress, so a finger is on the board). The idle
+  screensaver keeps refusing outright: a dialog raised there would sit on 72
+  keycaps with nobody to answer it, in place of the screensaver it was supposed
+  to introduce. An **INVALID** signature is refused on every path and never
+  prompts — the same asymmetry as the firmware image, for the same reason
+  (offering a keypress for a tampered artifact hands an attacker the one thing
+  the physical gate exists to withhold).
+
+  The whole table is `doom/doom_pack_gate.h`, which is pure and covered by
+  `make test:polykybd_doom_pack_gate`. An accepted pack is remembered **for the
+  boot only** and **bound to that pack's image CRC**, so re-flashing asks again
+  and a power cycle is a fresh decision — persisting it would turn one keypress
+  into a permanent FW-9 bypass. The master's answer reaches the slave through
+  `poly_sync_t.doom_pack_auth`, because the slave loads the pack too and never
+  sees the keypress.
+
+  ⚠️ **`build_pack.sh` does not sign** — `sign_doompack.py` is a separate step
+  that `release.yml` runs with the key as a CI secret. So a locally built `.plyx`
+  has no trailer at all and will always take the prompt route. Two alternatives
+  if you would rather not answer it every boot: the monolithic
+  `POLYKYBD_DOOM=yes` flavour embeds the engine and needs no pack, or sign the
+  pack with a locally generated key pair (`gen_signing_key.py` + rebuild with the
+  matching `fw_pubkey.h`).

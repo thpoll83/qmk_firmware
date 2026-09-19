@@ -165,10 +165,14 @@ void emit_boot_banner(void) {
 // happen without also seeing which style was actually selected.
 void emit_idle_config(void) {
     const uint8_t style = get_idle_style();
-    uprintf("   idle: style=%s (%u) fade_out=%ums fade=%ums turn_off=%ums\n",
+    // fade_out is the ACTIVE value (cmd 40 / poly_eeconf_t.idle_timeout), not a
+    // compile-time constant any more — printing FADE_OUT_TIME here would report the
+    // default on a board that has chosen something else, which is exactly the class
+    // of console line that sends a reader looking in the wrong place.
+    uprintf("   idle: style=%s (%u) fade_out=%ums (preset %u) fade=%ums turn_off=%ums\n",
             idle_style_name(style), (unsigned int)style,
-            (unsigned int)FADE_OUT_TIME, (unsigned int)FADE_TRANSITION_TIME,
-            (unsigned int)TURN_OFF_TIME);
+            (unsigned int)get_idle_timeout_ms(), (unsigned int)get_idle_timeout(),
+            (unsigned int)FADE_TRANSITION_TIME, (unsigned int)TURN_OFF_TIME);
 }
 
 // The stored dynamic-keymap format version and whether this boot had to discard the
@@ -265,6 +269,11 @@ void boot_banner_housekeeping_tick(void) {
             emit_idle_config();
             emit_keymap_storage_line();
             emit_apply_breadcrumb_line();
+            // Rides the same repeat as the rest: the table is only complete at
+            // SPLASH_DONE, which is well before a console is usually attached, and
+            // the console is lossy — a one-shot print of the thing we need in order
+            // to size a watchdog is the wrong shape.
+            emit_boot_timing_line();
             crash_record_emit_lines();   // the previous run's crash, if there was one
             banner_timer = timer_read32();
             banner_repeats++;
@@ -326,6 +335,62 @@ static uint8_t utext_visible_len(const uint32_t* s) {
     return n;
 }
 
+// ── Sub-milestones and the boot timing table ────────────────────────────────
+// Which milestone we are inside, so boot_substep() can draw the right percent and
+// stamp the right high byte without the caller repeating itself.
+static uint8_t  s_boot_step = 0;
+// (tag, ms) per milestone, where tag is the SAME encoding the crash breadcrumb
+// uses: a bare step, or step<<8 | sub. 24 entries covers 8 milestones plus room
+// for sub-steps without a bounds worry.
+#define BOOT_TIMING_MAX 24
+static uint16_t s_boot_tag[BOOT_TIMING_MAX];
+static uint16_t s_boot_ms[BOOT_TIMING_MAX];
+static uint8_t  s_boot_n    = 0;
+static uint32_t s_boot_last = 0;
+
+// Record the gap since the previous milestone. Saturates rather than wrapping: a
+// span longer than a minute is already the answer, and a wrapped uint16 would read
+// as a short one.
+static void boot_timing_mark(uint16_t tag) {
+    const uint32_t now = timer_read32();
+    if (s_boot_n < BOOT_TIMING_MAX) {
+        const uint32_t d = s_boot_n ? (now - s_boot_last) : 0u;
+        s_boot_tag[s_boot_n] = tag;
+        s_boot_ms[s_boot_n]  = (d > 0xFFFFu) ? 0xFFFFu : (uint16_t)d;
+        s_boot_n++;
+    }
+    s_boot_last = now;
+}
+
+void emit_boot_timing_line(void) {
+    if (s_boot_n == 0) return;
+    // One line, because the console is lossy and a table split over many prints is
+    // a table with holes in it. Each entry is "tag=ms"; a sub-step shows as 0x0502.
+    uprint("   boot: spans ms");
+    for (uint8_t i = 0; i < s_boot_n; i++) {
+        if (s_boot_tag[i] & 0xFF00u) {
+            uprintf(" %u.%u=%u", (unsigned)(s_boot_tag[i] >> 8),
+                    (unsigned)(s_boot_tag[i] & 0xFFu), (unsigned)s_boot_ms[i]);
+        } else {
+            uprintf(" %u=%u", (unsigned)s_boot_tag[i], (unsigned)s_boot_ms[i]);
+        }
+    }
+    uprint("\n");
+}
+
+void boot_substep(uint8_t sub) {
+    if (s_boot_step == 0 || sub == 0) return;   // no milestone open / nothing to say
+    const uint16_t tag = (uint16_t)(((uint16_t)s_boot_step << 8) | sub);
+    // Same breadcrumb the milestones write, so whatever reset finally happens
+    // archives the SUB-step rather than only the step it was inside.
+    (void)crash_phase_enter(CRASH_PHASE_BOOT, tag);
+    boot_timing_mark(tag);
+    // Percent line only. The keycap splash is untouched: its solidify count belongs
+    // to the milestone, and repainting 72 displays per sub-step would itself be a
+    // multi-hundred-ms span in the window we are trying to measure.
+    oled_boot_progress(s_boot_step, POLY_SPLASH_STEPS, sub);
+}
+
 void splash_progress(uint8_t step) {
     const bool      final   = (step == SPLASH_DONE);
     const bool      left    = is_left_side();
@@ -355,12 +420,16 @@ void splash_progress(uint8_t step) {
     // milestone supersedes the last, and crash_watchdog_start() resets the phase to
     // CRASH_PHASE_LOOP when post_init completes.
     (void)crash_phase_enter(CRASH_PHASE_BOOT, step);
+    // Open this milestone for boot_substep(), and time the span that just ended.
+    // SPLASH_DONE is stamped as the step count so the table's last row reads "8".
+    s_boot_step = final ? POLY_SPLASH_STEPS : step;
+    boot_timing_mark(s_boot_step);
 
     // ...and put the same milestone somewhere a human can read off a wedged board.
     // Skipped for step 1: that one runs in keyboard_pre_init_user(), and QMK does not
     // call oled_init() until later in keyboard_init(), so there is no panel yet.
     if (step != 1) {
-        oled_boot_progress(final ? POLY_SPLASH_STEPS : step, POLY_SPLASH_STEPS);
+        oled_boot_progress(final ? POLY_SPLASH_STEPS : step, POLY_SPLASH_STEPS, 0);
     }
 
     clear_all_displays();

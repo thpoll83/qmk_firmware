@@ -892,8 +892,9 @@ void poly_prepare_for_flash(void) {
     reset_idle_jitter();       // fresh centred legends, not jittered offsets
     // Restart the idle countdown from the start of the flash — a deliberate host
     // command, so this is real activity by update.h's rule. Unconditional matters:
-    // a keyboard 100 s into its 120 s FADE_OUT_TIME was awake (so the old gated
-    // stamp never ran) and would fade out 20 s into the transfer.
+    // a keyboard 100 s into a 120 s idle timeout was awake (so the old gated
+    // stamp never ran) and would fade out 20 s into the transfer. Shorter presets
+    // (cmd 40 goes down to 15 s) make that window tighter, not wider.
     update_performed();
     // Momentary/toggle layers off, then back onto the PolyKybd default layout.
     // A bare layer_clear() falls through to QMK's *saved* default layer
@@ -1204,7 +1205,7 @@ void housekeeping_task_user(void) {
         // Hold the idle countdown off for the whole gesture, the same way the FW-2
         // prompt below does. The panel IS the only indicator a recording has, and
         // update_displays() early-returns once DISP_IDLE is set — so a slow-typed
-        // macro that crossed FADE_OUT_TIME would dim the picker and the REC readout
+        // macro that crossed the idle timeout would dim the picker and the REC readout
         // out from under the user, with no way back short of a keypress that the
         // recorder would then capture.
         if (rs != (uint8_t)POLY_REC_IDLE) {
@@ -1214,7 +1215,17 @@ void housekeeping_task_user(void) {
 
     if (is_keyboard_master()) {
         fw_staging_confirm_tick();
-        const uint8_t want = fw_staging_awaiting_confirm() ? 1 : 0;
+        // Which dialog the board IS right now. FW-2's unsigned image outranks
+        // FW-9's unsigned pack: a flash in flight is the more consequential
+        // question, and doom_session_start() refuses to take the pool while the
+        // stager owns the link anyway, so the two cannot really coincide.
+        const uint8_t want = fw_staging_awaiting_confirm() ? POLY_CONFIRM_FW_IMAGE
+                           : doom_pack_confirm_pending()   ? POLY_CONFIRM_DOOM_PACK
+                                                           : POLY_CONFIRM_NONE;
+        // The slave never sees the keypress, so the master's answer travels with
+        // the rest of the synced state (state.h explains why delegating it is
+        // sound, and what stays local).
+        access_local_state()->doom_pack_auth_crc = doom_pack_auth_crc();
         poly_sync_t *cfm_state = access_local_state();
         if (cfm_state->fw_confirm != want) {
             cfm_state->fw_confirm = want;
@@ -1240,7 +1251,7 @@ void housekeeping_task_user(void) {
     // Hold the idle countdown off for the whole transfer, the same way the
     // confirmation prompt above does. The idle state machine below is NOT behind
     // the !fw_up_active gate (only the refresh that would act on it is), so a
-    // flash long enough to cross FADE_OUT_TIME with nobody typing flips the state
+    // flash long enough to cross the idle timeout with nobody typing flips the state
     // to idle mid-transfer — the keycaps poly_prepare_for_flash() just made
     // legible then go dark the moment the flash releases the display path (a
     // font-pack flash, which does not reboot, shows this plainly). A flash is a
@@ -1386,8 +1397,13 @@ void housekeeping_task_user(void) {
             flags |= STATUS_DISP_ON;
             flags &= ~((uint8_t)IDLE_TRANSITION);
 
-            if(elapsed_time_since_update > FADE_OUT_TIME && contrast >= MIN_BRIGHT && (flags & DISP_IDLE)==0) {
-                int32_t time_after = elapsed_time_since_update - FADE_OUT_TIME;
+            // The idle delay is a per-board SETTING now (enum poly_idle_timeout, HID
+            // cmd 40), read fresh every pass rather than latched: a host that shortens
+            // it below the time already elapsed must drop the board into idle on the
+            // very next pass, not at the next key press.
+            const uint32_t idle_after_ms = get_idle_timeout_ms();
+            if(elapsed_time_since_update > idle_after_ms && contrast >= MIN_BRIGHT && (flags & DISP_IDLE)==0) {
+                int32_t time_after = elapsed_time_since_update - idle_after_ms;
                 int16_t brightness = ((FADE_TRANSITION_TIME - time_after) * get_active_brightness()) / FADE_TRANSITION_TIME;
 
                 //transition to pulsing mode
@@ -1451,7 +1467,7 @@ void housekeeping_task_user(void) {
                     // would call kdisp_idle() and fight the animation).
                     contrast = EDEN_IDLE_BRIGHTNESS;
                 } else {
-                    int32_t time_after = PK_MAX(elapsed_time_since_update - FADE_OUT_TIME - FADE_TRANSITION_TIME, 0)/300;
+                    int32_t time_after = PK_MAX(elapsed_time_since_update - idle_after_ms - FADE_TRANSITION_TIME, 0)/300;
                     contrast = time_after%50;
                     // In JITTER style each key relocates its own legend independently as
                     // it pulses dark (kdisp_idle) — there is no shared per-cycle offset
@@ -1564,6 +1580,7 @@ const uint32_t* poly_lang_code(uint8_t lang) {
 static bool settings_key_is_gated(uint16_t keycode) {
     switch (keycode) {
         case KC_IDLE_STYLE:
+        case KC_IDLE_TIMEOUT:
         case KC_GLYPH_SCRIPT:
         case LBL_TEXT:
         case KC_TOGMODS:
@@ -1963,6 +1980,16 @@ _Static_assert(LEGEND_PLAN_SIZE_COUNT == GLYPH_SIZE_COUNT,
 _Static_assert(LEGEND_PLAN_SIZE_S == GLYPH_SIZE_S && LEGEND_PLAN_SIZE_M == GLYPH_SIZE_M &&
                LEGEND_PLAN_SIZE_L == GLYPH_SIZE_L,
                "legend_plan's size indices drifted from poly_glyph_size");
+
+// How far an idle legend with no free space of its own may hang OFF the visible
+// window to win itself some anti-burn-in travel (legend_plan_idle_travel). The
+// scratch buffer really extends there and kdisp_send_window() streams the window
+// only, so the ink is clipped by the panel edge, not by an array bound — but that
+// is a property of the geometry, so assert it rather than trusting the number.
+#define IDLE_TRAVEL_OVERHANG_PX 3
+_Static_assert(IDLE_TRAVEL_OVERHANG_PX <= BUFFER_SLACK_W, "idle travel would run off the west of the buffer");
+_Static_assert(IDLE_TRAVEL_OVERHANG_PX <= BUFFER_SLACK_E, "idle travel would run off the east of the buffer");
+_Static_assert(IDLE_TRAVEL_OVERHANG_PX <= BUFFER_SLACK_S, "idle travel would run off the south of the buffer");
 
 static bool legend_has_glyph_cb(uint32_t cp, void* ctx) {
     (void)ctx;
@@ -3393,9 +3420,15 @@ static uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col) {
 // width while a wide "w" stays within its small margin, each using all (and only) the
 // space it actually has. A global ±N envelope would be counter-productive here: it
 // would throttle the slim glyph (lots of slack, but capped) and edge-bias the wide one
-// (most rolls clamp to the same boundary). A glyph with no slack in an axis simply
-// doesn't move in it. The result is always fully on-screen for any script, so no
-// separate clamp step is needed.
+// (most rolls clamp to the same boundary).
+//
+// A glyph with NO slack in an axis used to simply not move in it — which is silent
+// and complete failure for exactly the legends that need an idle style most: a 40 px
+// tall icon fills the window, so it held the same pixels for the whole idle session.
+// Those now borrow up to IDLE_TRAVEL_OVERHANG_PX px of travel by hanging off the
+// bottom/left/right edges into the scratch buffer's own slack, which is never sent;
+// legend_plan_idle_travel() holds the rule and the reasons. Everything that already
+// had room is unaffected, so a legend only ever clips because it had no alternative.
 static void roll_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, uint32_t seed,
                              int8_t* dx, int8_t* dy) {
     // ⚠️ The ABSOLUTE box, not the relative one. The whole display list moves as a
@@ -3408,21 +3441,19 @@ static void roll_idle_offset(const uint32_t* text, int8_t ox, int8_t oy, uint32_
     // an empty box and would allow the lot.
     int8_t xmin, xmax, ymin, ymax;
     kdisp_gfx_text_bbox_abs(g_all_fonts, g_all_font_count, ox, oy, text, &xmin, &xmax, &ymin, &ymax);
-    int16_t axmin = xmin, axmax = xmax;   // glyph extent at the un-jittered origin
-    int16_t aymin = ymin, aymax = ymax;
-    int16_t xlo = (int16_t)BUFFER_X - axmin;                      // keep left edge >= BUFFER_X
-    int16_t xhi = (int16_t)(BUFFER_X + SCREEN_WIDTH - 1) - axmax; // keep right edge on-screen
-    int16_t ylo = -aymin;                                         // keep top >= 0
-    int16_t yhi = (int16_t)(SCREEN_HEIGHT - 1) - aymax;           // keep bottom on-screen
-    *dx = (xhi < xlo) ? 0 : jitter_axis(seed, 0x0000u, (int8_t)xlo, (int8_t)xhi);
-    *dy = (yhi < ylo) ? 0 : jitter_axis(seed, 0x1000u, (int8_t)ylo, (int8_t)yhi);
+    int8_t xlo, xhi, ylo, yhi;
+    legend_plan_idle_travel(&legend_plan_env, xmin, xmax, ymin, ymax, IDLE_TRAVEL_OVERHANG_PX,
+                            &xlo, &xhi, &ylo, &yhi);
+    *dx = (xhi < xlo) ? 0 : jitter_axis(seed, 0x0000u, xlo, xhi);
+    *dy = (yhi < ylo) ? 0 : jitter_axis(seed, 0x1000u, ylo, yhi);
 }
 
 // Idle (anti-burn-in) per-key relocation: redraws ONLY the resting normal legend — no
 // shift/AltGr preview, no overlay image, no tab/MRU chrome — at a fresh random spot
-// within THIS glyph's own slack (roll_idle_offset, seeded by `seed`), always fully
-// visible. Renders into the currently selected display's buffer, so it works from
-// inside kdisp_idle()'s shift-register walk (the caller selects the key, with the panel
+// within THIS glyph's own slack (roll_idle_offset, seeded by `seed`) — fully visible
+// unless the legend had no slack at all, in which case it borrows a few px off the
+// window's bottom/left/right edges. Renders into the currently selected display's
+// buffer, so it works from inside kdisp_idle()'s shift-register walk (the caller selects the key, with the panel
 // switched OFF, so the move is invisible). Returns false WITHOUT touching the buffer
 // when the keycode has no plain-text legend (a language flag, emoji, region tab, MRU
 // control, …): those can't be jittered (full-bleed images), so we leave their current
@@ -3460,7 +3491,9 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
     kdisp_set_draw_offset(dx, dy);
     kdisp_write_gfx_text(g_all_fonts, g_all_font_count, plan.x, plan.y, plan.text);
     kdisp_set_draw_offset(0, 0);
-    kdisp_send_window();   // idle jitter draws within the 72x40 window (roll_idle_offset clamps to it)
+    // The draw may land up to IDLE_TRAVEL_OVERHANG_PX px outside the 72x40 window
+    // (roll_idle_offset); that ink is inside the scratch buffer and this send ignores it.
+    kdisp_send_window();
     return true;
 }
 
@@ -3519,8 +3552,9 @@ bool eden_idle_erase_legend(uint8_t disp_idx) {
     // Draw the legend LIT but with a scanline half-brightness effect (every other buffer
     // row lit) so it reads lighter over the comet field, at a slowly-drifting position
     // within its own on-screen slack. roll_idle_offset() picks a uniform random offset
-    // inside the glyph's free space (fully on-screen, per-glyph — the same helper the
-    // jitter idle style uses); the seed changes once per EDEN_LEGEND_DRIFT_MS so every
+    // inside the glyph's free space (per-glyph — the same helper the jitter idle style
+    // uses, including the few px of off-window travel it lends a legend that has no free
+    // space of its own); the seed changes once per EDEN_LEGEND_DRIFT_MS so every
     // ~7 s the letter jumps to a fresh spot. Per-key phase (disp_idx) so they don't all
     // move in lockstep.
     // Same glyph-size plan as render_idle_key() — this is the second idle draw path
@@ -4378,6 +4412,20 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             request_disp_refresh();
             break;
         }
+        // Cycle the idle TIMEOUT. No skipped value, unlike the style above: every
+        // preset is a legitimate choice and none of them hides an easter egg. The
+        // activity timestamp is deliberately NOT reset — the new delay is measured
+        // against the one already running, so cycling down to a timeout shorter than
+        // the time since the last keypress idles the board on the next housekeeping
+        // pass. ⚠️ That means walking past 15s while the board has been quiet can
+        // idle it under your finger; the press itself is activity, so the very next
+        // pass restarts the countdown and it wakes again — which is the behaviour a
+        // person testing "how short can I make this" expects to see.
+        case KC_IDLE_TIMEOUT:
+            if (!act) break;
+            set_idle_timeout((uint8_t)((get_idle_timeout() + 1u) % IDLE_TIMEOUT_COUNT));
+            request_disp_refresh();
+            break;
         case KC_GLYPH_SCRIPT:
             if (!act) break;
             // Wrap on GLYPH_SCRIPT_COUNT (what THIS firmware can draw), not on 0xFF:
@@ -4464,17 +4512,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // and only the two prompt keys mean anything. Only the master runs
     // process_record — the slave's matrix is pulled over the split link — so a
     // press on EITHER half arrives here, and the matrix row is what says which.
-    if (fw_staging_awaiting_confirm()) {
+    if (fw_staging_awaiting_confirm() || doom_pack_confirm_pending()) {
         // Answer on the RELEASE, not the press. split72.c's matrix_scan_kb inverts a
         // keycap on press and un-inverts it on release, entirely independently of
         // process_record — so acting on the press tears the prompt down and redraws
         // the normal legend while that keycap is still inverted, and it stays
         // inverted until the finger lifts.
         if (!record->event.pressed && record->event.key.col == FW_CONFIRM_COL) {
+            // Route to whichever dialog is up. Both answer functions ignore a
+            // call while they are not pending, so the pair is safe even in the
+            // window where one has just resolved.
             if (record->event.key.row == FW_CONFIRM_ROW) {
                 fw_staging_confirm_answer(true);    // left half  -> A / ACCEPT
+                doom_pack_confirm_answer(true);
             } else if (record->event.key.row == FW_CONFIRM_ROW + MATRIX_ROWS_PER_SIDE) {
                 fw_staging_confirm_answer(false);   // right half -> R / REJECT
+                doom_pack_confirm_answer(false);
             }
         }
         return false;
@@ -5312,6 +5365,13 @@ void keyboard_post_init_user(void) {
 #endif
     splash_progress(5);                 // core1 up
 
+    // ⚠️ Sub-steps, because 63% -> 75% is the gap a boot hang has repeatedly landed
+    // in and "somewhere in these four calls" is as far as the milestone can narrow
+    // it. Everything here is cheap on paper — array writes and XIP reads — which is
+    // exactly why the hang is interesting: it points at core1, launched immediately
+    // above, rather than at the calls themselves. The sub-step is what turns the
+    // next occurrence into a name instead of a photograph of a percentage.
+    boot_substep(1);                    // core1 launched, about to register RPCs
     transaction_register_rpc(USER_SYNC_POLY_DATA,           user_sync_poly_data_handler);
     transaction_register_rpc(USER_SYNC_LAYER_DATA,          user_sync_layer_data_handler);
     transaction_register_rpc(USER_SYNC_LASTKEY_DATA,        user_sync_lastkey_data_handler);
@@ -5323,6 +5383,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
     transaction_register_rpc(USER_SYNC_FLASH_STAGE,         user_sync_flash_stage_handler);
     transaction_register_rpc(USER_SYNC_RESET,               user_sync_reset_handler);
+    boot_substep(2);         // the 11 poly RPCs are registered
     slave_data_register();   // USER_SYNC_SLAVE_DATA: LTR-559 sensor pull + the slave crash record
 #ifdef POLY_DUMMY_TXN_TEST
     // Root-cause experiment: register 3 no-op transactions so NUM_TOTAL_TRANSACTIONS
@@ -5333,7 +5394,9 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_DUMMY3, user_sync_dummy_handler);
 #endif
 
+    boot_substep(3);                    // slave_data_register() returned
     fw_staging_init();
+    boot_substep(4);                    // fw_staging_init() returned (apply-log + done-record read)
     splash_progress(6);                 // split RPCs registered, fw-staging up
 
     poly_eeconf_t ee = load_user_eeconf();
@@ -5347,6 +5410,7 @@ void keyboard_post_init_user(void) {
     // the host re-engages). Overrides local_state->contrast when auto was on.
     load_auto_brightness(ee.auto_brightness);
     note_idle_style(ee.idle_style);
+    note_idle_timeout(ee.idle_timeout);   // BEFORE the banner below, which prints it
     emit_idle_config();   // the style is only known here — the banner tick re-emits it
     note_glyph_script(ee.glyph_script);
     note_glyph_size(ee.glyph_size);
@@ -5634,6 +5698,12 @@ void eeconfig_init_user(void) {
     // migrated, and the zero that {0} leaves here means PULSE, not "unset".
     ee.idle_style     = POLY_DEFAULT_IDLE_STYLE;
     ee.idle_style_fmt = IDLE_STYLE_FMT_OK;
+    // Likewise born with a real choice recorded. ⚠️ Through idle_timeout_pack(), not
+    // raw: the stored form is biased by one, and the zero {0} leaves here is the
+    // "never written" value — writing the enum directly would store IDLE_TIMEOUT_15S
+    // as a 0 that the loader then reads back as unset. Same class of trap as the
+    // latin_assign memset two blocks down, opposite direction.
+    ee.idle_timeout   = idle_timeout_pack(POLY_DEFAULT_IDLE_TIMEOUT);
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.

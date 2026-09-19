@@ -238,7 +238,7 @@
 //      only and live in the `latinbig` font-pack bundle; without it (or for a
 //      non-latin legend) the render falls back to small, so the setting is
 //      always safe to accept.
-#define PROTOCOL_VERSION 17
+#define PROTOCOL_VERSION 18
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -247,10 +247,20 @@
 
 //10 sec
 #define FADE_TRANSITION_TIME 10000
-//2 min
-#define FADE_OUT_TIME 120000
 //10 min
 #define TURN_OFF_TIME 1200000
+
+// ⚠️ FADE_OUT_TIME is GONE. The delay before the idle fade starts is a per-board
+// SETTING now — enum poly_idle_timeout in state.h, six presets from 15 s to 5 min,
+// read through get_idle_timeout_ms() and set over HID cmd 40 (protocol v18+). The
+// old constant was 120000, which is IDLE_TIMEOUT_2MIN, the default; deleting it
+// rather than leaving it to rot is deliberate, because a stale `> FADE_OUT_TIME`
+// anywhere would compile and then silently ignore the user's choice.
+//
+// TURN_OFF_TIME (displays off + suspend) stays a constant and is NOT scaled by the
+// idle timeout: they answer different questions — when the screensaver starts, and
+// when the panels give up entirely. state.c static_asserts that the longest preset
+// still leaves the fade room inside this deadline.
 
 // Idle "jitter" style: while pulsing, each key independently relocates its own legend
 // to a fresh random spot the moment that key's out-of-phase pulse dims it to black
@@ -259,7 +269,10 @@
 // range is derived per glyph from its own on-screen slack (roll_idle_offset), so a slim
 // "i" roams its full free width while a wide "w" or a full-width CJK legend moves only
 // as far as it can without clipping. A fixed ±N cap would be counter-productive here
-// (it would throttle the slim glyph and edge-bias the wide one).
+// (it would throttle the slim glyph and edge-bias the wide one). A legend with NO slack
+// of its own -- the 40 px tall icons, which fill the window exactly -- borrows
+// IDLE_TRAVEL_OVERHANG_PX px of travel off the window's bottom/left/right edges rather
+// than freezing; see legend_plan_idle_travel().
 // How often a key relocates: the breathing curve dips dark ~twice per ~15 s pulse
 // cycle, so we'd otherwise move each key ~every 7.5 s. Relocate only every Nth dark
 // episode to slow the drift (3 -> ~every 22 s per key). Raise for a calmer display.

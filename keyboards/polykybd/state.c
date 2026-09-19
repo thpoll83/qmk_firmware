@@ -391,6 +391,61 @@ void note_idle_style(uint8_t style) {
     g_idle_style = (style < IDLE_STYLE_COUNT) ? style : POLY_DEFAULT_IDLE_STYLE;
 }
 
+// ---- Idle TIMEOUT (enum poly_idle_timeout, HID cmd 40) --------------------
+//
+// The presets, their durations and the EEPROM encoding are base/idle_timeout.h;
+// this file holds the live value and the one guard that needs keyboard config.
+// The whole feature replaces the compile-time FADE_OUT_TIME, which was 120000 —
+// IDLE_TIMEOUT_2MIN, the default, so a board that never touches the setting
+// behaves exactly as it always did.
+//
+// ⚠️ Every preset must leave room for the whole fade INSIDE the suspend deadline.
+// The housekeeping chain tests the fade-out branch first and the TURN_OFF branch
+// second, so a preset at or past TURN_OFF_TIME would not merely shorten the idle
+// session — the board would reach the suspend branch having never entered the idle
+// style at all, and IDLE_STYLE_* would silently do nothing. The doom screensaver
+// derives its runtime by subtracting from the same deadline, so it needs the strict
+// inequality too or its window goes negative.
+//
+// This lives HERE rather than beside the list in base/idle_timeout.h because
+// TURN_OFF_TIME and FADE_TRANSITION_TIME are keyboard config, and that header is
+// deliberately pure so the encoding can be tested off-hardware. Asserted per PRESET
+// rather than on the largest one, so it holds however the list is later ordered.
+#define POLY_IDLE_TIMEOUT_FITS(name, ms) \
+    _Static_assert((ms) + FADE_TRANSITION_TIME < TURN_OFF_TIME, \
+                   #name " leaves no room for the fade before TURN_OFF_TIME");
+POLY_IDLE_TIMEOUT_LIST(POLY_IDLE_TIMEOUT_FITS)
+#undef POLY_IDLE_TIMEOUT_FITS
+
+static uint8_t g_idle_timeout = POLY_DEFAULT_IDLE_TIMEOUT;
+
+uint8_t get_idle_timeout(void) {
+    return g_idle_timeout;
+}
+
+uint32_t get_idle_timeout_ms(void) {
+    return idle_timeout_ms_of(g_idle_timeout);
+}
+
+// Sets the idle timeout and marks the settings block dirty (flushed at the next
+// suspend / store). Out-of-range values are ignored. No reset of the activity
+// timestamp: the new value is measured against the SAME last_update, so shortening
+// the timeout below the time already elapsed drops the board into idle on the next
+// housekeeping pass, which is what a user who just picked "15 s" expects to see.
+void set_idle_timeout(uint8_t value) {
+    if (value >= IDLE_TIMEOUT_COUNT) {
+        return;
+    }
+    g_idle_timeout = value;
+    g_brightness_dirty = true;
+    poly_state_touch();
+}
+
+// Records the idle timeout without marking settings dirty (boot-time EEPROM load).
+void note_idle_timeout(uint8_t value) {
+    g_idle_timeout = (value < IDLE_TIMEOUT_COUNT) ? value : (uint8_t)POLY_DEFAULT_IDLE_TIMEOUT;
+}
+
 // Console-log name for an idle style. Keep in sync with enum poly_idle_style.
 const char* idle_style_name(uint8_t style) {
     switch (style) {

@@ -338,6 +338,14 @@ contrast with their neighbour that the wire format does not show. The
   `*_set_user` being CALLED rather than implemented.
 - **Cmd `32` (profiler) is present ONLY in a `POLYKYBD_LOOP_PROFILE` build and bumps no
   `PROTOCOL_VERSION`.** Its NACK on a normal build is the deliberate capability signal.
+- ⚠️ **v18's idle TIMEOUT (cmd 40) deletes `FADE_OUT_TIME`** — the delay before the
+  idle style engages is a per-board setting now (`enum poly_idle_timeout`,
+  `base/idle_timeout.h`, six presets 15 s…5 min), read through
+  `get_idle_timeout_ms()`. The constant is GONE rather than left to rot, because a
+  stale `> FADE_OUT_TIME` would compile and then silently ignore the user's choice.
+  `TURN_OFF_TIME` is unchanged and deliberately not scaled by it. It is persisted as
+  the enum **biased by one**, so a zero byte means "never chosen" — the property
+  `idle_style_fmt` needed a whole second byte to provide.
 - ⚠️ **The flat overlay index is the only ADDRESS an upload has, resolved through
   `overlay_map[]` — so `reset_overlay_mapping()`'s identity default is LOAD-BEARING FOR
   WRITES**, not a display convenience. Zeroing it sent every image to slot 0: nearly
@@ -450,18 +458,31 @@ user-facing story are
 - ⚠️ **COMMIT must NOT block waiting for the answer** — it runs inside
   `raw_hid_receive()` on the loop that scans the matrix, so a busy-wait guarantees the
   keypress is never seen. It is a state machine answering `?` until resolved.
-- ⚠️ **An UNSIGNED image gets the prompt; an INVALID one is refused outright.** Opposite
+- ⚠️ **An UNSIGNED artifact gets the prompt; an INVALID one is refused outright.** Opposite
   events: offering a keypress for the second hands an attacker the one thing the physical
-  gate exists to withhold. **Accept is physical, cancel may be remote.**
+  gate exists to withhold. **Accept is physical, cancel may be remote.** The rule now
+  covers the DOOM pack too (below), and both prompts share one presentation —
+  `poly_sync_t.fw_confirm` carries the KIND (`enum poly_confirm_kind`), and the render
+  gate, the key swallow and the `clear_keyboard()` are written once.
 - ⚠️ **`clear_keyboard()` before ANY path that swallows keys or does not return**, or the
   host keeps a keycode registered and auto-repeats it until USB drops.
 - ⚠️ **A visual cue set on a path that never returns is never painted.** The orange RGB
   cue had, in practice, never been seen — anything that must be *visible* before a
   blocking self-flash has to be flushed by the code that draws it.
-- ⚠️ **Signing gates the FIRMWARE image only.** The resource region has no signature
-  check at any target, and the `.plyx` engine pack is *executable code* branched into
-  after a CRC32. Do not describe the keyboard as "signed firmware, so a malicious flash
-  is covered".
+- ⚠️ **Signing covers the firmware image AND the `.plyx` engine pack (FW-9), but NOT the
+  rest of the resource region** — no signature check there at any target. Do not
+  describe the keyboard as "signed firmware, so a malicious flash is covered".
+- ⚠️ **The pack's unsigned prompt is gated on the ENTRY, and `build_pack.sh` does not
+  sign.** `doom/doom_pack_gate.h` is the table: valid loads; INVALID is refused on every
+  path; UNSIGNED prompts only on a deliberate `KC_IDDQD` entry and is refused on the idle
+  screensaver, where nobody is there to answer. A locally built `.plyx` therefore always
+  takes the prompt route — signing is `sign_doompack.py`, a separate step only
+  `release.yml` runs. An accepted pack is remembered **for the boot, bound to its image
+  CRC**, and reaches the slave through `poly_sync_t.doom_pack_auth` (the slave loads the
+  pack too and never sees the keypress). ⚠️ The load runs on the loop that scans the
+  matrix, so it **raises the prompt and returns false**; `doom_tick()` re-enters once the
+  answer lands. Blocking there would guarantee the keypress is never seen — the same trap
+  `FW_UP_COMMIT` avoids.
 
 ### The Intl layer: latin-variation picker and letter remap (`_ADDLANG1`)
 

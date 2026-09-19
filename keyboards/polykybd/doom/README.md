@@ -217,7 +217,9 @@ Beyond the game (typed `IDDQD` → armed menu item → play), the egg doubles as
   sees no keystroke. `doom_exit()` re-arms the idle timer, so the fade→idle
   cycle restarts.
 - **Deadline**: the demo runs the same wall-clock window the pulse would have
-  (`DOOM_SAVER_MAX_MS = TURN_OFF_TIME − FADE_OUT_TIME − FADE_TRANSITION_TIME`),
+  (`doom_saver_max_ms() = TURN_OFF_TIME − the configured idle timeout −
+  FADE_TRANSITION_TIME` — a runtime value since the idle delay became a setting,
+  HID cmd 40, so a shorter idle delay gives the demo a longer window),
   then `doom_tick()` tears down and `poly_suspend()`s — landing in the same
   displays-off state the pulse's `TURN_OFF_TIME` branch produces.
 - **Safe fallback**: `doom_screensaver_start()` returns false on a non-doom

@@ -154,6 +154,13 @@ PR author needs without opening it:
   rig leaves it `queued` with no conclusion and silently arms a release refusal hours
   later. **Read `status` before `conclusion`**, and do not re-run: the rig runs one job
   at a time.
+- ⚠️ **A GREEN HIL run can cover NONE of the change you just shipped — read the `SKIP`
+  lines, not the conclusion.** The suite announces each opt-in test it declines
+  (`[test] SKIP: … (doom suite — re-run with --doom + a signed --plyx-valid …)`), and a
+  run full of them still reports success. #298 merged on a green `TIER_EXTENDED` pass
+  whose log skipped **all four** doom tests — so the FW-9 gate and its new on-keycap
+  prompt, the largest change in the PR, have never run on hardware. **Grep the job log
+  for your feature's own test name** before treating a green board as coverage.
 - ⚠️ **A green board does NOT mean a rig test from an unmerged `polykybd-ctnd` PR ran** —
   CI force-syncs the station to ctnd `main`, so that test does not exist on the rig.
   Land the ctnd PR first, then re-run HIL; verify by grepping the job log for the test's
@@ -478,9 +485,14 @@ user-facing story are
   screensaver, where nobody is there to answer. A locally built `.plyx` therefore always
   takes the prompt route — signing is `sign_doompack.py`, a separate step only
   `release.yml` runs. An accepted pack is remembered **for the boot, bound to its image
-  CRC**, and reaches the slave through `poly_sync_t.doom_pack_auth` (the slave loads the
-  pack too and never sees the keypress). ⚠️ The load runs on the loop that scans the
-  matrix, so it **raises the prompt and returns false**; `doom_tick()` re-enters once the
+  CRC**, and reaches the slave through `poly_sync_t.doom_pack_auth_crc` — the CRC, not a
+  flag, because the slave must honour the answer only for the pack IT holds (a partial
+  `install_doompack` can leave the halves different, and the GET_ID slot block covers the
+  master's slots only, so nothing downstream notices). The slave loads the pack too and
+  never sees the keypress. ⚠️ **That binding, and the refusal latch's key, are the two
+  places this gate has already been got wrong — the `audit-derived-verdict` skill is the
+  checklist for any cached or delegated verdict, here or elsewhere.** ⚠️ The load runs on
+  the loop that scans the matrix, so it **raises the prompt and returns false**; `doom_tick()` re-enters once the
   answer lands. Blocking there would guarantee the keypress is never seen — the same trap
   `FW_UP_COMMIT` avoids.
 

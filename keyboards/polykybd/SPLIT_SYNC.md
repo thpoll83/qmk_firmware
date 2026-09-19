@@ -19,6 +19,17 @@ CAPACITY, not a transfer size.** Two independent facts, both easy to get backwar
   when the Intl remap gained the punctuation targets. `state.h` now carries a
   `static_assert(sizeof(latin_sync_t) <= RPC_M2S_BUFFER_SIZE)`; add one for any
   struct that can grow.
+- ⚠️ **WHERE a wide member goes matters too, and the assert says nothing about it: a
+  new `uint32_t` in `poly_sync_t` belongs directly after `crc32`.** The per-transaction
+  CRC is computed over `&buf[4]` to the end (`crc32_1byte(&((uint8_t *)in_data)[4],
+  in_len - 4, 0)`), so it covers **every** byte of the struct including padding. The
+  struct is a `uint32_t` followed by a long run of `uint8_t`, which today has no
+  interior padding at all; dropping a 4-byte member into that run makes the compiler
+  insert up to 3 alignment bytes **inside the checksummed range**. Both halves run the
+  same image and the struct lives in `.bss`, so those bytes are zero and the CRC
+  matches — which is exactly why the mistake would not show up in testing, and why the
+  rule is positional rather than diagnostic. `doom_pack_auth_crc` (2026-09-19, #298) is
+  placed this way and says so in its comment.
 - **Raising it costs RAM and nothing else — measured, not reasoned.** The constant
   appears in exactly three places in QMK: the array declaration and the two rejection
   checks. Both ends size the real transfer from `rpc_info.payload.m2s_length`, i.e.

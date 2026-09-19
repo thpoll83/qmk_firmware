@@ -726,6 +726,28 @@ inherited-upstream noise:
     ran** — CI force-syncs the station to ctnd `main`, so that test does not exist on
     the rig. Land the ctnd PR first, then re-run HIL; verify by grepping the job log
     for the test's own name.
+  - ⚠️ **A job that RAN and went green can still have skipped the tests your change is
+    about — and it says so, in the log only.** The two rules above cover a job that
+    never started and one that is absent behind `needs:`; this is the third and
+    quietest shape, because here everything a badge can show is genuinely fine. The
+    suite prints a line per declined test:
+
+    ```
+    [test] SKIP: doom signed engine-pack loads (FW-9 accept) (doom suite — re-run with
+           --doom + a signed --plyx-valid (or the hil-doom label))
+    ```
+
+    Measured 2026-09-19 on job 105912746231 (PR #298): `suite tier: EXTENDED`,
+    conclusion `success`, the 450-frame split-link soak PASS with `crc_err=0` and the
+    reboot power cycle PASS — and **all four doom tests SKIP**. The FW-9 signature
+    gate and the on-keycap unsigned-pack prompt, which were the bulk of that PR, have
+    still never executed on hardware; they are covered by 23 host gtest cases and
+    nothing else. The doom set needs the **`hil-doom` label** (plus a signed `.plyx`),
+    which a PR does not carry by default.
+
+    **So: grep the job log for your own feature's test name before calling a green
+    board coverage.** `hil-extended` buys the deep *generic* checks; it buys nothing
+    for a feature whose tests sit behind a different opt-in label.
   - **The `diagnose-hil-failure` skill classifies a red rig check**;
     **`debug-firmware-on-rig`** drives a one-off probe (`tier: debug`) when the
     graded suite cannot answer the question.

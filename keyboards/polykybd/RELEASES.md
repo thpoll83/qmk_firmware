@@ -48,6 +48,44 @@ that cost real debugging to learn (2026-07):
     firmware, which is worse than no gate; accepting only `FW_VERSION` would
     refuse a well-covered protocol release at publish time (caught in review of
     the PR that added it, #264).
+  - ⚠️ **The delta may ALSO carry files the build and the rig never read** — the
+    `!` entries of `qmk-test.yml`'s own `paths:` filter (`**.md`, `scripts/**`,
+    `.claude/**`, the other workflows). Without that, a single docs or skills
+    merge landing between a rig run and a release cost the release a fresh
+    `tier: fwapply` round-trip: `PolyKybd-fw-v0.27.1` published with **zero
+    assets** on 2026-09-19 because the retro merge sat in the way, and the
+    refusal read *"4 commits separate the covered run from the release commit"*.
+    - **The filter is READ OUT of the workflow, never copied here.** It already
+      answers exactly this question and its own comment states the test —
+      *whether the build or the rig ever READS it* — so an edit there moves the
+      gate with it. A second list would be a second thing to keep in step.
+    - ⚠️ **It fails CLOSED.** An unparseable or absent `paths:` block makes every
+      file count as reaching the image, degrading the gate to its old strictness
+      rather than waving a release through. `--selftest` pins that, and pins
+      that a rename OUT of a build path (a `.c` becoming a `.md`) is judged on
+      **both** names — the new one being harmless proves nothing, since the move
+      removed a build input.
+    - The commit-count bound is no longer the proof and was raised to 25
+      (`MAX_DELTA_COMMITS`); the proof is the file list, which is refused
+      outright if it reaches GitHub's 300-file cap and may have been truncated.
+    - ⚠️ **The delta must not be able to write the policy it is judged by.**
+      `release.yml` checks out the commit being RELEASED, so a filter read off
+      disk is one the delta may have authored: a single commit could drop the
+      `.github/workflows/qmk-test.yml` re-include, add `!keyboards/**`, and edit
+      the firmware, and all three files would read as harmless. Two independent
+      answers, both in place (Greptile P1 on #300, reproduced before fixing):
+      the filter is fetched from the **covered commit** over the API rather than
+      from the checkout, and a delta touching `qmk-test.yml`,
+      `require_fwapply_run.py` or `release.yml` is refused outright whatever any
+      filter says. The line is "decides whether a release is SAFE": `release.yml`
+      controls whether the gate runs and on which sha, `bump-version.yml` only
+      picks a number. ⚠️ **This does not defend against the gate being deleted
+      from `release.yml`** — nothing running inside that workflow could, and the
+      protection for it is the branch ruleset and review, not this script. It
+      stops a delta that weakened the release path being auto-cleared on the way
+      past.
+      Editing either therefore costs the next release a fresh rig run — the
+      correct price for changing what decides whether a release is safe.
   - **The job name is DERIVED from the checked-out workflow**, not hardcoded — a
     rename would otherwise turn the gate into a silent no-op that reports "never
     covered" for firmware that was. Same reason the ctnd unit-test workflow greps
@@ -83,6 +121,16 @@ that cost real debugging to learn (2026-07):
 - **Version bump is label-driven**: the merged PR's `bump:major`/`bump:minor`/
   `bump:protocol` label (else patch) drives `bump-version.yml`. Protocol PRs often bump
   `PROTOCOL_VERSION` in-source and *omit* `bump:protocol` (the label would double-bump).
+  - **`bump:none` skips the bump entirely**, for a PR that cannot change the firmware
+    image — docs, skills, `scripts/`. It is tested FIRST and beats every other label:
+    a PR carrying both is contradictory, and the safe reading of a contradiction is
+    not to move the version, since a version that did not move can be bumped by the
+    next merge while one that moved is already published history.
+  - ⚠️ **It is a convenience, not the fix for the release gate.** The gate now
+    accepts non-build files on its own (above), so forgetting `bump:none` costs a
+    patch number and nothing else. That ordering matters: a fix that depended on
+    remembering a label would fail exactly the way the missing-`bump:minor`
+    incidents below already have.
   - ⚠️ **A MISSING bump label is silent, and it can make the LIVE DOCS wrong within
     minutes — apply the label before the merge, not after.** The label is read at merge
     time and there is no second chance: the bump lands as a `chore:` commit and the

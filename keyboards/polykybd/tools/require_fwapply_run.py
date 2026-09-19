@@ -27,11 +27,30 @@ import os
 import re
 import sys
 import urllib.error
+import base64
 import urllib.request
 
 API = "https://api.github.com"
 WORKFLOW = "qmk-test.yml"
 WORKFLOW_PATH = os.path.join(".github", "workflows", WORKFLOW)
+# The same path as GitHub spells it in a compare/contents response, which is
+# always POSIX regardless of the runner.
+WORKFLOW_PATH_POSIX = ".github/workflows/" + WORKFLOW
+# ⚠️ The files that DECIDE this gate's verdict. A delta touching one of them is
+# NEVER cleared by the path filter, whatever that filter says, because the
+# filter it would be judged by is one the delta itself could have written.
+# Found in review of #300: release.yml checks out the RELEASE sha, so without
+# this one commit could drop the `.github/workflows/qmk-test.yml` re-include,
+# add `!keyboards/**`, and edit the firmware in the same breath — and all three
+# files would read as harmless. Reproduced before fixing.
+#
+# The consequence is intended: changing the policy, or this script, costs the
+# next release a fresh rig run. That is the correct price for editing the thing
+# that decides whether a release is safe.
+SELF_PATHS = (
+    WORKFLOW_PATH_POSIX,
+    "keyboards/polykybd/tools/require_fwapply_run.py",
+)
 JOB_ID = "fwapply-test"
 # Fallback only. The real name is DERIVED from the workflow (see job_name): a
 # hardcoded string here would silently stop matching the day someone renames the
@@ -175,6 +194,30 @@ def build_path_filter(workflow_text=None):
     return None
 
 
+def build_path_filter_at(repo, ref, token):
+    """The filter as it stood at a commit a green rig run already covered.
+
+    ⚠️ Read from the COVERED commit, never from the working checkout. release.yml
+    checks out the commit being RELEASED, so a filter read from disk is one the
+    delta under judgement may have written — the delta would be setting its own
+    policy. The covered commit's copy is the one a rig run actually vouched for.
+
+    Fails CLOSED (None) on any error: a missing file, a non-base64 body, undecodable
+    bytes or a filter that will not parse.
+    """
+    try:
+        blob = api(f"/repos/{repo}/contents/{WORKFLOW_PATH_POSIX}?ref={ref}", token)
+    except urllib.error.HTTPError:
+        return None
+    if not isinstance(blob, dict) or blob.get("encoding") != "base64":
+        return None
+    try:
+        text = base64.b64decode(blob.get("content") or "").decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return None
+    return build_path_filter(text)
+
+
 def path_reaches_the_image(path, patterns):
     """Replay the workflow's filter for one file. LAST match wins.
 
@@ -213,6 +256,10 @@ def delta_is_provably_harmless(files, patterns):
         if not name:
             return False
         previous = f.get("previous_filename")
+        # ⚠️ Before the filter is consulted at all: a change to the gate's own
+        # inputs cannot be judged by them.
+        if name in SELF_PATHS or (previous and previous in SELF_PATHS):
+            return False
         if previous and path_reaches_the_image(previous, patterns):
             return False
         if not path_reaches_the_image(name, patterns):
@@ -355,10 +402,11 @@ def main():
             print(f"::notice::firmware apply verified on {candidate[:8]} by run {run_id}; "
                   f"the only delta to {sha[:8]} is the {VERSION_MACRO} bump")
             return 0
-        patterns = build_path_filter()
+        patterns = build_path_filter_at(repo, candidate, token)
         if patterns is None:
-            print(f"::warning::could not read the path filter out of {WORKFLOW_PATH}; "
-                  f"treating every changed file as able to reach the image")
+            print(f"::warning::could not read the path filter out of {WORKFLOW_PATH} "
+                  f"at the covered commit {candidate[:8]}; treating every changed "
+                  f"file as able to reach the image")
         if delta_is_provably_harmless(files, patterns):
             print(f"::notice::firmware apply verified on {candidate[:8]} by run {run_id}; "
                   f"the delta to {sha[:8]} is the {VERSION_MACRO} bump plus files the "
@@ -659,7 +707,48 @@ def selftest():
           patch("@@", "-#define SOMETHING 1", "+#define SOMETHING 2")],
          False),
         ("a file entry with no filename", [{"patch": "@@\n+x"}], False),
+        # ⚠️ The delta must not be able to write the policy it is judged by.
+        # release.yml checks out the RELEASED commit, so one commit could drop
+        # the qmk-test.yml re-include, add `!keyboards/**`, and edit the
+        # firmware — every file then reading as harmless. Reproduced on #300
+        # before the fix; these pin both halves of it.
+        ("the path filter itself changed",
+         [{"filename": WORKFLOW_PATH_POSIX, "patch": "@@\n+      - '!keyboards/**'"}],
+         False),
+        ("this gate's own source changed",
+         [{"filename": "keyboards/polykybd/tools/require_fwapply_run.py",
+           "patch": "@@\n+    return True"}],
+         False),
+        ("the filter renamed out of the way",
+         [{"filename": "docs/old-workflow.md",
+           "previous_filename": WORKFLOW_PATH_POSIX}],
+         False),
     ]
+
+    # ⚠️ And with a filter that says those files are harmless — the exact shape
+    # the attack produces. The self-path rule must win over the filter, not
+    # merely agree with it.
+    hostile = ["**", "!**.md", "!.github/workflows/**", "!keyboards/**"]
+    attack = [
+        {"filename": WORKFLOW_PATH_POSIX, "patch": "@@\n+      - '!keyboards/**'"},
+        {"filename": "keyboards/polykybd/base/fw_staging.c", "patch": "@@\n+bad"},
+    ]
+    if delta_is_provably_harmless(attack, hostile):
+        print("selftest FAIL: a delta that rewrites the filter judged itself harmless")
+        ok = False
+    # ⚠️ The rename must be refused by the SELF_PATHS check on the PREVIOUS name
+    # and by nothing else, so the filter here has to call that old path harmless
+    # too. With the ordinary filter this case passes for the wrong reason — the
+    # old path reaches the image on its own — and a rule that only looked at the
+    # new name survived the mutation sweep because of it.
+    renamed_away = [{"filename": "docs/gone.md",
+                     "previous_filename": WORKFLOW_PATH_POSIX}]
+    if path_reaches_the_image(WORKFLOW_PATH_POSIX, hostile):
+        print("selftest FAIL: the hostile fixture no longer isolates the rename rule")
+        ok = False
+    if delta_is_provably_harmless(renamed_away, hostile):
+        print("selftest FAIL: the filter was renamed out of the way and cleared")
+        ok = False
     for name, files, want in delta_cases:
         got = delta_is_provably_harmless(files, pats)
         if got != want:

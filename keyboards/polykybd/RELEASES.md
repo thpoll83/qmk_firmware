@@ -68,6 +68,17 @@ that cost real debugging to learn (2026-07):
     - The commit-count bound is no longer the proof and was raised to 25
       (`MAX_DELTA_COMMITS`); the proof is the file list, which is refused
       outright if it reaches GitHub's 300-file cap and may have been truncated.
+    - ⚠️ **The delta must not be able to write the policy it is judged by.**
+      `release.yml` checks out the commit being RELEASED, so a filter read off
+      disk is one the delta may have authored: a single commit could drop the
+      `.github/workflows/qmk-test.yml` re-include, add `!keyboards/**`, and edit
+      the firmware, and all three files would read as harmless. Two independent
+      answers, both in place (Greptile P1 on #300, reproduced before fixing):
+      the filter is fetched from the **covered commit** over the API rather than
+      from the checkout, and a delta touching `qmk-test.yml` or
+      `require_fwapply_run.py` is refused outright whatever any filter says.
+      Editing either therefore costs the next release a fresh rig run — the
+      correct price for changing what decides whether a release is safe.
   - **The job name is DERIVED from the checked-out workflow**, not hardcoded — a
     rename would otherwise turn the gate into a silent no-op that reports "never
     covered" for firmware that was. Same reason the ctnd unit-test workflow greps

@@ -75,8 +75,15 @@ that cost real debugging to learn (2026-07):
       the firmware, and all three files would read as harmless. Two independent
       answers, both in place (Greptile P1 on #300, reproduced before fixing):
       the filter is fetched from the **covered commit** over the API rather than
-      from the checkout, and a delta touching `qmk-test.yml` or
-      `require_fwapply_run.py` is refused outright whatever any filter says.
+      from the checkout, and a delta touching `qmk-test.yml`,
+      `require_fwapply_run.py` or `release.yml` is refused outright whatever any
+      filter says. The line is "decides whether a release is SAFE": `release.yml`
+      controls whether the gate runs and on which sha, `bump-version.yml` only
+      picks a number. ⚠️ **This does not defend against the gate being deleted
+      from `release.yml`** — nothing running inside that workflow could, and the
+      protection for it is the branch ruleset and review, not this script. It
+      stops a delta that weakened the release path being auto-cleared on the way
+      past.
       Editing either therefore costs the next release a fresh rig run — the
       correct price for changing what decides whether a release is safe.
   - **The job name is DERIVED from the checked-out workflow**, not hardcoded — a

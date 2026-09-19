@@ -47,9 +47,14 @@ WORKFLOW_PATH_POSIX = ".github/workflows/" + WORKFLOW
 # The consequence is intended: changing the policy, or this script, costs the
 # next release a fresh rig run. That is the correct price for editing the thing
 # that decides whether a release is safe.
+#
+# The line is drawn at "decides whether a release is SAFE", which is why
+# release.yml is here and bump-version.yml is not: one controls whether this
+# gate runs and on which sha, the other only picks a version number.
 SELF_PATHS = (
-    WORKFLOW_PATH_POSIX,
-    "keyboards/polykybd/tools/require_fwapply_run.py",
+    WORKFLOW_PATH_POSIX,                                  # the policy
+    "keyboards/polykybd/tools/require_fwapply_run.py",    # the gate
+    ".github/workflows/release.yml",                      # what invokes it
 )
 JOB_ID = "fwapply-test"
 # Fallback only. The real name is DERIVED from the workflow (see job_name): a
@@ -718,6 +723,15 @@ def selftest():
         ("this gate's own source changed",
          [{"filename": "keyboards/polykybd/tools/require_fwapply_run.py",
            "patch": "@@\n+    return True"}],
+         False),
+        # ⚠️ release.yml invokes this gate and supplies its SHA. The filter calls
+        # it harmless (it is not a build input), so only SELF_PATHS refuses it.
+        # This does NOT defend against the gate being deleted from that workflow
+        # — nothing running inside it could — it stops a delta that weakened the
+        # release path from being auto-cleared on the way past.
+        ("the release workflow changed",
+         [{"filename": ".github/workflows/release.yml",
+           "patch": "@@\n-          python3 keyboards/polykybd/tools/require_fwapply_run.py"}],
          False),
         ("the filter renamed out of the way",
          [{"filename": "docs/old-workflow.md",

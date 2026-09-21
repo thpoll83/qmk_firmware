@@ -111,7 +111,7 @@ unavailable.** `qmk compile -kb polykybd/split72 -km default`. The once-per-cont
 setup, the submodule failure modes, the `-Wcast-align` guard and its path filter, and the
 vendored-DOOM `-Werror` collateral are in
 [`keyboards/polykybd/BUILD_ENVIRONMENT.md`](keyboards/polykybd/BUILD_ENVIRONMENT.md).
-Eight rules bind work outside that file:
+Nine rules bind work outside that file:
 
 - **The deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over
   HID. ⚠️ **Put the commit sha in the filename**: every test build reports the same
@@ -148,6 +148,18 @@ Eight rules bind work outside that file:
   the firmware builds and the rig flashes over GPIO BOOTSEL with picotool-made images.
   The tool audits the container against the bootrom's rules now, so the release build is
   the gate.
+- ⚠️ **A single-block UF2 that writes ONE far-away sector then leaves the half unable
+  to boot — and the cause is the WRITE, not the bytes.** With the `payloadSize` fix
+  the handedness stamp UF2 completes (the drive unmounts, so `safe_reboot()` ran) and
+  the half comes up in the bootrom on every power cycle until the firmware `.uf2` is
+  re-flashed. **Narrowed by building the same record a different way**: an image built
+  with **`-e POLYKYBD_FORCE_HAND=left|right`** writes the identical record to the
+  identical sector through `stamp_write()` and boots fine (`hand: LEFT (flash stamp)`),
+  which retires the record's content, the side change and all of
+  `poly_hand_boot_init()` in one measurement. Still open, and the lesson that
+  generalises: **when a write breaks a boot, re-do the same write by another path
+  before debugging what reads it.** That flag is also the working way to provision a
+  half from a plain multi-block `.uf2`; the release ships neither stamp UF2 any more.
 - **Docker is NOT usable** in the remote container (no daemon).
 
 ## Continuous integration (PR checks)

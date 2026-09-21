@@ -93,12 +93,16 @@ v0.25.0 and v0.27.1 should be deleted. Two separate faults:
    `--verify` now rejects those files, so it tells you which kind you have.
 2. With that fixed the write completes — the drive unmounts, which only happens once
    the bootrom's `safe_reboot()` fires — and the half then **does not boot**: no RGB,
-   no displays, no console, and the bootrom's drive back on every power cycle. Both
-   halves, both sides. Re-flashing the firmware `.uf2` recovers it every time.
-   Unexplained: the bootrom puts the erase and the program at `FW_HAND_STAMP_OFFSET`
-   (0x3F6000), a sector nothing but `hand_stamp.c` reads, and a firmware `.uf2` does
-   not rewrite that sector — so the record is still present on the boot that works.
-   Being reproduced on the HIL rig.
+   no displays, no console, and the bootrom's drive back on every power cycle,
+   surviving 30 s unpowered. Both halves, both sides. Re-flashing the firmware
+   `.uf2` recovers it every time. Still unexplained, but **narrowed by measurement**:
+   a provisioning image (below) writes the *same record* to the *same sector*
+   through `stamp_write()` and the half boots fine, reporting
+   `hand: LEFT (flash stamp)`. So neither the record's content nor anything in
+   handedness resolution is the cause — the fault is specific to the **bootrom
+   writing that sector from a single-block UF2**. Ruled out the same way: a stale
+   `.ram0.bootloader_magic` double-tap flag, an invalid boot2, and any software
+   `reset_usb_boot()`, which has no boot-time caller.
 
 Build them yourself — the release just runs this:
 
@@ -106,10 +110,33 @@ Build them yourself — the release just runs this:
 `python3 tools/make_hand_uf2.py --side right`
 `python3 tools/make_hand_uf2.py --verify polykybd-hand-left.uf2`
 
-`--append-to <firmware.uf2>` folds the stamp into a firmware image so one file
-provisions a half. Useful on the bench, deliberately not what a release ships: then
-every firmware re-flash would rewrite handedness, and the wrong file silently flips
-a half.
+`--append-to` is **refused**: the bootrom tracks which sectors it has already erased
+by BLOCK NUMBER (`page_no = block_no * 256 / FLASH_SECTOR_ERASE_SIZE`), which is the
+sector index only while blocks run contiguously from the image base. An appended
+stamp block 4 MB up collides with the bit for firmware blocks 2992–2999 and skips
+its own erase when one of those was written first, so the record lands corrupt.
+
+### Provisioning a half today
+
+Build a one-off image that stamps the side itself, and flash it as an ordinary
+firmware `.uf2` — no hand-built UF2 block, so it avoids fault (2) above entirely:
+
+```bash
+qmk compile -kb polykybd/split72 -km default -e POLYKYBD_FORCE_HAND=left     # or =right
+```
+
+It calls `poly_hand_force_stamp()` from `keyboard_pre_init_user()`, through the same
+`stamp_write()` the host's HID cmd 25 uses, and only when the sector does not already
+name that side — so no page is burned per boot. Confirm with the banner's `hand:`
+line, then **flash the normal image back**: while a forcing image is on the half,
+every boot that disagrees rewrites the side, which is precisely what the neutral
+release `.uf2` avoids so a firmware update can never flip a half. The stamp is in its
+own sector and survives the reflash.
+
+⚠️ A half whose EEPROM was wiped comes up with `reset=YES` in the `keymap:` banner
+line — the stored keymap and the macros are back at defaults and want re-applying
+from the host. The stamp itself is unaffected; that is the whole point of it living
+outside the wear-levelling store.
 
 PolyKybdHost can also set it (HID cmd 25) — it stamps both halves and reboots them.
 

@@ -122,6 +122,23 @@ void poly_hand_post_init(void);
 // it is correct even if something reads it before poly_hand_boot_init().
 bool poly_hand_is_left(void);
 
+// PROVISIONING BUILD ONLY (`-e POLYKYBD_FORCE_HAND=left|right`). Stamp this half's
+// side from the image itself, so provisioning needs no hand-built 512-byte UF2 --
+// the artifact is an ordinary multi-block firmware .uf2, flashed over BOOTSEL like
+// any other. That matters because the standalone stamp UF2 route is currently
+// unexplained-broken on hardware (see tools/make_hand_uf2.py), while this path is
+// the same stamp_write() the host's HID cmd 25 has always used.
+//
+// Idempotent: writes only when the sector does not already say this, so re-flashing
+// or rebooting does not burn a page per boot. Call from keyboard_pre_init_user()
+// BEFORE poly_hand_boot_init(), which then resolves the stamp normally and repairs
+// the EEPROM byte through the ordinary path.
+//
+// ⚠️ A board flashed with such an image has its side rewritten on every boot that
+// disagrees, which is exactly why a RELEASE .uf2 stays handedness-neutral. Flash the
+// normal image again once the half is provisioned; the stamp persists.
+void poly_hand_force_stamp(bool is_left);
+
 // Record a handedness change (HID cmd 25 on the master, the reset-sync carrier on
 // the slave). Deliberately does no flash or EEPROM work: the slave's caller is a
 // split-transaction handler with a ~20 ms budget. poly_hand_flush_pending() does

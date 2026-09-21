@@ -129,6 +129,17 @@ void poly_hand_boot_init(void) {
     resolve(/*may_migrate=*/true);
 }
 
+void poly_hand_force_stamp(bool is_left) {
+    // Same core1 rule as resolve()'s migration write: this runs at pre_init, where
+    // core1 has never been launched, so it must NOT take the lockout -- releasing
+    // one there would leave post_init's unbounded multicore_launch_core1()
+    // handshake blocked forever.
+    bool cur  = false;
+    bool have = stamp_read(&cur);
+    if (have && cur == is_left) return;   // already this side; no page burned
+    stamp_write(is_left, /*lockout=*/false);
+}
+
 bool poly_hand_is_left(void) {
     // Resolve without migrating if something asks before pre_init: a flash write
     // from an unknown point in the boot is not worth the convenience, and

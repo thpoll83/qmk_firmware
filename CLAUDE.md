@@ -111,7 +111,7 @@ unavailable.** `qmk compile -kb polykybd/split72 -km default`. The once-per-cont
 setup, the submodule failure modes, the `-Wcast-align` guard and its path filter, and the
 vendored-DOOM `-Werror` collateral are in
 [`keyboards/polykybd/BUILD_ENVIRONMENT.md`](keyboards/polykybd/BUILD_ENVIRONMENT.md).
-Seven rules bind work outside that file:
+Eight rules bind work outside that file:
 
 - **The deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over
   HID. ⚠️ **Put the commit sha in the filename**: every test build reports the same
@@ -135,6 +135,19 @@ Seven rules bind work outside that file:
   silently produces a wrong answer that looks like plausible history. Run
   `git rev-parse --is-shallow-repository` before ANY such question;
   `git fetch origin --unshallow --no-recurse-submodules` takes ~45 s.
+- ⚠️ **A hand-built UF2 must declare `payloadSize` 256 on EVERY block, whatever it
+  actually carries.** The RP2040 bootrom's `vd_write_block()` tests
+  `uf2->payload_size == 256` before it looks at a block at all, and then programs a full
+  page regardless — so a block sized to its own 12-byte record is dropped, the download
+  never completes, and **`safe_reboot()` never runs**: the half sits in BOOTSEL with the
+  drive still mounted. That is a *file* fault presenting as a dead board, and it shipped
+  in three releases' handedness UF2s (v0.23.0–v0.27.1, `tools/make_hand_uf2.py`). Two
+  generalisations: a **round-trip verifier proves self-consistency, not conformance** —
+  `verify()` read the size field back out of the file it had just written and passed
+  every time; and a **generated artifact no test consumes is checked by nothing**, since
+  the firmware builds and the rig flashes over GPIO BOOTSEL with picotool-made images.
+  The tool audits the container against the bootrom's rules now, so the release build is
+  the gate.
 - **Docker is NOT usable** in the remote container (no daemon).
 
 ## Continuous integration (PR checks)

@@ -82,6 +82,13 @@ EEPROM are untouched), and one pair covers both `split42` and `split72`:
 * `polykybd-handedness-left_vX.Y.Z.uf2`
 * `polykybd-handedness-right_vX.Y.Z.uf2`
 
+⚠️ **The copies published with v0.23.0, v0.25.0 and v0.27.1 do not work — delete them.**
+Their UF2 blocks declared the 12-byte record as their `payloadSize`, and the RP2040
+bootrom ignores any block that does not declare exactly 256. So nothing was written and
+the download never completed, which is why the board stayed in BOOTSEL with the drive
+mounted instead of restarting. Take the pair from a release after this fix, or build
+them below; `--verify` now rejects the old files, so it tells you which kind you have.
+
 Build them yourself — the release just runs this:
 
 `python3 tools/make_hand_uf2.py --side left`

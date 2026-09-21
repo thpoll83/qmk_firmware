@@ -223,11 +223,31 @@ jobs:
           # like every other asset only so downloads of two releases do not collide
           # in the browser (see the note above); the bytes are identical from
           # release to release unless the flash map itself moves.
+          #
+          # ⚠️ NOT PUBLISHED, 2026-09-21. These are BUILT so the tool and its
+          # container checks keep running in CI, and deliberately NOT added to
+          # ASSETS. Two faults, one shipped and one found on the bench:
+          #
+          #   1. payloadSize was the record's own 12 bytes, and the RP2040 bootrom
+          #      ignores any block not declaring exactly 256. v0.23.0, v0.25.0 and
+          #      v0.27.1 all shipped an inert pair that left the half sitting in
+          #      BOOTSEL. Fixed in make_hand_uf2.py.
+          #   2. With that fixed the write COMPLETES -- the drive unmounts, so
+          #      safe_reboot() ran -- and the half then does not boot: no RGB, no
+          #      displays, no console, and the bootrom's drive back on every power
+          #      cycle. Both halves, both sides. Re-flashing this firmware .uf2
+          #      recovers it every time. UNEXPLAINED: the bootrom's own source puts
+          #      the erase and the program at FW_HAND_STAMP_OFFSET (0x3F6000) via
+          #      flash_page_program(addr - XIP_MAIN_BASE, data), a sector nothing
+          #      but hand_stamp.c reads -- and a firmware .uf2 does not rewrite it,
+          #      so the record is still there on the boot that works.
+          #
+          # Until (2) is reproduced on the rig and understood, handedness is
+          # provisioned over HID cmd 25 (readme.md), which has run on hardware.
           python3 keyboards/polykybd/tools/make_hand_uf2.py --side left \
             -o "polykybd-handedness-left_v${VER}.uf2"
           python3 keyboards/polykybd/tools/make_hand_uf2.py --side right \
             -o "polykybd-handedness-right_v${VER}.uf2"
-          ASSETS+=( "polykybd-handedness-left_v${VER}.uf2" "polykybd-handedness-right_v${VER}.uf2" )
           # Include the detached signature when the Sign step produced one (FW-2).
           # It must travel as "<bin>.sig" of the RENAMED bin, or hid_fw_up.py will
           # not find it (sig_path = bin_path + ".sig").

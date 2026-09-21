@@ -82,12 +82,23 @@ EEPROM are untouched), and one pair covers both `split42` and `split72`:
 * `polykybd-handedness-left_vX.Y.Z.uf2`
 * `polykybd-handedness-right_vX.Y.Z.uf2`
 
-⚠️ **The copies published with v0.23.0, v0.25.0 and v0.27.1 do not work — delete them.**
-Their UF2 blocks declared the 12-byte record as their `payloadSize`, and the RP2040
-bootrom ignores any block that does not declare exactly 256. So nothing was written and
-the download never completed, which is why the board stayed in BOOTSEL with the drive
-mounted instead of restarting. Take the pair from a release after this fix, or build
-them below; `--verify` now rejects the old files, so it tells you which kind you have.
+⚠️ **The BOOTSEL route does not work yet — use HID cmd 25 (below) to set handedness.**
+No release publishes the pair any more, and the copies that went out with v0.23.0,
+v0.25.0 and v0.27.1 should be deleted. Two separate faults:
+
+1. Those three releases' files declared the record's own 12 bytes as the UF2
+   `payloadSize`, and the RP2040 bootrom ignores any block that does not declare
+   exactly 256. Nothing was written, the download never completed, and the half sat
+   in BOOTSEL with the drive still mounted instead of restarting. Fixed in the tool;
+   `--verify` now rejects those files, so it tells you which kind you have.
+2. With that fixed the write completes — the drive unmounts, which only happens once
+   the bootrom's `safe_reboot()` fires — and the half then **does not boot**: no RGB,
+   no displays, no console, and the bootrom's drive back on every power cycle. Both
+   halves, both sides. Re-flashing the firmware `.uf2` recovers it every time.
+   Unexplained: the bootrom puts the erase and the program at `FW_HAND_STAMP_OFFSET`
+   (0x3F6000), a sector nothing but `hand_stamp.c` reads, and a firmware `.uf2` does
+   not rewrite that sector — so the record is still present on the boot that works.
+   Being reproduced on the HIL rig.
 
 Build them yourself — the release just runs this:
 

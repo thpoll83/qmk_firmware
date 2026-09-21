@@ -200,10 +200,22 @@ def main():
 
     blocks = []
     if args.append_to:
-        blocks = parse_uf2(args.append_to.read_bytes(), args.append_to)
-        clash = [a for a, _ in blocks if (a - XIP_BASE) // 4096 == stamp_off // 4096]
-        if clash:
-            raise SystemExit(f"{args.append_to}: already writes the stamp sector — refusing to add a second record")
+        # ⚠️ REFUSED: the bootrom's erase bookkeeping is indexed by BLOCK NUMBER, not
+        # by address. _write_uf2_page() computes
+        #     page_no = block_no * 256 / FLASH_SECTOR_ERASE_SIZE
+        # and uses it as the bit in `cleared_pages` that decides whether the target
+        # sector still needs erasing. That is the sector index only while the blocks
+        # run contiguously from the image base. An appended stamp sits 4 MB up while
+        # its block number keeps counting from the firmware, so it collides with the
+        # bit for firmware blocks 2992..2999 — and if one of those was written first,
+        # the stamp's sector is NEVER ERASED. Programming can only clear bits, so the
+        # record lands corrupt, which a firmware image right beside it would make
+        # unreviewable. Two files, flashed one after the other, have no such coupling.
+        raise SystemExit(
+            "--append-to is refused: the RP2040 bootrom tracks which sectors it has erased "
+            "by BLOCK NUMBER, so an appended block 4 MB from the image base can share a "
+            "bit with a firmware block and skip its own erase. Flash the firmware .uf2 and "
+            "the stamp .uf2 separately.")
     blocks.append(block)
 
     out = args.out or pathlib.Path(

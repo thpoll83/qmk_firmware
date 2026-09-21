@@ -144,8 +144,16 @@ void emit_boot_banner(void) {
     // a guess.
     {
         static const char *const src[] = {"flash stamp", "stamped from EEPROM", "EEPROM, UNSTAMPED"};
-        uprintf("   hand: %s (%s)%s\n", is_keyboard_left() ? "LEFT" : "RIGHT",
-                src[poly_hand_source()], poly_hand_ee_repaired() ? " [EEPROM byte repaired from the stamp]" : "");
+        // slot/count/writer are here so an experiment can prove a stamp WRITE landed.
+        // Without them this line reads identically whether a freshly dragged UF2 was
+        // applied or a previous record is still in the sector -- which is exactly how
+        // a probe that never wrote anything was read as "the write is harmless".
+        // A UF2 lands at slot 0 with count 1 (the bootrom erases the sector first) and
+        // carries writer=0x55; stamp_write() appends at the first free page and leaves 0.
+        uprintf("   hand: %s (%s) slot=%u/%u writer=0x%02X%s\n", is_keyboard_left() ? "LEFT" : "RIGHT",
+                src[poly_hand_source()], (unsigned)poly_hand_stamp_slot(),
+                (unsigned)poly_hand_stamp_count(), (unsigned)poly_hand_stamp_writer(),
+                poly_hand_ee_repaired() ? " [EEPROM byte repaired from the stamp]" : "");
     }
     // Read the clock back from the hardware rather than printing SYS_CLK_KHZ:
     // the define is what we ASKED for, this is what the PLL actually landed on.

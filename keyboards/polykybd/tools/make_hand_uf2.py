@@ -72,6 +72,15 @@ PAGE = 256
 STAMP_FMT = "<IB3xI"
 STAMP_CRC_SPAN = 8
 
+# pad[0] carries WHO wrote the record: this tool, or the firmware's stamp_write().
+# It rides inside the CRC span (the span is 8 bytes = magic + is_left + pad), and
+# stamp_valid() ignores the pad bytes, so firmware predating this still accepts it.
+# The boot banner prints it, which is what lets an experiment prove its write
+# LANDED -- `hand: LEFT (flash stamp)` alone reads the same whether a dragged UF2
+# was applied or a previous record is still there, and that ambiguity already cost
+# a hardware round.
+WRITER_UF2 = 0x55
+
 
 def _defines(path):
     out = {}
@@ -102,7 +111,7 @@ def firmware_constants():
 
 
 def stamp_record(is_left, magic):
-    body = struct.pack("<IB3x", magic, 1 if is_left else 0)
+    body = struct.pack("<IBB2x", magic, 1 if is_left else 0, WRITER_UF2)
     assert len(body) == STAMP_CRC_SPAN, "STAMP_CRC_SPAN disagrees with the record layout"
     return body + struct.pack("<I", zlib.crc32(body))
 
@@ -176,7 +185,11 @@ def verify(path):
         raise SystemExit(f"{path}: is_left is {is_left}; the firmware rejects anything above 1")
     if crc != zlib.crc32(payload[:STAMP_CRC_SPAN]):
         raise SystemExit(f"{path}: stamp CRC does not check out — the firmware would ignore this record")
-    print(f"{path}: valid handedness stamp — {'LEFT' if is_left else 'RIGHT'} at 0x{target:08X}")
+    writer = payload[5]
+    print(f"{path}: valid handedness stamp — {'LEFT' if is_left else 'RIGHT'} at 0x{target:08X}"
+          f" (writer=0x{writer:02X}{', this tool' if writer == WRITER_UF2 else ''})")
+    print(f"  the boot banner will read `slot=0/1 writer=0x{writer:02X}` once this record is in use,"
+          " so an applied write is distinguishable from an ignored one")
 
 
 def main():

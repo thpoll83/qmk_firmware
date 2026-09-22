@@ -256,8 +256,10 @@ def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0):
     Both halves draw the same thing (each is reporting its OWN boot), so there is no
     `side`. The percent rounds to nearest: 25 / 38 / 50 / 63 / 75 / 88 / 100.
 
-    A sub-step (`sub` >= 1) takes the LABEL's line rather than decorating the percent:
-    "100%" over "17 / 40". `sub_total` 0 prints the count alone.
+    A sub-step (`sub` >= 1) gives the second line to the fraction and moves the percent
+    up beside the label: "Booting 100%" over "17 / 40". `sub_total` 0 prints the count
+    alone. That header line uses the SMALL face whatever the panel, because
+    "Booting 100%" is 127 px of 128 in the 19 px one -- mirror of the C.
     """
     pts = []
     setp = lambda px, py: pts.append((px, py))
@@ -266,17 +268,20 @@ def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0):
     face = disp if P_H >= 64 else (small or disp)
     pct = "%d%%" % ((step * 100 + total // 2) // total)
     if sub:
-        lines = [pct, ("%d / %d" % (sub, sub_total)) if sub_total else "%d" % sub]
+        lines = ["Booting " + pct,
+                 ("%d / %d" % (sub, sub_total)) if sub_total else "%d" % sub]
+        faces = [small or disp, face]
     else:
         lines = ["Booting....", pct]
+        faces = [face, face]
     band = P_H // 2
     for i, txt in enumerate(lines):
         cp = s2cp(txt)
-        bx0, bx1, by0, by1 = text_bbox(face, cp)
+        bx0, bx1, by0, by1 = text_bbox(faces[i], cp)
         x = (P_W - (bx1 - bx0 + 1)) // 2 - bx0
         if x < 0:
             x = 0
-        draw(setp, face, x, band * i + band // 2 - (by0 + by1) // 2, cp)
+        draw(setp, faces[i], x, band * i + band // 2 - (by0 + by1) // 2, cp)
     return pts
 
 

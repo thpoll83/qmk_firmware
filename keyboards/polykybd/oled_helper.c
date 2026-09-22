@@ -331,17 +331,23 @@ static void oled_fw_notice(const uint32_t* word, bool icon) {
 // Costs a couple of hundred ms of I2C across the whole boot: the first paint is a
 // full frame, the rest change only the digit, and oled_write_raw diffs.
 void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_total) {
-    // ⚠ The 19 px face does NOT fit two bands on the 32 px panel — measured, 2 px of
+    // ⚠️ The 19 px face does NOT fit two bands on the 32 px panel — measured, 2 px of
     // "Booting...."'s ascenders land at y = -1 and the hardware clips them away.
     // split42 uses the 15 px face instead; it still fits comfortably across 128 px
     // (74 px for the label, 39 for the percent).
     const GFXfont* face[]  = { (OLED_DISPLAY_HEIGHT >= 64) ? &NotoSans_Regular_Mid_19px7b
                                                            : &NotoSans_Regular_Small_15px7b };
-    uint32_t       buf[12];      // the percent
+    // ⚠️ "Booting 100%" is 127 px of the 128 in the 19 px face — measured, a ONE pixel
+    // margin, the fit-by-a-hair shape this screen has already been sent back for twice.
+    // The header line therefore drops to the 15 px face (103 px) whenever it carries the
+    // percent, which also reads as a hierarchy: the label is subordinate to the numbers
+    // under it. No flash cost — both faces are already linked on both variants.
+    const GFXfont* label_face[] = { &NotoSans_Regular_Small_15px7b };
+    uint32_t       buf[16];      // "Booting 100%" is 12 chars + NUL — 12 slots TRUNCATES
     uint32_t       sub_buf[12];  // the sub-step fraction, when there is one
     char           txt[20];
 
-    // ⚠ TWO lines, not one. "Booting.... 100%" measures 143 of the 128 px in this
+    // ⚠️ TWO lines, not one. "Booting.... 100%" measures 143 of the 128 px in this
     // font, and 119 in the small one — 4 px of margin, the fit-by-a-hair shape that
     // already sent "Restarting" and "no image staged" back for a second pass. Split,
     // the widest parts are 88 px and 48 px.
@@ -351,27 +357,28 @@ void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_to
     // milestone; the machine-readable one is the CRASH_PHASE_BOOT argument, which stays
     // the step number, so "stuck at 38%" and phase=1:0x0003 name the same place.
     const uint8_t pct = (uint8_t)(((uint16_t)step * 100u + total / 2u) / total);
-    snprintf(txt, sizeof(txt), "%u%%", (unsigned)pct);
-    ascii_to_u32_string(buf, sizeof(buf), txt);
 
-    // ⚠ A sub-step still APPENDS to the vocabulary; it never renumbers. The
+    // ⚠️ A sub-step still APPENDS to the vocabulary; it never renumbers. The
     // percentages are how this board's boot hangs have been reported for longer than
     // the splash letters have existed, and the same number is the CRASH_PHASE_BOOT
     // argument — so "63%" has to keep meaning step 5 for every report already
     // collected, and the breadcrumb stays 0x0502 (step<<8 | sub).
     //
-    // What changed is only how it READS. The sub-step takes the label's line instead
-    // of decorating the percent:
+    // What changed is only how it READS. The sub-step gets the second line to itself
+    // and the percent joins the label on the first:
     //
-    //     Booting....          100%
+    //     Booting....          Booting 63%
     //     63%           ->     2 / 4
     //
     // "63%.2" was a code the reader had to be taught; a fraction says both how far
-    // through the split milestone it got and how many pieces there are, from across
-    // a desk and in a photograph. The label is what it displaces because by then it
-    // is the least informative thing on the panel.
+    // through the split milestone it got and how many pieces there are, from across a
+    // desk and in a photograph — which is how this screen is actually read, because
+    // the board it is on cannot be attached to.
     const uint32_t* lines[2];
+    const GFXfont* const* line_face[2] = { face, face };
     if (sub) {
+        snprintf(txt, sizeof(txt), "Booting %u%%", (unsigned)pct);
+        ascii_to_u32_string(buf, sizeof(buf), txt);
         if (sub_total) {
             snprintf(txt, sizeof(txt), "%u / %u", (unsigned)sub, (unsigned)sub_total);
         } else {
@@ -379,9 +386,12 @@ void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_to
             snprintf(txt, sizeof(txt), "%u", (unsigned)sub);
         }
         ascii_to_u32_string(sub_buf, sizeof(sub_buf), txt);
-        lines[0] = buf;
-        lines[1] = sub_buf;
+        line_face[0] = label_face;
+        lines[0]     = buf;
+        lines[1]     = sub_buf;
     } else {
+        snprintf(txt, sizeof(txt), "%u%%", (unsigned)pct);
+        ascii_to_u32_string(buf, sizeof(buf), txt);
         lines[0] = label;
         lines[1] = buf;
     }
@@ -395,10 +405,10 @@ void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_to
     const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / 2);
     for (uint8_t i = 0; i < 2; ++i) {
         int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
-        kdisp_gfx_text_bbox(face, 1, lines[i], &x0, &x1, &y0, &y1);
+        kdisp_gfx_text_bbox(line_face[i], 1, lines[i], &x0, &x1, &y0, &y1);
         int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - (x1 - x0 + 1)) / 2 - x0);
         if (x < 0) x = 0;
-        kdisp_write_gfx_text(face, 1, (int8_t)x,
+        kdisp_write_gfx_text(line_face[i], 1, (int8_t)x,
                              (int8_t)(band * i + band / 2 - (y0 + y1) / 2), lines[i]);
     }
 

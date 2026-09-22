@@ -54,9 +54,9 @@ void splash_progress(uint8_t step);
 // ⚠️ It does NOT renumber the percentages, and that is the whole point. "63%" has
 // named step 5 for longer than the splash letters have existed, the same number is
 // the CRASH_PHASE_BOOT argument, and this board's boot hangs are reported in that
-// vocabulary — so a finer split has to append rather than renumber. The panel keeps
-// the percent on its own line and reads the sub-step as a fraction under it ("63%"
-// over "2 / 4"); the breadcrumb becomes 0x0502 (step<<8 | sub), which a bare
+// vocabulary — so a finer split has to append rather than renumber. The panel reads
+// the sub-step as a fraction under the label line ("Booting 63%" over "2 / 4");
+// the breadcrumb becomes 0x0502 (step<<8 | sub), which a bare
 // milestone never produces because it stamps the step alone (0x0005). So old
 // records keep their meaning and new ones are distinguishable by the high byte.
 //
@@ -84,7 +84,7 @@ void boot_substep(uint8_t sub, uint8_t sub_total);
 // across the render by splash_progress, so a STALL resets and a merely slow render
 // does not), stamp the breadcrumb with the key index (step 8, so `phase=1:0x08NN`,
 // NN = row*MATRIX_COLS + col + 1), and — once per ROW, not per key — repaint the
-// status panel as "100%" over "NN / <keys on this half>". So the panel names the
+// status panel as "Booting 100%" over "NN / <keys on this half>". So the panel names the
 // row on a board nobody can attach to, and the archived crash record names the
 // exact key.
 void boot_render_mark(uint8_t row, uint8_t col);

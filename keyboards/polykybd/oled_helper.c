@@ -330,14 +330,19 @@ static void oled_fw_notice(const uint32_t* word, bool icon) {
 //
 // Costs a couple of hundred ms of I2C across the whole boot: the first paint is a
 // full frame, the rest change only the digit, and oled_write_raw diffs.
-void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub) {
+void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_total,
+                        const uint32_t* note) {
     // ⚠️ The 19 px face does NOT fit two bands on the 32 px panel — measured, 2 px of
     // "Booting...."'s ascenders land at y = -1 and the hardware clips them away.
     // split42 uses the 15 px face instead; it still fits comfortably across 128 px
     // (74 px for the label, 39 for the percent).
     const GFXfont* face[]  = { (OLED_DISPLAY_HEIGHT >= 64) ? &NotoSans_Regular_Mid_19px7b
                                                            : &NotoSans_Regular_Small_15px7b };
-    uint32_t       buf[12];
+    // The 15 px face, used for a sub-step screen's context lines. No flash cost —
+    // both faces are already linked on both variants.
+    const GFXfont* sub_face[] = { &NotoSans_Regular_Small_15px7b };
+    uint32_t       buf[16];      // "Booting 100%" is 12 chars + NUL — 12 slots TRUNCATES
+    uint32_t       sub_buf[12];  // the sub-step fraction, when there is one
     char           txt[20];
 
     // ⚠️ TWO lines, not one. "Booting.... 100%" measures 143 of the 128 px in this
@@ -350,17 +355,64 @@ void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub) {
     // milestone; the machine-readable one is the CRASH_PHASE_BOOT argument, which stays
     // the step number, so "stuck at 38%" and phase=1:0x0003 name the same place.
     const uint8_t pct = (uint8_t)(((uint16_t)step * 100u + total / 2u) / total);
-    // ⚠️ A sub-step APPENDS; it never renumbers. The percentages are a vocabulary
-    // this board's boot hangs have been reported in for longer than the splash
-    // letters have existed, and the same number is the CRASH_PHASE_BOOT argument —
-    // so "63%" has to keep meaning step 5 for every report already collected.
-    // Splitting a milestone finer therefore reads "63%.2", not a new percentage.
+
+    // ⚠️ A sub-step still APPENDS to the vocabulary; it never renumbers. The
+    // percentages are how this board's boot hangs have been reported for longer than
+    // the splash letters have existed, and the same number is the CRASH_PHASE_BOOT
+    // argument — so "63%" has to keep meaning step 5 for every report already
+    // collected, and the breadcrumb stays 0x0502 (step<<8 | sub).
+    //
+    // What changed is only how it READS. A sub-step turns the screen into THREE bands
+    // on the 64 px panel, context first and the percent last and largest:
+    //
+    //     Booting....          Booting....   (15 px)
+    //     63%           ->     2 / 4         (15 px)
+    //                          63%           (19 px)
+    //
+    // "63%.2" was a code the reader had to be taught; a fraction says both how far
+    // through the split milestone it got and how many pieces there are, from across a
+    // desk and in a photograph — which is how this screen is actually read, because
+    // the board it is on cannot be attached to.
+    //
+    // ⚠️ The 32 px panel cannot hold three bands: they would be 10 px apart and the
+    // 15 px face is 14 px tall with a descender, so every row would overlap the next.
+    // There the percent stays on the label's line ("Booting 63%", 103 px of 128 — it
+    // does NOT fit the 19 px face, which measures 127) and the fraction takes the
+    // second band.
+    const uint32_t*       lines[3];
+    const GFXfont* const* line_face[3] = { face, face, face };
+    uint8_t               n_lines      = 2;
     if (sub) {
-        snprintf(txt, sizeof(txt), "%u%%.%u", (unsigned)pct, (unsigned)sub);
+        if (sub_total) {
+            snprintf(txt, sizeof(txt), "%u / %u", (unsigned)sub, (unsigned)sub_total);
+        } else {
+            // No total to divide by — the count alone still localises the stall.
+            snprintf(txt, sizeof(txt), "%u", (unsigned)sub);
+        }
+        ascii_to_u32_string(sub_buf, sizeof(sub_buf), txt);
+        if (OLED_DISPLAY_HEIGHT >= 64) {
+            snprintf(txt, sizeof(txt), "%u%%", (unsigned)pct);
+            ascii_to_u32_string(buf, sizeof(buf), txt);
+            n_lines      = 3;
+            // `note` displaces the label, never the numbers: it is only ever set when
+            // something happened that the reader needs more than the word "Booting".
+            lines[0]     = note ? note : label;
+            line_face[0] = sub_face;
+            lines[1]     = sub_buf;  line_face[1] = sub_face;
+            lines[2]     = buf;      /* line_face[2] stays the panel's 19 px face */
+        } else {
+            snprintf(txt, sizeof(txt), "Booting %u%%", (unsigned)pct);
+            ascii_to_u32_string(buf, sizeof(buf), txt);
+            lines[0]     = note ? note : buf;
+            line_face[0] = sub_face;
+            lines[1]     = sub_buf;  line_face[1] = sub_face;
+        }
     } else {
         snprintf(txt, sizeof(txt), "%u%%", (unsigned)pct);
+        ascii_to_u32_string(buf, sizeof(buf), txt);
+        lines[0] = label;
+        lines[1] = buf;
     }
-    ascii_to_u32_string(buf, sizeof(buf), txt);
 
     oled_on();
     kdisp_set_buffer(0);
@@ -368,14 +420,13 @@ void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub) {
     // Each line centred in its own half of the panel, from its own bbox — the same
     // band shape oled_fw_confirm_screen() uses, so a descender does not push the other
     // line. Works unchanged on the 32 px panel: two bands of 16.
-    const uint32_t* lines[2] = { label, buf };
-    const int8_t    band     = (int8_t)(OLED_DISPLAY_HEIGHT / 2);
-    for (uint8_t i = 0; i < 2; ++i) {
+    const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / n_lines);
+    for (uint8_t i = 0; i < n_lines; ++i) {
         int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
-        kdisp_gfx_text_bbox(face, 1, lines[i], &x0, &x1, &y0, &y1);
+        kdisp_gfx_text_bbox(line_face[i], 1, lines[i], &x0, &x1, &y0, &y1);
         int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - (x1 - x0 + 1)) / 2 - x0);
         if (x < 0) x = 0;
-        kdisp_write_gfx_text(face, 1, (int8_t)x,
+        kdisp_write_gfx_text(line_face[i], 1, (int8_t)x,
                              (int8_t)(band * i + band / 2 - (y0 + y1) / 2), lines[i]);
     }
 

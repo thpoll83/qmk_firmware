@@ -3754,6 +3754,9 @@ void update_displays(enum refresh_mode mode) {
     }
     for (uint8_t r = start_row; r < max_rows; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            // Boot only: breadcrumb + watchdog feed for the final handoff render
+            // (see boot_diag.h). A bool test per key at every other time.
+            boot_render_mark(r, c);
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
 
             //since MATRIX_COLS==8 we don't need to shift multiple times at the end of the row
@@ -5371,7 +5374,7 @@ void keyboard_post_init_user(void) {
     // exactly why the hang is interesting: it points at core1, launched immediately
     // above, rather than at the calls themselves. The sub-step is what turns the
     // next occurrence into a name instead of a photograph of a percentage.
-    boot_substep(1);                    // core1 launched, about to register RPCs
+    boot_substep(1, 4);                    // core1 launched, about to register RPCs
     transaction_register_rpc(USER_SYNC_POLY_DATA,           user_sync_poly_data_handler);
     transaction_register_rpc(USER_SYNC_LAYER_DATA,          user_sync_layer_data_handler);
     transaction_register_rpc(USER_SYNC_LASTKEY_DATA,        user_sync_lastkey_data_handler);
@@ -5383,7 +5386,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_OVERLAY_MAP_DATA,    user_sync_overlay_map_data_handler);
     transaction_register_rpc(USER_SYNC_FLASH_STAGE,         user_sync_flash_stage_handler);
     transaction_register_rpc(USER_SYNC_RESET,               user_sync_reset_handler);
-    boot_substep(2);         // the 11 poly RPCs are registered
+    boot_substep(2, 4);         // the 11 poly RPCs are registered
     slave_data_register();   // USER_SYNC_SLAVE_DATA: LTR-559 sensor pull + the slave crash record
 #ifdef POLY_DUMMY_TXN_TEST
     // Root-cause experiment: register 3 no-op transactions so NUM_TOTAL_TRANSACTIONS
@@ -5394,9 +5397,9 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(USER_SYNC_DUMMY3, user_sync_dummy_handler);
 #endif
 
-    boot_substep(3);                    // slave_data_register() returned
+    boot_substep(3, 4);                    // slave_data_register() returned
     fw_staging_init();
-    boot_substep(4);                    // fw_staging_init() returned (apply-log + done-record read)
+    boot_substep(4, 4);                    // fw_staging_init() returned (apply-log + done-record read)
     splash_progress(6);                 // split RPCs registered, fw-staging up
 
     poly_eeconf_t ee = load_user_eeconf();

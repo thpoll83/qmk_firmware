@@ -54,14 +54,42 @@ void splash_progress(uint8_t step);
 // ⚠️ It does NOT renumber the percentages, and that is the whole point. "63%" has
 // named step 5 for longer than the splash letters have existed, the same number is
 // the CRASH_PHASE_BOOT argument, and this board's boot hangs are reported in that
-// vocabulary — so a finer split has to append rather than renumber. The panel shows
-// "63%.2"; the breadcrumb becomes 0x0502 (step<<8 | sub), which a bare milestone
-// never produces because it stamps the step alone (0x0005). So old records keep
-// their meaning and new ones are distinguishable by the high byte.
+// vocabulary — so a finer split has to append rather than renumber. The panel reads
+// the sub-step as a fraction between the label and the percent ("Booting...." over
+// "2 / 4" over "63%");
+// the breadcrumb becomes 0x0502 (step<<8 | sub), which a bare
+// milestone never produces because it stamps the step alone (0x0005). So old
+// records keep their meaning and new ones are distinguishable by the high byte.
+//
+// `sub_total` is how many pieces this milestone was split into — it is only ever
+// shown, never stored, so it can change without invalidating a single report.
 //
 // Cheap: it repaints the status OLED's percent line only, and does not touch the
 // keycaps (the splash letters stay where the step left them).
-void boot_substep(uint8_t sub);
+void boot_substep(uint8_t sub, uint8_t sub_total);
+
+// ── The FINAL boot render (the 100% step) ───────────────────────────────────
+// Called by update_displays() once per key, and a no-op at every other time. It
+// is armed only for the ONE update_displays(ALL_AT_ONCE) at the SPLASH_DONE tail
+// — the largest unwatched span in boot, and the one a MacBook cold boot has been
+// seen to hang in with the splash still reading 100%.
+//
+// ⚠️ That span is invisible by construction: it runs before crash_watchdog_start()
+// (so a stall is permanent — no reset, no record) and before the main loop (so
+// console_task() never flushes a word of it, and nothing drains the USB event
+// queue). Each keycap is a blocking spi_transmit() -> spiSend(), i.e. an
+// osalThreadSuspendS() with NO timeout, so one lost SPI/DMA completion parks the
+// main thread there for good.
+//
+// While it is armed this does three things per key: feed the watchdog (armed
+// across the render by splash_progress, so a STALL resets and a merely slow render
+// does not), stamp the breadcrumb with the key index (step 8, so `phase=1:0x08NN`,
+// NN = row*MATRIX_COLS + col + 1), and — once per ROW, not per key — repaint the
+// status panel as "NN / <keys on this half>", between the label and the percent. So
+// the panel names the
+// row on a board nobody can attach to, and the archived crash record names the
+// exact key.
+void boot_render_mark(uint8_t row, uint8_t col);
 
 // Per-milestone elapsed times for THIS boot, printed once the boot completes.
 //

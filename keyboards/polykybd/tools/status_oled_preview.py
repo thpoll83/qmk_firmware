@@ -258,8 +258,9 @@ def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0):
 
     A sub-step (`sub` >= 1) gives the second line to the fraction and moves the percent
     up beside the label: "Booting 100%" over "17 / 40". `sub_total` 0 prints the count
-    alone. That header line uses the SMALL face whatever the panel, because
-    "Booting 100%" is 127 px of 128 in the 19 px one -- mirror of the C.
+    alone. BOTH lines then use the SMALL face whatever the panel: "Booting 100%" is
+    127 px of 128 in the 19 px one, and a bigger line would read as the more important
+    one when the two are a single reading -- mirror of the C.
     """
     pts = []
     setp = lambda px, py: pts.append((px, py))
@@ -270,7 +271,7 @@ def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0):
     if sub:
         lines = ["Booting " + pct,
                  ("%d / %d" % (sub, sub_total)) if sub_total else "%d" % sub]
-        faces = [small or disp, face]
+        faces = [small or disp, small or disp]
     else:
         lines = ["Booting....", pct]
         faces = [face, face]

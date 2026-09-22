@@ -41,8 +41,9 @@ void oled_fw_confirm_screen(void);
    resets itself. `step`/`total` are the milestone; the percent is derived. */
 // `sub` 0 draws "Booting...." over the plain percent, exactly as before. 1.. means
 // the milestone was split further: the percent joins the label on the first line
-// ("Booting 100%", in the small face) and the second becomes the fraction
-// "<sub> / <sub_total>" (e.g. 17 / 40). A `sub_total` of 0 prints the count alone.
+// ("Booting 100%") and the second becomes the fraction
+// "<sub> / <sub_total>" (e.g. 17 / 40). Both lines are then drawn in the SMALL face
+// — see the definition. A `sub_total` of 0 prints the count alone.
 // The PERCENT NEVER CHANGES MEANING -- see the comment on the definition.
 void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_total);
 void oled_fw_apply_screen(void);

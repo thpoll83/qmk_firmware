@@ -138,7 +138,7 @@ run on it (`test_no_crash_record`). What is worth knowing:
   spend a round concluding "it printed nothing" from a channel that structurally
   cannot carry it — the STATUS PANEL is the only live channel a wedged board has.
 
-  Four things now survive it, none of which needs the boot to finish:
+  Five things now survive it, none of which needs the boot to finish:
 
   - `splash_progress()` stamps `crash_phase_enter(CRASH_PHASE_BOOT, step)` at each
     milestone, so any record written LATER says how far that boot got — the line reads
@@ -173,12 +173,13 @@ run on it (`test_no_crash_record`). What is worth knowing:
     volatile read, no hook in the USB stack. It exists because the boot-render hang
     reproduced only when a MacBook was COLD-BOOTED with the keyboard attached, i.e.
     while EFI enumerates and the kernel then resets the bus, all inside this window.
-  - ⚠️ **The instrument is not free, and it is in the window it measures.** Five
-    per-row panel paints add 25-40 ms of I2C to a ~100 ms render — enough to move a
-    timing race, and the 2-in-3 repro stopped once the instrumented build was flashed
-    (unproven either way, n is small). The fall-back if it stops reproducing for good
-    is breadcrumb + watchdog with NO paints: the record still names the key after the
-    reset, and only the live readout is lost.
+
+  ⚠️ **The instrument is not free, and it sits in the window it measures.** Five
+  per-row panel paints add 25-40 ms of I2C to a ~100 ms render — enough to move a
+  timing race, and the 2-in-3 repro stopped once the instrumented build was flashed
+  (unproven either way, n is small). The fall-back if it stops reproducing for good is
+  breadcrumb + watchdog with NO paints: the record still names the key after the reset,
+  and only the live readout is lost.
 
   ⚠️ **Arming the watchdog earlier is NOT a free fix**, which is why it is still not
   armed across the whole of post_init. `crash_watchdog_start()` also sets

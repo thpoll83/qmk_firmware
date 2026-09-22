@@ -34,7 +34,18 @@ rather than assuming a loop worked.
     ```text
     ./lib/chibios/os/hal/include/hal.h:136:2: error: #error "obsolete or unknown configuration file"
     ```
-    Fix: `rm -rf` the stale dirs and re-init properly (after `add_repo`, above):
+    ⚠️ **But those two tells are NOT proof the tree cannot build — the BUILD is the
+    authority, so compile BEFORE reaching for `rm -rf`.** On 2026-09-22 all five
+    modules showed the `-` prefix with no `lib/<m>/.git`, exactly the state described
+    above, and `qmk compile` came back clean for split72 AND split42, twice. Acting on
+    the prefix alone would have deleted a working `lib/` tree and spent the session
+    re-cloning through a proxy that had already failed five times once. The cheap check
+    is the compile itself: the `#error "obsolete or unknown configuration file"` above
+    is the signature that matters, and it costs one build to ask. Same rule as this
+    file's opening line — believe the error in front of you, not the history here.
+
+    Fix, once a build has actually failed that way: `rm -rf` the stale dirs and re-init
+    properly (after `add_repo`, above):
     ```bash
     rm -rf lib/chibios lib/chibios-contrib lib/pico-sdk lib/printf lib/lufa
     for m in lib/chibios lib/chibios-contrib lib/printf lib/lufa lib/pico-sdk; do

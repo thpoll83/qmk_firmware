@@ -718,6 +718,27 @@ narrative is in
 5. **Don't over-narrate conclusions before the test.** State what a build contains and
    what each outcome would imply; let the hardware decide.
 
+### A crash, a hang, or a board that "just stopped"
+
+**How a fault is recorded, rebooted through and announced on the next boot is
+[`keyboards/polykybd/CRASH_DIAGNOSTICS.md`](keyboards/polykybd/CRASH_DIAGNOSTICS.md)** —
+the phase breadcrumb, the 8 s watchdog, cmd 39 / `polyctl crash show`, and the boot
+window's own instruments. Read it before chasing any "it froze and a replug fixed it".
+Three rules that bind code outside it:
+
+- ⚠️ **BOOT is the one unwatched window**, so a stall there is permanent: no reset, no
+  record, **and no console output at all** — `console_task()` and
+  `usb_event_queue_task()` are MAIN-LOOP calls and `keyboard_init()` has not reached
+  the loop. The status panel is the only live channel a wedged board has; do not
+  conclude "it printed nothing" from one that structurally cannot carry it.
+- ⚠️ **The final boot render is ~40 blocking `spiSend()` calls with no timeout**
+  (`osalThreadSuspendS`), which is where a cold-boot wedge has actually landed. A
+  watchdog guard covers just that span, armed with `crash_watchdog_arm()` — never
+  `crash_watchdog_start()`, which declares the boot survived.
+- ⚠️ **A watchdog reset runs NO code**, so it never reaches the crash-loop halt in
+  `record_and_reboot()`. Any watchdog armed inside boot must be one-shot, or a hang
+  that recurs every boot becomes a reboot loop.
+
 ### Rules that came out of closed investigations
 
 The narratives moved to

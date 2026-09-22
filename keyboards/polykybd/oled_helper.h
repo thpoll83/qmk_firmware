@@ -45,7 +45,11 @@ void oled_fw_confirm_screen(void);
 // then the percent in the panel's own, last and largest. The 32 px panel keeps two
 // bands, with the percent on the label line. A `sub_total` of 0 prints the count
 // alone. The PERCENT NEVER CHANGES MEANING -- see the comment on the definition.
-void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_total);
+// `note` (sub-step screens only, NULL otherwise) replaces the LABEL line when the
+// boot has something more urgent to say than "Booting" -- today, a USB bus event
+// seen mid-render. Never the numbers: they are what the screen is for.
+void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_total,
+                        const uint32_t* note);
 void oled_fw_apply_screen(void);
 /* "⭯Restarting / Now⭯" — the QK_REBOOT / staged-reset path, which also latches the
    orange "you cannot type" cue and then never returns. */

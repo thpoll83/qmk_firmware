@@ -388,7 +388,7 @@ void boot_substep(uint8_t sub, uint8_t sub_total) {
     // Percent line only. The keycap splash is untouched: its solidify count belongs
     // to the milestone, and repainting 72 displays per sub-step would itself be a
     // multi-hundred-ms span in the window we are trying to measure.
-    oled_boot_progress(s_boot_step, POLY_SPLASH_STEPS, sub, sub_total);
+    oled_boot_progress(s_boot_step, POLY_SPLASH_STEPS, sub, sub_total, NULL);
 }
 
 // ── The final boot render: per-key breadcrumbs + a watchdog guard ───────────
@@ -431,6 +431,59 @@ static void boot_render_guard_end(void) {
     // of keyboard_post_init_user(), and from there the main loop feeds it.
 }
 
+// ── The USB bus watch ───────────────────────────────────────────────────────
+// Why this is here at all: the render walks 40 keycaps at roughly 2.5 ms each, and
+// two MacBook cold boots wedged it 5 ms apart (after key 16 and after key 18). A bad
+// glyph would stop at the SAME key every time, so what stops it is not the keycap —
+// it is something arriving from outside at a repeatable moment. The Mac's boot-time
+// USB sequence is exactly that kind of clock: EFI enumerates, the kernel takes over
+// and resets the bus, and every one of those events lands while post_init is still
+// running and NOTHING is draining the USB event queue (usb_event_queue_task() is a
+// main-loop call, and the main loop has not started).
+//
+// ChibiOS's driver state is the cheapest possible witness: one volatile read per key,
+// no hook, no instrumentation of the USB stack. USB_ACTIVE(4) is the steady state; a
+// bus reset drops it to USB_READY(2), a suspend to USB_SUSPENDED(5).
+//
+// The panel is the only channel that can report it, because a board wedged here
+// prints nothing (console_task() is a main-loop call too) — so the transition
+// displaces the label line and STAYS there, to be read off a photograph:
+//
+//     USB 4>2 @18          <- the bus dropped to READY while key 18 was drawing
+//     18 / 40
+//     100%
+//
+// A trailing '*' means it was not the only transition; the one shown is the LAST,
+// which is the one next to the stall. The count itself is left off because
+// "USB 4>2 @40 x12" measures 125 px of 128 and this screen has been sent back for
+// less.
+static uint8_t  s_usb_prev  = 0xFF;   // 0xFF = not sampled yet
+static uint8_t  s_usb_count = 0;
+static uint32_t s_usb_note[16];
+static bool     s_usb_seen  = false;
+
+static void usb_watch(uint8_t key) {
+    const uint8_t st = (uint8_t)USBD1.state;
+    if (s_usb_prev == 0xFF) {          // first sample: the baseline, not an event
+        s_usb_prev = st;
+        return;
+    }
+    if (st == s_usb_prev) {
+        return;
+    }
+    char txt[24];
+    s_usb_count = (uint8_t)(s_usb_count < 0xFF ? s_usb_count + 1 : 0xFF);
+    snprintf(txt, sizeof(txt), "USB %u>%u @%u%s", (unsigned)s_usb_prev, (unsigned)st,
+             (unsigned)key, s_usb_count > 1 ? "*" : "");
+    ascii_to_u32_string(s_usb_note, sizeof(s_usb_note), txt);
+    s_usb_seen = true;
+    s_usb_prev = st;
+    // Paint it NOW, not at the next row: the event and the stall are milliseconds
+    // apart, and the next row may never come.
+    oled_boot_progress(POLY_SPLASH_STEPS, POLY_SPLASH_STEPS, key, BOOT_RENDER_KEYS,
+                       s_usb_note);
+}
+
 void boot_render_mark(uint8_t row, uint8_t col) {
     if (!s_render_guard) {
         return;
@@ -441,6 +494,7 @@ void boot_render_mark(uint8_t row, uint8_t col) {
     crash_watchdog_feed();
     (void)crash_phase_enter(CRASH_PHASE_BOOT,
                             (uint16_t)(((uint16_t)POLY_SPLASH_STEPS << 8) | key));
+    usb_watch(key);
     if (col == 0) {
         // Once per ROW: five panel frames, not forty. Each one is itself I2C traffic
         // inside the window being measured, and the boot timing table is not fed
@@ -448,7 +502,8 @@ void boot_render_mark(uint8_t row, uint8_t col) {
         // drop the milestones). Safe mid-render: the status OLED is I2C, it touches
         // neither the keycap SPI nor the shift-register walk, and every per-key
         // branch re-initialises the shared scratch buffer with kdisp_set_buffer().
-        oled_boot_progress(POLY_SPLASH_STEPS, POLY_SPLASH_STEPS, key, BOOT_RENDER_KEYS);
+        oled_boot_progress(POLY_SPLASH_STEPS, POLY_SPLASH_STEPS, key, BOOT_RENDER_KEYS,
+                           s_usb_seen ? s_usb_note : NULL);
     }
 }
 
@@ -490,7 +545,7 @@ void splash_progress(uint8_t step) {
     // Skipped for step 1: that one runs in keyboard_pre_init_user(), and QMK does not
     // call oled_init() until later in keyboard_init(), so there is no panel yet.
     if (step != 1) {
-        oled_boot_progress(final ? POLY_SPLASH_STEPS : step, POLY_SPLASH_STEPS, 0, 0);
+        oled_boot_progress(final ? POLY_SPLASH_STEPS : step, POLY_SPLASH_STEPS, 0, 0, NULL);
     }
 
     clear_all_displays();

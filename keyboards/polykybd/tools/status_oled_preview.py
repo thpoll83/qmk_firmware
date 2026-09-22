@@ -249,7 +249,7 @@ def build_fw_notice_panel(side, disp, arrow, word, icon=True):
     return pts
 
 
-def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0):
+def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0, note=None):
     """Boot progress — mirror of oled_helper.c's oled_boot_progress().
 
     TWO lines, because "Booting.... 100%" measures 143 of the 128 px in this font.
@@ -260,7 +260,8 @@ def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0):
     the percent last and largest: "Booting...." / "17 / 40" in the small face, then the
     percent in the panel's own. `sub_total` 0 prints the count alone. The 32 px panel
     cannot hold three bands (10 px apart, a 14 px face), so there the percent stays on
-    the label line -- mirror of the C.
+    the label line -- mirror of the C. `note` (e.g. "USB 4>2 @18") replaces the LABEL
+    line when the boot has something more urgent to say.
     """
     pts = []
     setp = lambda px, py: pts.append((px, py))
@@ -270,10 +271,10 @@ def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0):
     pct = "%d%%" % ((step * 100 + total // 2) // total)
     frac = ("%d / %d" % (sub, sub_total)) if sub_total else "%d" % sub
     if sub and P_H >= 64:
-        lines = ["Booting....", frac, pct]
+        lines = [note or "Booting....", frac, pct]
         faces = [small or disp, small or disp, face]
     elif sub:
-        lines = ["Booting " + pct, frac]
+        lines = [note or ("Booting " + pct), frac]
         faces = [small or disp, small or disp]
     else:
         lines = ["Booting....", pct]
@@ -799,6 +800,9 @@ def main():
                     help='preview the RGB-off layout (both panels re-flow to three rows)')
     ap.add_argument('--boot', type=int, choices=range(2, 9), metavar='STEP',
                     help='preview the boot-progress screen at splash milestone 2..8')
+    ap.add_argument('--boot-note', metavar='TEXT', default=None,
+                    help='with --boot-sub: the note line that displaces the label '
+                         '(e.g. "USB 4>2 @18")')
     ap.add_argument('--boot-sub', metavar='N/M', default=None,
                     help='with --boot: a sub-step inside that milestone, as "N/M" '
                          '(e.g. 17/40 for the final render). "N" alone omits the total.')
@@ -854,7 +858,8 @@ def main():
         if args.boot_sub:
             n, _, m = args.boot_sub.partition('/')
             sub, sub_total = int(n), (int(m) if m else 0)
-        L = build_boot_panel(disp, args.boot, small=small, sub=sub, sub_total=sub_total)
+        L = build_boot_panel(disp, args.boot, small=small, sub=sub, sub_total=sub_total,
+                             note=args.boot_note)
         R = L
     elif args.fw_notice in ('failed', 'failed-none'):
         why = 'none' if args.fw_notice == 'failed-none' else 'crc'

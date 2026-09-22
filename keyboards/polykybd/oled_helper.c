@@ -330,7 +330,8 @@ static void oled_fw_notice(const uint32_t* word, bool icon) {
 //
 // Costs a couple of hundred ms of I2C across the whole boot: the first paint is a
 // full frame, the rest change only the digit, and oled_write_raw diffs.
-void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_total) {
+void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_total,
+                        const uint32_t* note) {
     // ⚠️ The 19 px face does NOT fit two bands on the 32 px panel — measured, 2 px of
     // "Booting...."'s ascenders land at y = -1 and the hardware clips them away.
     // split42 uses the 15 px face instead; it still fits comfortably across 128 px
@@ -393,13 +394,17 @@ void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_to
             snprintf(txt, sizeof(txt), "%u%%", (unsigned)pct);
             ascii_to_u32_string(buf, sizeof(buf), txt);
             n_lines      = 3;
-            lines[0]     = label;    line_face[0] = sub_face;
+            // `note` displaces the label, never the numbers: it is only ever set when
+            // something happened that the reader needs more than the word "Booting".
+            lines[0]     = note ? note : label;
+            line_face[0] = sub_face;
             lines[1]     = sub_buf;  line_face[1] = sub_face;
             lines[2]     = buf;      /* line_face[2] stays the panel's 19 px face */
         } else {
             snprintf(txt, sizeof(txt), "Booting %u%%", (unsigned)pct);
             ascii_to_u32_string(buf, sizeof(buf), txt);
-            lines[0]     = buf;      line_face[0] = sub_face;
+            lines[0]     = note ? note : buf;
+            line_face[0] = sub_face;
             lines[1]     = sub_buf;  line_face[1] = sub_face;
         }
     } else {

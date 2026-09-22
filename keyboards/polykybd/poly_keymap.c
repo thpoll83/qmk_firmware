@@ -3754,6 +3754,9 @@ void update_displays(enum refresh_mode mode) {
     }
     for (uint8_t r = start_row; r < max_rows; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            // Boot only: breadcrumb + watchdog feed for the final handoff render
+            // (see boot_diag.h). A bool test per key at every other time.
+            boot_render_mark(r, c);
             uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
 
             //since MATRIX_COLS==8 we don't need to shift multiple times at the end of the row

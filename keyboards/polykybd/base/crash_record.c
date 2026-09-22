@@ -482,6 +482,12 @@ bool crash_record_note_slave(const uint8_t *body, uint8_t len) {
 // ---------------------------------------------------------------------------
 // The watchdog
 // ---------------------------------------------------------------------------
+void crash_watchdog_arm(void) {
+    // Same timeout, no bookkeeping: see crash_record.h. Re-arming in
+    // crash_watchdog_start() a moment later is harmless — watchdog_enable()
+    // reprograms the counter rather than requiring a disable first.
+    watchdog_enable(CRASH_WATCHDOG_MS, true);
+}
 void crash_watchdog_start(void) {
     // The boot got all the way through post_init, so whatever crashed before
     // was not a boot loop: the back-to-back count starts over, as the field's

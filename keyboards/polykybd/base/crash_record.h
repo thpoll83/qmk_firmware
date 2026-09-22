@@ -183,6 +183,13 @@ void crash_record_emit_slave_line(void);
 // before it. From then on the main loop must feed it every CRASH_WATCHDOG_MS.
 #define CRASH_WATCHDOG_MS 8000u   // the RP2040 maximum is ~8.3 s
 void crash_watchdog_start(void);
+// Arm the watchdog WITHOUT declaring the boot survived. For the FINAL BOOT RENDER
+// (boot_diag.c), which runs before crash_watchdog_start() and is the one unwatched
+// span long enough to hang in. crash_watchdog_start() zeroes `consecutive` and moves
+// the phase to LOOP because reaching it proves post_init finished; neither is true
+// yet here, so a reset from the render must keep the BOOT breadcrumb (archived as
+// `phase=1:0x08NN`, the key it died on) and keep counting toward the crash loop.
+void crash_watchdog_arm(void);
 void crash_watchdog_feed(void);
 // Disarm before anything that legitimately stops the loop for longer than the
 // timeout and never returns: the firmware self-apply, a bootloader jump, a

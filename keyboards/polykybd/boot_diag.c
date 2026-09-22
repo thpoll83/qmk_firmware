@@ -391,6 +391,62 @@ void boot_substep(uint8_t sub) {
     oled_boot_progress(s_boot_step, POLY_SPLASH_STEPS, sub);
 }
 
+// ── The final boot render: per-key breadcrumbs + a watchdog guard ───────────
+// See boot_diag.h (boot_render_mark) for what this instruments and why that span
+// has no other evidence.
+static bool s_render_guard = false;
+
+// Skip the guard when the PREVIOUS boot already died under it. The record is
+// archived by then, so a second reset adds nothing — and without this a board that
+// hangs here on every boot would reboot-loop, because the crash-loop halt lives in
+// the fault handler and a watchdog reset runs no code at all. One reset, one
+// record, then the old wedge, which BOOTSEL still recovers.
+static bool render_guard_already_fired(void) {
+    poly_crash_record_t rec;
+    if (!crash_record_fresh() || !crash_record_archived(&rec)) {
+        return false;
+    }
+    return rec.kind == CRASH_KIND_WATCHDOG && rec.phase == CRASH_PHASE_BOOT &&
+           (uint8_t)(rec.phase_arg >> 8) == POLY_SPLASH_STEPS;
+}
+
+static void boot_render_guard_begin(void) {
+    if (render_guard_already_fired()) {
+        return;
+    }
+    s_render_guard = true;
+    // ⚠️ crash_watchdog_arm(), NOT crash_watchdog_start(): post_init has not
+    // finished, so the BOOT breadcrumb and the consecutive count must survive.
+    crash_watchdog_arm();
+}
+
+static void boot_render_guard_end(void) {
+    s_render_guard = false;
+    // The watchdog stays ARMED on purpose: crash_watchdog_start() is the next line
+    // of keyboard_post_init_user(), and from there the main loop feeds it.
+}
+
+void boot_render_mark(uint8_t row, uint8_t col) {
+    if (!s_render_guard) {
+        return;
+    }
+    const uint8_t key = (uint8_t)(row * MATRIX_COLS + col + 1);   // 1-based
+    // A long render must not trip the guard; a stalled one must. Each key gets the
+    // full CRASH_WATCHDOG_MS, so what the reset means is "one keycap took 8 s".
+    crash_watchdog_feed();
+    (void)crash_phase_enter(CRASH_PHASE_BOOT,
+                            (uint16_t)(((uint16_t)POLY_SPLASH_STEPS << 8) | key));
+    if (col == 0) {
+        // Once per ROW: five panel frames, not forty. Each one is itself I2C traffic
+        // inside the window being measured, and the boot timing table is not fed
+        // from here for the same reason (BOOT_TIMING_MAX would fill with keys and
+        // drop the milestones). Safe mid-render: the status OLED is I2C, it touches
+        // neither the keycap SPI nor the shift-register walk, and every per-key
+        // branch re-initialises the shared scratch buffer with kdisp_set_buffer().
+        oled_boot_progress(POLY_SPLASH_STEPS, POLY_SPLASH_STEPS, key);
+    }
+}
+
 void splash_progress(uint8_t step) {
     const bool      final   = (step == SPLASH_DONE);
     const bool      left    = is_left_side();
@@ -447,6 +503,8 @@ void splash_progress(uint8_t step) {
         // over to the real legends — the same tail show_splash_screen() always
         // ran, now deferred to the end of boot so the reveal is meaningful.
         wait_ms(400);
+        boot_render_guard_begin();
         update_displays(ALL_AT_ONCE);
+        boot_render_guard_end();
     }
 }

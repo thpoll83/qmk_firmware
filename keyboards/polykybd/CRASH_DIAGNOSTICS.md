@@ -121,7 +121,24 @@ run on it (`test_no_crash_record`). What is worth knowing:
   restart, unplugging brought it back" lands in this window, which is exactly why it
   keeps being re-reported as "still not clear why".
 
-  Two things now survive it, neither of which needs the watchdog:
+  ⚠️ **The span it actually hangs in is the FINAL RENDER**, and that one is worth
+  naming because nothing about it looks dangerous: `splash_progress(SPLASH_DONE)`
+  ends by handing the keycaps over to the real legends
+  (`update_displays(ALL_AT_ONCE)`, `boot_diag.c`), which walks ~40 keycaps at
+  roughly 2.5 ms each, and **every one of them is a blocking `spi_transmit()` ->
+  `spiSend()`, i.e. an `osalThreadSuspendS()` with NO timeout**. One lost SPI/DMA
+  completion parks the main thread there permanently. That is also the only
+  unbounded wait in the whole render — the rest is array reads and XIP.
+
+  ⚠️ **And "no console line" is not a shortage of prints, it is structural**:
+  `console_task()` is called from the MAIN LOOP (`quantum/main.c`), which
+  `keyboard_init()` has not reached yet, so every `uprintf` of this boot is still
+  sitting in the report buffer. `usb_event_queue_task()` is in the same loop, so a
+  bus reset or suspend from the host queues up and is never acted on either. Do not
+  spend a round concluding "it printed nothing" from a channel that structurally
+  cannot carry it — the STATUS PANEL is the only live channel a wedged board has.
+
+  Four things now survive it, none of which needs the boot to finish:
 
   - `splash_progress()` stamps `crash_phase_enter(CRASH_PHASE_BOOT, step)` at each
     milestone, so any record written LATER says how far that boot got — the line reads
@@ -141,15 +158,53 @@ run on it (`test_no_crash_record`). What is worth knowing:
     short panel uses the 15 px one. Both measured with
     `tools/status_oled_preview.py --boot <step>`; 0 off-panel pixels at every milestone
     on both heights.
+  - `boot_render_mark()` (`boot_diag.c`) stamps the breadcrumb **per KEY** through that
+    final render — `phase=1:0x08NN`, `NN = row*MATRIX_COLS + col + 1` — and repaints the
+    panel once per ROW as a fraction. A sub-step screen reads `Booting 100%` over
+    `17 / 40` over `100%`; it is drawn per row rather than per key because the paint is
+    itself I2C traffic in the window being measured (see the cost note below). So the
+    panel names the row on a board nobody can attach to, and the archived record names
+    the exact key. ⚠️ A stop that MOVES between boots (key 16, then key 18) rules out a
+    bad glyph or a missing font entry outright — those stop at the same key every time.
+  - a **watchdog guard across that render only** (below), which turns the wedge into a
+    reset that records.
+  - `usb_watch()` samples `USBD1.state` per key and, on a change, displaces the label
+    line with `USB 4>2 @18` — ACTIVE(4) -> READY(2) is a bus reset, (5) a suspend. One
+    volatile read, no hook in the USB stack. It exists because the boot-render hang
+    reproduced only when a MacBook was COLD-BOOTED with the keyboard attached, i.e.
+    while EFI enumerates and the kernel then resets the bus, all inside this window.
+  - ⚠️ **The instrument is not free, and it is in the window it measures.** Five
+    per-row panel paints add 25-40 ms of I2C to a ~100 ms render — enough to move a
+    timing race, and the 2-in-3 repro stopped once the instrumented build was flashed
+    (unproven either way, n is small). The fall-back if it stops reproducing for good
+    is breadcrumb + watchdog with NO paints: the record still names the key after the
+    reset, and only the live readout is lost.
 
-  ⚠️ **Arming the watchdog earlier is NOT a free fix**, which is why it has not been
-  done. `crash_watchdog_start()` also sets `consecutive = 0`, and reaching it is the
-  definition of "this boot succeeded" for the crash-loop halt; arming during boot
-  changes what that counter means. And 8 s is the RP2040 MAXIMUM, so any single
+  ⚠️ **Arming the watchdog earlier is NOT a free fix**, which is why it is still not
+  armed across the whole of post_init. `crash_watchdog_start()` also sets
+  `consecutive = 0`, and reaching it is the definition of "this boot succeeded" for the
+  crash-loop halt; arming during boot changes what that counter means. And 8 s is the RP2040 MAXIMUM, so any single
   milestone gap that legitimately exceeds it turns a rare hang into a permanent reboot
   storm — on a path where the first gap spans QMK's split and USB init, i.e. the very
   thing that blocks when the other half is missing. It needs measured per-milestone
   boot timings first.
+
+  What #301 does instead is arm it across the **final render alone** — every slow step
+  is above that line — through two deliberate pieces:
+
+  - **`crash_watchdog_arm()` is `crash_watchdog_start()` without the bookkeeping.**
+    It reprograms the same 8 s timeout and touches neither `consecutive` nor the phase,
+    because post_init has NOT finished: the BOOT breadcrumb has to survive so the record
+    reads `phase=1:0x08NN`, and the hang has to keep counting toward the halt. Never
+    call `start()` for a guard inside boot.
+  - ⚠️ **A watchdog reset runs no code, so it never reaches the crash-loop halt.**
+    The halt lives in `record_and_reboot()`, which a timeout does not go through — the
+    chip simply resets. A hang that recurs every boot would therefore reboot-loop
+    forever. The guard is one-shot for exactly that reason: it skips itself when
+    `crash_record_fresh()` plus the archived record say the previous boot already died
+    under it (`kind=watchdog`, phase BOOT, high byte `POLY_SPLASH_STEPS`). One reset,
+    one record, then the old wedge — which BOOTSEL still recovers, and which leaves the
+    panel readable for a photograph instead of resetting it away every 8 s.
 
 - **A crash loop halts instead of looping forever**: `consecutive` counts
   back-to-back records and past `CRASH_LOOP_LIMIT` (5) the handler parks in `wfi`

@@ -256,11 +256,11 @@ def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0):
     Both halves draw the same thing (each is reporting its OWN boot), so there is no
     `side`. The percent rounds to nearest: 25 / 38 / 50 / 63 / 75 / 88 / 100.
 
-    A sub-step (`sub` >= 1) gives the second line to the fraction and moves the percent
-    up beside the label: "Booting 100%" over "17 / 40". `sub_total` 0 prints the count
-    alone. BOTH lines then use the SMALL face whatever the panel: "Booting 100%" is
-    127 px of 128 in the 19 px one, and a bigger line would read as the more important
-    one when the two are a single reading -- mirror of the C.
+    A sub-step (`sub` >= 1) makes it THREE bands on the 64 px panel, context first and
+    the percent last and largest: "Booting...." / "17 / 40" in the small face, then the
+    percent in the panel's own. `sub_total` 0 prints the count alone. The 32 px panel
+    cannot hold three bands (10 px apart, a 14 px face), so there the percent stays on
+    the label line -- mirror of the C.
     """
     pts = []
     setp = lambda px, py: pts.append((px, py))
@@ -268,14 +268,17 @@ def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0):
     # short panel uses the 15 px one -- mirror of the same test in the C.
     face = disp if P_H >= 64 else (small or disp)
     pct = "%d%%" % ((step * 100 + total // 2) // total)
-    if sub:
-        lines = ["Booting " + pct,
-                 ("%d / %d" % (sub, sub_total)) if sub_total else "%d" % sub]
+    frac = ("%d / %d" % (sub, sub_total)) if sub_total else "%d" % sub
+    if sub and P_H >= 64:
+        lines = ["Booting....", frac, pct]
+        faces = [small or disp, small or disp, face]
+    elif sub:
+        lines = ["Booting " + pct, frac]
         faces = [small or disp, small or disp]
     else:
         lines = ["Booting....", pct]
         faces = [face, face]
-    band = P_H // 2
+    band = P_H // len(lines)
     for i, txt in enumerate(lines):
         cp = s2cp(txt)
         bx0, bx1, by0, by1 = text_bbox(faces[i], cp)

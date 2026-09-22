@@ -249,19 +249,26 @@ def build_fw_notice_panel(side, disp, arrow, word, icon=True):
     return pts
 
 
-def build_boot_panel(disp, step, total=8, small=None):
+def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0):
     """Boot progress — mirror of oled_helper.c's oled_boot_progress().
 
     TWO lines, because "Booting.... 100%" measures 143 of the 128 px in this font.
     Both halves draw the same thing (each is reporting its OWN boot), so there is no
     `side`. The percent rounds to nearest: 25 / 38 / 50 / 63 / 75 / 88 / 100.
+
+    A sub-step (`sub` >= 1) takes the LABEL's line rather than decorating the percent:
+    "100%" over "17 / 40". `sub_total` 0 prints the count alone.
     """
     pts = []
     setp = lambda px, py: pts.append((px, py))
     # The 19 px face clips 2 px off the top of a 32 px panel with two bands, so the
     # short panel uses the 15 px one -- mirror of the same test in the C.
     face = disp if P_H >= 64 else (small or disp)
-    lines = ["Booting....", "%d%%" % ((step * 100 + total // 2) // total)]
+    pct = "%d%%" % ((step * 100 + total // 2) // total)
+    if sub:
+        lines = [pct, ("%d / %d" % (sub, sub_total)) if sub_total else "%d" % sub]
+    else:
+        lines = ["Booting....", pct]
     band = P_H // 2
     for i, txt in enumerate(lines):
         cp = s2cp(txt)
@@ -783,6 +790,9 @@ def main():
                     help='preview the RGB-off layout (both panels re-flow to three rows)')
     ap.add_argument('--boot', type=int, choices=range(2, 9), metavar='STEP',
                     help='preview the boot-progress screen at splash milestone 2..8')
+    ap.add_argument('--boot-sub', metavar='N/M', default=None,
+                    help='with --boot: a sub-step inside that milestone, as "N/M" '
+                         '(e.g. 17/40 for the final render). "N" alone omits the total.')
     ap.add_argument('--fw-notice', choices=('apply', 'restart', 'failed', 'failed-none'),
                     help='preview a firmware notice screen instead of the status screen')
     ap.add_argument('--telemetry', action='store_true',
@@ -831,7 +841,11 @@ def main():
         L = build_pad_panel(small, fx, fy, tapping=args.pad_tap)
         R = L
     elif args.boot is not None:
-        L = build_boot_panel(disp, args.boot, small=small)
+        sub, sub_total = 0, 0
+        if args.boot_sub:
+            n, _, m = args.boot_sub.partition('/')
+            sub, sub_total = int(n), (int(m) if m else 0)
+        L = build_boot_panel(disp, args.boot, small=small, sub=sub, sub_total=sub_total)
         R = L
     elif args.fw_notice in ('failed', 'failed-none'):
         why = 'none' if args.fw_notice == 'failed-none' else 'crc'

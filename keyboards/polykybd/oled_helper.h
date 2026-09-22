@@ -39,10 +39,12 @@ void oled_fw_confirm_screen(void);
 /* "Booting...." + a percent on the status OLED at each splash milestone — the only
    evidence a boot HANG leaves, since post_init runs with the watchdog off and never
    resets itself. `step`/`total` are the milestone; the percent is derived. */
-// `sub` 0 draws the plain percent, exactly as before; 1.. appends a sub-marker
-// ("63%.3") for a milestone that was split further. The PERCENT NEVER
-// CHANGES MEANING -- see the comment on the definition.
-void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub);
+// `sub` 0 draws the label over the plain percent, exactly as before. 1.. means the
+// milestone was split further: the percent moves up to the label's line and the
+// second line becomes the fraction "<sub> / <sub_total>" (e.g. 100% over 17 / 40).
+// A `sub_total` of 0 prints the count alone. The PERCENT NEVER CHANGES MEANING --
+// see the comment on the definition.
+void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_total);
 void oled_fw_apply_screen(void);
 /* "⭯Restarting / Now⭯" — the QK_REBOOT / staged-reset path, which also latches the
    orange "you cannot type" cue and then never returns. */

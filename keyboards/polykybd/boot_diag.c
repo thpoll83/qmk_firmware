@@ -378,7 +378,7 @@ void emit_boot_timing_line(void) {
     uprint("\n");
 }
 
-void boot_substep(uint8_t sub) {
+void boot_substep(uint8_t sub, uint8_t sub_total) {
     if (s_boot_step == 0 || sub == 0) return;   // no milestone open / nothing to say
     const uint16_t tag = (uint16_t)(((uint16_t)s_boot_step << 8) | sub);
     // Same breadcrumb the milestones write, so whatever reset finally happens
@@ -388,13 +388,18 @@ void boot_substep(uint8_t sub) {
     // Percent line only. The keycap splash is untouched: its solidify count belongs
     // to the milestone, and repainting 72 displays per sub-step would itself be a
     // multi-hundred-ms span in the window we are trying to measure.
-    oled_boot_progress(s_boot_step, POLY_SPLASH_STEPS, sub);
+    oled_boot_progress(s_boot_step, POLY_SPLASH_STEPS, sub, sub_total);
 }
 
 // ── The final boot render: per-key breadcrumbs + a watchdog guard ───────────
 // See boot_diag.h (boot_render_mark) for what this instruments and why that span
 // has no other evidence.
 static bool s_render_guard = false;
+
+// The denominator the panel shows: every key update_displays() walks on this half,
+// KC_NO holes included, because the mark is stamped before the keycode is looked at.
+// 40 on split72 (5 x 8), 24 on split42 (4 x 6).
+#define BOOT_RENDER_KEYS ((uint8_t)(MATRIX_ROWS_PER_SIDE * MATRIX_COLS))
 
 // Skip the guard when the PREVIOUS boot already died under it. The record is
 // archived by then, so a second reset adds nothing — and without this a board that
@@ -430,7 +435,7 @@ void boot_render_mark(uint8_t row, uint8_t col) {
     if (!s_render_guard) {
         return;
     }
-    const uint8_t key = (uint8_t)(row * MATRIX_COLS + col + 1);   // 1-based
+    const uint8_t key = (uint8_t)(row * MATRIX_COLS + col + 1);   // 1-based, of BOOT_RENDER_KEYS
     // A long render must not trip the guard; a stalled one must. Each key gets the
     // full CRASH_WATCHDOG_MS, so what the reset means is "one keycap took 8 s".
     crash_watchdog_feed();
@@ -443,7 +448,7 @@ void boot_render_mark(uint8_t row, uint8_t col) {
         // drop the milestones). Safe mid-render: the status OLED is I2C, it touches
         // neither the keycap SPI nor the shift-register walk, and every per-key
         // branch re-initialises the shared scratch buffer with kdisp_set_buffer().
-        oled_boot_progress(POLY_SPLASH_STEPS, POLY_SPLASH_STEPS, key);
+        oled_boot_progress(POLY_SPLASH_STEPS, POLY_SPLASH_STEPS, key, BOOT_RENDER_KEYS);
     }
 }
 
@@ -485,7 +490,7 @@ void splash_progress(uint8_t step) {
     // Skipped for step 1: that one runs in keyboard_pre_init_user(), and QMK does not
     // call oled_init() until later in keyboard_init(), so there is no panel yet.
     if (step != 1) {
-        oled_boot_progress(final ? POLY_SPLASH_STEPS : step, POLY_SPLASH_STEPS, 0);
+        oled_boot_progress(final ? POLY_SPLASH_STEPS : step, POLY_SPLASH_STEPS, 0, 0);
     }
 
     clear_all_displays();

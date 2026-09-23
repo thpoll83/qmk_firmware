@@ -838,8 +838,10 @@ you act on it — that is the standing check the CLAUDE.md rules still carry.
     back then" — do not plan around it.** Measured across the four PRs of
     2026-08-30, four refusals issued **within 61 seconds of each other** quoted
     four different waits — 4 days, 1 day 3 hours, 1 day 3 hours, 19 hours 41
-    minutes — so it is computed per PR, not from one global clock. And one of them
-    was superseded almost immediately: qmk#255 was told *"1 day and 3 hours"* at
+    minutes — so it is not one global clock. ⚠️ **Nor is it stable per PR:** host#258
+    was told *"5 days and 4 hours"* at 05:14 on 2026-09-23 and *"7 minutes"* at
+    05:31 the same morning, same PR, same budget. Read the number as noise. And one
+    of them was superseded almost immediately: qmk#255 was told *"1 day and 3 hours"* at
     08:58:18 and Sourcery submitted a real **`APPROVED`** review on its next
     commit at **09:02:21, three minutes later**. The other three pushed follow-up
     commits too and got nothing, so this is neither reliable nor universal —

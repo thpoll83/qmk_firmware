@@ -383,6 +383,12 @@ bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
         // hands the panels back and repaints — never runs, leaving this half showing
         // the tutorial forever. Route it through the SAME finish edge the master uses
         // by ending the phase instead, so there is one teardown path, not two.
+        // ⚠️ A STOP WORD CANCELS A PENDING START, and this must happen BEFORE the
+        // !s_active early-out — otherwise a start armed by an earlier ACTIVE word
+        // survives the stop and tutorial_tick() drains it into a lesson on this half
+        // alone. That is exactly the window the teardown ordering opens on the
+        // master, and the two fixes are belt and braces for the same race.
+        s_start_pending = false;
         if (!s_active) return false;
         s_st.phase       = TUT_DONE;
         s_st.phase_start = timer_read32();

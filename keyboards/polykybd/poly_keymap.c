@@ -622,6 +622,19 @@ static void poly_tutorial_finish_if_done(void) {
             // redrawn — so the panels are never repainted against stale state, and the
             // legends drawn are the ones the board will actually type.
             tutorial_stop();
+            // ⚠️ RETIRE THE SYNC WORD FIRST — BEFORE the teardown's own
+            // sync_and_refresh_displays() below. tut[0] still holds whatever the last
+            // push wrote (ACTIVE, and the ARMED level Eden handed over), and both are
+            // LEVELS the slave acts on. Clearing it afterwards left a real race: the
+            // slave finishes off the TUT_DONE phase in the final push, so by the time
+            // that teardown sync arrives it is INACTIVE — and an ACTIVE word reaching
+            // an inactive slave arms s_start_pending, which tutorial_tick() then
+            // drains into a lesson running on the slave ALONE. (The zeroed word that
+            // follows cannot undo it; see the cancel in tutorial_sync_apply().)
+            if (is_usb_host_side()) {
+                poly_sync_t *ls = access_local_state();
+                for (uint8_t i = 0; i < TUTORIAL_SYNC_BYTES; ++i) ls->tut[i] = 0;
+            }
             set_displays(get_local_state()->contrast, false);
             // Two-pass (rows 0-2, matrix scan, rows 3-4) rather than a one-shot
             // ALL_AT_ONCE, for the reason display_wakeup() gives: a full render is
@@ -639,17 +652,6 @@ static void poly_tutorial_finish_if_done(void) {
             fw_staging_core1_lockout_begin();
             mark_boot_intro_done();
             fw_staging_core1_lockout_end();
-            // ⚠️ RETIRE the sync word. tut[0] keeps whatever the last push wrote —
-            // ACTIVE, and the ARMED level from the Eden that handed over — and both
-            // are LEVELS the slave acts on. Left set, the next Eden replay (KC_EDEN
-            // or the HID command) would re-arm and then re-start a tutorial on the
-            // slave with no master running one. The ordinary state diff carries the
-            // cleared word; the slave has already torn down off the TUT_DONE phase
-            // in the final push, and reads a zeroed word as "nothing to do".
-            if (is_usb_host_side()) {
-                poly_sync_t *ls = access_local_state();
-                for (uint8_t i = 0; i < TUTORIAL_SYNC_BYTES; ++i) ls->tut[i] = 0;
-            }
             uprintf("Tutorial %s; displays handed back\n", was_skipped ? "skipped" : "done");
         }
 }

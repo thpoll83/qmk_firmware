@@ -484,6 +484,18 @@ outside those files:
   `key_has_display(r,c)` first — a bounds check is not a substitute, since both
   offending keys index in-range phantom slots. ⚠️ **Model placement from the OLED
   chip-select, NOT the RGB `g_led_config` x-order** — they do not match.
+- ⚠️ **The MATRIX index and the DISPLAY index are different spaces on split72's right
+  half, and `LAYOUT_TO_INDEX(r,c)` gives you the matrix one.** Its upper four matrix rows
+  carry no col-0 key, so matrix col `c` sits behind display col `c-1`; the chip-select
+  table, `SA_GEOM_*[]` and the per-panel dirty-window bboxes are all in DISPLAY space.
+  `update_displays()`/`kdisp_idle()` used the unfolded index, so every right-half panel's
+  bbox was remembered under its NEIGHBOUR's — 28 of 74 keys, invisible for as long as the
+  feature existed because legends are similar centred boxes and the union covered the old
+  ink anyway. A thin off-centre arc is not, and the ring stopped being erased **on one
+  half only**. `key_display_index()` is the one fold now; `python3
+  tools/check_disp_index.py` replays the walk against the real keymap and is the gate.
+  ⚠️ **One half only is the tell** — a wrong panel index reads as a bug in whatever drew
+  the unusual shape.
 
 ### Split synchronisation
 

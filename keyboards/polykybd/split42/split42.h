@@ -78,6 +78,16 @@ struct display_info {
 
 void invert_display(uint8_t r, uint8_t c, bool state);
 
+/*
+ * The DISPLAY index (0..N, = disp_row*MATRIX_COLS + disp_col) behind matrix (r,c),
+ * or 255 when there is no panel. split42 is a symmetric CRKBD — both halves carry
+ * all 6 columns — so there is NO right-half column fold and this is just the matrix
+ * index folded into this half's row range. It exists so the shared poly_keymap.c can
+ * address a panel the same way on both variants; see split72.h for the fold that
+ * makes the distinction matter there.
+ */
+uint8_t key_display_index(uint8_t r, uint8_t c);
+
 const uint8_t* get_key_disp_bitmask(uint8_t index);
 
 /*

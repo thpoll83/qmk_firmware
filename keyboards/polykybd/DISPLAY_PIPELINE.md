@@ -167,3 +167,36 @@ and relative links were adjusted to suit a standalone file.
     it cannot see two rows colliding, which is what it found (a layout name's
     descenders overlapping the row below by 2 px).
 
+
+## ⚠️ The matrix index and the display index are DIFFERENT SPACES on split72's right half
+
+`update_displays()` and `kdisp_idle()` walk the **keymap** — matrix rows and columns —
+while everything they address is a **panel**: the chip-select table `key_display[]`, the
+animation geometry `SA_GEOM_LEFT/RIGHT[]`, and the per-panel dirty-window bboxes. On
+split72's right half the upper four matrix rows (5..8) carry no col-0 key, so matrix col
+`c` sits behind display col `c-1`. The left half does not fold, and split42 does not fold
+at all.
+
+`LAYOUT_TO_INDEX(r, c)` performs **no fold**, so using it to address a panel is correct on
+the left half and one column out on the right. Both loops did exactly that.
+
+**`key_display_index(r, c)`** (per variant, `split72.c` / `split42.c`) is the one fold;
+`invert_display()` and `tutorial_slot_of()` both go through it rather than carrying a
+copy. It returns `255` for a matrix position with no panel of its own.
+
+- **What it cost.** For as long as the dirty-window feature has existed, every right-half
+  panel's bbox was remembered under its **neighbour's** index — 28 of 74 keys, all on the
+  right half. It stayed invisible because a legend is a similar centred box on either key,
+  so `union(neighbour's previous, new)` happened to cover the old ink. The focus ripple
+  then drew a thin **off-centre arc**, whose bbox is nothing like a legend's, the union
+  stopped covering, and parts of the ring were never erased — reported as *"only on the
+  slave side parts of the ring are not cleared any more and stay"*.
+- ⚠️ **A wrong index here does not look like a wrong index.** It looks like a rendering
+  bug in whatever drew the unusual shape, which is where three rounds of this one went.
+  The tell is that it is **one half only**.
+- **`python3 tools/check_disp_index.py` is the gate**, and reading the two and agreeing
+  that they agree is not: it replays the walking-zero panel walk against the real keymap
+  and the real `keyboard.json`, and compares each key's landing panel with what
+  `key_display_index()` says. Mutation-checked — narrowing the fold's row range by one at
+  either end fails it. It reports `n/a` for a table-select variant (split42), where there
+  is no running walk position to compare against, rather than inventing mismatches.

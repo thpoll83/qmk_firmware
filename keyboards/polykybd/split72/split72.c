@@ -37,19 +37,27 @@ bool key_has_display(uint8_t r, uint8_t c) {
     return !((r == 3 && c == 7) || (r == 8 && c == 0));
 }
 
-void invert_display(uint8_t r, uint8_t c, bool state) {
-    if (r>=5 && r<=8) {
-        c--; //on the right side of the slit layout the first 4 rows have no key
+uint8_t key_display_index(uint8_t r, uint8_t c) {
+    if (r >= 5 && r <= 8) {
+        // On the right side of the split layout the upper four rows have no col-0
+        // key, so matrix col c sits behind display col c-1. See the header note:
+        // this is the ONE place the fold lives.
+        if (c == 0) return 255;   // no panel of its own (and it underflows below)
+        c--;
     }
-
     r = r % MATRIX_ROWS_PER_SIDE;
     const uint8_t disp_idx = LAYOUT_TO_INDEX(r, c);
+    const uint8_t table_size = (uint8_t)(sizeof(key_display) / sizeof(key_display[0]));
+    return (disp_idx < table_size) ? disp_idx : 255;
+}
+
+void invert_display(uint8_t r, uint8_t c, bool state) {
     // Bounds guard only, matching split42 — callers screen out the keys that
     // have no display via key_has_display(). This replaces an `if (disp_idx !=
     // 255)` test placed AFTER the indexed read, which could therefore never
     // prevent one, and which only ever matched r%5==0 anyway.
-    const uint8_t table_size = (uint8_t)(sizeof(key_display) / sizeof(key_display[0]));
-    if (disp_idx >= table_size) return;
+    const uint8_t disp_idx = key_display_index(r, c);
+    if (disp_idx == 255) return;
     const uint8_t* bitmask = get_key_disp_bitmask(disp_idx);
     sr_shift_out_buffer_latch(bitmask, sizeof(key_display->bitmask));
 

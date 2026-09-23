@@ -35,6 +35,8 @@
 #define BACKSLASH                   	U"\x5c"
 #define GRAVE_ACCENT                	U"\x60"
 #define ICON_LAYER                  	U"\x80"
+#define ICON_LAYER_SWITCH           	U"\xA0"
+#define ICON_LAYER_ONESHOT          	U"\xA1"
 #define ICON_UP                     	U"\x81"
 #define ICON_DOWN                   	U"\x82"
 #define ICON_LEFT                   	U"\x83"

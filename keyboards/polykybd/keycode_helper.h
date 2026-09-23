@@ -19,6 +19,37 @@
 // the letters are the icon. An earlier version drew a rounded-rect tile around
 // them as a custom IconsFont glyph — dropped, along with the glyph, once the
 // frame turned out to add nothing the letters were not already saying.
+// ---- layer-key notation ---------------------------------------------------
+// Every layer key draws ICON_LAYER; the MARK AFTER IT says what kind of layer key it
+// is. Three cases, and only two of them need a mark:
+//
+//   (none)          MOMENTARY — you are on that layer only while you hold the key.
+//   LAYER_ONESHOT   one-shot — the layer survives exactly one more keypress.
+//   LAYER_SWITCH    switch — the board STAYS there until something takes it back.
+//
+// ⚠️ Momentary is UNMARKED because it is the common case and the least surprising one:
+// let go and you are back. The two marks sit on the behaviours that outlive the finger,
+// which is what a new owner actually needs warning about. The `!` used to mean the
+// opposite (it marked momentary, on ONE of the two momentary keys), so a board with an
+// older firmware reads a mark it no longer has.
+//
+// ⚠️ The mark goes AFTER ICON_LAYER, never after the layer's NAME. On the second line
+// the icon ends at x=50 of 72, so a mark there is free no matter how long the name is —
+// "Base" plus a mark after the word measured 5px from the edge, and after the icon it
+// costs nothing at all. It also reads better: the mark modifies the LAYER, not the word.
+// ⚠️ ICON glyphs, not the ASCII characters they replaced. Both are 16 px tall with
+// ICON_LAYER's exact yOffset, because they sit directly beside it and a mark 4 px taller
+// than the icon reads as a mistake rather than as a style — the text face's '!' is h=20
+// against the icon's h=16.
+//
+// ⚠️ They are RESIDENT (IconsFont, 0xA0/0xA1), not pack glyphs. U+26A1 ⚡ does exist in
+// the symbol bundle at h=29 — half-size would land near 15, close enough — but a core
+// layer key must not go blank on a keyboard whose font pack was never flashed. Adding
+// them to IconsFont is also the sanctioned way to add a resident glyph: a whole new
+// resident FONT would shift every pack font's gidx and force a full-pack reship.
+#define LAYER_ONESHOT               ICON_LAYER_ONESHOT
+#define LAYER_SWITCH                ICON_LAYER_SWITCH
+
 #define INTL_LAYER_LEGEND   U"\x130\xF1\x21B\x142"   // Intl, spelled in accented latin
 #define INTL_PICKER_LEGEND  U"\xC1\xBB\xC6"           // Á»Æ — Ctrl: pick another variation
 // à»ñ — reassign which LETTER this key hosts (vs Á»Æ, which picks another form of

@@ -176,6 +176,12 @@ string in a test.
   re-raised on the next push.
 - Skip nitpicks that add coupling (e.g. caching a subprocess result across tests) —
   say so briefly rather than silently ignoring them.
+- ⚠️ **Reply to a CodeRabbit thread only AFTER the fix is pushed.** It verifies a
+  reply straight away, against the head it can see. A reply naming a commit that is
+  "not pushed yet" gets checked against the OLD head, fails, and the thread stays
+  open with "I'll leave the finding open until the fix is pushed" (PolyKybdHost#265,
+  2026-09-23: a second reply after the push was needed to close it). So: commit,
+  push, then reply with the sha.
 - Post **one** comment, not one per finding. Table of findings → verdict, then a
   short section for what you declined and why. End with the attribution footer:
 

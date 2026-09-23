@@ -5618,6 +5618,16 @@ void keyboard_pre_init_user(void) {
     // is fine" look identical, which is the one input poly_hand_decide() needs.
     // Same core1 rule as crash_record_init() above: the migration write takes no
     // lockout because core1 has not been launched yet.
+    // Provisioning build (-e POLYKYBD_FORCE_HAND=left|right): stamp the side from
+    // the image, BEFORE the resolve below, so poly_hand_boot_init() reads it back
+    // and reports SRC_STAMP and drives the EEPROM repair through the ordinary path.
+    // Written as two plain #ifs rather than IS_DEFINED(), which needs the macro to
+    // expand to 0/1 -- OPT_DEFS passes these with no value at all.
+#if defined(POLYKYBD_FORCE_HAND_LEFT)
+    poly_hand_force_stamp(true);
+#elif defined(POLYKYBD_FORCE_HAND_RIGHT)
+    poly_hand_force_stamp(false);
+#endif
     poly_hand_boot_init();
 
     // Load the external-flash font pack and assemble g_all_fonts = resident ++

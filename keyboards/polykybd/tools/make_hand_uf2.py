@@ -26,6 +26,24 @@ firmware UF2 leaves the font pack and the EEPROM intact). So one block lands as
 page 0 of a freshly erased sector, which is exactly the state hand_stamp.c's
 append-style reader expects.
 
+⚠️ EVERY BLOCK'S payloadSize MUST BE EXACTLY 256, EVEN FOR A 12-BYTE RECORD. The
+RP2040 bootrom's vd_write_block() tests `uf2->payload_size == 256` before it looks
+at the block at all, and _write_uf2_page() then programs `data_length =
+FLASH_PAGE_SIZE` regardless -- a full page, always. A block declaring the record's
+own 12 bytes is dropped as a "non UF2 sector": nothing is written,
+valid_block_count never reaches num_blocks, and the completion path that calls
+safe_reboot() never runs. The half sits in BOOTSEL with the drive still mounted,
+which reads exactly like a corrupt file or a dead board.
+
+That is what shipped in v0.23.0 through v0.27.1: payloadSize was `len(payload)`,
+so all three releases' handedness UF2s were inert. `verify()` could not catch it
+because it read the size field back out of the same file it had just written --
+self-consistency, not conformance. It checks the container against the bootrom's
+rules now, so the release build is the gate.
+
+The 244 bytes after the record are therefore programmed too, and they are filled
+with 0xFF so a UF2-written page is byte-identical to one stamp_write() produces.
+
 Offsets and the magic are parsed out of the firmware headers rather than repeated
 here, so a change to the flash map cannot silently desync this tool. The record
 LAYOUT is the one thing written out by hand; it is pinned by
@@ -53,6 +71,15 @@ PAGE = 256
 # The CRC covers everything before it, i.e. the first 8 bytes.
 STAMP_FMT = "<IB3xI"
 STAMP_CRC_SPAN = 8
+
+# pad[0] carries WHO wrote the record: this tool, or the firmware's stamp_write().
+# It rides inside the CRC span (the span is 8 bytes = magic + is_left + pad), and
+# stamp_valid() ignores the pad bytes, so firmware predating this still accepts it.
+# The boot banner prints it, which is what lets an experiment prove its write
+# LANDED -- `hand: LEFT (flash stamp)` alone reads the same whether a dragged UF2
+# was applied or a previous record is still there, and that ambiguity already cost
+# a hardware round.
+WRITER_UF2 = 0x55
 
 
 def _defines(path):
@@ -84,18 +111,29 @@ def firmware_constants():
 
 
 def stamp_record(is_left, magic):
-    body = struct.pack("<IB3x", magic, 1 if is_left else 0)
+    body = struct.pack("<IBB2x", magic, 1 if is_left else 0, WRITER_UF2)
     assert len(body) == STAMP_CRC_SPAN, "STAMP_CRC_SPAN disagrees with the record layout"
     return body + struct.pack("<I", zlib.crc32(body))
 
 
+def stamp_page(is_left, magic):
+    """The record as a whole flash page -- see the payloadSize note in the header."""
+    return stamp_record(is_left, magic).ljust(PAGE, b"\xFF")
+
+
 def uf2_block(addr, payload, block_no, num_blocks):
-    data = payload.ljust(476, b"\x00")
+    # Both invariants are the bootrom's, not this format's: vd_write_block()
+    # requires payload_size == 256, and _update_current_uf2_info() rejects a flash
+    # target that is not page-aligned. A block breaking either is silently ignored.
+    if len(payload) != PAGE:
+        raise SystemExit(f"refusing to emit a {len(payload)}-byte payload — the RP2040 bootrom drops any block whose payloadSize is not {PAGE}")
+    if addr % PAGE:
+        raise SystemExit(f"refusing to emit a block at 0x{addr:08X} — the RP2040 bootrom drops a flash target that is not {PAGE}-byte aligned")
     return struct.pack(
         "<8I476sI",
         UF2_MAGIC0, UF2_MAGIC1, UF2_FLAG_FAMILY_ID, addr,
         len(payload), block_no, num_blocks, RP2040_FAMILY_ID,
-        data, UF2_MAGIC_END,
+        payload.ljust(476, b"\x00"), UF2_MAGIC_END,
     )
 
 
@@ -108,9 +146,18 @@ def parse_uf2(blob, path):
         m0, m1, flags, addr, size, no, total, family = struct.unpack("<8I", b[:32])
         if m0 != UF2_MAGIC0 or m1 != UF2_MAGIC1 or struct.unpack("<I", b[508:512])[0] != UF2_MAGIC_END:
             raise SystemExit(f"{path}: block {i // 512} is not a UF2 block")
-        if flags & UF2_FLAG_FAMILY_ID and family != RP2040_FAMILY_ID:
-            raise SystemExit(f"{path}: block {i // 512} targets family 0x{family:08X}, not RP2040")
-        blocks.append((addr, b[32:32 + size]))
+        # The bootrom's own acceptance rules. Applied on the way IN as well as out,
+        # because an appended stamp inherits the input's block numbering: a file
+        # this tool would refuse to emit is a file it must refuse to build on.
+        if not (flags & UF2_FLAG_FAMILY_ID) or family != RP2040_FAMILY_ID:
+            raise SystemExit(f"{path}: block {i // 512} does not carry the RP2040 family ID "
+                             f"(flags 0x{flags:08X}, family 0x{family:08X}) — the bootrom ignores it")
+        if size != PAGE:
+            raise SystemExit(f"{path}: block {i // 512} declares payloadSize {size}, not {PAGE} — the RP2040 bootrom ignores it")
+        if no != i // 512 or total != len(blob) // 512:
+            raise SystemExit(f"{path}: block {i // 512} is numbered {no}/{total}, expected {i // 512}/{len(blob) // 512} — "
+                             "a numBlocks that changes mid-file resets the bootrom's transfer, so it never completes")
+        blocks.append((addr, b[32:32 + PAGE]))
     return blocks
 
 
@@ -122,6 +169,9 @@ def write_uf2(path, blocks):
 def verify(path):
     stamp_off, magic = firmware_constants()
     target = XIP_BASE + stamp_off
+    # parse_uf2() is what audits the container (payloadSize, alignment, block
+    # numbering). Keep the record check downstream of it: a perfectly formed record
+    # in a block the bootrom discards is the bug this whole file is a fix for.
     hits = [(a, p) for a, p in parse_uf2(path.read_bytes(), path) if a == target]
     if not hits:
         raise SystemExit(f"{path}: no block targets the handedness stamp at 0x{target:08X}")
@@ -135,7 +185,11 @@ def verify(path):
         raise SystemExit(f"{path}: is_left is {is_left}; the firmware rejects anything above 1")
     if crc != zlib.crc32(payload[:STAMP_CRC_SPAN]):
         raise SystemExit(f"{path}: stamp CRC does not check out — the firmware would ignore this record")
-    print(f"{path}: valid handedness stamp — {'LEFT' if is_left else 'RIGHT'} at 0x{target:08X}")
+    writer = payload[5]
+    print(f"{path}: valid handedness stamp — {'LEFT' if is_left else 'RIGHT'} at 0x{target:08X}"
+          f" (writer=0x{writer:02X}{', this tool' if writer == WRITER_UF2 else ''})")
+    print(f"  the boot banner will read `slot=0/1 writer=0x{writer:02X}` once this record is in use,"
+          " so an applied write is distinguishable from an ignored one")
 
 
 def main():
@@ -155,14 +209,26 @@ def main():
 
     stamp_off, magic = firmware_constants()
     is_left = args.side == "left"
-    block = (XIP_BASE + stamp_off, stamp_record(is_left, magic))
+    block = (XIP_BASE + stamp_off, stamp_page(is_left, magic))
 
     blocks = []
     if args.append_to:
-        blocks = parse_uf2(args.append_to.read_bytes(), args.append_to)
-        clash = [a for a, _ in blocks if (a - XIP_BASE) // 4096 == stamp_off // 4096]
-        if clash:
-            raise SystemExit(f"{args.append_to}: already writes the stamp sector — refusing to add a second record")
+        # ⚠️ REFUSED: the bootrom's erase bookkeeping is indexed by BLOCK NUMBER, not
+        # by address. _write_uf2_page() computes
+        #     page_no = block_no * 256 / FLASH_SECTOR_ERASE_SIZE
+        # and uses it as the bit in `cleared_pages` that decides whether the target
+        # sector still needs erasing. That is the sector index only while the blocks
+        # run contiguously from the image base. An appended stamp sits 4 MB up while
+        # its block number keeps counting from the firmware, so it collides with the
+        # bit for firmware blocks 2992..2999 — and if one of those was written first,
+        # the stamp's sector is NEVER ERASED. Programming can only clear bits, so the
+        # record lands corrupt, which a firmware image right beside it would make
+        # unreviewable. Two files, flashed one after the other, have no such coupling.
+        raise SystemExit(
+            "--append-to is refused: the RP2040 bootrom tracks which sectors it has erased "
+            "by BLOCK NUMBER, so an appended block 4 MB from the image base can share a "
+            "bit with a firmware block and skip its own erase. Flash the firmware .uf2 and "
+            "the stamp .uf2 separately.")
     blocks.append(block)
 
     out = args.out or pathlib.Path(

@@ -199,6 +199,36 @@ ifneq ($(filter yes left right,$(strip $(POLYKYBD_HIL))),)
     endif
 endif
 
+# PROVISIONING build: stamp this half's handedness from the image itself.
+#
+#   -e POLYKYBD_FORCE_HAND=left     this image stamps the half as LEFT at boot
+#   -e POLYKYBD_FORCE_HAND=right    ... as RIGHT
+#
+# The stamp sector (base/hand_stamp.h) is written through the same stamp_write()
+# the host's HID cmd 25 uses, from keyboard_pre_init_user(), and only when the
+# sector does not already say this -- so no page is burned per boot. This exists
+# because the standalone 512-byte stamp UF2 (tools/make_hand_uf2.py) is currently
+# unexplained-broken on hardware, while an ordinary multi-block firmware .uf2
+# flashes fine; a provisioning IMAGE sidesteps the whole question.
+#
+# ⚠️ NOT for a release, and not for general use: an image carrying this rewrites
+# the side on every boot that disagrees, which is exactly what the neutral release
+# .uf2 avoids so a firmware update can never flip a half. Flash the normal image
+# again once the half is provisioned -- the stamp persists.
+#
+# A typo must fail the BUILD rather than silently produce a neutral image: an
+# unset variable is the normal case, but a non-empty value that is not
+# left|right is a mistake nothing downstream would report.
+ifneq ($(strip $(POLYKYBD_FORCE_HAND)),)
+    ifeq ($(strip $(POLYKYBD_FORCE_HAND)), left)
+        OPT_DEFS += -DPOLYKYBD_FORCE_HAND_LEFT
+    else ifeq ($(strip $(POLYKYBD_FORCE_HAND)), right)
+        OPT_DEFS += -DPOLYKYBD_FORCE_HAND_RIGHT
+    else
+        $(error POLYKYBD_FORCE_HAND must be `left` or `right`, got `$(POLYKYBD_FORCE_HAND)`)
+    endif
+endif
+
 # "Can it run Doom?" easter egg — dev-harness build (see DOOM_FEASIBILITY.md and
 # doom/README.md). Opt-in only: `qmk compile ... -e POLYKYBD_DOOM=yes` compiles
 # the game-mode scaffold (overlay-pool borrow, keycap blitter, IDDQD trigger).

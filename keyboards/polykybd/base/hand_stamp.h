@@ -102,6 +102,29 @@ typedef enum {
 poly_hand_source_t poly_hand_source(void);
 bool               poly_hand_ee_repaired(void);
 
+// Which record answered, so an experiment can prove its write LANDED rather than
+// inferring it from whether the board came up. `hand: LEFT (flash stamp)` reads the
+// same whether a fresh UF2 was applied or a previous record is still there, and that
+// ambiguity cost a whole hardware round: a probe that was supposed to erase this
+// sector booted, which looked like "the write is harmless" and actually meant "the
+// write never happened".
+//
+//   slot   the page the answer came from. A UF2 always lands at page 0, because the
+//          bootrom erases the whole 4 KB sector before programming; stamp_write()
+//          appends at the first FREE page, so a firmware-written record on a sector
+//          that already held one is at page >= 1.
+//   count  how many valid records the sector holds. Also a UF2/firmware tell: an
+//          erase-then-program leaves exactly 1.
+//   writer poly_hand_stamp_t.pad[0], which make_hand_uf2.py sets to
+//          POLY_HAND_WRITER_UF2 and stamp_write() leaves 0. The pad bytes are inside
+//          the CRC span, so this is covered, and stamp_valid() ignores them, so
+//          firmware predating this still accepts such a record.
+#define POLY_HAND_WRITER_FIRMWARE 0x00u
+#define POLY_HAND_WRITER_UF2      0x55u
+uint8_t poly_hand_stamp_slot(void);
+uint8_t poly_hand_stamp_count(void);
+uint8_t poly_hand_stamp_writer(void);
+
 // --- I/O --------------------------------------------------------------------
 // Resolve + migrate. Call once from keyboard_pre_init_user(), which is the last
 // hook before keyboard_init() -> quantum_init() can run eeconfig_init() and erase
@@ -121,6 +144,23 @@ void poly_hand_post_init(void);
 // The resolved handedness. Safe to call at any time: it resolves on first use, so
 // it is correct even if something reads it before poly_hand_boot_init().
 bool poly_hand_is_left(void);
+
+// PROVISIONING BUILD ONLY (`-e POLYKYBD_FORCE_HAND=left|right`). Stamp this half's
+// side from the image itself, so provisioning needs no hand-built 512-byte UF2 --
+// the artifact is an ordinary multi-block firmware .uf2, flashed over BOOTSEL like
+// any other. That matters because the standalone stamp UF2 route is currently
+// unexplained-broken on hardware (see tools/make_hand_uf2.py), while this path is
+// the same stamp_write() the host's HID cmd 25 has always used.
+//
+// Idempotent: writes only when the sector does not already say this, so re-flashing
+// or rebooting does not burn a page per boot. Call from keyboard_pre_init_user()
+// BEFORE poly_hand_boot_init(), which then resolves the stamp normally and repairs
+// the EEPROM byte through the ordinary path.
+//
+// ⚠️ A board flashed with such an image has its side rewritten on every boot that
+// disagrees, which is exactly why a RELEASE .uf2 stays handedness-neutral. Flash the
+// normal image again once the half is provisioned; the stamp persists.
+void poly_hand_force_stamp(bool is_left);
 
 // Record a handedness change (HID cmd 25 on the master, the reset-sync carrier on
 // the slave). Deliberately does no flash or EEPROM work: the slave's caller is a

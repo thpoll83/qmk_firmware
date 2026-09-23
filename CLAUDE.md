@@ -111,7 +111,7 @@ unavailable.** `qmk compile -kb polykybd/split72 -km default`. The once-per-cont
 setup, the submodule failure modes, the `-Wcast-align` guard and its path filter, and the
 vendored-DOOM `-Werror` collateral are in
 [`keyboards/polykybd/BUILD_ENVIRONMENT.md`](keyboards/polykybd/BUILD_ENVIRONMENT.md).
-Seven rules bind work outside that file:
+Nine rules bind work outside that file:
 
 - **The deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over
   HID. ⚠️ **Put the commit sha in the filename**: every test build reports the same
@@ -135,6 +135,60 @@ Seven rules bind work outside that file:
   silently produces a wrong answer that looks like plausible history. Run
   `git rev-parse --is-shallow-repository` before ANY such question;
   `git fetch origin --unshallow --no-recurse-submodules` takes ~45 s.
+- ⚠️ **A hand-built UF2 must declare `payloadSize` 256 on EVERY block, whatever it
+  actually carries.** The RP2040 bootrom's `vd_write_block()` tests
+  `uf2->payload_size == 256` before it looks at a block at all, and then programs a full
+  page regardless — so a block sized to its own 12-byte record is dropped, the download
+  never completes, and **`safe_reboot()` never runs**: the half sits in BOOTSEL with the
+  drive still mounted. That is a *file* fault presenting as a dead board, and it shipped
+  in three releases' handedness UF2s (v0.23.0–v0.27.1, `tools/make_hand_uf2.py`). Two
+  generalisations: a **round-trip verifier proves self-consistency, not conformance** —
+  `verify()` read the size field back out of the file it had just written and passed
+  every time; and a **generated artifact no test consumes is checked by nothing**, since
+  the firmware builds and the rig flashes over GPIO BOOTSEL with picotool-made images.
+  The tool audits the container against the bootrom's rules now, so the release build is
+  the gate.
+- ⚠️ **"It booted" is NOT evidence a flash LANDED — make the artifact say so.** The
+  fixed stamp UF2 was read as harmless on the strength of a board coming up, twice,
+  when in fact nothing had been written: `hand: LEFT (flash stamp)` prints whenever
+  `stamp_read()` finds ANY valid record, so a dragged file that was ignored and a
+  previous record read identically. A probe built to ERASE that sector "booted",
+  which meant the erase never happened. The banner now carries `slot=N/M writer=0xNN`
+  (`poly_hand_stamp_slot/count/writer()`, `pad[0]` = 0x55 from `make_hand_uf2.py` and
+  0x00 from `stamp_write()`), and a real hardware round then settled it in one flash:
+  **`slot=0/1 writer=0x55` is the bootrom's own signature** — erase-then-program
+  leaves exactly one record at page 0 — so the fixed UF2 DOES apply and the half DOES
+  boot. Generalises past handedness: **an experiment whose result is "the board came
+  up" proves nothing unless the artifact identifies itself.**
+- ⚠️ **One unreproduced brick remains, and the confounders matter more than the
+  event.** With the `payloadSize` fix a fresh half completed its write (the drive
+  unmounted, so `safe_reboot()` ran) and then did not boot for minutes, recovering
+  only on a firmware `.uf2`. It has not recurred: a provisioned half takes the same
+  file and boots. Weigh it against two confounders discovered afterwards, both of
+  which make that session's readings unreliable — a second single-block UF2 in one
+  BOOTSEL session is silently dropped (below), and the old banner could not tell an
+  applied record from a pre-existing one. The **field report is NOT a second data
+  point**: it used a released `payloadSize=12` file, which never writes at all, so a
+  half left in BOOTSEL with the drive mounted — no RGB, no displays, no console —
+  is exactly what it should look like. Do not cite it as a brick. Ruled out by measurement, not argument: the record's content and the
+  side change (`-e POLYKYBD_FORCE_HAND=left|right` writes the identical record through
+  `stamp_write()` and boots), a stale `.ram0.bootloader_magic` double-tap flag (30 s
+  unpowered still lands in BOOTSEL), an invalid boot2 (a firmware `.uf2` recovers it),
+  and any software `reset_usb_boot()`, which has no boot-time caller. The release ships
+  neither stamp UF2 while this is open; `POLYKYBD_FORCE_HAND` is the provisioning route
+  that has worked on hardware. **When a write breaks a boot, re-do the same write by
+  another path before debugging what reads it.**
+- ⚠️ **Two single-block UF2s in ONE BOOTSEL session: the second is silently dropped.**
+  `vd_reset()` clears `_uf2_info` only on a USB reset, and the written-blocks bitmap is
+  re-cleared only when an arriving block's `num_blocks` DIFFERS from the current
+  transfer. Every stamp file has `num_blocks=1`, so a second one hits
+  `"Ignore duplicate write"`, writes nothing, and does not even reboot. Power-cycle
+  between such drags, or a multi-block firmware `.uf2` in between resets it.
+- ⚠️ **`boot: spans ms … 2=65535` is a SATURATION sentinel, not 65 seconds measured.**
+  `boot_timing_mark()` clamps at `0xFFFF`, so span 2 — the whole of QMK's
+  `keyboard_init()` — took *at least* 65.5 s. Seen on two boots with
+  `transport_connected=1` and `err=0.0%`, so it is NOT a master waiting on an absent
+  partner. Unexplained; do not read a 65535 as a measurement.
 - **Docker is NOT usable** in the remote container (no daemon).
 
 ## Continuous integration (PR checks)

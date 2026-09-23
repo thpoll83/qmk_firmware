@@ -24,6 +24,11 @@ static bool   s_ee_repaired = false;
 static poly_hand_source_t s_source = POLY_HAND_SRC_EEPROM;
 static bool   s_pending    = false;
 static bool   s_pending_is_left = false;
+static uint8_t s_slot   = 0xFFu;  // page the answer came from; 0xFF = no record
+static uint8_t s_count  = 0;      // valid records in the sector
+static uint8_t s_writer = 0;      // pad[0] of that record (see hand_stamp.h)
+
+static void resolve(bool may_migrate);  // defined below; the accessors resolve on demand
 
 // --- the sector -------------------------------------------------------------
 static const poly_hand_stamp_t *stamp_page(uint32_t i) {
@@ -40,15 +45,36 @@ static bool stamp_valid(const poly_hand_stamp_t *p) {
 // previous good one still answers -- which is the whole point of appending.
 static bool stamp_read(bool *is_left) {
     bool found = false;
+    s_slot  = 0xFFu;
+    s_count = 0;
+    s_writer = 0;
     for (uint32_t i = 0; i < STAMP_PAGES; i++) {
         const poly_hand_stamp_t *p = stamp_page(i);
         if (p->magic == 0xFFFFFFFFu) break;   // erased: nothing beyond this
         if (stamp_valid(p)) {
             *is_left = (p->is_left != 0);
             found    = true;
+            s_slot   = (uint8_t)i;      // the LAST valid page wins, so keep overwriting
+            s_writer = p->pad[0];
+            s_count++;
         }
     }
     return found;
+}
+
+uint8_t poly_hand_stamp_slot(void) {
+    if (s_resolved < 0) resolve(/*may_migrate=*/false);
+    return s_slot;
+}
+
+uint8_t poly_hand_stamp_count(void) {
+    if (s_resolved < 0) resolve(/*may_migrate=*/false);
+    return s_count;
+}
+
+uint8_t poly_hand_stamp_writer(void) {
+    if (s_resolved < 0) resolve(/*may_migrate=*/false);
+    return s_writer;
 }
 
 // `lockout` = park core1 around the write (it serves RLE from XIP, so it must not
@@ -127,6 +153,17 @@ bool poly_hand_ee_repaired(void) {
 
 void poly_hand_boot_init(void) {
     resolve(/*may_migrate=*/true);
+}
+
+void poly_hand_force_stamp(bool is_left) {
+    // Same core1 rule as resolve()'s migration write: this runs at pre_init, where
+    // core1 has never been launched, so it must NOT take the lockout -- releasing
+    // one there would leave post_init's unbounded multicore_launch_core1()
+    // handshake blocked forever.
+    bool cur  = false;
+    bool have = stamp_read(&cur);
+    if (have && cur == is_left) return;   // already this side; no page burned
+    stamp_write(is_left, /*lockout=*/false);
 }
 
 bool poly_hand_is_left(void) {

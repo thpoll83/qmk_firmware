@@ -338,10 +338,17 @@ void tutorial_tick(void) {
 // ---- split sync -----------------------------------------------------------
 
 void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]) {
-    // Preserve the ARMED bit the arm site wrote — this runs while the tutorial is up,
-    // by which point arming is over, but clobbering it would make the two writers of
-    // tut[0] fight if that ever stops being true.
-    out[0] = (uint8_t)((out[0] & TUT_SYNC_ARMED) | (s_active ? TUT_SYNC_ACTIVE : 0u) |
+    // ⚠️ ARMED IS DROPPED, NOT PRESERVED — the two are mutually exclusive BY
+    // CONSTRUCTION at the one point that publishes ACTIVE. This used to preserve it
+    // "so the two writers of tut[0] cannot fight", which kept the level alive for the
+    // whole session: the split handler re-armed the slave on every sync long after its
+    // own hand-off, and a later Eden-only replay then started a lesson on the slave
+    // with no master running one. The hand-off in poly_keymap.c clears the bit too —
+    // that covers the branch which finds nothing to teach and so never publishes
+    // ACTIVE at all — but relying on it alone would leave this expression free to
+    // re-publish ARMED beside ACTIVE if any future path started a tutorial without
+    // passing the hand-off. Clearing it here is the structural half of the guarantee.
+    out[0] = (uint8_t)((s_active ? TUT_SYNC_ACTIVE : 0u) |
                       ((uint8_t)(s_st.step << TUT_SYNC_STEP_SHIFT) & TUT_SYNC_STEP_MASK));
     out[1] = s_st.phase;
     out[2] = tut_current_slot(&s_st);

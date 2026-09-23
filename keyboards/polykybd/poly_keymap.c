@@ -1497,6 +1497,15 @@ void housekeeping_task_user(void) {
                 if (s_tutorial_armed) {
                     s_tutorial_armed = false;
                     s_tut_skip_since = 0;
+                    // ⚠️ RETIRE THE SYNCED LEVEL HERE, not only at the teardown. It has
+                    // done its job — the slave armed itself from it during Eden — and
+                    // tutorial_sync_fill() PRESERVES it, so left set it rides every sync
+                    // for the rest of the session. Two paths then go wrong: the branch
+                    // below that finds nothing to teach never reaches the teardown that
+                    // clears it, and a later Eden replay re-arms the slave, which starts
+                    // a lesson alone and is torn down by the next !ACTIVE packet.
+                    // Both halves run this, and both own their own copy of the bit.
+                    access_local_state()->tut[0] &= (uint8_t)~TUT_SYNC_ARMED;
                     // The layer stack AND the default layout are parked inside
                     // tutorial_start() -> tutorial_enter_base_layout(), so both halves
                     // do it rather than only the one that owns this arm site.

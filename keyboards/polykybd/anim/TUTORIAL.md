@@ -955,9 +955,24 @@ on a keyboard whose font pack was never flashed**, and the font pack is exactly 
 first-run keyboard does not have. A resident bolt costs 20 bytes and cannot disappear.
 
 ⚠️ **Extend `IconsFont`, never add a resident FONT** — a new font shifts every pack
-font's gidx and forces a full-pack reship (CLAUDE.md). The range goes 0x80–0x9F →
-0x80–0xA1. Nothing else claimed 0xA0/0xA1: checked by walking every font's first/last,
-not assumed.
+font's gidx and forces a full-pack reship (CLAUDE.md). The range went 0x80–0x9F →
+0x80–0xA1.
+
+❌ **And that was WRONG — the range now straddles as 0x7F–0xA0 (fixed in round 20).**
+This paragraph used to end *"Nothing else claimed 0xA0/0xA1: checked by walking every
+font's first/last, not assumed"*, and **that claim was false**:
+`NotoSans_Regular_SupAndExtA_14pt16b` begins at **exactly 0xA1**, which is `¡` —
+`INVERTED_EMARK`, rendered by ~20 `es-*` layouts. `IconsFont` is `g_all_fonts[0]` and
+the scan is first-match-wins, so the mark simply won. The walk it names would have found
+this in one pass; whatever was actually run, it was not that.
+
+⚠️ **Keep the failure mode, not just the fix: a stated measurement is only worth what
+the command that produced it is worth, and prose cannot carry that.** The repo already
+had the rule (`FONT_PACK.md`: *"never `0xA0+`"*) **and** a script to check it
+(`tools/check_icon_slots.py`) — but the script printed a caution and exited 0, so running
+it felt like verification and proved nothing. It exits 1 now. The two marks live on the
+**shoulders** 0x7F (DEL) and 0xA0 (NBSP), the last two codepoints adjacent to a full C1
+block that no other resident or pack font covers and that appear in no legend.
 
 ⚠️ **APPEND the bitmaps.** `bitmapOffset` is an absolute index into one shared array, so
 inserting anywhere but the end silently re-points every later glyph. The new offsets

@@ -795,8 +795,18 @@ you act on it — that is the standing check the CLAUDE.md rules still carry.
     `get_reviews`, `get_check_runs`, and the timestamps, every time.**
 
 - ⚠️ **Sourcery refuses in TWO different ways, and only one of them is the weekly
-  budget.** Both arrive as a `COMMENTED` review whose entire body is the notice, so
-  the tell is the body text, not the presence of a review:
+  budget.** Both usually arrive as a `COMMENTED` review whose entire body is the
+  notice, so the tell is the body text, not the presence of a review — but ⚠️ **the
+  budget refusal does not ALWAYS post a review, and then `get_reviews` shows a clean
+  absence.** On host#257 (2026-09-22) the last three commits got only a check run,
+  `conclusion: skipped` / title `⏭️ Skipped`, with no review object at all; on
+  host#258 the next morning the same budget produced both a review and a skipped
+  check. So the surface varies, and on the check-run-only shape the reason lives in
+  `output.summary`, which the PR-level check list does not carry — it needs
+  `get_check_run` with that run's id. **Open a `skipped` Sourcery row rather than
+  reading it as "nothing new to say"**: those three #257 rows were read that way,
+  and the commits they covered — which carried every fix in the PR — turned out to
+  have had no Sourcery review at all.
   - **Budget** — *"you've used your own review budget of 250,000 diff characters
     for the last 7 days ... You can request another review in 1 day and 16 hours by
     commenting `@sourcery-ai review`"*. ⚠️ Note the FIGURE MOVES — 250,000 here,

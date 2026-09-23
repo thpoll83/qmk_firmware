@@ -39,6 +39,15 @@ C1_END = 0xA0
 SHOULDERS = {0x7F, 0xA0}
 
 
+def shadowed_by(cp):
+    """-> what a custom icon at `cp` would hide, for the failure message."""
+    if cp in PRINTABLE_LATIN1:
+        return f"Latin-1 {PRINTABLE_LATIN1[cp]!r}"
+    if 0x20 <= cp < 0x7F:
+        return f"ASCII {chr(cp)!r}"
+    return "a codepoint outside the C1 band"
+
+
 def icons_font():
     """-> (first, last, {cp: (w, h)}) reading the glyph table, gaps excluded."""
     src = open(ICONS, encoding="utf-8").read()
@@ -91,15 +100,19 @@ for cp in range(min(first, 0x80), max(last, C1_END) + 6):
             state = "free (past last)"
     elif g:
         state = "taken"
-        if cp >= C1_END and cp not in SHOULDERS:
+        if cp in SHOULDERS:
+            state = "taken (shoulder — nothing else covers it)"
+        elif not (0x80 <= cp < C1_END):
             # ⚠️ This used to be a printed caution under the table and nothing more,
             # so the layer-key marks were parked at 0xA0/0xA1 and shadowed ¡ on every
             # es-* layout. A caution nobody has to act on is not a gate.
-            problems.append(f"0x{cp:02X} holds a glyph but shadows Latin-1 "
-                            f"{PRINTABLE_LATIN1.get(cp, '?')!r}")
-            state = "taken, SHADOWS LATIN-1"
-        elif cp in SHOULDERS:
-            state = "taken (shoulder — nothing else covers it)"
+            # ⚠️ The band is bounded at BOTH ends. IconsFont is g_all_fonts[0] and
+            # wins the lookup wherever it has a glyph, so one below 0x80 hides an
+            # ASCII character exactly as surely as one at 0xA1 hides ¡ — and the
+            # earlier form of this check only looked upward, so an icon parked at
+            # 0x7E would have replaced `~` with the gate still green.
+            problems.append(f"0x{cp:02X} holds a glyph but shadows {shadowed_by(cp)}")
+            state = "taken, SHADOWS A REAL CHARACTER"
         if not nm:
             state = "taken, UNNAMED"
             problems.append(f"0x{cp:02X} has a glyph but no named_glyphs macro")

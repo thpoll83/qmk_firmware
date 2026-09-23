@@ -91,9 +91,9 @@ bool key_has_display(uint8_t r, uint8_t c);
  * That is not theoretical: update_displays() tracked each right-half panel's
  * dirty-window bbox under its NEIGHBOUR's index for as long as the feature has
  * existed. It stayed invisible because legends are similar centred boxes, so
- * union(neighbour's previous, new) happened to cover the old ink — until the focus
- * ripple drew a thin off-centre arc, whose bbox is nothing like a legend's, and
- * parts of the ring stopped being erased on the slave.
+ * union(neighbour's previous, new) happened to cover the old ink — until an animation
+ * drew a thin off-centre arc, whose bbox is nothing like a legend's, and parts of that
+ * shape stopped being erased on the slave.
  *
  * So: ONE fold, here. invert_display() calls it rather than carrying a second copy.
  */

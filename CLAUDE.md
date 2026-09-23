@@ -491,8 +491,8 @@ outside those files:
   `update_displays()`/`kdisp_idle()` used the unfolded index, so every right-half panel's
   bbox was remembered under its NEIGHBOUR's — 28 of 74 keys, invisible for as long as the
   feature existed because legends are similar centred boxes and the union covered the old
-  ink anyway. A thin off-centre arc is not, and the ring stopped being erased **on one
-  half only**. `key_display_index()` is the one fold now; `python3
+  ink anyway. A thin off-centre arc is not, and parts of one stopped being erased **on
+  one half only**. `key_display_index()` is the one fold now; `python3
   tools/check_disp_index.py` replays the walk against the real keymap and is the gate.
   ⚠️ **One half only is the tell** — a wrong panel index reads as a bug in whatever drew
   the unusual shape.

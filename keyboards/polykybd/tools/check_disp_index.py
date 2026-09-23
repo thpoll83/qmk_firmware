@@ -15,8 +15,8 @@ sits behind display col c-1.
 It used `LAYOUT_TO_INDEX(r, c)`, which performs no fold, so for as long as the
 dirty-window feature existed every right-half panel's bbox was remembered under its
 NEIGHBOUR's index. Nothing showed, because legends are similar centred boxes and
-union(neighbour's previous, new) happened to cover the old ink — until the focus ripple
-drew a thin off-centre arc, whose bbox is nothing like a legend's, and parts of the ring
+union(neighbour's previous, new) happened to cover the old ink — until an animation drew
+a thin off-centre arc, whose bbox is nothing like a legend's, and parts of that shape
 stopped being erased. On the SLAVE only, because only the right half folds.
 
 This is the mechanical check that settles it: replay the walking-zero panel walk against
@@ -107,13 +107,17 @@ def check(board, rows_per_side, cols, panels, verbose):
     _, order = layout_order(board)
     args = base_layer(board)
     if len(args) != len(order):
-        # A wrapper macro that reorders or pads (split42's POLY_LAYOUT) cannot be
-        # zipped against the layout. Say so rather than checking nothing: a check
-        # that quietly passes on a board it never read is worse than no check.
-        print("%s: SKIP — the keymap's layout macro takes %d entries, keyboard.json "
+        # ⚠️ This is a FAILURE, not a skip, and the difference is the whole gate.
+        # split42 has already returned above through table_select(), so the only
+        # board that can reach this line is split72 — the one board this check
+        # reads at all. A wrapper macro that reorders or pads cannot be zipped
+        # against the layout, so the mapping is UNKNOWN, not fine; returning 0
+        # would turn the gate green having checked nothing, which is exactly the
+        # silent pass it exists to prevent.
+        print("%s: FAIL — the keymap's layout macro takes %d entries, keyboard.json "
               "lists %d positions; cannot map keycodes to the matrix here."
               % (board, len(args), len(order)))
-        return 0
+        return 1
     kc = dict(zip(order, args))
     lo, hi = fold(board)
 

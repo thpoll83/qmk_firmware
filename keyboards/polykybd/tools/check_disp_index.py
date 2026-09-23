@@ -154,6 +154,78 @@ def check(board, rows_per_side, cols, panels, verbose):
     return len(bad)
 
 
+# The two production walks that must address panels through the fold. Both assign
+# `disp_idx` and hand it to panel-space consumers (the chip-select table, SA_GEOM_*[],
+# the per-panel dirty-window bbox).
+CALLERS = ("update_displays", "kdisp_idle")
+
+
+def fn_body(src, name):
+    """-> the body of a top-level `... name(...) {` definition, or None.
+
+    Relies on this file's formatting: the closing brace of a top-level function is a
+    `}` in column 0. That is true throughout poly_keymap.c and is checked by the
+    caller, which fails loudly rather than silently reporting no problem.
+    """
+    m = re.search(r"^[A-Za-z_][\w \t\*]*\b%s\s*\([^;{]*\)\s*\{" % re.escape(name),
+                  src, re.M)
+    if not m:
+        return None
+    end = re.compile(r"^\}", re.M).search(src, m.end())
+    return src[m.end():end.start()] if end else None
+
+
+def strip_comments(src):
+    """-> `src` with C comments blanked.
+
+    ⚠️ LOAD-BEARING. Without it the substring test below matches the COMMENT that
+    explains the fold rather than the call that performs it — and update_displays()
+    carries exactly such a comment, so a revert of its call to LAYOUT_TO_INDEX() still
+    passed this gate. Caught by mutation; the mutant is the whole reason this exists.
+    """
+    return re.sub(r"//[^\n]*|/\*.*?\*/", "", src, flags=re.S)
+
+
+def check_callers(verbose):
+    """⚠️ The mapping being right is NOT the same as anything USING it.
+
+    The walk above proves key_display_index() names the right panel. It reads only
+    split72.c and keyboard.json, so reverting update_displays() to LAYOUT_TO_INDEX(r, c)
+    would leave every assertion above passing while the original bug came straight back
+    — the gate would go green over exactly the defect it was written for. That is the
+    same shape as the two it already guards, so it is checked here rather than trusted.
+
+    This is a source-text check, not a semantic one: it asserts each walk resolves its
+    panel through key_display_index(), and cannot tell you the argument is right. The
+    walk above is what does that.
+    """
+    path = os.path.join(KB, "poly_keymap.c")
+    with open(path, encoding="utf-8") as f:
+        src = f.read()
+    bad = 0
+    for name in CALLERS:
+        body = fn_body(src, name)
+        if body is None:
+            # Not "no problem": the check could not be performed at all.
+            print("poly_keymap.c: FAIL — could not read %s()'s body; the caller check "
+                  "did not run." % name)
+            bad += 1
+            continue
+        body = strip_comments(body)
+        if "key_display_index(" in body:
+            if verbose:
+                print("   %s() resolves its panel through key_display_index()" % name)
+        else:
+            used = "LAYOUT_TO_INDEX" if "LAYOUT_TO_INDEX" in body else "something else"
+            print("poly_keymap.c: FAIL — %s() does not call key_display_index() (uses %s). "
+                  "It addresses panels, so on split72's right half every bbox lands under "
+                  "the neighbouring panel's index." % (name, used))
+            bad += 1
+    print("poly_keymap.c: %d of %d display walk(s) go through key_display_index()"
+          % (len(CALLERS) - bad, len(CALLERS)))
+    return bad
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -161,6 +233,7 @@ def main():
     a = ap.parse_args()
     bad = check("split72", 5, 8, 40, a.verbose)
     bad += check("split42", 4, 6, 24, a.verbose)
+    bad += check_callers(a.verbose)
     return 1 if bad else 0
 
 

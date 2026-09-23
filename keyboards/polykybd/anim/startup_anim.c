@@ -33,11 +33,22 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 #define SA_BG_FADE_START_MS SA_INTRO_MS   // start of the hold (letters are formed)
 #define SA_BG_FADE_MS       1800          // quick background dissolve
 // Scanline glitch: once the background has FULLY faded (SA_BG_FADE_START_MS + SA_BG_FADE_MS)
-// plus a 1 s beat of clean letters, wipe out every second horizontal line of the text ALL
-// AT ONCE (a one-frame glitch), then keep that look for the rest of the show. Waiting for a
-// clean, noise-free frame first makes the scanline effect read clearly.
-#define SA_LINE_CLEAR_DELAY_MS 1000
-#define SA_LINE_CLEAR_AT_MS    (SA_BG_FADE_START_MS + SA_BG_FADE_MS + SA_LINE_CLEAR_DELAY_MS)
+// plus a 1 s beat of clean letters, wipe out every second horizontal line of the text, then
+// keep that look for the rest of the show. Waiting for a clean, noise-free frame first makes
+// the scanline effect read clearly.
+//
+// ⚠️ It used to hit every key in the SAME frame — "it happens too sudden" (hardware, fifth
+// round). The board is 36 separate panels, so one simultaneous flip reads as a fault rather
+// than an effect. Each key now trips at its own moment, scattered over SA_LINE_CLEAR_SPREAD_MS
+// by a hash of its index, so the letters go over one by one in no discernible order.
+// The spread has to close well before the final fade starts (SA_INTRO_MS + SA_HOLD_MS), or
+// the last keys would still be flipping while the others are already dissolving — hence the
+// static_assert rather than a comment asking the next editor to remember.
+#define SA_LINE_CLEAR_DELAY_MS  1000
+#define SA_LINE_CLEAR_AT_MS     (SA_BG_FADE_START_MS + SA_BG_FADE_MS + SA_LINE_CLEAR_DELAY_MS)
+#define SA_LINE_CLEAR_SPREAD_MS 1200
+_Static_assert(SA_LINE_CLEAR_AT_MS + SA_LINE_CLEAR_SPREAD_MS < SA_INTRO_MS + SA_HOLD_MS,
+               "the staggered scanline must finish before the letters start dissolving");
 
 // ---- effect tuning ----
 #define SA_NSPARK      340      // one L→R comet per spark; more of them → denser streaks
@@ -381,8 +392,13 @@ static void sa_render_frame(uint32_t el) {
 
         // Scanline glitch: after the background has fully faded + a 1 s beat, wipe out every
         // SECOND horizontal line of the buffer. Re-applied each frame so the look persists
-        // (the letters are redrawn every frame); the transition is instant (one frame).
-        if (el >= SA_LINE_CLEAR_AT_MS) {
+        // (the letters are redrawn every frame). Per-key trip time from a hash of the index,
+        // so the 36 panels go over one at a time rather than together — see the note on
+        // SA_LINE_CLEAR_SPREAD_MS. `idx + 1` because sa_hash8(0) would pin key 0 to a fixed
+        // point in the order on every single boot.
+        const uint32_t sl_at = SA_LINE_CLEAR_AT_MS +
+                               ((uint32_t)sa_hash8((uint32_t)idx + 1u) * SA_LINE_CLEAR_SPREAD_MS) / 255u;
+        if (el >= sl_at) {
             for (int16_t ly = 1; ly < SCREEN_HEIGHT; ly += 2)
                 for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx)
                     buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
@@ -501,6 +517,26 @@ static void sa_begin(bool loop, uint8_t contrast) {
     kdisp_set_contrast(contrast);
 }
 
+
+// ---- geometry accessor (see startup_anim.h) -------------------------------
+// The tutorial's ripple works in the same board space, so it asks here rather than
+// including the geometry header a second time.
+sa_geom_t startup_anim_key_geom(bool right, uint8_t idx) {
+    sa_geom_t out = {0, 0, 0, 0, false, false};
+    if (idx >= SA_NUM_KEYS) return out;
+    const sa_key_geom_t *g = &(right ? SA_GEOM_RIGHT : SA_GEOM_LEFT)[idx];
+    if (!g->valid) return out;
+    out.cx    = g->cx;
+    out.cy    = g->cy;
+    out.rot   = (g->ang != 0);
+    out.cosv  = (int16_t)sa_sin((uint8_t)(g->ang + 64)) - 128;
+    out.sinv  = (int16_t)sa_sin(g->ang) - 128;
+    out.valid = true;
+    return out;
+}
+uint16_t startup_anim_board_w(void) { return SA_BOARD_W; }
+uint16_t startup_anim_board_h(void) { return SA_BOARD_H; }
+
 void startup_anim_start(void) { sa_begin(false, 255); }
 
 void startup_anim_start_loop(uint8_t contrast) {
@@ -589,4 +625,7 @@ void startup_anim_stop(void) {}
 bool startup_anim_is_loop(void) { return false; }
 void startup_anim_tick(void) {}
 bool startup_anim_active(void) { return false; }
+sa_geom_t startup_anim_key_geom(bool right, uint8_t idx) { (void)right; (void)idx; sa_geom_t o = {0,0,0,0,false,false}; return o; }
+uint16_t startup_anim_board_w(void) { return 0; }
+uint16_t startup_anim_board_h(void) { return 0; }
 #endif

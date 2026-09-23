@@ -65,6 +65,9 @@
 #include "base/fonts/nano_font.h"          // 10px label font under the flags
 #include "base/fonts/util_font.h"         // mid (10px) utility-label font
 #include "polymod_core1.h"
+#include "anim/tutorial.h"
+#include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
+#include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
@@ -532,6 +535,108 @@ static uint8_t status_oled_level(bool idle) {
 static bool g_force_layer_resync = true;
 static uint8_t g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;
 
+static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
+// The user's own default LAYOUT, parked while the tutorial runs. 0xFF = nothing parked.
+// ⚠️ This is poly's def_layer (a layer INDEX _L0.._L4, the Qwerty/Colemak/Neo choice),
+// NOT the momentary layer stack — layer_clear() does not touch it, which is why the
+// board kept coming back on the user's layout mid-lesson.
+static uint8_t  s_tut_saved_def_layer = 0xFF;
+
+// Park the layout on _L0 for the lesson. ⚠️ Both halves call this, from tutorial_start():
+// the SLAVE resolves its own keycaps through its own def_layer, so forcing it only on the
+// master would letter one half from Qwerty and the other from whatever the user runs.
+//
+// ⚠️ NO defer_default_layer_save() — this is a temporary override, and persisting it
+// would mean a tutorial silently changed the user's layout.
+void tutorial_enter_base_layout(void) {
+    poly_layer_t *ll = access_local_layer();
+    if (s_tut_saved_def_layer == 0xFF) s_tut_saved_def_layer = ll->def_layer;
+    ll->def_layer = _L0;
+    layer_clear();
+    layer_on(_L0);
+    ll->layer = layer_state;
+}
+
+// Hand the board back exactly as it was found: the parked layout, and no momentary or
+// toggled layer left over from a chapter that asked the user to hold one (the skip
+// gesture can land mid-hold).
+void tutorial_restore_layout(void) {
+    poly_layer_t *ll = access_local_layer();
+    if (s_tut_saved_def_layer != 0xFF) {
+        ll->def_layer         = s_tut_saved_def_layer;
+        s_tut_saved_def_layer = 0xFF;
+    }
+    layer_clear();
+    layer_on(ll->def_layer);
+    ll->layer = layer_state;
+}
+
+// ---- the two halves of the tutorial's housekeeping -------------------------
+// Shared by the EXCLUSIVE branch (chapter 1) and the NORMAL branch (intro mode), so the
+// skip gesture, the slave push and the teardown exist once rather than once per mode.
+
+// The documented skip: hold either outer-edge top key. A held key emits no events, so
+// the duration is measured here rather than in process_record.
+static void poly_tutorial_skip_if_held(void) {
+    if (s_tut_skip_since != 0 && timer_elapsed32(s_tut_skip_since) >= TUT_SKIP_HOLD_MS) {
+        s_tut_skip_since = 0;
+        tutorial_skip();
+    }
+}
+
+static void poly_tutorial_push_sync(void) {
+    poly_tutorial_skip_if_held();
+        // Push the step/ripple to the slave: it draws the keys that land on its own
+        // half. Gated on the transport being up (non-blocking) for the same reason
+        // Eden's nonce is — a fresh boot must never stall on a slave still coming up.
+        if (is_usb_host_side() && tutorial_sync_pending() && is_transport_connected()) {
+            poly_sync_t* ls = access_local_state();
+            tutorial_sync_fill(ls->tut);
+            // ONE attempt, not three. The push is re-armed on a timer, so a
+            // failure costs 400 ms rather than a retry; three blocking retries
+            // every 400 ms is main-loop time taken from the matrix scan and the
+            // slave pull — which presents as a sluggish keypress.
+            const uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void*)ls,
+                                               sizeof(poly_sync_t), 1);
+            if (sync_succeeded(ack)) {
+                tutorial_sync_sent();
+            } else {
+                // Never bool-test the ack (every return is non-zero). Logged
+                // because a slave that never joins the tutorial shows dark
+                // keycaps and its ordinary status screen — which reads as "the
+                // tutorial is broken" rather than "the link dropped one frame".
+                static uint8_t s_tut_sync_fail;
+                if (++s_tut_sync_fail <= 5) {
+                    uprintf("Tutorial sync to slave failed (ack=0x%02X)\n", ack);
+                }
+            }
+        }
+}
+
+static void poly_tutorial_finish_if_done(void) {
+        if (tutorial_finished()) {
+            const bool was_skipped = tutorial_was_skipped();
+            // Order matters. tutorial_stop() restores the parked layout, drops any
+            // layer a chapter left held, blanks every panel and invalidates the
+            // dirty-window boxes; THEN the brightness is restored, THEN the legends are
+            // redrawn — so the panels are never repainted against stale state, and the
+            // legends drawn are the ones the board will actually type.
+            tutorial_stop();
+            set_displays(get_local_state()->contrast, false);
+            // Two-pass (rows 0-2, matrix scan, rows 3-4) rather than a one-shot
+            // ALL_AT_ONCE, for the reason display_wakeup() gives: a full render is
+            // ~107 ms in one pass and would swallow the keystroke right after.
+            set_disp_refresh(START_FIRST_HALF);
+            sync_and_refresh_displays();
+            // ⚠️ EEPROM LAST. The straight-through write (see mark_boot_intro_done)
+            // can trigger a wear-levelling consolidation — ~50-100 ms with
+            // interrupts off — and that must not land between the SPI writes that
+            // are handing the displays back.
+            mark_boot_intro_done();
+            uprintf("Tutorial %s; displays handed back\n", was_skipped ? "skipped" : "done");
+        }
+}
+
 void sync_and_refresh_displays(void) {
     // Freeze slave display while bootloader is active; re-assert RGB each cycle.
     if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
@@ -624,6 +729,16 @@ void sync_and_refresh_displays(void) {
         }
 
         access_local_layer()->led_state = host_keyboard_led_state();
+        // ⚠️ The tutorial holds caps INTERNALLY for chapter 1, and this is the only place
+        // it can: the line above re-reads the host's real lock state every pass, so an
+        // override set anywhere else is erased before update_displays() runs (which it
+        // does from further down this same function). It was previously set in the
+        // tutorial's own housekeeping branch and never took effect — first because that
+        // branch runs before this one, and now because the branch does not run at all.
+        //
+        // The host's real caps lock is untouched; only the LOCAL snapshot the renderer
+        // reads is forced, and only while chapter 1 is up.
+        if (tutorial_caps_hold()) access_local_layer()->led_state.caps_lock = true;
         access_local_layer()->mods = get_mods();
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         // Force one layer push to the slave after boot even with no diff: each half
@@ -962,6 +1077,44 @@ static void eden_idle_tick(void) {
     }
 }
 
+// Armed when the first-run experience starts, so Eden's finishing edge knows to hand
+// off to the tutorial rather than stamping the marker itself.
+static bool     s_tutorial_armed  = false;
+
+// Arm the post-intro hand-off on THIS half, and (on the master) publish the intent on
+// the sync so the slave can arm its own.
+//
+// ⚠️ This is the shape the Eden IDLE loop already has and the tutorial did not, which
+// is why one works on both halves and the other did not. eden_idle_tick() never
+// receives a "start" message: every pass, each half re-derives `want` from state it
+// already holds (`idle_style` + DISP_IDLE, ordinary poly_sync_t fields carried by the
+// normal diff-retry sync) and starts or stops its own animation. The boot intro is the
+// same idea one level down — keyboard_post_init_user() runs on BOTH halves and each
+// reads its OWN EEPROM marker, so a cold boot needs no cross-half message at all.
+// Eden's only push is the replay nonce, for the one case with no local trigger.
+//
+// The tutorial was the opposite: the slave's entry was a single 0->1 edge on tut[0],
+// from the master, over a bespoke one-retry push, on a path where the normal state
+// sync is skipped. On the KC_EDEN path it was worse than fragile — s_tutorial_armed is
+// set in process_record_user(), which only ever runs on the master, so the slave had
+// NO local trigger and that one message was the entire mechanism. Losing it left the
+// slave dark for the whole session, with the master happily running the lesson.
+static void arm_tutorial_after_intro(void) {
+    s_tutorial_armed = true;
+    s_tut_skip_since = 0;
+    // Level, not edge: the bit rides every sync for the whole of Eden (seconds), so it
+    // has many chances to land rather than one. Cleared by tutorial_start()'s first
+    // tutorial_sync_fill(), which owns tut[0] from then on.
+    access_local_state()->tut[0] |= TUT_SYNC_ARMED;
+}
+
+// Called from the split handler on the slave when the master's sync says the first-run
+// experience is armed. Idempotent, and deliberately NOT tutorial_start(): the slave
+// starts the tutorial from its own Eden finish edge, exactly as a cold boot does.
+void poly_arm_tutorial_after_intro(void) {
+    if (!s_tutorial_armed) arm_tutorial_after_intro();
+}
+
 void housekeeping_task_user(void) {
     // Optional loop-timing probe (no-op unless POLYKYBD_LOOP_PROFILE). At the very
     // top so it measures the FULL previous iteration — matrix scan, HID, bridge.
@@ -1256,7 +1409,17 @@ void housekeeping_task_user(void) {
     // legible then go dark the moment the flash releases the display path (a
     // font-pack flash, which does not reboot, shows this plainly). A flash is a
     // deliberate host command, so this is legitimate activity by update.h's rule.
-    if (fw_staging_fw_up_active()) {
+    // ⚠️ EVERY firmware phase, not just the streaming one. fw_up_active() covers the
+    // chunk transfer and nothing else, so staging, the apply and the signing prompt were
+    // all free to idle out from under their own screen — seen on hardware. poly_fw_screen()
+    // is the one selector that knows about all four.
+    //
+    // …and the tutorial. It used to call update_performed() from its own housekeeping
+    // branch; once it moved onto the normal render path that branch stopped running and
+    // the lesson could fade away mid-step. Suppressing idle belongs with "is something
+    // on screen that the user did not put there", which is exactly these two.
+    if (fw_staging_fw_up_active() || poly_fw_screen() != POLY_FW_SCREEN_NONE ||
+        tutorial_active()) {
         update_performed();
     }
 
@@ -1308,22 +1471,69 @@ void housekeeping_task_user(void) {
             }
             if (!startup_anim_active()) {   // just finished this pass
                 s_anim_synced = false;      // re-arm for the next replay (KC_EDEN / HID)
-                mark_boot_intro_done();
+                // Hand off to the tutorial rather than stamping the marker here. The
+                // marker must record "the TUTORIAL was seen", not "Eden played":
+                // stamped here, RESET Eden would clear it, replay the animation, and
+                // this line would re-stamp it a second later — so the tutorial could
+                // never appear, with nothing in any log to say why.
+                if (s_tutorial_armed) {
+                    s_tutorial_armed = false;
+                    s_tut_skip_since = 0;
+                    // The layer stack AND the default layout are parked inside
+                    // tutorial_start() -> tutorial_enter_base_layout(), so both halves
+                    // do it rather than only the one that owns this arm site.
+                    tutorial_start(timer_read32());
+                    if (!tutorial_active()) mark_boot_intro_done();   // nothing to teach
+                }
                 // Eden ran at full brightness; restore the user's normal
                 // brightness behaviour now that it has faded to black, then
-                // redraw the real legends and resume normal split sync.
-                set_displays(get_local_state()->contrast, false);
-                request_disp_refresh();
-                sync_and_refresh_displays();
+                // redraw the real legends and resume normal split sync. Skipped when
+                // the tutorial just took the keycaps over — it owns them now.
+                if (!tutorial_active()) {
+                    set_displays(get_local_state()->contrast, false);
+                    request_disp_refresh();
+                    sync_and_refresh_displays();
+                }
             }
             // While Eden plays we OWN the displays: skip sync_and_refresh_displays
             // (its set_displays() would overwrite our full-bright contrast with the
             // user brightness — the "brightness changes mid-animation" bug) and skip
             // the boot forced-layer-resync's per-pass blocking UART, which also
             // stole frame time. Each half renders its own keycaps independently.
+        } else if (tutorial_exclusive()) {
+            // ⚠️ CHAPTER 1 ONLY. From chapter 2 the tutorial runs in INTRO mode and
+            // falls through to the normal `else` below — the stock mods snapshot, the
+            // stock layer sync, the stock render, on both halves. This branch used to
+            // carry hand-rolled copies of all three, and each one was a bug: the mods
+            // were never refreshed, the layer never reached the slave, and the repaint
+            // front covered 12 % of the board. The fix was to stop re-implementing
+            // rather than to fix the copies. See base/tutorial_plan.h.
+            //
+            // The renderer is SLICED (a few ms per pass) precisely so the matrix keeps
+            // being scanned mid-frame — it has to notice a tap, which the unsliced Eden
+            // path provably cannot.
+            tutorial_tick();
+            poly_tutorial_push_sync();
+            poly_tutorial_finish_if_done();
         } else {
+            // INTRO mode rides the normal path: the board renders itself, and the
+            // tutorial only advances its own phase machine and keeps the other half in
+            // step. tutorial_tick() does NOT touch a panel outside chapter 1.
+            if (tutorial_active()) {
+                tutorial_tick();
+                if (s_tut_skip_since != 0 &&
+                    timer_elapsed32(s_tut_skip_since) >= TUT_SKIP_HOLD_MS) {
+                    s_tut_skip_since = 0;
+                    tutorial_skip();
+                }
+                poly_tutorial_push_sync();
+                poly_tutorial_finish_if_done();
+            }
             sync_and_refresh_displays();
         }
+        // Advance the focus ripple, if one is live. Self-gating and bounded to
+        // POLY_FOCUS_SLICE_MS, so an idle keyboard pays a single boolean test.
+        poly_focus_tick();
         // Drain a pending overlay-mapping repair (armed by enable_overlays when a
         // bridge dropped during an app switch). Master-only — it re-pushes OUR
         // tables to the slave — and bounded per tick, so it can never turn into
@@ -1377,7 +1587,11 @@ void housekeeping_task_user(void) {
             }
         }
 #    ifdef POLYKYBD_LTR559_DRIVE
-        poly_ltr559_drive();   // master-side auto-brightness + idle-inhibit
+        // Not while Eden or the tutorial owns the displays: the sensor pushes a fresh
+        // contrast about twice a second and would dim the intro out from under itself.
+        if (!startup_anim_active() && !tutorial_active()) {
+            poly_ltr559_drive();   // master-side auto-brightness + idle-inhibit
+        }
 #    endif
 #endif
     }
@@ -3512,6 +3726,186 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
 // invert it to (r,c) to resolve the keycode. Returns false without touching the
 // buffer for keys with no plain-text legend (flags/emoji/tabs/overlays) — those faces
 // just show the plain comet field. Mirrors render_idle_key's legend derivation.
+// ---- first-run tutorial callbacks (see anim/tutorial.h) -------------------
+// Matrix (row,col) -> packed display slot, or TUT_SLOT_NONE when no OLED sits behind
+// that key. The INVERSE of eden_idle_erase_legend's mapping, right-half `c--` display
+// fold included. That fold is why the mirrored skip key at the outer edge is NOT the
+// same local column on both halves: right display col 0 is the INNER edge.
+static uint8_t tutorial_slot_of(uint8_t row, uint8_t col) {
+    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) return TUT_SLOT_NONE;
+    if (!key_has_display(row, col)) return TUT_SLOT_NONE;
+    // ⚠️ The right-half column fold used to be re-derived here. It is key_display_index()'s
+    // job — the same fold the chip-select table and the dirty-window bboxes use — and a
+    // second copy is how the two drift. It returns 255 for a position with no panel of
+    // its own (the right half's absent col 0), which is the case this used to spell out.
+    const uint8_t idx = key_display_index(row, col);
+    if (idx == 255) return TUT_SLOT_NONE;
+    return TUT_SLOT(row >= MATRIX_ROWS_PER_SIDE ? 1 : 0, idx);
+}
+
+uint8_t tutorial_collect_candidates(uint8_t* out, uint8_t max) {
+    uint8_t n = 0;
+    for (uint8_t r = 0; r < MATRIX_ROWS && n < max; ++r) {
+        for (uint8_t c = 0; c < MATRIX_COLS && n < max; ++c) {
+            const uint16_t kc = keymaps[_BL][r][c];
+            if (kc < KC_A || kc > KC_Z) continue;          // plain letters only
+            const uint8_t slot = tutorial_slot_of(r, c);
+            if (slot != TUT_SLOT_NONE) out[n++] = slot;
+        }
+    }
+    return n;
+}
+
+// The two Shift keys, left hand first. ⚠️ SCANNED FROM THE KEYMAP, not hardcoded to
+// (3,0) and (8,7): chapter 2 points a ring at one of them and refuses the other, so a
+// position that disagrees with the keymap would leave the lesson unclearable. The scan
+// is the same shape as tutorial_collect_candidates() and asks the same questions —
+// key_has_display() (a shift with no OLED cannot be pointed at) and the mod-tap unwrap
+// (a home-row Shift is a mod-tap, and its TAP keycode is what its legend says).
+void tutorial_shift_slots(uint8_t out[TUT_SHIFT_STAGES]) {
+    for (uint8_t i = 0; i < TUT_SHIFT_STAGES; ++i) out[i] = TUT_SLOT_NONE;
+    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            uint16_t kc = keymaps[_BL][r][c];
+            if (IS_QK_MOD_TAP(kc)) kc = QK_MOD_TAP_GET_TAP_KEYCODE(kc);
+            if (kc != KC_LEFT_SHIFT && kc != KC_RIGHT_SHIFT) continue;
+            const uint8_t slot = tutorial_slot_of(r, c);
+            if (slot == TUT_SLOT_NONE) continue;
+            // By HAND, from the slot's own side bit — not from the keycode. KC_RSFT on
+            // the left half is a perfectly ordinary keymap, and chapter 2 is teaching
+            // "either hand", not "either keycode".
+            const uint8_t hand = TUT_SLOT_RIGHT(slot) ? 1u : 0u;
+            if (out[hand] == TUT_SLOT_NONE) out[hand] = slot;
+        }
+    }
+}
+
+uint32_t tutorial_slot_letter(uint8_t slot) {
+    if (slot == TUT_SLOT_NONE) return 0;
+    const uint8_t idx = TUT_SLOT_IDX(slot);
+    const uint8_t dr = (uint8_t)(idx / MATRIX_COLS), dc = (uint8_t)(idx % MATRIX_COLS);
+    uint8_t       mr, mc;
+    if (TUT_SLOT_RIGHT(slot)) {
+        mr = (uint8_t)(dr + MATRIX_ROWS_PER_SIDE);
+        mc = (dr < 4) ? (uint8_t)(dc + 1) : dc;
+    } else {
+        mr = dr;
+        mc = dc;
+    }
+    if (mr >= MATRIX_ROWS || mc >= MATRIX_COLS) return 0;
+    const uint16_t kc = keymaps[_BL][mr][mc];
+    if (kc < KC_A || kc > KC_Z) return 0;
+    // Upper case: at 2x the 19px face this fills the keycap, and a lone capital reads
+    // as "this one" rather than as a letter you are being asked to type.
+    return (uint32_t)('A' + (kc - KC_A));
+}
+
+// Any key whose job is to change layer. ⚠️ Derived from QMK's keycode RANGES, not from
+// a list of the layer keycodes this keymap happens to use — a hand-kept list is the
+// guard shape that goes stale the moment a keymap gains a layer key, and here going
+// stale means the tutorial silently leaves that key dark.
+bool tutorial_is_layer_key(uint16_t kc) {
+    return IS_QK_MOMENTARY(kc) || IS_QK_ONE_SHOT_LAYER(kc) || IS_QK_TO(kc) ||
+           IS_QK_LAYER_TAP_TOGGLE(kc) || IS_QK_DEF_LAYER(kc) || IS_QK_TOGGLE_LAYER(kc) ||
+           kc == KC_BASE;
+}
+
+// The key chapter 3 asks for: the MOMENTARY layer key, since holding is the gesture
+// chapter 2 just taught. Returns TUT_SLOT_NONE when this half has none — the master
+// asks both halves' keymaps, so a board with Fn on either side works.
+static bool tutorial_is_chapter3_key(uint16_t kc) {
+    return IS_QK_MOMENTARY(kc);
+}
+
+// Is this key in a chapter's lit set? ⚠️ A direct per-key question now, not a
+// precomputed bitmap over display slots: update_displays() walks the MATRIX and already
+// knows (row, col), so the slot round-trip bought nothing. The letters are in BOTH sets
+// — they are the board the chapter transforms. Only the key the chapter asks you to
+// HOLD differs.
+// Does this matrix position resolve to `slot`? The inverse question to
+// tutorial_slot_of(), asked per key by the intro-mode visibility gate.
+bool tutorial_slot_matches(uint8_t slot, uint8_t row, uint8_t col) {
+    return slot != TUT_SLOT_NONE && tutorial_slot_of(row, col) == slot;
+}
+
+bool tutorial_key_in_chapter_set(uint8_t row, uint8_t col, bool layer_chapter) {
+    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) return false;
+    uint16_t kc = keymaps[_BL][row][col];
+    // A mod-tap's legend is its TAP keycode's legend, so unwrap before asking what this
+    // key is — the same unwrap render_key() opens with, and for the same reason.
+    if (IS_QK_MOD_TAP(kc)) kc = QK_MOD_TAP_GET_TAP_KEYCODE(kc);
+    if (kc >= KC_A && kc <= KC_Z) return true;
+    return layer_chapter ? tutorial_is_layer_key(kc)
+                         : (kc == KC_LEFT_SHIFT || kc == KC_RIGHT_SHIFT);
+}
+
+
+// Matrix (row,col) for a slot on THIS half, or false when it does not map back.
+static bool tutorial_matrix_of(uint8_t slot, uint8_t *row, uint8_t *col) {
+    if (slot == TUT_SLOT_NONE) return false;
+    const uint8_t idx = TUT_SLOT_IDX(slot);
+    const uint8_t dr = (uint8_t)(idx / MATRIX_COLS), dc = (uint8_t)(idx % MATRIX_COLS);
+    if (TUT_SLOT_RIGHT(slot)) {
+        *row = (uint8_t)(dr + MATRIX_ROWS_PER_SIDE);
+        *col = (dr < 4) ? (uint8_t)(dc + 1) : dc;
+    } else {
+        *row = dr;
+        *col = dc;
+    }
+    return (*row < MATRIX_ROWS) && (*col < MATRIX_COLS);
+}
+
+// Defined further down, beside update_displays()' own use of them.
+static void draw_legend_cx_cy(const uint32_t *text, int8_t y, int8_t cy_radius);
+static uint16_t display_keycode_at(const poly_layer_t *lyr, uint8_t row, uint8_t col);
+
+// The focus ripple repaints keys outside update_displays()' own pass and needs their
+// ordinary legend back under the arc — the same draw, so the same function.
+//
+// ⚠️ Draws NOTHING for a key that is not being rendered. Without this, the wavefront
+// crossing a hidden key drew that key's real legend, un-hiding exactly the keys the
+// lesson had darkened. The ARC is not gated on this — see the note in focus_ring.h; the
+// ring has to cross the whole board. The visibility question has ONE answer and both the
+// normal render path and the ripple ask it here.
+bool poly_focus_draw_legend(uint8_t slot) {
+    uint8_t r, c;
+    if (!tutorial_matrix_of(slot, &r, &c)) return false;
+    if (!tutorial_key_visible(r, c)) return false;
+    tutorial_draw_board_legend(slot);
+    return true;
+}
+
+void tutorial_draw_board_legend(uint8_t slot) {
+    uint8_t r, c;
+    if (!tutorial_matrix_of(slot, &r, &c)) return;
+
+    const poly_layer_t *local_layer = get_local_layer();
+    const led_t   state = local_layer->led_state;
+    const uint8_t mods  = local_layer->mods;
+    const uint16_t keycode = display_keycode_at(local_layer, r, c);
+
+    // ⚠️ The PAIR, in update_displays()' own order: to_static_text() first, render_key()
+    // only when it returned NULL. render_key() alone draws nothing at all for a key
+    // whose legend is static text.
+    const uint32_t *text = to_static_text(keycode, state);
+    if (text == NULL) {
+        render_key(keycode, state, mods);
+    } else if (r % MATRIX_ROWS_PER_SIDE == MATRIX_ROWS_PER_SIDE - 1) {
+        draw_legend_cx_cy(text, 23, KDISP_CY_DEFAULT);   // thumb row: centred
+    } else {
+        kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text,
+                                KDISP_CY_DEFAULT);
+    }
+}
+
+// The two outer-edge top keys — the documented (not displayed) skip gesture. LEFT is
+// display (0,0); RIGHT is display (0,6), the outer edge at board x=223, NOT (0,0)
+// which the `c--` fold puts on the inner edge at x=143.
+static bool tutorial_is_skip_key(uint8_t row, uint8_t col) {
+    const uint8_t slot = tutorial_slot_of(row, col);
+    return slot == TUT_SLOT(0, 0) || slot == TUT_SLOT(1, 6);
+}
+
 bool eden_idle_erase_legend(uint8_t disp_idx) {
     if (disp_idx >= MATRIX_ROWS_PER_SIDE * MATRIX_COLS) return false;
     // disp_idx == the anim geom index == display row*8 + col. Invert to the matrix
@@ -3686,6 +4080,16 @@ void update_displays(enum refresh_mode mode) {
         s_disp_render_active = false;
         return;
     }
+    // Same for chapter 1 of the first-run tutorial — its sliced blitter is the only
+    // writer while it is up, and a repaint here would erase the lit letter mid-step.
+    // ⚠️ EXCLUSIVE, not active. From chapter 2 the board renders NORMALLY and this
+    // function is exactly what draws it; standing down there is what forced the
+    // tutorial to re-implement the renderer, which is where four rounds of bugs came
+    // from. See the architectural note in base/tutorial_plan.h.
+    if (tutorial_exclusive()) {
+        s_disp_render_active = false;
+        return;
+    }
     const poly_sync_t* local_state = get_local_state();
     const bool idle = (local_state->flags & DISP_IDLE) != 0;
     // While idle we never full-re-render here: kdisp_idle() pulses the existing
@@ -3763,9 +4167,9 @@ void update_displays(enum refresh_mode mode) {
             // animation geometry, the per-panel dirty-window bbox) is in DISPLAY space.
             // This tracked each right-half panel's bbox under its NEIGHBOUR's index
             // until 2026-09; legends are similar centred boxes so the union happened to
-            // cover, and only a thin off-centre arc exposed it as "parts of the ring
-            // are not cleared, on the slave". key_display_index() is the one fold —
-            // see split72.h.
+            // cover, and only the focus ripple's thin off-centre arc exposed it as
+            // "parts of the ring are not cleared, on the slave". key_display_index() is
+            // the one fold — see split72.h.
             uint8_t  disp_idx = key_display_index((uint8_t)(r + offset), c);
 
             //since MATRIX_COLS==8 we don't need to shift multiple times at the end of the row
@@ -3807,6 +4211,21 @@ void update_displays(enum refresh_mode mode) {
                         } else {
                             kdisp_set_buffer(0x00);
                         }
+                        kdisp_send_window();
+                        doom_handled = true;
+                    } else if (tutorial_intro_mode() &&
+                               !tutorial_key_visible((uint8_t)(r + offset), c)) {
+                        // The tutorial's intro mode: the board is drawing NORMALLY, and
+                        // the only thing the lesson does is darken what it is not asking
+                        // you to look at. A visible key falls straight through to the
+                        // ordinary legend path below — real mods, real layer, real
+                        // language — which is the whole point of this mode.
+                        //
+                        // ⚠️ Both halves reach this: update_displays() runs on each, and
+                        // each answers tutorial_key_visible() from its own keymap and
+                        // the phase it already has from the ordinary tutorial sync. No
+                        // extra state crosses the link.
+                        kdisp_set_buffer(0x00);
                         kdisp_send_window();
                         doom_handled = true;
                     } else if (local_state->rec_state == POLY_REC_PICKING) {
@@ -4002,7 +4421,13 @@ void update_displays(enum refresh_mode mode) {
                         // looks equivalent and is not: the else would then fire on
                         // the Intl layer and paint the hardcoded hint back over the
                         // variation, which is the bug this exists to stop.
-                        if(!add_lang) {
+                        // ⚠️ The tutorial joins `add_lang` in the OUTER condition, for
+                        // exactly the reason the note above gives: folding it into the
+                        // first arm (`display_overlays && !tutorial_active()`) would let
+                        // the ELSE fire and paint the hardcoded Ctrl-shortcut hints over
+                        // the lesson instead. A lesson's keycaps are the payload — an
+                        // app overlay or a hint over them teaches the wrong thing.
+                        if(!add_lang && !tutorial_active()) {
                             if(display_overlays) {
                                 if(!copy_overlay_to_buffer(keycode, mods)) {
                                     text = keycode_to_disp_overlay(keycode); //fallback to hardcoded
@@ -4020,6 +4445,14 @@ void update_displays(enum refresh_mode mode) {
                         }
                         if(invert_key) {
                             kdisp_set_gfx_erase(false);
+                        }
+                        // ⚠️ The focus ripple composites LAST, on top of everything this
+                        // key drew — it points AT the legend, so it must not be painted
+                        // under it. One boolean test per keycap when no ripple is live,
+                        // which is every keypress on a keyboard nobody is pointing at.
+                        if (poly_focus_active()) {
+                            const sa_geom_t fg = startup_anim_key_geom(!is_left_side(), disp_idx);
+                            poly_focus_overlay(disp_idx, &fg);
                         }
                         kdisp_send_window();
                         }
@@ -4400,6 +4833,11 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         }
         case KC_EDEN:
             if (!act) break;
+            // ⚠️ PROTOTYPE BEHAVIOUR: this runs Eden AND the tutorial on the spot so the
+            // whole sequence can be retried without rebooting. The SHIPPING semantics
+            // (anim/TUTORIAL.md) are different: this key RE-ARMS the first-run
+            // experience for the next startup and only replays the animation now.
+            arm_tutorial_after_intro();
             // Trigger the startup ("Eden") animation NOW on this (master) half and bump
             // the synced nonce so the slave plays in lockstep (the nonce is delivered by
             // the one-shot bridge send in housekeeping, once the transport is up — see
@@ -4517,6 +4955,56 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // pulse, the first key press should dismiss it and pass through to the wake
     // (display_wakeup clears DISP_IDLE → eden_idle_tick stops the loop next pass).
     if (startup_anim_active() && !startup_anim_is_loop()) {
+        return false;
+    }
+
+    // The first-run tutorial IS the board while it runs: every key event is swallowed
+    // (nothing should reach the host mid-lesson) and consumed here instead. Swallowed
+    // in process_record_user rather than on the release edge — an OSL layer
+    // re-dispatches a release-edge action up to three times.
+    if (tutorial_active()) {
+        const uint8_t row = record->event.key.row, col = record->event.key.col;
+        // ⚠️ SHIFT IS THE ONE EXCEPTION, and it has to be a real one. Chapter 2 asks
+        // the user to hold Shift and watch every legend change — and the legends follow
+        // local_layer->mods, which only moves if QMK actually registers the modifier.
+        // Faking it would make the chapter a simulation of the board rather than the
+        // board. A bare Shift hold types nothing, so "nothing reaches the host
+        // mid-lesson" survives; this is also the standing rule that modifiers and layer
+        // keys must fall through a swallow, which the Intl layer learned twice.
+        uint16_t kc = poly_keycode_at(_BL, row, col);
+        if (IS_QK_MOD_TAP(kc)) kc = QK_MOD_TAP_GET_TAP_KEYCODE(kc);
+        // ⚠️ SHIFT AND THE LAYER KEYS ARE THE EXCEPTIONS, and they have to be real
+        // ones. Chapters 2 and 3 ask the user to hold a key and watch every legend
+        // change — and the legends follow local_layer->mods and ->layer, which only
+        // move if QMK actually registers the modifier / applies the layer. Faking it
+        // would make the chapters a simulation of the board rather than the board. A
+        // bare Shift or a held Fn types nothing on its own, so "nothing reaches the
+        // host mid-lesson" survives; this is also the standing rule that modifiers and
+        // layer keys must fall through a swallow, which the Intl layer learned twice.
+        if (kc == KC_LEFT_SHIFT || kc == KC_RIGHT_SHIFT) {
+            tutorial_hold(TUT_HOLD_SHIFT, record->event.pressed, tutorial_slot_of(row, col));
+            return true;        // let QMK register/unregister it
+        }
+        if (tutorial_is_chapter3_key(kc)) {
+            tutorial_hold(TUT_HOLD_LAYER, record->event.pressed, tutorial_slot_of(row, col));
+            return true;
+        }
+        if (tutorial_is_layer_key(kc)) {
+            // A layer key the chapter is not asking for still must not be SWALLOWED —
+            // swallowing a layer key's release leaves the board stuck on that layer,
+            // which is the exact bug MO(_ADDLANG1) shipped. It simply drives nothing.
+            return true;
+        }
+        if (record->event.pressed) {
+            // A press that is not the key being asked for does NOTHING, deliberately:
+            // silence is the correction. The only other meaning a key can carry here
+            // is the documented hold-to-skip.
+            if (!tutorial_press(tutorial_slot_of(row, col)) && tutorial_is_skip_key(row, col)) {
+                if (s_tut_skip_since == 0) s_tut_skip_since = timer_read32();
+            }
+        } else if (tutorial_is_skip_key(row, col)) {
+            s_tut_skip_since = 0;   // released early — the hold has to be continuous
+        }
         return false;
     }
 
@@ -5603,6 +6091,18 @@ void keyboard_post_init_user(void) {
     boot_trace(U"4");
 #endif
     splash_progress(SPLASH_DONE);       // boot complete: full splash, dwell, then legends
+    // First-run experience: Eden, then the tutorial. boot_intro_pending() reads the
+    // EEPROM marker — which is stamped only once the TUTORIAL has been seen or skipped,
+    // so an interrupted first run replays both and a completed one never returns. The
+    // marker survives a firmware flash: EEPROM is the last 8 KB of the chip
+    // (0x7FE000..0x800000), outside every region any flash path writes.
+    //
+    // ⚠️ boot_intro_pending() had NO callers before this — the marker, the pending check
+    // and the finish edge all existed, but nothing ever started the animation at boot.
+    if (boot_intro_pending()) {
+        arm_tutorial_after_intro();
+        startup_anim_start();
+    }
     // LAST: arm the hardware watchdog. Everything above may block for seconds
     // (the keymap discard, the splash dwell); from here on housekeeping feeds it
     // every pass and a hang becomes a reset with a `kind=watchdog` crash record.

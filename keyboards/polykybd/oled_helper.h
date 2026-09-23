@@ -33,6 +33,8 @@ void oled_fw_update_screen(void);
    words behind the big A/R keycaps, so the board says WHY it went modal and not
    just which key does what. Driven by the synced poly_sync_t.fw_confirm. */
 void oled_fw_confirm_screen(void);
+// First-run tutorial prose (two centred lines). See anim/TUTORIAL.md.
+void oled_tutorial_screen(void);
 /* "⭯Applying / Firmware⭯" notice (resident circular refresh arrow U+2B6F) drawn +
    fully flushed on both halves the moment a staged firmware image is applied, right
    before the blocking self-flash + reboot. */

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #pragma once
+#include "anim/tutorial.h"   // TUTORIAL_SYNC_BYTES
 
 #include <stdint.h>
 #include "quantum.h"
@@ -256,6 +257,13 @@ typedef struct _poly_sync_t {
     // Master-authoritative and never persisted: a recording does not survive a reboot.
     uint8_t  rec_state;
     uint8_t  rec_slot;
+    // First-run tutorial: {active, phase, current slot, ripple seq, ripple origin}.
+    // The master owns the step machine; the slave draws the keys that land on its own
+    // half, so it is TOLD what is being asked for rather than deriving it (two
+    // independent draws would disagree). The ripple seq is a nonce — any change starts
+    // one ripple, timed from RECEIPT, because the two MCUs share no time base.
+    // See anim/tutorial.h (TUTORIAL_SYNC_BYTES) and anim/TUTORIAL.md.
+    uint8_t  tut[6];
 } poly_sync_t;
 
 // Same reasoning as latin_sync_t's guard: transaction_rpc_exec() refuses a payload
@@ -264,6 +272,10 @@ typedef struct _poly_sync_t {
 // and a slave that never hears it, with nothing in the log.
 static_assert(sizeof(poly_sync_t) <= RPC_M2S_BUFFER_SIZE,
               "poly_sync_t exceeds RPC_M2S_BUFFER_SIZE — the split sync would be silently rejected");
+// The tutorial's sync payload and the field it rides in must stay the same size — a
+// mismatch would silently truncate the ripple origin rather than fail to build.
+static_assert(sizeof(((poly_sync_t *)0)->tut) == TUTORIAL_SYNC_BYTES,
+              "poly_sync_t.tut does not match TUTORIAL_SYNC_BYTES");
 
 typedef struct _poly_last_t {
     uint32_t crc32;

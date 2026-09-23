@@ -13,3 +13,4 @@ TEST_LIST += polykybd_hand_stamp
 TEST_LIST += polykybd_cirque_gesture
 TEST_LIST += polykybd_status_brightness
 TEST_LIST += polykybd_doom_pack_gate
+TEST_LIST += polykybd_tutorial_plan

@@ -95,14 +95,24 @@ v0.25.0 and v0.27.1 should be deleted. Two separate faults:
    the bootrom's `safe_reboot()` fires — and the half then **does not boot**: no RGB,
    no displays, no console, and the bootrom's drive back on every power cycle,
    surviving 30 s unpowered. Both halves, both sides. Re-flashing the firmware
-   `.uf2` recovers it every time. Still unexplained, but **narrowed by measurement**:
-   a provisioning image (below) writes the *same record* to the *same sector*
-   through `stamp_write()` and the half boots fine, reporting
-   `hand: LEFT (flash stamp)`. So neither the record's content nor anything in
-   handedness resolution is the cause — the fault is specific to the **bootrom
-   writing that sector from a single-block UF2**. Ruled out the same way: a stale
-   `.ram0.bootloader_magic` double-tap flag, an invalid boot2, and any software
-   `reset_usb_boot()`, which has no boot-time caller.
+   `.uf2` recovers it every time. **Narrowed twice by measurement, and NOT understood.** One
+   already-provisioned half did not reproduce it — the fixed file applies and boots: the banner reports `slot=0/1 writer=0x55`, which is the bootrom's own
+   signature (erase-then-program leaves exactly one record at page 0) carrying this
+   tool's marker byte. A provisioning image writing the *same record* to the *same
+   sector* through `stamp_write()` also boots. So neither the record's content, nor
+   the side change, nor anything in handedness resolution is the cause. Ruled out the
+   same way: a stale `.ram0.bootloader_magic` double-tap flag, an invalid boot2, and
+   any software `reset_usb_boot()`, which has no boot-time caller. What is NOT ruled
+   out is the write itself, and a single half that did not reproduce it does not make
+   this fresh-board-only — there is a field report of a brick too. No release
+   publishes these files while that stands.
+
+⚠️ **Two single-block UF2s in ONE BOOTSEL session: the second is silently dropped.**
+`vd_reset()` clears the bootrom's transfer state only on a USB reset, and its
+written-blocks bitmap is re-cleared only when an arriving block's `num_blocks` differs
+from the current transfer. Every stamp file has `num_blocks=1`, so a second one is
+discarded as a duplicate, writes nothing, and does not even reboot. Power-cycle between
+drags, or put a multi-block firmware `.uf2` in between.
 
 Build them yourself — the release just runs this:
 

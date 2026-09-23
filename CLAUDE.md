@@ -160,12 +160,17 @@ Nine rules bind work outside that file:
   leaves exactly one record at page 0 — so the fixed UF2 DOES apply and the half DOES
   boot. Generalises past handedness: **an experiment whose result is "the board came
   up" proves nothing unless the artifact identifies itself.**
-- ⚠️ **The stamp UF2 has bricked boards and it is NOT understood.** The fixed file
-  completes its write (the drive unmounts, so `safe_reboot()` ran) and the half then
-  does not boot for minutes, with the bootrom's drive back on every power cycle until
-  a firmware `.uf2` is re-flashed. One provisioned half did NOT reproduce it, and a
-  field report did — so "only fresh boards" is an inference from a single negative,
-  not a finding; do not repeat it. Ruled out by measurement, not argument: the record's content and the
+- ⚠️ **One unreproduced brick remains, and the confounders matter more than the
+  event.** With the `payloadSize` fix a fresh half completed its write (the drive
+  unmounted, so `safe_reboot()` ran) and then did not boot for minutes, recovering
+  only on a firmware `.uf2`. It has not recurred: a provisioned half takes the same
+  file and boots. Weigh it against two confounders discovered afterwards, both of
+  which make that session's readings unreliable — a second single-block UF2 in one
+  BOOTSEL session is silently dropped (below), and the old banner could not tell an
+  applied record from a pre-existing one. The **field report is NOT a second data
+  point**: it used a released `payloadSize=12` file, which never writes at all, so a
+  half left in BOOTSEL with the drive mounted — no RGB, no displays, no console —
+  is exactly what it should look like. Do not cite it as a brick. Ruled out by measurement, not argument: the record's content and the
   side change (`-e POLYKYBD_FORCE_HAND=left|right` writes the identical record through
   `stamp_write()` and boots), a stale `.ram0.bootloader_magic` double-tap flag (30 s
   unpowered still lands in BOOTSEL), an invalid boot2 (a firmware `.uf2` recovers it),

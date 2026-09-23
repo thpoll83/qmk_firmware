@@ -102,10 +102,12 @@ v0.25.0 and v0.27.1 should be deleted. Two separate faults:
    sector* through `stamp_write()` also boots. So neither the record's content, nor
    the side change, nor anything in handedness resolution is the cause. Ruled out the
    same way: a stale `.ram0.bootloader_magic` double-tap flag, an invalid boot2, and
-   any software `reset_usb_boot()`, which has no boot-time caller. What is NOT ruled
-   out is the write itself, and a single half that did not reproduce it does not make
-   this fresh-board-only — there is a field report of a brick too. No release
-   publishes these files while that stands.
+   any software `reset_usb_boot()`, which has no boot-time caller. What remains is a
+   single unreproduced event, from a session with two confounders found later: a
+   second single-block UF2 in one BOOTSEL session is silently dropped (below), and the
+   banner then could not tell an applied record from a pre-existing one. The original
+   field report is not a second data point — it used a `payloadSize=12` release file,
+   which writes nothing, so a half left in BOOTSEL is precisely the expected result.
 
 ⚠️ **Two single-block UF2s in ONE BOOTSEL session: the second is silently dropped.**
 `vd_reset()` clears the bootrom's transfer state only on a USB reset, and its

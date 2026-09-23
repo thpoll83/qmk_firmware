@@ -23,9 +23,20 @@ produced a genuinely valuable one. Both halves of that matter.
 ## 1. Fetch what's there
 
 ```
-mcp__github__pull_request_read  method=get_comments  owner=thpoll83 repo=<repo> pullNumber=<n>
-mcp__github__pull_request_read  method=get_reviews   owner=thpoll83 repo=<repo> pullNumber=<n>
+mcp__github__pull_request_read  method=get_comments    owner=thpoll83 repo=<repo> pullNumber=<n>
+mcp__github__pull_request_read  method=get_reviews     owner=thpoll83 repo=<repo> pullNumber=<n>
+mcp__github__pull_request_read  method=get_check_runs  owner=thpoll83 repo=<repo> pullNumber=<n>
 ```
+
+⚠️ **Fetch all three — the third one is not for CI.** A check run can never tell you
+a review HAPPENED (§2 collects the ways a green tick sits on a head nothing read), but
+when `get_reviews` comes back empty it is the only place the REASON is written down:
+a Sourcery row at `conclusion: skipped` carries the refusal in `output.summary`, and
+the PR-level list does not include that field — read it with
+`mcp__github__get_check_run  owner=thpoll83 repo=<repo> checkRunId=<id>`. **Open every
+`skipped` row from a bot**, rather than reading it as "nothing new to say"; on
+host#257 three of them were the whole of Sourcery's answer to the commits carrying
+every fix in the PR.
 
 ⚠️ **`get_comments` routinely exceeds the tool's token limit** (51k characters on a
 medium PR — the bots' walkthroughs are enormous). It then saves to a file and tells
@@ -53,14 +64,19 @@ Check each:
 | Bot | Reviewed | Didn't review — tells |
 |---|---|---|
 | **CodeRabbit** | body contains **`Actionable comments posted: N`** | `> [!WARNING] Review limit reached … next review in N minutes`; a "Reviews paused … under active development" note (auto-pause) |
-| **Sourcery** | a review with per-comment findings ("Hey - I've found N issues") | its **review object's body is the rate-limit notice** (`you have reached your weekly rate limit of 500000 diff characters`) while its *Reviewer's Guide comment still renders in full* and looks like a review |
+| **Sourcery** | a review with per-comment findings ("Hey - I've found N issues") | its **review object's body is the rate-limit notice** (`you have reached your weekly rate limit of 500000 diff characters`) while its *Reviewer's Guide comment still renders in full* and looks like a review; or **no review object at all**, with the refusal only in the `Sourcery review` check run's `output.summary` at `conclusion: skipped` |
 | **Qodo** | a comment headed **`Code Review by Qodo`** with a bug count | only `PR Summary by Qodo` — that is a description, never a review |
 | **Greptile** | a review object with findings | **announces a skip NOWHERE** — silence is indistinguishable from "no findings". Its `Greptile Review` **check run is anti-correlated with reality** (measured: a green one over no review at all), so it proves nothing. Account-wide refusals arrive as a review whose body is *"reached the 50-credit limit for trial accounts"* |
 | **CodeQL** (host) | inline comments from **`github-advanced-security[bot]`** + a review object | judge the **`Analyze Python` job**, not the `CodeQL` check run. Absent on a PR that changed no analysed code |
 
 The findings live in **`get_reviews`**, not only in `get_comments` — CodeRabbit's
 actionable list is the review body, and Sourcery's rate-limit notice arrives as a
-review too. Always pull both.
+review too. Always pull both. ⚠️ **And when a bot's row in the table above comes
+back EMPTY, go on to its `skipped` check run** (`get_check_runs`, then
+`get_check_run` for the summary): for Sourcery that row is sometimes the only
+statement it made, and reading the empty `get_reviews` as the whole answer is how
+three commits on host#257 were recorded as reviewed by a bot that had read none of
+them.
 
 ### 2b. A review only counts for the commit it READ — check the sha
 
@@ -305,7 +321,13 @@ you act on it — that is the standing check the CLAUDE.md rules still carry.
     least renders a `> [!WARNING] Review limit reached` banner. Both were
     simultaneously unavailable on #203 (2026-08-12), leaving a fully green board
     that **no reviewer had read**. To tell them apart, read the review *body* via
-    `pull_request_read` `get_reviews` — do not infer from the check conclusion.
+    `pull_request_read` `get_reviews` — a `success` conclusion distinguishes
+    nothing, so never read one as a review. ⚠️ **The inverse does not follow: a
+    `skipped` Sourcery row is worth opening**, because when there is no review
+    object at all it holds the refusal in `output.summary` — step 1 above, and the
+    Sourcery-refusal note under *From `PolyKybdHost/CLAUDE.md`*.
+    The rule is *a check conclusion never establishes that a review happened*, not
+    *check runs are never worth fetching*.
     (The sibling rule "a bot comment is not a review" is in `PolyKybdHost/CLAUDE.md`;
     this is the same failure with a green check instead of a long comment.)
     - ⚠️ **A THIRD shape, and the quietest yet: `Sourcery review` = `success`
@@ -795,8 +817,18 @@ you act on it — that is the standing check the CLAUDE.md rules still carry.
     `get_reviews`, `get_check_runs`, and the timestamps, every time.**
 
 - ⚠️ **Sourcery refuses in TWO different ways, and only one of them is the weekly
-  budget.** Both arrive as a `COMMENTED` review whose entire body is the notice, so
-  the tell is the body text, not the presence of a review:
+  budget.** Both usually arrive as a `COMMENTED` review whose entire body is the
+  notice, so the tell is the body text, not the presence of a review — but ⚠️ **the
+  budget refusal does not ALWAYS post a review, and then `get_reviews` shows a clean
+  absence.** On host#257 (2026-09-22) the last three commits got only a check run,
+  `conclusion: skipped` / title `⏭️ Skipped`, with no review object at all; on
+  host#258 the next morning the same budget produced both a review and a skipped
+  check. So the surface varies, and on the check-run-only shape the reason lives in
+  `output.summary`, which the PR-level check list does not carry — it needs
+  `get_check_run` with that run's id. **Open a `skipped` Sourcery row rather than
+  reading it as "nothing new to say"**: those three #257 rows were read that way,
+  and the commits they covered — which carried every fix in the PR — turned out to
+  have had no Sourcery review at all.
   - **Budget** — *"you've used your own review budget of 250,000 diff characters
     for the last 7 days ... You can request another review in 1 day and 16 hours by
     commenting `@sourcery-ai review`"*. ⚠️ Note the FIGURE MOVES — 250,000 here,
@@ -806,8 +838,10 @@ you act on it — that is the standing check the CLAUDE.md rules still carry.
     back then" — do not plan around it.** Measured across the four PRs of
     2026-08-30, four refusals issued **within 61 seconds of each other** quoted
     four different waits — 4 days, 1 day 3 hours, 1 day 3 hours, 19 hours 41
-    minutes — so it is computed per PR, not from one global clock. And one of them
-    was superseded almost immediately: qmk#255 was told *"1 day and 3 hours"* at
+    minutes — so it is not one global clock. ⚠️ **Nor is it stable per PR:** host#258
+    was told *"5 days and 4 hours"* at 05:14 on 2026-09-23 and *"7 minutes"* at
+    05:31 the same morning, same PR, same budget. Read the number as noise. And one
+    of them was superseded almost immediately: qmk#255 was told *"1 day and 3 hours"* at
     08:58:18 and Sourcery submitted a real **`APPROVED`** review on its next
     commit at **09:02:21, three minutes later**. The other three pushed follow-up
     commits too and got nothing, so this is neither reliable nor universal —

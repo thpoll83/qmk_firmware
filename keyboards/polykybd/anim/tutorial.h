@@ -81,20 +81,9 @@ void tutorial_skip(void);
 // [5] how far the MASTER's ripple has already run (tut_elapsed_encode) — see the
 // cross-half ripple clock in base/tutorial_plan.h.
 #define TUTORIAL_SYNC_BYTES 6
-// tut[0] is a BITFIELD, not a bool. ARMED is the half of it that makes the slave
-// behave like Eden: it says "the first-run experience is running, start the tutorial
-// when the intro ends" and is carried for the whole of Eden, so the slave gets a
-// LOCAL trigger instead of depending on one 0->1 edge landing. See the note on
-// tutorial_sync_apply() in tutorial.c.
-#define TUT_SYNC_ACTIVE 0x01u   // the tutorial itself is running
-#define TUT_SYNC_ARMED  0x02u   // armed: start it when the intro finishes
-// ⚠️ The STEP rides in tut[0]'s spare bits, and leaving it out was a real bug: the
-// slave's step stayed 0 for the whole of chapter 1, so its status panel said "lit key"
-// under the master's "And now" and "One more" — two of the three letters showed a
-// sentence whose halves disagreed. The six bytes were full, the two flags use two bits,
-// and TUT_LETTERS is 3, so it fits here rather than costing poly_sync_t a byte.
-#define TUT_SYNC_STEP_SHIFT 2u
-#define TUT_SYNC_STEP_MASK  0x0Cu
+// tut[0]'s flag byte — TUT_SYNC_ACTIVE / TUT_SYNC_ARMED / the STEP field, and the
+// tut_sync_word_stops() classifier — live in base/tutorial_plan.h, where the unit
+// suite can reach them. See the note on tutorial_sync_apply() in tutorial.c.
 // Kept in step with poly_sync_t.tut[] by a static_assert in state.h.
 void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]);
 // Returns true when anything changed (the caller repaints).

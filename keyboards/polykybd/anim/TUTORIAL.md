@@ -1476,3 +1476,42 @@ a second include is a link error on `IconsBitmaps`/`IconsGlyphs`/`HelperGlyphs`.
 Verified by rendering rather than by reading: a model of `oled_tutorial_screen()` driven
 by `tools/status_oled_preview.py`'s own font parser, over all five screens, **0 pixels
 outside the 128×64 panel**.
+
+## Round 20 — the review round, and two rules this repo had already written down
+
+CodeRabbit's first real pass on PR #306 raised ten findings. Eight were real; the two
+worth generalising had both been **documented in this repo before the PR was written**,
+which is the part that matters.
+
+- **The layer-key marks shadowed `¡` on every Spanish layout.** They were appended to
+  `IconsFont` at `0xA0`/`0xA1`, and `IconsFont` is `g_all_fonts[0]` — first match wins,
+  so `INVERTED_EMARK` (U+00A1, used by ~20 `es-*` layouts) resolved to a lightning bolt.
+  `FONT_PACK.md` already carried the trap *and* the reason the C1 band stops at `0x9F`,
+  and `tools/check_icon_slots.py` already existed to answer "is this slot free?".
+  **The gate printed the caution and exited 0**, so running it proved nothing. It
+  enforces now, and the two marks live on the shoulders `0x7F`/`0xA0` — measured to be
+  covered by no other font and used in no legend.
+  ⚠️ **Generalise: a caution a tool prints and then exits 0 on is documentation, not a
+  gate.** It is weaker than a comment, because running it feels like having checked.
+- **Two hand-written `#define`s were added INSIDE the cog-generated block** of
+  `named_glyphs.h`, where the next `cog -r` deletes them and every consumer of
+  `keycode_helper.h` stops compiling. `FONT_PACK.md` describes this exact failure for
+  `ICON_BACKSPACE`, and the file has a hand-written tail for precisely this. Moved there.
+
+The tutorial's own bug was quieter: **`ARMED` without `ACTIVE` was read as "stop".**
+The master holds `TUT_SYNC_ARMED` for the whole of its Eden and pushes it every pass, so
+a half whose Eden finished first receives those packets *while running the tutorial* —
+and tore itself down, stamping the boot-intro marker, losing its first-run tutorial for
+good. The two animations run on independent clocks, so either order happens.
+`tut_sync_word_stops()` (`base/tutorial_plan.h`) is the one place that decides now, and
+it is unit-tested — the three `TutorialSyncWord` cases fail against the old semantics.
+The word is also **retired** (zeroed) at teardown, so a later Eden replay cannot find a
+stale `ACTIVE`/`ARMED` level and re-trigger a tutorial on the slave alone.
+
+Three smaller ones, each a one-liner with a real consequence: the confirm prompt now sits
+**above** the tutorial swallow (both are "the board IS the dialog" modes, and with the
+tutorial first the FW-2 / DOOM `ACCEPT`/`REJECT` keys were eaten while the prompt was on
+screen — a dialog nobody could answer); the focus ring marks a key on the **ink**, not on
+the call, so a full refresh mid-ripple no longer owes a restore repaint on every key it
+touched; and the status OLED is handed back at the **live** contrast rather than the
+compile-time `OLED_BRIGHTNESS`.

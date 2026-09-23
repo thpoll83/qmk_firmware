@@ -1005,4 +1005,39 @@ TEST(TutorialChoose, EmptyPoolIsSafe) {
     EXPECT_EQ(out[0], TUT_SLOT_NONE);
 }
 
+// ---- the split sync word's flag byte --------------------------------------
+//
+// The ARMED-without-ACTIVE case is the whole reason this classifier exists: the
+// master carries ARMED for the entire length of its own Eden and pushes it every
+// pass, so a half whose Eden finished first receives those packets WHILE running
+// the tutorial. Reading one as a stop tore that half down and stamped the
+// boot-intro marker, so its first-run tutorial was lost for good.
+
+TEST(TutorialSyncWord, ActiveNeverStops) {
+    EXPECT_FALSE(tut_sync_word_stops(TUT_SYNC_ACTIVE));
+    EXPECT_FALSE(tut_sync_word_stops(TUT_SYNC_ACTIVE | TUT_SYNC_ARMED));
+    // The step rides in the same byte and must not change the verdict.
+    for (uint8_t step = 0; step < 4; ++step) {
+        const uint8_t w = (uint8_t)(TUT_SYNC_ACTIVE | (step << TUT_SYNC_STEP_SHIFT));
+        EXPECT_FALSE(tut_sync_word_stops(w)) << "step " << (int)step;
+    }
+}
+
+TEST(TutorialSyncWord, ArmedWithoutActiveIsNotYetStartedNotStop) {
+    EXPECT_FALSE(tut_sync_word_stops(TUT_SYNC_ARMED));
+    for (uint8_t step = 0; step < 4; ++step) {
+        const uint8_t w = (uint8_t)(TUT_SYNC_ARMED | (step << TUT_SYNC_STEP_SHIFT));
+        EXPECT_FALSE(tut_sync_word_stops(w)) << "step " << (int)step;
+    }
+}
+
+TEST(TutorialSyncWord, NeitherFlagStops) {
+    EXPECT_TRUE(tut_sync_word_stops(0));
+    // The retired word the master writes at teardown is all-zero, and a stray step
+    // left in it must still read as a stop.
+    for (uint8_t step = 0; step < 4; ++step) {
+        EXPECT_TRUE(tut_sync_word_stops((uint8_t)(step << TUT_SYNC_STEP_SHIFT)));
+    }
+}
+
 }  // namespace

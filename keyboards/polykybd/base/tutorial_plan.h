@@ -153,6 +153,33 @@ typedef enum {
 // a lit set of exactly one key. The predicate is kept rather than deleted because it is
 // the seam: if a future chapter ever genuinely needs the panels to itself, it says so
 // here and the housekeeping branch is still wired for it.
+// ---- the split sync word's flag byte (tut[0]) -----------------------------
+// tut[0] is a BITFIELD, not a bool. ARMED is the half of it that makes the slave
+// behave like Eden: it says "the first-run experience is running, start the tutorial
+// when the intro ends" and is carried for the whole of Eden, so the slave gets a
+// LOCAL trigger instead of depending on one 0->1 edge landing.
+#define TUT_SYNC_ACTIVE 0x01u   // the tutorial itself is running
+#define TUT_SYNC_ARMED  0x02u   // armed: start it when the intro finishes
+// ⚠️ The STEP rides in tut[0]'s spare bits, and leaving it out was a real bug: the
+// slave's step stayed 0 for the whole of chapter 1, so its status panel said "lit key"
+// under the master's "And now" and "One more" — two of the three letters showed a
+// sentence whose halves disagreed. The six bytes were full, the two flags use two bits,
+// and TUT_LETTERS is 3, so it fits here rather than costing poly_sync_t a byte.
+#define TUT_SYNC_STEP_SHIFT 2u
+#define TUT_SYNC_STEP_MASK  0x0Cu
+
+// Does this flag byte tell a half that is ALREADY running the tutorial to stop?
+//
+// ⚠️ ARMED WITHOUT ACTIVE IS "NOT STARTED YET", NEVER "STOP" — the one case that is
+// not simply !ACTIVE. The master holds ARMED for the whole of its own Eden and pushes
+// it every pass, so a half whose Eden finished first is running the tutorial while
+// those packets are still arriving. Reading one as a stop tore that half down and
+// stamped the boot-intro marker, losing its first-run tutorial permanently.
+static inline bool tut_sync_word_stops(uint8_t w0) {
+    if ((w0 & TUT_SYNC_ACTIVE) != 0u) return false;
+    return (w0 & TUT_SYNC_ARMED) == 0u;
+}
+
 static inline bool tut_phase_is_exclusive(uint8_t p) {
     (void)p;
     return false;

@@ -366,6 +366,10 @@ bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
     // set for the whole of the Eden intro — a bare non-zero test would start the
     // tutorial on top of the animation.
     const bool want_active = (in[0] & TUT_SYNC_ACTIVE) != 0u;
+    // ⚠️ Not `!want_active` — an ARMED-without-ACTIVE packet means the master has not
+    // started yet, not stop. tut_sync_word_stops() is the one place that decides, and
+    // carries the post-mortem (base/tutorial_plan.h).
+    if (!want_active && !tut_sync_word_stops(in[0])) return false;
     if (!want_active) {
         // ⚠️ Do NOT tutorial_stop() here. That clears s_active, so tutorial_finished()
         // goes false and the slave's own housekeeping teardown — the restore trio that

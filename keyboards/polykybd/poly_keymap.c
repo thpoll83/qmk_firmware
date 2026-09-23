@@ -632,7 +632,24 @@ static void poly_tutorial_finish_if_done(void) {
             // can trigger a wear-levelling consolidation — ~50-100 ms with
             // interrupts off — and that must not land between the SPI writes that
             // are handing the displays back.
+            // ⚠️ EEPROM writes run with the QSPI out of XIP; halt core1 across it.
+            // The overlay decompressor is free to be anywhere in flash, and the
+            // refresh just requested above is exactly what puts it there. Same
+            // lockout the fw-apply flush takes, and for the same hazard.
+            fw_staging_core1_lockout_begin();
             mark_boot_intro_done();
+            fw_staging_core1_lockout_end();
+            // ⚠️ RETIRE the sync word. tut[0] keeps whatever the last push wrote —
+            // ACTIVE, and the ARMED level from the Eden that handed over — and both
+            // are LEVELS the slave acts on. Left set, the next Eden replay (KC_EDEN
+            // or the HID command) would re-arm and then re-start a tutorial on the
+            // slave with no master running one. The ordinary state diff carries the
+            // cleared word; the slave has already torn down off the TUT_DONE phase
+            // in the final push, and reads a zeroed word as "nothing to do".
+            if (is_usb_host_side()) {
+                poly_sync_t *ls = access_local_state();
+                for (uint8_t i = 0; i < TUTORIAL_SYNC_BYTES; ++i) ls->tut[i] = 0;
+            }
             uprintf("Tutorial %s; displays handed back\n", was_skipped ? "skipped" : "done");
         }
 }
@@ -1103,8 +1120,9 @@ static void arm_tutorial_after_intro(void) {
     s_tutorial_armed = true;
     s_tut_skip_since = 0;
     // Level, not edge: the bit rides every sync for the whole of Eden (seconds), so it
-    // has many chances to land rather than one. Cleared by tutorial_start()'s first
-    // tutorial_sync_fill(), which owns tut[0] from then on.
+    // has many chances to land rather than one. ⚠️ tutorial_sync_fill() PRESERVES it
+    // (the two writers of tut[0] must not fight), so it is retired with the rest of
+    // the word at the teardown in poly_tutorial_finish_if_done() — not by the start.
     access_local_state()->tut[0] |= TUT_SYNC_ARMED;
 }
 
@@ -1483,7 +1501,11 @@ void housekeeping_task_user(void) {
                     // tutorial_start() -> tutorial_enter_base_layout(), so both halves
                     // do it rather than only the one that owns this arm site.
                     tutorial_start(timer_read32());
-                    if (!tutorial_active()) mark_boot_intro_done();   // nothing to teach
+                    if (!tutorial_active()) {                        // nothing to teach
+                        fw_staging_core1_lockout_begin();            // see the teardown
+                        mark_boot_intro_done();
+                        fw_staging_core1_lockout_end();
+                    }
                 }
                 // Eden ran at full brightness; restore the user's normal
                 // brightness behaviour now that it has faded to black, then
@@ -4958,6 +4980,37 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         return false;
     }
 
+    // ⚠️ ORDER: the confirm prompt outranks the tutorial. Both are "the board IS the
+    // dialog" modes and both swallow every key, so whichever runs first wins — and
+    // with the tutorial first its swallow ate the ACCEPT / REJECT presses while the
+    // prompt was rendered on the keycaps and the status panel, leaving a dialog
+    // nobody could answer. The prompt is the one that must never be unanswerable.
+    // FW-2: while the unsigned-image prompt is up the whole board IS the dialog —
+    // every key event is swallowed (nothing should reach the host mid-decision)
+    // and only the two prompt keys mean anything. Only the master runs
+    // process_record — the slave's matrix is pulled over the split link — so a
+    // press on EITHER half arrives here, and the matrix row is what says which.
+    if (fw_staging_awaiting_confirm() || doom_pack_confirm_pending()) {
+        // Answer on the RELEASE, not the press. split72.c's matrix_scan_kb inverts a
+        // keycap on press and un-inverts it on release, entirely independently of
+        // process_record — so acting on the press tears the prompt down and redraws
+        // the normal legend while that keycap is still inverted, and it stays
+        // inverted until the finger lifts.
+        if (!record->event.pressed && record->event.key.col == FW_CONFIRM_COL) {
+            // Route to whichever dialog is up. Both answer functions ignore a
+            // call while they are not pending, so the pair is safe even in the
+            // window where one has just resolved.
+            if (record->event.key.row == FW_CONFIRM_ROW) {
+                fw_staging_confirm_answer(true);    // left half  -> A / ACCEPT
+                doom_pack_confirm_answer(true);
+            } else if (record->event.key.row == FW_CONFIRM_ROW + MATRIX_ROWS_PER_SIDE) {
+                fw_staging_confirm_answer(false);   // right half -> R / REJECT
+                doom_pack_confirm_answer(false);
+            }
+        }
+        return false;
+    }
+
     // The first-run tutorial IS the board while it runs: every key event is swallowed
     // (nothing should reach the host mid-lesson) and consumed here instead. Swallowed
     // in process_record_user rather than on the release edge — an OSL layer
@@ -5004,32 +5057,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             }
         } else if (tutorial_is_skip_key(row, col)) {
             s_tut_skip_since = 0;   // released early — the hold has to be continuous
-        }
-        return false;
-    }
-
-    // FW-2: while the unsigned-image prompt is up the whole board IS the dialog —
-    // every key event is swallowed (nothing should reach the host mid-decision)
-    // and only the two prompt keys mean anything. Only the master runs
-    // process_record — the slave's matrix is pulled over the split link — so a
-    // press on EITHER half arrives here, and the matrix row is what says which.
-    if (fw_staging_awaiting_confirm() || doom_pack_confirm_pending()) {
-        // Answer on the RELEASE, not the press. split72.c's matrix_scan_kb inverts a
-        // keycap on press and un-inverts it on release, entirely independently of
-        // process_record — so acting on the press tears the prompt down and redraws
-        // the normal legend while that keycap is still inverted, and it stays
-        // inverted until the finger lifts.
-        if (!record->event.pressed && record->event.key.col == FW_CONFIRM_COL) {
-            // Route to whichever dialog is up. Both answer functions ignore a
-            // call while they are not pending, so the pair is safe even in the
-            // window where one has just resolved.
-            if (record->event.key.row == FW_CONFIRM_ROW) {
-                fw_staging_confirm_answer(true);    // left half  -> A / ACCEPT
-                doom_pack_confirm_answer(true);
-            } else if (record->event.key.row == FW_CONFIRM_ROW + MATRIX_ROWS_PER_SIDE) {
-                fw_staging_confirm_answer(false);   // right half -> R / REJECT
-                doom_pack_confirm_answer(false);
-            }
         }
         return false;
     }

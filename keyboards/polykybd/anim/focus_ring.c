@@ -86,7 +86,11 @@ void poly_focus_overlay(uint8_t disp_idx, const sa_geom_t *g) {
     // That is the "parts of the ring not being removed on the slave" report: the slave
     // takes more full refreshes (every layer/state sync), so it collected more of them.
     // Whoever draws the ink owns saying so.
-    if (disp_idx < POLY_FOCUS_KEYS) bit_set(s_marked, disp_idx, true);
+    // ⚠️ …but mark it on the INK, not on the call. The band is culled by a keycap
+    // half-diagonal, and update_displays() calls this for every key it repaints, so
+    // most calls write no pixel at all — marking those owed each of them a restore
+    // repaint the next frame, i.e. a whole-half repaint pass for nothing.
+    bool inked = false;
     uint8_t *buf = get_scratch_buffer();
     for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly) {
         const int16_t dy = (int16_t)(ly - 20);
@@ -107,8 +111,10 @@ void poly_focus_overlay(uint8_t disp_idx, const sa_geom_t *g) {
             if (s_dens <= tut_dither(gx, gy)) continue;
             buf[(size_t)(ly >> 3) * POLY_FOCUS_STRIDE + (BUFFER_X + lx)] |=
                 (uint8_t)(1u << (ly & 7));
+            inked = true;
         }
     }
+    if (disp_idx < POLY_FOCUS_KEYS) bit_set(s_marked, disp_idx, inked);
 }
 
 // Repaint one key: its ordinary legend, plus the arc when the band is over it.

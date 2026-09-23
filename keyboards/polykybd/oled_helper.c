@@ -11,6 +11,7 @@
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/fw_staging.h"
+#include "base/status_brightness.h"   // poly_status_brightness() — the live panel level
 #include "poly_keymap.h"         // poly_fw_screen() / poly_fw_hold_active()
 #include "poly_macro.h"          // POLY_MACRO_COUNT
 #include "poly_macro_record.h"   // enum poly_rec_state + the recording read-outs
@@ -876,7 +877,13 @@ bool oled_task_user(void) {
     // oled_set_brightness every tick would be pointless I2C traffic).
     if (tutorial_active() != s_tut_oled_raised) {
         s_tut_oled_raised = tutorial_active();
-        oled_set_brightness(s_tut_oled_raised ? 255 : OLED_BRIGHTNESS);
+        // ⚠️ Restore to the LIVE level, not the compile-time OLED_BRIGHTNESS. The
+        // status panel tracks the synced contrast (status_oled_level() in
+        // poly_keymap.c is the same expression), so handing back the constant made
+        // the tutorial's exit undo whatever brightness the user had set.
+        oled_set_brightness(s_tut_oled_raised
+                                ? 255
+                                : poly_status_brightness(get_local_state()->contrast));
     }
 
     // A firmware episode owns the panel outright: ONE selector decides which screen,

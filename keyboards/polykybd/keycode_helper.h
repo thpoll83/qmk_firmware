@@ -42,7 +42,9 @@
 // than the icon reads as a mistake rather than as a style — the text face's '!' is h=20
 // against the icon's h=16.
 //
-// ⚠️ They are RESIDENT (IconsFont, 0xA0/0xA1), not pack glyphs. U+26A1 ⚡ does exist in
+// ⚠️ They are RESIDENT (IconsFont, 0x7F/0xA0 — the two SHOULDERS of the C1 block, which
+// was already full; 0xA1 is ¡ and shadowing it broke the es-* layouts, see FONT_PACK.md
+// and tools/check_icon_slots.py), not pack glyphs. U+26A1 ⚡ does exist in
 // the symbol bundle at h=29 — half-size would land near 15, close enough — but a core
 // layer key must not go blank on a keyboard whose font pack was never flashed. Adding
 // them to IconsFont is also the sanctioned way to add a resident glyph: a whole new

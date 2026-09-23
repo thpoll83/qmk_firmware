@@ -181,7 +181,7 @@ at all.
 the left half and one column out on the right. Both loops did exactly that.
 
 **`key_display_index(r, c)`** (per variant, `split72.c` / `split42.c`) is the one fold;
-`invert_display()` and `tutorial_slot_of()` both go through it rather than carrying a
+`invert_display()` goes through it rather than carrying a
 copy. It returns `255` for a matrix position with no panel of its own.
 
 - **What it cost.** For as long as the dirty-window feature has existed, every right-half

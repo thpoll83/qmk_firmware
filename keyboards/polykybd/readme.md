@@ -115,10 +115,21 @@ both halves, then in PolyKybdHost's tray menu:
 > **Maintenance → Fix Left/Right Side → "Connected half is LEFT (other is RIGHT)"**
 > (or RIGHT)
 
-The assignment is relative to the half holding the USB cable, because a HID command only
-ever reaches the master. That sends HID cmd 25: the master stamps its own side, pushes
-the complement to the slave over the split link, and both halves reboot onto it — about
-10 s, no replug, no BOOTSEL.
+or, from a terminal — the same thing, and the only route on a headless daemon where
+there is no tray to click (**PolyKybdHost 1.0.4+**):
+
+```bash
+polyctl handedness left        # or right
+```
+
+Either way the side you name is the **connected** half, because a HID command only ever
+reaches the one holding the USB cable. That sends HID cmd 25: the master stamps its own
+side, pushes the complement to the slave over the split link, and both halves reboot
+onto it — about 10 s, no replug, no BOOTSEL.
+
+⚠️ The keyboard resets right after receiving cmd 25 and sends no reliable reply, so
+neither route can tell you it *applied* — only that it was sent. Confirm from the boot
+banner below.
 
 This is the route to reach for when a half is simply on the wrong side. It needs the
 split cable in place, since the slave is set over it.

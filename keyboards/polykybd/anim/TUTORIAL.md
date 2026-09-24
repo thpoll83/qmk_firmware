@@ -1651,3 +1651,27 @@ screen to be read.
   reset, with no Eden and no marker check. It starts outside the pre-watchdog window on
   purpose, so a test build does not exercise the boot path `POLYKYBD_BOOT_INTRO` is gated
   for.
+
+## Round 23 — the slave that sat out, and the reveal's sparks (2026-09-24)
+
+- ⚠️ **A zero sync word STOPPED a slave that started first.** The test build started
+  the tutorial on each half's own timer. The master's `tut[0]` stayed zero until its
+  first tutorial push, and `tut[]` rides every `poly_sync_t` send, so an ordinary state
+  sync in that window (a host language or brightness change at connect) was read by the
+  already-running slave as "stop": it tore its lesson down and showed normal legends
+  ("the slave stayed at the default layer", hardware, intermittent).
+  Two fixes. The master now writes `TUT_SYNC_ACTIVE` into `tut[0]` on every pass while a
+  lesson runs (`poly_tutorial_publish_active()`), and right at the Eden hand-off, so no
+  send can carry a zero word mid-lesson. Only the flag byte: the rest of the word changes
+  per pass during a wave, and writing it every pass would make every pass a state diff and
+  a full repaint. And the test build no longer starts the tutorial on a timer at all.
+- **`POLYKYBD_TUTORIAL_TEST` now plays Eden, then the tutorial, on every reset** — the
+  real first-run path with the marker ignored. That path never had the race, because
+  `TUT_SYNC_ARMED` is set in post_init before the first sync. It also means every test
+  boot exercises the pre-watchdog start `POLYKYBD_BOOT_INTRO` is gated for.
+- **The reveal front is wider (20 → 44 units) and leaves a spark trail.** Behind the
+  front, 2x2-px sparks light at up to ~5 % of cells, thinning to none ~220 units back,
+  and re-roll every 90 ms so they twinkle and die out. The cull band covers the trail,
+  since a trail key the ring does not repaint would neither show nor clear its sparks.
+  ⚠️ The trail roughly triples the keys repainted per frame; if the front stutters on
+  hardware, shorten `POLY_FOCUS_TRAIL` first.

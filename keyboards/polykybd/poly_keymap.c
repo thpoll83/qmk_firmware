@@ -538,13 +538,6 @@ static uint8_t g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;
 static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
 // Chapter 3's language/script preview; defined beside the tutorial's keymap helpers.
 static uint8_t poly_tutorial_apply_preview(void);
-#ifdef POLYKYBD_TUTORIAL_TEST
-// Armed in keyboard_post_init_user(), drained on the first housekeeping pass after the
-// board has settled. Both halves start their own, exactly as the Eden hand-off does on a
-// cold boot; the master picks the letters and the slave follows the synced phase.
-static bool s_tut_test_pending = false;
-#define TUT_TEST_START_MS 1500u
-#endif
 // The user's own default LAYOUT, parked while the tutorial runs. 0xFF = nothing parked.
 // ⚠️ This is poly's def_layer (a layer INDEX _L0.._L4, the Qwerty/Colemak/Neo choice),
 // NOT the momentary layer stack — layer_clear() does not touch it, which is why the
@@ -593,7 +586,21 @@ static void poly_tutorial_skip_if_held(void) {
     }
 }
 
+// ⚠️ The master's tut[0] must say ACTIVE for as long as a lesson runs, not only from the
+// first successful tutorial push. tut[] rides EVERY poly_sync_t send, and a zero word is
+// "stop" to a slave already in the tutorial (tut_sync_word_stops). Before this, any
+// ordinary state sync the master sent between starting and its first push — a host
+// language or brightness change at connect — could end the slave's lesson. Only the
+// flag byte is written here: the rest of the word changes per pass during a wave, and
+// writing it every pass would make every pass a state diff and a full repaint.
+static void poly_tutorial_publish_active(void) {
+    if (is_usb_host_side() && tutorial_active()) {
+        access_local_state()->tut[0] |= TUT_SYNC_ACTIVE;
+    }
+}
+
 static void poly_tutorial_push_sync(void) {
+    poly_tutorial_publish_active();
     poly_tutorial_skip_if_held();
         // Push the step/ripple to the slave: it draws the keys that land on its own
         // half. Gated on the transport being up (non-blocking) for the same reason
@@ -1521,6 +1528,7 @@ void housekeeping_task_user(void) {
                     // tutorial_start() -> tutorial_enter_base_layout(), so both halves
                     // do it rather than only the one that owns this arm site.
                     tutorial_start(timer_read32());
+                    poly_tutorial_publish_active();
                     if (!tutorial_active()) {                        // nothing to teach
                         fw_staging_core1_lockout_begin();            // see the teardown
                         mark_boot_intro_done();
@@ -1561,12 +1569,6 @@ void housekeeping_task_user(void) {
             // INTRO mode rides the normal path: the board renders itself, and the
             // tutorial only advances its own phase machine and keeps the other half in
             // step. tutorial_tick() does NOT touch a panel outside chapter 1.
-#ifdef POLYKYBD_TUTORIAL_TEST
-            if (s_tut_test_pending && timer_read32() >= TUT_TEST_START_MS) {
-                s_tut_test_pending = false;
-                tutorial_start(timer_read32());
-            }
-#endif
             if (tutorial_active()) {
                 tutorial_tick();
                 if (s_tut_skip_since != 0 &&
@@ -6362,13 +6364,21 @@ void keyboard_post_init_user(void) {
     // Everything the feature needs stays compiled and reachable: KC_EDEN, HID cmd 28
     // and poly_arm_tutorial_after_intro() all still work, so the tutorial can be driven
     // by hand for testing without this define.
-#if defined(POLYKYBD_TUTORIAL_TEST)
-    // Test build: the tutorial on every reset, from housekeeping (see
-    // s_tut_test_pending) — never from here, which is the pre-watchdog boot window.
-    s_tut_test_pending = true;
-    uprintf("Tutorial TEST build: starting the tutorial on every reset\n");
-#elif defined(POLYKYBD_BOOT_INTRO)
-    if (boot_intro_pending()) {
+#if defined(POLYKYBD_BOOT_INTRO) || defined(POLYKYBD_TUTORIAL_TEST)
+#    ifdef POLYKYBD_TUTORIAL_TEST
+    // Test build: the REAL first-run path — Eden, then the tutorial — on every reset,
+    // with the marker ignored. ⚠️ It used to start the tutorial directly from
+    // housekeeping on each half's own timer, and that raced: the master's sync word
+    // read zero ("stop") until its first tutorial push, so an ordinary state sync that
+    // landed after the SLAVE had started tore the slave's lesson down (hardware: "the
+    // slave stayed at the default layer"). The Eden hand-off has no such window —
+    // ARMED is set right here, before the first sync — so the test build uses it.
+    const bool first_run = true;
+    uprintf("Tutorial TEST build: Eden + tutorial on every reset\n");
+#    else
+    const bool first_run = boot_intro_pending();
+#    endif
+    if (first_run) {
         arm_tutorial_after_intro();
         startup_anim_start();
         // ⚠️ The master's marker decides for BOTH halves. RESET Eden runs on the

@@ -1530,3 +1530,40 @@ screen — a dialog nobody could answer); the focus ring marks a key on the **in
 the call, so a full refresh mid-ripple no longer owes a restore repaint on every key it
 touched; and the status OLED is handed back at the **live** contrast rather than the
 compile-time `OLED_BRIGHTNESS`.
+
+## Round 21 — the boot trigger is opt-in, and that is not caution
+
+The whole feature hangs off four lines near the end of `keyboard_post_init_user()`:
+
+```c
+if (boot_intro_pending()) { arm_tutorial_after_intro(); startup_anim_start(); }
+```
+
+They are now behind **`#ifdef POLYKYBD_BOOT_INTRO`**, off unless a build asks for it
+(`-e POLYKYBD_BOOT_INTRO=yes`, wired in `keyboards/polykybd/rules.mk` like every other
+PolyKybd opt-in). Three reasons, and the first is the one that decides it:
+
+- ⚠️ **The comment six lines above this code already said not to do it.** It records that
+  boot auto-play was disabled after a startup hang, and asks for it back *"once the
+  startup hang is understood"*. It is not understood. Re-enabling it by default while
+  that sentence still stands is reversing a decision without the evidence that decision
+  was waiting for.
+- **This is the pre-watchdog window.** `crash_watchdog_start()` is called *below* this
+  point, and per `CRASH_DIAGNOSTICS.md` boot is the one span with no reset, no crash
+  record and no console — `console_task()` is a main-loop call that has not been reached.
+  A hang here is permanent and mute, on a path that had never run a cold boot.
+- **Default-on would ship it to every first boot of every board**, which is the widest
+  possible blast radius for the least-tested path in the feature.
+
+⚠️ **Nothing is stubbed out.** `KC_EDEN`, HID cmd 28 and `poly_arm_tutorial_after_intro()`
+all still compile and still work, so the tutorial is fully drivable by hand for testing —
+the define gates *who starts it*, not whether it exists. Measured, not assumed: the
+opt-in build's `.text` is 177716 against the default's 177676, a real 40-byte delta, so
+the define reaches the compiler. That check is not ceremony here — `PERMISSIVE_HOLD` and
+`HOLD_ON_OTHER_KEY_PRESS` sat in both `rules.mk` files for years doing nothing, because
+no `.mk` file translated them, and the build stayed green while the source read as
+configured.
+
+**What would flip the default:** a cold boot exercised on hardware (step 1 of
+`TUTORIAL_NEXT.md`), which only the user can run. Until then the gate is the honest
+statement of what has and has not been tested.

@@ -6137,10 +6137,25 @@ void keyboard_post_init_user(void) {
     //
     // ⚠️ boot_intro_pending() had NO callers before this — the marker, the pending check
     // and the finish edge all existed, but nothing ever started the animation at boot.
+    //
+    // ⚠️ OPT-IN, AND DELIBERATELY OFF BY DEFAULT (`-e POLYKYBD_BOOT_INTRO=yes`).
+    // This is the ONE path that runs before the board is fully up, and the comment a
+    // few lines above says why that matters: boot auto-play was disabled after a
+    // startup hang that was never root-caused, and the note asks for it back only
+    // "once the startup hang is understood". It is not understood. Until a cold boot
+    // has actually been exercised on hardware, a default-on trigger here would put an
+    // unproven animation plus a tutorial on every first boot of every board, in the
+    // one window with no watchdog, no crash record and no console (CRASH_DIAGNOSTICS.md
+    // — crash_watchdog_start() is still several lines below this point).
+    // Everything the feature needs stays compiled and reachable: KC_EDEN, HID cmd 28
+    // and poly_arm_tutorial_after_intro() all still work, so the tutorial can be driven
+    // by hand for testing without this define.
+#ifdef POLYKYBD_BOOT_INTRO
     if (boot_intro_pending()) {
         arm_tutorial_after_intro();
         startup_anim_start();
     }
+#endif
     // LAST: arm the hardware watchdog. Everything above may block for seconds
     // (the keymap discard, the splash dwell); from here on housekeeping feeds it
     // every pass and a hang becomes a reset with a `kind=watchdog` crash record.

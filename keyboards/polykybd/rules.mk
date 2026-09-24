@@ -466,6 +466,15 @@ OPT_DEFS += -DFW_REQUIRE_SIGNATURE
 #
 # ⚠️ TEST BUILDS ONLY -- never ship this in a release image. A normal build
 # compiles the inline no-ops in crash_test.h and pays nothing.
+# First-run boot intro (Eden + the tutorial), opt-in: `-e POLYKYBD_BOOT_INTRO=yes`.
+# ⚠️ Default OFF on purpose — see the long note at the guard in poly_keymap.c. It runs
+# in the pre-watchdog boot window, and boot auto-play was previously disabled after an
+# unexplained startup hang. Do not flip this default until a cold boot has been run on
+# hardware.
+ifeq ($(strip $(POLYKYBD_BOOT_INTRO)), yes)
+    OPT_DEFS += -DPOLYKYBD_BOOT_INTRO
+endif
+
 ifeq ($(strip $(POLYKYBD_CRASH_TEST)), yes)
     OPT_DEFS += -DPOLYKYBD_CRASH_TEST
     SRC += crash_test.c

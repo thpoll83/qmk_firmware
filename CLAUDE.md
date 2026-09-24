@@ -496,6 +496,14 @@ outside those files:
   tools/check_disp_index.py` replays the walk against the real keymap and is the gate.
   ⚠️ **One half only is the tell** — a wrong panel index reads as a bug in whatever drew
   the unusual shape.
+  - ⚠️ **A gate that SCANS SOURCE must strip comments before it tests for a call, or it
+    asserts its own documentation.** `check_disp_index.py`'s caller check looks for
+    `key_display_index(` in each of `update_displays`/`kdisp_idle`; `update_displays()`
+    carries a comment *explaining* the fold, so a mutant that reverted the actual call
+    still PASSED — the substring matched the prose. `strip_comments()` is load-bearing
+    for that reason and is commented as such (#308, 2026-09-24). It cost nothing to find
+    only because the mutation was run; a grep-based gate is otherwise untested by
+    construction. The same shape binds every other `check_*.py` here.
 
 ### Split synchronisation
 

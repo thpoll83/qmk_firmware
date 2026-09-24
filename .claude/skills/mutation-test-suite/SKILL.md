@@ -170,6 +170,20 @@ For each mutation, three outcomes:
 - **Not caught at all** — the real finding. Either add the missing test, or
   conclude the mutation is genuinely unobservable (say which, don't hand-wave).
 
+⚠️ **A single-binary GATE names no failing test, so "caught" is unattributable —
+and that is a fourth way this fails open.** The three outcomes above assume a
+harness that tells you *which* test went red. A `tools/check_*.py`, `qmk lint` or
+any other gate that prints one verdict and exits 1 cannot: every rule inside it
+produces the identical signal. So a mutation aimed at your NEW rule can be caught
+by an OLD one in the same script, and the sweep records "caught" — which reads as
+confirmation that the new rule works when it has never fired at all. Hit on #308
+(2026-09-24): the first mutant was answered by an unrelated existing check, and
+the new caller test turned out to be matching a comment rather than the call
+(qmk `CLAUDE.md` → display-index gate). **Choose a mutant only the rule under test
+can reach**, and confirm by reading the gate's own printed line — not the exit
+status — that it names your rule. When no such mutant exists, say so; that itself
+is a finding about the gate's granularity.
+
 Restore the source and re-run the suite green at the end. Verify with
 `git status --short` that nothing is left mutated — shipping a mutation is the
 one way this skill can do harm.

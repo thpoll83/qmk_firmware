@@ -116,7 +116,7 @@ both halves, then in PolyKybdHost's tray menu:
 > (or RIGHT)
 
 or, from a terminal — the same thing, and the only route on a headless daemon where
-there is no tray to click (**PolyKybdHost 1.0.4+**):
+there is no tray to click (**PolyKybdHost 1.1.0+**):
 
 ```bash
 polyctl handedness left        # or right

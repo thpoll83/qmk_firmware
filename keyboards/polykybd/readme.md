@@ -61,7 +61,8 @@ For example:
 
 Put the half in BOOTSEL first so it mounts as a drive. **Both halves take the same
 image** — which one is left is decided by the handedness stamp below, not by the
-build, so there is no per-side firmware target.
+build, so no *release* carries a per-side firmware target. (A one-off per-side
+provisioning build is one of the two ways to set the side; see below.)
 
 To update a keyboard that is already running, PolyKybdHost flashes the `.bin` from a
 release over HID instead, with no BOOTSEL and no cable swapping.
@@ -73,65 +74,26 @@ release over HID instead, with no BOOTSEL and no cable swapping.
 Each half has to know its side, or both come up as `right` and the split link never
 forms. PolyKybd keeps that in a flash sector of its own (`FW_HAND_STAMP_OFFSET`, see
 [`base/hand_stamp.h`](base/hand_stamp.h)) rather than in the emulated EEPROM — so it
-survives an EEPROM loss, and it can be written over BOOTSEL with no host app.
+survives an EEPROM loss.
 
-Drag the right file onto each half's BOOTSEL drive. Every firmware release ships
-them; they are 512 bytes, touch only that one 4 KB sector (firmware, font pack and
-EEPROM are untouched), and one pair covers both `split42` and `split72`:
+**Two ways to set it.** Both end in the same `stamp_write()`, so the result is
+identical; they differ only in whether you build anything:
 
-* `polykybd-handedness-left_vX.Y.Z.uf2`
-* `polykybd-handedness-right_vX.Y.Z.uf2`
+1. **Build a per-side image** and flash it over BOOTSEL. Needs a toolchain, needs no
+   host app, and works on a half that cannot talk to anything.
+2. **Flash the ordinary unified image, then set the side from the host app.** Needs no
+   build and fixes both halves in one action — also the repair route when a half turns
+   up on the wrong side.
 
-⚠️ **The BOOTSEL route does not work yet — use HID cmd 25 (below) to set handedness.**
-No release publishes the pair any more, and the copies that went out with v0.23.0,
-v0.25.0 and v0.27.1 should be deleted. Two separate faults:
+⚠️ The 512-byte `polykybd-handedness-{left,right}_vX.Y.Z.uf2` files are a **third route
+that does not work** — no release publishes them any more, and the copies that went out
+with v0.23.0, v0.25.0 and v0.27.1 should be deleted. See *The stamp UF2, and why it is
+not shipped* below.
 
-1. Those three releases' files declared the record's own 12 bytes as the UF2
-   `payloadSize`, and the RP2040 bootrom ignores any block that does not declare
-   exactly 256. Nothing was written, the download never completed, and the half sat
-   in BOOTSEL with the drive still mounted instead of restarting. Fixed in the tool;
-   `--verify` now rejects those files, so it tells you which kind you have.
-2. With that fixed the write completes — the drive unmounts, which only happens once
-   the bootrom's `safe_reboot()` fires — and the half then **does not boot**: no RGB,
-   no displays, no console, and the bootrom's drive back on every power cycle,
-   surviving 30 s unpowered. Both halves, both sides. Re-flashing the firmware
-   `.uf2` recovers it every time. **Narrowed twice by measurement, and NOT understood.** One
-   already-provisioned half did not reproduce it — the fixed file applies and boots: the banner reports `slot=0/1 writer=0x55`, which is the bootrom's own
-   signature (erase-then-program leaves exactly one record at page 0) carrying this
-   tool's marker byte. A provisioning image writing the *same record* to the *same
-   sector* through `stamp_write()` also boots. So neither the record's content, nor
-   the side change, nor anything in handedness resolution is the cause. Ruled out the
-   same way: a stale `.ram0.bootloader_magic` double-tap flag, an invalid boot2, and
-   any software `reset_usb_boot()`, which has no boot-time caller. What remains is a
-   single unreproduced event, from a session with two confounders found later: a
-   second single-block UF2 in one BOOTSEL session is silently dropped (below), and the
-   banner then could not tell an applied record from a pre-existing one. The original
-   field report is not a second data point — it used a `payloadSize=12` release file,
-   which writes nothing, so a half left in BOOTSEL is precisely the expected result.
+#### 1. Build a per-side provisioning image
 
-⚠️ **Two single-block UF2s in ONE BOOTSEL session: the second is silently dropped.**
-`vd_reset()` clears the bootrom's transfer state only on a USB reset, and its
-written-blocks bitmap is re-cleared only when an arriving block's `num_blocks` differs
-from the current transfer. Every stamp file has `num_blocks=1`, so a second one is
-discarded as a duplicate, writes nothing, and does not even reboot. Power-cycle between
-drags, or put a multi-block firmware `.uf2` in between.
-
-Build them yourself — the release just runs this:
-
-`python3 tools/make_hand_uf2.py --side left`
-`python3 tools/make_hand_uf2.py --side right`
-`python3 tools/make_hand_uf2.py --verify polykybd-hand-left.uf2`
-
-`--append-to` is **refused**: the bootrom tracks which sectors it has already erased
-by BLOCK NUMBER (`page_no = block_no * 256 / FLASH_SECTOR_ERASE_SIZE`), which is the
-sector index only while blocks run contiguously from the image base. An appended
-stamp block 4 MB up collides with the bit for firmware blocks 2992–2999 and skips
-its own erase when one of those was written first, so the record lands corrupt.
-
-### Provisioning a half today
-
-Build a one-off image that stamps the side itself, and flash it as an ordinary
-firmware `.uf2` — no hand-built UF2 block, so it avoids fault (2) above entirely:
+Build a one-off image that stamps the side itself, and flash it as an ordinary firmware
+`.uf2` — a normal multi-block image, so it avoids fault (2) below entirely:
 
 ```bash
 qmk compile -kb polykybd/split72 -km default -e POLYKYBD_FORCE_HAND=left     # or =right
@@ -139,18 +101,29 @@ qmk compile -kb polykybd/split72 -km default -e POLYKYBD_FORCE_HAND=left     # o
 
 It calls `poly_hand_force_stamp()` from `keyboard_pre_init_user()`, through the same
 `stamp_write()` the host's HID cmd 25 uses, and only when the sector does not already
-name that side — so no page is burned per boot. Confirm with the banner's `hand:`
-line, then **flash the normal image back**: while a forcing image is on the half,
-every boot that disagrees rewrites the side, which is precisely what the neutral
-release `.uf2` avoids so a firmware update can never flip a half. The stamp is in its
-own sector and survives the reflash.
+name that side — so no page is burned per boot. Confirm with the banner's `hand:` line,
+then **flash the normal image back**: while a forcing image is on the half, every boot
+that disagrees rewrites the side, which is precisely what the neutral release `.uf2`
+avoids so a firmware update can never flip a half. The stamp is in its own sector and
+survives the reflash.
 
-⚠️ A half whose EEPROM was wiped comes up with `reset=YES` in the `keymap:` banner
-line — the stored keymap and the macros are back at defaults and want re-applying
-from the host. The stamp itself is unaffected; that is the whole point of it living
-outside the wear-levelling store.
+#### 2. Flash the unified image, then set the side from the host
 
-PolyKybdHost can also set it (HID cmd 25) — it stamps both halves and reboots them.
+Both halves take the **same** release image — nothing in it names a side. Flash it to
+both halves, then in PolyKybdHost's tray menu:
+
+> **Maintenance → Fix Left/Right Side → "Connected half is LEFT (other is RIGHT)"**
+> (or RIGHT)
+
+The assignment is relative to the half holding the USB cable, because a HID command only
+ever reaches the master. That sends HID cmd 25: the master stamps its own side, pushes
+the complement to the slave over the split link, and both halves reboot onto it — about
+10 s, no replug, no BOOTSEL.
+
+This is the route to reach for when a half is simply on the wrong side. It needs the
+split cable in place, since the slave is set over it.
+
+#### Reading the side back
 
 The boot banner names the source, so a half on the wrong side is one line to diagnose:
 
@@ -160,11 +133,67 @@ The boot banner names the source, so a half on the wrong side is one line to dia
    hand: RIGHT (EEPROM, UNSTAMPED)       <- never provisioned, set it
 ```
 
+⚠️ A half whose EEPROM was wiped comes up with `reset=YES` in the `keymap:` banner line —
+the stored keymap and the macros are back at defaults and want re-applying from the host.
+The stamp itself is unaffected; that is the whole point of it living outside the
+wear-levelling store.
+
 ⚠️ `make …:uf2-split-left` / `-right` are **refused** by `rules.mk`. They are QMK's
-`EE_HANDS` targets and only add `-DINIT_EE_HANDS_LEFT`, which has an effect solely
-inside the `EE_HANDS` branch of `is_keyboard_left_impl()` — and PolyKybd does not
-define `EE_HANDS` ([`config.h`](config.h) says why). Unrefused they would build a
-perfectly good image that sets no handedness at all.
+`EE_HANDS` targets and only add `-DINIT_EE_HANDS_LEFT`, which has an effect solely inside
+the `EE_HANDS` branch of `is_keyboard_left_impl()` — and PolyKybd does not define
+`EE_HANDS` ([`config.h`](config.h) says why). Unrefused they would build a perfectly good
+image that sets no handedness at all.
+
+#### The stamp UF2, and why it is not shipped
+
+Because the stamp lives in an ordinary flash sector rather than the emulated EEPROM, a
+512-byte UF2 can write it directly with no host app and no toolchain — one pair covering
+both `split42` and `split72`, touching only that one 4 KB sector. That was the intended
+first-flash route. It is **off** on two separate faults:
+
+1. The v0.23.0, v0.25.0 and v0.27.1 files declared the record's own 12 bytes as the UF2
+   `payloadSize`, and the RP2040 bootrom ignores any block that does not declare exactly
+   256. Nothing was written, the download never completed, and the half sat in BOOTSEL
+   with the drive still mounted instead of restarting. Fixed in the tool; `--verify` now
+   rejects those files, so it tells you which kind you have.
+2. With that fixed the write completes — the drive unmounts, which only happens once the
+   bootrom's `safe_reboot()` fires — and the half then **does not boot**: no RGB, no
+   displays, no console, and the bootrom's drive back on every power cycle, surviving
+   30 s unpowered. Both halves, both sides. Re-flashing the firmware `.uf2` recovers it
+   every time. **Narrowed twice by measurement, and NOT understood.** One
+   already-provisioned half did not reproduce it — the fixed file applies and boots: the
+   banner reports `slot=0/1 writer=0x55`, which is the bootrom's own signature
+   (erase-then-program leaves exactly one record at page 0) carrying this tool's marker
+   byte. A provisioning image writing the *same record* to the *same sector* through
+   `stamp_write()` also boots. So neither the record's content, nor the side change, nor
+   anything in handedness resolution is the cause. Ruled out the same way: a stale
+   `.ram0.bootloader_magic` double-tap flag, an invalid boot2, and any software
+   `reset_usb_boot()`, which has no boot-time caller. What remains is a single
+   unreproduced event, from a session with two confounders found later: a second
+   single-block UF2 in one BOOTSEL session is silently dropped (below), and the banner
+   then could not tell an applied record from a pre-existing one. The original field
+   report is not a second data point — it used a `payloadSize=12` release file, which
+   writes nothing, so a half left in BOOTSEL is precisely the expected result.
+
+⚠️ **Two single-block UF2s in ONE BOOTSEL session: the second is silently dropped.**
+`vd_reset()` clears the bootrom's transfer state only on a USB reset, and its
+written-blocks bitmap is re-cleared only when an arriving block's `num_blocks` differs
+from the current transfer. Every stamp file has `num_blocks=1`, so a second one is
+discarded as a duplicate, writes nothing, and does not even reboot. Power-cycle between
+drags, or put a multi-block firmware `.uf2` in between.
+
+Build them yourself — the release build just runs this, and still does, so the format
+stays tested even while the assets are unpublished:
+
+`python3 tools/make_hand_uf2.py --side left`
+`python3 tools/make_hand_uf2.py --side right`
+`python3 tools/make_hand_uf2.py --verify polykybd-hand-left.uf2`
+
+`--append-to` is **refused**: the bootrom tracks which sectors it has already erased by
+BLOCK NUMBER (`page_no = block_no * 256 / FLASH_SECTOR_ERASE_SIZE`), which is the sector
+index only while blocks run contiguously from the image base. An appended stamp block
+4 MB up collides with the bit for firmware blocks 2992–2999 and skips its own erase when
+one of those was written first, so the record lands corrupt.
 
 ### Keymaps
 

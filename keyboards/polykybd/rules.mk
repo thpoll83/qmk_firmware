@@ -475,6 +475,14 @@ ifeq ($(strip $(POLYKYBD_BOOT_INTRO)), yes)
     OPT_DEFS += -DPOLYKYBD_BOOT_INTRO
 endif
 
+# Tutorial TEST build: `-e POLYKYBD_TUTORIAL_TEST=yes` starts the tutorial ~1.5 s after
+# EVERY reset — no Eden, no boot marker, nothing else — so a lesson can be retried by
+# replugging. ⚠️ TEST BUILDS ONLY: a user would get the tutorial on every power-up.
+# Overrides POLYKYBD_BOOT_INTRO when both are given.
+ifeq ($(strip $(POLYKYBD_TUTORIAL_TEST)), yes)
+    OPT_DEFS += -DPOLYKYBD_TUTORIAL_TEST
+endif
+
 ifeq ($(strip $(POLYKYBD_CRASH_TEST)), yes)
     OPT_DEFS += -DPOLYKYBD_CRASH_TEST
     SRC += crash_test.c

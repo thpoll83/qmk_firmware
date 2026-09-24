@@ -267,9 +267,9 @@ static bool tut_reveal_reached(uint8_t row, uint8_t col) {
 
 bool tutorial_key_visible(uint8_t row, uint8_t col) {
     if (!s_active) return true;
-    // The Esc keycap carries the chapter count from the first line of text on, and is
-    // the exit gesture, so it is never hidden once the lesson is talking.
-    if (s_st.phase != TUT_BLANK && tutorial_is_count_key(row, col)) return true;
+    // The two top outer keys are the lesson's chrome — Esc says how to leave, its mirror
+    // on the right says how far along you are — so neither is hidden once it is talking.
+    if (s_st.phase != TUT_BLANK && tutorial_is_chrome_key(row, col)) return true;
     if (tut_phase_shows_all(s_st.phase)) return true;
     switch (s_st.phase) {
         case TUT_DONE:
@@ -382,18 +382,28 @@ int16_t tutorial_preview_index(void) {
     return tut_preview_index(&s_st);
 }
 
-// The Esc keycap: which chapter this is and that holding it ends the lesson. One literal
-// per chapter because MID_TWO_LINE builds a string at compile time; the static_assert
-// keeps the table and the count in step.
-const uint32_t *tutorial_count_label(void) {
-    static const uint32_t *const labels[] = {
-        MID_TWO_LINE("1/3", "Hold=exit"),
-        MID_TWO_LINE("2/3", "Hold=exit"),
-        MID_TWO_LINE("3/3", "Hold=exit"),
-    };
+static bool tut_chrome_live(void) {
+    return s_active && s_st.phase != TUT_BLANK && s_st.phase != TUT_DONE;
+}
+
+// The Esc keycap: "Hold to / skip...". ⚠️ Neither stock two-line stack fits it — the top
+// line has ascenders (H l d t) AND the bottom a descender (p), which MID_TWO_LINE's note
+// says a 40 px panel cannot hold under its spacing. Measured with the host preview's own
+// renderer (tools/oled_preview.py): MID_TWO_LINE's lift clips 4 px off the top,
+// MID_TWO_WORD's push 8 px off the bottom; lift 4 x 2 px / push 2 x 2 px clips none and
+// leaves a 4 px gap between the lines.
+const uint32_t *tutorial_skip_label(void) {
+    if (!tut_chrome_live()) return NULL;
+    return HINT_MID U"\f\f\f\f" U"Hold to" U"\r\v\x05\x05" U"skip...";
+}
+
+// The right key mirroring Esc: which chapter this is. One literal per chapter; the
+// static_assert keeps the table and the count in step.
+const uint32_t *tutorial_progress_label(void) {
+    static const uint32_t *const labels[] = {U"1/3", U"2/3", U"3/3"};
     _Static_assert(sizeof(labels) / sizeof(labels[0]) == TUT_CHAPTERS,
-                   "one Esc label per chapter");
-    if (!s_active || s_st.phase == TUT_BLANK || s_st.phase == TUT_DONE) return NULL;
+                   "one progress label per chapter");
+    if (!tut_chrome_live()) return NULL;
     const uint8_t ch = tut_chapter_of(s_st.phase);
     if (ch == 0 || ch > TUT_CHAPTERS) return NULL;
     return labels[ch - 1u];
@@ -657,7 +667,8 @@ bool tutorial_hold(uint8_t kind, bool pressed, uint8_t slot) {
 
 void tutorial_skip(void) {}
 int16_t tutorial_preview_index(void) { return -1; }
-const uint32_t *tutorial_count_label(void) { return NULL; }
+const uint32_t *tutorial_skip_label(void) { return NULL; }
+const uint32_t *tutorial_progress_label(void) { return NULL; }
 void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]) {
     for (uint8_t i = 0; i < TUTORIAL_SYNC_BYTES; ++i) out[i] = 0;
 }

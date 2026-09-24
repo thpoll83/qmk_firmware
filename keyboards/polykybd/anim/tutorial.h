@@ -77,9 +77,10 @@ void tutorial_skip(void);
 // -1 on the slave, which only renders what the sync carries).
 int16_t tutorial_preview_index(void);
 
-// The Esc keycap's legend while the tutorial runs ("2/3" over "Hold=exit"), or NULL
-// when it should show nothing.
-const uint32_t *tutorial_count_label(void);
+// The lesson's chrome, or NULL when it should show nothing: Esc reads "Hold to / skip...",
+// and the mirrored top-right outer key shows the chapter ("2/3").
+const uint32_t *tutorial_skip_label(void);
+const uint32_t *tutorial_progress_label(void);
 
 // ---- split sync -----------------------------------------------------------
 // The master owns the step machine; the slave draws the keys that land on its own
@@ -161,8 +162,10 @@ bool tutorial_slot_matches(uint8_t slot, uint8_t row, uint8_t col);
 // The packed display slot at a matrix position on THIS half, or TUT_SLOT_NONE.
 uint8_t tutorial_slot_at(uint8_t row, uint8_t col);
 
-// The Esc key, which carries the chapter count (see tutorial_count_label()).
-bool tutorial_is_count_key(uint8_t row, uint8_t col);
+// Is this one of the two chrome keys with a label to show right now (Esc, or the
+// top-right outer key)? And draw that label into the selected, cleared buffer.
+bool tutorial_is_chrome_key(uint8_t row, uint8_t col);
+void tutorial_draw_chrome(uint8_t row, uint8_t col);
 
 // ---- chapter 3 (master side; the table lives with the fonts in poly_keymap.c) ----
 // Build the list of languages and glyph scripts this board can actually draw, and

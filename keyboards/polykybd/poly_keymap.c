@@ -538,6 +538,13 @@ static uint8_t g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;
 static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
 // Chapter 3's language/script preview; defined beside the tutorial's keymap helpers.
 static uint8_t poly_tutorial_apply_preview(void);
+#ifdef POLYKYBD_TUTORIAL_TEST
+// Armed in keyboard_post_init_user(), drained on the first housekeeping pass after the
+// board has settled. Both halves start their own, exactly as the Eden hand-off does on a
+// cold boot; the master picks the letters and the slave follows the synced phase.
+static bool s_tut_test_pending = false;
+#define TUT_TEST_START_MS 1500u
+#endif
 // The user's own default LAYOUT, parked while the tutorial runs. 0xFF = nothing parked.
 // ⚠️ This is poly's def_layer (a layer INDEX _L0.._L4, the Qwerty/Colemak/Neo choice),
 // NOT the momentary layer stack — layer_clear() does not touch it, which is why the
@@ -1554,6 +1561,12 @@ void housekeeping_task_user(void) {
             // INTRO mode rides the normal path: the board renders itself, and the
             // tutorial only advances its own phase machine and keeps the other half in
             // step. tutorial_tick() does NOT touch a panel outside chapter 1.
+#ifdef POLYKYBD_TUTORIAL_TEST
+            if (s_tut_test_pending && timer_read32() >= TUT_TEST_START_MS) {
+                s_tut_test_pending = false;
+                tutorial_start(timer_read32());
+            }
+#endif
             if (tutorial_active()) {
                 tutorial_tick();
                 if (s_tut_skip_since != 0 &&
@@ -3910,12 +3923,10 @@ bool poly_focus_draw_legend(uint8_t slot) {
     uint8_t r, c;
     if (!tutorial_matrix_of(slot, &r, &c)) return false;
     if (!tutorial_key_visible(r, c)) return false;
-    // The Esc keycap shows the chapter count, here as in update_displays(), or a ring
-    // crossing it would paint "Esc" back for a frame.
-    const uint32_t *count = tutorial_is_count_key(r, c) ? tutorial_count_label() : NULL;
-    if (count != NULL) {
-        kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, count,
-                                KDISP_CY_DEFAULT);
+    // The chrome keys show the lesson's labels, here as in update_displays(), or a ring
+    // crossing one would paint "Esc" back for a frame.
+    if (tutorial_is_chrome_key(r, c)) {
+        tutorial_draw_chrome(r, c);
         return true;
     }
     tutorial_draw_board_legend(slot);
@@ -3955,10 +3966,33 @@ static bool tutorial_is_skip_key(uint8_t row, uint8_t col) {
 
 uint8_t tutorial_slot_at(uint8_t row, uint8_t col) { return tutorial_slot_of(row, col); }
 
-// The Esc keycap carries the chapter count. Left display (0,0), the same key as the
-// left half of the skip gesture, so the thing that says "2/3" is the thing you hold.
-bool tutorial_is_count_key(uint8_t row, uint8_t col) {
-    return tutorial_slot_of(row, col) == TUT_SLOT(0, 0);
+// The two chrome keys are the two halves of the skip gesture (tutorial_is_skip_key):
+// Esc at left display (0,0) says how to leave, and its mirror — right display (0,6),
+// the OUTER edge — shows the chapter. Either still skips when held.
+static const uint32_t *tutorial_chrome_label(uint8_t row, uint8_t col) {
+    const uint8_t slot = tutorial_slot_of(row, col);
+    if (slot == TUT_SLOT(0, 0)) return tutorial_skip_label();
+    if (slot == TUT_SLOT(1, 6)) return tutorial_progress_label();
+    return NULL;
+}
+
+bool tutorial_is_chrome_key(uint8_t row, uint8_t col) {
+    return tutorial_chrome_label(row, col) != NULL;
+}
+
+// Esc's label is a HINT_MID two-line stack drawn like any static legend on a non-thumb
+// row; the progress is one big run in the keycap face, centred both ways (its ink spans
+// rows 1..20 at the usual baseline 23, so baseline 32 puts it at 10..29 of the 40).
+void tutorial_draw_chrome(uint8_t row, uint8_t col) {
+    const uint32_t *t = tutorial_chrome_label(row, col);
+    if (t == NULL) return;
+    if (tutorial_slot_of(row, col) == TUT_SLOT(0, 0)) {
+        kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, t,
+                                KDISP_CY_DEFAULT);
+    } else {
+        draw_legend_cx_cy(t, 32, KDISP_CY_DEFAULT);
+    }
+    kdisp_set_gfx_erase(false);
 }
 
 // ---- chapter 3: languages and glyph scripts, previewed on the board only ----------
@@ -4400,15 +4434,11 @@ void update_displays(enum refresh_mode mode) {
                         kdisp_send_window();
                         doom_handled = true;
                     } else if (tutorial_intro_mode() &&
-                               tutorial_is_count_key((uint8_t)(r + offset), c) &&
-                               tutorial_count_label() != NULL) {
-                        // The tutorial's chapter count on the Esc keycap, which is also
-                        // the key you hold to leave. Drawn the way a static two-line
-                        // legend is on a non-thumb row (tutorial_draw_board_legend()).
+                               tutorial_is_chrome_key((uint8_t)(r + offset), c)) {
+                        // The tutorial's chrome: "Hold to / skip..." on Esc, the chapter
+                        // on its mirror at the top-right outer edge.
                         kdisp_set_buffer(0x00);
-                        kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23,
-                                                tutorial_count_label(), KDISP_CY_DEFAULT);
-                        kdisp_set_gfx_erase(false);
+                        tutorial_draw_chrome((uint8_t)(r + offset), c);
                         kdisp_send_window();
                         doom_handled = true;
                     } else if (tutorial_intro_mode() &&
@@ -6328,7 +6358,12 @@ void keyboard_post_init_user(void) {
     // Everything the feature needs stays compiled and reachable: KC_EDEN, HID cmd 28
     // and poly_arm_tutorial_after_intro() all still work, so the tutorial can be driven
     // by hand for testing without this define.
-#ifdef POLYKYBD_BOOT_INTRO
+#if defined(POLYKYBD_TUTORIAL_TEST)
+    // Test build: the tutorial on every reset, from housekeeping (see
+    // s_tut_test_pending) — never from here, which is the pre-watchdog boot window.
+    s_tut_test_pending = true;
+    uprintf("Tutorial TEST build: starting the tutorial on every reset\n");
+#elif defined(POLYKYBD_BOOT_INTRO)
     if (boot_intro_pending()) {
         arm_tutorial_after_intro();
         startup_anim_start();

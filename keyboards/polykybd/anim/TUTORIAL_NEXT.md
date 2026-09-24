@@ -51,8 +51,12 @@ interrupted first run replays.
    keycaps only; the host keeps seeing the real language. The ring then circles the
    Lang key, and a finale screen ends it.
 
-The **Esc keycap shows the chapter count** (`1/3` over `Hold=exit`) from the first line
-of text on. Design and traps: `TUTORIAL.md` round 22.
+The lesson's chrome: **Esc reads "Hold to / skip..."** and its mirror, the **top-right
+outer key, shows the chapter** (`1/3`…`3/3`). Holding either still skips. Design and
+traps: `TUTORIAL.md` round 22.
+
+**Test build:** `-e POLYKYBD_TUTORIAL_TEST=yes` starts the tutorial ~1.5 s after every
+reset, with no Eden and no marker check, so a round is a replug. Never in a release.
 
 ---
 

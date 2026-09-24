@@ -1635,3 +1635,19 @@ All of it. In particular: whether the reveal front keeps up (a 20-unit band cros
 to ~20 keys per frame per half, against a 3 ms slice), whether `MID_TWO_LINE("2/3",
 "Hold=exit")` fits the Esc keycap without clipping, and how long each script needs on
 screen to be read.
+
+### Round 22, part 2 — the chrome keys and a test build
+
+- **Esc reads "Hold to / skip..."; the top-right outer key shows the chapter.** They are
+  the two halves of the existing skip gesture, so either still ends the lesson when held.
+- ⚠️ **Neither stock two-line stack fits "Hold to / skip...".** The top line has ascenders
+  and the bottom a descender, the combination `MID_TWO_LINE`'s note says a 40 px panel
+  cannot hold. Measured with `tools/oled_preview.py`'s renderer, which reproduces the
+  known-good "RESET / Eden" with zero clipped pixels: `MID_TWO_LINE` spacing clips 4 px off
+  the top, `MID_TWO_WORD` 8 px off the bottom, and lift 4 × 2 px with push 2 × 2 px clips
+  none and leaves a 4 px gap. The progress run ("1/3") sits at rows 1..20 on baseline 23,
+  so it is drawn on baseline 32 to centre it.
+- **`POLYKYBD_TUTORIAL_TEST=yes`** starts the tutorial from housekeeping ~1.5 s after every
+  reset, with no Eden and no marker check. It starts outside the pre-watchdog window on
+  purpose, so a test build does not exercise the boot path `POLYKYBD_BOOT_INTRO` is gated
+  for.

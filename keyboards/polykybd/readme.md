@@ -71,8 +71,19 @@ release over HID instead, with no BOOTSEL and no cable swapping.
 
 (eg. when you flash for the first time)
 
-Each half has to know its side, or both come up as `right` and the split link never
-forms. PolyKybd keeps that in a flash sector of its own (`FW_HAND_STAMP_OFFSET`, see
+Each half has to know its side. Unprovisioned, both resolve to `right` — no stamp plus
+a blank EEPROM byte reads as "not left" — so both halves scan and render as the right
+hand and the keyboard is wrong.
+
+⚠️ **The split LINK is not affected by any of this**, which is what makes route 2 below
+work on two fresh halves. Master/slave comes from `USB_VBUS_PIN` (GP24), and
+`SERIAL_USART_PIN_SWAP` applies the crossover on the **master's** init path only
+(`serial_vendor.c`: `master_init` swaps, `slave_init` does not), so one identical image
+forms the link by role with no handedness at all — see the comment in
+[`config.h`](config.h). Handedness feeds `set_side()` and the boot banner; it reaches
+nothing in the transport.
+
+PolyKybd keeps the side in a flash sector of its own (`FW_HAND_STAMP_OFFSET`, see
 [`base/hand_stamp.h`](base/hand_stamp.h)) rather than in the emulated EEPROM — so it
 survives an EEPROM loss.
 

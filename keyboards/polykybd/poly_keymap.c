@@ -5061,13 +5061,19 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         }
         case KC_EDEN:
             if (!act) break;
-            // RESET Eden (anim/TUTORIAL.md §3): clear the boot marker so Eden + the
-            // tutorial return at the next startup, and replay only the animation now as
-            // the acknowledgement. Pressing it mid-work must not lock anyone into a lesson.
+            // RESET Eden: clear the boot marker, then play Eden AND the tutorial now.
             //
-            // Held with SHIFT it also runs the tutorial on the spot — the retry path the
-            // hardware rounds use. It still clears the marker first, but the tutorial's
-            // done/skip edge re-stamps it, so Shift+RESET leaves the next boot unchanged.
+            // ⚠️ TUTORIAL.md §3 asks for "clear the marker, replay only the animation" as
+            // the shipping behaviour, with the tutorial waiting for the next boot. That
+            // was tried with a Shift modifier for the run-now path, and SHIFT CANNOT BE
+            // HELD HERE: KC_EDEN lives on _SL, whose two Shift positions are
+            // KC_SETTINGS_MORE and KC_NO, so the tutorial became unreachable from the
+            // keyboard ("I only see the animation", hardware). Until the shipping split is
+            // decided, the key does both.
+            //
+            // The marker clear still matters for a cold-boot test: the tutorial re-stamps
+            // it only at done/skip, so unplugging mid-lesson leaves it cleared and the
+            // next power-up plays the first-run experience.
             //
             // ⚠️ Clearing only THIS half's marker is enough: at boot the master bumps
             // anim_nonce when it starts the intro, and that replays Eden on a slave whose
@@ -5076,9 +5082,7 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             fw_staging_core1_lockout_begin();
             rearm_boot_intro();
             fw_staging_core1_lockout_end();
-            if (get_mods() & MOD_MASK_SHIFT) {
-                arm_tutorial_after_intro();
-            }
+            arm_tutorial_after_intro();
             // Trigger the startup ("Eden") animation NOW on this (master) half and bump
             // the synced nonce so the slave plays in lockstep (the nonce is delivered by
             // the one-shot bridge send in housekeeping, once the transport is up — see

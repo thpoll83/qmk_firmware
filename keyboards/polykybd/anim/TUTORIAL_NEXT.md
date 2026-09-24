@@ -101,20 +101,21 @@ already proved on hardware.
 The procedure, on a `-e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_BOOT_INTRO=yes` build:
 
 1. Flash the `.bin`. It reboots; nothing plays, since the marker still reads DONE.
-2. Settings layer → tap **RESET Eden** (no Shift). Eden replays; no tutorial starts.
-3. Power cycle (unplug USB). Expect Eden on **both** halves, then chapter 1.
+2. Settings layer → tap **RESET Eden**. Eden and the tutorial run; **unplug during the
+   tutorial**, before it finishes, so the cleared marker is not re-stamped.
+3. Power up. Expect Eden on **both** halves, then chapter 1.
 4. Finish or skip the tutorial, then power cycle again. Expect **no** replay.
-5. Optional: RESET Eden, power cycle, unplug mid-tutorial, power cycle. Expect a replay
-   (the marker is stamped only at done/skip).
 
 Watch step 3 for a wedge in the boot window: no console reaches the host there, so a
 half stuck on the splash is the only sign.
 
-### 2. Restore the shipping `KC_EDEN` semantics — done (2026-09-24)
-RESET Eden clears the marker and replays only the animation. **Shift+RESET Eden** keeps
-the prototype path (run the tutorial on the spot) for retries without a reboot. It
-clears the marker too, but the tutorial's done/skip edge re-stamps it, so the next boot
-is unchanged. Only the master's EEPROM is written; the boot-time nonce covers the slave.
+### 2. The `KC_EDEN` semantics — OPEN again
+RESET Eden clears the marker AND plays Eden plus the tutorial on the spot. The planned
+"clear the marker, replay only the animation" split was tried with Shift+RESET as the
+run-now path, and ⚠️ **Shift cannot be held on `_SL`** — both Shift positions there are
+other keys — so the tutorial became unreachable. Deciding the shipping behaviour needs a
+different gesture (or none). Only the master's EEPROM is written; the boot-time nonce
+covers the slave.
 
 ### 3. The HID enable/disable command (needed by the rig)
 So a host — and the HIL rig — can turn the tutorial on and off and read its state. Use

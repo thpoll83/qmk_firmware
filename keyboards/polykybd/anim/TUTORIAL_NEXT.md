@@ -5,7 +5,8 @@ post-mortems. **This file is the worklist**: what is finished, what is deliberat
 postponed, and what a future session has to do to take it further. Read both before
 touching `anim/tutorial.c`, `base/tutorial_plan.[ch]` or `anim/focus_ring.[ch]`.
 
-Branch: `claude/eden-startup-tutorial-1exa5m`. Everything below is pushed there.
+Chapters 1–2 merged to `PolyKybd` in #306 and #309. The boot trigger is **opt-in**
+(`-e POLYKYBD_BOOT_INTRO=yes`, see `TUTORIAL.md` round 21) until step 1 below has run.
 
 ---
 
@@ -72,16 +73,32 @@ the panel.
 ## Work still to do, in the order it should be done
 
 ### 1. A cold-boot round (blocking — nothing else is worth doing first)
-Flash a build, wipe the boot marker (or use a board that has never run it), power
-cycle, and watch the whole first-run sequence. Then power cycle again and confirm it
-does **not** replay. See "NOT verified" above.
 
-### 2. Restore the shipping `KC_EDEN` semantics
-`poly_keymap.c`'s `case KC_EDEN` currently carries a comment marked **PROTOTYPE
-BEHAVIOUR**: it arms the tutorial *and* replays Eden on the spot so the sequence can be
-retried without rebooting. The shipping behaviour is to **re-arm the first-run
-experience for the next startup** and only replay the animation now. Undo the prototype
-path once step 1 no longer needs it — and not before, or there is no way to retry.
+⚠️ **Until 2026-09-24 this round could not run: nothing in the firmware cleared the
+marker.** Every earlier round went through `KC_EDEN`, whose tutorial done/skip edge
+stamped `BOOT_INTRO_DONE` on both halves, so an opt-in build on any tested board booted
+straight to the legends. "Wipe the marker" named a step with no mechanism. RESET Eden
+now clears it (step 2), and at boot the master bumps `anim_nonce` so a slave whose own
+marker still reads DONE plays Eden anyway, through the `anim_replay` path `KC_EDEN`
+already proved on hardware.
+
+The procedure, on a `-e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_BOOT_INTRO=yes` build:
+
+1. Flash the `.bin`. It reboots; nothing plays, since the marker still reads DONE.
+2. Settings layer → tap **RESET Eden** (no Shift). Eden replays; no tutorial starts.
+3. Power cycle (unplug USB). Expect Eden on **both** halves, then chapter 1.
+4. Finish or skip the tutorial, then power cycle again. Expect **no** replay.
+5. Optional: RESET Eden, power cycle, unplug mid-tutorial, power cycle. Expect a replay
+   (the marker is stamped only at done/skip).
+
+Watch step 3 for a wedge in the boot window: no console reaches the host there, so a
+half stuck on the splash is the only sign.
+
+### 2. Restore the shipping `KC_EDEN` semantics — done (2026-09-24)
+RESET Eden clears the marker and replays only the animation. **Shift+RESET Eden** keeps
+the prototype path (run the tutorial on the spot) for retries without a reboot. It
+clears the marker too, but the tutorial's done/skip edge re-stamps it, so the next boot
+is unchanged. Only the master's EEPROM is written; the boot-time nonce covers the slave.
 
 ### 3. The HID enable/disable command (needed by the rig)
 So a host — and the HIL rig — can turn the tutorial on and off and read its state. Use

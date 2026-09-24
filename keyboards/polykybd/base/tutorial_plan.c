@@ -19,6 +19,12 @@ static uint32_t tut_phase_ms(uint8_t phase) {
         case TUT_LAYER_SWEEP: return TUT_SWEEP_MS;
         case TUT_LAYER_HELD:  return TUT_LAYER_HELD_MS;
         case TUT_NOTATION:    return TUT_NOTATION_MS;
+        case TUT_BOARD_REVEAL: return TUT_BOARD_REVEAL_MS;
+        case TUT_BOARD_SHOW:   return TUT_BOARD_SHOW_MS;
+        case TUT_LANG_INTRO:   return TUT_LANG_INTRO_MS;
+        case TUT_LANG_SHOW:    return TUT_LANG_ITEM_MS;
+        case TUT_LANG_POINT:   return TUT_LANG_POINT_MS;
+        case TUT_FINALE:       return TUT_FINALE_MS;
         default:            return 0;
     }
 }
@@ -46,6 +52,9 @@ void tut_init(tut_state_t *st, const uint8_t slots[TUT_LETTERS],
     st->skipped     = false;
     st->shift_stage = 0;
     st->point_at    = now;
+    st->lang_slot   = TUT_SLOT_NONE;
+    st->n_preview   = 0;
+    st->preview     = 0;
     for (uint8_t i = 0; i < TUT_LETTERS; ++i) {
         st->slots[i] = slots ? slots[i] : TUT_SLOT_NONE;
     }
@@ -59,11 +68,38 @@ static uint8_t tut_point_slot_of(const tut_state_t *st, uint8_t phase) {
     switch (phase) {
         case TUT_SHIFT_WAIT:  return st->shift_slots[0];
         case TUT_SHIFT_AGAIN: return st->shift_slots[1];
+        case TUT_LANG_POINT:  return st->lang_slot;
         default:              return TUT_SLOT_NONE;
     }
 }
 
 uint8_t tut_point_slot(const tut_state_t *st) { return tut_point_slot_of(st, st->phase); }
+
+void tut_set_chapter3(tut_state_t *st, uint8_t lang_slot, uint8_t n_preview) {
+    st->lang_slot = lang_slot;
+    st->n_preview = (n_preview > TUT_PREVIEW_MAX) ? (uint8_t)TUT_PREVIEW_MAX : n_preview;
+}
+
+int16_t tut_preview_index(const tut_state_t *st) {
+    if (st->phase != TUT_LANG_SHOW || st->preview >= st->n_preview) return -1;
+    return st->preview;
+}
+
+// The board reveal starts from the Shift the user last held — the right one when the
+// board has it, since that is the stage that just ended — and bumps the ripple sequence
+// so the slave arms its own wavefront from the same key.
+static void tut_enter_reveal(tut_state_t *st, uint32_t now) {
+    uint8_t origin = st->shift_slots[1];
+    if (origin == TUT_SLOT_NONE) origin = st->shift_slots[0];
+    st->ripple_slot = origin;
+    st->ripple_seq++;
+    tut_enter(st, TUT_BOARD_REVEAL, now);
+}
+
+// After the languages: point at the Lang key if the board has one, else finish.
+static void tut_enter_after_preview(tut_state_t *st, uint32_t now) {
+    tut_enter(st, st->lang_slot != TUT_SLOT_NONE ? TUT_LANG_POINT : TUT_FINALE, now);
+}
 
 // Re-fire the pointing ring if this phase is pointing and the period has elapsed.
 // Returns true when it fired (the caller then syncs, and the ring starts on both
@@ -122,16 +158,43 @@ bool tut_tick(tut_state_t *st, uint32_t now) {
                 tut_enter(st, TUT_SHIFT_AGAIN, now);   // which points at the other one at once
                 return true;
             }
-            // ⚠️ CHAPTER 3 IS POSTPONED, not deleted. The layer chapter's phases, its
-            // lit set, its prose and its tests are all still here and still covered —
-            // only this one transition is redirected, so restoring it is a one-line
-            // change. Shift has to feel right before a second chapter rides on the
-            // same machinery.
-            tut_enter(st, TUT_DONE, now);
+            // ⚠️ THE LAYER CHAPTER IS POSTPONED, not deleted. Its phases, its lit set,
+            // its prose and its tests are all still here and still covered — only this
+            // one transition is redirected. Chapter 3 is now the board reveal and the
+            // languages; restoring the layer chapter means routing here to
+            // TUT_LAYER_WAIT and sending TUT_NOTATION on to the reveal.
+            tut_enter_reveal(st, now);
             return true;
         case TUT_LAYER_SWEEP: tut_enter(st, TUT_LAYER_HELD, now); return true;
         case TUT_LAYER_HELD:  tut_enter(st, TUT_NOTATION, now);   return true;
         case TUT_NOTATION:    tut_enter(st, TUT_DONE, now);       return true;
+        case TUT_BOARD_REVEAL: tut_enter(st, TUT_BOARD_SHOW, now); return true;
+        case TUT_BOARD_SHOW:
+            // No renderable language or script (a board with no font pack yet): the
+            // reveal alone is the chapter, and the board goes straight to the finale.
+            if (st->n_preview == 0) {
+                tut_enter_after_preview(st, now);
+            } else {
+                tut_enter(st, TUT_LANG_INTRO, now);
+            }
+            return true;
+        case TUT_LANG_INTRO:
+            st->preview = 0;
+            tut_enter(st, TUT_LANG_SHOW, now);
+            return true;
+        case TUT_LANG_SHOW:
+            // One phase, re-entered per item: the phase clock is the item clock.
+            if ((uint8_t)(st->preview + 1u) < st->n_preview) {
+                st->preview++;
+                tut_enter(st, TUT_LANG_SHOW, now);
+            } else {
+                // No reset of `preview` needed: tut_preview_index() answers -1 in every
+                // phase but TUT_LANG_SHOW, which is what ends the last item's preview.
+                tut_enter_after_preview(st, now);
+            }
+            return true;
+        case TUT_LANG_POINT:  tut_enter(st, TUT_FINALE, now); return true;
+        case TUT_FINALE:      tut_enter(st, TUT_DONE, now);   return true;
         default: return false;
     }
 }

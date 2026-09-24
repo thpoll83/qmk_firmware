@@ -305,7 +305,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             }
             case 7: //lang
                 memset(data, 0, length);
-                switch(local_state->lang) {
+                // poly_reported_lang(), not local_state->lang: the host switches the OS
+                // layout to this answer, and the tutorial may be previewing another one.
+                switch(poly_reported_lang()) {
                     /*[[[cog
                     for lang in languages:
                         cog.outl(f'case LANG_{lang.upper()}: memcpy(data, "P\\x07.{lang}", 7); break;')

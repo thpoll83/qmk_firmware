@@ -536,6 +536,8 @@ static bool g_force_layer_resync = true;
 static uint8_t g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;
 
 static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
+// Chapter 3's language/script preview; defined beside the tutorial's keymap helpers.
+static uint8_t poly_tutorial_apply_preview(void);
 // The user's own default LAYOUT, parked while the tutorial runs. 0xFF = nothing parked.
 // ⚠️ This is poly's def_layer (a layer INDEX _L0.._L4, the Qwerty/Colemak/Neo choice),
 // NOT the momentary layer stack — layer_clear() does not touch it, which is why the
@@ -1744,8 +1746,12 @@ void housekeeping_task_user(void) {
         }
         // Master-authoritative glyph-script override; the slave adopts it via
         // copy_local_state and re-renders its own legends on the synced diff.
-        if (access_local_state()->glyph_script != get_glyph_script()) {
-            access_local_state()->glyph_script = get_glyph_script();
+        // The tutorial's chapter 3 may be previewing a language or script: it writes
+        // that over the board's state for a couple of seconds at a time and hands back
+        // the script to draw. Outside the tutorial this is get_glyph_script().
+        const uint8_t draw_script = poly_tutorial_apply_preview();
+        if (access_local_state()->glyph_script != draw_script) {
+            access_local_state()->glyph_script = draw_script;
             request_disp_refresh();   // script changed -> re-render letter/digit legends
         }
         // Master-authoritative keycap legend size, adopted + re-rendered by the
@@ -3904,6 +3910,14 @@ bool poly_focus_draw_legend(uint8_t slot) {
     uint8_t r, c;
     if (!tutorial_matrix_of(slot, &r, &c)) return false;
     if (!tutorial_key_visible(r, c)) return false;
+    // The Esc keycap shows the chapter count, here as in update_displays(), or a ring
+    // crossing it would paint "Esc" back for a frame.
+    const uint32_t *count = tutorial_is_count_key(r, c) ? tutorial_count_label() : NULL;
+    if (count != NULL) {
+        kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, count,
+                                KDISP_CY_DEFAULT);
+        return true;
+    }
     tutorial_draw_board_legend(slot);
     return true;
 }
@@ -3937,6 +3951,145 @@ void tutorial_draw_board_legend(uint8_t slot) {
 static bool tutorial_is_skip_key(uint8_t row, uint8_t col) {
     const uint8_t slot = tutorial_slot_of(row, col);
     return slot == TUT_SLOT(0, 0) || slot == TUT_SLOT(1, 6);
+}
+
+uint8_t tutorial_slot_at(uint8_t row, uint8_t col) { return tutorial_slot_of(row, col); }
+
+// The Esc keycap carries the chapter count. Left display (0,0), the same key as the
+// left half of the skip gesture, so the thing that says "2/3" is the thing you hold.
+bool tutorial_is_count_key(uint8_t row, uint8_t col) {
+    return tutorial_slot_of(row, col) == TUT_SLOT(0, 0);
+}
+
+// ---- chapter 3: languages and glyph scripts, previewed on the board only ----------
+//
+// ⚠️ BOARD-ONLY. The host polls GET_LANG every second and SWITCHES THE OS LAYOUT to
+// match (PolyHost's language-changed flow), so a preview written into
+// local_state->lang would retype the user's OS in Greek. poly_reported_lang() is what
+// GET_LANG and the EEPROM save read instead, and it answers with the REAL language for
+// as long as a preview is on screen. The glyph script needs no such guard: cmd 30 and
+// the save both read get_glyph_script(), which the preview never touches.
+typedef struct {
+    bool          script;   // false = a keyboard language (LANG_*), true = GLYPH_*
+    uint8_t       value;
+    const uint32_t *name;   // status-panel name; resident ASCII only
+} tut_preview_t;
+
+// A tour, not a catalogue: scripts that look nothing like each other, then the
+// fantasy faces. Order is the order shown.
+static const tut_preview_t s_tut_preview_all[] = {
+    {false, LANG_ELGR,      U"Greek"},
+    {false, LANG_RURU,      U"Russian"},
+    {false, LANG_ARSA,      U"Arabic"},
+    {false, LANG_JAJP,      U"Japanese"},
+    {false, LANG_KOKR,      U"Korean"},
+    {true,  GLYPH_TENGWAR,  U"Elvish"},
+    {true,  GLYPH_RUNES,    U"Runes"},
+    {true,  GLYPH_AUREBESH, U"Aurebesh"},
+    {true,  GLYPH_BRAILLE,  U"Braille"},
+};
+#define TUT_PREVIEW_ALL (sizeof(s_tut_preview_all) / sizeof(s_tut_preview_all[0]))
+_Static_assert(TUT_PREVIEW_ALL <= TUT_PREVIEW_MAX, "preview table exceeds the plan's cap");
+
+static uint8_t s_tut_preview[TUT_PREVIEW_ALL];   // indices into the table, renderable only
+static uint8_t s_tut_preview_n;
+
+// Can this board draw the entry? Asked of the fonts actually flashed, through the same
+// lookup the renderer uses: on a fresh board with no font pack every non-Latin entry
+// fails here and the chapter shows only the reveal, rather than a board of blanks.
+static bool tut_preview_renderable(const tut_preview_t *e) {
+    uint32_t cp = 0;
+    if (e->script) {
+        cp = glyph_script_codepoint(e->value, KC_A);
+    } else {
+        const uint32_t *t = translate_keycode(e->value, KC_A, false, false);
+        cp = (t != NULL) ? t[0] : 0;
+    }
+    return cp != 0 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL;
+}
+
+uint8_t tutorial_preview_prepare(void) {
+    s_tut_preview_n = 0;
+    const uint8_t own = poly_reported_lang();
+    for (uint8_t i = 0; i < TUT_PREVIEW_ALL; ++i) {
+        const tut_preview_t *e = &s_tut_preview_all[i];
+        // A Greek user's board already speaks Greek: showing it would change nothing.
+        if (!e->script && e->value == own) continue;
+        if (tut_preview_renderable(e)) s_tut_preview[s_tut_preview_n++] = i;
+    }
+    return s_tut_preview_n;
+}
+
+uint8_t tutorial_lang_slot(void) {
+    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            if (keymaps[_BL][r][c] != KC_LANG) continue;
+            const uint8_t slot = tutorial_slot_of(r, c);
+            if (slot != TUT_SLOT_NONE) return slot;
+        }
+    }
+    return TUT_SLOT_NONE;
+}
+
+// The master's live preview entry, or NULL.
+static const tut_preview_t *tut_preview_live(void) {
+    const int16_t i = tutorial_preview_index();
+    if (i < 0 || i >= s_tut_preview_n) return NULL;
+    return &s_tut_preview_all[s_tut_preview[i]];
+}
+
+// Named from what THIS half draws: a script override wins, as it does in the renderer.
+const uint32_t *tutorial_preview_name(void) {
+    const poly_sync_t *ls = get_local_state();
+    for (uint8_t i = 0; i < TUT_PREVIEW_ALL; ++i) {
+        const tut_preview_t *e = &s_tut_preview_all[i];
+        if (e->script && ls->glyph_script != GLYPH_STD && e->value == ls->glyph_script) return e->name;
+    }
+    if (ls->glyph_script == GLYPH_STD) {
+        for (uint8_t i = 0; i < TUT_PREVIEW_ALL; ++i) {
+            const tut_preview_t *e = &s_tut_preview_all[i];
+            if (!e->script && e->value == ls->lang) return e->name;
+        }
+    }
+    return U"...";
+}
+
+// The language preview's bookkeeping. s_tut_real_lang is the user's language while a
+// preview is written over it (0xFF = no preview); s_tut_written_lang is what we wrote,
+// so a host SET_LANG that lands mid-preview is recognised as the new real value rather
+// than being overwritten and then "restored" to the old one.
+static uint8_t s_tut_real_lang    = 0xFF;
+static uint8_t s_tut_written_lang = 0xFF;
+
+uint8_t poly_reported_lang(void) {
+    const uint8_t cur = get_local_state()->lang;
+    if (s_tut_real_lang != 0xFF && cur == s_tut_written_lang) return s_tut_real_lang;
+    return cur;
+}
+
+// Master only, once per housekeeping pass: write or retire the preview. Returns the
+// glyph script the board should DRAW (the preview's, or the user's own).
+static uint8_t poly_tutorial_apply_preview(void) {
+    poly_sync_t          *ls = access_local_state();
+    const tut_preview_t *e  = tut_preview_live();
+    if (e != NULL && !e->script) {
+        if (s_tut_real_lang == 0xFF || ls->lang != s_tut_written_lang) {
+            s_tut_real_lang = ls->lang;           // first item, or the host moved it
+        }
+        if (ls->lang != e->value) {
+            ls->lang = e->value;
+            request_disp_refresh();
+        }
+        s_tut_written_lang = e->value;
+    } else if (s_tut_real_lang != 0xFF) {
+        if (ls->lang == s_tut_written_lang && ls->lang != s_tut_real_lang) {
+            ls->lang = s_tut_real_lang;
+            request_disp_refresh();
+        }
+        s_tut_real_lang    = 0xFF;
+        s_tut_written_lang = 0xFF;
+    }
+    return (e != NULL && e->script) ? e->value : get_glyph_script();
 }
 
 bool eden_idle_erase_legend(uint8_t disp_idx) {
@@ -4244,6 +4397,18 @@ void update_displays(enum refresh_mode mode) {
                         } else {
                             kdisp_set_buffer(0x00);
                         }
+                        kdisp_send_window();
+                        doom_handled = true;
+                    } else if (tutorial_intro_mode() &&
+                               tutorial_is_count_key((uint8_t)(r + offset), c) &&
+                               tutorial_count_label() != NULL) {
+                        // The tutorial's chapter count on the Esc keycap, which is also
+                        // the key you hold to leave. Drawn the way a static two-line
+                        // legend is on a non-thumb row (tutorial_draw_board_legend()).
+                        kdisp_set_buffer(0x00);
+                        kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23,
+                                                tutorial_count_label(), KDISP_CY_DEFAULT);
+                        kdisp_set_gfx_erase(false);
                         kdisp_send_window();
                         doom_handled = true;
                     } else if (tutorial_intro_mode() &&

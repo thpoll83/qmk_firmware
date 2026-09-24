@@ -19,7 +19,7 @@
 
 // Writes only lang+brightness+idle_style+unused (4 bytes) to EEPROM.
 void save_user_settings(void) {
-    const poly_eeconf_t ee = { .lang = get_local_state()->lang, .brightness = (uint8_t)(~get_user_brightness()),
+    const poly_eeconf_t ee = { .lang = poly_reported_lang(), .brightness = (uint8_t)(~get_user_brightness()),
                                .idle_style = get_idle_style(), .auto_brightness = pack_auto_brightness() };
     eeconfig_update_user_datablock(&ee, 0, offsetof(poly_eeconf_t, latin_ex));
     // Stamp the idle-style format marker AFTER the block it describes, same rule as

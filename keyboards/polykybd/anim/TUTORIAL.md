@@ -1567,3 +1567,71 @@ configured.
 **What would flip the default:** a cold boot exercised on hardware (step 1 of
 `TUTORIAL_NEXT.md`), which only the user can run. Until then the gate is the honest
 statement of what has and has not been tested.
+
+## Round 22 — chapter 3: the board reveal, languages and scripts (2026-09-24)
+
+*"It's a bit too fast — the tutorial needs more steps first. We have to teach all the
+features and make a wow effect."* Scope agreed for this round: the languages and glyph
+scripts as a **board-only preview**, a **chapter count on the Esc keycap** that is also
+the hold-to-exit key, and a **board reveal after Shift**, where the lesson stops hiding
+keys.
+
+### The chain
+
+`TUT_SHIFT_HELD` (second hand) → `TUT_BOARD_REVEAL` → `TUT_BOARD_SHOW` →
+`TUT_LANG_INTRO` → `TUT_LANG_SHOW` × N → `TUT_LANG_POINT` → `TUT_FINALE` → `TUT_DONE`.
+About 45 s on top of chapters 1–2 with the full nine-item list. `TUT_LANG_SHOW` is ONE
+phase re-entered per item, so the phase clock is the item clock and nothing new crosses
+the link. The layer chapter stays postponed; it now sits between Shift and the reveal
+if it is ever restored.
+
+### The reveal is the focus ring at board scale
+
+`poly_focus_start_sweep()` is a second PROFILE of the same ring, not a second renderer:
+radius on `tut_sweep_radius()` out to `TUT_SWEEP_MAX_R` over `TUT_BOARD_REVEAL_MS`, a
+20-unit band, solid until the last quarter. A key becomes visible when the front passes
+its centre (`tut_reveal_reached()`), and the ring's own repaint is what draws its legend
+there, so nothing else has to know a reveal is happening.
+- ⚠️ **Keys chapter 2 already showed stay lit.** The front only ADDS keys; a letter going
+  dark and relighting as the wave reached it would read as a fault.
+- ⚠️ **The ring and the visibility test must run on one clock.** The slave's ring used to
+  start "from now" on receipt; for the reveal it is back-dated by the master's elapsed
+  (`poly_focus_start_sweep(slot, already_ms)`), the same number that back-dates
+  `phase_start`. Otherwise the slave lights keys ahead of its own wavefront.
+- `TUT_BOARD_REVEAL` is a wave phase, so its elapsed rides `tut[5]` like the letter
+  ripple's.
+
+### ⚠️ A language preview must not reach the host
+
+The host polls `GET_LANG` every second and **switches the OS layout to match**
+(PolyHost's language-changed flow). Writing a preview into `local_state->lang` is the
+only way to get it onto both halves' keycaps, so `GET_LANG` (`hid_com.c` case 7) and
+`save_user_settings()` now read `poly_reported_lang()`, which answers with the user's
+real language while a preview is on screen. A host `SET_LANG` that lands mid-preview is
+recognised (the value is no longer the one the preview wrote) and becomes the new real
+language instead of being overwritten and later "restored" to the old one.
+- The glyph script needs no guard: cmd 30 and the EEPROM save read `get_glyph_script()`,
+  and the preview only changes what the master writes into `local_state->glyph_script`.
+- ⚠️ The SLAVE still marks its settings dirty when the synced language changes, so a
+  flush that lands mid-preview can store the preview on the slave. The restore marks it
+  dirty again, so it converges at the next flush. Not fixed, because the slave never
+  answers `GET_LANG` and its stored language is overwritten by the master's sync at boot.
+
+### Only what the board can draw
+
+`tutorial_preview_prepare()` keeps an entry only when the glyph for `KC_A` in that
+language or script resolves in the flashed fonts, through the same lookup the renderer
+uses. A first-boot board with no font pack gets `n_preview == 0`, and the chapter goes
+straight from the reveal to the finale rather than showing a board of blank keycaps.
+The user's own language is skipped; showing it would change nothing.
+
+### Pacing
+
+`TUT_TEXT_MS` 2000 → 2600, `TUT_GAP_MS` 700 → 1000, `TUT_SHIFT_HELD_MS` 2000 → 2600.
+
+### Not verified on hardware
+
+All of it. In particular: whether the reveal front keeps up (a 20-unit band crosses up
+to ~20 keys per frame per half, against a 3 ms slice), whether `MID_TWO_LINE("2/3",
+"Hold=exit")` fits the Esc keycap without clipping, and how long each script needs on
+screen to be read.

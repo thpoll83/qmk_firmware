@@ -20,6 +20,14 @@
 // call restarts it. TUT_SLOT_NONE cancels.
 void poly_focus_start(uint8_t slot);
 void poly_focus_cancel(void);
+
+// The BOARD REVEAL profile: the same ring, but board-sized and slow — it runs out to
+// TUT_SWEEP_MAX_R over TUT_BOARD_REVEAL_MS on the chapter-2 sweep curve, solid until
+// the last stretch. `already_ms` back-dates the start, so the slave's front lands where
+// the master's already is (the master sends its own elapsed; the two MCUs share no
+// clock). The tutorial lights each key as this front passes its centre, and the ring's
+// own repaint is what draws the legend there.
+void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms);
 bool poly_focus_active(void);
 
 // ---- the two hooks --------------------------------------------------------

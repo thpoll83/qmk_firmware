@@ -192,10 +192,10 @@ TEST(TutorialShift, ATapStillFinishesTheChapter) {
     // one opens.
     EXPECT_EQ(st.phase, TUT_SHIFT_AGAIN);
     ClearShiftStage(&st, &now);
-    // ⚠️ Chapter 3 is POSTPONED — the shift chapter ends the tutorial for now. This is
-    // the one assertion that pins the postponement; everything else about chapter 3 is
+    // ⚠️ The LAYER chapter is postponed: Shift hands over to the board reveal, not to
+    // TUT_LAYER_WAIT. This is the one assertion that pins that; the layer chapter is
     // still implemented and still tested below, entered directly.
-    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_EQ(st.phase, TUT_BOARD_REVEAL);
     EXPECT_FALSE(st.skipped);
 }
 
@@ -213,7 +213,7 @@ TEST(TutorialShift, PointsAtTheLeftHandFirstAndThenTheRight) {
     EXPECT_EQ(tut_point_slot(&st), SHIFT_R) << "the second stage asks for the OTHER hand";
 
     ClearShiftStage(&st, &now);
-    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_EQ(st.phase, TUT_BOARD_REVEAL);
 }
 
 // ⚠️ The whole reason the second stage exists: both stages must not be clearable with
@@ -243,7 +243,9 @@ TEST(TutorialShift, OneShiftBoardFinishesAfterASingleStage) {
     st.phase       = TUT_SHIFT_WAIT;
     st.phase_start = now;
     ClearShiftStage(&st, &now);
-    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_EQ(st.phase, TUT_BOARD_REVEAL);
+    // With no right Shift the reveal starts from the left one.
+    EXPECT_EQ(st.ripple_slot, SHIFT_L);
 }
 
 // ⚠️ The pointing ring RE-FIRES while the chapter waits. Chapter 1's ring is struck by
@@ -391,7 +393,8 @@ TEST(TutorialLayer, ThePhasePredicatesCoverExactlyTheRightPhases) {
         EXPECT_FALSE(tut_phase_is_exclusive(p))
             << "phase " << (int)p << " claims the panels; see the note above";
         EXPECT_EQ(tut_phase_is_intro(p), p != TUT_DONE) << "phase " << (int)p;
-        EXPECT_EQ(tut_phase_is_wave(p), p == TUT_RIPPLE) << "phase " << (int)p;
+        EXPECT_EQ(tut_phase_is_wave(p), p == TUT_RIPPLE || p == TUT_BOARD_REVEAL)
+            << "phase " << (int)p;
     }
 }
 
@@ -1038,6 +1041,142 @@ TEST(TutorialSyncWord, NeitherFlagStops) {
     for (uint8_t step = 0; step < 4; ++step) {
         EXPECT_TRUE(tut_sync_word_stops((uint8_t)(step << TUT_SYNC_STEP_SHIFT)));
     }
+}
+
+// ---- chapter 3: the board reveal, languages and scripts -----------------------
+
+// Run chapters 1 and 2 and stop at the start of the board reveal.
+static tut_state_t AtChapterThree3(uint32_t *now, uint8_t lang_slot, uint8_t n_preview) {
+    tut_state_t st = AtChapterTwo(now);
+    tut_set_chapter3(&st, lang_slot, n_preview);
+    FinishPhase(&st, now, TUT_REVEAL_MS);
+    ClearShiftStage(&st, now);
+    ClearShiftStage(&st, now);
+    EXPECT_EQ(st.phase, TUT_BOARD_REVEAL);
+    return st;
+}
+
+constexpr uint8_t LANG_KEY = R(33);
+
+// The reveal is a WAVE: it must bump the ripple sequence, or the slave never starts its
+// half of it, and it must start from the Shift that was just held.
+TEST(TutorialBoard, RevealStartsFromTheLastShiftAndBumpsTheSequence) {
+    // The sequence at the end of chapter 1 (one bump per letter). Chapter 2 bumps it
+    // only for its pointing rings, so compare against a run that stops just before the
+    // reveal rather than against a constant.
+    uint32_t    t0     = 0;
+    tut_state_t before = AtChapterTwo(&t0);
+    tut_set_chapter3(&before, LANG_KEY, 3);
+    FinishPhase(&before, &t0, TUT_REVEAL_MS);
+    ClearShiftStage(&before, &t0);
+    before.shift_stage = 1;
+    ASSERT_EQ(before.phase, TUT_SHIFT_AGAIN);
+    const uint8_t seq_before_last_stage = before.ripple_seq;
+    ClearShiftStage(&before, &t0);
+    ASSERT_EQ(before.phase, TUT_BOARD_REVEAL);
+    EXPECT_NE(before.ripple_seq, seq_before_last_stage) << "the slave would never start";
+    EXPECT_EQ(before.ripple_slot, SHIFT_R);
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, LANG_KEY, 3);
+    EXPECT_EQ(st.ripple_slot, SHIFT_R);
+    EXPECT_TRUE(tut_phase_is_wave(st.phase));
+}
+
+TEST(TutorialBoard, RunsRevealShowLanguagesPointFinaleDone) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, LANG_KEY, 3);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    EXPECT_EQ(st.phase, TUT_BOARD_SHOW);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    EXPECT_EQ(st.phase, TUT_LANG_INTRO);
+    EXPECT_EQ(tut_preview_index(&st), -1) << "no item is live before the first one";
+    FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    for (int16_t i = 0; i < 3; ++i) {
+        EXPECT_EQ(st.phase, TUT_LANG_SHOW);
+        EXPECT_EQ(tut_preview_index(&st), i);
+        FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
+    }
+    EXPECT_EQ(st.phase, TUT_LANG_POINT);
+    EXPECT_EQ(tut_preview_index(&st), -1) << "the last item must not stay applied";
+    EXPECT_EQ(tut_point_slot(&st), LANG_KEY);
+    FinishPhase(&st, &now, TUT_LANG_POINT_MS);
+    EXPECT_EQ(st.phase, TUT_FINALE);
+    FinishPhase(&st, &now, TUT_FINALE_MS);
+    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_FALSE(st.skipped);
+}
+
+// A board with no font pack can render no language but its own and no script at all:
+// the reveal is then the whole chapter, and nothing points at a Lang key it will not
+// have explained.
+TEST(TutorialBoard, NoPreviewItemsGoesStraightToTheFinale) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, LANG_KEY, 0);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    EXPECT_EQ(st.phase, TUT_LANG_POINT);
+}
+
+TEST(TutorialBoard, NoLangKeySkipsThePointer) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, TUT_SLOT_NONE, 1);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
+    EXPECT_EQ(st.phase, TUT_FINALE);
+}
+
+// The pointer at the Lang key fires at once, like the Shift pointers.
+TEST(TutorialBoard, LangPointFiresTheRingImmediately) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, LANG_KEY, 1);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
+    ASSERT_EQ(st.phase, TUT_LANG_POINT);
+    const uint8_t seq = st.ripple_seq;
+    tut_tick(&st, now + 1u);
+    EXPECT_NE(st.ripple_seq, seq);
+    EXPECT_EQ(st.ripple_slot, LANG_KEY);
+}
+
+TEST(TutorialBoard, PreviewCountIsCapped) {
+    tut_state_t st{};
+    tut_init(&st, nullptr, nullptr, 0);
+    tut_set_chapter3(&st, TUT_SLOT_NONE, 200);
+    EXPECT_EQ(st.n_preview, TUT_PREVIEW_MAX);
+}
+
+TEST(TutorialBoard, SkipEndsItMidPreview) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, LANG_KEY, 3);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    ASSERT_EQ(tut_preview_index(&st), 0);
+    tut_skip(&st, now);
+    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_EQ(tut_preview_index(&st), -1) << "a skip must drop the preview too";
+}
+
+// Only the reveal decides key by key; every later chapter-3 phase shows the whole board.
+TEST(TutorialBoard, ShowsAllCoversExactlyThePostRevealPhases) {
+    for (uint8_t p = 0; p <= TUT_DONE; ++p) {
+        const bool want = p >= TUT_BOARD_SHOW && p <= TUT_FINALE;
+        EXPECT_EQ(tut_phase_shows_all(p), want) << "phase " << (int)p;
+    }
+}
+
+TEST(TutorialBoard, ChapterCountFollowsThePhases) {
+    EXPECT_EQ(tut_chapter_of(TUT_BLANK), 1u);
+    EXPECT_EQ(tut_chapter_of(TUT_GAP), 1u);
+    EXPECT_EQ(tut_chapter_of(TUT_REVEAL), 2u);
+    EXPECT_EQ(tut_chapter_of(TUT_SHIFT_AGAIN), 2u);
+    EXPECT_EQ(tut_chapter_of(TUT_BOARD_REVEAL), 3u);
+    EXPECT_EQ(tut_chapter_of(TUT_FINALE), 3u);
+    EXPECT_LE(tut_chapter_of(TUT_FINALE), TUT_CHAPTERS);
 }
 
 }  // namespace

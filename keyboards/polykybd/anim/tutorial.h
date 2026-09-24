@@ -73,6 +73,14 @@ bool tutorial_hold(uint8_t kind, bool pressed, uint8_t slot);
 // End it now: the hold-Esc gesture, or a remote disable over HID.
 void tutorial_skip(void);
 
+// Chapter 3: the preview item the MASTER should show right now, or -1 for none (also
+// -1 on the slave, which only renders what the sync carries).
+int16_t tutorial_preview_index(void);
+
+// The Esc keycap's legend while the tutorial runs ("2/3" over "Hold=exit"), or NULL
+// when it should show nothing.
+const uint32_t *tutorial_count_label(void);
+
 // ---- split sync -----------------------------------------------------------
 // The master owns the step machine; the slave draws the keys that land on its own
 // half, so it needs to know what is being asked for and when a ripple started. Both
@@ -149,6 +157,21 @@ bool tutorial_key_in_chapter_set(uint8_t row, uint8_t col, bool layer_chapter);
 
 // Does this matrix position resolve to `slot`?
 bool tutorial_slot_matches(uint8_t slot, uint8_t row, uint8_t col);
+
+// The packed display slot at a matrix position on THIS half, or TUT_SLOT_NONE.
+uint8_t tutorial_slot_at(uint8_t row, uint8_t col);
+
+// The Esc key, which carries the chapter count (see tutorial_count_label()).
+bool tutorial_is_count_key(uint8_t row, uint8_t col);
+
+// ---- chapter 3 (master side; the table lives with the fonts in poly_keymap.c) ----
+// Build the list of languages and glyph scripts this board can actually draw, and
+// return how many. Called once at tutorial_start() on the master.
+uint8_t tutorial_preview_prepare(void);
+// The slot of the Lang key on the base layer, either half, or TUT_SLOT_NONE.
+uint8_t tutorial_lang_slot(void);
+// The status-panel name of whatever language or script THIS half is drawing now.
+const uint32_t *tutorial_preview_name(void);
 
 // A chapter's LIT SET, as a bitmap over THIS HALF's display slots. TUT_SET_SHIFT is the
 // plain A-Z keys plus both shifts; TUT_SET_LAYER is the letters plus the layer keys.

@@ -43,6 +43,17 @@ interrupted first run replays.
 - Whether the marker survives a **firmware flash** (it is EEPROM, so it should; the
   point of the marker living off Eden's finish edge was exactly this).
 
+### Chapter 3 (2026-09-24, not yet on hardware)
+3. **The board reveal, then languages and scripts.** After the second Shift a wave
+   leaves that key and lights every legend it passes ("Every key / is a screen", then
+   "72 screens, / one keyboard"). Then the board previews Greek, Russian, Arabic,
+   Japanese, Korean, Elvish, Runes, Aurebesh and Braille, about 2 s each, on the
+   keycaps only; the host keeps seeing the real language. The ring then circles the
+   Lang key, and a finale screen ends it.
+
+The **Esc keycap shows the chapter count** (`1/3` over `Hold=exit`) from the first line
+of text on. Design and traps: `TUTORIAL.md` round 22.
+
 ---
 
 ## The postponed chapter
@@ -55,11 +66,12 @@ is redirected, in `tut_tick()`:
 ```c
 case TUT_SHIFT_HELD:
     ...
-    tut_enter(st, TUT_DONE, now);      // <- change to TUT_LAYER_WAIT to restore
+    tut_enter_reveal(st, now);         // <- change to TUT_LAYER_WAIT to restore
 ```
 
-`TutorialShift.ATapStillFinishesTheChapter` is the one assertion pinning the
-postponement; restoring the transition means updating that test and nothing else.
+To restore it, also send `TUT_NOTATION` on to `tut_enter_reveal()` instead of
+`TUT_DONE`, so chapter 3 still follows. `TutorialShift.ATapStillFinishesTheChapter` is
+the assertion pinning the postponement.
 
 Why it was held back: Shift had to feel right first, and the chapter-2 round found four
 separate bugs in the machinery chapter 3 would ride on.
@@ -130,6 +142,11 @@ Use the **`update-polykybd-docs`** skill. ⚠️ **A docs PR ships the moment it
 (`deploy.yml` runs on push to `main`) while a firmware PR only bumps a version — so the
 page waits for the *release* that carries the tutorial, not merely for the firmware PR
 to merge. Say so in the docs PR body; nothing else will catch it.
+
+### 5b. A hardware round for chapter 3
+Check the reveal's speed and smoothness, the Esc label's fit, each preview's dwell,
+and that the tray/OS language does NOT change during the preview (watch the host's
+language indicator while Greek is on the keycaps).
 
 ### 6. Later chapters (optional, in this order)
 - **Chapter 4 — the settings layer.** What the layer holds and how to reach it.

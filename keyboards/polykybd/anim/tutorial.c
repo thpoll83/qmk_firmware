@@ -161,6 +161,14 @@ void tutorial_start(uint32_t seed) {
     tutorial_shift_slots(shifts);
     tutorial_enter_base_layout();
     tut_init(&s_st, s_slots, shifts, timer_read32());
+    // Chapter 3's inputs. Only the master's count matters — it owns the phase machine —
+    // and it is computed from the fonts actually flashed, so a board with no font pack
+    // skips the languages instead of showing a board of blank keycaps.
+    if (is_usb_host_side()) {
+        tut_set_chapter3(&s_st, tutorial_lang_slot(), tutorial_preview_prepare());
+        uprintf("Tutorial chapter 3: %u preview item(s), lang key %s\n",
+                (unsigned)s_st.n_preview, s_st.lang_slot == TUT_SLOT_NONE ? "none" : "found");
+    }
     s_active     = true;
     s_sync_dirty = is_usb_host_side();
     s_seen_seq   = s_st.ripple_seq;
@@ -242,11 +250,34 @@ bool tutorial_caps_hold(void) {
 // shifts; chapter 3 the letters and the layer keys. ⚠️ Answered from the LOCAL keymap on
 // whichever half is asking, so the slave hides the same keys without being told —
 // update_displays() runs on both halves and both know the phase from the ordinary sync.
+// Has the board-reveal front passed this key's centre yet? Measured on THIS half's own
+// clock and geometry, the same curve the focus ring draws the front on, so a key lights
+// as the ring crosses it.
+static bool tut_reveal_reached(uint8_t row, uint8_t col) {
+    const uint8_t slot = tutorial_slot_at(row, col);
+    if (slot == TUT_SLOT_NONE || s_st.ripple_slot == TUT_SLOT_NONE) return false;
+    const sa_geom_t k = startup_anim_key_geom(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot));
+    const sa_geom_t o = startup_anim_key_geom(TUT_SLOT_RIGHT(s_st.ripple_slot),
+                                              TUT_SLOT_IDX(s_st.ripple_slot));
+    if (!k.valid || !o.valid) return false;
+    const int32_t  dx = (int32_t)k.cx - o.cx, dy = (int32_t)k.cy - o.cy;
+    const uint32_t r  = tut_sweep_radius(tut_phase_progress(&s_st, timer_read32()));
+    return (uint32_t)(dx * dx + dy * dy) <= r * r;
+}
+
 bool tutorial_key_visible(uint8_t row, uint8_t col) {
     if (!s_active) return true;
+    // The Esc keycap carries the chapter count from the first line of text on, and is
+    // the exit gesture, so it is never hidden once the lesson is talking.
+    if (s_st.phase != TUT_BLANK && tutorial_is_count_key(row, col)) return true;
+    if (tut_phase_shows_all(s_st.phase)) return true;
     switch (s_st.phase) {
         case TUT_DONE:
             return true;
+        // ⚠️ Keys the Shift chapter already showed STAY lit; the front only adds keys.
+        // A letter blinking off and back on as the wave passes would read as a fault.
+        case TUT_BOARD_REVEAL:
+            return tutorial_key_in_chapter_set(row, col, false) || tut_reveal_reached(row, col);
         // Chapter 1 opens on a dark, still board — the lit set is simply empty.
         case TUT_BLANK:
         case TUT_TEXT:
@@ -279,10 +310,21 @@ bool tutorial_was_skipped(void) { return s_st.skipped; }
 // shift edge, and chapter 2's pointing re-fire on a timer), and giving each its own
 // poly_focus_start() call is how the third one would ship doing nothing on the master
 // while working perfectly on the slave, which reads it off the wire.
+// The reveal arms the BOARD-sized profile, back-dated by how far `phase_start` already
+// is, so the ring and tut_reveal_reached() run on one clock. Everything else is the
+// ordinary letter ring.
+static void tutorial_start_ring(uint8_t slot) {
+    if (s_st.phase == TUT_BOARD_REVEAL) {
+        poly_focus_start_sweep(slot, timer_elapsed32(s_st.phase_start));
+    } else {
+        poly_focus_start(slot);
+    }
+}
+
 static void tutorial_arm_ring_if_new(void) {
     if (s_st.ripple_seq == s_seen_seq) return;
     s_seen_seq = s_st.ripple_seq;
-    poly_focus_start(s_st.ripple_slot);
+    tutorial_start_ring(s_st.ripple_slot);
 }
 
 bool tutorial_press(uint8_t slot) {
@@ -333,6 +375,28 @@ void tutorial_tick(void) {
     // update_displays(), the ripple is the focus service, and the status panels are
     // drawn by oled_task_user(). What is left is the phase machine and the push to the
     // other half — which is all this ever should have been.
+}
+
+int16_t tutorial_preview_index(void) {
+    if (!s_active) return -1;
+    return tut_preview_index(&s_st);
+}
+
+// The Esc keycap: which chapter this is and that holding it ends the lesson. One literal
+// per chapter because MID_TWO_LINE builds a string at compile time; the static_assert
+// keeps the table and the count in step.
+const uint32_t *tutorial_count_label(void) {
+    static const uint32_t *const labels[] = {
+        MID_TWO_LINE("1/3", "Hold=exit"),
+        MID_TWO_LINE("2/3", "Hold=exit"),
+        MID_TWO_LINE("3/3", "Hold=exit"),
+    };
+    _Static_assert(sizeof(labels) / sizeof(labels[0]) == TUT_CHAPTERS,
+                   "one Esc label per chapter");
+    if (!s_active || s_st.phase == TUT_BLANK || s_st.phase == TUT_DONE) return NULL;
+    const uint8_t ch = tut_chapter_of(s_st.phase);
+    if (ch == 0 || ch > TUT_CHAPTERS) return NULL;
+    return labels[ch - 1u];
 }
 
 // ---- split sync -----------------------------------------------------------
@@ -444,7 +508,7 @@ bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
         // from now, which is why the master keeps sending its own elapsed.
         // s_seen_seq was adopted above, so tutorial_arm_ring_if_new() stays a no-op
         // here: on the slave the ring is armed from the wire, not from a local press.
-        poly_focus_start(in[4]);
+        tutorial_start_ring(in[4]);
         changed           = true;
     }
     return changed;
@@ -509,6 +573,23 @@ const uint32_t *tutorial_line(uint8_t which) {
             // The LEFT panel draws the layer symbol large instead of a line — the
             // symbol changing IS the lesson, so it is the thing on the panel.
             return left ? NULL : U"a whole layer";
+        case TUT_BOARD_REVEAL:
+            return left ? U"Every key" : U"is a screen";
+        case TUT_BOARD_SHOW:
+            return left ? U"72 screens," : U"one keyboard";
+        case TUT_LANG_INTRO:
+            return left ? U"It speaks" : U"your language";
+        case TUT_LANG_SHOW: {
+            // The name comes from what THIS half is drawing (its synced lang / script),
+            // not from a preview index: the slave is never told the index, and a name
+            // read off the same state the keycaps render cannot disagree with them.
+            const uint32_t *name = tutorial_preview_name();
+            return left ? U"Now in" : name;
+        }
+        case TUT_LANG_POINT:
+            return left ? U"Switch with" : U"the Lang key";
+        case TUT_FINALE:
+            return left ? U"You're" : U"ready!";
         case TUT_NOTATION:
             // ⚠️ FOUR short lines, two per panel, reading left to right then down.
             // This is the only screen with a second line: three marks do not fit in
@@ -575,6 +656,8 @@ bool tutorial_hold(uint8_t kind, bool pressed, uint8_t slot) {
 }
 
 void tutorial_skip(void) {}
+int16_t tutorial_preview_index(void) { return -1; }
+const uint32_t *tutorial_count_label(void) { return NULL; }
 void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]) {
     for (uint8_t i = 0; i < TUTORIAL_SYNC_BYTES; ++i) out[i] = 0;
 }

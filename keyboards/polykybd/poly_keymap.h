@@ -164,3 +164,9 @@ bool poly_fw_hold_active(void);
 // notice is held, so the values have to outlive the housekeeping pass that recorded
 // them rather than being passed down the call.
 fw_apply_verdict_t poly_fw_failure_detail(uint32_t *size, uint32_t *want, uint32_t *got);
+
+// Arm the post-intro tutorial hand-off on this half. Called by the split handler on
+// the SLAVE when the master's sync carries TUT_SYNC_ARMED, so the slave enters the
+// tutorial from its own Eden finish edge instead of depending on one 0->1 edge of
+// tut[0] landing. Idempotent.
+void poly_arm_tutorial_after_intro(void);

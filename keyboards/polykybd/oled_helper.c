@@ -1,6 +1,8 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "oled_helper.h"
+#include "anim/tutorial.h"
+#include "anim/startup_anim.h"
 #include "layer_names.h"
 
 #include "state.h"
@@ -9,6 +11,7 @@
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/fw_staging.h"
+#include "base/status_brightness.h"   // poly_status_brightness() — the live panel level
 #include "poly_keymap.h"         // poly_fw_screen() / poly_fw_hold_active()
 #include "poly_macro.h"          // POLY_MACRO_COUNT
 #include "poly_macro_record.h"   // enum poly_rec_state + the recording read-outs
@@ -33,6 +36,11 @@ extern const GFXfont NotoSansSymbols2_Regular_Arrows_20pt16b;
 // Defined in <variant>/status_oled.c's translation unit — extern here for the
 // same reason (its PROGMEM tables must not be duplicated at link time).
 extern const GFXfont NotoSans_Regular_Small_15px7b;
+// ⚠️ EXTERN, not #include "base/fonts/gfx_icons.h". The font headers DEFINE their
+// tables (no extern, no guard against a second TU), so a second include is a link
+// error on IconsBitmaps/IconsGlyphs/HelperGlyphs. Every other font here is reached
+// the same way.
+extern const GFXfont IconsFont;   // the tutorial line's trailing glyph (ICON_SHIFT)
 
 // Render `value` as a char32 (U"...") display string into `buffer`. The display
 // pipeline is 32-bit (kdisp_write_gfx_text takes const uint32_t*), so each digit
@@ -779,7 +787,105 @@ const uint8_t wpm_gauge_bitmap[] PROGMEM = {
     0x8e, 0x20,
 };
 
+// First-run tutorial prose: at most two centred lines, resident-font ASCII only (at
+// first boot the font pack may never have been flashed, so a pack glyph here would
+// render as nothing on the very first screen a new user sees).
+//
+// ⚠️ The panel normally runs at OLED_BRIGHTNESS (60 of 255, ~24%) — deliberately dim
+// for a status readout, too dim for the one screen that has to be read across a desk.
+// It is raised for the tutorial and put back afterwards. Raised HERE rather than left
+// to sync_and_refresh_displays(), which only touches brightness on a state CHANGE and
+// is skipped entirely while the tutorial owns the displays.
+static bool s_tut_oled_raised = false;
+
+// Pixels between a tutorial line and its trailing icon.
+#define TUT_ICON_GAP 3
+
+void oled_tutorial_screen(void) {
+    const GFXfont*  small   = &NotoSans_Regular_Small_15px7b;
+    const GFXfont*  fonts[] = {small};
+    const uint32_t* l0      = tutorial_line(0);
+    const uint32_t* l1      = tutorial_line(1);
+
+    oled_on();   // Eden left the panel off; the tutorial is the first thing to speak
+    kdisp_set_buffer(0);
+
+    // The confirmation letter owns the panel when there is one: it is the answer to
+    // "did it take THAT key", so it is drawn as a glyph in its own right rather than
+    // set as a line of prose. tutorial_draw_big_letter picks the largest latin face
+    // that is actually flashed — see the tier note there for why this is not a 2x
+    // upscale of the 19 px UI face.
+    if (tutorial_draw_big_letter(0, OLED_DISPLAY_WIDTH, OLED_DISPLAY_HEIGHT)) {
+        oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+        oled_render_dirty(true);
+        return;
+    }
+
+    // ⚠️ A trailing icon is drawn with its OWN single-font array, never appended to the
+    // line. The status face covers 0x20..0x7E, so the glyph is not in it; and
+    // kdisp_write_gfx_char baseline-aligns every glyph to fonts[0], so a two-font array
+    // would drop the icon by (IconsFont 40 - small 20) = 20 px, straight out of its
+    // band. Two calls, two arrays, two correct baselines.
+    const GFXfont* icon_fonts[] = {&IconsFont};
+
+    const uint32_t* lines[2] = {l0, l1};
+    const uint8_t   count    = (uint8_t)((l0 ? 1 : 0) + (l1 ? 1 : 0));
+    if (count > 0) {
+        // Same even-band placement as the FW-2 prompt: each line is centred in its own
+        // band from its own bbox, so a descender does not push its neighbour.
+        const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / count);
+        uint8_t      slot = 0;
+        for (uint8_t i = 0; i < 2; ++i) {
+            if (lines[i] == NULL) continue;
+            int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+            kdisp_gfx_text_bbox(fonts, 1, lines[i], &x0, &x1, &y0, &y1);
+            int8_t w = (int8_t)(x1 - x0 + 1);
+
+            // The icon joins the line as one centred unit — measured, not guessed, so
+            // "SHIFT" does not stay centred with the glyph hanging off the right edge.
+            const uint32_t  cp        = tutorial_line_icon(i);
+            const uint32_t  icon[2]   = {cp, 0};
+            int8_t          ix0 = 0, ix1 = 0, iy0 = 0, iy1 = 0;
+            int8_t          icon_w    = 0;
+            if (cp) {
+                kdisp_gfx_text_bbox(icon_fonts, 1, icon, &ix0, &ix1, &iy0, &iy1);
+                icon_w = (int8_t)(ix1 - ix0 + 1 + TUT_ICON_GAP);
+                w      = (int8_t)(w + icon_w);
+            }
+
+            int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2 - x0);
+            if (x < 0) x = 0;
+            const int8_t base = (int8_t)(band * slot + band / 2 - (y0 + y1) / 2);
+            kdisp_write_gfx_text(fonts, 1, (int8_t)x, base, lines[i]);
+            if (cp) {
+                // Centred on the TEXT's own band, from the icon's bbox — the two faces
+                // have different heights, so sharing a baseline would sit it low.
+                const int8_t ibase = (int8_t)(band * slot + band / 2 - (iy0 + iy1) / 2);
+                kdisp_write_gfx_text(icon_fonts, 1,
+                                     (int8_t)(x + x0 + (x1 - x0 + 1) + TUT_ICON_GAP - ix0),
+                                     ibase, icon);
+            }
+            slot++;
+        }
+    }
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    oled_render_dirty(true);   // one synchronous pass — a line must not dribble in
+}
+
 bool oled_task_user(void) {
+    // Brightness ownership for the tutorial, on its edges only (an unconditional
+    // oled_set_brightness every tick would be pointless I2C traffic).
+    if (tutorial_active() != s_tut_oled_raised) {
+        s_tut_oled_raised = tutorial_active();
+        // ⚠️ Restore to the LIVE level, not the compile-time OLED_BRIGHTNESS. The
+        // status panel tracks the synced contrast (status_oled_level() in
+        // poly_keymap.c is the same expression), so handing back the constant made
+        // the tutorial's exit undo whatever brightness the user had set.
+        oled_set_brightness(s_tut_oled_raised
+                                ? 255
+                                : poly_status_brightness(get_local_state()->contrast));
+    }
+
     // A firmware episode owns the panel outright: ONE selector decides which screen,
     // so the dispatch cannot fall through to the status screen between two phases.
     // It used to be three separate conditions here, and the seams between them were
@@ -808,6 +914,23 @@ bool oled_task_user(void) {
         // that has already gone idle and show 0%, which is worse than the flash it is
         // meant to fix.
         return false;
+    } else if (startup_anim_active() && !startup_anim_is_loop()) {
+        // The one-shot Eden intro owns the whole board: the status panels stay DARK
+        // for its duration rather than showing a status readout beside the animation.
+        // BELOW the firmware block on purpose — a signing question, a live flash, an
+        // apply or a restart outranks the intro, and poly_prepare_for_flash() stops a
+        // one-shot anyway. Above everything else, which would all paint something.
+        oled_scroll_off();
+        oled_off();
+        return false;
+    } else if (tutorial_active()) {
+        // Below the firmware screens (a signing question, a live flash or an apply
+        // outranks a lesson) and above everything else. ⚠️ `active`, not `exclusive`:
+        // the status panels are the tutorial's in BOTH modes — carrying the prose is
+        // the whole point of intro mode, where the keycaps have gone back to rendering
+        // themselves.
+        oled_scroll_off();
+        oled_tutorial_screen();
 #ifdef POLYKYBD_DOOM
     } else if (doom_mode_active() || get_local_state()->doom_ctl) {
         // Game mode status OLED — master directly, slave via the synced

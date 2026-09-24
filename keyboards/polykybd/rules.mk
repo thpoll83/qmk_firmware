@@ -138,7 +138,7 @@ OS_DETECTION_ENABLE = yes
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
 # covers emoji/emoji_layer.c and hints/os_hints.c.
-POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/font_lookup.c base/crash_record.c base/hand_stamp.c slave_data.c
+POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c base/tutorial_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/font_lookup.c base/crash_record.c base/hand_stamp.c slave_data.c
 SRC += $(POLY_SRC)
 
 # emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
@@ -466,6 +466,15 @@ OPT_DEFS += -DFW_REQUIRE_SIGNATURE
 #
 # ⚠️ TEST BUILDS ONLY -- never ship this in a release image. A normal build
 # compiles the inline no-ops in crash_test.h and pays nothing.
+# First-run boot intro (Eden + the tutorial), opt-in: `-e POLYKYBD_BOOT_INTRO=yes`.
+# ⚠️ Default OFF on purpose — see the long note at the guard in poly_keymap.c. It runs
+# in the pre-watchdog boot window, and boot auto-play was previously disabled after an
+# unexplained startup hang. Do not flip this default until a cold boot has been run on
+# hardware.
+ifeq ($(strip $(POLYKYBD_BOOT_INTRO)), yes)
+    OPT_DEFS += -DPOLYKYBD_BOOT_INTRO
+endif
+
 ifeq ($(strip $(POLYKYBD_CRASH_TEST)), yes)
     OPT_DEFS += -DPOLYKYBD_CRASH_TEST
     SRC += crash_test.c

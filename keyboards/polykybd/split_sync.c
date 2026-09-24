@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "split_sync.h"
+#include "anim/tutorial.h"
 
 #include "quantum.h"
 
@@ -27,6 +28,7 @@
 #include "state.h"
 #include "anim/startup_anim.h"
 #include "side.h"
+#include "bridge_helper.h"   // is_usb_host_side()
 #ifdef POLYKYBD_DOOM
 #include "doom/doom_arena.h"
 #include "doom/doom_mirror.h"
@@ -113,6 +115,27 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     }
     if (anim_replay) {
         startup_anim_start();
+    }
+    // First-run tutorial, arming half: the master says the first-run experience is
+    // running, so arm the hand-off HERE too and let this half enter the tutorial from
+    // its OWN Eden finish edge — the same way a cold boot does, where each half reads
+    // its own EEPROM marker and no cross-half message exists at all.
+    //
+    // ⚠️ This is the local trigger the slave was missing. s_tutorial_armed lives in
+    // process_record_user()'s world (master-only) on the KC_EDEN path, so before this
+    // the slave's ONLY route into the tutorial was a single 0->1 edge on tut[0]; losing
+    // that one push left it dark for the whole session. TUT_SYNC_ARMED is a LEVEL held
+    // for the whole of Eden, so it has seconds of chances to land, and the per-step
+    // tut[] sync below is demoted from "the mechanism" to "a correction".
+    if (!is_usb_host_side() && tutorial_sync_says_armed(incoming->tut)) {
+        poly_arm_tutorial_after_intro();
+    }
+    // First-run tutorial: adopt the master's step / ripple. Applied AFTER
+    // copy_local_state so it reads the values that just arrived, and it is a no-op on
+    // the master (which is authoritative). The slave times its own ripple from receipt
+    // — the two MCUs share no clock.
+    if (tutorial_sync_apply(incoming->tut)) {
+        request_disp_refresh();
     }
     emj_apply_sync(incoming->emj_category, incoming->emj_page);
     lang_apply_sync(incoming->lang_page);

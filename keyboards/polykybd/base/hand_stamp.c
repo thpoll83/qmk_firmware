@@ -136,6 +136,14 @@ static void resolve(bool may_migrate) {
         s_source = POLY_HAND_SRC_STAMP;
     } else if (d.migrate && may_migrate) {
         stamp_write(d.is_left, /*lockout=*/false);
+        // Re-scan so slot/count/writer describe the record that is NOW in flash.
+        // stamp_read() above ran BEFORE the write and left them at "no record"
+        // (0xFF / 0), so without this the banner reports slot=255/0 on the one
+        // boot that actually creates a stamp -- exactly the boot where somebody
+        // reading the line wants to know where it landed. The fields say which
+        // record answered; after a migration that record exists.
+        bool written_is_left = false;
+        (void)stamp_read(&written_is_left);
         s_source = POLY_HAND_SRC_MIGRATED;
     } else {
         s_source = POLY_HAND_SRC_EEPROM;

@@ -113,3 +113,37 @@ jobs:
             exit 1
           fi
           echo "All $count PolyKybd test suite(s) passed."
+
+      # The googletest suites above cover COMPILED code. This step covers the
+      # Python that generates artifacts nothing else consumes -- which is how a
+      # handedness UF2 with the wrong payloadSize shipped inert in three
+      # releases: the firmware build never reads that tool's output, and the HIL
+      # rig flashes elf2uf2-made images, so no build and no hardware round could
+      # have caught it. Only the release workflow ran the tool at all.
+      #
+      # ⚠️ Scoped to tools/tests, NOT a repo-wide discover: keyboards/polykybd/lang/
+      # carries tests needing openpyxl and a spreadsheet, which are not installed
+      # here. A discover that silently collects zero tests is the failure this
+      # whole workflow exists to prevent, so the count is asserted below.
+      - name: Run PolyKybd tool tests (Python)
+        run: |
+          set -eu
+          dir=keyboards/polykybd/tools/tests
+          if [ ! -d "$dir" ]; then
+            echo "::error::$dir is missing — the tool test suite was moved or deleted."
+            exit 1
+          fi
+          python3 -m unittest discover -v -s "$dir" -p '*_test.py' 2>&1 | tee /tmp/tooltests.log
+          # `tee` makes the pipeline's status tee's, so read the count instead --
+          # the same trap that made an earlier submodule loop report success
+          # while every clone in it had failed.
+          ran=$(sed -n 's/^Ran \([0-9][0-9]*\) test.*/\1/p' /tmp/tooltests.log | tail -1)
+          if [ -z "$ran" ] || [ "$ran" -eq 0 ]; then
+            echo "::error::the Python tool suite ran ZERO tests"
+            exit 1
+          fi
+          if ! grep -q '^OK' /tmp/tooltests.log; then
+            echo "::error::the Python tool suite reported failures"
+            exit 1
+          fi
+          echo "Python tool tests passed ($ran test(s))."

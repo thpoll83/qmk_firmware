@@ -458,6 +458,17 @@ in either shape, so "not failed" is never "passed".
     a run, which is the safe direction.
   - **`workflow_dispatch` has no paths filter**, so a manual run — including the
     both-tiers route above — works on any commit regardless.
+  - ⚠️ **A DRAFT PR runs the full pipeline here, and `ready_for_review` starts
+    nothing.** `qmk-test.yml`'s `types:` is `[opened, synchronize, reopened,
+    labeled]`; nothing anywhere gates on `github.event.pull_request.draft`, and
+    `ready_for_review` is not in that list. Both halves surprise people, and both
+    were got wrong on #306 (2026-09-24, where the claim "a draft gets no CI" was
+    reported to the user): **opening as a draft does not spare the rig** a build +
+    flash cycle — #306's checks started at 05:37:46 while it was still a draft, five
+    minutes before it was marked ready — and **marking it ready fires no run at
+    all**, so a draft whose checks you cancelled stays uncovered until a push or a
+    label. If you want a WIP branch to skip the rig, keep it PR-less or confine it
+    to the path-filtered directories above; draft status is not a switch.
   - ⚠️ **A path-filtered `pull_request` trigger applies to `labeled` too**, so
     adding `hil-extended` or `hil-perf` to a docs-only PR now starts nothing at all.
     That is the intent (there is no firmware there to measure), but it is a silent
@@ -791,9 +802,20 @@ inherited-upstream noise:
   runs.** `qmk-test.yml` listens for `labeled` (it must, or the `hil-perf` label would
   trigger nothing), so adding `hil-perf` + `bump:minor` together started **two identical
   perf runs** — a wasted rig build + flash each (2026-08-05). The rig executes one job
-  at a time so they queue rather than collide, but cancel the duplicate. Apply labels
-  one call at a time when one of them is a trigger, or expect to clean up. This is a
-  *different* mechanism from the push/pull_request duplication below.
+  at a time so they queue rather than collide. Apply labels one call at a time when one
+  of them is a trigger, or expect to clean up. This is a *different* mechanism from the
+  push/pull_request duplication below.
+  - ⚠️ **"Cancel the duplicate" is only right while it is `queued` — once the rig has
+    PICKED IT UP, cancelling costs more than letting it finish.** This line used to say
+    cancel it, full stop, and following that is what damaged #306 (2026-09-24). A
+    `hil-extended` label fired a second run on a PR that already had a green extended
+    pass; the rig started its HIL job at 05:46:27 and the cancel landed at 05:47:14,
+    interrupting the flash. GitHub renders a cancelled job as a **failure**, so the PR
+    was left with five `cancelled` check runs and `mergeable_state: unstable` — which
+    only a full re-run (Build firmware + HIL, ~7 min of rig time) clears. Cancelling
+    spent more rig time than the duplicate would have, and put a red-looking board in
+    front of the reviewer. **Read `status` before deciding**: `queued` → cancel is free;
+    `in_progress` → let it run.
 - ⚠️ **A `check_suite.completed` wake can name a SUPERSEDED head, and read at face
   value it says "CI is green" about a commit nobody is on.** The envelope's own text
   is *"No third-party check suite on the PR's head_sha is still running or failed"*

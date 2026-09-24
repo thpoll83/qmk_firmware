@@ -80,6 +80,38 @@ mcp__github__actions_list  method=list_workflow_runs  resource_id=qmk-test.yml
 mcp__github__actions_list  method=list_workflow_jobs  resource_id=<run_id>  filter=all
 ```
 
+⚠️ **Those filters are advisory — `list_workflow_runs` returns the repo's runs
+whatever you pass for `workflow_id` / `event` / `branch`** (measured 2026-09-24).
+Page it and match client-side on the fields you care about rather than trusting the
+filter to have narrowed anything; a run you "found" may belong to another workflow
+entirely. There is also **no job-listing method on `actions_get`**, so when the jobs
+call is the one you need and it will not narrow, fetch the run's log archive instead
+(`get_workflow_run_logs_url`, then unzip) — each job is a separate text file in it,
+which is also the fastest way to grep a green run for a test name.
+
+### Getting a SECOND rig verdict without marking the PR
+
+⚠️ **A re-run is the expensive way to re-ask the rig, and it writes its answer onto
+the PR.** When the question is *"is this PR broken or is the rig flaky?"*, dispatch
+the suite on the same commit instead:
+
+```
+mcp__github__actions_run_trigger  method=run_workflow
+                                  owner=thpoll83  repo=qmk_firmware
+                                  workflow_id=qmk-test.yml
+                                  ref=<the PR's branch>   # not PolyKybd
+                                  inputs={tier: "fwapply"}
+```
+
+The graded suite still runs in full under that tier, and because a
+`workflow_dispatch` run is **not associated with a pull request**, its result never
+joins the PR's check runs — so a second red does not make the board look worse, and
+a green one is clean evidence. That is how #308's supposed rig regression was
+settled (2026-09-24): the dispatch returned **40 PASS / 0 FAIL** with `raw HID
+interfaces present: 1`, which places the earlier failure in the intermittent
+no-enumeration class in §2 rather than in the diff. It also buys the FW-APPLY
+coverage a PR event never runs.
+
 ## 1.5 Did the suite RUN at all? — the no-log case
 
 ⚠️ **Before step 2: if the log ends at `Prepare all required actions`, there is no

@@ -795,6 +795,9 @@ void note_boot_flags(uint8_t flags);
 bool boot_intro_pending(void);
 // Persist BOOT_INTRO_DONE (one-time tail-byte write) so the intro won't replay.
 void mark_boot_intro_done(void);
+// Clear the marker (straight-through write) so the intro + tutorial replay next boot.
+// Master-only by design: at boot the master's marker decides for both halves.
+void rearm_boot_intro(void);
 
 // The raw boot_flags byte, for the persistence half (save_user_boot_flags).
 uint8_t get_boot_flags(void);

@@ -560,6 +560,18 @@ void mark_boot_intro_done(void) {
     save_user_boot_flags();
 }
 
+// RESET Eden: clear the marker so Eden + the tutorial return at the next startup.
+// Written straight through for the same reason as mark_boot_intro_done(): a user who
+// presses RESET Eden and then unplugs must get the first-run experience next boot.
+// Writes 0, not 0xFF — an erased or wear-levelled-clear byte reads 0 here, and every
+// value other than BOOT_INTRO_DONE means "pending".
+void rearm_boot_intro(void) {
+    if (g_boot_flags == 0) return;
+    g_boot_flags = 0;
+    g_boot_dirty = false;
+    save_user_boot_flags();
+}
+
 // The raw boot_flags byte, for the persistence half (save_user_boot_flags).
 uint8_t get_boot_flags(void) {
     return g_boot_flags;

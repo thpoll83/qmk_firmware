@@ -4866,11 +4866,24 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         }
         case KC_EDEN:
             if (!act) break;
-            // ⚠️ PROTOTYPE BEHAVIOUR: this runs Eden AND the tutorial on the spot so the
-            // whole sequence can be retried without rebooting. The SHIPPING semantics
-            // (anim/TUTORIAL.md) are different: this key RE-ARMS the first-run
-            // experience for the next startup and only replays the animation now.
-            arm_tutorial_after_intro();
+            // RESET Eden (anim/TUTORIAL.md §3): clear the boot marker so Eden + the
+            // tutorial return at the next startup, and replay only the animation now as
+            // the acknowledgement. Pressing it mid-work must not lock anyone into a lesson.
+            //
+            // Held with SHIFT it also runs the tutorial on the spot — the retry path the
+            // hardware rounds use. It still clears the marker first, but the tutorial's
+            // done/skip edge re-stamps it, so Shift+RESET leaves the next boot unchanged.
+            //
+            // ⚠️ Clearing only THIS half's marker is enough: at boot the master bumps
+            // anim_nonce when it starts the intro, and that replays Eden on a slave whose
+            // own marker is already consumed (split_sync.c, the anim_replay guard).
+            // ⚠️ EEPROM writes run with the QSPI out of XIP; halt core1 across it.
+            fw_staging_core1_lockout_begin();
+            rearm_boot_intro();
+            fw_staging_core1_lockout_end();
+            if (get_mods() & MOD_MASK_SHIFT) {
+                arm_tutorial_after_intro();
+            }
             // Trigger the startup ("Eden") animation NOW on this (master) half and bump
             // the synced nonce so the slave plays in lockstep (the nonce is delivered by
             // the one-shot bridge send in housekeeping, once the transport is up — see
@@ -6154,6 +6167,14 @@ void keyboard_post_init_user(void) {
     if (boot_intro_pending()) {
         arm_tutorial_after_intro();
         startup_anim_start();
+        // ⚠️ The master's marker decides for BOTH halves. RESET Eden runs on the
+        // master only and so clears only the master's marker; a slave that already
+        // saw the tutorial reads DONE and would sit out the first run. The nonce
+        // replays Eden there exactly as KC_EDEN does (split_sync.c's anim_replay), and
+        // is a no-op on a slave already animating from its own pending marker.
+        // is_keyboard_master(), not is_usb_host_side(): the bridge role is not known
+        // yet this early, while QMK's split role is.
+        if (is_keyboard_master()) local_state->anim_nonce++;
     }
 #endif
     // LAST: arm the hardware watchdog. Everything above may block for seconds

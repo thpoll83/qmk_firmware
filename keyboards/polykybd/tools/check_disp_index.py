@@ -15,8 +15,8 @@ sits behind display col c-1.
 It used `LAYOUT_TO_INDEX(r, c)`, which performs no fold, so for as long as the
 dirty-window feature existed every right-half panel's bbox was remembered under its
 NEIGHBOUR's index. Nothing showed, because legends are similar centred boxes and
-union(neighbour's previous, new) happened to cover the old ink — until the focus ripple
-drew a thin off-centre arc, whose bbox is nothing like a legend's, and parts of the ring
+union(neighbour's previous, new) happened to cover the old ink — until an animation drew
+a thin off-centre arc, whose bbox is nothing like a legend's, and parts of that shape
 stopped being erased. On the SLAVE only, because only the right half folds.
 
 This is the mechanical check that settles it: replay the walking-zero panel walk against
@@ -107,13 +107,17 @@ def check(board, rows_per_side, cols, panels, verbose):
     _, order = layout_order(board)
     args = base_layer(board)
     if len(args) != len(order):
-        # A wrapper macro that reorders or pads (split42's POLY_LAYOUT) cannot be
-        # zipped against the layout. Say so rather than checking nothing: a check
-        # that quietly passes on a board it never read is worse than no check.
-        print("%s: SKIP — the keymap's layout macro takes %d entries, keyboard.json "
+        # ⚠️ This is a FAILURE, not a skip, and the difference is the whole gate.
+        # split42 has already returned above through table_select(), so the only
+        # board that can reach this line is split72 — the one board this check
+        # reads at all. A wrapper macro that reorders or pads cannot be zipped
+        # against the layout, so the mapping is UNKNOWN, not fine; returning 0
+        # would turn the gate green having checked nothing, which is exactly the
+        # silent pass it exists to prevent.
+        print("%s: FAIL — the keymap's layout macro takes %d entries, keyboard.json "
               "lists %d positions; cannot map keycodes to the matrix here."
               % (board, len(args), len(order)))
-        return 0
+        return 1
     kc = dict(zip(order, args))
     lo, hi = fold(board)
 
@@ -150,6 +154,78 @@ def check(board, rows_per_side, cols, panels, verbose):
     return len(bad)
 
 
+# The two production walks that must address panels through the fold. Both assign
+# `disp_idx` and hand it to panel-space consumers (the chip-select table, SA_GEOM_*[],
+# the per-panel dirty-window bbox).
+CALLERS = ("update_displays", "kdisp_idle")
+
+
+def fn_body(src, name):
+    """-> the body of a top-level `... name(...) {` definition, or None.
+
+    Relies on this file's formatting: the closing brace of a top-level function is a
+    `}` in column 0. That is true throughout poly_keymap.c and is checked by the
+    caller, which fails loudly rather than silently reporting no problem.
+    """
+    m = re.search(r"^[A-Za-z_][\w \t\*]*\b%s\s*\([^;{]*\)\s*\{" % re.escape(name),
+                  src, re.M)
+    if not m:
+        return None
+    end = re.compile(r"^\}", re.M).search(src, m.end())
+    return src[m.end():end.start()] if end else None
+
+
+def strip_comments(src):
+    """-> `src` with C comments blanked.
+
+    ⚠️ LOAD-BEARING. Without it the substring test below matches the COMMENT that
+    explains the fold rather than the call that performs it — and update_displays()
+    carries exactly such a comment, so a revert of its call to LAYOUT_TO_INDEX() still
+    passed this gate. Caught by mutation; the mutant is the whole reason this exists.
+    """
+    return re.sub(r"//[^\n]*|/\*.*?\*/", "", src, flags=re.S)
+
+
+def check_callers(verbose):
+    """⚠️ The mapping being right is NOT the same as anything USING it.
+
+    The walk above proves key_display_index() names the right panel. It reads only
+    split72.c and keyboard.json, so reverting update_displays() to LAYOUT_TO_INDEX(r, c)
+    would leave every assertion above passing while the original bug came straight back
+    — the gate would go green over exactly the defect it was written for. That is the
+    same shape as the two it already guards, so it is checked here rather than trusted.
+
+    This is a source-text check, not a semantic one: it asserts each walk resolves its
+    panel through key_display_index(), and cannot tell you the argument is right. The
+    walk above is what does that.
+    """
+    path = os.path.join(KB, "poly_keymap.c")
+    with open(path, encoding="utf-8") as f:
+        src = f.read()
+    bad = 0
+    for name in CALLERS:
+        body = fn_body(src, name)
+        if body is None:
+            # Not "no problem": the check could not be performed at all.
+            print("poly_keymap.c: FAIL — could not read %s()'s body; the caller check "
+                  "did not run." % name)
+            bad += 1
+            continue
+        body = strip_comments(body)
+        if "key_display_index(" in body:
+            if verbose:
+                print("   %s() resolves its panel through key_display_index()" % name)
+        else:
+            used = "LAYOUT_TO_INDEX" if "LAYOUT_TO_INDEX" in body else "something else"
+            print("poly_keymap.c: FAIL — %s() does not call key_display_index() (uses %s). "
+                  "It addresses panels, so on split72's right half every bbox lands under "
+                  "the neighbouring panel's index." % (name, used))
+            bad += 1
+    print("poly_keymap.c: %d of %d display walk(s) go through key_display_index()"
+          % (len(CALLERS) - bad, len(CALLERS)))
+    return bad
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -157,6 +233,7 @@ def main():
     a = ap.parse_args()
     bad = check("split72", 5, 8, 40, a.verbose)
     bad += check("split42", 4, 6, 24, a.verbose)
+    bad += check_callers(a.verbose)
     return 1 if bad else 0
 
 

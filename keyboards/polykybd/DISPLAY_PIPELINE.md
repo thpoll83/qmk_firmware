@@ -181,15 +181,15 @@ at all.
 the left half and one column out on the right. Both loops did exactly that.
 
 **`key_display_index(r, c)`** (per variant, `split72.c` / `split42.c`) is the one fold;
-`invert_display()` and `tutorial_slot_of()` both go through it rather than carrying a
+`invert_display()` goes through it rather than carrying a
 copy. It returns `255` for a matrix position with no panel of its own.
 
 - **What it cost.** For as long as the dirty-window feature has existed, every right-half
   panel's bbox was remembered under its **neighbour's** index — 28 of 74 keys, all on the
   right half. It stayed invisible because a legend is a similar centred box on either key,
-  so `union(neighbour's previous, new)` happened to cover the old ink. The focus ripple
-  then drew a thin **off-centre arc**, whose bbox is nothing like a legend's, the union
-  stopped covering, and parts of the ring were never erased — reported as *"only on the
+  so `union(neighbour's previous, new)` happened to cover the old ink. An animation then
+  drew a thin **off-centre arc**, whose bbox is nothing like a legend's, the union
+  stopped covering, and parts of that shape were never erased — reported as *"only on the
   slave side parts of the ring are not cleared any more and stay"*.
 - ⚠️ **A wrong index here does not look like a wrong index.** It looks like a rendering
   bug in whatever drew the unusual shape, which is where three rounds of this one went.

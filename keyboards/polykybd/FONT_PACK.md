@@ -197,7 +197,7 @@ flashes all stale bundles, `flash <id>` force-flashes one).
       (`ICON_LAYER_SWITCH` / `ICON_LAYER_ONESHOT`, 2026-09) needed two slots with
       the band full, and were first parked at `0xA0`/`0xA1` — **shadowing ¡ on the
       ~20 `es-*` layouts** that render `INVERTED_EMARK`, i.e. the exact trap this
-      section already described, one PR after it was written (CodeRabbit, PR #306).
+      section already described, one PR after it was written (caught in review, 2026-09).
       They sit at `0x7F` (DEL) and `0xA0` (NBSP) instead: measured, **no other
       resident font and no pack range covers either**, and neither appears in any
       legend — a legend's space is `SPACE`/`ICON_SPACE`. `0xA1` is where the

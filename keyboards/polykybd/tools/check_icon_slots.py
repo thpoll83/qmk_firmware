@@ -28,6 +28,24 @@ NAMES = os.path.join(KB, "lang", "named_glyphs.h")
 PRINTABLE_LATIN1 = {0xA0: "nbsp", **{c: chr(c) for c in range(0xA1, 0x100)}}
 # End of the non-printable C1 block: the only band a custom icon may live in.
 C1_END = 0xA0
+# ⚠️ The two SHOULDERS of that band, and the only codepoints outside it a custom
+# icon may take. Both were measured (2026-09-23): NO other resident font and no
+# pack range covers either, and neither appears in any legend — 0x7F is DEL and
+# 0xA0 is NBSP, and a legend's space is SPACE/ICON_SPACE. 0xA1 is ¡, which ~20
+# es-* layouts render through INVERTED_EMARK, so the band genuinely stops there.
+# They exist because the C1 block filled up; the next icon after these has to go
+# in the PACK or free a C1 slot. Nothing else may be added to this set without
+# the same two measurements.
+SHOULDERS = {0x7F, 0xA0}
+
+
+def shadowed_by(cp):
+    """-> what a custom icon at `cp` would hide, for the failure message."""
+    if cp in PRINTABLE_LATIN1:
+        return f"Latin-1 {PRINTABLE_LATIN1[cp]!r}"
+    if 0x20 <= cp < 0x7F:
+        return f"ASCII {chr(cp)!r}"
+    return "a codepoint outside the C1 band"
 
 
 def icons_font():
@@ -64,7 +82,7 @@ problems = []
 
 print(f"IconsFont range 0x{first:02X}..0x{last:02X}  ({len(glyphs)} glyphs)\n")
 print(f"{'cp':<6} {'glyph':<12} {'macro':<24} state")
-for cp in range(0x80, max(last, C1_END) + 6):
+for cp in range(min(first, 0x80), max(last, C1_END) + 6):
     g = glyphs.get(cp)
     nm = names.get(cp, "")
     if cp > last:
@@ -82,6 +100,19 @@ for cp in range(0x80, max(last, C1_END) + 6):
             state = "free (past last)"
     elif g:
         state = "taken"
+        if cp in SHOULDERS:
+            state = "taken (shoulder — nothing else covers it)"
+        elif not (0x80 <= cp < C1_END):
+            # ⚠️ This used to be a printed caution under the table and nothing more,
+            # so the layer-key marks were parked at 0xA0/0xA1 and shadowed ¡ on every
+            # es-* layout. A caution nobody has to act on is not a gate.
+            # ⚠️ The band is bounded at BOTH ends. IconsFont is g_all_fonts[0] and
+            # wins the lookup wherever it has a glyph, so one below 0x80 hides an
+            # ASCII character exactly as surely as one at 0xA1 hides ¡ — and the
+            # earlier form of this check only looked upward, so an icon parked at
+            # 0x7E would have replaced `~` with the gate still green.
+            problems.append(f"0x{cp:02X} holds a glyph but shadows {shadowed_by(cp)}")
+            state = "taken, SHADOWS A REAL CHARACTER"
         if not nm:
             state = "taken, UNNAMED"
             problems.append(f"0x{cp:02X} has a glyph but no named_glyphs macro")
@@ -95,6 +126,8 @@ for cp in range(0x80, max(last, C1_END) + 6):
 free = [cp for cp in range(0x80, C1_END) if cp not in glyphs]
 print(f"\nfree C1 slots: {', '.join(f'0x{c:02X}' for c in free) or '(none — the C1 range is full)'}")
 print("⚠️  0xA0+ is printable Latin-1; a custom icon there shadows a real character.")
+print(f"    the only exceptions are the shoulders "
+      f"{', '.join(f'0x{c:02X}' for c in sorted(SHOULDERS))} — see the note in this script.")
 
 if "--free" in sys.argv:
     print(f"\nnext free: 0x{free[0]:02X}" if free else "\nnext free: NONE")

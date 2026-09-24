@@ -3757,7 +3757,16 @@ void update_displays(enum refresh_mode mode) {
             // Boot only: breadcrumb + watchdog feed for the final handoff render
             // (see boot_diag.h). A bool test per key at every other time.
             boot_render_mark(r, c);
-            uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
+            // ⚠️ DISPLAY index, not LAYOUT_TO_INDEX(r, c). On split72's right half the
+            // upper four rows carry no col-0 key, so matrix col c sits behind display
+            // col c-1 — and every panel-addressed thing (the chip-select table, the
+            // animation geometry, the per-panel dirty-window bbox) is in DISPLAY space.
+            // This tracked each right-half panel's bbox under its NEIGHBOUR's index
+            // until 2026-09; legends are similar centred boxes so the union happened to
+            // cover, and only a thin off-centre arc exposed it as "parts of the ring
+            // are not cleared, on the slave". key_display_index() is the one fold —
+            // see split72.h.
+            uint8_t  disp_idx = key_display_index((uint8_t)(r + offset), c);
 
             //since MATRIX_COLS==8 we don't need to shift multiple times at the end of the row
             //except there was a leading and missing physical key (KC_NO on base layer)
@@ -4075,7 +4084,8 @@ void kdisp_idle(uint8_t contrast) {
     //uint8_t idx = 0;
     for (uint8_t r = 0; r < MATRIX_ROWS_PER_SIDE; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
-            uint8_t  disp_idx = LAYOUT_TO_INDEX(r, c);
+            // Display space, as in update_displays() above (see the note there).
+            uint8_t  disp_idx = key_display_index((uint8_t)(r + offset), c);
 
             //since MATRIX_COLS==8 we don't need to shift multiple times at the end of the row
             //except there was a leading and missing physical key (KC_NO on base layer)

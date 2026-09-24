@@ -76,5 +76,28 @@ const uint8_t* get_key_disp_bitmask(uint8_t index);
  */
 bool key_has_display(uint8_t r, uint8_t c);
 
+/*
+ * The DISPLAY index (0..39, = disp_row*8 + disp_col) behind matrix (r,c), or 255
+ * when that position has no panel of its own.
+ *
+ * ⚠️ THE MATRIX INDEX AND THE DISPLAY INDEX ARE DIFFERENT SPACES ON THE RIGHT HALF.
+ * The right half's upper four matrix rows (5..8) carry no col-0 key, so matrix col
+ * `c` sits behind display col `c-1`. Everything that addresses a panel — the
+ * chip-select table `key_display[]`, the animation geometry `SA_GEOM_RIGHT[]`, the
+ * per-panel dirty-window bboxes — is indexed in DISPLAY space; only the keymap walk
+ * is in matrix space. `LAYOUT_TO_INDEX(r, c)` performs NO fold, so using it to
+ * address a panel is right on the left half and one column out on the right.
+ *
+ * That is not theoretical: update_displays() tracked each right-half panel's
+ * dirty-window bbox under its NEIGHBOUR's index for as long as the feature has
+ * existed. It stayed invisible because legends are similar centred boxes, so
+ * union(neighbour's previous, new) happened to cover the old ink — until an animation
+ * drew a thin off-centre arc, whose bbox is nothing like a legend's, and parts of that
+ * shape stopped being erased on the slave.
+ *
+ * So: ONE fold, here. invert_display() calls it rather than carrying a second copy.
+ */
+uint8_t key_display_index(uint8_t r, uint8_t c);
+
 uint8_t get_disp_bitmask_size(void);
 

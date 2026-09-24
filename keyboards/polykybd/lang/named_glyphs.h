@@ -1926,6 +1926,15 @@
 #define MANAT_SIGN                  	U"\x20BC"
 //[[[end]]]
 
+// The two layer-key marks, resident in IconsFont beside ICON_LAYER. Defined here
+// (outside the cog table above) for the same reason as the hint glyphs below: a
+// `cog -r named_glyphs.h` regenerates that block from lang_lut.xlsx and would
+// delete anything hand-added inside it, taking keycode_helper.h's consumers with
+// it. ⚠️ The codepoints STRADDLE the C1 block — see the note in gfx_icons.h: the
+// block is full, and 0xA1 is ¡, which the es-* layouts need.
+#define ICON_LAYER_SWITCH           	U"\x7F"
+#define ICON_LAYER_ONESHOT          	U"\xA0"
+
 // OS-aware shortcut-preview hint glyphs (wave B). Real Noto codepoints rendered
 // from the font pack (NOT resident) — see keycode_to_disp_overlay() in
 // poly_keymap.c and the symbol-bundle entries in fonts/fonts.yaml. Defined here

@@ -68,6 +68,14 @@ bool key_has_display(uint8_t r, uint8_t c) {
     return true;
 }
 
+uint8_t key_display_index(uint8_t r, uint8_t c) {
+    /* No right-half column fold here (see the header) — just the row fold. */
+    r = r % MATRIX_ROWS_PER_SIDE;
+    const uint8_t disp_idx = LAYOUT_TO_INDEX(r, c);
+    const uint8_t table_size = (uint8_t)(sizeof(key_display) / sizeof(key_display[0]));
+    return (disp_idx < table_size) ? disp_idx : 255;
+}
+
 void invert_display(uint8_t r, uint8_t c, bool state) {
     /*
      * split42 is a symmetric CRKBD: the right-half matrix rows (4-7) carry all 6
@@ -75,10 +83,8 @@ void invert_display(uint8_t r, uint8_t c, bool state) {
      * its upper-right rows. Fold the matrix row into this half's 0..3 range and
      * index the table directly, bounding to the table size for safety.
      */
-    r = r % MATRIX_ROWS_PER_SIDE;
-    const uint8_t disp_idx = LAYOUT_TO_INDEX(r, c);
-    const uint8_t table_size = (uint8_t)(sizeof(key_display) / sizeof(key_display[0]));
-    if (disp_idx >= table_size) return;
+    const uint8_t disp_idx = key_display_index(r, c);
+    if (disp_idx == 255) return;
     const uint8_t* bitmask = get_key_disp_bitmask(disp_idx);
     sr_shift_out_buffer_latch(bitmask, sizeof(key_display->bitmask));
 

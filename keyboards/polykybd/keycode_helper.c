@@ -171,7 +171,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case SC_LAPO:                       return U"(    <\r     ~";
         case SC_RAPC:                       return U")    <\r     ~";
         case SC_SENT:                       return ARROWS_RETURN U"  " ICON_SHIFT;
-        case TO(_EMJ):                      return U" " PRIVATE_EMOJI_1F600 U"\v" ICON_LAYER;
+        case TO(_EMJ):                      return U" " PRIVATE_EMOJI_1F600 U"\v" ICON_LAYER LAYER_SWITCH;
         // "WakeX" did not fit — measured, it clipped 101 pixels off the 72px panel,
         // which is exactly how it was reported. The name was also opaque: what this
         // toggles is whether the FIRST press after the displays go dark is swallowed
@@ -325,13 +325,15 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_PAGE_DOWN:                  return U"  " ARROWS_DOWNSTOP;
         case KC_DELETE:                     return (state_flags & MORE_TEXT) != 0 ? U"Del" : TECHNICAL_ERASERIGHT;
         case KC_MYCM:                       return U"  " PRIVATE_PC;
-        case TO(_SL):                       return PRIVATE_SETTINGS U"\v" ICON_LAYER;
+        case TO(_SL):                       return PRIVATE_SETTINGS U"\v" ICON_LAYER LAYER_SWITCH;
         case MO(_FL):                       return U"Fn\r\v\t" ICON_LAYER;
-        case TO(_NL):                       return U"Nm\r\v\t" ICON_LAYER;
-        case MO(_NL):                       return U"Nm!\r\v\t" ICON_LAYER;
-        case KC_BASE:                       return U"Base\r\v\t" ICON_LAYER;
-        case OSL(_UL):                      return U"Util*\r\v\t" ICON_LAYER;
-        case TO(_UL):                       return U"Util\r\v\t" ICON_LAYER;
+        case TO(_NL):                       return U"Nm\r\v\t" ICON_LAYER LAYER_SWITCH;
+        case MO(_NL):                       return U"Nm\r\v\t" ICON_LAYER;
+        case TO(_BL):
+        case KC_BASE:                       return U"Base\r\v\t" ICON_LAYER LAYER_SWITCH;
+        case OSL(_UL):                      return U"Util\r\v\t" ICON_LAYER LAYER_ONESHOT;
+        case MO(_UL):                       return U"Util\r\v\t" ICON_LAYER;
+        case TO(_UL):                       return U"Util\r\v\t" ICON_LAYER LAYER_SWITCH;
         case MO(_ADDLANG1):                 return (state_flags & MORE_TEXT) != 0 ? U"Intl" : INTL_LAYER_LEGEND;
         case KC_LAT_REMAP:                  return (state_flags & MORE_TEXT) != 0 ? U"Map" : INTL_REMAP_LEGEND;
         case KC_F1:                         return U" F1";

@@ -192,6 +192,21 @@ flashes all stale bundles, `flash <id>` force-flashes one).
       and `0xA0+` is not an option — see the shadowing trap above. The next one has
       to go in the **pack** (a real PUA / an existing symbol codepoint), or free a
       slot by migrating an existing icon there.
+    - ⚠️ **…and then it overflowed anyway. The two SHOULDERS `0x7F` and `0xA0` are
+      now taken, and they are the last of them.** The layer-key marks
+      (`ICON_LAYER_SWITCH` / `ICON_LAYER_ONESHOT`, 2026-09) needed two slots with
+      the band full, and were first parked at `0xA0`/`0xA1` — **shadowing ¡ on the
+      ~20 `es-*` layouts** that render `INVERTED_EMARK`, i.e. the exact trap this
+      section already described, one PR after it was written (caught in review, 2026-09).
+      They sit at `0x7F` (DEL) and `0xA0` (NBSP) instead: measured, **no other
+      resident font and no pack range covers either**, and neither appears in any
+      legend — a legend's space is `SPACE`/`ICON_SPACE`. `0xA1` is where the
+      fall-through to NotoSans genuinely begins, so there is no third shoulder.
+      The next icon after these goes in the **pack**, or frees a C1 slot.
+    - ⚠️ **The rule is ENFORCED now, not printed.** `check_icon_slots.py` used to
+      end with a caution line under the table and exit 0 regardless — which is how
+      a documented trap was walked into by someone who had run the gate. A glyph at
+      `C1_END`+ outside `SHOULDERS` is a **problem** and exits 1.
     - **`python3 tools/check_icon_slots.py` is the gate, and it is the only thing
       that can answer "is this slot free?"** — the named_glyphs sheet's own
       "Distance Helper" column measures the sheet against *itself*, so a codepoint

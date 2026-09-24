@@ -127,7 +127,6 @@ static void doom_engine_start(void) {
     // Take core1 from the overlay-RLE service (idle in game mode — the
     // pool-writing HID commands are frozen) and give it to the game, with its
     // stack at the tail of the pool.
-    doom_core1_reset();
 #ifdef POLYKYBD_DOOM_PACK
     // ⚠️ This widens the alignment requirement (uint8_t* -> uint32_t*) on a
     // CORE1 STACK POINTER, where an unaligned result is worse than the HardFault
@@ -158,7 +157,39 @@ static void doom_engine_start(void) {
                           & ~(uintptr_t)7u;
     uint32_t *stack_bottom = (uint32_t *)stack_top;
 #endif
-    multicore_launch_core1_with_stack(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES);
+    // BOUNDED launch, mirroring doom_engine_stop's relaunch: the plain
+    // multicore_launch_core1_with_stack blocks core0 FOREVER if core1 is not
+    // cleanly back in the bootrom wait loop, and cumulative doom-slot flashes
+    // (the signed-accept path after a soak) can leave it exactly that way — the
+    // console then never drains and the session reads as a 30 s silence
+    // (verdict=none). PSM-reset + bounded handshake, retry, and on a total miss
+    // degrade to the fire demo (observable) rather than wedging the main loop.
+    const uint32_t t0 = timer_read32();
+    bool ok = false;
+    for (uint8_t attempt = 0; attempt < 3 && !ok; ++attempt) {
+        doom_core1_reset();
+        ok = multicore_launch_core1_with_stack_bounded(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES, 100u * 1000u);
+    }
+    if (!ok) {
+        // core1 would not come up for the game — do NOT leave core0 blocked.
+        // Fall back to the fire demo, the same degradation as a missing WHX.
+        // Unlike the missing-WHX/no-pack fallbacks (which return before ever
+        // touching core1), we have already reset core1, so it is sitting idle
+        // in reset — and doom_engine_stop won't relaunch the RLE service on
+        // session exit because s_engine_running is false. Put core1 back to the
+        // overlay-RLE service ourselves so overlay decompression isn't degraded
+        // until reboot; if this relaunch also misses, core1 stays reset (no
+        // worse, and still no core0 hang).
+        bool rle_ok = false;
+        for (uint8_t attempt = 0; attempt < 3 && !rle_ok; ++attempt) {
+            doom_core1_reset();
+            rle_ok = multicore_launch_core1_bounded(100u * 1000u);
+        }
+        printf("doom: core1 launch FAILED after %lu ms — fire demo; RLE core relaunch %s\n",
+               (unsigned long)timer_elapsed32(t0), rle_ok ? "ok" : "FAILED");
+        s_engine_running = false;
+        return;
+    }
     s_engine_running = true;
 }
 

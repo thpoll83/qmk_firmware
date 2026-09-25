@@ -317,10 +317,17 @@ void tutorial_stop(void) {
 bool tutorial_active(void)    { return s_active; }
 
 // The Shift chapter's reveal brings the lit set in with the menu cascade
-// (anim/menu_cascade.h) rather than all at once. Both halves know the phase from the
-// sync, so each runs the same cascade from its own clock.
+// (anim/menu_cascade.h) rather than all at once, and so does each preview item's name
+// (Latin on one half, native on the other) and the two "more" screens' words. The phase
+// and the item index are in the signature, so every screen cascades afresh. Both halves
+// know both from the sync, so each runs the same cascade from its own clock.
 uint32_t tutorial_cascade_signature(void) {
-    return (s_active && s_st.phase == TUT_REVEAL) ? 0x03000000u : 0u;
+    if (!s_active) return 0u;
+    if (s_st.phase == TUT_REVEAL) return 0x03000000u;
+    if (s_st.phase == TUT_LANG_NAME || s_st.phase == TUT_LANG_MORE || s_st.phase == TUT_LANG_MORE2) {
+        return 0x04000000u | ((uint32_t)s_st.phase << 8) | s_st.preview;
+    }
+    return 0u;
 }
 
 // A language layout is on the keys and still: the sparkles (anim/lang_sparkle.h) run.

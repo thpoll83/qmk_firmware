@@ -2014,3 +2014,8 @@ Hardware feedback:
   (`anim/lang_sparkle.c`): up to three at a time per half, a new one every 150 ms,
   each a dot, a cross, a four-point star and back over 480 ms, with a black halo so
   it reads over ink. Each half picks its own keys; nothing is synced.
+- Each preview item's name (Latin on one half, native on the other) and the words of
+  the two "more" screens cascade in the same way, over display rows 1..2 where they
+  sit (signature `0x04 | phase | item`, so every screen starts afresh). They are
+  chrome keys, so `update_displays()`' chrome branch now asks `menu_cascade_hidden()`
+  too; the focus ring's draw already did.

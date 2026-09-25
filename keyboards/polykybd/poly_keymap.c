@@ -5317,9 +5317,13 @@ void update_displays(enum refresh_mode mode) {
                     } else if (tutorial_intro_mode() &&
                                tutorial_is_chrome_key((uint8_t)(r + offset), c)) {
                         // The tutorial's chrome: "Hold to / skip..." on Esc, the chapter
-                        // on its mirror at the top-right outer edge.
+                        // on its mirror at the top-right outer edge. A preview name's
+                        // letters are chrome too, and cascade in (anim/menu_cascade.h):
+                        // until its turn such a key stays dark.
                         kdisp_set_buffer(0x00);
-                        tutorial_draw_chrome((uint8_t)(r + offset), c);
+                        if (!menu_cascade_hidden((uint8_t)(r + offset), c)) {
+                            tutorial_draw_chrome((uint8_t)(r + offset), c);
+                        }
                         kdisp_send_window();
                         doom_handled = true;
                     } else if (tutorial_intro_mode() &&

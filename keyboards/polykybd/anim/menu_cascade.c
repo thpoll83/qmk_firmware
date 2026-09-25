@@ -22,12 +22,13 @@
 #define CASC_FADE_MS  202u   // each key's own fade-in
 #define CASC_ROWS       3u   // a menu: display rows 1..3; row 0 (tabs) and row 4 stay put
 #define CASC_BOARD_ROWS 4u   // the Shift reveal: rows 1..4, so the shifts come in too
+#define CASC_NAME_ROWS  2u   // a preview name or a "more" screen: rows 1..2, where its letters sit
 #define CASC_TICK_MS   30u
 #define CASC_KEYS      40u   // display slots per half (8 x 5, some phantom)
 
 static uint32_t s_sig;                 // the menu signature the cascade belongs to
 static bool     s_live;
-static bool     s_board;               // the tutorial's reveal, not a menu (see poll())
+static uint8_t  s_rows;                // display rows 1..s_rows cascade (see poll())
 static uint32_t s_start;
 static uint32_t s_at;
 static uint8_t  s_drawn[5];            // this half's display slots already drawn
@@ -40,7 +41,7 @@ static void set_bit(uint8_t *m, uint8_t i)  { m[i >> 3] |= (uint8_t)(1u << (i & 
 // that does not cascade (the tab row, the bottom row, a slot with no panel).
 static uint32_t due_ms(bool right, uint8_t idx) {
     const uint8_t dr   = (uint8_t)(idx / 8u);
-    const uint8_t rows = s_board ? CASC_BOARD_ROWS : CASC_ROWS;
+    const uint8_t rows = s_rows;
     if (dr == 0u || dr > rows) return 0u;
     const sa_geom_t g  = startup_anim_key_geom(right, idx);
     const uint32_t  bw = startup_anim_board_w();
@@ -62,7 +63,13 @@ static void poll(void) {
     if (s_live && sig == 0u) request_disp_refresh();
     s_sig   = sig;
     s_live  = sig != 0u;
-    s_board = (sig >> 24) == 0x03u;
+    // The signature's top byte says what is cascading, and so which rows: 0x01/0x02 a
+    // menu, 0x03 the tutorial's Shift reveal, 0x04 a preview name or a "more" screen.
+    switch (sig >> 24) {
+        case 0x03u: s_rows = CASC_BOARD_ROWS; break;
+        case 0x04u: s_rows = CASC_NAME_ROWS;  break;
+        default:    s_rows = CASC_ROWS;       break;
+    }
     if (!s_live) return;
     s_start = timer_read32();
     s_at    = s_start - CASC_TICK_MS;

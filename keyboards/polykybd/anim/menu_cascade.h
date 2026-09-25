@@ -5,8 +5,8 @@
 // is entered, or a tab / the page key is pressed), the three content rows appear key
 // by key — left to right across the whole board, row by row — each fading up. The tab
 // row and the bottom row stay put. In the first-run tutorial and outside it alike.
-// The tutorial borrows it once more for the Shift chapter's reveal: the lit set (the
-// letters and both shifts) comes in the same way, over rows 1..4.
+// The tutorial borrows it for the Shift chapter's reveal (the letters and both shifts,
+// rows 1..4) and for each preview item's name (rows 1..2).
 //
 // ⚠️ No sync byte: each half detects the change from state it already has (the synced
 // layer, region, category and page), and a key's moment is a pure function of its

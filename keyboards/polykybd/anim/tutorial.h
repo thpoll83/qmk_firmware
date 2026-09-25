@@ -81,6 +81,8 @@ int16_t tutorial_preview_index(void);
 uint8_t tutorial_preview_entry(void);
 // True while the board is dark and spelling the next item's name.
 bool tutorial_naming(void);
+// True in the (postponed) layer chapter's hold phases — the only time a layer key may act.
+bool tutorial_in_layer_chapter(void);
 // True while the board spells how many layouts and scripts there are (TUT_LANG_MORE).
 bool tutorial_telling_more(void);
 // Draw a capital centred on the selected keycap buffer (the name's letters).

@@ -1759,3 +1759,17 @@ its last two units on the last key (JAPANE|SE, ΕΛΛΗΝΙ|ΚΑ).
   `gen_tutorial_names.py` now takes a `|` in the text as a forced cut (`ภาษา|ไทย`,
   "language" | "Thai") so a strip never breaks mid-word. Cluster offsets from uharfbuzz's
   `add_str` are CHARACTER indices, not UTF-8 bytes.
+
+## Round 26 — the emoji layer took over the lesson
+
+⚠️ **Layer keys passed straight through the tutorial's key swallow**, a rule written so
+that a layer key's RELEASE can never be eaten (the MO(_ADDLANG1) bug). It let the PRESS
+through too, and `TO(_EMJ)` sits beside B on the base layer — dark in chapter 1, so
+blank but not inert. One press moved the board to the emoji layer, where `TO()` latches,
+and every letter key showed an emoji for the rest of the lesson (hardware).
+- A layer key's press is now swallowed during the tutorial, except the layer chapter's
+  own momentary key IN that chapter (`tutorial_in_layer_chapter()`); its release still
+  passes, which is a no-op for a press that never happened.
+- `poly_tutorial_hold_lesson_layer()` re-parks the master on `_L0` (layer stack AND
+  `def_layer`) if either is found anywhere else outside the layer chapter, and logs
+  `Tutorial: layer drifted (...)` so a future cause names itself on the console.

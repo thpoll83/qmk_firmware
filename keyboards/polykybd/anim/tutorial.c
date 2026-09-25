@@ -399,6 +399,10 @@ uint8_t tutorial_preview_entry(void) {
 }
 
 bool tutorial_naming(void) { return s_active && s_st.phase == TUT_LANG_NAME; }
+bool tutorial_in_layer_chapter(void) {
+    return s_active && (s_st.phase == TUT_LAYER_WAIT || s_st.phase == TUT_LAYER_SWEEP ||
+                        s_st.phase == TUT_LAYER_HELD);
+}
 bool tutorial_telling_more(void) { return s_active && s_st.phase == TUT_LANG_MORE; }
 
 // A capital on a keycap, one tier larger than the legend face when that tier is flashed,
@@ -714,6 +718,7 @@ void tutorial_skip(void) {}
 int16_t tutorial_preview_index(void) { return -1; }
 uint8_t tutorial_preview_entry(void) { return 0xFFu; }
 bool tutorial_naming(void) { return false; }
+bool tutorial_in_layer_chapter(void) { return false; }
 bool tutorial_telling_more(void) { return false; }
 bool tutorial_draw_key_letter(uint32_t cp) { (void)cp; return false; }
 const uint32_t *tutorial_skip_label(void) { return NULL; }

@@ -603,7 +603,29 @@ static void poly_tutorial_publish_active(void) {
     }
 }
 
+// ⚠️ Belt to the layer-key swallow's braces: outside the layer chapter the lesson runs on
+// _L0 and nothing else, so if the layer stack is ever found elsewhere — an emoji layer
+// latched by a TO() press, or anything not yet thought of — put it back. Master only:
+// the slave renders from the synced poly_layer_t, which follows. Cheap: one compare per
+// pass, and a repark only on a real drift.
+static void poly_tutorial_hold_lesson_layer(void) {
+    if (!is_usb_host_side() || !tutorial_active() || tutorial_in_layer_chapter()) return;
+    const layer_state_t want = (layer_state_t)1 << _L0;
+    poly_layer_t       *ll   = access_local_layer();
+    // def_layer too: display_keycode_at() ORs it into the stack, so a stray one would
+    // letter the keys from another layer just as surely.
+    if (layer_state == want && ll->def_layer == _L0) return;
+    uprintf("Tutorial: layer drifted (state 0x%08lX, def %u), back to _L0\n",
+            (unsigned long)layer_state, (unsigned)ll->def_layer);
+    ll->def_layer = _L0;
+    layer_clear();
+    layer_on(_L0);
+    ll->layer = layer_state;
+    request_disp_refresh();
+}
+
 static void poly_tutorial_push_sync(void) {
+    poly_tutorial_hold_lesson_layer();
     poly_tutorial_publish_active();
     poly_tutorial_skip_if_held();
         // Push the step/ripple to the slave: it draws the keys that land on its own
@@ -5458,15 +5480,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             tutorial_hold(TUT_HOLD_SHIFT, record->event.pressed, tutorial_slot_of(row, col));
             return true;        // let QMK register/unregister it
         }
-        if (tutorial_is_chapter3_key(kc)) {
-            tutorial_hold(TUT_HOLD_LAYER, record->event.pressed, tutorial_slot_of(row, col));
-            return true;
-        }
         if (tutorial_is_layer_key(kc)) {
-            // A layer key the chapter is not asking for still must not be SWALLOWED —
-            // swallowing a layer key's release leaves the board stuck on that layer,
-            // which is the exact bug MO(_ADDLANG1) shipped. It simply drives nothing.
-            return true;
+            // The layer chapter's momentary key acts for real, but only IN that chapter.
+            if (tutorial_is_chapter3_key(kc) && tutorial_in_layer_chapter()) {
+                tutorial_hold(TUT_HOLD_LAYER, record->event.pressed, tutorial_slot_of(row, col));
+                return true;
+            }
+            // ⚠️ Every other layer key: swallow the PRESS, pass the RELEASE. Passing the
+            // press let TO(_EMJ) — beside B on the base layer, and DARK in chapter 1 —
+            // move the whole board onto the emoji layer, where it latched: every letter
+            // key showed an emoji for the rest of the lesson (hardware). "Hidden" is two
+            // invariants, blank AND inert, and this key was only blank.
+            // The release still goes through: swallowing a layer key's release leaves the
+            // board stuck on that layer (the bug MO(_ADDLANG1) shipped), and a release
+            // with no press behind it is a no-op for MO/TO/TG/OSL and for KC_BASE, which
+            // acts on the press.
+            return !record->event.pressed;
         }
         if (record->event.pressed) {
             // A press that is not the key being asked for does NOTHING, deliberately:

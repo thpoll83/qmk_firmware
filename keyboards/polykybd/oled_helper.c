@@ -875,8 +875,10 @@ void oled_tutorial_screen(void) {
 bool oled_task_user(void) {
     // Brightness ownership for the tutorial, on its edges only (an unconditional
     // oled_set_brightness every tick would be pointless I2C traffic).
-    if (tutorial_active() != s_tut_oled_raised) {
-        s_tut_oled_raised = tutorial_active();
+    // Eden's welcome tail belongs to the lesson too (it says the lesson's first words).
+    const bool tut_owns_panel = tutorial_active() || startup_anim_welcome();
+    if (tut_owns_panel != s_tut_oled_raised) {
+        s_tut_oled_raised = tut_owns_panel;
         // ⚠️ Restore to the LIVE level, not the compile-time OLED_BRIGHTNESS. The
         // status panel tracks the synced contrast (status_oled_level() in
         // poly_keymap.c is the same expression), so handing back the constant made
@@ -922,7 +924,13 @@ bool oled_task_user(void) {
         // BELOW the firmware block on purpose — a signing question, a live flash, an
         // apply or a restart outranks the intro, and poly_prepare_for_flash() stops a
         // one-shot anyway. Above everything else, which would all paint something.
+        // The exception is the welcome tail (startup_anim_welcome()): the lesson's first
+        // words, drawn by the lesson's own screen, while the stars still fall.
         oled_scroll_off();
+        if (startup_anim_welcome() && (get_local_state()->flags & STATUS_DISP_ON) != 0) {
+            oled_tutorial_screen();
+            return false;
+        }
         oled_off();
         return false;
     } else if (tutorial_active()) {

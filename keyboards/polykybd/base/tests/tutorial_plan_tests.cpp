@@ -1191,6 +1191,22 @@ TEST(TutorialBoard, EveryTourStepFiresTheRingImmediately) {
     }
 }
 
+// The welcome can be said by Eden's tail instead; the lesson then opens on the first
+// letter, and only from the opening phases.
+TEST(TutorialBoard, BeginAtLettersSkipsTheWelcomeOnlyAtTheStart) {
+    tut_state_t st = Start(0);
+    tut_begin_at_letters(&st, 5);
+    EXPECT_EQ(st.phase, TUT_LETTER_IN);
+    EXPECT_EQ(st.step, 0);
+    EXPECT_EQ(tut_current_slot(&st), st.slots[0]);
+    EXPECT_EQ(tut_progress(&st), 2u);
+    uint32_t    now = 0;
+    tut_state_t late = AtChapterTwo(&now);
+    const uint8_t phase = late.phase;
+    tut_begin_at_letters(&late, now);
+    EXPECT_EQ(late.phase, phase) << "never rewinds a lesson already under way";
+}
+
 TEST(TutorialBoard, TourIsCapped) {
     tut_state_t st{};
     tut_init(&st, nullptr, nullptr, 0);

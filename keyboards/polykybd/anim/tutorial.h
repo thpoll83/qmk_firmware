@@ -79,6 +79,9 @@ bool tutorial_tour_press(uint8_t slot);
 int16_t tutorial_tour_step(void);
 // The slot of that step's key, or TUT_SLOT_NONE.
 uint8_t tutorial_tour_target(void);
+// The slot of tour step `step` as THIS half knows it: on the slave, the key the master
+// sent while that step was live (tut[5]), not the slave's own draw.
+uint8_t tutorial_tour_slot(uint8_t step);
 // Go back to waiting on tour step `step` (master; see tut_tour_rewind()).
 void    tutorial_tour_rewind(uint8_t step);
 bool    tutorial_tour_seen(void);

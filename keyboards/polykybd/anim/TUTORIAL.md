@@ -1919,3 +1919,24 @@ Hardware feedback:
   in tour phases, so the slave pulses the right key without knowing the draw.
 - Progress: 1 opening, 2 letters, 3 Shifts, 4 reveal, 5 languages, 6 Lang menu,
   7 emoji, 8 Fn and Num, 9 Intl, 10 close.
+
+## Round 32 — the prose named the wrong letter; stars until the first letter
+
+- **"Press the Y" while E was lit.** The Intl letter is drawn at random on the MASTER.
+  The slave built its tour with its own seed and, although the master sends it the live
+  target key (`tut[5]`), the prose read the letter out of a variable holding the LOCAL
+  draw. The right panel is usually the slave, so its half of "Pick the | letter Y"
+  disagreed with the ring. The prose now reads the letter from the letter step's synced
+  key (`tutorial_tour_slot()` → `tutorial_slot_letter()`), and the draw variable is gone.
+  The general rule: on the slave, anything the master DREW is known only as what the
+  link carried; a local re-derivation of it is a second, different draw.
+- **The stars keep falling until the letter selection.** When the tutorial follows,
+  Eden runs a WELCOME TAIL (`startup_anim_set_tail()`, set with the tutorial's arming,
+  on both halves): the black stage lengthens by `SA_TAIL_MS` (2.6 s), the stars keep
+  falling on the dark board, and the status panels say "Welcome | to PolyKybd" through
+  the lesson's own screen (`startup_anim_welcome()`). The tutorial then opens straight
+  on the first letter (`tut_begin_at_letters()`, unit-tested), so the tail REPLACES
+  `TUT_BLANK` + `TUT_TEXT` rather than adding to them. The star window now runs to the
+  end of the show, black stage and tail included.
+- **Fewer and slower stars**: 3 slots at ~25 %, 3.6 s each, over the longer window;
+  about a third fewer are lit at any moment than in round 31.

@@ -94,6 +94,12 @@ static uint8_t tut_point_slot_of(const tut_state_t *st, uint8_t phase) {
 
 uint8_t tut_point_slot(const tut_state_t *st) { return tut_point_slot_of(st, st->phase); }
 
+void tut_begin_at_letters(tut_state_t *st, uint32_t now) {
+    if (st->phase != TUT_BLANK && st->phase != TUT_TEXT) return;
+    st->step = 0;
+    tut_enter(st, TUT_LETTER_IN, now);
+}
+
 void tut_set_chapter3(tut_state_t *st, uint8_t n_preview) {
     st->n_preview = (n_preview > TUT_PREVIEW_MAX) ? (uint8_t)TUT_PREVIEW_MAX : n_preview;
 }

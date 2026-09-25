@@ -52,6 +52,16 @@ void startup_anim_start(void);
 void startup_anim_start_loop(uint8_t contrast);
 // Stop immediately (idle wake / suspend). Safe to call when not running.
 void startup_anim_stop(void);
+// The tutorial follows this one-shot: run the WELCOME TAIL (the black stage lengthened,
+// stars still falling, the status panels saying the welcome). Set when the tutorial is
+// armed, on each half; a plain flag, safe from the split-protocol thread.
+void startup_anim_set_tail(bool on);
+// True during the black stage + tail of a one-shot with the tail armed: the status
+// panels show the tutorial's welcome.
+bool startup_anim_welcome(void);
+// Did the show that just ended say the welcome? Consumed by tutorial_start(), which then
+// opens on the first letter instead of saying it again.
+bool startup_anim_take_welcome_said(void);
 // True while the LOOPING screensaver owns the keycaps (idle Eden). Distinguishes it
 // from the one-shot boot/KC_EDEN animation, which callers gate differently.
 bool startup_anim_is_loop(void);

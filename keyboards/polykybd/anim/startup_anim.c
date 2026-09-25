@@ -33,13 +33,23 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 // is gone. Drawn LAST, so neither the scanline wipe nor the dither eats one.
 // History (hardware): 650 ms "came and disappeared too quickly"; 1.6 s was "still too
 // fast", with one shape (a 5-px plus) and ~39 % of five slots lit, "reduce the amount a
-// bit". Now 2.8 s, five shapes, ~25 % of four slots.
-#define SA_STAR_SLOTS    4
+// bit"; 2.8 s and ~25 % of four slots was "still a little less and slower". Now 3.6 s,
+// ~25 % of THREE slots, spread over a window that the welcome tail lengthens by 2.6 s,
+// so about a third fewer are lit at any moment.
+#define SA_STAR_SLOTS    3
 #define SA_STAR_USE      64    // of 255: ~25 % of slots light at all
-#define SA_STAR_LIFE_MS  2800
+#define SA_STAR_LIFE_MS  3600
 #define SA_STAR_SHAPES   5
 #define SA_BLACK_MS 1000    // hold on black at the end before the normal display returns
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS + SA_BLACK_MS)
+// The WELCOME TAIL: when the tutorial follows (startup_anim_set_tail()), the black stage
+// runs this much longer, the stars keep falling on the dark board, and the status panels
+// say the tutorial's welcome ("Welcome | to PolyKybd"). The tutorial then opens straight
+// on the first letter (tut_begin_at_letters()), so the stars last "until we really
+// reached the letter selection" (hardware). It REPLACES the tutorial's own dark
+// TUT_BLANK + TUT_TEXT opening rather than adding to it: the welcome shows for the black
+// stage plus this, 3.6 s, against the 2.6 s TUT_TEXT gave it.
+#define SA_TAIL_MS  2600
 // The background sparkle haze dissolves EARLY and SLOWLY: it begins the moment the hold
 // starts (letters just formed) and clears over SA_BG_FADE_MS, so the dots fade away while
 // the clean letters stay up — rather than lingering behind them until the final fade.
@@ -63,8 +73,10 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 // tt 165 of 256 of the intro, see `letter_in` in sa_render_frame) to the end of the fade.
 // It opened at the scanline wipe before; "the sparks can start already when we write
 // POLYKYBD solid" (hardware).
+// The window runs to the END of the show (the black stage, and the welcome tail when there
+// is one): each star is placed so it finishes inside it.
 #define SA_STAR_START_MS        ((SA_INTRO_MS * 165u) / 256u)
-#define SA_STAR_WINDOW_MS       (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS - SA_STAR_START_MS)
+#define SA_STAR_WINDOW_MS       (SA_TOTAL_MS - SA_STAR_START_MS)
 _Static_assert(SA_STAR_WINDOW_MS > SA_STAR_LIFE_MS, "a star must fit in its window");
 #define SA_LINE_CLEAR_SPREAD_MS 1200
 _Static_assert(SA_LINE_CLEAR_AT_MS + SA_LINE_CLEAR_SPREAD_MS < SA_INTRO_MS + SA_HOLD_MS,
@@ -96,6 +108,12 @@ _Static_assert(sizeof(SA_GEOM_RIGHT) / sizeof(SA_GEOM_RIGHT[0]) == SA_NUM_KEYS,
 
 static bool     s_active;
 static bool     s_loop;       // true: idle screensaver — restart at the end instead of ending
+static bool     s_tail;       // the welcome tail is armed: the tutorial follows this show
+static bool     s_tail_said;  // this show ended having said the welcome (consumed once)
+
+// The one-shot's length: the welcome tail adds SA_TAIL_MS.
+static uint32_t sa_total_ms(void) { return SA_TOTAL_MS + (s_tail ? SA_TAIL_MS : 0u); }
+static uint32_t sa_star_window_ms(void) { return sa_total_ms() - SA_STAR_START_MS; }
 static uint32_t s_start;
 static uint32_t s_next_log;   // next elapsed-ms threshold at which to emit a progress log
 static uint32_t s_last_frame; // last idle-loop frame time (frame-rate throttle, loop only)
@@ -356,7 +374,7 @@ static void sa_plot_stars(uint8_t *buf, uint8_t idx, uint32_t fe) {
     for (uint8_t k = 0; k < SA_STAR_SLOTS; ++k) {
         const uint32_t seed = (uint32_t)idx * SA_STAR_SLOTS + k + 1u;
         if (sa_hash8(seed * 5u + 3u) >= SA_STAR_USE) continue;
-        const uint32_t t0 = ((uint32_t)sa_hash8(seed * 7u + 1u) * (SA_STAR_WINDOW_MS - SA_STAR_LIFE_MS)) / 255u;
+        const uint32_t t0 = ((uint32_t)sa_hash8(seed * 7u + 1u) * (sa_star_window_ms() - SA_STAR_LIFE_MS)) / 255u;
         if (fe < t0 || fe >= t0 + SA_STAR_LIFE_MS) continue;
         const uint32_t age   = fe - t0;
         const int16_t  sx    = (int16_t)(4 + sa_hash8(seed * 11u + 5u) % (SCREEN_WIDTH - 8));
@@ -421,7 +439,12 @@ static void sa_render_frame(uint32_t el) {
         kdisp_set_buffer(0x00);
         uint8_t *buf = get_scratch_buffer();
 
-        if (black) { kdisp_send_window(); continue; }   // just push the cleared (black) buffer
+        // Black stage (and the welcome tail): nothing but the stars, still falling.
+        if (black) {
+            sa_plot_stars(buf, idx, el - SA_STAR_START_MS);
+            kdisp_send_window();
+            continue;
+        }
 
         // Background = plasma haze + dissolved ring, computed on a 2x2 grid (sa_bg is
         // the expensive part: 3 sines + the ring); the per-pixel noise compare keeps the
@@ -627,7 +650,23 @@ void startup_anim_start_loop(uint8_t contrast) {
     sa_begin(true, contrast ? contrast : 1);
 }
 
+void startup_anim_set_tail(bool on) { s_tail = on; }
+
+bool startup_anim_welcome(void) {
+    if (!s_active || s_loop || !s_tail) return false;
+    return timer_elapsed32(s_start) >= (uint32_t)(SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS);
+}
+
+bool startup_anim_take_welcome_said(void) {
+    const bool said = s_tail_said;
+    s_tail_said     = false;
+    return said;
+}
+
 void startup_anim_stop(void) {
+    // An interrupted show said no welcome, and the tail must not outlive it.
+    s_tail      = false;
+    s_tail_said = false;
     s_active = false;
     s_loop   = false;
     // Drop any partially-rendered frame — the keycaps are handed straight back to
@@ -687,9 +726,11 @@ void startup_anim_tick(void) {
         }
         return;
     }
-    if (el >= SA_TOTAL_MS) {
-        s_active = false;
-        uprintf("Eden done (%lums)\n", (unsigned long)el);
+    if (el >= sa_total_ms()) {
+        s_active    = false;
+        s_tail_said = s_tail;
+        s_tail      = false;
+        uprintf("Eden done (%lums%s)\n", (unsigned long)el, s_tail_said ? ", welcome said" : "");
         return;
     }
     // Emit a progress line ~once/second BEFORE rendering the frame, so if the render
@@ -705,6 +746,9 @@ void startup_anim_tick(void) {
 void startup_anim_start(void) {}
 void startup_anim_start_loop(uint8_t contrast) { (void)contrast; }
 void startup_anim_stop(void) {}
+void startup_anim_set_tail(bool on) { (void)on; }
+bool startup_anim_welcome(void) { return false; }
+bool startup_anim_take_welcome_said(void) { return false; }
 bool startup_anim_is_loop(void) { return false; }
 void startup_anim_tick(void) {}
 bool startup_anim_active(void) { return false; }

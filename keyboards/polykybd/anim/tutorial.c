@@ -206,6 +206,12 @@ void tutorial_start(uint32_t seed) {
     tutorial_shift_slots(shifts);
     tutorial_enter_base_layout();
     tut_init(&s_st, s_slots, shifts, timer_read32());
+    // Eden's tail already said the welcome over falling stars: open on the first letter.
+    // A tail armed on a show that has since ended (the slave can be armed late, after its
+    // own Eden) is dropped here, so it cannot lengthen an unrelated replay later.
+    const bool welcome_said = startup_anim_take_welcome_said();
+    if (!startup_anim_active()) startup_anim_set_tail(false);
+    if (welcome_said) tut_begin_at_letters(&s_st, timer_read32());
     // Chapter 3's inputs. Only the master's count matters — it owns the phase machine —
     // and it is computed from the fonts actually flashed, so a board with no font pack
     // skips the languages instead of showing a board of blank keycaps.
@@ -418,6 +424,10 @@ bool tutorial_tour_press(uint8_t slot) {
 }
 
 int16_t tutorial_tour_step(void) { return s_active ? tut_tour_index(&s_st) : -1; }
+uint8_t tutorial_tour_slot(uint8_t step) {
+    return (s_active && step < s_st.n_tour) ? s_st.tour[step] : TUT_SLOT_NONE;
+}
+
 uint8_t tutorial_tour_target(void) {
     const int16_t i = tutorial_tour_step();
     return i < 0 ? TUT_SLOT_NONE : s_st.tour[i];
@@ -714,6 +724,11 @@ void tutorial_sync_sent(void)    { s_sync_dirty = false; s_sync_at = timer_read3
 // second line is deliberately unused for now — one short line per panel is calmer than
 // two, and leaves room for the letter the confirmation draws large.
 const uint32_t *tutorial_line(uint8_t which) {
+    // Before the lesson starts: Eden's welcome tail (startup_anim_welcome()) says the
+    // opening words, the same ones TUT_TEXT says when there is no tail.
+    if (!s_active && which == 0 && startup_anim_welcome()) {
+        return is_left_side() ? U"Welcome" : U"to PolyKybd";
+    }
     // ⚠️ `which` used to be rejected unless 0 — the second line was deliberately unused
     // while every screen was one short phrase. TUT_NOTATION needs it, so the gate is
     // now per-phase (every other case still returns NULL for line 1 by falling off its
@@ -854,6 +869,7 @@ bool tutorial_tour_press(uint8_t slot) { (void)slot; return false; }
 int16_t tutorial_tour_step(void) { return -1; }
 void tutorial_tour_rewind(uint8_t step) { (void)step; }
 uint8_t tutorial_tour_target(void) { return TUT_SLOT_NONE; }
+uint8_t tutorial_tour_slot(uint8_t step) { (void)step; return TUT_SLOT_NONE; }
 bool tutorial_tour_seen(void) { return false; }
 int16_t tutorial_preview_index(void) { return -1; }
 uint8_t tutorial_preview_entry(void) { return 0xFFu; }

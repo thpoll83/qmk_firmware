@@ -325,6 +325,11 @@ typedef struct {
 void tut_init(tut_state_t *st, const uint8_t slots[TUT_LETTERS],
               const uint8_t shift_slots[TUT_SHIFT_STAGES], uint32_t now);
 
+// Start at the first letter, skipping TUT_BLANK and TUT_TEXT. For a lesson whose
+// welcome was already said by the tail of the Eden intro (startup_anim.c), where the
+// stars keep falling on a dark board until the letter selection begins.
+void tut_begin_at_letters(tut_state_t *st, uint32_t now);
+
 // Chapter 3's input, resolved from the flashed fonts by the caller: how many
 // languages/scripts can actually be drawn (0 skips straight from the board reveal to the
 // key tour, which is what a board with no font pack gets).

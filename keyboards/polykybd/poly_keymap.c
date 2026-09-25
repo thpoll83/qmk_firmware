@@ -516,7 +516,7 @@ static uint8_t status_oled_level(bool idle) {
     // during the lesson (the tutorial forces the keycaps' own level on its start edge)
     // ran the branch in sync_and_refresh_displays() and dropped the panel back to the
     // user's mapped level, which tops out at OLED_BRIGHTNESS (60).
-    if (tutorial_active()) return (uint8_t)POLY_INTRO_STATUS_BRIGHT;
+    if (tutorial_active() || startup_anim_welcome()) return (uint8_t)POLY_INTRO_STATUS_BRIGHT;
     return idle ? POLY_STATUS_IDLE_BRIGHT : poly_status_brightness(get_local_state()->contrast);
 }
 
@@ -1249,6 +1249,11 @@ static void arm_tutorial_after_intro(void) {
     // (the two writers of tut[0] must not fight), so it is retired with the rest of
     // the word at the teardown in poly_tutorial_finish_if_done() — not by the start.
     access_local_state()->tut[0] |= TUT_SYNC_ARMED;
+    // Eden says the welcome in its tail and keeps the stars falling until the first
+    // letter (startup_anim.c, SA_TAIL_MS). A plain flag: this also runs on the slave's
+    // split-protocol thread (poly_arm_tutorial_after_intro), where nothing may touch
+    // the panels.
+    startup_anim_set_tail(true);
 }
 
 // Called from the split handler on the slave when the master's sync says the first-run
@@ -4323,11 +4328,10 @@ static uint8_t s_tour_allow[TUT_TOUR_MAX];   // a HELD layer allowed but not enf
 static uint8_t s_tour_need[TUT_TOUR_MAX];    // TUT_NEED_* / TUT_INERT
 static uint8_t s_tour_n;
 
-// The Intl chapter's letter. ⚠️ The accent the chapter picks for it is KEPT: the one
-// setting a lesson deliberately changes, agreed for this instance ("for that one
-// instance it would be fine to accept the alternative"). Everything else the lesson
-// touches — the layout, the layers, the preview language — is handed back.
-static uint16_t s_tut_intl_letter = KC_NO;
+// ⚠️ The accent the Intl chapter picks is KEPT: the one setting a lesson deliberately
+// changes, agreed for this instance ("for that one instance it would be fine to accept
+// the alternative"). Everything else the lesson touches — the layout, the layers, the
+// preview language — is handed back.
 
 // The first key on `layer` holding `kc` that has a panel, or TUT_SLOT_NONE.
 static uint8_t tut_find_slot(uint8_t layer, uint16_t kc) {
@@ -4460,7 +4464,6 @@ uint8_t tutorial_tour_build(tut_tour_step_t out[TUT_TOUR_MAX], uint32_t seed) {
     if (intl != TUT_SLOT_NONE && ctrl != TUT_SLOT_NONE && tut_choose_intl(seed, &letter, &alt)) {
         const uint8_t lslot = tut_find_slot(_BL, letter);
         const uint8_t aslot = tut_find_slot(_ADDLANG1, latin_slot_keycode(alt));
-        s_tut_intl_letter   = letter;
         const uint8_t I = _ADDLANG1;
         (void)tut_tour_add_ex(TUT_TOUR_INTL_LOOK, 0, intl, 0xFFu, I, 0u, 30u, TUT_PROG_INTL);
         (void)tut_tour_add_ex(TUT_TOUR_INTL_ARM, 0, intl, 0xFFu, I, 0u, 3u, TUT_PROG_INTL);
@@ -4536,12 +4539,24 @@ static void poly_tutorial_tour_rewind_if_let_go(void) {
 }
 
 // "letter X" for the Intl chapter's prose, the letter in capitals.
+//
+// ⚠️ Read from the KEY the letter step points at, never from a variable holding the
+// draw. The letter is drawn at random on the MASTER; the slave builds its own tour with
+// its own seed and only learns the master's key over the link. Prose from the local
+// draw said "letter Y" on the right panel while the ring and the pulse sat on E
+// (hardware). tutorial_tour_slot() is the synced key on the slave.
 static const uint32_t *tut_letter_words(const uint32_t *prefix) {
     static uint32_t buf[16];
     uint8_t         n = 0;
     while (prefix[n] != 0 && n < 13) { buf[n] = prefix[n]; n++; }
-    buf[n++] = (s_tut_intl_letter >= KC_A && s_tut_intl_letter <= KC_Z)
-                   ? (uint32_t)('A' + (s_tut_intl_letter - KC_A)) : (uint32_t)'?';
+    uint32_t cp = 0;
+    for (uint8_t i = 0; i < s_tour_n; ++i) {
+        if (s_tour_kind[i] == TUT_TOUR_INTL_LETTER) {
+            cp = tutorial_slot_letter(tutorial_tour_slot(i));
+            break;
+        }
+    }
+    buf[n++] = cp != 0 ? cp : (uint32_t)'?';
     buf[n]   = 0;
     return buf;
 }

@@ -128,6 +128,24 @@ git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -5
    `ifndef RAW_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`, `POLYKYBD_VREG_VSEL`,
    `oled_render_dirty(true)`). Full procedure in `keyboards/polykybd/UPSTREAM_PATCHES.md`.
 
+6c. **Refresh the host's keycode table if upstream moved keycodes.** The host's layout
+   editor reads keycode names and values from its own COPY,
+   `PolyKybdHost/polyhost/res/keycodes.h`, not from this repo. Nothing builds or tests
+   the two against each other, so a stale copy shows wrong names in the editor and
+   offers keycodes whose values the firmware no longer uses.
+   ```bash
+   git diff --stat <old-merge-base>..HEAD -- quantum/keycodes.h data/constants/keycodes/
+   cmp quantum/keycodes.h ../PolyKybdHost/polyhost/res/keycodes.h
+   ```
+   If the header changed: `cp` it to the host, then check where the new names land in
+   the editor's tabs (`categorize()` in `polyhost/gui/layout_dialog/qmk_keycode_helper.py`
+   files by name prefix, and anything unmatched falls into "Additional"). Read
+   `docs/ChangeLog/<date>.md` for renamed or MOVED keycodes: a moved value changes the
+   meaning of any keymap already stored in EEPROM. Example: the 2026-09-25 merge brought
+   keycodes 0.0.9, which grew steno from 4 codes to 83 plus 88 `ST_*` aliases, and moved
+   `QK_STENO_BOLT` from 0x74F0 to 0x751C (0x74F0 is now `QK_STENO_X7`). The host copy
+   stayed at 0.0.8 until a follow-up PR. `check-mirrored-artifacts` now flags this pair.
+
 7. **Verify the build is not broken** (optional but recommended for large upstream pulls):
    Activate the QMK virtualenv and do a quick compile check:
    ```bash

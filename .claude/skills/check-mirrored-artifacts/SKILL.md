@@ -1,6 +1,6 @@
 ---
 name: check-mirrored-artifacts
-description: Verify the files PolyKybd keeps byte-identical across repos have not drifted — the frozen ISO index table (3 copies), the font render manifests, the mirrored skills — and, the half no `cmp` can cover, that each GENERATED artifact's generator still resolves its input. Use when a change touches any mirrored or generated file, before a release, when a preview or a decoded value looks wrong for no reason, at the end of a cross-repo session, or when asked "are the copies in sync / did something drift / is this file stale". NOT for syncing font-pack bundles to the host (that is reship-fontpack-bundle) and NOT for keeping two skills identical after you edit one (just `cp`).
+description: Verify the files PolyKybd keeps byte-identical across repos have not drifted — the frozen ISO index table (3 copies), the font render manifests, QMK's keycodes.h, the mirrored skills — and, the half no `cmp` can cover, that each GENERATED artifact's generator still resolves its input. Use when a change touches any mirrored or generated file, before a release, when a preview or a decoded value looks wrong for no reason, at the end of a cross-repo session, or when asked "are the copies in sync / did something drift / is this file stale". NOT for syncing font-pack bundles to the host (that is reship-fontpack-bundle) and NOT for keeping two skills identical after you edit one (just `cp`).
 ---
 
 # Check the mirrored and generated artifacts
@@ -22,7 +22,7 @@ answerable by `cmp`:
 bash .claude/skills/check-mirrored-artifacts/check_mirrors.sh
 ```
 
-It checks eleven pairs and prints `ok` / `DRIFTED` per line, exiting non-zero on any
+It checks twelve pairs and prints `ok` / `DRIFTED` per line, exiting non-zero on any
 drift or missing file. Measured clean on 2026-09-14 — a clean result is the normal one,
 and is evidence the discipline is working rather than that the check is unnecessary.
 
@@ -32,11 +32,16 @@ and is evidence the discipline is working rather than that the check is unnecess
 | `noto-fonts.yaml` | qmk `fonts/`, host `polyhost/res/fonts/` | the host's "Download Noto…" fetches a different catalogue |
 | `fontpack_render_settings.json` | qmk `base/fonts/generated/`, host `polyhost/res/fontpack/` | the font-pack **edit** dialog pre-fills the wrong render options |
 | `lang_flags.json` | same two | the editor cannot rebuild a flag glyph correctly |
+| `keycodes.h` | qmk `quantum/`, host `polyhost/res/` | the layout editor shows wrong keycode names, files new ones under the wrong tab, and offers values the firmware moved |
 | the nine mirrored skills | qmk + host `.claude/skills/` | each copy becomes the newer one for a different note |
 
 ⚠️ **The skills are the case where drift is PURE LOSS, not tailoring.** Measured before
 they were harmonised: each copy was ahead of the other on a different note, and nothing
 flagged it, because a skill has no build, no test and no reviewer. **Copy, never fork.**
+
+⚠️ **`keycodes.h` was an unguarded copy until 2026-09-25.** The upstream merge that day
+brought QMK keycodes 0.0.9 into the firmware while the host stayed on 0.0.8. Nothing
+compared them, so the gap surfaced only because someone asked.
 
 ## 2. The generated artifacts — the half `cmp` cannot see
 
@@ -65,7 +70,10 @@ into CI, fix the manifest/prune ordering rather than hand-editing the committed 
 ## 3. When something HAS drifted
 
 - **Pick the correct side deliberately, not by timestamp.** For the frozen ISO table the
-  qmk copy is canonical (the cog imports it). For the skills, read both and merge — each
+  qmk copy is canonical (the cog imports it). For `keycodes.h` the qmk copy is canonical
+  too: it changes on every upstream merge that bumps `QMK_KEYCODES_VERSION`, and the
+  host copy follows (see `merge-upstream-into-branch` step 6c). After copying, check
+  where new names land in `categorize()` (`qmk_keycode_helper.py`). For the skills, read both and merge — each
   is likely newer for a different note.
 - **`cp`, then re-run the check**, then say in the commit which direction you copied and
   why. A silent re-sync leaves the next person unable to tell which copy was wrong.

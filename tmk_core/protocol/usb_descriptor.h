@@ -302,7 +302,7 @@ enum usb_endpoints {
 #define SHARED_EPSIZE 32
 #define MOUSE_EPSIZE 16
 #ifndef RAW_EPSIZE
-    #define RAW_EPSIZE 32
+#    define RAW_EPSIZE 32
 #endif
 #define PLOVER_HID_EPSIZE 9
 #define CONSOLE_EPSIZE 32

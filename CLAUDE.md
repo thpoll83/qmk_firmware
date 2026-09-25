@@ -765,7 +765,7 @@ candidate tables and the status of each shipped wave are in
 [`keyboards/polykybd/lang/FUTURE_LANGUAGES.md`](keyboards/polykybd/lang/FUTURE_LANGUAGES.md);
 the `add-polykybd-language` skill drives the job.
 
-**`NUM_LANG` is 156.** ⚠️ Protocol codes are fixed 2+2 chars, so an ISO-639-2/3 language
+**`NUM_LANG` is 160.** ⚠️ Protocol codes are fixed 2+2 chars, so an ISO-639-2/3 language
 needs a **pseudo-code** stored verbatim in the frozen index table (Hawaiian is `hw-US`,
 Sorani `ku-IQ`). Adding a standard ISO language needs no table change.
 

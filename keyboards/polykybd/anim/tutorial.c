@@ -282,8 +282,10 @@ bool tutorial_key_visible(uint8_t row, uint8_t col) {
         // A letter blinking off and back on as the wave passes would read as a fault.
         case TUT_BOARD_REVEAL:
             return tutorial_key_in_chapter_set(row, col, false) || tut_reveal_reached(row, col);
-        // The name's letters are chrome keys (above), so everything else goes dark.
+        // The name's letters (and the "more" screen's words) are chrome keys (above), so
+        // everything else goes dark.
         case TUT_LANG_NAME:
+        case TUT_LANG_MORE:
             return false;
         // Chapter 1 opens on a dark, still board — the lit set is simply empty.
         case TUT_BLANK:
@@ -397,6 +399,7 @@ uint8_t tutorial_preview_entry(void) {
 }
 
 bool tutorial_naming(void) { return s_active && s_st.phase == TUT_LANG_NAME; }
+bool tutorial_telling_more(void) { return s_active && s_st.phase == TUT_LANG_MORE; }
 
 // A capital on a keycap, one tier larger than the legend face when that tier is flashed,
 // centred in the whole 72x40 window. Used to spell a preview item's name.
@@ -407,7 +410,8 @@ bool tutorial_draw_key_letter(uint32_t cp) {
     // and ไท as "[n" before this guard. Everything else draws at its own codepoint.
     static const uint32_t latin[]  = {TUT_LETTER_TIER_BASE, 0u};
     static const uint32_t native[] = {0u};
-    const bool is_latin = (cp >= 'A' && cp <= 'Z');
+    // Digits too: the "more" screen's numbers, and the latinbig bundle carries 0-9.
+    const bool is_latin = (cp >= 'A' && cp <= 'Z') || (cp >= '0' && cp <= '9');
     return tut_draw_letter_tiered(cp, is_latin ? latin : native, is_latin ? 2 : 1,
                                   BUFFER_X, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
@@ -635,6 +639,8 @@ const uint32_t *tutorial_line(uint8_t which) {
             const uint32_t *name = tutorial_preview_name();
             return left ? U"Now in" : name;
         }
+        case TUT_LANG_MORE:
+            return left ? U"...and many" : U"more to pick";
         case TUT_LANG_POINT:
             return left ? U"Switch with" : U"the Lang key";
         case TUT_FINALE:
@@ -708,6 +714,7 @@ void tutorial_skip(void) {}
 int16_t tutorial_preview_index(void) { return -1; }
 uint8_t tutorial_preview_entry(void) { return 0xFFu; }
 bool tutorial_naming(void) { return false; }
+bool tutorial_telling_more(void) { return false; }
 bool tutorial_draw_key_letter(uint32_t cp) { (void)cp; return false; }
 const uint32_t *tutorial_skip_label(void) { return NULL; }
 const uint32_t *tutorial_progress_label(void) { return NULL; }

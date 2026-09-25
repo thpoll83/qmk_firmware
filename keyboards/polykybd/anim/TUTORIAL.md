@@ -1744,3 +1744,18 @@ its last two units on the last key (JAPANE|SE, ΕΛΛΗΝΙ|ΚΑ).
 - `tools/tutorial_name_sheet.py` renders every item's name screen as the keys draw it,
   reading the pre-rendered tiles out of the generated header. Its item list is a replica
   of `s_tut_preview_all[]` — change both.
+
+### Round 25, part 2 — "and many more", and Thai
+
+- **`TUT_LANG_MORE` (3 s) closes the tour**: the board goes dark and the keys read
+  `160 / LAYOUTS` on the left and `10 / SCRIPTS` on the right (number on row 1, word on
+  row 2), with "...and many / more to pick" on the status panels. Both numbers are read
+  from `NUM_LANG` and `GLYPH_SCRIPT_COUNT - 1`, so the screen cannot go stale. A board
+  that previewed nothing (no font pack) skips it — "more" after an empty tour is wrong.
+  Digits use the larger latin tier too; the latinbig bundle carries 0-9.
+- **Thai compared three ways** (keycap font per character, Noto Sans Thai per character,
+  Noto word strip): the keycap font's Thai IS essentially Noto Sans Thai, a size smaller,
+  so per-character pre-rendering buys nothing. The word strip reads as a word, and
+  `gen_tutorial_names.py` now takes a `|` in the text as a forced cut (`ภาษา|ไทย`,
+  "language" | "Thai") so a strip never breaks mid-word. Cluster offsets from uharfbuzz's
+  `add_str` are CHARACTER indices, not UTF-8 bytes.

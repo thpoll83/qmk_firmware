@@ -30,7 +30,9 @@ MAX_TILE_W = 66
 
 # (C symbol, text, font file, mode, start px size)
 #   tiles   : one HarfBuzz cluster per key (separate characters or syllables)
-#   strip   : the joined word, cut at glyph boundaries into key-width pieces
+#   strip   : the joined word, cut at glyph boundaries into key-width pieces. A '|' in
+#             the text forces the cut there instead (ภาษา|ไทย: "language" | "Thai"), so a
+#             word never breaks mid-syllable; the '|' itself is not drawn.
 NAMES = [
     ("AR", "العربية", "NotoSansArabic.ttf",     "strip", 34),
     ("HI", "हिन्दी",   "NotoSansDevanagari.ttf", "tiles", 34),
@@ -97,8 +99,15 @@ def ink_box(canvas):
     return min(xs), max(xs), min(ys), max(ys)
 
 
-def groups(glyphs, mode):
+def groups(glyphs, mode, breaks=()):
     """Column ranges per tile, left to right."""
+    if breaks:   # explicit cuts: one tile per segment, by the text offset of each glyph
+        seg = {}
+        for cl, x0, x1 in glyphs:
+            k = sum(1 for b in breaks if cl >= b)
+            a, b = seg.get(k, (x0, x1))
+            seg[k] = (min(a, x0), max(b, x1))
+        return sorted(seg.values())
     by_cluster = {}
     for cl, x0, x1 in glyphs:
         a, b = by_cluster.get(cl, (x0, x1))
@@ -123,10 +132,17 @@ def groups(glyphs, mode):
 
 
 def build(path, text, mode, px):
+    breaks, clean = [], ""
+    for ch in text:              # '|' marks a forced cut. Offsets are CHARACTER indices:
+        if ch == "|":            # uharfbuzz's add_str numbers clusters per codepoint.
+            breaks.append(len(clean))
+        else:
+            clean += ch
+    text = clean
     while px > 10:
         canvas, glyphs = render(path, text, px)
         x0, x1, y0, y1 = ink_box(canvas)
-        tiles = groups(glyphs, mode)
+        tiles = groups(glyphs, mode, breaks)
         if y1 - y0 + 1 <= MAX_INK_H and all(b - a + 1 <= MAX_TILE_W for a, b in tiles):
             break
         px -= 1

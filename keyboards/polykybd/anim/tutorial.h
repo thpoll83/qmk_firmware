@@ -81,6 +81,8 @@ int16_t tutorial_preview_index(void);
 uint8_t tutorial_preview_entry(void);
 // True while the board is dark and spelling the next item's name.
 bool tutorial_naming(void);
+// True while the board spells how many layouts and scripts there are (TUT_LANG_MORE).
+bool tutorial_telling_more(void);
 // Draw a capital centred on the selected keycap buffer (the name's letters).
 bool tutorial_draw_key_letter(uint32_t cp);
 

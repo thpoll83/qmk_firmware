@@ -4191,11 +4191,15 @@ static uint8_t tut_name_units(const tut_preview_t *e, bool right, uint32_t out[T
     return n;
 }
 
-// Which unit of an `n`-unit name lands on key `idx` of this half, or -1. Up to 7 units
-// fill row 2; more are split over rows 1 and 2, the larger half on top. Each row is
-// centred on its own keys.
-static int8_t tut_name_slot_unit(uint8_t side, uint8_t idx, uint8_t n) {
-    const uint8_t top = n > TUT_NAME_KEYS ? (uint8_t)((n + 1u) / 2u) : 0u;
+// How a name of `n` units splits: up to 7 fill row 2 alone; more put the larger half on
+// row 1.
+static uint8_t tut_name_top(uint8_t n) {
+    return n > TUT_NAME_KEYS ? (uint8_t)((n + 1u) / 2u) : 0u;
+}
+
+// Which of `n` units lands on key `idx` of this half, or -1: the first `top` units on
+// row 1, the rest on row 2, each row centred on its own keys.
+static int8_t tut_name_slot_unit(uint8_t side, uint8_t idx, uint8_t n, uint8_t top) {
     for (uint8_t r = 0; r < 2; ++r) {
         const uint8_t first = r == 0 ? 0u : top;
         const uint8_t count = r == 0 ? top : (uint8_t)(n - top);
@@ -4211,23 +4215,51 @@ static int8_t tut_name_slot_unit(uint8_t side, uint8_t idx, uint8_t n) {
 
 // What this key shows while the board is naming an item. Returns 0 (not a name key),
 // 1 (a character in *cp) or 2 (a pre-rendered tile in *tile).
+// The "more" screen: a number over a word on each half — the layouts this firmware knows
+// on the left, the alternative glyph scripts on the right. Read from the enums, so the
+// screen stays true as languages and scripts are added. Returns the unit count and sets
+// *top to how many of them (the number) go on row 1.
+static uint8_t tut_more_units(bool right, uint32_t out[TUT_NAME_UNITS], uint8_t *top) {
+    const uint16_t  count = right ? (uint16_t)(GLYPH_SCRIPT_COUNT - 1) : (uint16_t)NUM_LANG;
+    const uint32_t *word  = right ? U"SCRIPTS" : U"LAYOUTS";
+    char            digits[6];
+    uint8_t         nd = 0;
+    uint16_t        v  = count;
+    do { digits[nd++] = (char)('0' + v % 10u); v /= 10u; } while (v != 0 && nd < sizeof(digits));
+    uint8_t n = 0;
+    while (nd > 0) out[n++] = (uint32_t)digits[--nd];
+    *top = n;
+    for (uint8_t i = 0; word[i] != 0 && n < TUT_NAME_UNITS; ++i) out[n++] = word[i];
+    return n;
+}
+
 static uint8_t tut_name_key(uint8_t row, uint8_t col, uint32_t *cp, const uint8_t **tile) {
-    if (!tutorial_naming()) return 0;
-    const tut_preview_t *e = tut_preview_current();
-    if (e == NULL) return 0;
+    const bool more = tutorial_telling_more();
+    if (!more && !tutorial_naming()) return 0;
     const uint8_t slot = tutorial_slot_of(row, col);
     if (slot == TUT_SLOT_NONE) return 0;
     const uint8_t side = TUT_SLOT_RIGHT(slot) ? 1u : 0u;
     if (!s_tut_name_built[side]) tut_name_keys_build(side);
+    uint32_t units[TUT_NAME_UNITS];
+    if (more) {
+        uint8_t       top = 0;
+        const uint8_t n   = tut_more_units(side != 0, units, &top);
+        const int8_t  u   = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n, top);
+        if (u < 0) return 0;
+        *cp = units[u];
+        return 1;
+    }
+    const tut_preview_t *e = tut_preview_current();
+    if (e == NULL) return 0;
     if (side == 1 && e->strip != NULL) {
-        const int8_t u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), e->strip->n);
+        const uint8_t n = e->strip->n;
+        const int8_t  u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n, tut_name_top(n));
         if (u < 0) return 0;
         *tile = e->strip->tiles + (size_t)u * 360u;
         return 2;
     }
-    uint32_t      units[TUT_NAME_UNITS];
     const uint8_t n = tut_name_units(e, side != 0, units);
-    const int8_t  u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n);
+    const int8_t  u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n, tut_name_top(n));
     if (u < 0) return 0;
     *cp = units[u];
     return 1;

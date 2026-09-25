@@ -45,6 +45,9 @@ ITEMS = [
     ("Aurebesh", ("script", "AUREBESH"), False),
     ("Braille",  ("script", "BRAILLE"), False),
 ]
+# The closing TUT_LANG_MORE screen: (left top, left bottom, right top, right bottom).
+# The numbers are NUM_LANG and GLYPH_SCRIPT_COUNT - 1, read out of the headers below.
+MORE_WORDS = ("LAYOUTS", "SCRIPTS")
 
 
 def load_strips():
@@ -56,9 +59,21 @@ def load_strips():
     return out
 
 
-def layout(n):
+def enum_counts():
+    lang = open(os.path.join(KB, "lang", "lang_lut.h"), encoding="utf-8").read()
+    body = lang[lang.rfind("enum", 0, lang.index("NUM_LANG };")):lang.index("NUM_LANG };")]
+    body = re.sub(r"//.*|/\*.*?\*/", "", body, flags=re.S)
+    n_lang = len(re.findall(r"\bLANG_[A-Z0-9_]+\b", body))
+    st = open(os.path.join(KB, "state.h"), encoding="utf-8").read()
+    enum = st[st.index("enum poly_glyph_script"):st.index("GLYPH_SCRIPT_COUNT")]
+    n_scripts = len(re.findall(r"\bGLYPH_[A-Z0-9_]+\s*=", enum)) - 1   # minus GLYPH_STD
+    return n_lang, n_scripts
+
+
+def layout(n, top=None):
     """(row, position-in-row) per unit, rows 0 = display row 1, 1 = display row 2."""
-    top = (n + 1) // 2 if n > KEYS else 0
+    if top is None:
+        top = (n + 1) // 2 if n > KEYS else 0
     slots = []
     for r, (first, count) in enumerate(((0, top), (top, n - top))):
         start = (KEYS - count) // 2
@@ -105,7 +120,7 @@ def main():
     G, GAP, LABEL = 6, 36, 90
     bw = LABEL + 2 * KEYS * (W + G) + GAP
     bh = 2 * (H + G) + 14
-    sheet = Image.new("L", (bw, len(ITEMS) * bh + 10), 30)
+    sheet = Image.new("L", (bw, (len(ITEMS) + 1) * bh + 10), 30)
     d = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
     for i, (latin, native, rtl) in enumerate(ITEMS):
@@ -124,6 +139,15 @@ def main():
             x_side = LABEL + side * (KEYS * (W + G) + GAP)
             for (r, pos), t in zip(layout(len(tiles)), tiles):
                 sheet.paste(t, (x_side + pos * (W + G), y0 + r * (H + G)))
+    n_lang, n_scripts = enum_counts()
+    y0 = 10 + len(ITEMS) * bh
+    d.text((6, y0 + H // 2), "(more)", fill=255, font=font)
+    for side, (num, word) in enumerate(((n_lang, MORE_WORDS[0]), (n_scripts, MORE_WORDS[1]))):
+        text = f"{num}{word}"
+        tiles = [char_tile(R, ord(c)) for c in text]
+        x_side = LABEL + side * (KEYS * (W + G) + GAP)
+        for (r, pos), t in zip(layout(len(text), top=len(str(num))), tiles):
+            sheet.paste(t, (x_side + pos * (W + G), y0 + r * (H + G)))
     sheet.save(args.out)
     print(f"wrote {args.out}")
 

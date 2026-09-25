@@ -4279,9 +4279,9 @@ uint8_t tutorial_tour_build(uint8_t out[TUT_TOUR_MAX], uint8_t *split) {
     const uint8_t lang = tutorial_lang_slot();
     if (lang != TUT_SLOT_NONE) {
         tut_tour_add(out, TUT_TOUR_LANG, 0, lang, _LL);
-        // Every region tab but the one already open, and none that is empty (two
-        // regions carry no language yet): either press would change nothing on screen.
-        // The region is synced, so both halves skip the same tab and agree on the steps.
+        // Every region tab but the one already open: pressing it would change nothing on
+        // screen. The region is synced, so both halves skip the same tab and agree on the
+        // steps. (The empty-region test is a guard only; all six regions carry languages.)
         for (uint8_t r = 0; r < NUM_LANG_REGIONS; ++r) {
             if (r == lang_active_region() || lang_region_count(r) == 0) continue;
             tut_tour_add(out, TUT_TOUR_LCAT, r, tut_find_slot(_LL, LCAT(r)), _LL);

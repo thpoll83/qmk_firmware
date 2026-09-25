@@ -1879,8 +1879,9 @@ Hardware feedback:
   `update_displays()`, so every such key the ring crossed went dark. Those branches are
   one function now, `render_menu_key()`, used by both; the ring also draws the emoji tab
   frames and the MRU bar.
-- **The active tab is not asked for**: the tour skips the region already open and the
-  empty regions, and the emoji tabs are two per half from a preference list that skips
+- **The active tab is not asked for**: the tour skips the region already open (all six
+  regions carry languages; an old comment in `lang_layer.h` claiming Africa and Oceania
+  were empty was stale, and is corrected), and the emoji tabs are two per half from a preference list that skips
   the open category. Region and category are synced, so both halves build the same tour.
 - **The emoji page key** (`TUT_TOUR_EPAGE`, `KC_EMJ_PAGE_NEXT`) follows the last chosen
   tab whose category has a second page. ⚠️ That key sits where the progress chrome is

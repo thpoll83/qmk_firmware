@@ -24,6 +24,7 @@
 #include "base/disp_array.h"
 #include "base/update.h"
 #include "polymod_crc32.h"
+#include "base/crash_record.h"   // crash_watchdog_feed() in the keymap discard
 #include "fill_overlay.h"
 #include "state.h"
 #include "anim/startup_anim.h"
@@ -374,6 +375,11 @@ void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column,
 // (eeconfig_init_kb, poly_keymap.c).
 void dynamic_keymap_reset_poly(void) {
     for (uint8_t layer = 0; layer < DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT; layer++) {
+        // ⚠️ Fed per layer: at boot this runs under the late-boot watchdog guard
+        // (boot_diag.c), and each layer is 80 wear-levelled EEPROM writes, any of which
+        // can trigger a consolidation erase. One feed before the whole discard left
+        // all eight layers and the macro clear to share one CRASH_WATCHDOG_MS.
+        crash_watchdog_feed();
         for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
             for (uint8_t col = 0; col < MATRIX_COLS; col++) {
                 dynamic_keymap_set_keycode(layer, row, col,
@@ -389,6 +395,7 @@ void dynamic_keymap_reset_poly(void) {
         }
 #endif
     }
+    crash_watchdog_feed();
     poly_macro_reset_all();   // bodies AND labels — a stale label on a cleared macro
                              // is worse than no label, it names something that is gone
     poly_fl_row_cache_invalidate();

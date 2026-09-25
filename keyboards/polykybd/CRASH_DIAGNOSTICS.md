@@ -212,7 +212,9 @@ run on it (`test_no_crash_record`). What is worth knowing:
     63% -> 75% gap this file names, and outside the old guard there was no reset and so
     nothing for `polyctl crash show` to read. The guard is armed by
     `boot_guard_milestone()` at step 5 (core1 up) and fed at every milestone, sub-step
-    and render key; the one-time keymap discard between steps 6 and 7 feeds it too.
+    and render key; the one-time keymap discard between steps 6 and 7 feeds it once per layer and
+    before the macro clear (`dynamic_keymap_reset_poly()`), so no single span of its
+    EEPROM writes has to fit the whole discard into 8 s.
     Inside each milestone, `splash_progress()` stamps two finer breadcrumbs:
     `0xSSE1` before the status-panel paint (I2C) and `0xSSE2` before the logo draw
     (keycap SPI), plus `0x08E3` before the final dwell. So `phase=1:0x06E1` reads

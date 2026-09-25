@@ -135,7 +135,12 @@ def main():
         else:
             units = list(native)[::-1] if rtl else list(native)
             right = [char_tile(R, ord(c)) for c in units]
-        for side, tiles in ((0, left), (1, right)):
+        # The halves swap from item to item (tut_native_on(): native on the RIGHT for an
+        # even table row, on the LEFT for an odd one).
+        latin_tiles, native_tiles = left, right
+        pairs = ((0, latin_tiles), (1, native_tiles)) if i % 2 == 0 else \
+                ((0, native_tiles), (1, latin_tiles))
+        for side, tiles in pairs:
             x_side = LABEL + side * (KEYS * (W + G) + GAP)
             for (r, pos), t in zip(layout(len(tiles)), tiles):
                 sheet.paste(t, (x_side + pos * (W + G), y0 + r * (H + G)))

@@ -881,8 +881,10 @@ bool oled_task_user(void) {
         // status panel tracks the synced contrast (status_oled_level() in
         // poly_keymap.c is the same expression), so handing back the constant made
         // the tutorial's exit undo whatever brightness the user had set.
+        // During the tutorial: the same POLY_INTRO_CONTRAST as the keycaps, so the two
+        // kinds of panel match (it was 255 against the keys' own level).
         oled_set_brightness(s_tut_oled_raised
-                                ? 255
+                                ? POLY_INTRO_CONTRAST
                                 : poly_status_brightness(get_local_state()->contrast));
     }
 

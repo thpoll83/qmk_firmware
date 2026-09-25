@@ -1185,14 +1185,72 @@ TEST(TutorialBoard, ShowsAllCoversExactlyThePostRevealPhases) {
     }
 }
 
-TEST(TutorialBoard, ChapterCountFollowsThePhases) {
-    EXPECT_EQ(tut_chapter_of(TUT_BLANK), 1u);
-    EXPECT_EQ(tut_chapter_of(TUT_GAP), 1u);
-    EXPECT_EQ(tut_chapter_of(TUT_REVEAL), 2u);
-    EXPECT_EQ(tut_chapter_of(TUT_SHIFT_AGAIN), 2u);
-    EXPECT_EQ(tut_chapter_of(TUT_BOARD_REVEAL), 3u);
-    EXPECT_EQ(tut_chapter_of(TUT_FINALE), 3u);
-    EXPECT_LE(tut_chapter_of(TUT_FINALE), TUT_CHAPTERS);
+TEST(TutorialProgressSteps, CountsOneToTenAcrossTheWholeLesson) {
+    uint32_t    now = 0;
+    tut_state_t st  = Start(now);
+    tut_set_chapter3(&st, R(33), 4);
+    uint8_t last = tut_progress(&st);
+    EXPECT_EQ(last, 1u);
+    // Walk every timed phase and every wait to the end; the count must never go back
+    // and must end on the last step.
+    for (int guard = 0; guard < 200 && st.phase != TUT_DONE; ++guard) {
+        switch (st.phase) {
+            case TUT_LETTER_WAIT: tut_press(&st, st.slots[st.step], now); break;
+            case TUT_SHIFT_WAIT:
+            case TUT_SHIFT_AGAIN: tut_hold(&st, TUT_HOLD_SHIFT, true, tut_point_slot(&st), now); break;
+            default: now += 60000u; tut_tick(&st, now); break;
+        }
+        const uint8_t p = tut_progress(&st);
+        EXPECT_GE(p, last) << "phase " << (int)st.phase;
+        EXPECT_LE(p, TUT_PROGRESS_STEPS);
+        last = p;
+    }
+    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_EQ(last, TUT_PROGRESS_STEPS);
+}
+
+TEST(TutorialProgressSteps, UsesEveryStep) {
+    // Each of the ten steps must actually be shown somewhere in a normal run.
+    uint32_t    now = 0;
+    tut_state_t st  = Start(now);
+    tut_set_chapter3(&st, R(33), 4);
+    bool seen[TUT_PROGRESS_STEPS + 1] = {};
+    for (int guard = 0; guard < 200 && st.phase != TUT_DONE; ++guard) {
+        seen[tut_progress(&st)] = true;
+        switch (st.phase) {
+            case TUT_LETTER_WAIT: tut_press(&st, st.slots[st.step], now); break;
+            case TUT_SHIFT_WAIT:
+            case TUT_SHIFT_AGAIN: tut_hold(&st, TUT_HOLD_SHIFT, true, tut_point_slot(&st), now); break;
+            default: now += 60000u; tut_tick(&st, now); break;
+        }
+    }
+    for (uint8_t i = 1; i <= TUT_PROGRESS_STEPS; ++i) EXPECT_TRUE(seen[i]) << "step " << (int)i;
+}
+
+TEST(TutorialPulse, PulsesTheKeyTheLessonWaitsFor) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterTwo(&now);
+    EXPECT_EQ(tut_pulse_slot(&st), TUT_SLOT_NONE) << "the reveal is not a wait";
+    FinishPhase(&st, &now, TUT_REVEAL_MS);
+    EXPECT_EQ(tut_pulse_slot(&st), SHIFT_L);
+    tut_state_t c1 = Start(0);
+    FinishPhase(&c1, &now, TUT_BLANK_MS);
+    FinishPhase(&c1, &now, TUT_TEXT_MS);
+    EXPECT_EQ(tut_pulse_slot(&c1), TUT_SLOT_NONE) << "not while the letter fades in";
+    FinishPhase(&c1, &now, TUT_LETTER_IN_MS);
+    EXPECT_EQ(tut_pulse_slot(&c1), c1.slots[0]);
+}
+
+TEST(TutorialPulse, LevelBreathesBetweenFloorAndFull) {
+    const uint8_t lo = (uint8_t)((255u * TUT_PULSE_FLOOR) / 255u);
+    EXPECT_EQ(tut_pulse_level(0, 255), lo);
+    EXPECT_EQ(tut_pulse_level(TUT_PULSE_PERIOD_MS / 2u, 255), 255u);
+    EXPECT_EQ(tut_pulse_level(TUT_PULSE_PERIOD_MS, 255), lo) << "periodic";
+    for (uint32_t t = 0; t < TUT_PULSE_PERIOD_MS; t += 10) {
+        const uint8_t v = tut_pulse_level(t, 200);
+        EXPECT_GE(v, (200u * TUT_PULSE_FLOOR) / 255u);
+        EXPECT_LE(v, 200u);
+    }
 }
 
 }  // namespace

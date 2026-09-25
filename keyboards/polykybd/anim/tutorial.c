@@ -20,6 +20,7 @@
 #include "startup_anim.h"           // sa_geom_t / startup_anim_key_geom
 
 #include "base/fontpack.h"   // g_all_fonts / g_all_font_count
+#include "state.h"           // get_local_state()->contrast, for the pulse's full level
 
 // The letter is drawn in the NORMAL keycap face, one tier larger — the same relocated
 // `latinbig` glyphs the legend-size feature uses (M = 0xF0000, see glyph_size_base[] in
@@ -124,6 +125,46 @@ static bool tut_draw_letter_tiered(uint32_t cp, const uint32_t *tiers, uint8_t n
 // no way to express. Running LETTER_IN/WAIT in intro mode and RIPPLE exclusively would
 // hand the panels back and forth twice per letter — six ~107 ms full repaints inside a
 // chapter whose whole point is calm. So the mode stays, and only the DRAW is borrowed.
+// ---- the pulse on the key to press ------------------------------------------
+// ONE panel's contrast, re-written every TUT_PULSE_TICK_MS. update_displays() writes
+// every key's contrast back to the normal level on each repaint, so the pulse re-asserts
+// itself rather than setting a value once. Both halves run it for the keys on their own
+// half; each knows the phase and the pulsed slot from the ordinary sync.
+#define TUT_PULSE_TICK_MS 30u
+static uint8_t  s_pulse_idx = 0xFFu;    // this half's display index being pulsed
+static uint32_t s_pulse_at;
+
+// The pulse peaks at the tutorial's one uniform level (see set_displays()), or 0 while
+// the panels are off (suspend), so a sleeping board never lights a key.
+static uint8_t tut_normal_contrast(void) {
+    return get_local_state()->contrast == DISP_OFF ? 0 : (uint8_t)POLY_INTRO_CONTRAST;
+}
+
+static void tut_panel_contrast(uint8_t idx, uint8_t level) {
+    sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
+    kdisp_set_contrast(level);
+}
+
+static void tutorial_pulse_stop(void) {
+    if (s_pulse_idx == 0xFFu) return;
+    tut_panel_contrast(s_pulse_idx, tut_normal_contrast());
+    s_pulse_idx = 0xFFu;
+}
+
+static void tutorial_pulse_tick(uint32_t now) {
+    const uint8_t slot = tut_pulse_slot(&s_st);
+    const bool    mine = slot != TUT_SLOT_NONE && TUT_SLOT_RIGHT(slot) == !is_left_side();
+    const uint8_t idx  = mine ? TUT_SLOT_IDX(slot) : 0xFFu;
+    if (idx != s_pulse_idx) {
+        tutorial_pulse_stop();          // hand the previous key its normal level back
+        s_pulse_idx = idx;
+        s_pulse_at  = now - TUT_PULSE_TICK_MS;
+    }
+    if (s_pulse_idx == 0xFFu || (uint32_t)(now - s_pulse_at) < TUT_PULSE_TICK_MS) return;
+    s_pulse_at = now;
+    tut_panel_contrast(s_pulse_idx, tut_pulse_level(now, tut_normal_contrast()));
+}
+
 // ---- lifecycle ------------------------------------------------------------
 
 void tutorial_start(uint32_t seed) {
@@ -168,6 +209,10 @@ void tutorial_start(uint32_t seed) {
     // Chapter 3's inputs. Only the master's count matters — it owns the phase machine —
     // and it is computed from the fonts actually flashed, so a board with no font pack
     // skips the languages instead of showing a board of blank keycaps.
+    // ⚠️ The Lang key's slot on BOTH halves: the pulse runs on whichever half owns the
+    // key, and that is not necessarily the master. Only the master's preview count
+    // matters — it owns the phase machine.
+    if (!is_usb_host_side()) tut_set_chapter3(&s_st, tutorial_lang_slot(), 0);
     if (is_usb_host_side()) {
         tut_set_chapter3(&s_st, tutorial_lang_slot(), tutorial_preview_prepare());
         uprintf("Tutorial chapter 3: %u preview item(s), lang key %s\n",
@@ -189,6 +234,7 @@ void tutorial_start(uint32_t seed) {
 
 void tutorial_stop(void) {
     if (!s_active) return;
+    tutorial_pulse_stop();
     s_active     = false;
     // Hand the board back on the user's own layout, with nothing held over from a
     // chapter. Both halves, for the same reason the park is on both.
@@ -211,7 +257,7 @@ void tutorial_stop(void) {
     sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);   // all panels on this half
     kdisp_set_buffer(0x00);
     kdisp_send_window();
-    kdisp_set_contrast(255);
+    kdisp_set_contrast(POLY_INTRO_CONTRAST);     // the finish edge's set_displays() then restores the user's level
     // ⚠️ This invalidate is NOT belt-and-braces — it is THE fix, and the reason is
     // worth knowing. update_displays() is reached only through the refresh drain, and
     // housekeeping does not call sync_and_refresh_displays() while the tutorial owns
@@ -380,6 +426,7 @@ void tutorial_tick(void) {
         // start (or came up late) joins in within a few hundred ms.
         if ((uint32_t)(now - s_sync_at) >= TUT_SYNC_REARM_MS) s_sync_dirty = true;
     }
+    tutorial_pulse_tick(now);
     // ⚠️ NOTHING IS RENDERED HERE ANY MORE. The board draws itself through
     // update_displays(), the ripple is the focus service, and the status panels are
     // drawn by oled_task_user(). What is left is the phase machine and the push to the
@@ -435,16 +482,20 @@ const uint32_t *tutorial_skip_label(void) {
     return HINT_MID U"\f\f\f\f" U"Hold to" U"\r\v\x05\x05" U"skip...";
 }
 
-// The right key mirroring Esc: which chapter this is. One literal per chapter; the
-// static_assert keeps the table and the count in step.
+// The right key mirroring Esc: how far along the lesson is, "3/10". Built into a buffer
+// because the numerator moves; TUT_PROGRESS_STEPS even steps, not chapters.
 const uint32_t *tutorial_progress_label(void) {
-    static const uint32_t *const labels[] = {U"1/3", U"2/3", U"3/3"};
-    _Static_assert(sizeof(labels) / sizeof(labels[0]) == TUT_CHAPTERS,
-                   "one progress label per chapter");
+    static uint32_t buf[6];
     if (!tut_chrome_live()) return NULL;
-    const uint8_t ch = tut_chapter_of(s_st.phase);
-    if (ch == 0 || ch > TUT_CHAPTERS) return NULL;
-    return labels[ch - 1u];
+    uint8_t       n = 0;
+    const uint8_t p = tut_progress(&s_st);
+    if (p >= 10u) buf[n++] = (uint32_t)('0' + p / 10u);
+    buf[n++] = (uint32_t)('0' + p % 10u);
+    buf[n++] = '/';
+    if (TUT_PROGRESS_STEPS >= 10u) buf[n++] = (uint32_t)('0' + TUT_PROGRESS_STEPS / 10u);
+    buf[n++] = (uint32_t)('0' + TUT_PROGRESS_STEPS % 10u);
+    buf[n]   = 0;
+    return buf;
 }
 
 // ---- split sync -----------------------------------------------------------
@@ -636,13 +687,10 @@ const uint32_t *tutorial_line(uint8_t which) {
         case TUT_LANG_INTRO:
             return left ? U"It speaks" : U"your language";
         case TUT_LANG_NAME:
-        case TUT_LANG_SHOW: {
-            // The name comes from what THIS half is drawing (its synced lang / script),
-            // not from a preview index: the slave is never told the index, and a name
-            // read off the same state the keycaps render cannot disagree with them.
-            const uint32_t *name = tutorial_preview_name();
-            return left ? U"Now in" : name;
-        }
+        case TUT_LANG_SHOW:
+            // A question rather than a label ("Now in" read as static, hardware): the
+            // phrase rotates with the item, and the name finishes the sentence.
+            return left ? tutorial_preview_phrase() : tutorial_preview_name();
         case TUT_LANG_MORE:
             return left ? U"...and many" : U"more to pick";
         case TUT_LANG_POINT:

@@ -4144,8 +4144,32 @@ const uint32_t *tutorial_preview_name(void) {
     return e != NULL ? e->name : U"...";
 }
 
+// The status panels read as one sentence: a lead-in on the left, the name on the right.
+// Rotated by the item's table row — the one thing both halves know — so consecutive
+// items never repeat the same words. A glyph script is written, not spoken.
+const uint32_t *tutorial_preview_phrase(void) {
+    static const uint32_t *const spoken[] = {
+        U"How about", U"You may speak", U"Or perhaps", U"Maybe you read", U"Do you speak",
+    };
+    const tut_preview_t *e   = tut_preview_current();
+    const uint8_t        row = tutorial_preview_entry();
+    if (e == NULL) return U"How about";
+    if (e->script) return U"Or write in";
+    return spoken[row % (sizeof(spoken) / sizeof(spoken[0]))];
+}
+
+// Which half spells the NATIVE name for this item: alternating by table row, so the
+// Latin name is not always on the same side ("too static", hardware). The name row is
+// the one thing both halves know about the item, so they agree without being told.
+static bool tut_native_on(uint8_t side) {
+    const uint8_t row = tutorial_preview_entry();
+    const uint8_t native_side = (row & 1u) ? 0u : 1u;
+    return side == native_side;
+}
+
 // ---- the name spelled on the keys (TUT_LANG_NAME) ----
-// LEFT half: the Latin name. RIGHT half: the language's own name, per character or as
+// One half: the Latin name; the other: the language's own name (they swap sides from one
+// item to the next, tut_native_on()), per character or as
 // pre-rendered tiles; a glyph script spells its Latin name through its own glyphs. A
 // name of up to 7 units sits on the middle display row (row 2); a longer one is split
 // over row 1 and row 2, the first half on top. Every letter row has 7 panels per half,
@@ -4183,10 +4207,11 @@ static void tut_name_keys_build(uint8_t side) {
     s_tut_name_built[side] = true;
 }
 
-// The units THIS half spells for `e`, in left-to-right order. Returns the count.
-static uint8_t tut_name_units(const tut_preview_t *e, bool right, uint32_t out[TUT_NAME_UNITS]) {
+// The units a half spells for `e`, in left-to-right order: the native name when
+// `native`, else the Latin one. Returns the count.
+static uint8_t tut_name_units(const tut_preview_t *e, bool native, uint32_t out[TUT_NAME_UNITS]) {
     uint8_t n = 0;
-    if (!right || (!e->script && e->native == NULL)) {
+    if (!native || (!e->script && e->native == NULL)) {
         for (; e->name[n] != 0 && n < TUT_NAME_UNITS; ++n) {
             uint32_t ch = e->name[n];
             if (ch >= 'a' && ch <= 'z') ch -= 'a' - 'A';
@@ -4273,14 +4298,15 @@ static uint8_t tut_name_key(uint8_t row, uint8_t col, uint32_t *cp, const uint8_
     }
     const tut_preview_t *e = tut_preview_current();
     if (e == NULL) return 0;
-    if (side == 1 && e->strip != NULL) {
+    const bool native = tut_native_on(side);
+    if (native && e->strip != NULL) {
         const uint8_t n = e->strip->n;
         const int8_t  u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n, tut_name_top(n));
         if (u < 0) return 0;
         *tile = e->strip->tiles + (size_t)u * 360u;
         return 2;
     }
-    const uint8_t n = tut_name_units(e, side != 0, units);
+    const uint8_t n = tut_name_units(e, native, units);
     const int8_t  u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n, tut_name_top(n));
     if (u < 0) return 0;
     *cp = units[u];
@@ -4631,7 +4657,9 @@ void update_displays(enum refresh_mode mode) {
                     // pass-through no-op in non-doom builds and while unarmed).
                     keycode = doom_egg_menu_keycode(keycode, (uint8_t)(r + offset), c);
                     kdisp_enable(true);
-                    kdisp_set_contrast((uint8_t)(local_state->contrast-1));
+                    // The tutorial's one uniform level (see set_displays()).
+                    kdisp_set_contrast(tutorial_active() ? (uint8_t)POLY_INTRO_CONTRAST
+                                                         : (uint8_t)(local_state->contrast - 1));
                     // Doom control pad (this only ever renders on the SLAVE
                     // half — the master early-returns above while the game
                     // runs): the outer two columns become ESC + weapon slots,
@@ -6148,6 +6176,13 @@ void show_splash_screen(void) {
 
 // Configures all displays with contrast level; shows idle pulsating animation if enabled.
 void set_displays(uint8_t contrast, bool idle) {
+    // The tutorial runs every keycap at the one first-run level (POLY_INTRO_CONTRAST),
+    // whatever brightness is set or pushed meanwhile; OFF (suspend) still turns them off.
+    // The finish edge calls this again once the tutorial is no longer active, which is
+    // what hands the user's own level back.
+    if (!idle && contrast != DISP_OFF && tutorial_active()) {
+        contrast = (uint8_t)(POLY_INTRO_CONTRAST + 1u);   // this function stores level+1
+    }
     if(idle) {
         kdisp_idle(contrast);
     } else {

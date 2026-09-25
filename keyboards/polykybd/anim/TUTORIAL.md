@@ -1773,3 +1773,31 @@ and every letter key showed an emoji for the rest of the lesson (hardware).
 - `poly_tutorial_hold_lesson_layer()` re-parks the master on `_L0` (layer stack AND
   `def_layer`) if either is found anywhere else outside the layer chapter, and logs
   `Tutorial: layer drifted (...)` so a future cause names itself on the console.
+
+## Round 27 — pacing, a pulse, ten steps, and one brightness
+
+Hardware feedback, all in one round:
+- **Eden's stars start with the scanline wipe** (not the final fade) and live 1.6 s
+  instead of 0.65 s; 3 slots per keycap at ~39 %.
+- **The key to press PULSES.** `tut_pulse_slot()` names it — the lit letter while it
+  waits, and whatever the pointing ring circles (both Shifts, the Lang key) — and
+  `tut_pulse_level()` eases its panel's contrast between 24/255 of full and full over
+  1.4 s. Both are pure and unit-tested; `tutorial_pulse_tick()` re-writes that ONE
+  panel's contrast every 30 ms, because `update_displays()` writes every key's contrast
+  back on each repaint. ⚠️ The Lang key's slot is now resolved on BOTH halves: the pulse
+  runs on the half that owns the key, which need not be the master.
+- **Progress counts in ten steps**, not three chapters (`tut_progress()`): opening, each
+  letter, each Shift, the reveal, the first and second half of the tour, and the close.
+  A walk through a whole run pins that it never goes backwards and uses all ten.
+- **The tour is twice as slow**: name 2 s, glyphs 4.4 s.
+- **"Now in" is gone**: the left status panel rotates "How about" / "You may speak" /
+  "Or perhaps" / "Maybe you read" / "Do you speak" by the item's table row (scripts get
+  "Or write in"), and the right panel finishes with the name.
+- **Latin and native swap halves from item to item** (`tut_native_on()`, by table-row
+  parity — the one thing both halves know about the item).
+- **One brightness for the whole first run**: `POLY_INTRO_CONTRAST` (128 of 255) on the
+  keycaps AND the status panels, through Eden and the tutorial. `set_displays()` forces it
+  while the tutorial is active (OFF still turns panels off), `update_displays()`'s per-key
+  write uses it, and the status panel's tutorial edge sets it. The finish edge's
+  `set_displays()` runs after the tutorial is inactive, which hands the user's persisted
+  level back.

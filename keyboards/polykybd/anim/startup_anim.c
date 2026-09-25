@@ -25,13 +25,16 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 #define SA_INTRO_MS 5000    // sparks stream + converge, letters form, sparks wink out
 #define SA_HOLD_MS  5000    // hold the PolyKybd logo (letters up)
 #define SA_FADE_MS  3200    // final fade: the letters dissolve to black (slow, gradual)
-// Stars that twinkle while the letters fade: each keycap has SA_STAR_SLOTS chances, a
-// hash decides which slots are used (so the stars land "here and there"), when each
-// lights within the fade and where. A star grows 1 px -> a 5-px plus -> 1 px -> gone
-// over SA_STAR_LIFE_MS. Drawn AFTER the letter dissolve, so the dither never eats one.
-#define SA_STAR_SLOTS    2
-#define SA_STAR_USE      110   // of 255: ~43 % of slots light at all
-#define SA_STAR_LIFE_MS  650
+// Stars that twinkle while the letters go: from the scanline wipe (SA_LINE_CLEAR_AT_MS)
+// to the end of the fade. Each keycap has SA_STAR_SLOTS chances, a hash decides which are
+// used (so the stars land "here and there"), when each lights within that window and
+// where. A star grows 1 px -> a 5-px plus -> 1 px -> gone over SA_STAR_LIFE_MS. Drawn
+// LAST, so neither the scanline wipe nor the dither eats one.
+// 650 ms "came and disappeared too quickly", and the stars only started with the final
+// fade (hardware); they now start with the scanline wipe and live 1.6 s.
+#define SA_STAR_SLOTS    3
+#define SA_STAR_USE      100   // of 255: ~39 % of slots light at all
+#define SA_STAR_LIFE_MS  1600
 #define SA_BLACK_MS 1000    // hold on black at the end before the normal display returns
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS + SA_BLACK_MS)
 // The background sparkle haze dissolves EARLY and SLOWLY: it begins the moment the hold
@@ -53,6 +56,9 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 // static_assert rather than a comment asking the next editor to remember.
 #define SA_LINE_CLEAR_DELAY_MS  1000
 #define SA_LINE_CLEAR_AT_MS     (SA_BG_FADE_START_MS + SA_BG_FADE_MS + SA_LINE_CLEAR_DELAY_MS)
+// The star window: from the scanline wipe to the end of the letter fade.
+#define SA_STAR_WINDOW_MS       (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS - SA_LINE_CLEAR_AT_MS)
+_Static_assert(SA_STAR_WINDOW_MS > SA_STAR_LIFE_MS, "a star must fit in its window");
 #define SA_LINE_CLEAR_SPREAD_MS 1200
 _Static_assert(SA_LINE_CLEAR_AT_MS + SA_LINE_CLEAR_SPREAD_MS < SA_INTRO_MS + SA_HOLD_MS,
                "the staggered scanline must finish before the letters start dissolving");
@@ -292,13 +298,13 @@ static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16
     }
 }
 
-// The fade-out stars for one keycap, `fe` ms into the final fade. Pure function of the
+// The stars for one keycap, `fe` ms into the star window (scanline wipe .. end of fade). Pure function of the
 // key index and the time, so both halves (and every frame) agree without any state.
 static void sa_plot_stars(uint8_t *buf, uint8_t idx, uint32_t fe) {
     for (uint8_t k = 0; k < SA_STAR_SLOTS; ++k) {
         const uint32_t seed = (uint32_t)idx * SA_STAR_SLOTS + k + 1u;
         if (sa_hash8(seed * 5u + 3u) >= SA_STAR_USE) continue;
-        const uint32_t t0 = ((uint32_t)sa_hash8(seed * 7u + 1u) * (SA_FADE_MS - SA_STAR_LIFE_MS)) / 255u;
+        const uint32_t t0 = ((uint32_t)sa_hash8(seed * 7u + 1u) * (SA_STAR_WINDOW_MS - SA_STAR_LIFE_MS)) / 255u;
         if (fe < t0 || fe >= t0 + SA_STAR_LIFE_MS) continue;
         const uint32_t age = fe - t0;
         const int16_t  sx  = (int16_t)(4 + sa_hash8(seed * 11u + 5u) % (SCREEN_WIDTH - 8));
@@ -440,7 +446,7 @@ static void sa_render_frame(uint32_t el) {
                         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
         }
 
-        if (letter_fade) sa_plot_stars(buf, idx, el - SA_INTRO_MS - SA_HOLD_MS);
+        if (el >= SA_LINE_CLEAR_AT_MS) sa_plot_stars(buf, idx, el - SA_LINE_CLEAR_AT_MS);
 
         kdisp_send_window();   // 360 B (visible cols/pages) not the full 1024 B — faster SPI
     }
@@ -568,7 +574,7 @@ sa_geom_t startup_anim_key_geom(bool right, uint8_t idx) {
 uint16_t startup_anim_board_w(void) { return SA_BOARD_W; }
 uint16_t startup_anim_board_h(void) { return SA_BOARD_H; }
 
-void startup_anim_start(void) { sa_begin(false, 255); }
+void startup_anim_start(void) { sa_begin(false, POLY_INTRO_CONTRAST); }
 
 void startup_anim_start_loop(uint8_t contrast) {
     if (s_active && s_loop) return;              // already looping — don't restart mid-cycle

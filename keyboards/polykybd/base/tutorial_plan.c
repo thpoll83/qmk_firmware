@@ -87,6 +87,35 @@ int16_t tut_preview_index(const tut_state_t *st) {
     return st->preview;
 }
 
+uint8_t tut_progress(const tut_state_t *st) {
+    const uint8_t p = st->phase;
+    if (p <= TUT_TEXT) return 1u;
+    if (p <= TUT_GAP) return (uint8_t)(2u + (st->step < TUT_LETTERS ? st->step : TUT_LETTERS - 1u));
+    if (p == TUT_REVEAL || p == TUT_SHIFT_WAIT) return 5u;
+    if (p == TUT_SHIFT_SWEEP || p == TUT_SHIFT_HELD) return st->shift_stage == 0 ? 5u : 6u;
+    if (p < TUT_BOARD_REVEAL) return 6u;             // TUT_SHIFT_AGAIN + the layer chapter
+    if (p <= TUT_BOARD_SHOW) return 7u;
+    if (p <= TUT_LANG_SHOW) {
+        // The tour is the longest stretch by far, so it takes two steps.
+        return (st->n_preview > 1 && st->preview >= st->n_preview / 2u) ? 9u : 8u;
+    }
+    return TUT_PROGRESS_STEPS;
+}
+
+uint8_t tut_pulse_slot(const tut_state_t *st) {
+    if (st->phase == TUT_LETTER_WAIT) return tut_current_slot(st);
+    return tut_point_slot(st);
+}
+
+uint8_t tut_pulse_level(uint32_t t_ms, uint8_t full) {
+    const uint32_t half = TUT_PULSE_PERIOD_MS / 2u;
+    const uint32_t ph   = t_ms % TUT_PULSE_PERIOD_MS;
+    const uint32_t tri  = ph < half ? ph : TUT_PULSE_PERIOD_MS - ph;      // 0..half
+    const uint8_t  ease = tut_fade_contrast((uint8_t)((tri * 255u) / half)); // 0..255
+    const uint32_t lo   = ((uint32_t)full * TUT_PULSE_FLOOR) / 255u;
+    return (uint8_t)(lo + (((uint32_t)full - lo) * ease) / 255u);
+}
+
 int16_t tut_preview_pos(const tut_state_t *st) {
     if (st->phase != TUT_LANG_NAME && st->phase != TUT_LANG_SHOW) return -1;
     if (st->preview >= st->n_preview) return -1;

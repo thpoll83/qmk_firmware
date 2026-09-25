@@ -27,6 +27,13 @@
 //   be a brightness/coverage ramp over the first N frames, gated on s_loop == false so
 //   the looping idle screensaver (which is meant to already be running) is unaffected.
 #pragma once
+
+// ONE brightness for the whole first-run experience — the Eden intro and the tutorial —
+// on the keycaps AND the status panels (contrast register, of 255). The keycaps used to
+// run Eden at 255 and the tutorial at the user's level while the status panels sat at
+// another, so the two kinds of display visibly disagreed ("the status displays were
+// brighter than the keys", hardware). The user's own, persisted level returns after.
+#define POLY_INTRO_CONTRAST 128u
 #include <stdbool.h>
 #include <stdint.h>
 

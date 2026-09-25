@@ -107,11 +107,14 @@
 #define TUT_BOARD_SHOW_MS   2800u   // "72 screens" — the whole board, still
 #define TUT_LANG_INTRO_MS   2600u
 // One language or script on screen. ⚠️ Long enough to READ a whole board of unfamiliar
-// glyphs; the repaint itself takes ~110 ms per half, so most of this is looking.
-#define TUT_LANG_ITEM_MS    2200u
-// Before each item the board goes dark and spells the item's NAME across the middle row,
-// one letter per keycap, so the reader knows what they are about to look at.
-#define TUT_LANG_NAME_MS    1000u
+// glyphs; the repaint itself takes ~110 ms per half, so most of this is looking. 2200 ms
+// "passes too fast — humans need a moment to read the language and then see the keys"
+// (hardware); doubled with the name below.
+#define TUT_LANG_ITEM_MS    4400u
+// Before each item the board goes dark and spells the item's NAME on the keys, Latin on
+// one half and the language's own script on the other, so the reader knows what they
+// are about to look at.
+#define TUT_LANG_NAME_MS    2000u
 // After the last item: the board says how many more there are (layouts / scripts).
 #define TUT_LANG_MORE_MS    3000u
 #define TUT_LANG_POINT_MS   4500u   // the ring circles the Lang key; informational, timed
@@ -121,8 +124,15 @@
 // only counts through it, so the cap is the one thing it has to know.
 #define TUT_PREVIEW_MAX 16u
 
-// The number of chapters the Esc keycap counts through ("2/3").
-#define TUT_CHAPTERS 3u
+// The progress keycap counts in TUT_PROGRESS_STEPS even steps, NOT in chapters: three
+// chapters read as a counter that barely moves ("we need more steps — divide in 10").
+#define TUT_PROGRESS_STEPS 10u
+
+// ---- the PULSE on the key to press ----------------------------------------
+// The key the lesson is waiting for breathes: its panel's contrast eases between a low
+// floor and full over TUT_PULSE_PERIOD_MS, so it can be found at a glance.
+#define TUT_PULSE_PERIOD_MS 1400u
+#define TUT_PULSE_FLOOR     24u      // of 255: dim, never off (an OFF key reads as broken)
 
 #define TUT_SKIP_HOLD_MS 1000u   // hold Esc this long to skip
 
@@ -242,14 +252,7 @@ static inline bool tut_phase_shows_all(uint8_t p) {
     return p >= TUT_BOARD_SHOW && p < TUT_DONE && p != TUT_LANG_NAME && p != TUT_LANG_MORE;
 }
 
-// Which chapter (1-based) a phase belongs to, for the count on the Esc keycap. The
-// postponed layer chapter counts as chapter 2's tail if it is ever restored, so the
-// total stays TUT_CHAPTERS.
-static inline uint8_t tut_chapter_of(uint8_t p) {
-    if (p <= TUT_GAP) return 1u;
-    if (p < TUT_BOARD_REVEAL) return 2u;
-    return 3u;
-}
+
 
 // The two shift keys, in the order chapter 2 asks for them.
 #define TUT_SHIFT_STAGES 2
@@ -286,6 +289,19 @@ void tut_init(tut_state_t *st, const uint8_t slots[TUT_LETTERS],
 // `n_preview` is how many languages/scripts can actually be drawn (0 skips straight
 // from the board reveal to the finale, which is what a board with no font pack gets).
 void tut_set_chapter3(tut_state_t *st, uint8_t lang_slot, uint8_t n_preview);
+
+// Progress 1..TUT_PROGRESS_STEPS for the progress keycap. Even-ish steps through the
+// whole lesson rather than chapters: the opening, each letter, each Shift, the reveal,
+// the first and second half of the language tour, and the close.
+uint8_t tut_progress(const tut_state_t *st);
+
+// The key that should PULSE right now — the one the lesson is waiting for — or
+// TUT_SLOT_NONE: the lit letter while it waits, and whatever the pointing ring circles.
+uint8_t tut_pulse_slot(const tut_state_t *st);
+
+// The pulse's contrast at time `t_ms` for a panel whose normal contrast is `full`: eased
+// (smoothstep) between TUT_PULSE_FLOOR/255 of `full` and `full`, period TUT_PULSE_PERIOD_MS.
+uint8_t tut_pulse_level(uint32_t t_ms, uint8_t full);
 
 // The preview item to APPLY to the board right now, or -1 outside TUT_LANG_SHOW.
 int16_t tut_preview_index(const tut_state_t *st);

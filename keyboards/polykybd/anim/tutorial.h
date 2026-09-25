@@ -186,6 +186,8 @@ uint8_t tutorial_preview_prepare(void);
 uint8_t tutorial_lang_slot(void);
 // The status-panel name of the preview item being named or shown.
 const uint32_t *tutorial_preview_name(void);
+// The left panel's lead-in for that item ("How about", "You may speak", ...).
+const uint32_t *tutorial_preview_phrase(void);
 // Map a position in the renderable subset (master only) to its table row.
 uint8_t tutorial_preview_table_row(uint8_t pos);
 

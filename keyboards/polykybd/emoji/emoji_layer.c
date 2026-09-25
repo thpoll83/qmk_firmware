@@ -125,6 +125,11 @@ static void emj_mru_preset(void) {
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
+uint8_t emj_page_count(uint8_t cat) {
+    if (cat >= EMJ_NUM_CATEGORIES || EMJ_CATEGORIES[cat].count == 0) return 0;
+    return page_count(cat);
+}
+
 void emj_init(void) {
     s_category = 0;
     s_page     = 0;

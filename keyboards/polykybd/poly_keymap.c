@@ -549,6 +549,19 @@ static uint8_t  s_tut_pass_row    = 0xFFu;
 static uint8_t  s_tut_pass_col    = 0xFFu;
 // Chapter 3's language/script preview; defined beside the tutorial's keymap helpers.
 static uint8_t poly_tutorial_apply_preview(void);
+// Master only: write the preview (or the user's own glyph script) into the synced state.
+// ⚠️ Called from the tutorial branch BEFORE its slave push and its render, and again
+// from the master block of housekeeping. It used to run only there — AFTER the tutorial
+// branch had already pushed the new phase to the slave and rendered — so each board of
+// glyphs was first drawn in the PREVIOUS item's language and repainted a pass later
+// ("I can still see the previous script and then it changes", hardware). Idempotent.
+static void poly_apply_draw_script(void) {
+    const uint8_t draw_script = poly_tutorial_apply_preview();
+    if (access_local_state()->glyph_script != draw_script) {
+        access_local_state()->glyph_script = draw_script;
+        request_disp_refresh();   // script changed -> re-render letter/digit legends
+    }
+}
 static uint32_t tut_name_letter(uint8_t row, uint8_t col);   // the spelled preview name
 static uint8_t  tut_name_key(uint8_t row, uint8_t col, uint32_t *cp, const uint8_t **tile);
 static void     tut_draw_name_tile(const uint8_t *tile);
@@ -1639,6 +1652,9 @@ void housekeeping_task_user(void) {
             // step. tutorial_tick() does NOT touch a panel outside chapter 1.
             if (tutorial_active()) {
                 tutorial_tick();
+                // The preview for the phase just entered, before anything draws or is
+                // pushed (see poly_apply_draw_script()).
+                if (is_usb_host_side()) poly_apply_draw_script();
                 if (s_tut_skip_since != 0 &&
                     timer_elapsed32(s_tut_skip_since) >= TUT_SKIP_HOLD_MS) {
                     s_tut_skip_since = 0;
@@ -1832,11 +1848,7 @@ void housekeeping_task_user(void) {
         // The tutorial's chapter 3 may be previewing a language or script: it writes
         // that over the board's state for a couple of seconds at a time and hands back
         // the script to draw. Outside the tutorial this is get_glyph_script().
-        const uint8_t draw_script = poly_tutorial_apply_preview();
-        if (access_local_state()->glyph_script != draw_script) {
-            access_local_state()->glyph_script = draw_script;
-            request_disp_refresh();   // script changed -> re-render letter/digit legends
-        }
+        poly_apply_draw_script();
         // Master-authoritative keycap legend size, adopted + re-rendered by the
         // slave the same way.
         if (access_local_state()->glyph_size != get_glyph_size()) {
@@ -4003,6 +4015,35 @@ bool poly_focus_draw_legend(uint8_t slot) {
     return true;
 }
 
+// The language menu's keys that are drawn by a bespoke renderer rather than from a
+// legend: a language slot or MRU recent (country flag + tiny code), an MRU Preset/Clear
+// control, a region tab. Draws into the CLEARED buffer and returns true, or returns
+// false for any other key. ⚠️ ONE copy for update_displays() and the tutorial's focus
+// ring: the ring redraws the legend under itself, and while it knew only the static-text
+// / render_key() pair, every flag and tab it crossed on the language layer went BLANK
+// ("the screen is totally blank as soon as the ring touches them", hardware).
+static bool render_menu_key(uint16_t keycode, led_t state, uint8_t current_lang) {
+    const int16_t lang_idx = lang_index_for_keycode(keycode);
+    if (lang_idx >= 0) {
+        draw_mru_top_bar(keycode);
+        render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state),
+                             current_lang);
+        return true;
+    }
+    if (keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET || keycode == KC_EMJ_CLEAR ||
+        keycode == KC_LANG_CLEAR) {
+        render_mru_ctrl_key(keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET);
+        return true;
+    }
+    if (keycode >= KC_LANG_CAT_BASE && keycode < KC_LANG_PAGE_PREV) {
+        lang_draw_tab_indicator(keycode);
+        lang_draw_tab_bottom(keycode);
+        render_lang_region_tab(keycode);
+        return true;
+    }
+    return false;
+}
+
 void tutorial_draw_board_legend(uint8_t slot) {
     uint8_t r, c;
     if (!tutorial_matrix_of(slot, &r, &c)) return;
@@ -4011,6 +4052,13 @@ void tutorial_draw_board_legend(uint8_t slot) {
     const led_t   state = local_layer->led_state;
     const uint8_t mods  = local_layer->mods;
     const uint16_t keycode = display_keycode_at(local_layer, r, c);
+
+    // The menus' bespoke keys, then the emoji tab frames and the MRU bar — the same
+    // order update_displays() draws them in.
+    if (render_menu_key(keycode, state, get_local_state()->lang)) return;
+    emj_draw_tab_indicator(keycode);
+    emj_draw_tab_bottom(keycode);
+    draw_mru_top_bar(keycode);
 
     // ⚠️ The PAIR, in update_displays()' own order: to_static_text() first, render_key()
     // only when it returned NULL. render_key() alone draws nothing at all for a key
@@ -4041,6 +4089,10 @@ uint8_t tutorial_slot_at(uint8_t row, uint8_t col) { return tutorial_slot_of(row
 // the OUTER edge — shows the chapter. Either still skips when held.
 static const uint32_t *tutorial_chrome_label(uint8_t row, uint8_t col) {
     const uint8_t slot = tutorial_slot_of(row, col);
+    // The key the tour is asking for shows its OWN legend, even where the chrome sits:
+    // the emoji page arrow is the progress key's position, and a key labelled "9/10"
+    // cannot be asked for as "the next page".
+    if (slot != TUT_SLOT_NONE && slot == tutorial_tour_target()) return NULL;
     if (slot == TUT_SLOT(0, 0)) return tutorial_skip_label();
     if (slot == TUT_SLOT(1, 6)) return tutorial_progress_label();
     return NULL;
@@ -4183,12 +4235,18 @@ typedef enum {
     TUT_TOUR_BASE_LL,    // KC_BASE on _LL: back to the letters
     TUT_TOUR_EMJ,        // TO(_EMJ) on the base layer
     TUT_TOUR_ECAT,       // a category tab on _EMJ (arg = category)
+    TUT_TOUR_EPAGE,      // KC_EMJ_PAGE_NEXT on _EMJ
     TUT_TOUR_BASE_EMJ,   // KC_BASE on _EMJ
 } tut_tour_kind_t;
 
 // A few emoji tabs rather than all twelve — the menu is taught by then, and the point is
-// the variety: two tabs on each half, so the ring crosses the split.
-static const uint8_t s_tut_emj_tabs[] = {0, 4, 7, 8};   // smileys, animals, travel, sports
+// the variety: two tabs on each half, so the ring crosses the split. Candidates per half
+// in preference order; the ACTIVE category is skipped (pressing the tab that is already
+// open changes nothing on screen — "we should not ask to press the first tab which is
+// active by default", hardware), so each half has a spare.
+static const uint8_t s_tut_emj_left[]  = {0, 4, 5};    // smileys, animals, food (cats 0-5)
+static const uint8_t s_tut_emj_right[] = {7, 8, 9};    // travel, sports, tools  (cats 6-11)
+#define TUT_EMJ_TABS_PER_HALF 2u
 
 static uint8_t s_tour_kind[TUT_TOUR_MAX];
 static uint8_t s_tour_arg[TUT_TOUR_MAX];
@@ -4221,7 +4279,11 @@ uint8_t tutorial_tour_build(uint8_t out[TUT_TOUR_MAX], uint8_t *split) {
     const uint8_t lang = tutorial_lang_slot();
     if (lang != TUT_SLOT_NONE) {
         tut_tour_add(out, TUT_TOUR_LANG, 0, lang, _LL);
+        // Every region tab but the one already open, and none that is empty (two
+        // regions carry no language yet): either press would change nothing on screen.
+        // The region is synced, so both halves skip the same tab and agree on the steps.
         for (uint8_t r = 0; r < NUM_LANG_REGIONS; ++r) {
+            if (r == lang_active_region() || lang_region_count(r) == 0) continue;
             tut_tour_add(out, TUT_TOUR_LCAT, r, tut_find_slot(_LL, LCAT(r)), _LL);
         }
         tut_tour_add(out, TUT_TOUR_BASE_LL, 0, tut_find_slot(_LL, KC_BASE), 0xFFu);
@@ -4230,9 +4292,28 @@ uint8_t tutorial_tour_build(uint8_t out[TUT_TOUR_MAX], uint8_t *split) {
     const uint8_t emj = tut_find_slot(_BL, TO(_EMJ));
     if (emj != TUT_SLOT_NONE) {
         tut_tour_add(out, TUT_TOUR_EMJ, 0, emj, _EMJ);
-        for (uint8_t i = 0; i < sizeof(s_tut_emj_tabs); ++i) {
-            tut_tour_add(out, TUT_TOUR_ECAT, s_tut_emj_tabs[i],
-                         tut_find_slot(_EMJ, KC_EMJ_CAT(s_tut_emj_tabs[i])), _EMJ);
+        uint8_t tabs[2 * TUT_EMJ_TABS_PER_HALF];
+        uint8_t n_tabs = 0;
+        for (uint8_t half = 0; half < 2; ++half) {
+            const uint8_t *cand = half ? s_tut_emj_right : s_tut_emj_left;
+            uint8_t        took = 0;
+            for (uint8_t i = 0; i < 3 && took < TUT_EMJ_TABS_PER_HALF; ++i) {
+                if (cand[i] == emj_active_category() || emj_page_count(cand[i]) == 0) continue;
+                tabs[n_tabs++] = cand[i];
+                took++;
+            }
+        }
+        // The page key follows the last tab whose category HAS a second page, so the
+        // press visibly turns it (the arrow is blank on a one-page category).
+        uint8_t page_after = 0xFFu;
+        for (uint8_t i = 0; i < n_tabs; ++i) {
+            if (emj_page_count(tabs[i]) > 1) page_after = i;
+        }
+        for (uint8_t i = 0; i < n_tabs; ++i) {
+            tut_tour_add(out, TUT_TOUR_ECAT, tabs[i], tut_find_slot(_EMJ, KC_EMJ_CAT(tabs[i])), _EMJ);
+            if (i == page_after) {
+                tut_tour_add(out, TUT_TOUR_EPAGE, 0, tut_find_slot(_EMJ, KC_EMJ_PAGE_NEXT), _EMJ);
+            }
         }
         tut_tour_add(out, TUT_TOUR_BASE_EMJ, 0, tut_find_slot(_EMJ, KC_BASE), 0xFFu);
     }
@@ -4257,6 +4338,7 @@ const uint32_t *tutorial_tour_line(uint8_t step, bool left) {
         case TUT_TOUR_BASE_LL:  return left ? U"Back to" : U"your letters";
         case TUT_TOUR_EMJ:      return left ? U"Now for" : U"some emoji";
         case TUT_TOUR_BASE_EMJ: return left ? U"And home" : U"again";
+        case TUT_TOUR_EPAGE:    return left ? U"Flip to" : U"the next page";
         case TUT_TOUR_LCAT: {
             static const uint32_t *const lines[NUM_LANG_REGIONS][2] = {
                 {U"From Canada", U"to Chile"},       // America
@@ -4273,6 +4355,8 @@ const uint32_t *tutorial_tour_line(uint8_t step, bool left) {
             switch (s_tour_arg[step]) {
                 case 0:  return left ? U"Smileys" : U"and faces";
                 case 4:  return left ? U"Animals," : U"big and small";
+                case 5:  return left ? U"Plants" : U"and food";
+                case 9:  return left ? U"Tools" : U"and objects";
                 case 7:  return left ? U"Travel" : U"and places";
                 case 8:  return left ? U"Sports" : U"and games";
                 default: return left ? U"More" : U"emoji";
@@ -4990,26 +5074,9 @@ void update_displays(enum refresh_mode mode) {
                     if (doom_handled) {
                         // rendered above
                     } else if(keycode!=KC_TRNS) {
-                        int16_t lang_idx = lang_index_for_keycode(keycode);
-                        if (lang_idx >= 0) {
-                            // Language layer: country flag + tiny language code
-                            // (paged slots and the top-row MRU recents alike).
-                            kdisp_set_buffer(0x00);
-                            draw_mru_top_bar(keycode);
-                            render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state), local_state->lang);
-                            kdisp_send_window();
-                        } else if (keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET ||
-                                   keycode == KC_EMJ_CLEAR  || keycode == KC_LANG_CLEAR) {
-                            // Top-row MRU controls: "Preset" / "Clear".
-                            kdisp_set_buffer(0x00);
-                            render_mru_ctrl_key(keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET);
-                            kdisp_send_window();
-                        } else if (keycode >= KC_LANG_CAT_BASE && keycode < KC_LANG_PAGE_PREV) {
-                            // Language region tab — continent label + active frame.
-                            kdisp_set_buffer(0x00);
-                            lang_draw_tab_indicator(keycode);
-                            lang_draw_tab_bottom(keycode);
-                            render_lang_region_tab(keycode);
+                        // The language menu's bespoke keys; see render_menu_key().
+                        kdisp_set_buffer(0x00);
+                        if (render_menu_key(keycode, state, local_state->lang)) {
                             kdisp_send_window();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);

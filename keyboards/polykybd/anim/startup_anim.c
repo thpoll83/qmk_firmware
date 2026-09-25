@@ -27,14 +27,17 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 #define SA_FADE_MS  3200    // final fade: the letters dissolve to black (slow, gradual)
 // Stars that twinkle from the moment POLYKYBD is solid (SA_STAR_START_MS) to the end of
 // the fade. Each keycap has SA_STAR_SLOTS chances, a hash decides which are
-// used (so the stars land "here and there"), when each lights within that window and
-// where. A star grows 1 px -> a 5-px plus -> 1 px -> gone over SA_STAR_LIFE_MS. Drawn
-// LAST, so neither the scanline wipe nor the dither eats one.
-// 650 ms "came and disappeared too quickly", and the stars only started with the final
-// fade (hardware); they now start with the scanline wipe and live 1.6 s.
-#define SA_STAR_SLOTS    5   // the window is ~10 s now; five chances keep it lively
-#define SA_STAR_USE      100   // of 255: ~39 % of slots light at all
-#define SA_STAR_LIFE_MS  1600
+// used (so the stars land "here and there"), when each lights within that window, where,
+// and which of SA_STAR_SHAPES it is. Each star swells over SA_STAR_LIFE_MS through five
+// equal stages — a pixel, its small form, its full form, the small form, a pixel — and
+// is gone. Drawn LAST, so neither the scanline wipe nor the dither eats one.
+// History (hardware): 650 ms "came and disappeared too quickly"; 1.6 s was "still too
+// fast", with one shape (a 5-px plus) and ~39 % of five slots lit, "reduce the amount a
+// bit". Now 2.8 s, five shapes, ~25 % of four slots.
+#define SA_STAR_SLOTS    4
+#define SA_STAR_USE      64    // of 255: ~25 % of slots light at all
+#define SA_STAR_LIFE_MS  2800
+#define SA_STAR_SHAPES   5
 #define SA_BLACK_MS 1000    // hold on black at the end before the normal display returns
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS + SA_BLACK_MS)
 // The background sparkle haze dissolves EARLY and SLOWLY: it begins the moment the hold
@@ -302,25 +305,64 @@ static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16
     }
 }
 
-// The stars for one keycap, `fe` ms into the star window (letters solid .. end of fade). Pure function of the
-// key index and the time, so both halves (and every frame) agree without any state.
+// One star's pixels at `stage` 0..4 of its life (0 and 4 the bare pixel, 2 the peak).
+// Shapes, small form -> full form:
+//   0 plus        +      -> a plus with 2-px arms
+//   1 cross       x      -> an eight-point star (x and + together)
+//   2 diamond     +      -> the four points at distance 2, centre lit
+//   3 turning     +      -> x (the small form rotates through the peak)
+//   4 spike       +      -> a thin plus with 3-px arms, the centre ring dark
+static void sa_star_shape(uint8_t *buf, int16_t x, int16_t y, uint8_t shape, uint8_t stage) {
+    const uint8_t form = (stage == 2) ? 2 : (stage == 1 || stage == 3) ? 1 : 0;   // dot/small/full
+#define SA_P(dx, dy) sa_set(buf, (int16_t)(x + (dx)), (int16_t)(y + (dy)))
+    if (form == 0) { SA_P(0, 0); return; }
+    const bool x_small = (shape == 1);
+    if (form == 1) {
+        SA_P(0, 0);
+        if (x_small) { SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1); }
+        else         { SA_P(-1, 0);  SA_P(1, 0);  SA_P(0, -1); SA_P(0, 1); }
+        return;
+    }
+    switch (shape) {
+        case 0:
+            SA_P(0, 0);
+            for (int8_t d = 1; d <= 2; ++d) { SA_P(-d, 0); SA_P(d, 0); SA_P(0, -d); SA_P(0, d); }
+            break;
+        case 1:
+            SA_P(0, 0);
+            SA_P(-1, 0); SA_P(1, 0); SA_P(0, -1); SA_P(0, 1);
+            SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
+            break;
+        case 2:
+            SA_P(0, 0);
+            SA_P(-2, 0); SA_P(2, 0); SA_P(0, -2); SA_P(0, 2);
+            SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
+            break;
+        case 3:
+            SA_P(0, 0); SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
+            break;
+        default:
+            SA_P(0, 0);
+            for (int8_t d = 2; d <= 3; ++d) { SA_P(-d, 0); SA_P(d, 0); SA_P(0, -d); SA_P(0, d); }
+            break;
+    }
+#undef SA_P
+}
+
+// The stars for one keycap, `fe` ms into the star window (letters solid .. end of fade).
+// Pure function of the key index and the time, so both halves (and every frame) agree
+// without any state.
 static void sa_plot_stars(uint8_t *buf, uint8_t idx, uint32_t fe) {
     for (uint8_t k = 0; k < SA_STAR_SLOTS; ++k) {
         const uint32_t seed = (uint32_t)idx * SA_STAR_SLOTS + k + 1u;
         if (sa_hash8(seed * 5u + 3u) >= SA_STAR_USE) continue;
         const uint32_t t0 = ((uint32_t)sa_hash8(seed * 7u + 1u) * (SA_STAR_WINDOW_MS - SA_STAR_LIFE_MS)) / 255u;
         if (fe < t0 || fe >= t0 + SA_STAR_LIFE_MS) continue;
-        const uint32_t age = fe - t0;
-        const int16_t  sx  = (int16_t)(4 + sa_hash8(seed * 11u + 5u) % (SCREEN_WIDTH - 8));
-        const int16_t  sy  = (int16_t)(4 + sa_hash8(seed * 13u + 9u) % (SCREEN_HEIGHT - 8));
-        sa_set(buf, sx, sy);
-        // The middle of its life: the plus. Before and after: the single pixel.
-        if (age >= SA_STAR_LIFE_MS / 5u && age < (SA_STAR_LIFE_MS * 3u) / 5u) {
-            sa_set(buf, (int16_t)(sx - 1), sy);
-            sa_set(buf, (int16_t)(sx + 1), sy);
-            sa_set(buf, sx, (int16_t)(sy - 1));
-            sa_set(buf, sx, (int16_t)(sy + 1));
-        }
+        const uint32_t age   = fe - t0;
+        const int16_t  sx    = (int16_t)(4 + sa_hash8(seed * 11u + 5u) % (SCREEN_WIDTH - 8));
+        const int16_t  sy    = (int16_t)(4 + sa_hash8(seed * 13u + 9u) % (SCREEN_HEIGHT - 8));
+        const uint8_t  shape = (uint8_t)(sa_hash8(seed * 17u + 2u) % SA_STAR_SHAPES);
+        sa_star_shape(buf, sx, sy, shape, (uint8_t)((age * 5u) / SA_STAR_LIFE_MS));
     }
 }
 

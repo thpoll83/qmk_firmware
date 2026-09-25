@@ -419,6 +419,10 @@ bool tutorial_tour_press(uint8_t slot) {
 }
 
 int16_t tutorial_tour_step(void) { return s_active ? tut_tour_index(&s_st) : -1; }
+uint8_t tutorial_tour_target(void) {
+    const int16_t i = tutorial_tour_step();
+    return i < 0 ? TUT_SLOT_NONE : s_st.tour[i];
+}
 bool    tutorial_tour_seen(void) { return s_active && s_st.phase == TUT_TOUR_SEEN; }
 
 void tutorial_skip(void) {
@@ -820,6 +824,7 @@ bool tutorial_hold(uint8_t kind, bool pressed, uint8_t slot) {
 void tutorial_skip(void) {}
 bool tutorial_tour_press(uint8_t slot) { (void)slot; return false; }
 int16_t tutorial_tour_step(void) { return -1; }
+uint8_t tutorial_tour_target(void) { return TUT_SLOT_NONE; }
 bool tutorial_tour_seen(void) { return false; }
 int16_t tutorial_preview_index(void) { return -1; }
 uint8_t tutorial_preview_entry(void) { return 0xFFu; }

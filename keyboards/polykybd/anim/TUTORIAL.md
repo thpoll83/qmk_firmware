@@ -1858,3 +1858,32 @@ Hardware feedback:
     leave a menu behind. `TO(_EMJ)` turns `_L0` off, which is not counted as drift.
   - Progress: 1 opening, 2-3 letters, 4-5 one Shift each, 6 the reveal, 7 the
     languages, 8 the language menu, 9 the emoji menu, 10 the close.
+
+## Round 30 — slower stars, the stale script, the ring on the menus, the active tab
+
+Hardware feedback:
+- **Eden's stars**: 2.8 s each (was 1.6), ~25 % of four slots per keycap (was ~39 % of
+  five), and five shapes (`sa_star_shape()`): plus, eight-point cross, diamond, a small
+  form that turns from + to x, and a thin spike. Each passes through five equal stages:
+  pixel, small, full, small, pixel.
+- **"When the screens come back I can still see the previous script, then it
+  changes."** An ordering bug, not a render one. `poly_tutorial_apply_preview()` ran in
+  housekeeping's master block, AFTER the tutorial branch had ticked into `TUT_LANG_SHOW`,
+  pushed that phase to the slave and rendered. So every board of glyphs was drawn once
+  in the previous language, then again a pass later. `poly_apply_draw_script()` now runs
+  right after `tutorial_tick()`, before the push and the render, so both halves get the
+  phase and the language in one packet and draw once.
+- **The ring blanked language keys.** The ring redraws the legend under itself through
+  `tutorial_draw_board_legend()`, which knew only the static-text / `render_key()` pair.
+  Flags, region tabs and MRU controls are drawn by bespoke branches of
+  `update_displays()`, so every such key the ring crossed went dark. Those branches are
+  one function now, `render_menu_key()`, used by both; the ring also draws the emoji tab
+  frames and the MRU bar.
+- **The active tab is not asked for**: the tour skips the region already open and the
+  empty regions, and the emoji tabs are two per half from a preference list that skips
+  the open category. Region and category are synced, so both halves build the same tour.
+- **The emoji page key** (`TUT_TOUR_EPAGE`, `KC_EMJ_PAGE_NEXT`) follows the last chosen
+  tab whose category has a second page. ⚠️ That key sits where the progress chrome is
+  (right half, top-right outer key), so `tutorial_chrome_label()` gives up the chrome for
+  whatever key the tour is asking for: a key reading "9/10" cannot be asked for as "the
+  next page".

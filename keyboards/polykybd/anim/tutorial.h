@@ -77,6 +77,8 @@ bool tutorial_tour_press(uint8_t slot);
 // The tour step being asked for or just pressed, or -1 outside the tour; and whether it
 // has been pressed (the dwell on its result).
 int16_t tutorial_tour_step(void);
+// The slot of that step's key, or TUT_SLOT_NONE.
+uint8_t tutorial_tour_target(void);
 bool    tutorial_tour_seen(void);
 
 // End it now: the hold-Esc gesture, or a remote disable over HID.

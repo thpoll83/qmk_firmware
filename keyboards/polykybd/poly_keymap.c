@@ -777,6 +777,12 @@ static void poly_tutorial_finish_if_done(void) {
             // redrawn — so the panels are never repainted against stale state, and the
             // legends drawn are the ones the board will actually type.
             tutorial_stop();
+            // Hand back the user's language and glyph script BEFORE the teardown
+            // repaint below. tutorial_stop() retires the preview, but the state only
+            // follows at the master block's poly_apply_draw_script(), later in the same
+            // pass: a skip mid-preview repainted one frame, and synced it to the slave,
+            // in the previewed language (review of #313). Idempotent on the normal end.
+            if (is_usb_host_side()) poly_apply_draw_script();
             // ⚠️ RETIRE THE SYNC WORD FIRST — BEFORE the teardown's own
             // sync_and_refresh_displays() below. tut[0] still holds whatever the last
             // push wrote (ACTIVE, and the ARMED level Eden handed over), and both are

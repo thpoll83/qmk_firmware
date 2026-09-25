@@ -1542,6 +1542,8 @@ void housekeeping_task_user(void) {
         // before the boot-animation block below and owns the LOOPING variant; the
         // block below is for the ONE-SHOT boot/KC_EDEN animation only.
         eden_idle_tick();
+        // An Eden replay the split handler recorded (it may not start one itself).
+        split_sync_drain_anim_replay();
         // One-time startup animation: render a frame while active (both halves
         // render their own keycaps). On the finishing edge, persist the "played"
         // marker and request a normal refresh so the base legends come back. Gated

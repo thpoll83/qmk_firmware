@@ -63,6 +63,18 @@ bool key_has_display(uint8_t r, uint8_t c);
 
 
 // Handles incoming poly_sync data for the bridge with CRC32 validation.
+// A startup-animation replay the master asked for, waiting for the main thread (see
+// the note in user_sync_poly_data_handler). Written by the split-protocol thread.
+static volatile bool s_anim_replay_pending = false;
+
+void split_sync_drain_anim_replay(void) {
+    if (!s_anim_replay_pending) return;
+    s_anim_replay_pending = false;
+    // Re-check: this half may have started its own Eden (its own boot marker) between
+    // the request and now, and restarting it shows a frame-0 stutter.
+    if (!startup_anim_active()) startup_anim_start();
+}
+
 void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     SYNC_VALIDATE_OR_RETURN(poly_sync_t);
     const poly_sync_t* incoming = (const poly_sync_t *)in_data;
@@ -113,8 +125,17 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     if (doom_ctl_changed || fw_confirm_changed || glyph_size_changed) {
         request_disp_refresh();
     }
+    // ⚠️ RECORD, never start, here. This handler runs on the slave's split-protocol
+    // THREAD (serial_protocol.c's SlaveThread, HIGHPRIO), concurrently with the main
+    // thread — and startup_anim_start() latches the shift registers and writes every
+    // panel over SPI. During boot the main thread is in the middle of its own splash /
+    // final-render SPI traffic, so the two collided on one SPI bus and the slave wedged
+    // with its status panel frozen at "100%" and no render sub-steps (hardware). It only
+    // bit once the master bumped the nonce at BOOT (the first-run path), because only then
+    // does a nonce arrive while the slave is still inside keyboard_post_init_user().
+    // Housekeeping drains the request on the main thread, after post_init.
     if (anim_replay) {
-        startup_anim_start();
+        s_anim_replay_pending = true;
     }
     // First-run tutorial, arming half: the master says the first-run experience is
     // running, so arm the hand-off HERE too and let this half enter the tutorial from

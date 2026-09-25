@@ -47,12 +47,22 @@ variants.
 ```diff
 -#define RAW_EPSIZE 32
 +#ifndef RAW_EPSIZE
-+    #define RAW_EPSIZE 32
++#    define RAW_EPSIZE 32
 +#endif
 ```
 
 Originally introduced before this tracker existed. Single hunk around the
 endpoint-size block (`#define KEYBOARD_EPSIZE 8` … `#define DIGITIZER_EPSIZE 8`).
+
+⚠️ **The nested `#define` must be indented `#    define` (space after `#`), not
+`    #define` (space before `#`)** — that's `qmk format-c`'s (clang-format)
+required style for a preprocessor directive nested inside `#ifndef`/`#endif`.
+The file carried the wrong indent for a long time undetected, because the
+`lint` CI job only reformats and diffs files that are *in the current PR's
+diff* — this file wasn't touched again until the 2026-09-25 upstream merge
+touched the neighbouring line, which is when `lint` finally caught it. Run
+`qmk format-c --core-only tmk_core/protocol/usb_descriptor.h` after any
+hand-edit to this hunk.
 
 ## tmk_core/protocol/chibios/usb_main.c
 

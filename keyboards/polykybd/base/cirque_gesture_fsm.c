@@ -132,6 +132,7 @@ void poly_gest_feed(poly_gest_t *g, const poly_gest_sample_t *s, poly_gest_out_t
                 g->fx_q4                                      = (int32_t)mx * 16;
                 g->fy_q4                                      = (int32_t)my * 16;
                 g->res_x = g->res_y = 0;
+                g->z_dipped = false;
                 const bool in_ring      = g->r0sq >= ((uint32_t)POLY_GEST_RING_R * POLY_GEST_RING_R);
                 /* ...or the dedicated wedge at the top left, which reaches inward and
                  * so stays a generous target however far out the ring is pushed. */
@@ -143,6 +144,10 @@ void poly_gest_feed(poly_gest_t *g, const poly_gest_sample_t *s, poly_gest_out_t
                  * start, the corner only decides which BUTTON a tap sends. A corner tap
                  * still works from PENDING, because a tap does not rotate. */
                 g->mode                 = (in_ring || in_wedge) ? POLY_GEST_PENDING : POLY_GEST_MOVE;
+                /* The inward drag test starts at the arming radius, not at the
+                 * touchdown radius, so a dial can start any distance outside it. */
+                const uint32_t r_arm    = in_ring ? POLY_GEST_RING_R : POLY_GEST_DIAL_WEDGE_R;
+                g->r_floor              = (g->r0 < r_arm) ? g->r0 : r_arm;
             } else {
                 /* Smoothed, for the same reason the tap displacement is: the raw
                  * position scatters by tens of units, and on the CURSOR path that is
@@ -170,14 +175,42 @@ void poly_gest_feed(poly_gest_t *g, const poly_gest_sample_t *s, poly_gest_out_t
                     g->mx = (uint16_t)smx;
                     g->my = (uint16_t)smy;
                 }
+                /* No cursor motion while z sits in the release band. As a finger
+                 * lifts, z decays from Z_TOUCH to Z_RELEASE and the reported position
+                 * wanders with it; the tap test below already ignores those samples,
+                 * and the cursor path now does too. On a short nudge that wander was
+                 * larger than the nudge itself, so it read as a jump. The origin still
+                 * advances above, so the wander is dropped, not replayed later.
+                 *
+                 * ...and when z comes back up, the filter has been following the
+                 * wander the whole time. Re-anchor every piece of motion state to the
+                 * current position, or it walks the cursor back from where the wander
+                 * left it: the wander replayed in reverse (CodeRabbit, #311). */
+                if (s->z < POLY_GEST_Z_TOUCH) {
+                    dx = dy = 0;
+                    g->z_dipped = true;
+                } else if (g->z_dipped) {
+                    g->mhist_x[0] = g->mhist_x[1] = g->mhist_x[2] = mx;
+                    g->mhist_y[0] = g->mhist_y[1] = g->mhist_y[2] = my;
+                    g->mhist_n                                    = 0;
+                    g->fx_q4                                      = (int32_t)mx * 16;
+                    g->fy_q4                                      = (int32_t)my * 16;
+                    g->mx                                         = mx;
+                    g->my                                         = my;
+                    g->res_x = g->res_y = 0;
+                    g->z_dipped         = false;
+                    dx = dy = 0;
+                }
                 /* Speed scaling with acceleration, keeping the remainder so slow
                  * movement is delayed rather than floored away. Below the knee the
                  * factor is constant, which is what leaves precision work and the
-                 * tremor filter alone. */
+                 * tremor filter alone; above it the factor grows with the square of
+                 * the excess, so a small quick move is barely accelerated. */
                 const int32_t mag = labs(dx) + labs(dy);
                 int32_t       pct = POLY_GEST_SPEED_PCT;
                 if (mag > POLY_GEST_ACCEL_KNEE) {
-                    pct += (mag - POLY_GEST_ACCEL_KNEE) * POLY_GEST_ACCEL_SLOPE;
+                    const int32_t over = mag - POLY_GEST_ACCEL_KNEE;
+                    pct += over * over / POLY_GEST_ACCEL_DIV;
                     if (pct > POLY_GEST_ACCEL_MAX_PCT) pct = POLY_GEST_ACCEL_MAX_PCT;
                 }
                 g->res_x += dx * pct;
@@ -227,11 +260,10 @@ void poly_gest_feed(poly_gest_t *g, const poly_gest_sample_t *s, poly_gest_out_t
                      * REAL units — see POLY_GEST_SCROLL_DR for what comparing this
                      * in a scaled squared domain silently did to the threshold. */
                     const int32_t r_now = (int32_t)poly_gest_isqrt((uint32_t)(rx * rx + ry * ry));
-                    const int32_t r_was = (int32_t)g->r0;
                     if (labs(g->ang_total) >= POLY_GEST_SCROLL_COMMIT) {
                         g->mode    = POLY_GEST_SCROLL;
                         g->ang_acc = g->ang_total;
-                    } else if (labs(r_now - r_was) >= POLY_GEST_SCROLL_DR) {
+                    } else if (r_now <= (int32_t)g->r_floor - POLY_GEST_SCROLL_DR || r_now >= (int32_t)g->r0 + POLY_GEST_SCROLL_DR) {
                         g->mode = POLY_GEST_MOVE;
                     }
                 } else if (g->mode == POLY_GEST_SCROLL) {

@@ -72,6 +72,31 @@ have fallen inside the new minimum radius, so "a dial armed at the wrong angle" 
 the wrong quadrant" would silently have become "too close to the centre". A test that
 still passes after the change it should have caught is worse than no test.
 
+## A dial can start any distance outside the ring
+
+The drag-vs-dial test aborts a pending dial when the radius changes by
+`POLY_GEST_SCROLL_DR` (120). INWARD it is measured from `r_floor`, the smaller of the
+touchdown radius and the radius that armed the dial (the ring, or the wedge for a wedge
+start). It used to be measured from the touchdown radius, so a thumb that landed in a
+corner at ~600 and slid in to ~430 before turning moved 170 units inward and became a
+drag, while the same stroke started at 440 scrolled (field report 2026-09-25).
+`DialStartedFarOutsideTheRingStillScrolls` pins it. OUTWARD it is still measured from
+the touchdown radius.
+
+## Pointer acceleration and lift-off
+
+Acceleration is quadratic above the knee, `(mag - 6)^2 / 20` percent on top of the 65 %
+base, capped at 130 %. The old linear ramp reached the cap at 30 motion units per sample,
+so a quick short move already ran at double speed ("acceleration starts too fast",
+2026-09-25). The table and the measured strokes are in `base/cirque_gesture_fsm.h`.
+
+The cursor also ignores samples whose z sits in the release band (`Z_RELEASE..Z_TOUCH`).
+As a finger lifts, the reported position wanders, and on a short move that wander was
+larger than the move. The tap test already ignored those samples.
+When z comes back up, the filter, the cursor origin and the residual are re-anchored
+to the current position. Otherwise the filter walks the cursor back from the wandered
+position, replaying the wander in reverse.
+
 ## One image for either side — analysed 2026-09-15, NOT implemented
 
 Question: now that the gesture layer is ours, can the pad be soldered to either half

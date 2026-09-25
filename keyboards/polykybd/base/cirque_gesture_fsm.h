@@ -148,6 +148,16 @@
 #endif
 /* Radius change, in REAL pad units, that says drag rather than dial.
  *
+ * INWARD it is measured from r_floor, the smaller of the touchdown radius and the
+ * radius that armed the dial (POLY_GEST_RING_R, or POLY_GEST_DIAL_WEDGE_R for a wedge
+ * start). It used to be measured from the touchdown radius alone, so a dial started
+ * far outside the ring had a smaller margin than one started on it. A thumb that
+ * lands in a corner at radius ~600 and slides in to ~430 before it turns moved 170
+ * units inward and was aborted into a drag, while the same stroke started at 440
+ * scrolled. Field report 2026-09-25: "scrolling does not trigger when starting too
+ * far outside". With the floor, how far outside the ring a dial starts does not
+ * matter. OUTWARD it is still measured from the touchdown radius.
+ *
  * This was compared in a scaled SQUARED domain (rsq / (RING_R/2) against 120) on the
  * theory that it avoided a sqrt. It does, and it also made the threshold mean
  * something else entirely: d(r^2)/dr is 2r, about 660 at the ring, so dividing by 150
@@ -193,30 +203,37 @@
 #    define POLY_GEST_SMOOTH_Q4 8
 #endif
 
-/* Pointer acceleration: above POLY_GEST_ACCEL_KNEE motion units in one sample, each
- * further unit adds POLY_GEST_ACCEL_SLOPE percent, capped at ACCEL_MAX_PCT.
+/* Pointer acceleration: above POLY_GEST_ACCEL_KNEE motion units in one sample, the
+ * factor grows with the SQUARE of the excess, (mag - knee)^2 / POLY_GEST_ACCEL_DIV
+ * percent on top of POLY_GEST_SPEED_PCT, capped at ACCEL_MAX_PCT.
  *
- * The knee is what keeps it from fighting the filters: tremor and slow tracking sit
- * below it and are scaled by POLY_GEST_SPEED_PCT alone, so precision work is
- * unaffected and only a deliberate sweep is amplified. The residual carries through
+ * The knee keeps acceleration away from the filters: tremor and slow tracking sit
+ * below it and are scaled by POLY_GEST_SPEED_PCT alone. The residual carries through
  * the varying factor unchanged, so a stroke still loses nothing to truncation.
  *
- * The cap has been lowered TWICE, both times because a mutation run could not detect
- * removing it, and both times the fix was to make the knob do something rather than
- * to loosen the test. At 220 it engaged only above 39 motion units in a sample, by
- * which point clamp_xy's 127-per-report HID limit was already bounding things: a fast
- * pad crossing measured 1638 capped against 1733 uncapped. 160 fixed that at slope 5
- * — and then dropping the slope to 3 made 160 redundant all over again, 1193 against
- * 1237, under 4%. At 130 the same crossing is 982 against 1237, and it trims the fast
- * end of the curve as well, which is the direction the tuning wanted.
+ * Quadratic, not linear. The linear ramp (knee 8, +3 % per unit) reached the 130 %
+ * cap at 30 units per sample, so a quick stroke already ran at double the base
+ * speed. Field report 2026-09-25: "acceleration starts too fast, a small move makes
+ * the cursor jump". The quadratic ramp is flat near the knee and steep near the cap:
  *
- * The lesson is that this cap is not independent of the SLOPE. Re-measure it whenever
- * the slope moves; a value that bit at one slope can be dead at the next. */
+ *     motion units/sample   13    20    26    33    43+
+ *     linear  (old)         80   101   119   130   130  %
+ *     quadratic (DIV 20)    67    74    85   101   130  %
+ *
+ * Measured over the same 1000-raw-unit stroke (test sample spacing, 10 ms): 13 units
+ * per sample moved the cursor 416 against 494 before, 20 units 441 against 593. The
+ * top speed barely moved: at 42 units per sample it is 676 against 708.
+ *
+ * ⚠️ The cap is not independent of the curve. It has been lowered twice because a
+ * mutation run could not detect removing it: the 127-per-report HID clamp in
+ * clamp_xy was already bounding the fast end. The quadratic curve reaches 130 only at
+ * 43 units per sample, so AccelerationIsCapped crosses the pad faster than that.
+ * Re-measure that test whenever the knee, the divisor or the cap moves. */
 #ifndef POLY_GEST_ACCEL_KNEE
-#    define POLY_GEST_ACCEL_KNEE 8
+#    define POLY_GEST_ACCEL_KNEE 6
 #endif
-#ifndef POLY_GEST_ACCEL_SLOPE
-#    define POLY_GEST_ACCEL_SLOPE 3
+#ifndef POLY_GEST_ACCEL_DIV
+#    define POLY_GEST_ACCEL_DIV 20
 #endif
 #ifndef POLY_GEST_ACCEL_MAX_PCT
 #    define POLY_GEST_ACCEL_MAX_PCT 130
@@ -247,8 +264,10 @@ typedef struct {
     uint16_t mhist_x[3], mhist_y[3];
     int32_t  fx_q4, fy_q4; /* low-passed position, sixteenths */
     int32_t  res_x, res_y; /* speed-scaling remainder         */
+    bool     z_dipped;     /* z fell into the release band; re-anchor on recovery */
     uint8_t  mhist_n;
-    uint32_t r0;  /* radius at touchdown, real units */
+    uint32_t r0;       /* radius at touchdown, real units */
+    uint32_t r_floor;  /* min(r0, arming radius): an inward drag is measured from here */
     uint16_t mx, my;
     uint16_t travel;   /* max displacement while z was solid */
     uint8_t  z_peak;   /* peak z within this touch */

@@ -7093,11 +7093,8 @@ void keyboard_post_init_user(void) {
     // procedural intro once, then persist BOOT_INTRO_DONE (in the housekeeping
     // finish edge). Each half reads its own flag and animates its own keycaps.
     note_boot_flags(ee.boot_flags);
-    // Boot-time auto-play of the Eden animation is intentionally NOT started here:
-    // running it during boot was wedging a half (see the startup logs in
-    // startup_anim.c). The animation is triggered on demand by the KC_EDEN key
-    // instead (process_record_user), when the board is fully up and the split link
-    // is live. Re-enable a guarded boot auto-play once the startup hang is understood.
+    // The boot-time auto-play of Eden that used to wedge a half is the first-run
+    // trigger below; see the note there for what the hang was and why it is fixed.
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif
@@ -7111,18 +7108,19 @@ void keyboard_post_init_user(void) {
     // ⚠️ boot_intro_pending() had NO callers before this — the marker, the pending check
     // and the finish edge all existed, but nothing ever started the animation at boot.
     //
-    // ⚠️ OPT-IN, AND DELIBERATELY OFF BY DEFAULT (`-e POLYKYBD_BOOT_INTRO=yes`).
-    // This is the ONE path that runs before the board is fully up, and the comment a
-    // few lines above says why that matters: boot auto-play was disabled after a
-    // startup hang that was never root-caused, and the note asks for it back only
-    // "once the startup hang is understood". It is not understood. Until a cold boot
-    // has actually been exercised on hardware, a default-on trigger here would put an
-    // unproven animation plus a tutorial on every first boot of every board, in the
-    // one window with no watchdog, no crash record and no console (CRASH_DIAGNOSTICS.md
-    // — crash_watchdog_start() is still several lines below this point).
-    // Everything the feature needs stays compiled and reachable: KC_EDEN, HID cmd 28
-    // and poly_arm_tutorial_after_intro() all still work, so the tutorial can be driven
-    // by hand for testing without this define.
+    // ON BY DEFAULT since 1.0.0 (`-e POLYKYBD_BOOT_INTRO=no` opts out; HIL images
+    // default it off, see rules.mk). It was off for a long time because boot auto-play
+    // had wedged a half and the hang was never understood. It is understood now: the
+    // master bumps anim_nonce at boot, and the SLAVE's poly-sync handler started Eden
+    // RIGHT THERE — on the split-protocol thread (serial_protocol.c's SlaveThread,
+    // HIGHPRIO), concurrently with the slave's own post_init. Both wrote the keycap SPI
+    // bus at once and the slave parked forever in a spiSend() with no timeout, status
+    // panel frozen at "100%" with no render sub-steps (hardware, 2026-09-25). The
+    // handler now only records the request and housekeeping starts it
+    // (split_sync_drain_anim_replay()). The rounds of tutorial testing since have run
+    // this exact path on every reset (POLYKYBD_TUTORIAL_TEST) without a recurrence.
+    // What runs HERE is cheap — arming, and startup_anim_start()'s contrast write; the
+    // frames render from housekeeping, after crash_watchdog_start() below.
 #if defined(POLYKYBD_BOOT_INTRO) || defined(POLYKYBD_TUTORIAL_TEST)
     // ⚠️ The TEST build respects the marker too. It used to force this true on every
     // reset, and a tester who had FINISHED the lesson saw it again after a restart. The

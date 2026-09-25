@@ -466,11 +466,18 @@ OPT_DEFS += -DFW_REQUIRE_SIGNATURE
 #
 # ⚠️ TEST BUILDS ONLY -- never ship this in a release image. A normal build
 # compiles the inline no-ops in crash_test.h and pays nothing.
-# First-run boot intro (Eden + the tutorial), opt-in: `-e POLYKYBD_BOOT_INTRO=yes`.
-# ⚠️ Default OFF on purpose — see the long note at the guard in poly_keymap.c. It runs
-# in the pre-watchdog boot window, and boot auto-play was previously disabled after an
-# unexplained startup hang. Do not flip this default until a cold boot has been run on
-# hardware.
+# First-run boot intro (Eden + the tutorial): ON by default since 1.0.0; opt out with
+# `-e POLYKYBD_BOOT_INTRO=no`. It plays once per board (the EEPROM marker), and again
+# only after RESET Eden. See the note at the guard in poly_keymap.c for why the old
+# "default OFF" is lifted.
+# ⚠️ HIL images default it OFF: a rig board boots with a pending marker, nobody presses
+# a key, so the lesson would never finish and would own the displays, the brightness
+# and the layer stack for every graded test after the boot. A HIL build that wants it
+# can still pass `-e POLYKYBD_BOOT_INTRO=yes`.
+ifneq ($(strip $(POLYKYBD_HIL)),)
+    POLYKYBD_BOOT_INTRO ?= no
+endif
+POLYKYBD_BOOT_INTRO ?= yes
 ifeq ($(strip $(POLYKYBD_BOOT_INTRO)), yes)
     OPT_DEFS += -DPOLYKYBD_BOOT_INTRO
 endif

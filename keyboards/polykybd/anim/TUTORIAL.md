@@ -1801,3 +1801,17 @@ Hardware feedback, all in one round:
   write uses it, and the status panel's tutorial edge sets it. The finish edge's
   `set_displays()` runs after the tutorial is inactive, which hands the user's persisted
   level back.
+
+## Round 28 — stars from the solid logo, lean inward, two heavy closing screens
+
+- **Eden's stars open when POLYKYBD is solid**: `SA_STAR_START_MS` is the end of the
+  letters' dither-in (tt 165 of 256 of the intro, ~3.2 s), not the scanline wipe. The
+  window is ~10 s now, so five slots per keycap.
+- **Names get 3 s** to be read (was 2).
+- **A name leans toward the split when it cannot centre exactly**: with an odd number of
+  spare keys the spare goes to the OUTER edge (`tut_name_slot_unit()`); keys are ordered by
+  board x, so that is the left end of the left half and the right end of the right half.
+- **The closing screen is TWO screens**, `TUT_LANG_MORE` then `TUT_LANG_MORE2`, 2.6 s
+  each: `160 | LAYOUTS`, then `10 | SCRIPTS` — number on the left half, word on the right,
+  both on the middle row, in `FreeSansBold24pt7b`, the heavy face of the boot splash and
+  the BOOT-/LOADER! message (`tut_draw_heavy()`).

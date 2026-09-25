@@ -332,6 +332,7 @@ bool tutorial_key_visible(uint8_t row, uint8_t col) {
         // everything else goes dark.
         case TUT_LANG_NAME:
         case TUT_LANG_MORE:
+        case TUT_LANG_MORE2:
             return false;
         // Chapter 1 opens on a dark, still board — the lit set is simply empty.
         case TUT_BLANK:
@@ -450,7 +451,10 @@ bool tutorial_in_layer_chapter(void) {
     return s_active && (s_st.phase == TUT_LAYER_WAIT || s_st.phase == TUT_LAYER_SWEEP ||
                         s_st.phase == TUT_LAYER_HELD);
 }
-bool tutorial_telling_more(void) { return s_active && s_st.phase == TUT_LANG_MORE; }
+bool tutorial_telling_more(void) {
+    return s_active && (s_st.phase == TUT_LANG_MORE || s_st.phase == TUT_LANG_MORE2);
+}
+bool tutorial_more_scripts(void) { return s_active && s_st.phase == TUT_LANG_MORE2; }
 
 // A capital on a keycap, one tier larger than the legend face when that tier is flashed,
 // centred in the whole 72x40 window. Used to spell a preview item's name.
@@ -692,7 +696,9 @@ const uint32_t *tutorial_line(uint8_t which) {
             // phrase rotates with the item, and the name finishes the sentence.
             return left ? tutorial_preview_phrase() : tutorial_preview_name();
         case TUT_LANG_MORE:
-            return left ? U"...and many" : U"more to pick";
+            return left ? U"...and many" : U"more layouts";
+        case TUT_LANG_MORE2:
+            return left ? U"...plus" : U"fun scripts";
         case TUT_LANG_POINT:
             return left ? U"Switch with" : U"the Lang key";
         case TUT_FINALE:
@@ -768,6 +774,7 @@ uint8_t tutorial_preview_entry(void) { return 0xFFu; }
 bool tutorial_naming(void) { return false; }
 bool tutorial_in_layer_chapter(void) { return false; }
 bool tutorial_telling_more(void) { return false; }
+bool tutorial_more_scripts(void) { return false; }
 bool tutorial_draw_key_letter(uint32_t cp) { (void)cp; return false; }
 const uint32_t *tutorial_skip_label(void) { return NULL; }
 const uint32_t *tutorial_progress_label(void) { return NULL; }

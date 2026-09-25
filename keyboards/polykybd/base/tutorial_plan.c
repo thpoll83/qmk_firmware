@@ -25,6 +25,7 @@ static uint32_t tut_phase_ms(uint8_t phase) {
         case TUT_LANG_NAME:    return TUT_LANG_NAME_MS;
         case TUT_LANG_SHOW:    return TUT_LANG_ITEM_MS;
         case TUT_LANG_MORE:    return TUT_LANG_MORE_MS;
+        case TUT_LANG_MORE2:   return TUT_LANG_MORE_MS;
         case TUT_LANG_POINT:   return TUT_LANG_POINT_MS;
         case TUT_FINALE:       return TUT_FINALE_MS;
         default:            return 0;
@@ -233,7 +234,8 @@ bool tut_tick(tut_state_t *st, uint32_t now) {
                 tut_enter(st, TUT_LANG_MORE, now);
             }
             return true;
-        case TUT_LANG_MORE:   tut_enter_after_preview(st, now); return true;
+        case TUT_LANG_MORE:   tut_enter(st, TUT_LANG_MORE2, now); return true;
+        case TUT_LANG_MORE2:  tut_enter_after_preview(st, now); return true;
         case TUT_LANG_POINT:  tut_enter(st, TUT_FINALE, now); return true;
         case TUT_FINALE:      tut_enter(st, TUT_DONE, now);   return true;
         default: return false;

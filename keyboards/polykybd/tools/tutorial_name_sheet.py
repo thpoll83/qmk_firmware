@@ -70,15 +70,24 @@ def enum_counts():
     return n_lang, n_scripts
 
 
-def layout(n, top=None):
-    """(row, position-in-row) per unit, rows 0 = display row 1, 1 = display row 2."""
+def layout(n, side, top=None):
+    """(row, position-in-row) per unit, rows 0 = display row 1, 1 = display row 2.
+    Centred per row; an odd spare key goes to the OUTER edge so the word leans toward the
+    split (tut_name_slot_unit): the right end of the left half, the left of the right."""
     if top is None:
         top = (n + 1) // 2 if n > KEYS else 0
     slots = []
     for r, (first, count) in enumerate(((0, top), (top, n - top))):
-        start = (KEYS - count) // 2
+        slack = KEYS - count
+        start = (slack + 1) // 2 if side == 0 else slack // 2
         slots += [(r, start + k) for k in range(count)]
     return slots
+
+
+def heavy_tile(heavy, cp):
+    """A character in the heavy splash face, centred from its box (tut_draw_heavy)."""
+    R = op.Renderer([heavy])
+    return char_tile(R, cp)
 
 
 def char_tile(R, cp):
@@ -120,7 +129,7 @@ def main():
     G, GAP, LABEL = 6, 36, 90
     bw = LABEL + 2 * KEYS * (W + G) + GAP
     bh = 2 * (H + G) + 14
-    sheet = Image.new("L", (bw, (len(ITEMS) + 1) * bh + 10), 30)
+    sheet = Image.new("L", (bw, (len(ITEMS) + 2) * bh + 10), 30)
     d = ImageDraw.Draw(sheet)
     font = ImageFont.load_default()
     for i, (latin, native, rtl) in enumerate(ITEMS):
@@ -142,17 +151,22 @@ def main():
                 ((0, native_tiles), (1, latin_tiles))
         for side, tiles in pairs:
             x_side = LABEL + side * (KEYS * (W + G) + GAP)
-            for (r, pos), t in zip(layout(len(tiles)), tiles):
+            for (r, pos), t in zip(layout(len(tiles), side), tiles):
                 sheet.paste(t, (x_side + pos * (W + G), y0 + r * (H + G)))
+    # The two closing screens (TUT_LANG_MORE, TUT_LANG_MORE2): the number on the left
+    # half, the word on the right, both on the middle row, in the heavy splash face.
+    import gfx_font  # noqa: E402  (the host tool's own GFX header parser)
+    heavy = gfx_font.load_ui_font(os.path.join(KB, "base", "fonts"), "FreeSansBold24pt7b.h",
+                                  "FreeSansBold24pt7b")
     n_lang, n_scripts = enum_counts()
-    y0 = 10 + len(ITEMS) * bh
-    d.text((6, y0 + H // 2), "(more)", fill=255, font=font)
-    for side, (num, word) in enumerate(((n_lang, MORE_WORDS[0]), (n_scripts, MORE_WORDS[1]))):
-        text = f"{num}{word}"
-        tiles = [char_tile(R, ord(c)) for c in text]
-        x_side = LABEL + side * (KEYS * (W + G) + GAP)
-        for (r, pos), t in zip(layout(len(text), top=len(str(num))), tiles):
-            sheet.paste(t, (x_side + pos * (W + G), y0 + r * (H + G)))
+    for k, (num, word) in enumerate(((n_lang, MORE_WORDS[0]), (n_scripts, MORE_WORDS[1]))):
+        y0 = 10 + (len(ITEMS) + k) * bh
+        d.text((6, y0 + H // 2), f"(more {k + 1}/2)", fill=255, font=font)
+        for side, text in ((0, str(num)), (1, word)):
+            tiles = [heavy_tile(heavy, ord(c)) for c in text]
+            x_side = LABEL + side * (KEYS * (W + G) + GAP)
+            for (r, pos), t in zip(layout(len(text), side, top=0), tiles):
+                sheet.paste(t, (x_side + pos * (W + G), y0 + r * (H + G)))
     sheet.save(args.out)
     print(f"wrote {args.out}")
 

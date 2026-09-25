@@ -25,14 +25,14 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 #define SA_INTRO_MS 5000    // sparks stream + converge, letters form, sparks wink out
 #define SA_HOLD_MS  5000    // hold the PolyKybd logo (letters up)
 #define SA_FADE_MS  3200    // final fade: the letters dissolve to black (slow, gradual)
-// Stars that twinkle while the letters go: from the scanline wipe (SA_LINE_CLEAR_AT_MS)
-// to the end of the fade. Each keycap has SA_STAR_SLOTS chances, a hash decides which are
+// Stars that twinkle from the moment POLYKYBD is solid (SA_STAR_START_MS) to the end of
+// the fade. Each keycap has SA_STAR_SLOTS chances, a hash decides which are
 // used (so the stars land "here and there"), when each lights within that window and
 // where. A star grows 1 px -> a 5-px plus -> 1 px -> gone over SA_STAR_LIFE_MS. Drawn
 // LAST, so neither the scanline wipe nor the dither eats one.
 // 650 ms "came and disappeared too quickly", and the stars only started with the final
 // fade (hardware); they now start with the scanline wipe and live 1.6 s.
-#define SA_STAR_SLOTS    3
+#define SA_STAR_SLOTS    5   // the window is ~10 s now; five chances keep it lively
 #define SA_STAR_USE      100   // of 255: ~39 % of slots light at all
 #define SA_STAR_LIFE_MS  1600
 #define SA_BLACK_MS 1000    // hold on black at the end before the normal display returns
@@ -56,8 +56,12 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 // static_assert rather than a comment asking the next editor to remember.
 #define SA_LINE_CLEAR_DELAY_MS  1000
 #define SA_LINE_CLEAR_AT_MS     (SA_BG_FADE_START_MS + SA_BG_FADE_MS + SA_LINE_CLEAR_DELAY_MS)
-// The star window: from the scanline wipe to the end of the letter fade.
-#define SA_STAR_WINDOW_MS       (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS - SA_LINE_CLEAR_AT_MS)
+// The star window: from the moment the POLYKYBD letters are SOLID (the dither-in ends at
+// tt 165 of 256 of the intro, see `letter_in` in sa_render_frame) to the end of the fade.
+// It opened at the scanline wipe before; "the sparks can start already when we write
+// POLYKYBD solid" (hardware).
+#define SA_STAR_START_MS        ((SA_INTRO_MS * 165u) / 256u)
+#define SA_STAR_WINDOW_MS       (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS - SA_STAR_START_MS)
 _Static_assert(SA_STAR_WINDOW_MS > SA_STAR_LIFE_MS, "a star must fit in its window");
 #define SA_LINE_CLEAR_SPREAD_MS 1200
 _Static_assert(SA_LINE_CLEAR_AT_MS + SA_LINE_CLEAR_SPREAD_MS < SA_INTRO_MS + SA_HOLD_MS,
@@ -298,7 +302,7 @@ static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16
     }
 }
 
-// The stars for one keycap, `fe` ms into the star window (scanline wipe .. end of fade). Pure function of the
+// The stars for one keycap, `fe` ms into the star window (letters solid .. end of fade). Pure function of the
 // key index and the time, so both halves (and every frame) agree without any state.
 static void sa_plot_stars(uint8_t *buf, uint8_t idx, uint32_t fe) {
     for (uint8_t k = 0; k < SA_STAR_SLOTS; ++k) {
@@ -446,7 +450,7 @@ static void sa_render_frame(uint32_t el) {
                         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
         }
 
-        if (el >= SA_LINE_CLEAR_AT_MS) sa_plot_stars(buf, idx, el - SA_LINE_CLEAR_AT_MS);
+        if (el >= SA_STAR_START_MS) sa_plot_stars(buf, idx, el - SA_STAR_START_MS);
 
         kdisp_send_window();   // 360 B (visible cols/pages) not the full 1024 B — faster SPI
     }

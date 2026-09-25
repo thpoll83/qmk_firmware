@@ -85,6 +85,8 @@ bool tutorial_naming(void);
 bool tutorial_in_layer_chapter(void);
 // True while the board spells how many layouts and scripts there are (TUT_LANG_MORE).
 bool tutorial_telling_more(void);
+// Which of the two: false = the layouts screen, true = the scripts screen.
+bool tutorial_more_scripts(void);
 // Draw a capital centred on the selected keycap buffer (the name's letters).
 bool tutorial_draw_key_letter(uint32_t cp);
 

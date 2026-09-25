@@ -114,9 +114,11 @@
 // Before each item the board goes dark and spells the item's NAME on the keys, Latin on
 // one half and the language's own script on the other, so the reader knows what they
 // are about to look at.
-#define TUT_LANG_NAME_MS    2000u
-// After the last item: the board says how many more there are (layouts / scripts).
-#define TUT_LANG_MORE_MS    3000u
+#define TUT_LANG_NAME_MS    3000u   // 2000 left too little time to read the name (hardware)
+// After the last item: the board says how many more there are — two screens, the
+// layouts first and then the scripts, each a number on one half and the word on the
+// other, in the heavy splash face.
+#define TUT_LANG_MORE_MS    2600u
 #define TUT_LANG_POINT_MS   4500u   // the ring circles the Lang key; informational, timed
 #define TUT_FINALE_MS       3000u
 
@@ -169,7 +171,8 @@ typedef enum {
     TUT_LANG_INTRO,     // "It speaks your language"
     TUT_LANG_NAME,      // board dark, the next item's name spelled across the middle row
     TUT_LANG_SHOW,      // one preview item on screen; re-entered once per item
-    TUT_LANG_MORE,      // "160 LAYOUTS / 10 SCRIPTS" on the keys: there are many more
+    TUT_LANG_MORE,      // "160 | LAYOUTS" on the keys: there are many more
+    TUT_LANG_MORE2,     // "10 | SCRIPTS"
     TUT_LANG_POINT,     // the ring circles the Lang key: where to change it for real
     TUT_FINALE,         // "You're ready!"
     TUT_DONE,           // finished or skipped — the caller tears down
@@ -249,7 +252,8 @@ static inline bool tut_phase_is_wave(uint8_t p) {
 // TUT_LANG_NAME and TUT_LANG_MORE are the exceptions: they darken the board around the
 // words they spell.
 static inline bool tut_phase_shows_all(uint8_t p) {
-    return p >= TUT_BOARD_SHOW && p < TUT_DONE && p != TUT_LANG_NAME && p != TUT_LANG_MORE;
+    return p >= TUT_BOARD_SHOW && p < TUT_DONE && p != TUT_LANG_NAME && p != TUT_LANG_MORE &&
+           p != TUT_LANG_MORE2;
 }
 
 

@@ -1106,6 +1106,7 @@ TEST(TutorialBoard, RunsRevealShowLanguagesPointFinaleDone) {
     EXPECT_EQ(st.phase, TUT_LANG_MORE) << "the tour ends by saying there are more";
     EXPECT_EQ(tut_preview_index(&st), -1) << "the last item must not stay applied";
     FinishPhase(&st, &now, TUT_LANG_MORE_MS);
+    FinishPhase(&st, &now, TUT_LANG_MORE_MS);   // layouts, then scripts
     EXPECT_EQ(st.phase, TUT_LANG_POINT);
     EXPECT_EQ(tut_preview_index(&st), -1) << "the last item must not stay applied";
     EXPECT_EQ(tut_point_slot(&st), LANG_KEY);
@@ -1136,6 +1137,7 @@ TEST(TutorialBoard, NoLangKeySkipsThePointer) {
     FinishPhase(&st, &now, TUT_LANG_NAME_MS);
     FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
     FinishPhase(&st, &now, TUT_LANG_MORE_MS);
+    FinishPhase(&st, &now, TUT_LANG_MORE_MS);   // layouts, then scripts
     EXPECT_EQ(st.phase, TUT_FINALE);
 }
 
@@ -1149,6 +1151,7 @@ TEST(TutorialBoard, LangPointFiresTheRingImmediately) {
     FinishPhase(&st, &now, TUT_LANG_NAME_MS);
     FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
     FinishPhase(&st, &now, TUT_LANG_MORE_MS);
+    FinishPhase(&st, &now, TUT_LANG_MORE_MS);   // layouts, then scripts
     ASSERT_EQ(st.phase, TUT_LANG_POINT);
     const uint8_t seq = st.ripple_seq;
     tut_tick(&st, now + 1u);
@@ -1180,7 +1183,7 @@ TEST(TutorialBoard, SkipEndsItMidPreview) {
 TEST(TutorialBoard, ShowsAllCoversExactlyThePostRevealPhases) {
     for (uint8_t p = 0; p <= TUT_DONE; ++p) {
         const bool want = p >= TUT_BOARD_SHOW && p <= TUT_FINALE && p != TUT_LANG_NAME &&
-                          p != TUT_LANG_MORE;
+                          p != TUT_LANG_MORE && p != TUT_LANG_MORE2;
         EXPECT_EQ(tut_phase_shows_all(p), want) << "phase " << (int)p;
     }
 }

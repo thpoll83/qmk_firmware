@@ -542,6 +542,7 @@ static uint8_t poly_tutorial_apply_preview(void);
 static uint32_t tut_name_letter(uint8_t row, uint8_t col);   // the spelled preview name
 static uint8_t  tut_name_key(uint8_t row, uint8_t col, uint32_t *cp, const uint8_t **tile);
 static void     tut_draw_name_tile(const uint8_t *tile);
+static void     tut_draw_heavy(uint32_t cp);
 // The user's own default LAYOUT, parked while the tutorial runs. 0xFF = nothing parked.
 // ⚠️ This is poly's def_layer (a layer INDEX _L0.._L4, the Qwerty/Colemak/Neo choice),
 // NOT the momentary layer stack — layer_clear() does not touch it, which is why the
@@ -4022,6 +4023,10 @@ void tutorial_draw_chrome(uint8_t row, uint8_t col) {
         case 2:
             tut_draw_name_tile(name_tile);
             return;
+        case 3:
+            tut_draw_heavy(name_cp);
+            kdisp_set_gfx_erase(false);
+            return;
         default:
             break;
     }
@@ -4252,7 +4257,11 @@ static int8_t tut_name_slot_unit(uint8_t side, uint8_t idx, uint8_t n, uint8_t t
         const uint8_t count = r == 0 ? top : (uint8_t)(n - top);
         const uint8_t avail = s_tut_name_n[side][r];
         if (count == 0 || count > avail) continue;
-        const uint8_t start = (uint8_t)((avail - count) / 2u);
+        // Centred, and when the spare key count is odd the odd key goes to the OUTER
+        // edge, so the word leans toward the split (keys are ordered by board x, so the
+        // split is the right end of the left half and the left end of the right half).
+        const uint8_t slack = (uint8_t)(avail - count);
+        const uint8_t start = side == 0 ? (uint8_t)((slack + 1u) / 2u) : (uint8_t)(slack / 2u);
         for (uint8_t k = 0; k < count; ++k) {
             if (s_tut_name_keys[side][r][start + k] == idx) return (int8_t)(first + k);
         }
@@ -4260,24 +4269,37 @@ static int8_t tut_name_slot_unit(uint8_t side, uint8_t idx, uint8_t n, uint8_t t
     return -1;
 }
 
-// What this key shows while the board is naming an item. Returns 0 (not a name key),
-// 1 (a character in *cp) or 2 (a pre-rendered tile in *tile).
-// The "more" screen: a number over a word on each half — the layouts this firmware knows
-// on the left, the alternative glyph scripts on the right. Read from the enums, so the
-// screen stays true as languages and scripts are added. Returns the unit count and sets
-// *top to how many of them (the number) go on row 1.
-static uint8_t tut_more_units(bool right, uint32_t out[TUT_NAME_UNITS], uint8_t *top) {
-    const uint16_t  count = right ? (uint16_t)(GLYPH_SCRIPT_COUNT - 1) : (uint16_t)NUM_LANG;
-    const uint32_t *word  = right ? U"SCRIPTS" : U"LAYOUTS";
-    char            digits[6];
-    uint8_t         nd = 0;
-    uint16_t        v  = count;
-    do { digits[nd++] = (char)('0' + v % 10u); v /= 10u; } while (v != 0 && nd < sizeof(digits));
+// What this key shows while the board is naming an item (or on the "more" screens).
+// Returns 0 (not a name key), 1 (a character in *cp), 2 (a pre-rendered tile in *tile)
+// or 3 (a character in *cp, drawn in the heavy splash face).
+// The "more" screens, one at a time: the NUMBER on the left half and the WORD on the
+// right — first the layouts this firmware knows, then the alternative glyph scripts.
+// Read from the enums, so the screens stay true as languages and scripts are added.
+// Returns the unit count for THIS half's middle row.
+static uint8_t tut_more_units(bool right, bool scripts, uint32_t out[TUT_NAME_UNITS]) {
     uint8_t n = 0;
+    if (right) {
+        const uint32_t *word = scripts ? U"SCRIPTS" : U"LAYOUTS";
+        for (; word[n] != 0 && n < TUT_NAME_UNITS; ++n) out[n] = word[n];
+        return n;
+    }
+    char     digits[6];
+    uint8_t  nd = 0;
+    uint16_t v  = scripts ? (uint16_t)(GLYPH_SCRIPT_COUNT - 1) : (uint16_t)NUM_LANG;
+    do { digits[nd++] = (char)('0' + v % 10u); v /= 10u; } while (v != 0 && nd < sizeof(digits));
     while (nd > 0) out[n++] = (uint32_t)digits[--nd];
-    *top = n;
-    for (uint8_t i = 0; word[i] != 0 && n < TUT_NAME_UNITS; ++i) out[n++] = word[i];
     return n;
+}
+
+// The heavy splash face (the one "BOOT- / LOADER!" and the POLY KYBD splash use),
+// one character centred on the selected keycap from its measured box.
+static void tut_draw_heavy(uint32_t cp) {
+    const GFXfont *const one[1] = {&FreeSansBold24pt7b};
+    const uint32_t       txt[2] = {cp, 0};
+    int8_t               x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+    kdisp_gfx_text_bbox(one, 1, txt, &x0, &x1, &y0, &y1);
+    kdisp_write_gfx_text(one, 1, (int8_t)(BUFFER_X + (SCREEN_WIDTH - (x1 - x0 + 1)) / 2 - x0),
+                         (int8_t)((SCREEN_HEIGHT - (y1 - y0 + 1)) / 2 - y0), txt);
 }
 
 static uint8_t tut_name_key(uint8_t row, uint8_t col, uint32_t *cp, const uint8_t **tile) {
@@ -4289,12 +4311,11 @@ static uint8_t tut_name_key(uint8_t row, uint8_t col, uint32_t *cp, const uint8_
     if (!s_tut_name_built[side]) tut_name_keys_build(side);
     uint32_t units[TUT_NAME_UNITS];
     if (more) {
-        uint8_t       top = 0;
-        const uint8_t n   = tut_more_units(side != 0, units, &top);
-        const int8_t  u   = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n, top);
+        const uint8_t n = tut_more_units(side != 0, tutorial_more_scripts(), units);
+        const int8_t  u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n, 0);
         if (u < 0) return 0;
         *cp = units[u];
-        return 1;
+        return 3;   // heavy face
     }
     const tut_preview_t *e = tut_preview_current();
     if (e == NULL) return 0;

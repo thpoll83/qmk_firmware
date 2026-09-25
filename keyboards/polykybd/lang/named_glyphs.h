@@ -2097,6 +2097,7 @@
 #define BADGE_OFF        U"\x01"      // ...released: a 2px rounded outline
 #define BADGE_ON         U"\x02"      // ...engaged: the same silhouette, solid
 #define BADGE_LINE       U"\x03"      // ...a 1px outline (the context-menu frame)
+#define BADGE_SQUARE     U"\x04"      // ...solid with square corners (the context-menu bars)
 #define HINT_ERASE       U"\x14"      // draw the REST of the string as a HOLE, not as ink
 #define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
 #define HINT_ROT(step, cp) U"\x15" step cp  // rotate cp CCW by step*15 deg, halve it,
@@ -2332,21 +2333,30 @@
 // along an axis. 120 deg counter-clockwise from "rightwards" lands on the up-and-left
 // tilt a pointer is drawn at.
 //
-// Every part is placed ABSOLUTELY (hardware round 34): the lines at cursor (39,23), a
-// 1px frame one pixel clear of them, and the pointer at one third scale beside it. The
-// three together ink x41..85 y7..32, centred in the 72x40 cell to half a pixel.
+// Every part is placed ABSOLUTELY: the three bars, a 1px frame two pixels clear of
+// them, and the pointer at one third scale, its top level with the first bar. The
+// parts ink x43..83 y6..33, centred in the 72x40 cell to half a pixel.
 // ⚠️ ALL absolute, because the bottom row CENTRES its legend by shifting the origin
 // (draw_legend_cx_cy()), and a MOVE'd part does not follow the shift: with the lines
 // laid out relatively and only the pointer MOVE'd, the lines moved and the pointer
-// stayed, painting over them. A legend that MOVEs is drawn unshifted there now.
+// stayed, painting over them (round 34). A legend that MOVEs is drawn unshifted there.
 //
-// Positions measured in the keycap preview model (keycap-layout-preview skill): the
-// frame is (41,7) 33x26, the lines ink 43..71 x 9..30, the pointer 76..85 x 20..32.
-#define HINT_POS_CTXLINES           	U"\x27" U"\x17"   // (39,23) cursor: the lines' origin
-#define HINT_POS_CTXFRAME           	U"\x29" U"\x07"   // (41,7)  buffer: the frame's top-left
-#define HINT_SZ_CTXFRAME            	U"\x21" U"\x1A"   // 33x26
-#define HINT_POS_CTXPTR             	U"\x48" U"\x12"   // (72,18) buffer: the pointer's top-left
-#define ICON_CONTEXT_MENU           	HINT_MOVE(HINT_POS_CTXLINES) U"\x2630" \
+// ⚠️ The bars are three square BADGEs, not U+2630: round 35 asked for them at 80 % of
+// the glyph's 29px, and no op scales a glyph on one axis. 23x4 each, 9px apart, the
+// glyph's own bar height and pitch.
+//
+// Positions measured in the keycap preview model (keycap-layout-preview skill): bars
+// x46..68 at y9/18/27, frame (43,6) 29x28, pointer x74..83 y9..21.
+#define HINT_POS_CTXBAR1            	U"\x2E" U"\x09"   // (46,9)  buffer: bar 1 top-left
+#define HINT_POS_CTXBAR2            	U"\x2E" U"\x12"   // (46,18)
+#define HINT_POS_CTXBAR3            	U"\x2E" U"\x1B"   // (46,27)
+#define HINT_SZ_CTXBAR              	U"\x17" U"\x04"   // 23x4
+#define HINT_POS_CTXFRAME           	U"\x2B" U"\x06"   // (43,6)  buffer: the frame's top-left
+#define HINT_SZ_CTXFRAME            	U"\x1D" U"\x1C"   // 29x28
+#define HINT_POS_CTXPTR             	U"\x46" U"\x07"   // (70,7)  buffer: the pointer's top-left
+#define ICON_CONTEXT_MENU           	HINT_MOVE(HINT_POS_CTXBAR1) HINT_BADGE(HINT_SZ_CTXBAR, BADGE_SQUARE) \
+                                    	HINT_MOVE(HINT_POS_CTXBAR2) HINT_BADGE(HINT_SZ_CTXBAR, BADGE_SQUARE) \
+                                    	HINT_MOVE(HINT_POS_CTXBAR3) HINT_BADGE(HINT_SZ_CTXBAR, BADGE_SQUARE) \
                                     	HINT_MOVE(HINT_POS_CTXFRAME) HINT_BADGE(HINT_SZ_CTXFRAME, BADGE_LINE) \
                                     	HINT_MOVE(HINT_POS_CTXPTR) HINT_ROT(ROT_CCW_120_THIRD, U"\x27A4")
 

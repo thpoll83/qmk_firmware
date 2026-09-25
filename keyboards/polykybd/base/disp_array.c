@@ -789,7 +789,8 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
                 break;
             case U'\x13':   // BADGE: a lock-indicator box at the cursor. Next THREE codepoints
                             //   are w, h and style — 1 = 2px outline (released), 2 = solid
-                            //   (engaged), 3 = 1px outline (the context-menu frame); pair the
+                            //   (engaged), 3 = 1px outline (the context-menu frame), 4 = square
+                            //   solid (the context-menu bars); pair the
                             //   solid with \x14 to punch the glyph back out of it, the way
                             //   ICON_CAPSLOCK_ON is drawn.
                             //
@@ -800,10 +801,13 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
                             //   rounder radius for the run-dialog hint; do not merge them.
                             //   ⚠️ style cannot be 0: a 0 codepoint terminates the string.
                 if (text[1] && text[2] && text[3]) {
-                    // style 3 = a 1px outline, the context-menu legend's frame.
+                    // style 3 = a 1px outline (the context-menu frame), 4 = a SQUARE
+                    // solid (its bars: a 4px-tall badge would lose its corner pixels).
                     kdisp_draw_badge_rect(x_cursor, y_cursor, (int8_t)text[1], (int8_t)text[2],
-                                          KDISP_BADGE_RADIUS,
-                                          (text[3] == 2) ? 0 : (text[3] == 3) ? 1 : KDISP_BADGE_BORDER);
+                                          (text[3] == 4) ? 0 : KDISP_BADGE_RADIUS,
+                                          (text[3] == 2 || text[3] == 4) ? 0
+                                          : (text[3] == 3)               ? 1
+                                                                         : KDISP_BADGE_BORDER);
                     text += 3;
                 }
                 break;

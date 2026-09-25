@@ -1987,3 +1987,13 @@ Hardware feedback:
   and the pointer at one third scale (ROT steps 25..48, `KDISP_ROT_THIRD_STEP`), 10x13
   instead of 15x19. The host's `tools/oled_preview.py` ports both op changes and renders
   the legend pixel-identical to the keycap preview model.
+
+## Round 35 — the context-menu icon, narrower
+
+- The bars are 80 % of the glyph's width (23 of 29 px), so they are three square
+  badges now (`BADGE_SQUARE`, style 4) rather than U+2630: no op scales a glyph on one
+  axis. The frame keeps a 2 px margin (29x28), and the pointer's top is level with the
+  first bar. The parts ink x43..83 y6..33, centred to half a pixel.
+- ⚠️ The legend makes TEN macro calls, and the host's `expand_function_macros()`
+  stopped after six: the glyph loader dropped the macro and the key drew its own name.
+  The host bound is 64 now (PolyKybdHost `tools/oled_preview.py`).

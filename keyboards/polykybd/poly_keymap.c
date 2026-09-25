@@ -920,6 +920,13 @@ void sync_and_refresh_displays(void) {
         // The host's real caps lock is untouched; only the LOCAL snapshot the renderer
         // reads is forced, and only while chapter 1 is up.
         if (tutorial_caps_hold()) access_local_layer()->led_state.caps_lock = true;
+        // The same for Num Lock on the Num layer: with the host's Num Lock off the keypad
+        // keys draw their navigation legends (arrows, Ins, Del), so "hold Num" showed a
+        // layer without a single number on it (hardware). Display only, lesson only; the
+        // lesson swallows the keypad presses, so nothing typed disagrees with the legend.
+        if (tutorial_active() && get_highest_layer(access_local_layer()->layer) == _NL) {
+            access_local_layer()->led_state.num_lock = true;
+        }
         access_local_layer()->mods = get_mods();
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         // Force one layer push to the slave after boot even with no diff: each half

@@ -6,7 +6,8 @@
 // by key — left to right across the whole board, row by row — each fading up. The tab
 // row and the bottom row stay put. In the first-run tutorial and outside it alike.
 // The tutorial borrows it for the Shift chapter's reveal (the letters and both shifts,
-// rows 1..4) and for each preview item's name (rows 1..2).
+// rows 1..3) and for each preview item's name (rows 1..2). Rows are PHYSICAL rows
+// (menu_cascade_rows.h, generated from keyboard.json), not display rows.
 //
 // ⚠️ No sync byte: each half detects the change from state it already has (the synced
 // layer, region, category and page), and a key's moment is a pure function of its

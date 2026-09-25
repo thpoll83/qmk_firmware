@@ -12,6 +12,7 @@
 #include "side.h"
 #include QMK_KEYBOARD_H             // get_key_disp_bitmask
 #include "startup_anim.h"           // startup_anim_key_geom / startup_anim_board_w
+#include "menu_cascade_rows.h"      // CASC_ROW_* (tools/gen_cascade_rows.py)
 #include "tutorial.h"               // tutorial_slot_at()
 #include "focus_ring.h"             // poly_focus_draw_legend()
 #include "base/update.h"            // request_disp_refresh()
@@ -20,15 +21,16 @@
 // 20% faster"). Round 36: 30% faster again ("still too slow").
 #define CASC_MS      1008u   // first content key to last
 #define CASC_FADE_MS  202u   // each key's own fade-in
-#define CASC_ROWS       3u   // a menu: display rows 1..3; row 0 (tabs) and row 4 stay put
-#define CASC_BOARD_ROWS 4u   // the Shift reveal: rows 1..4, so the shifts come in too
+// Rows are PHYSICAL rows (menu_cascade_rows.h), counted from 0 at the top.
+#define CASC_ROWS       3u   // a menu: rows 1..3; row 0 (tabs) and row 4 stay put
+#define CASC_BOARD_ROWS 3u   // the Shift reveal: rows 1..3, the letters and both shifts
 #define CASC_NAME_ROWS  2u   // a preview name or a "more" screen: rows 1..2, where its letters sit
 #define CASC_TICK_MS   30u
 #define CASC_KEYS      40u   // display slots per half (8 x 5, some phantom)
 
 static uint32_t s_sig;                 // the menu signature the cascade belongs to
 static bool     s_live;
-static uint8_t  s_rows;                // display rows 1..s_rows cascade (see poll())
+static uint8_t  s_rows;                // physical rows 1..s_rows cascade (see poll())
 static uint32_t s_start;
 static uint32_t s_at;
 static uint8_t  s_drawn[5];            // this half's display slots already drawn
@@ -40,9 +42,13 @@ static void set_bit(uint8_t *m, uint8_t i)  { m[i >> 3] |= (uint8_t)(1u << (i & 
 // When this half's display slot `idx` appears, in ms from the change, or 0 for a key
 // that does not cascade (the tab row, the bottom row, a slot with no panel).
 static uint32_t due_ms(bool right, uint8_t idx) {
-    const uint8_t dr   = (uint8_t)(idx / 8u);
+    // ⚠️ The PHYSICAL row, not idx / 8. The thumb cluster's "Lang" and "PgDn" keys sit
+    // on the keyboard's fourth row but on the fifth DISPLAY row, so the display row
+    // counted them as the bottom row and drew them at once (hardware).
+    if (idx >= CASC_KEYS) return 0u;
+    const uint8_t dr   = right ? CASC_ROW_RIGHT[idx] : CASC_ROW_LEFT[idx];
     const uint8_t rows = s_rows;
-    if (dr == 0u || dr > rows) return 0u;
+    if (dr == 0u || dr == 0xFFu || dr > rows) return 0u;
     const sa_geom_t g  = startup_anim_key_geom(right, idx);
     const uint32_t  bw = startup_anim_board_w();
     if (!g.valid || bw == 0u) return 0u;

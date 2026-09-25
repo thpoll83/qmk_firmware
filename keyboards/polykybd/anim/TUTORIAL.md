@@ -2019,3 +2019,19 @@ Hardware feedback:
   sit (signature `0x04 | phase | item`, so every screen starts afresh). They are
   chrome keys, so `update_displays()`' chrome branch now asks `menu_cascade_hidden()`
   too; the focus ring's draw already did.
+
+## Round 37 — physical rows for the cascade, numbers on the Num layer
+
+- ⚠️ **The cascade counted DISPLAY rows, and the thumb cluster is not laid out like
+  the rest.** "Lang" at matrix (4,7) and "PgDn" at (9,0) sit on the keyboard's fourth
+  row (keyboard.json `y`=3) but on the fifth display row, so both were treated as the
+  bottom row and drawn at once while their row faded in (hardware). The cascade now
+  reads each panel's physical row from `anim/menu_cascade_rows.h`, generated from
+  `split72/keyboard.json` by `tools/gen_cascade_rows.py` (`--check` says whether it is
+  stale). The generator takes the right-half column fold from `check_disp_index.py`'s
+  reading of `key_display_index()`, so the two cannot disagree about a key's panel.
+  Both Shifts sit on physical row 3, so the reveal now spans rows 1..3.
+- With the host's Num Lock off, the keypad keys draw their navigation legends, so
+  "hold Num" showed a layer without a number on it. While the lesson runs and `_NL` is
+  the top layer, the local display snapshot holds Num Lock on, next to the Caps hold.
+  The host's lock is untouched, and the lesson swallows the keypad presses.

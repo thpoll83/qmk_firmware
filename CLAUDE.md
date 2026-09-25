@@ -522,6 +522,15 @@ one more field, or an `HID_REPORT_SIZE` bump, and an app switch presents as miss
 keycap images. Raising the cap costs RAM and nothing else (measured, not reasoned: `.bss`
 +32, `.text` identical).
 
+⚠️ **A `user_sync_*` handler runs on the SLAVE's split-protocol THREAD**
+(`serial_protocol.c`'s `SlaveThread`, `HIGHPRIO`), concurrently with the slave's main
+loop — not in it. So a handler must never touch the keycap SPI bus, the shift registers
+or anything the main thread may be mid-way through: record the request and let
+housekeeping act (`split_sync_drain_anim_replay()` is the pattern). Starting Eden from
+the handler collided with the slave's own boot render and froze it at "100%" with no
+render sub-steps — the boot hang that kept the first-run intro off for months (fixed
+2026-09-25).
+
 ### Firmware staging, the self-apply, and the on-keycap signing prompt (FW-2)
 
 `rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so an image without a valid Ed25519 signature
@@ -719,6 +728,27 @@ is `poly_keymap.c`'s `#include "quantum/via.h"`, which is where QMK happens to
 define the `id_dynamic_keymap_*` command IDs the dynamic keymap uses; that include
 is a QMK header path, not a VIA feature. Don't reintroduce "VIA-compatible" wording
 in docs, UI strings or comments.
+
+### The first-run intro and tutorial (`anim/tutorial.c`, `base/tutorial_plan.c`)
+
+Eden, then a ten-step lesson that points at real keys (letters, Shift, the board reveal,
+a board-only language preview, the Lang and emoji menus, Fn, Num, the Intl picker).
+**On by default since 1.0.0** (`-e POLYKYBD_BOOT_INTRO=no` opts out; HIL images default
+it off, since a rig never presses a key). Plays once per board (EEPROM marker), again
+after RESET Eden. The design, every hardware round and the traps are
+[`keyboards/polykybd/anim/TUTORIAL.md`](keyboards/polykybd/anim/TUTORIAL.md); the phase
+machine is pure and unit-tested (`make test:polykybd_tutorial_plan`). Three rules bind
+code outside it:
+
+- ⚠️ **The tutorial ANNOTATES the normal renderer, it never re-draws the board** — it
+  hides keys (`tutorial_key_visible`) and owns the status panels. Every chapter that
+  re-implemented rendering was a bug.
+- ⚠️ **On the slave, anything the master DREW is known only as what the link carried.**
+  The Intl letter is drawn at random on the master; prose built from the slave's own
+  draw named a different letter than the ring pointed at.
+- ⚠️ **The preview never reaches the host**: `poly_reported_lang()` is what GET_LANG and
+  the settings save read, because the host switches the OS layout to whatever GET_LANG
+  says.
 
 ## Font generation
 

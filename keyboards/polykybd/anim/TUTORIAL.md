@@ -2035,3 +2035,17 @@ Hardware feedback:
   "hold Num" showed a layer without a number on it. While the lesson runs and `_NL` is
   the top layer, the local display snapshot holds Num Lock on, next to the Caps hold.
   The host's lock is untouched, and the lesson swallows the keypad presses.
+
+## Round 38 — the cascade zooms each key in
+
+- Each key now zooms in over its existing 202 ms fade: a 2x2 dot at the keycap centre
+  (0..67 ms), then the real legend at half size (..135 ms), then full size. The spread
+  (1008 ms) and the fade are unchanged. The half frame is the legend drawn as usual and
+  shrunk 2:1 about the centre by `kdisp_zoom_half_window()` (each output pixel ORs a
+  2x2 block, so 1 px strokes survive).
+- Cost: three sends per key instead of one, about 200 ms more SPI across the whole
+  cascade, spread over its 30 ms ticks. The dot's send covers only its few columns
+  (the dirty-window scan). The shrink is ~3,000 pixel reads in RAM.
+- A full render landing mid-zoom would paint the full legend over a preview frame, so
+  `menu_cascade_hidden()` keeps a key that is mid-zoom dark and the tick repaints its
+  current frame. `s_in_draw` lets the tick's own legend draw through that gate.

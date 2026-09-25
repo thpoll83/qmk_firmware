@@ -380,6 +380,31 @@ void kdisp_draw_tab_underline(void) {
     }
 }
 
+// Shrink what is in the keycap window to half size about its centre: each output
+// pixel is the OR of a 2x2 block, so a 1px stroke survives. Used by the menu cascade's
+// zoom-in (anim/menu_cascade.c): draw the real legend, shrink it, send.
+void kdisp_zoom_half_window(void) {
+    enum { HW = SCREEN_WIDTH / 2, HH = SCREEN_HEIGHT / 2, HP = (HH + 7) / 8 };
+    uint8_t half[HP][HW];
+    memset(half, 0, sizeof(half));
+    for (int y = 0; y < HH; ++y) {
+        for (int x = 0; x < HW; ++x) {
+            const int sx = BUFFER_X + 2 * x, sy = 2 * y;
+            const bool on = ((scratch_buffer[GET_BUFFER_OFFSET(sx, sy)] >> (sy & 7)) & 1) ||
+                            ((scratch_buffer[GET_BUFFER_OFFSET(sx + 1, sy)] >> (sy & 7)) & 1) ||
+                            ((scratch_buffer[GET_BUFFER_OFFSET(sx, sy + 1)] >> ((sy + 1) & 7)) & 1) ||
+                            ((scratch_buffer[GET_BUFFER_OFFSET(sx + 1, sy + 1)] >> ((sy + 1) & 7)) & 1);
+            if (on) half[y >> 3][x] |= (uint8_t)(1u << (y & 7));
+        }
+    }
+    memset(scratch_buffer, 0, sizeof(scratch_buffer));
+    for (int y = 0; y < HH; ++y) {
+        for (int x = 0; x < HW; ++x) {
+            if ((half[y >> 3][x] >> (y & 7)) & 1) SET_PIXEL(BUFFER_X + HW / 2 + x, HH / 2 + y);
+        }
+    }
+}
+
 void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height) {
     for (int x = x_start; x < (x_start + width); ++x) {
         for (int y = y_start; y < (y_start + height); ++y) {

@@ -419,12 +419,15 @@ TEST(CirqueGesture, ModerateRadialDragStillAbortsTheDial) {
     const double A = POLY_GEST_PX_A / (double)POLY_GEST_Q, B = POLY_GEST_PX_B / (double)POLY_GEST_Q, C = POLY_GEST_PX_C / (double)POLY_GEST_Q;
     const double D = POLY_GEST_PY_A / (double)POLY_GEST_Q, E = POLY_GEST_PY_B / (double)POLY_GEST_Q, F = POLY_GEST_PY_C / (double)POLY_GEST_Q;
     const double det = A * E - B * D;
+    /* Ends 10 units past the inward floor. A touchdown at 440 is outside the ring, so
+     * the floor is POLY_GEST_RING_R, not 440 (see POLY_GEST_SCROLL_DR). */
+    const double end = POLY_GEST_RING_R - POLY_GEST_SCROLL_DR - 10;
     for (int i = 0; i <= 12; i++) {
-        const double rad = 440 - i * 13.0; /* 440 -> 284, a 156-unit radial move */
+        const double rad = 440 - i * (440 - end) / 12.0;
         const double px = POLY_GEST_CENTRE + rad, py = POLY_GEST_CENTRE;
         r.feed((uint16_t)std::lround((E * (px - C) - B * (py - F)) / det), (uint16_t)std::lround((A * (py - F) - D * (px - C)) / det), 40);
     }
-    EXPECT_EQ(r.wheel_total, 0) << "a 156-unit radial drag scrolled instead of moving";
+    EXPECT_EQ(r.wheel_total, 0) << "a radial drag past the floor scrolled instead of moving";
 }
 
 TEST(CirqueGesture, ModeResolutionDoesNotBurstTheCursor) {
@@ -504,7 +507,8 @@ TEST(CirqueGesture, CursorSpeedIsScaledButProportional) {
 
 TEST(CirqueGesture, AFastSweepTravelsFurtherThanASlowOne) {
     /* Pointer acceleration: the SAME pad distance, covered quickly, must move the
-     * cursor further. Measured 416 at 5 raw units per sample and 998 at 50. */
+     * cursor further. Measured 417 at 5 raw units per sample and 566 at 50 with the
+     * quadratic curve (749 with the old linear one). */
     Runner slow, fast;
     for (int i = 0; i < 200; i++) slow.feed((uint16_t)(MID_X - 500 + i * 5), MID_Y, 40);
     for (int i = 0; i < 20; i++) fast.feed((uint16_t)(MID_X - 500 + i * 50), MID_Y, 40);
@@ -538,8 +542,12 @@ TEST(CirqueGesture, TremorDoesNotShakeTheCursor) {
 }
 
 TEST(CirqueGesture, AccelerationIsCapped) {
-    /* A fast pad crossing: 20 samples at 65 raw units each. Measured 982 with
-     * POLY_GEST_ACCEL_MAX_PCT and 1237 without.
+    /* A fast pad crossing: 18 samples at 80 raw units each. Measured 998 with
+     * POLY_GEST_ACCEL_MAX_PCT and 1257 without.
+     *
+     * 80, not the 65 this used before. The quadratic curve reaches the cap only at
+     * ~43 motion units per sample, and 65 raw is 42, so at 65 the cap never bit
+     * (947 capped against 950 uncapped) and removing it passed.
      *
      * This bound has been re-measured twice, because the cap's effect depends on the
      * SLOPE: a bound that separated the two cases at slope 5 stopped separating them
@@ -548,11 +556,11 @@ TEST(CirqueGesture, AccelerationIsCapped) {
      * one — and the answer both times was to make the cap bite, not to widen the
      * bound. Re-measure this pair whenever POLY_GEST_ACCEL_SLOPE moves. */
     Runner r;
-    for (int i = 0; i <= 20; i++) r.feed((uint16_t)(300 + i * 65), MID_Y, 40);
+    for (int i = 0; i <= 17; i++) r.feed((uint16_t)(300 + i * 80), MID_Y, 40);
     const int moved = std::abs(r.dx_total) + std::abs(r.dy_total);
     EXPECT_GT(moved, 750) << "the fast crossing was not accelerated at all";
     EXPECT_LT(moved, 1100) << "the acceleration cap did nothing: " << moved << " units";
-    EXPECT_LT(r.step_max, 90) << "one sample moved " << r.step_max << " units";
+    EXPECT_LT(r.step_max, 80) << "one sample moved " << r.step_max << " units";
 }
 
 /* Sample radii DERIVED from the wedge constant, not hardcoded.
@@ -678,4 +686,92 @@ TEST(CirqueGesture, TheRightClickCornerReachesInAsFarAsItClaims) {
     }
 }
 
+/* ---- 2026-09-25 field report: gentler acceleration, far-out dial starts ------ */
+
+void feed_pad(Runner &r, double px, double py, uint16_t z = 40) {
+    const double A = POLY_GEST_PX_A / (double)POLY_GEST_Q, B = POLY_GEST_PX_B / (double)POLY_GEST_Q, C = POLY_GEST_PX_C / (double)POLY_GEST_Q;
+    const double D = POLY_GEST_PY_A / (double)POLY_GEST_Q, E = POLY_GEST_PY_B / (double)POLY_GEST_Q, F = POLY_GEST_PY_C / (double)POLY_GEST_Q;
+    const double det = A * E - B * D;
+    px               = std::min(std::max(px, 0.0), (double)POLY_GEST_SPAN);
+    py               = std::min(std::max(py, 0.0), (double)POLY_GEST_SPAN);
+    r.feed((uint16_t)std::lround((E * (px - C) - B * (py - F)) / det), (uint16_t)std::lround((A * (py - F) - D * (px - C)) / det), z);
+}
+
+TEST(CirqueGesture, DialStartedFarOutsideTheRingStillScrolls) {
+    /* "Scrolling does not trigger when starting too far outside." A thumb that lands
+     * in a corner slides in towards a comfortable circle before it turns. Measured
+     * from the touchdown radius, 560 -> 432 is a 128-unit inward drag and the dial
+     * aborted at every corner; measured from the ring it is no drag at all. The
+     * 440 start is the control: it scrolled before the fix too. */
+    for (int deg = 45; deg < 360; deg += 90) {
+        for (double r0 : {440.0, 560.0, 620.0}) {
+            Runner r;
+            for (int i = 0; i <= 40; i++) {
+                /* four samples straight in, then a 108-degree turn at 432 */
+                const double rad = i < 4 ? r0 + (432 - r0) * i / 4.0 : 432;
+                const double th  = (i < 4 ? deg : deg + (i - 4) * 3.0) * M_PI / 180.0;
+                feed_pad(r, POLY_GEST_CENTRE + rad * std::cos(th), POLY_GEST_CENTRE + rad * std::sin(th));
+            }
+            EXPECT_GT(r.wheel_pos + r.wheel_neg, 3) << "no dial from radius " << r0 << " at " << deg << " degrees";
+        }
+    }
+}
+
+TEST(CirqueGesture, RadialDragFromTheFarCornerStillMoves) {
+    /* The other side of the floor: a start far outside must still become a drag once
+     * it crosses inside the ring by POLY_GEST_SCROLL_DR. */
+    Runner r;
+    for (int i = 0; i <= 20; i++) {
+        const double rad = 620 - i * 20.0; /* 620 -> 220 */
+        const double th  = 45 * M_PI / 180.0;
+        feed_pad(r, POLY_GEST_CENTRE + rad * std::cos(th), POLY_GEST_CENTRE + rad * std::sin(th));
+    }
+    EXPECT_EQ(r.wheel_total, 0) << "a straight drag in from the corner scrolled";
+    EXPECT_EQ(r.g.mode, POLY_GEST_MOVE) << "the drag never left PENDING";
+    EXPECT_GT(std::abs(r.dx_total) + std::abs(r.dy_total), 100);
+}
+
+TEST(CirqueGesture, AShortQuickMoveIsBarelyAccelerated) {
+    /* "Acceleration starts too fast": 13 motion units per sample is a short, quick
+     * nudge. The linear ramp gave it +19 % (494 against 417 for the same distance
+     * slowly); the quadratic one gives it under 1 %. */
+    Runner slow, quick;
+    for (int i = 0; i <= 200; i++) slow.feed((uint16_t)(MID_X - 500 + i * 5), MID_Y, 40);
+    for (int i = 0; i <= 50; i++) quick.feed((uint16_t)(MID_X - 500 + i * 20), MID_Y, 40);
+    const int s_moved = std::abs(slow.dx_total) + std::abs(slow.dy_total);
+    const int q_moved = std::abs(quick.dx_total) + std::abs(quick.dy_total);
+    EXPECT_LT(q_moved, s_moved * 21 / 20) << "a quick nudge was accelerated: " << q_moved << " vs " << s_moved;
+}
+
+TEST(CirqueGesture, LiftOffWanderDoesNotMoveTheCursor) {
+    /* As a finger leaves, z decays through the release band and the position wanders
+     * with it. The tap test has ignored those samples for a long time; the cursor did
+     * not, so the end of a small move carried a jump the finger never made. */
+    Runner r;
+    for (int i = 0; i < 10; i++) r.feed(MID_X, MID_Y, 40);
+    const int before = std::abs(r.dx_total) + std::abs(r.dy_total);
+    uint16_t  z      = 15;
+    for (int i = 1; i <= 5; i++, z--) r.feed((uint16_t)(MID_X + i * 30), (uint16_t)(MID_Y - i * 20), z);
+    r.feed(MID_X + 150, MID_Y - 100, 0); /* lifted */
+    const int after = std::abs(r.dx_total) + std::abs(r.dy_total);
+    EXPECT_EQ(after - before, 0) << "lift-off wander moved the cursor " << after - before << " units";
+}
+
+TEST(CirqueGesture, AnOutwardDragFromTheWedgeStillAbortsTheDial) {
+    /* The floor only moved the INWARD test. Outward is still measured from the
+     * touchdown radius, so a drag that starts in the wedge and runs out to the rim is
+     * a drag. The straight line is offset from the centre, so its angle drifts; the
+     * outward test has to resolve the mode before that drift reaches the commit. */
+    Runner r;
+    for (int i = 0; i <= 20; i++) {
+        const double t  = i / 20.0;
+        const double px = POLY_GEST_CENTRE - (WEDGE_IN + 230 * t) * 0.707 - 60 * t;
+        const double py = POLY_GEST_CENTRE - (WEDGE_IN + 230 * t) * 0.707;
+        feed_pad(r, px, py);
+    }
+    EXPECT_EQ(r.wheel_total, 0) << "an outward drag from the wedge scrolled";
+    EXPECT_EQ(r.g.mode, POLY_GEST_MOVE);
+}
+
 } // namespace
+

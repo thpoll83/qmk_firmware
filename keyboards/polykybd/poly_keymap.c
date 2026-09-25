@@ -4294,7 +4294,7 @@ static uint8_t tut_more_units(bool right, bool scripts, uint32_t out[TUT_NAME_UN
 // The heavy splash face (the one "BOOT- / LOADER!" and the POLY KYBD splash use),
 // one character centred on the selected keycap from its measured box.
 static void tut_draw_heavy(uint32_t cp) {
-    const GFXfont *const one[1] = {&FreeSansBold24pt7b};
+    const GFXfont *const one[1] = {poly_heavy_font()};   // not the header: see poly_util.h
     const uint32_t       txt[2] = {cp, 0};
     int8_t               x0 = 0, x1 = 0, y0 = 0, y1 = 0;
     kdisp_gfx_text_bbox(one, 1, txt, &x0, &x1, &y0, &y1);

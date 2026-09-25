@@ -134,8 +134,21 @@
 // ACTS for real (the tab switches, the layer opens), then the board dwells on the result.
 // The keys are resolved from the keymap by the caller and handed in (tut_set_tour), so
 // this file only counts through them.
-#define TUT_TOUR_MAX      16u
+// Round 31 extended it past the menus: hold Fn, hold Num, then the Intl chapter (hold
+// it, hold it and tap Ctrl, pick a letter, pick its accent, hold it and press the
+// letter). About 23 steps on the default keymap.
+#define TUT_TOUR_MAX      28u
 #define TUT_TOUR_SEEN_MS 1600u   // looking at what the press did before the next key
+
+// One step of the tour, as the caller resolves it. `dwell_100ms` is how long
+// TUT_TOUR_SEEN holds after the press (0 = TUT_TOUR_SEEN_MS): a held layer wants
+// longer to look at, and a step that only arms the next one (hold Intl, THEN tap Ctrl)
+// wants almost none. `progress` is the step's value on the progress keycap (0 = 8).
+typedef struct {
+    uint8_t slot;
+    uint8_t dwell_100ms;
+    uint8_t progress;
+} tut_tour_step_t;
 
 // The preview list is a board-side table (it knows which fonts are flashed). This file
 // only counts through it, so the cap is the one thing it has to know.
@@ -297,10 +310,11 @@ typedef struct {
     uint8_t  preview;           // which one TUT_LANG_SHOW is on
     uint8_t  dark_next;         // the phase TUT_LANG_DARK hands over to
     // ---- the key tour (set by tut_set_tour; defaults to empty) ----
-    uint8_t  tour[TUT_TOUR_MAX];// the keys to press, in order
+    uint8_t  tour[TUT_TOUR_MAX];      // the keys to press, in order
+    uint8_t  tour_dwell[TUT_TOUR_MAX];// TUT_TOUR_SEEN per step, 100 ms units (0 = default)
+    uint8_t  tour_prog[TUT_TOUR_MAX]; // the progress keycap's value per step
     uint8_t  n_tour;
-    uint8_t  tour_split;        // the first EMOJI step; the ones before are the Lang menu
-    uint8_t  tour_i;            // the step being asked for / just pressed
+    uint8_t  tour_i;                  // the step being asked for / just pressed
     bool     hold_on;           // is the chapter's held key down right now
     bool     skipped;           // DONE was reached by the skip gesture, not by finishing
 } tut_state_t;
@@ -316,11 +330,15 @@ void tut_init(tut_state_t *st, const uint8_t slots[TUT_LETTERS],
 // key tour, which is what a board with no font pack gets).
 void tut_set_chapter3(tut_state_t *st, uint8_t n_preview);
 
-// The key tour, resolved from the keymap by the caller: `n` packed slots in the order
-// they are asked for (capped at TUT_TOUR_MAX), of which the first `split` belong to the
-// language menu and the rest to the emoji menu (only the progress count cares). n = 0
-// skips the tour.
-void tut_set_tour(tut_state_t *st, const uint8_t *slots, uint8_t n, uint8_t split);
+// The key tour, resolved from the keymap by the caller: `n` steps in the order they are
+// asked for (capped at TUT_TOUR_MAX). n = 0 skips the tour.
+void tut_set_tour(tut_state_t *st, const tut_tour_step_t *steps, uint8_t n);
+
+// Go back to waiting on `step` (no-op past the end). For a sequence that only works
+// while a key is HELD — the Intl picker closes the moment Intl is let go — the caller
+// rewinds to the step that asks for the hold again rather than leaving the user facing
+// a key that can no longer do what the lesson says.
+void tut_tour_rewind(tut_state_t *st, uint8_t step, uint32_t now);
 
 // The tour step being asked for (TUT_TOUR_WAIT) or just pressed (TUT_TOUR_SEEN), or -1.
 int16_t tut_tour_index(const tut_state_t *st);
@@ -330,9 +348,9 @@ int16_t tut_tour_index(const tut_state_t *st);
 // the caller swallows it.
 bool tut_tour_press(tut_state_t *st, uint8_t slot, uint32_t now);
 
-// Progress 1..TUT_PROGRESS_STEPS for the progress keycap. Even-ish steps through the
-// whole lesson rather than chapters: the opening, each letter, each Shift, the reveal,
-// the first and second half of the language tour, and the close.
+// Progress 1..TUT_PROGRESS_STEPS for the progress keycap: the opening, the letters, the
+// Shifts, the reveal, the languages, then each tour step's own value (tut_tour_step_t),
+// and the close.
 uint8_t tut_progress(const tut_state_t *st);
 
 // The key that should PULSE right now — the one the lesson is waiting for — or

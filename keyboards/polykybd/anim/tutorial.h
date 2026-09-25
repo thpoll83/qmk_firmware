@@ -79,6 +79,8 @@ bool tutorial_tour_press(uint8_t slot);
 int16_t tutorial_tour_step(void);
 // The slot of that step's key, or TUT_SLOT_NONE.
 uint8_t tutorial_tour_target(void);
+// Go back to waiting on tour step `step` (master; see tut_tour_rewind()).
+void    tutorial_tour_rewind(uint8_t step);
 bool    tutorial_tour_seen(void);
 
 // End it now: the hold-Esc gesture, or a remote disable over HID.
@@ -205,11 +207,13 @@ const uint32_t *tutorial_preview_phrase(void);
 uint8_t tutorial_preview_table_row(uint8_t pos);
 
 // ---- the key tour (poly_keymap.c resolves the keys from the keymap) ----
-// Fill `out` with the tour's slots in the order they are asked for and return how many;
-// `*split` is the first emoji step. Called on BOTH halves at tutorial_start().
-uint8_t tutorial_tour_build(uint8_t out[TUT_TOUR_MAX], uint8_t *split);
-// The status prose for a tour step, this half's half of the sentence.
-const uint32_t *tutorial_tour_line(uint8_t step, bool left);
+// Fill `out` with the tour's steps in the order they are asked for and return how many.
+// Called on BOTH halves at tutorial_start(); `seed` picks the Intl chapter's letter and
+// accent on the master (the slave is sent the keys, so its seed does not matter).
+uint8_t tutorial_tour_build(tut_tour_step_t out[TUT_TOUR_MAX], uint32_t seed);
+// The status prose for a tour step, this half's half of the sentence; `seen` is the
+// dwell after the press.
+const uint32_t *tutorial_tour_line(uint8_t step, bool left, bool seen);
 
 // A chapter's LIT SET, as a bitmap over THIS HALF's display slots. TUT_SET_SHIFT is the
 // plain A-Z keys plus both shifts; TUT_SET_LAYER is the letters plus the layer keys.

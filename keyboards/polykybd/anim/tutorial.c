@@ -217,13 +217,12 @@ void tutorial_start(uint32_t seed) {
     // on whichever half owns the key being asked for, and the status prose names it. Only
     // the step index crosses the link (tut[2]).
     {
-        uint8_t tour[TUT_TOUR_MAX];
-        uint8_t split = 0;
-        const uint8_t n = tutorial_tour_build(tour, &split);
-        tut_set_tour(&s_st, tour, n, split);
+        tut_tour_step_t tour[TUT_TOUR_MAX];
+        const uint8_t   n = tutorial_tour_build(tour, seed);
+        tut_set_tour(&s_st, tour, n);
         if (is_usb_host_side()) {
-            uprintf("Tutorial chapter 3: %u preview item(s), tour %u key(s) (%u lang)\n",
-                    (unsigned)s_st.n_preview, (unsigned)n, (unsigned)split);
+            uprintf("Tutorial chapter 3: %u preview item(s), tour %u key(s)\n",
+                    (unsigned)s_st.n_preview, (unsigned)n);
         }
     }
     s_active     = true;
@@ -425,6 +424,17 @@ uint8_t tutorial_tour_target(void) {
 }
 bool    tutorial_tour_seen(void) { return s_active && s_st.phase == TUT_TOUR_SEEN; }
 
+void tutorial_tour_rewind(uint8_t step) {
+    if (!s_active || !is_usb_host_side()) return;
+    const uint8_t before = s_st.tour_i;
+    tut_tour_rewind(&s_st, step, timer_read32());
+    if (s_st.tour_i != before) {
+        uprintf("Tutorial: tour step %u needs its key held, back to step %u\n",
+                (unsigned)before, (unsigned)s_st.tour_i);
+        s_sync_dirty = true;
+    }
+}
+
 void tutorial_skip(void) {
     if (!s_active) return;
     tut_skip(&s_st, timer_read32());
@@ -561,10 +571,19 @@ void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]) {
     // ⚠️ BOTH wave phases. Chapter 2's sweep rides the same machinery, so leaving it
     // out here would reproduce exactly the seam-step the letter ripple was fixed for.
     // The dark cut sends where it is going instead: the slave's status line reads the
-    // next screen's words through it, and never has a wave to run in that phase.
-    out[5] = tut_phase_is_wave(s_st.phase)
-                 ? tut_elapsed_encode(timer_elapsed32(s_st.phase_start))
-                 : (s_st.phase == TUT_LANG_DARK ? s_st.dark_next : 0u);
+    // next screen's words through it, and never has a wave to run in that phase. The
+    // tour sends the key it is asking for: the Intl chapter's letter and accent are drawn
+    // at RANDOM on the master, so the slave's own build cannot know them, and its pulse
+    // needs the real key.
+    if (tut_phase_is_wave(s_st.phase)) {
+        out[5] = tut_elapsed_encode(timer_elapsed32(s_st.phase_start));
+    } else if (s_st.phase == TUT_LANG_DARK) {
+        out[5] = s_st.dark_next;
+    } else if (tut_tour_index(&s_st) >= 0) {
+        out[5] = s_st.tour[s_st.tour_i];
+    } else {
+        out[5] = 0u;
+    }
 }
 
 bool tutorial_sync_says_armed(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
@@ -639,9 +658,15 @@ bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
         s_preview_tbl = in[2];
         changed       = true;
     }
-    if ((in[1] == TUT_TOUR_WAIT || in[1] == TUT_TOUR_SEEN) && s_st.tour_i != in[2]) {
-        s_st.tour_i = in[2];
-        changed     = true;
+    if ((in[1] == TUT_TOUR_WAIT || in[1] == TUT_TOUR_SEEN) && in[2] < TUT_TOUR_MAX) {
+        if (s_st.tour_i != in[2]) {
+            s_st.tour_i = in[2];
+            changed     = true;
+        }
+        if (s_st.tour[in[2]] != in[5]) {
+            s_st.tour[in[2]] = in[5];
+            changed          = true;
+        }
     }
     // The shift stage is not sent; the second wait implies it. The progress keycap sits on
     // the right half, which is usually the slave, and counts the two hands separately.
@@ -721,6 +746,9 @@ const uint32_t *tutorial_line(uint8_t which) {
             return left ? U"Press and hold" : U"SHIFT";
         case TUT_SHIFT_SWEEP:
         case TUT_SHIFT_HELD:
+            // The second hand: the same thing again, so ask rather than tell. A question
+            // ends in "?" on the panel that ends the sentence.
+            if (s_st.shift_stage == 1) return left ? U"Isn't that" : U"...nice?";
             return left ? U"All keys" : U"react...";
         case TUT_SHIFT_AGAIN:
             // The second hand. "Try again" rather than "now the right one": the ring
@@ -752,7 +780,7 @@ const uint32_t *tutorial_line(uint8_t which) {
         case TUT_TOUR_WAIT:
         case TUT_TOUR_SEEN: {
             const int16_t step = tut_tour_index(&s_st);
-            return step < 0 ? NULL : tutorial_tour_line((uint8_t)step, left);
+            return step < 0 ? NULL : tutorial_tour_line((uint8_t)step, left, phase == TUT_TOUR_SEEN);
         }
         case TUT_FINALE:
             return left ? U"You're" : U"ready!";
@@ -824,6 +852,7 @@ bool tutorial_hold(uint8_t kind, bool pressed, uint8_t slot) {
 void tutorial_skip(void) {}
 bool tutorial_tour_press(uint8_t slot) { (void)slot; return false; }
 int16_t tutorial_tour_step(void) { return -1; }
+void tutorial_tour_rewind(uint8_t step) { (void)step; }
 uint8_t tutorial_tour_target(void) { return TUT_SLOT_NONE; }
 bool tutorial_tour_seen(void) { return false; }
 int16_t tutorial_preview_index(void) { return -1; }

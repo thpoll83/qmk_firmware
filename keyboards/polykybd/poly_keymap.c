@@ -542,11 +542,13 @@ static bool g_force_layer_resync = true;
 static uint8_t g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;
 
 static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
-// The key-tour press that was let through, so its RELEASE goes through too: LCAT and
-// KC_BASE act on the release (poly_custom_key_action), and a swallowed release would
-// leave them doing nothing. 0xFF = none.
-static uint8_t  s_tut_pass_row    = 0xFFu;
-static uint8_t  s_tut_pass_col    = 0xFFu;
+// The key-tour presses that were let through, so their RELEASES go through too: LCAT
+// and KC_BASE act on the release (poly_custom_key_action), and a swallowed release would
+// leave them doing nothing. SEVERAL, not one: the Intl chapter has Intl held while Ctrl,
+// a letter and an accent are pressed, and each needs its own release. 0xFF = free.
+#define TUT_PASS_MAX 4u
+static uint8_t  s_tut_pass_row[TUT_PASS_MAX] = {0xFFu, 0xFFu, 0xFFu, 0xFFu};
+static uint8_t  s_tut_pass_col[TUT_PASS_MAX] = {0xFFu, 0xFFu, 0xFFu, 0xFFu};
 // Chapter 3's language/script preview; defined beside the tutorial's keymap helpers.
 static uint8_t poly_tutorial_apply_preview(void);
 // Master only: write the preview (or the user's own glyph script) into the synced state.
@@ -610,16 +612,33 @@ static uint8_t tutorial_slot_of(uint8_t row, uint8_t col);
 // The key tour: does this event ACT rather than being swallowed? Only the press of the
 // key being asked for, and later that same key's release. Everything else falls to the
 // swallow below it, so an emoji or language slot stays inert mid-lesson.
+static bool tut_tour_step_ready(void);
+static bool tut_tour_step_inert(void);
 static bool poly_tutorial_tour_passes(keyrecord_t *record) {
     const uint8_t row = record->event.key.row, col = record->event.key.col;
     if (!record->event.pressed) {
-        if (row != s_tut_pass_row || col != s_tut_pass_col) return false;
-        s_tut_pass_row = s_tut_pass_col = 0xFFu;
-        return true;
+        for (uint8_t i = 0; i < TUT_PASS_MAX; ++i) {
+            if (s_tut_pass_row[i] == row && s_tut_pass_col[i] == col) {
+                s_tut_pass_row[i] = s_tut_pass_col[i] = 0xFFu;
+                return true;
+            }
+        }
+        return false;
     }
+    // Not yet: the Intl chapter's Ctrl, letter and accent only mean what the lesson says
+    // with Intl held and the picker in the right state. Swallowed until then.
+    if (!tut_tour_step_ready()) return false;
+    const bool inert = tut_tour_step_inert();   // read BEFORE the press moves the step
     if (!tutorial_tour_press(tutorial_slot_of(row, col))) return false;
-    s_tut_pass_row = row;
-    s_tut_pass_col = col;
+    // Accepted but held back from the board: the lesson moves on, nothing is typed.
+    if (inert) return false;
+    for (uint8_t i = 0; i < TUT_PASS_MAX; ++i) {
+        if (s_tut_pass_row[i] == 0xFFu) {
+            s_tut_pass_row[i] = row;
+            s_tut_pass_col[i] = col;
+            break;
+        }
+    }
     return true;
 }
 
@@ -651,6 +670,8 @@ static void poly_tutorial_publish_active(void) {
 // the slave renders from the synced poly_layer_t, which follows. Cheap: one compare per
 // pass, and a repark only on a real drift.
 static uint8_t tut_tour_layer(void);
+static uint8_t tut_tour_allowed_layer(void);
+static void    poly_tutorial_tour_rewind_if_let_go(void);
 static void poly_tutorial_hold_lesson_layer(void) {
     if (!is_usb_host_side() || !tutorial_active() || tutorial_in_layer_chapter()) return;
     // The key tour opens the language and emoji menus for real, so there the lesson's
@@ -666,7 +687,13 @@ static void poly_tutorial_hold_lesson_layer(void) {
     // letter the keys from another layer just as surely.
     // `| base`: TO(_EMJ) turns off every other layer, _L0 included. The emoji layer
     // covers the board either way, so that is not a drift worth a repaint.
-    if ((layer_state | base) == want && ll->def_layer == _L0) return;
+    // A layer the step lets the user HOLD (Fn, Num, Intl) is allowed on top, never
+    // forced: forcing it would leave it on after the finger lifts.
+    const uint8_t       hold  = tut_tour_allowed_layer();
+    const layer_state_t held  = hold != 0xFFu ? want | ((layer_state_t)1 << hold) : want;
+    if (((layer_state | base) == want || (layer_state | base) == held) && ll->def_layer == _L0) {
+        return;
+    }
     uprintf("Tutorial: layer drifted (state 0x%08lX, def %u), back to _L0\n",
             (unsigned long)layer_state, (unsigned)ll->def_layer);
     ll->def_layer = _L0;
@@ -678,6 +705,7 @@ static void poly_tutorial_hold_lesson_layer(void) {
 }
 
 static void poly_tutorial_push_sync(void) {
+    if (is_usb_host_side() && tutorial_active()) poly_tutorial_tour_rewind_if_let_go();
     poly_tutorial_hold_lesson_layer();
     poly_tutorial_publish_active();
     poly_tutorial_skip_if_held();
@@ -4170,9 +4198,10 @@ typedef struct {
     // attached vowel signs, or glyphs the fonts lack — pre-rendered offline into keycap
     // tiles (tools/gen_tutorial_names.py -> anim/tutorial_names_gen.h).
     const tut_name_strip_t *strip;
-    // The left status panel's lead-in; the right panel finishes it with `name`. ONE per
-    // row, never a rotation: a 5-phrase cycle over 11 items repeated itself, and every
-    // script said "Or write in" ("make sure there is no repeating text", hardware).
+    // The left status panel's lead-in; the right panel finishes it with `name` and a
+    // "?" (tutorial_preview_name()), so every lead-in must open a QUESTION. ONE per row,
+    // never a rotation: a 5-phrase cycle over 11 items repeated itself, and every script
+    // said "Or write in" ("make sure there is no repeating text", hardware).
     const uint32_t *lead;
 } tut_preview_t;
 
@@ -4185,16 +4214,16 @@ typedef struct {
 // vowel signs, and 日本語 / 한국어, whose glyphs the keycap fonts do not carry.
 static const tut_preview_t s_tut_preview_all[] = {
     {false, LANG_ELGR,      U"Greek",    U"\u0395\u039B\u039B\u0397\u039D\u0399\u039A\u0391", false, NULL, U"How about"}, // ΕΛΛΗΝΙΚΑ
-    {false, LANG_ARSA,      U"Arabic",   NULL, false, &TUT_NAME_STRIP_AR, U"You may speak"},             // العربية
+    {false, LANG_ARSA,      U"Arabic",   NULL, false, &TUT_NAME_STRIP_AR, U"Do you speak"},             // العربية
     {false, LANG_HEIL,      U"Hebrew",   U"\u05E2\u05D1\u05E8\u05D9\u05EA", true, NULL, U"Or perhaps"},  // עברית
     {false, LANG_HIIN,      U"Hindi",    NULL, false, &TUT_NAME_STRIP_HI, U"Maybe you read"},            // हिन्दी
-    {false, LANG_THTH,      U"Thai",     U"\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22", false, NULL, U"Do you speak"}, // ภาษาไทย
+    {false, LANG_THTH,      U"Thai",     U"\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22", false, NULL, U"Or do you type"}, // ภาษาไทย
     {false, LANG_JAJP,      U"Japanese", NULL, false, &TUT_NAME_STRIP_JA, U"Or is it"},                  // 日本語
     {false, LANG_KOKR,      U"Korean",   NULL, false, &TUT_NAME_STRIP_KO, U"Perhaps even"},              // 한국어
-    {true,  GLYPH_TENGWAR,  U"Elvish",   NULL, false, NULL, U"Write in"},
-    {true,  GLYPH_RUNES,    U"Runes",    NULL, false, NULL, U"Carve some"},
-    {true,  GLYPH_AUREBESH, U"Aurebesh", NULL, false, NULL, U"Sci-fi fans:"},
-    {true,  GLYPH_BRAILLE,  U"Braille",  NULL, false, NULL, U"Read by touch:"},
+    {true,  GLYPH_TENGWAR,  U"Elvish",   NULL, false, NULL, U"Fancy some"},
+    {true,  GLYPH_RUNES,    U"Runes",    NULL, false, NULL, U"Or carving"},
+    {true,  GLYPH_AUREBESH, U"Aurebesh", NULL, false, NULL, U"Into sci-fi,"},
+    {true,  GLYPH_BRAILLE,  U"Braille",  NULL, false, NULL, U"Or by touch,"},
 };
 #define TUT_PREVIEW_ALL (sizeof(s_tut_preview_all) / sizeof(s_tut_preview_all[0]))
 _Static_assert(TUT_PREVIEW_ALL <= TUT_PREVIEW_MAX, "preview table exceeds the plan's cap");
@@ -4247,12 +4276,30 @@ uint8_t tutorial_lang_slot(void) {
 typedef enum {
     TUT_TOUR_LANG = 0,   // the Lang key: opens _LL
     TUT_TOUR_LCAT,       // a region tab on _LL (arg = region)
-    TUT_TOUR_BASE_LL,    // KC_BASE on _LL: back to the letters
+    TUT_TOUR_BASE_LL,    // KC_BASE on _LL: back home
     TUT_TOUR_EMJ,        // TO(_EMJ) on the base layer
     TUT_TOUR_ECAT,       // a category tab on _EMJ (arg = category)
     TUT_TOUR_EPAGE,      // KC_EMJ_PAGE_NEXT on _EMJ
     TUT_TOUR_BASE_EMJ,   // KC_BASE on _EMJ
+    TUT_TOUR_FN,         // hold MO(_FL) and look
+    TUT_TOUR_NUM,        // hold MO(_NL) and look
+    // ---- the Intl chapter: the only sequence whose steps need a key HELD ----
+    TUT_TOUR_INTL_LOOK,  // hold Intl: every letter shows its chosen accent
+    TUT_TOUR_INTL_ARM,   // hold Intl again (the picker needs it held throughout)
+    TUT_TOUR_INTL_CTRL,  // tap Ctrl: the picker opens
+    TUT_TOUR_INTL_LETTER,// press the chosen letter: its accents fill the number row
+    TUT_TOUR_INTL_ALT,   // press the chosen accent: saved, the picker closes
+    TUT_TOUR_INTL_AGAIN, // hold Intl once more
+    TUT_TOUR_INTL_TYPE,  // press the letter: it now shows the new accent (INERT)
 } tut_tour_kind_t;
+
+// What a step needs to be pressable, beyond being the key the ring is on.
+#define TUT_NEED_INTL    0x01u   // Intl held (_ADDLANG1 on)
+#define TUT_NEED_PICKER  0x02u   // the picker latched (Intl + Ctrl tapped)
+#define TUT_NEED_CLOSED  0x04u   // the picker NOT latched (the Ctrl tap must open it)
+#define TUT_INERT        0x08u   // accepted, but the press does NOT reach the board: the
+                                 // Intl letter would type its accent into whatever app
+                                 // has focus, which a lesson must never do
 
 // A few emoji tabs rather than all twelve — the menu is taught by then, and the point is
 // the variety: two tabs on each half, so the ring crosses the split. Candidates per half
@@ -4263,10 +4310,24 @@ static const uint8_t s_tut_emj_left[]  = {0, 4, 5};    // smileys, animals, food
 static const uint8_t s_tut_emj_right[] = {7, 8, 9};    // travel, sports, tools  (cats 6-11)
 #define TUT_EMJ_TABS_PER_HALF 2u
 
+// Progress keycap per section (base/tutorial_plan.c has the first five).
+#define TUT_PROG_LANGMENU 6u
+#define TUT_PROG_EMOJI    7u
+#define TUT_PROG_LAYERS   8u
+#define TUT_PROG_INTL     9u
+
 static uint8_t s_tour_kind[TUT_TOUR_MAX];
 static uint8_t s_tour_arg[TUT_TOUR_MAX];
 static uint8_t s_tour_after[TUT_TOUR_MAX];   // the layer on top of _L0 once pressed; 0xFF none
+static uint8_t s_tour_allow[TUT_TOUR_MAX];   // a HELD layer allowed but not enforced; 0xFF none
+static uint8_t s_tour_need[TUT_TOUR_MAX];    // TUT_NEED_* / TUT_INERT
 static uint8_t s_tour_n;
+
+// The Intl chapter's letter. ⚠️ The accent the chapter picks for it is KEPT: the one
+// setting a lesson deliberately changes, agreed for this instance ("for that one
+// instance it would be fine to accept the alternative"). Everything else the lesson
+// touches — the layout, the layers, the preview language — is handed back.
+static uint16_t s_tut_intl_letter = KC_NO;
 
 // The first key on `layer` holding `kc` that has a panel, or TUT_SLOT_NONE.
 static uint8_t tut_find_slot(uint8_t layer, uint16_t kc) {
@@ -4280,33 +4341,83 @@ static uint8_t tut_find_slot(uint8_t layer, uint16_t kc) {
     return TUT_SLOT_NONE;
 }
 
-static void tut_tour_add(uint8_t *out, uint8_t kind, uint8_t arg, uint8_t slot, uint8_t after) {
-    if (slot == TUT_SLOT_NONE || s_tour_n >= TUT_TOUR_MAX) return;
+// The picker keycode for slot n (KC_LAT10/11 are not contiguous with 0..9).
+static uint16_t latin_slot_keycode(uint8_t n) {
+    if (n <= 9) return (uint16_t)(KC_LAT0 + n);
+    return n == 10 ? KC_LAT10 : KC_LAT11;
+}
+
+static tut_tour_step_t *s_tour_out;   // the caller's array while building
+
+static bool tut_tour_add_ex(uint8_t kind, uint8_t arg, uint8_t slot, uint8_t after,
+                            uint8_t allow, uint8_t need, uint8_t dwell, uint8_t prog) {
+    if (slot == TUT_SLOT_NONE || s_tour_n >= TUT_TOUR_MAX) return false;
     s_tour_kind[s_tour_n]  = kind;
     s_tour_arg[s_tour_n]   = arg;
     s_tour_after[s_tour_n] = after;
-    out[s_tour_n++]        = slot;
+    s_tour_allow[s_tour_n] = allow;
+    s_tour_need[s_tour_n]  = need;
+    s_tour_out[s_tour_n]   = (tut_tour_step_t){slot, dwell, prog};
+    s_tour_n++;
+    return true;
 }
 
-uint8_t tutorial_tour_build(uint8_t out[TUT_TOUR_MAX], uint8_t *split) {
-    s_tour_n = 0;
+static void tut_tour_add(uint8_t kind, uint8_t arg, uint8_t slot, uint8_t after, uint8_t prog) {
+    (void)tut_tour_add_ex(kind, arg, slot, after, 0xFFu, 0u, 0u, prog);
+}
+
+// Choose the Intl chapter's letter and accent: a letter on the base layer with at least
+// three accents on the picker's first page, and an accent that is NOT the one already
+// picked (choosing the current one would change nothing on screen). `seed` varies the
+// letter on the master; the slave builds with any seed and is SENT the two slots over
+// the link (tut[5]), so the halves cannot disagree about which keys to point at.
+static bool tut_choose_intl(uint32_t seed, uint16_t *letter, uint8_t *alt_slot) {
+    uint16_t cand[26];
+    uint8_t  n = 0;
+    for (uint16_t kc = KC_A; kc <= KC_Z; ++kc) {
+        if (!latin_has_row(kc) || tut_find_slot(_BL, kc) == TUT_SLOT_NONE) continue;
+        const uint8_t row = latin_picker_row(kc, false);
+        uint8_t       on_page = latin_variation_count(row);
+        if (on_page > LATIN_PICKER_SLOTS) on_page = LATIN_PICKER_SLOTS;
+        if (on_page >= 3) cand[n++] = kc;
+    }
+    if (n == 0) return false;
+    const uint16_t kc  = cand[seed % n];
+    const uint8_t  row = latin_picker_row(kc, false);
+    uint8_t        on_page = latin_variation_count(row);
+    if (on_page > LATIN_PICKER_SLOTS) on_page = LATIN_PICKER_SLOTS;
+    const uint8_t cur = latin_pick_get(get_global_latin_table()->ex,
+                                       latin_pick_field(latin_target_slot(kc), false));
+    for (uint8_t k = 0; k < on_page; ++k) {
+        const uint8_t s = (uint8_t)((1u + (seed >> 8) + k) % on_page);
+        if (s == cur) continue;
+        if (tut_find_slot(_ADDLANG1, latin_slot_keycode(s)) == TUT_SLOT_NONE) continue;
+        *letter   = kc;
+        *alt_slot = s;
+        return true;
+    }
+    return false;
+}
+
+uint8_t tutorial_tour_build(tut_tour_step_t out[TUT_TOUR_MAX], uint32_t seed) {
+    s_tour_n   = 0;
+    s_tour_out = out;
     // A menu whose opening key is missing is skipped whole: its tabs cannot be reached.
     const uint8_t lang = tutorial_lang_slot();
     if (lang != TUT_SLOT_NONE) {
-        tut_tour_add(out, TUT_TOUR_LANG, 0, lang, _LL);
+        tut_tour_add(TUT_TOUR_LANG, 0, lang, _LL, TUT_PROG_LANGMENU);
         // Every region tab but the one already open: pressing it would change nothing on
         // screen. The region is synced, so both halves skip the same tab and agree on the
         // steps. (The empty-region test is a guard only; all six regions carry languages.)
         for (uint8_t r = 0; r < NUM_LANG_REGIONS; ++r) {
             if (r == lang_active_region() || lang_region_count(r) == 0) continue;
-            tut_tour_add(out, TUT_TOUR_LCAT, r, tut_find_slot(_LL, LCAT(r)), _LL);
+            tut_tour_add(TUT_TOUR_LCAT, r, tut_find_slot(_LL, LCAT(r)), _LL, TUT_PROG_LANGMENU);
         }
-        tut_tour_add(out, TUT_TOUR_BASE_LL, 0, tut_find_slot(_LL, KC_BASE), 0xFFu);
+        tut_tour_add(TUT_TOUR_BASE_LL, 0, tut_find_slot(_LL, KC_BASE), 0xFFu, TUT_PROG_LANGMENU);
     }
-    *split = s_tour_n;
     const uint8_t emj = tut_find_slot(_BL, TO(_EMJ));
     if (emj != TUT_SLOT_NONE) {
-        tut_tour_add(out, TUT_TOUR_EMJ, 0, emj, _EMJ);
+        tut_tour_add(TUT_TOUR_EMJ, 0, emj, _EMJ, TUT_PROG_EMOJI);
         uint8_t tabs[2 * TUT_EMJ_TABS_PER_HALF];
         uint8_t n_tabs = 0;
         for (uint8_t half = 0; half < 2; ++half) {
@@ -4325,13 +4436,45 @@ uint8_t tutorial_tour_build(uint8_t out[TUT_TOUR_MAX], uint8_t *split) {
             if (emj_page_count(tabs[i]) > 1) page_after = i;
         }
         for (uint8_t i = 0; i < n_tabs; ++i) {
-            tut_tour_add(out, TUT_TOUR_ECAT, tabs[i], tut_find_slot(_EMJ, KC_EMJ_CAT(tabs[i])), _EMJ);
+            tut_tour_add(TUT_TOUR_ECAT, tabs[i], tut_find_slot(_EMJ, KC_EMJ_CAT(tabs[i])), _EMJ,
+                         TUT_PROG_EMOJI);
             if (i == page_after) {
-                tut_tour_add(out, TUT_TOUR_EPAGE, 0, tut_find_slot(_EMJ, KC_EMJ_PAGE_NEXT), _EMJ);
+                tut_tour_add(TUT_TOUR_EPAGE, 0, tut_find_slot(_EMJ, KC_EMJ_PAGE_NEXT), _EMJ,
+                             TUT_PROG_EMOJI);
             }
         }
-        tut_tour_add(out, TUT_TOUR_BASE_EMJ, 0, tut_find_slot(_EMJ, KC_BASE), 0xFFu);
+        tut_tour_add(TUT_TOUR_BASE_EMJ, 0, tut_find_slot(_EMJ, KC_BASE), 0xFFu, TUT_PROG_EMOJI);
     }
+    // Hold Fn, then hold Num: a layer that exists only while its key is down, so the
+    // step ALLOWS the layer rather than enforcing it, and dwells 3 s to look at it.
+    (void)tut_tour_add_ex(TUT_TOUR_FN, 0, tut_find_slot(_BL, MO(_FL)), 0xFFu, _FL, 0u, 30u,
+                          TUT_PROG_LAYERS);
+    (void)tut_tour_add_ex(TUT_TOUR_NUM, 0, tut_find_slot(_BL, MO(_NL)), 0xFFu, _NL, 0u, 30u,
+                          TUT_PROG_LAYERS);
+    // The Intl chapter. Skipped whole if the board has no Intl key, no Ctrl, or no letter
+    // with accents to pick from.
+    const uint8_t intl = tut_find_slot(_BL, MO(_ADDLANG1));
+    const uint8_t ctrl = tut_find_slot(_BL, KC_LEFT_CTRL);
+    uint16_t      letter = KC_NO;
+    uint8_t       alt    = 0;
+    if (intl != TUT_SLOT_NONE && ctrl != TUT_SLOT_NONE && tut_choose_intl(seed, &letter, &alt)) {
+        const uint8_t lslot = tut_find_slot(_BL, letter);
+        const uint8_t aslot = tut_find_slot(_ADDLANG1, latin_slot_keycode(alt));
+        s_tut_intl_letter   = letter;
+        const uint8_t I = _ADDLANG1;
+        (void)tut_tour_add_ex(TUT_TOUR_INTL_LOOK, 0, intl, 0xFFu, I, 0u, 30u, TUT_PROG_INTL);
+        (void)tut_tour_add_ex(TUT_TOUR_INTL_ARM, 0, intl, 0xFFu, I, 0u, 3u, TUT_PROG_INTL);
+        (void)tut_tour_add_ex(TUT_TOUR_INTL_CTRL, 0, ctrl, 0xFFu, I,
+                              TUT_NEED_INTL | TUT_NEED_CLOSED, 5u, TUT_PROG_INTL);
+        (void)tut_tour_add_ex(TUT_TOUR_INTL_LETTER, 0, lslot, 0xFFu, I,
+                              TUT_NEED_INTL | TUT_NEED_PICKER, 8u, TUT_PROG_INTL);
+        (void)tut_tour_add_ex(TUT_TOUR_INTL_ALT, alt, aslot, 0xFFu, I,
+                              TUT_NEED_INTL | TUT_NEED_PICKER, 0u, TUT_PROG_INTL);
+        (void)tut_tour_add_ex(TUT_TOUR_INTL_AGAIN, 0, intl, 0xFFu, I, 0u, 3u, TUT_PROG_INTL);
+        (void)tut_tour_add_ex(TUT_TOUR_INTL_TYPE, 0, lslot, 0xFFu, I,
+                              TUT_NEED_INTL | TUT_INERT, 20u, TUT_PROG_INTL);
+    }
+    s_tour_out = NULL;
     return s_tour_n;
 }
 
@@ -4344,16 +4487,99 @@ static uint8_t tut_tour_layer(void) {
     return step == 0 ? 0xFFu : s_tour_after[step - 1];
 }
 
+// A layer the current step lets the user HOLD (Fn, Num, Intl), or 0xFF.
+static uint8_t tut_tour_allowed_layer(void) {
+    const int16_t step = tutorial_tour_step();
+    return (step < 0 || step >= s_tour_n) ? 0xFFu : s_tour_allow[step];
+}
+
+// Can the current step's key be pressed right now? Only the Intl chapter says no: its
+// Ctrl, letter and accent do something else entirely without Intl held and the picker
+// in the right state (the letter would TYPE its accent).
+static bool tut_tour_step_ready(void) {
+    const int16_t step = tutorial_tour_step();
+    if (step < 0 || step >= s_tour_n) return true;
+    const uint8_t need = s_tour_need[step];
+    if ((need & TUT_NEED_INTL) && !IS_LAYER_ON(_ADDLANG1)) return false;
+    if ((need & TUT_NEED_PICKER) && !s_picker_latched) return false;
+    if ((need & TUT_NEED_CLOSED) && s_picker_latched) return false;
+    return true;
+}
+
+static bool tut_tour_step_inert(void) {
+    const int16_t step = tutorial_tour_step();
+    return step >= 0 && step < s_tour_n && (s_tour_need[step] & TUT_INERT) != 0u;
+}
+
+// Master, every housekeeping pass: the Intl picker only exists while Intl is held, so a
+// user who lets go mid-sequence would face a Ctrl or a letter that no longer does what
+// the lesson says. Rewind to the step that asks for the hold again; and a picker closed
+// by a second Ctrl tap rewinds to the Ctrl step.
+static void poly_tutorial_tour_rewind_if_let_go(void) {
+    const int16_t step = tutorial_tour_step();
+    if (step < 0 || step >= s_tour_n || tutorial_tour_seen()) return;
+    const uint8_t need = s_tour_need[step];
+    if (!(need & (TUT_NEED_INTL | TUT_NEED_PICKER))) return;
+    uint8_t back = 0xFFu;
+    if ((need & TUT_NEED_INTL) && !IS_LAYER_ON(_ADDLANG1)) {
+        const uint8_t want = (s_tour_kind[step] == TUT_TOUR_INTL_TYPE) ? TUT_TOUR_INTL_AGAIN
+                                                                       : TUT_TOUR_INTL_ARM;
+        for (int16_t i = step - 1; i >= 0; --i) {
+            if (s_tour_kind[i] == want) { back = (uint8_t)i; break; }
+        }
+    } else if ((need & TUT_NEED_PICKER) && !s_picker_latched) {
+        for (int16_t i = step - 1; i >= 0; --i) {
+            if (s_tour_kind[i] == TUT_TOUR_INTL_CTRL) { back = (uint8_t)i; break; }
+        }
+    }
+    if (back != 0xFFu) tutorial_tour_rewind(back);
+}
+
+// "letter X" for the Intl chapter's prose, the letter in capitals.
+static const uint32_t *tut_letter_words(const uint32_t *prefix) {
+    static uint32_t buf[16];
+    uint8_t         n = 0;
+    while (prefix[n] != 0 && n < 13) { buf[n] = prefix[n]; n++; }
+    buf[n++] = (s_tut_intl_letter >= KC_A && s_tut_intl_letter <= KC_Z)
+                   ? (uint32_t)('A' + (s_tut_intl_letter - KC_A)) : (uint32_t)'?';
+    buf[n]   = 0;
+    return buf;
+}
+
 // The status prose: the LEFT panel opens the sentence, the right finishes it. Every
 // line is different — the same words twice read as the board repeating itself.
-const uint32_t *tutorial_tour_line(uint8_t step, bool left) {
+// `seen` is the dwell after the press, where a held layer is on screen.
+const uint32_t *tutorial_tour_line(uint8_t step, bool left, bool seen) {
     if (step >= s_tour_n) return NULL;
     switch (s_tour_kind[step]) {
         case TUT_TOUR_LANG:     return left ? U"Pick yours in" : U"the Lang menu";
-        case TUT_TOUR_BASE_LL:  return left ? U"Back to" : U"your letters";
+        case TUT_TOUR_BASE_LL:  return left ? U"Now back" : U"home";
         case TUT_TOUR_EMJ:      return left ? U"Now for" : U"some emoji";
         case TUT_TOUR_BASE_EMJ: return left ? U"And home" : U"again";
         case TUT_TOUR_EPAGE:    return left ? U"Flip to" : U"the next page";
+        case TUT_TOUR_FN:
+            if (seen) return left ? U"F1 to F12," : U"and more";
+            return left ? U"Hold Fn for" : U"the F-keys";
+        case TUT_TOUR_NUM:
+            if (seen) return left ? U"Digits and" : U"math keys";
+            return left ? U"Hold Num for" : U"a number pad";
+        case TUT_TOUR_INTL_LOOK:
+            if (seen) return left ? U"Each letter's" : U"chosen accent";
+            return left ? U"Hold Intl" : U"for accents";
+        case TUT_TOUR_INTL_ARM:   return left ? U"Hold Intl" : U"once more";
+        case TUT_TOUR_INTL_CTRL:
+            if (seen) return left ? U"The picker" : U"is open";
+            return left ? U"Keep holding," : U"tap Ctrl";
+        case TUT_TOUR_INTL_LETTER:
+            if (seen) return left ? U"Its accents" : U"are on top";
+            return left ? U"Pick the" : tut_letter_words(U"letter ");
+        case TUT_TOUR_INTL_ALT:
+            if (seen) return left ? U"Saved for" : tut_letter_words(U"the ");
+            return left ? U"Now take" : U"the lit accent";
+        case TUT_TOUR_INTL_AGAIN: return left ? U"Hold Intl" : U"one last time";
+        case TUT_TOUR_INTL_TYPE:
+            if (seen) return left ? U"That's how" : U"accents work";
+            return left ? U"And press" : tut_letter_words(U"the ");
         case TUT_TOUR_LCAT: {
             static const uint32_t *const lines[NUM_LANG_REGIONS][2] = {
                 {U"From Canada", U"to Chile"},       // America
@@ -4398,9 +4624,17 @@ static const tut_preview_t *tut_preview_current(void) {
     return row < TUT_PREVIEW_ALL ? &s_tut_preview_all[row] : NULL;
 }
 
+// The status panel's name ends the lead-in's question, so it carries the "?". Only the
+// PANEL: the keys spell `name` itself, where a "?" would be a keycap of its own.
 const uint32_t *tutorial_preview_name(void) {
+    static uint32_t      buf[16];
     const tut_preview_t *e = tut_preview_current();
-    return e != NULL ? e->name : U"...";
+    if (e == NULL) return U"...";
+    uint8_t n = 0;
+    while (e->name[n] != 0 && n < 14) { buf[n] = e->name[n]; n++; }
+    buf[n++] = '?';
+    buf[n]   = 0;
+    return buf;
 }
 
 // The status panels read as one sentence: the row's own lead-in on the left, the name on

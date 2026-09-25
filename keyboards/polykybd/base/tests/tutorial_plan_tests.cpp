@@ -1049,8 +1049,9 @@ TEST(TutorialSyncWord, NeitherFlagStops) {
 static tut_state_t AtChapterThree3(uint32_t *now, uint8_t n_tour, uint8_t n_preview) {
     tut_state_t st = AtChapterTwo(now);
     tut_set_chapter3(&st, n_preview);
-    const uint8_t tour[4] = {R(33), L(1), L(2), L(30)};   // lang key, two tabs, base
-    tut_set_tour(&st, tour, n_tour, 3);
+    // lang key, two tabs, base
+    const tut_tour_step_t tour[4] = {{R(33), 0, 6}, {L(1), 0, 6}, {L(2), 0, 7}, {L(30), 0, 9}};
+    tut_set_tour(&st, tour, n_tour);
     FinishPhase(&st, now, TUT_REVEAL_MS);
     ClearShiftStage(&st, now);
     ClearShiftStage(&st, now);
@@ -1190,16 +1191,65 @@ TEST(TutorialBoard, EveryTourStepFiresTheRingImmediately) {
     }
 }
 
-TEST(TutorialBoard, TourIsCappedAndSplitClamped) {
+TEST(TutorialBoard, TourIsCapped) {
     tut_state_t st{};
     tut_init(&st, nullptr, nullptr, 0);
-    uint8_t many[40];
-    for (uint8_t i = 0; i < 40; ++i) many[i] = L(i % 30);
-    tut_set_tour(&st, many, 40, 200);
+    tut_tour_step_t many[40];
+    for (uint8_t i = 0; i < 40; ++i) many[i] = {L(i % 30), 0, 6};
+    tut_set_tour(&st, many, 40);
     EXPECT_EQ(st.n_tour, TUT_TOUR_MAX);
-    EXPECT_EQ(st.tour_split, TUT_TOUR_MAX);
-    tut_set_tour(&st, nullptr, 5, 1);
+    tut_set_tour(&st, nullptr, 5);
     EXPECT_EQ(st.n_tour, 0);
+}
+
+// Each step's dwell is its own: 0 is the default, anything else is in 100 ms units.
+TEST(TutorialBoard, TourDwellIsPerStep) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 0, 0);
+    const tut_tour_step_t steps[3] = {{L(1), 0, 6}, {L(2), 3, 6}, {L(3), 30, 6}};
+    tut_set_tour(&st, steps, 3);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    const uint32_t want[3] = {TUT_TOUR_SEEN_MS, 300u, 3000u};
+    for (uint8_t i = 0; i < 3; ++i) {
+        ASSERT_EQ(st.phase, TUT_TOUR_WAIT);
+        ASSERT_TRUE(tut_tour_press(&st, steps[i].slot, now));
+        tut_tick(&st, now + want[i] - 1u);
+        EXPECT_EQ(st.phase, TUT_TOUR_SEEN) << "step " << (int)i << " left early";
+        now += want[i];
+        tut_tick(&st, now);
+        EXPECT_NE(st.phase, TUT_TOUR_SEEN) << "step " << (int)i << " overstayed";
+    }
+    EXPECT_EQ(st.phase, TUT_FINALE);
+}
+
+// A held-key sequence rewinds to the step that asks for the hold again.
+TEST(TutorialBoard, TourRewindWaitsOnTheEarlierStepAndPointsAtIt) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 4, 0);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    ASSERT_TRUE(tut_tour_press(&st, st.tour[0], now));
+    FinishPhase(&st, &now, TUT_TOUR_SEEN_MS);
+    ASSERT_TRUE(tut_tour_press(&st, st.tour[1], now));
+    FinishPhase(&st, &now, TUT_TOUR_SEEN_MS);
+    ASSERT_EQ(st.tour_i, 2);
+    tut_tour_rewind(&st, 1, now);
+    EXPECT_EQ(st.phase, TUT_TOUR_WAIT);
+    EXPECT_EQ(st.tour_i, 1);
+    const uint8_t seq = st.ripple_seq;
+    tut_tick(&st, now + 1u);
+    EXPECT_NE(st.ripple_seq, seq) << "the rewound step is pointed at at once";
+    EXPECT_EQ(st.ripple_slot, st.tour[1]);
+    tut_tour_rewind(&st, 9, now);
+    EXPECT_EQ(st.tour_i, 1) << "rewinding past the end is ignored";
+}
+
+TEST(TutorialBoard, TourRewindIsIgnoredOutsideTheTour) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 4, 0);
+    tut_tour_rewind(&st, 0, now);
+    EXPECT_EQ(st.phase, TUT_BOARD_REVEAL);
 }
 
 TEST(TutorialBoard, PreviewCountIsCapped) {
@@ -1237,8 +1287,8 @@ TEST(TutorialProgressSteps, CountsOneToTenAcrossTheWholeLesson) {
     uint32_t    now = 0;
     tut_state_t st  = Start(now);
     tut_set_chapter3(&st, 4);
-    const uint8_t tour[4] = {R(33), L(1), L(2), L(30)};
-    tut_set_tour(&st, tour, 4, 2);
+    const tut_tour_step_t tour[4] = {{R(33), 0, 6}, {L(1), 0, 7}, {L(2), 0, 8}, {L(30), 0, 9}};
+    tut_set_tour(&st, tour, 4);
     uint8_t last = tut_progress(&st);
     EXPECT_EQ(last, 1u);
     // Walk every timed phase and every wait to the end; the count must never go back
@@ -1265,8 +1315,8 @@ TEST(TutorialProgressSteps, UsesEveryStep) {
     uint32_t    now = 0;
     tut_state_t st  = Start(now);
     tut_set_chapter3(&st, 4);
-    const uint8_t tour[4] = {R(33), L(1), L(2), L(30)};
-    tut_set_tour(&st, tour, 4, 2);
+    const tut_tour_step_t tour[4] = {{R(33), 0, 6}, {L(1), 0, 7}, {L(2), 0, 8}, {L(30), 0, 9}};
+    tut_set_tour(&st, tour, 4);
     bool seen[TUT_PROGRESS_STEPS + 1] = {};
     for (int guard = 0; guard < 200 && st.phase != TUT_DONE; ++guard) {
         seen[tut_progress(&st)] = true;

@@ -35,6 +35,14 @@ static uint32_t tut_phase_ms(uint8_t phase) {
 
 static uint8_t tut_point_slot_of(const tut_state_t *st, uint8_t phase);
 
+// The current phase's duration: the table, except that TUT_TOUR_SEEN is per step.
+static uint32_t tut_phase_dur(const tut_state_t *st) {
+    if (st->phase == TUT_TOUR_SEEN && st->tour_i < st->n_tour && st->tour_dwell[st->tour_i] != 0u) {
+        return (uint32_t)st->tour_dwell[st->tour_i] * 100u;
+    }
+    return tut_phase_ms(st->phase);
+}
+
 static void tut_enter(tut_state_t *st, uint8_t phase, uint32_t now) {
     st->phase       = phase;
     st->phase_start = now;
@@ -60,9 +68,12 @@ void tut_init(tut_state_t *st, const uint8_t slots[TUT_LETTERS],
     st->preview     = 0;
     st->dark_next   = TUT_LANG_NAME;
     st->n_tour      = 0;
-    st->tour_split  = 0;
     st->tour_i      = 0;
-    for (uint8_t i = 0; i < TUT_TOUR_MAX; ++i) st->tour[i] = TUT_SLOT_NONE;
+    for (uint8_t i = 0; i < TUT_TOUR_MAX; ++i) {
+        st->tour[i]       = TUT_SLOT_NONE;
+        st->tour_dwell[i] = 0;
+        st->tour_prog[i]  = 0;
+    }
     for (uint8_t i = 0; i < TUT_LETTERS; ++i) {
         st->slots[i] = slots ? slots[i] : TUT_SLOT_NONE;
     }
@@ -87,13 +98,23 @@ void tut_set_chapter3(tut_state_t *st, uint8_t n_preview) {
     st->n_preview = (n_preview > TUT_PREVIEW_MAX) ? (uint8_t)TUT_PREVIEW_MAX : n_preview;
 }
 
-void tut_set_tour(tut_state_t *st, const uint8_t *slots, uint8_t n, uint8_t split) {
-    if (!slots) n = 0;
+void tut_set_tour(tut_state_t *st, const tut_tour_step_t *steps, uint8_t n) {
+    if (!steps) n = 0;
     if (n > TUT_TOUR_MAX) n = (uint8_t)TUT_TOUR_MAX;
-    for (uint8_t i = 0; i < TUT_TOUR_MAX; ++i) st->tour[i] = (i < n) ? slots[i] : TUT_SLOT_NONE;
-    st->n_tour     = n;
-    st->tour_split = split > n ? n : split;
-    st->tour_i     = 0;
+    for (uint8_t i = 0; i < TUT_TOUR_MAX; ++i) {
+        st->tour[i]       = (i < n) ? steps[i].slot : TUT_SLOT_NONE;
+        st->tour_dwell[i] = (i < n) ? steps[i].dwell_100ms : 0u;
+        st->tour_prog[i]  = (i < n) ? steps[i].progress : 0u;
+    }
+    st->n_tour = n;
+    st->tour_i = 0;
+}
+
+void tut_tour_rewind(tut_state_t *st, uint8_t step, uint32_t now) {
+    if (step >= st->n_tour) return;
+    if (st->phase != TUT_TOUR_WAIT && st->phase != TUT_TOUR_SEEN) return;
+    st->tour_i = step;
+    tut_enter(st, TUT_TOUR_WAIT, now);
 }
 
 int16_t tut_tour_index(const tut_state_t *st) {
@@ -117,18 +138,20 @@ int16_t tut_preview_index(const tut_state_t *st) {
     return st->preview;
 }
 
-// 1 the opening, 2-3 the letters, 4-5 one Shift each, 6 the reveal, 7 the languages,
-// 8 the language menu, 9 the emoji menu, 10 the close.
+// 1 the opening, 2 the letters, 3 the two Shifts, 4 the reveal, 5 the languages; the
+// key tour's steps carry their own value (6 the Lang menu, 7 emoji, 8 Fn and Num, 9
+// Intl, set by the caller), and 10 the close.
 uint8_t tut_progress(const tut_state_t *st) {
     const uint8_t p = st->phase;
     if (p <= TUT_TEXT) return 1u;
-    if (p <= TUT_GAP) return st->step == 0 ? 2u : 3u;
-    if (p == TUT_REVEAL || p == TUT_SHIFT_WAIT) return 4u;
-    if (p == TUT_SHIFT_SWEEP || p == TUT_SHIFT_HELD) return st->shift_stage == 0 ? 4u : 5u;
-    if (p < TUT_BOARD_REVEAL) return 5u;             // TUT_SHIFT_AGAIN + the layer chapter
-    if (p <= TUT_LANG_INTRO) return 6u;
-    if (p <= TUT_LANG_MORE2) return 7u;
-    if (p == TUT_TOUR_WAIT || p == TUT_TOUR_SEEN) return st->tour_i < st->tour_split ? 8u : 9u;
+    if (p <= TUT_GAP) return 2u;
+    if (p < TUT_BOARD_REVEAL) return 3u;             // both Shifts (+ the postponed layer chapter)
+    if (p <= TUT_LANG_INTRO) return 4u;
+    if (p <= TUT_LANG_MORE2) return 5u;
+    if (p == TUT_TOUR_WAIT || p == TUT_TOUR_SEEN) {
+        const uint8_t v = st->tour_i < st->n_tour ? st->tour_prog[st->tour_i] : 0u;
+        return (v == 0u || v > TUT_PROGRESS_STEPS) ? 8u : v;
+    }
     return TUT_PROGRESS_STEPS;
 }
 
@@ -196,7 +219,7 @@ bool tut_tick(tut_state_t *st, uint32_t now) {
     // that early return can never run on the phases that need a pointer.
     const bool pointed = tut_point_tick(st, now);
 
-    const uint32_t dur = tut_phase_ms(st->phase);
+    const uint32_t dur = tut_phase_dur(st);
     if (dur == 0) return pointed;                     // waiting on the user, not the clock
     // Modular subtraction, so the 49.7-day timer wrap cannot strand a phase (the same
     // arithmetic base/update.c had to be corrected to).
@@ -371,7 +394,7 @@ uint8_t tut_current_slot(const tut_state_t *st) {
 }
 
 uint8_t tut_phase_progress(const tut_state_t *st, uint32_t now) {
-    const uint32_t dur = tut_phase_ms(st->phase);
+    const uint32_t dur = tut_phase_dur(st);
     if (dur == 0) return 255;
     const uint32_t el = (uint32_t)(now - st->phase_start);
     if (el >= dur) return 255;

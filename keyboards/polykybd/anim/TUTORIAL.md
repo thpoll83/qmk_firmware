@@ -1888,3 +1888,34 @@ Hardware feedback:
   (right half, top-right outer key), so `tutorial_chrome_label()` gives up the chrome for
   whatever key the tour is asking for: a key reading "9/10" cannot be asked for as "the
   next page".
+
+## Round 31 — questions end in "?", the layer and Intl chapters
+
+Hardware feedback:
+- **A question on the status panels ends in "?"**, on the panel that ends the sentence.
+  Every preview lead-in opens a question now ("Do you speak" | "Arabic?"), and
+  `tutorial_preview_name()` adds the "?" to the PANEL name only; the keys still spell
+  the bare name. The second Shift says "Isn't that" | "...nice?".
+- **"Back to your letters" assumed a layout we do not know**: "Now back" | "home".
+- **The tour continues past the menus** (all in `tutorial_tour_build()`):
+  - Hold **Fn**, then hold **Num**: 3 s each to look at the layer.
+  - **Intl**: hold it (each letter's chosen accent); hold it again and tap **Ctrl**
+    (the picker opens); press the **letter** the tour drew at random (its accents fill
+    the number row); press the **accent** the tour picked (saved, the picker closes);
+    hold Intl one last time and press the letter (its new accent). Then "You're ready!".
+- ⚠️ **A step can now need a key HELD.** `tut_tour_step_t` carries a per-step dwell and
+  progress value; the binding keeps per-step `allow` (a layer the user may hold,
+  allowed by the guard but never forced — forcing it would leave it on after the finger
+  lifts) and `need` bits. The Intl picker exists only while Intl is held, so the Ctrl,
+  letter and accent steps refuse a press until Intl is down and the picker is in the
+  right state, and `poly_tutorial_tour_rewind_if_let_go()` rewinds to "Hold Intl" when
+  the user lets go (`tut_tour_rewind()`, unit-tested). Without the gate, the letter
+  pressed under Intl with the picker closed would TYPE its accent into the focused app.
+- ⚠️ **The last Intl press is INERT**: accepted, never passed to the board, for the same
+  reason. The released keys of passed presses are tracked in a 4-entry set, because
+  Intl is still held while Ctrl, the letter and the accent come and go.
+- **The chosen accent is KEPT** after the lesson (agreed for this one setting). The
+  letter and the accent are drawn on the master; `tut[5]` carries the tour's target key
+  in tour phases, so the slave pulses the right key without knowing the draw.
+- Progress: 1 opening, 2 letters, 3 Shifts, 4 reveal, 5 languages, 6 Lang menu,
+  7 emoji, 8 Fn and Num, 9 Intl, 10 close.

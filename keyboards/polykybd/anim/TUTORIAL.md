@@ -1719,3 +1719,28 @@ its last two units on the last key (JAPANE|SE, ΕΛΛΗΝΙ|ΚΑ).
   final-consonant forms (U+11A8..), so finals are written in their initial form, as on
   the Korean keycaps. Every native codepoint was checked with `tools/oled_preview.py`'s
   font loader, and every name row rendered with 0 clipped pixels.
+
+## Round 25 — language names, not script names; pre-rendered where the keys cannot spell
+
+- **Every native name is the LANGUAGE's name for itself** (한국어, not 한글; 日本語;
+  ΕΛΛΗΝΙΚΑ). List: Greek, Arabic, Hebrew, Hindi, Thai, Japanese, Korean, then the
+  glyph scripts Elvish, Runes, Aurebesh, Braille.
+- ⚠️ **Joined and attached scripts cannot be spelled one character per key.** The keycap
+  renderer draws one glyph at a time with no shaper, so Arabic's joins and Devanagari's
+  vowel signs and conjuncts fall apart, and 日本語 / 한국어 have no glyphs in the keycap
+  fonts at all (only kana and conjoining jamo). Those four are PRE-RENDERED:
+  `tools/gen_tutorial_names.py` shapes each with HarfBuzz from the Noto fonts listed in
+  `fonts/noto-fonts.yaml` (weight 500, 1 bit), cuts it into 72x40 tiles on one common
+  baseline — one grapheme cluster per key for Hindi/Japanese/Korean, key-width pieces cut
+  at glyph boundaries for Arabic — and writes `anim/tutorial_names_gen.h` (3240 bytes).
+  The tiles are in VISUAL order, so Arabic reads right to left across its keys with no
+  special case. Tiles need no font pack, so these names show on a board that has none.
+- **Long names use two rows.** Up to 7 units sit on display row 2; more are split over
+  rows 1 and 2, the larger half on top, each row centred (GREEK over ΕΛΛΗ/ΝΙΚΑ,
+  JAPA/NESE, AURE/BESH).
+- ⚠️ `tutorial_draw_key_letter()` looked every single character up at 0xF0000 + cp (the
+  latinbig relocation); for a non-Latin codepoint that is an unrelated glyph — にほ drew
+  as "k{". Only A–Z take the larger tier now.
+- `tools/tutorial_name_sheet.py` renders every item's name screen as the keys draw it,
+  reading the pre-rendered tiles out of the generated header. Its item list is a replica
+  of `s_tut_preview_all[]` — change both.

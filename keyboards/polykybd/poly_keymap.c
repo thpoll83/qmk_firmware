@@ -100,6 +100,7 @@
 #include "layers.h"
 #include "keycode_helper.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
+#include "anim/tutorial_names_gen.h"   // pre-rendered native language names
 #include "anim/startup_anim.h"   // one-time procedural boot animation (split72; no-op stubs on split42)
 #include "polymod_os_actions.h"
 #include "uni.h"
@@ -539,7 +540,8 @@ static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
 // Chapter 3's language/script preview; defined beside the tutorial's keymap helpers.
 static uint8_t poly_tutorial_apply_preview(void);
 static uint32_t tut_name_letter(uint8_t row, uint8_t col);   // the spelled preview name
-static uint8_t  tut_name_text(uint8_t row, uint8_t col, uint32_t out[3]);
+static uint8_t  tut_name_key(uint8_t row, uint8_t col, uint32_t *cp, const uint8_t **tile);
+static void     tut_draw_name_tile(const uint8_t *tile);
 // The user's own default LAYOUT, parked while the tutorial runs. 0xFF = nothing parked.
 // ⚠️ This is poly's def_layer (a layer INDEX _L0.._L4, the Qwerty/Colemak/Neo choice),
 // NOT the momentary layer stack — layer_clear() does not touch it, which is why the
@@ -3988,17 +3990,18 @@ bool tutorial_is_chrome_key(uint8_t row, uint8_t col) {
 // row; the progress is one big run in the keycap face, centred both ways (its ink spans
 // rows 1..20 at the usual baseline 23, so baseline 32 puts it at 10..29 of the 40).
 void tutorial_draw_chrome(uint8_t row, uint8_t col) {
-    uint32_t      name_txt[3];
-    const uint8_t units = tut_name_text(row, col, name_txt);
-    if (units == 1) {
-        (void)tutorial_draw_key_letter(name_txt[0]);   // one tier up when it is flashed
-        kdisp_set_gfx_erase(false);
-        return;
-    }
-    if (units > 1) {
-        (void)tutorial_draw_key_text(name_txt);
-        kdisp_set_gfx_erase(false);
-        return;
+    uint32_t       name_cp   = 0;
+    const uint8_t *name_tile = NULL;
+    switch (tut_name_key(row, col, &name_cp, &name_tile)) {
+        case 1:
+            (void)tutorial_draw_key_letter(name_cp);   // latin capitals one tier up
+            kdisp_set_gfx_erase(false);
+            return;
+        case 2:
+            tut_draw_name_tile(name_tile);
+            return;
+        default:
+            break;
     }
     const uint32_t *t = tutorial_chrome_label(row, col);
     if (t == NULL) return;
@@ -4023,32 +4026,36 @@ typedef struct {
     bool            script;   // false = a keyboard language (LANG_*), true = GLYPH_*
     uint8_t         value;
     const uint32_t *name;     // Latin name: status panel + the LEFT half's keys. ASCII.
-    // The name in the language's own script, for the RIGHT half's keys, one unit per
-    // keycap. NULL for a glyph script: its keys spell `name` through the script itself.
+    // The language's own name for itself, for the RIGHT half's keys, one character per
+    // keycap. NULL for a glyph script (its keys spell `name` through the script) and for
+    // a name drawn from `strip`.
     const uint32_t *native;
     bool            rtl;      // native reads right to left: laid out from the right
+    // A name the keycap renderer cannot spell character by character — joined letters,
+    // attached vowel signs, or glyphs the fonts lack — pre-rendered offline into keycap
+    // tiles (tools/gen_tutorial_names.py -> anim/tutorial_names_gen.h).
+    const tut_name_strip_t *strip;
 } tut_preview_t;
 
 // A tour, not a catalogue: scripts that look nothing like each other, then the
 // fantasy faces. Order is the order shown.
 //
-// The native spellings are KEYBOARD units, not typeset words: the keycap renderer has no
-// text shaper, so Devanagari is spelled with its vowel signs and virama as separate
-// characters, and Korean as jamo rather than syllables. ⚠️ The CONJOINING jamo (U+1100
-// initials, U+1161 vowels), which the Korean layout's keycaps use — not the compatibility
-// jamo at U+3131, which no font here carries — and final consonants in their initial
-// form, since U+11A8.. are missing too. Checked with tools/oled_preview.py's font loader. That is also how the keycaps of
-// those layouts look, which is the point of the chapter.
+// Every native name is the LANGUAGE's name for itself (한국어, not the script's name
+// 한글). The ones spelled per key are scripts whose letters stand alone and are in the
+// fonts; the rest are pre-rendered strips — joined Arabic, Devanagari with its attached
+// vowel signs, and 日本語 / 한국어, whose glyphs the keycap fonts do not carry.
 static const tut_preview_t s_tut_preview_all[] = {
-    {false, LANG_ELGR,      U"Greek",    U"\u0395\u039B\u039B\u0397\u039D\u0399\u039A\u0391", false}, // ΕΛΛΗΝΙΚΑ
-    {false, LANG_ARSA,      U"Arabic",   U"\u0627\u0644\u0639\u0631\u0628\u064A\u0629", true},         // العربية
-    {false, LANG_HIIN,      U"Hindi",    U"\u0939\u093F\u0928\u094D\u0926\u0940", false},               // हिन्दी
-    {false, LANG_JAJP,      U"Japanese", U"\u306B\u307B\u3093\u3054", false},                             // にほんご
-    {false, LANG_KOKR,      U"Korean",   U"\u1112\u1161\u1102\u1100\u116E\u1100\u110B\u1165", false}, // 한국어 as jamo
-    {true,  GLYPH_TENGWAR,  U"Elvish",   NULL, false},
-    {true,  GLYPH_RUNES,    U"Runes",    NULL, false},
-    {true,  GLYPH_AUREBESH, U"Aurebesh", NULL, false},
-    {true,  GLYPH_BRAILLE,  U"Braille",  NULL, false},
+    {false, LANG_ELGR,      U"Greek",    U"\u0395\u039B\u039B\u0397\u039D\u0399\u039A\u0391", false, NULL}, // ΕΛΛΗΝΙΚΑ
+    {false, LANG_ARSA,      U"Arabic",   NULL, false, &TUT_NAME_STRIP_AR},                            // العربية
+    {false, LANG_HEIL,      U"Hebrew",   U"\u05E2\u05D1\u05E8\u05D9\u05EA", true, NULL},            // עברית
+    {false, LANG_HIIN,      U"Hindi",    NULL, false, &TUT_NAME_STRIP_HI},                            // हिन्दी
+    {false, LANG_THTH,      U"Thai",     U"\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22", false, NULL}, // ภาษาไทย
+    {false, LANG_JAJP,      U"Japanese", NULL, false, &TUT_NAME_STRIP_JA},                            // 日本語
+    {false, LANG_KOKR,      U"Korean",   NULL, false, &TUT_NAME_STRIP_KO},                            // 한국어
+    {true,  GLYPH_TENGWAR,  U"Elvish",   NULL, false, NULL},
+    {true,  GLYPH_RUNES,    U"Runes",    NULL, false, NULL},
+    {true,  GLYPH_AUREBESH, U"Aurebesh", NULL, false, NULL},
+    {true,  GLYPH_BRAILLE,  U"Braille",  NULL, false, NULL},
 };
 #define TUT_PREVIEW_ALL (sizeof(s_tut_preview_all) / sizeof(s_tut_preview_all[0]))
 _Static_assert(TUT_PREVIEW_ALL <= TUT_PREVIEW_MAX, "preview table exceeds the plan's cap");
@@ -4115,43 +4122,49 @@ const uint32_t *tutorial_preview_name(void) {
     return e != NULL ? e->name : U"...";
 }
 
-// ---- the name spelled across the middle row (TUT_LANG_NAME) ----
-// LEFT half: the Latin name. RIGHT half: the same name in the language's own script (or,
-// for a glyph script, the Latin name drawn through that script). Each half's middle
-// display row (row 2) has 7 panels — so does every other letter row — ordered here by
-// board x. Built once, per half, from the shared geometry table.
-//
-// Up to 7 units fill one key each; an 8-unit name (Japanese, Aurebesh, ΕΛΛΗΝΙΚΑ, the
-// Korean jamo) puts its last two units on the last key. More than 8 does not fit and is
-// cut at 8; nothing in the table is that long.
+// ---- the name spelled on the keys (TUT_LANG_NAME) ----
+// LEFT half: the Latin name. RIGHT half: the language's own name, per character or as
+// pre-rendered tiles; a glyph script spells its Latin name through its own glyphs. A
+// name of up to 7 units sits on the middle display row (row 2); a longer one is split
+// over row 1 and row 2, the first half on top. Every letter row has 7 panels per half,
+// ordered here by board x, built once per half from the shared geometry table.
+#define TUT_NAME_ROW_TOP  1u
 #define TUT_NAME_ROW      2u
 #define TUT_NAME_KEYS     7u
-#define TUT_NAME_UNITS    8u
-static uint8_t s_tut_name_keys[2][TUT_NAME_KEYS];   // display index per half, board order
-static uint8_t s_tut_name_n[2] = {0xFFu, 0xFFu};    // 0xFF = not built yet
+#define TUT_NAME_UNITS   14u
+#define TUT_SCRATCH_STRIDE 128   // scratch bytes per page row (as focus_ring.c)
+static uint8_t s_tut_name_keys[2][2][TUT_NAME_KEYS];   // [side][row 1/2] display idx, by x
+static uint8_t s_tut_name_n[2][2];
+static bool    s_tut_name_built[2];
 
 static void tut_name_keys_build(uint8_t side) {
-    int16_t xs[TUT_NAME_KEYS];
-    s_tut_name_n[side] = 0;
-    for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
-        const uint8_t   idx = (uint8_t)(TUT_NAME_ROW * MATRIX_COLS + c);
-        const sa_geom_t g   = startup_anim_key_geom(side != 0, idx);
-        if (!g.valid || s_tut_name_n[side] >= TUT_NAME_KEYS) continue;
-        uint8_t k = s_tut_name_n[side]++;
-        while (k > 0 && xs[k - 1] > g.cx) {       // insertion sort on x
-            xs[k] = xs[k - 1];
-            s_tut_name_keys[side][k] = s_tut_name_keys[side][k - 1];
-            --k;
+    for (uint8_t r = 0; r < 2; ++r) {
+        int16_t        xs[TUT_NAME_KEYS];
+        const uint8_t  drow = r == 0 ? TUT_NAME_ROW_TOP : TUT_NAME_ROW;
+        uint8_t       *keys = s_tut_name_keys[side][r];
+        uint8_t        n    = 0;
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            const uint8_t   idx = (uint8_t)(drow * MATRIX_COLS + c);
+            const sa_geom_t g   = startup_anim_key_geom(side != 0, idx);
+            if (!g.valid || n >= TUT_NAME_KEYS) continue;
+            uint8_t k = n++;
+            while (k > 0 && xs[k - 1] > g.cx) {       // insertion sort on x
+                xs[k]   = xs[k - 1];
+                keys[k] = keys[k - 1];
+                --k;
+            }
+            xs[k]   = g.cx;
+            keys[k] = idx;
         }
-        xs[k] = g.cx;
-        s_tut_name_keys[side][k] = idx;
+        s_tut_name_n[side][r] = n;
     }
+    s_tut_name_built[side] = true;
 }
 
-// The units THIS half spells for `e`, in left-to-right KEY order. Returns the count.
+// The units THIS half spells for `e`, in left-to-right order. Returns the count.
 static uint8_t tut_name_units(const tut_preview_t *e, bool right, uint32_t out[TUT_NAME_UNITS]) {
     uint8_t n = 0;
-    if (!right || (e->native == NULL && !e->script)) {
+    if (!right || (!e->script && e->native == NULL)) {
         for (; e->name[n] != 0 && n < TUT_NAME_UNITS; ++n) {
             uint32_t ch = e->name[n];
             if (ch >= 'a' && ch <= 'z') ch -= 'a' - 'A';
@@ -4159,7 +4172,7 @@ static uint8_t tut_name_units(const tut_preview_t *e, bool right, uint32_t out[T
         }
         return n;
     }
-    if (e->native == NULL) {   // a glyph script: the Latin name through the script
+    if (e->script) {   // a glyph script: the Latin name through the script
         for (; e->name[n] != 0 && n < TUT_NAME_UNITS; ++n) {
             uint32_t ch = e->name[n];
             if (ch >= 'a' && ch <= 'z') ch -= 'a' - 'A';
@@ -4178,37 +4191,66 @@ static uint8_t tut_name_units(const tut_preview_t *e, bool right, uint32_t out[T
     return n;
 }
 
-// What this key spells while the board is naming an item: up to two units in `out`
-// (zero-terminated). Returns the unit count, 0 for "not a name key".
-static uint8_t tut_name_text(uint8_t row, uint8_t col, uint32_t out[3]) {
+// Which unit of an `n`-unit name lands on key `idx` of this half, or -1. Up to 7 units
+// fill row 2; more are split over rows 1 and 2, the larger half on top. Each row is
+// centred on its own keys.
+static int8_t tut_name_slot_unit(uint8_t side, uint8_t idx, uint8_t n) {
+    const uint8_t top = n > TUT_NAME_KEYS ? (uint8_t)((n + 1u) / 2u) : 0u;
+    for (uint8_t r = 0; r < 2; ++r) {
+        const uint8_t first = r == 0 ? 0u : top;
+        const uint8_t count = r == 0 ? top : (uint8_t)(n - top);
+        const uint8_t avail = s_tut_name_n[side][r];
+        if (count == 0 || count > avail) continue;
+        const uint8_t start = (uint8_t)((avail - count) / 2u);
+        for (uint8_t k = 0; k < count; ++k) {
+            if (s_tut_name_keys[side][r][start + k] == idx) return (int8_t)(first + k);
+        }
+    }
+    return -1;
+}
+
+// What this key shows while the board is naming an item. Returns 0 (not a name key),
+// 1 (a character in *cp) or 2 (a pre-rendered tile in *tile).
+static uint8_t tut_name_key(uint8_t row, uint8_t col, uint32_t *cp, const uint8_t **tile) {
     if (!tutorial_naming()) return 0;
     const tut_preview_t *e = tut_preview_current();
     if (e == NULL) return 0;
     const uint8_t slot = tutorial_slot_of(row, col);
-    if (slot == TUT_SLOT_NONE || TUT_SLOT_IDX(slot) / MATRIX_COLS != TUT_NAME_ROW) return 0;
+    if (slot == TUT_SLOT_NONE) return 0;
     const uint8_t side = TUT_SLOT_RIGHT(slot) ? 1u : 0u;
-    if (s_tut_name_n[side] == 0xFFu) tut_name_keys_build(side);
-    uint32_t      u[TUT_NAME_UNITS];
-    const uint8_t n    = tut_name_units(e, side != 0, u);
-    const uint8_t keys = n < s_tut_name_n[side] ? n : s_tut_name_n[side];
-    if (keys == 0) return 0;
-    const uint8_t start = (uint8_t)((s_tut_name_n[side] - keys) / 2u);
-    for (uint8_t k = 0; k < keys; ++k) {
-        if (s_tut_name_keys[side][start + k] != TUT_SLOT_IDX(slot)) continue;
-        // The last key takes whatever did not fit one-per-key.
-        const uint8_t first = k;
-        const uint8_t count = (k + 1u == keys) ? (uint8_t)(n - k) : 1u;
-        const uint8_t take  = count > 2u ? 2u : count;
-        for (uint8_t i = 0; i < take; ++i) out[i] = u[first + i];
-        out[take] = 0;
-        return take;
+    if (!s_tut_name_built[side]) tut_name_keys_build(side);
+    if (side == 1 && e->strip != NULL) {
+        const int8_t u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), e->strip->n);
+        if (u < 0) return 0;
+        *tile = e->strip->tiles + (size_t)u * 360u;
+        return 2;
     }
-    return 0;
+    uint32_t      units[TUT_NAME_UNITS];
+    const uint8_t n = tut_name_units(e, side != 0, units);
+    const int8_t  u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n);
+    if (u < 0) return 0;
+    *cp = units[u];
+    return 1;
 }
 
 static uint32_t tut_name_letter(uint8_t row, uint8_t col) {
-    uint32_t t[3];
-    return tut_name_text(row, col, t) != 0 ? t[0] : 0u;
+    uint32_t       cp   = 0;
+    const uint8_t *tile = NULL;
+    return tut_name_key(row, col, &cp, &tile) != 0 ? 1u : 0u;
+}
+
+// Blit a 72x40 pre-rendered tile (row-major, 9 bytes per row, MSB first) into the
+// selected, cleared scratch buffer.
+static void tut_draw_name_tile(const uint8_t *tile) {
+    uint8_t *buf = get_scratch_buffer();
+    for (uint8_t ly = 0; ly < SCREEN_HEIGHT; ++ly) {
+        for (uint8_t lx = 0; lx < SCREEN_WIDTH; ++lx) {
+            if (tile[ly * 9u + (lx >> 3)] & (0x80u >> (lx & 7u))) {
+                buf[(size_t)(ly >> 3) * TUT_SCRATCH_STRIDE + (BUFFER_X + lx)] |=
+                    (uint8_t)(1u << (ly & 7));
+            }
+        }
+    }
 }
 
 // The language preview's bookkeeping. s_tut_real_lang is the user's language while a

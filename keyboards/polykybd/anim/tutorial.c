@@ -412,24 +412,6 @@ bool tutorial_draw_key_letter(uint32_t cp) {
                                   BUFFER_X, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
-// Two or more characters on one keycap, centred from their measured box. Drawn through
-// a SINGLE-font array — the face of the first character — for the same baseline reason
-// as tut_draw_letter_tiered(); the name units that share a key are always one script.
-bool tutorial_draw_key_text(const uint32_t *txt) {
-    const GFXfont *of = NULL;
-    if (txt == NULL || txt[0] == 0 ||
-        kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count, txt[0], &of) == NULL) {
-        return false;
-    }
-    const GFXfont *one[1] = {of};
-    int8_t         x0 = 0, x1 = 0, y0 = 0, y1 = 0;
-    kdisp_gfx_text_bbox(one, 1, txt, &x0, &x1, &y0, &y1);
-    kdisp_write_gfx_text(one, 1,
-                         (int8_t)(BUFFER_X + (SCREEN_WIDTH - (x1 - x0 + 1)) / 2 - x0),
-                         (int8_t)((SCREEN_HEIGHT - (y1 - y0 + 1)) / 2 - y0), txt);
-    return true;
-}
-
 static bool tut_chrome_live(void) {
     return s_active && s_st.phase != TUT_BLANK && s_st.phase != TUT_DONE;
 }
@@ -727,7 +709,6 @@ int16_t tutorial_preview_index(void) { return -1; }
 uint8_t tutorial_preview_entry(void) { return 0xFFu; }
 bool tutorial_naming(void) { return false; }
 bool tutorial_draw_key_letter(uint32_t cp) { (void)cp; return false; }
-bool tutorial_draw_key_text(const uint32_t *txt) { (void)txt; return false; }
 const uint32_t *tutorial_skip_label(void) { return NULL; }
 const uint32_t *tutorial_progress_label(void) { return NULL; }
 void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]) {

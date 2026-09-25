@@ -1704,3 +1704,18 @@ screen to be read.
   while the host sleeps, so its panel stayed lit on "Braille" at full brightness after
   the computer shut down (hardware). The branch now turns the panel off while the flag
   is clear; the lesson resumes on wake.
+
+### Round 24, part 2 — the name in two scripts
+
+The name is now spelled TWICE: the Latin name on the LEFT half's middle row, and the name
+in the language's own script on the RIGHT half's (a glyph script spells the Latin name
+through its own glyphs). Every letter row has 7 panels per half, so an 8-unit name puts
+its last two units on the last key (JAPANE|SE, ΕΛΛΗΝΙ|ΚΑ).
+- The native spellings are KEYBOARD units, since the keycap renderer has no shaper:
+  Devanagari with its vowel signs and virama as separate characters, Arabic laid out
+  from the right, Japanese in hiragana.
+- ⚠️ **Korean is CONJOINING jamo (U+1100 initials, U+1161 vowels), not the compatibility
+  jamo at U+3131** — no font here carries U+3131.., nor precomposed syllables, nor the
+  final-consonant forms (U+11A8..), so finals are written in their initial form, as on
+  the Korean keycaps. Every native codepoint was checked with `tools/oled_preview.py`'s
+  font loader, and every name row rendered with 0 clipped pixels.

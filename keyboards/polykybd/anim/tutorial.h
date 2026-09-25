@@ -83,6 +83,8 @@ uint8_t tutorial_preview_entry(void);
 bool tutorial_naming(void);
 // Draw a capital centred on the selected keycap buffer (the name's letters).
 bool tutorial_draw_key_letter(uint32_t cp);
+// Draw a short run (two characters of one script) centred on the selected keycap buffer.
+bool tutorial_draw_key_text(const uint32_t *txt);
 
 // The lesson's chrome, or NULL when it should show nothing: Esc reads "Hold to / skip...",
 // and the mirrored top-right outer key shows the chapter ("2/3").

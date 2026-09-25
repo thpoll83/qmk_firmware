@@ -3555,13 +3555,28 @@ static void render_mru_ctrl_key(bool preset) {
 // Language region tab — the continent name centred in the keycap (continent
 // silhouettes will replace the text later). The active-tab frame / inactive
 // bottom bar is drawn separately by lang_draw_tab_indicator/bottom.
+//
+// In the _Small_ 15px face, the macro caption's ladder: the 10px _Nano_ face read as
+// "really small" (hardware). Measured from the glyph tables, the widest label ("Mid
+// East") is 60 px against the 66 px between the active frame's 3-px rails; _Mid_ 19px
+// would be 77 px and overflow on four of the six. A future label too wide for _Small_
+// drops to _Nano_ with its text intact rather than being clipped.
+#define LANG_TAB_MAX_W  (SCREEN_WIDTH - 8)   // inside the rails, 1 px air each side
 static void render_lang_region_tab(uint16_t keycode) {
+    static const GFXfont* const small[] = { &NotoSans_Regular_Small_15px7b };
     const uint32_t* label = lang_region_label((uint8_t)(keycode - KC_LANG_CAT_BASE));
+    const GFXfont* const* f = small;
     int8_t lo = 0, hi = 0;
-    kdisp_gfx_text_bounds(lang_label_fonts, 1, label, &lo, &hi);
-    int8_t w = (int8_t)(hi - lo);
-    int8_t x = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2 - lo);
-    kdisp_write_gfx_text(lang_label_fonts, 1, x, 22, label);
+    kdisp_gfx_text_bounds(f, 1, label, &lo, &hi);
+    int8_t baseline = 25;   // cap height 11 rows centred in rows 3..36 (frame/underline clear)
+    if (hi - lo + 1 > LANG_TAB_MAX_W) {
+        f        = lang_label_fonts;
+        baseline = 22;
+        kdisp_gfx_text_bounds(f, 1, label, &lo, &hi);
+    }
+    const int8_t w = (int8_t)(hi - lo + 1);
+    const int8_t x = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2 - lo);
+    kdisp_write_gfx_text(f, 1, x, baseline, label);
 }
 
 // MRU recents (emoji or language) get a full-width bar along the TOP edge —

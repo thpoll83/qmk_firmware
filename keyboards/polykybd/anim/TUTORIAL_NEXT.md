@@ -5,8 +5,10 @@ post-mortems. **This file is the worklist**: what is finished, what is deliberat
 postponed, and what a future session has to do to take it further. Read both before
 touching `anim/tutorial.c`, `base/tutorial_plan.[ch]` or `anim/focus_ring.[ch]`.
 
-Chapters 1–2 merged to `PolyKybd` in #306 and #309. The boot trigger is **opt-in**
-(`-e POLYKYBD_BOOT_INTRO=yes`, see `TUTORIAL.md` round 21) until step 1 below has run.
+Chapters 1–2 merged to `PolyKybd` in #306 and #309. Since 1.0.0 the boot trigger is
+**on by default** (`-e POLYKYBD_BOOT_INTRO=no` opts out); HIL images (`POLYKYBD_HIL=yes|left|right`)
+default it off, because a rig never presses a key. The boot hang that kept it opt-in is
+fixed (`TUTORIAL.md` round 29 onward, and the split handler thread rule in `CLAUDE.md`).
 
 ---
 

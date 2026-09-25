@@ -553,6 +553,7 @@ static uint32_t s_tut_prose[16];
 #define TUT_PASS_MAX 4u
 static uint8_t  s_tut_pass_row[TUT_PASS_MAX] = {0xFFu, 0xFFu, 0xFFu, 0xFFu};
 static uint8_t  s_tut_pass_col[TUT_PASS_MAX] = {0xFFu, 0xFFu, 0xFFu, 0xFFu};
+static void     poly_tutorial_forget_passes(void);
 // Chapter 3's language/script preview; defined beside the tutorial's keymap helpers.
 static uint8_t poly_tutorial_apply_preview(void);
 // Master only: write the preview (or the user's own glyph script) into the synced state.
@@ -743,6 +744,7 @@ static void poly_tutorial_push_sync(void) {
 static void poly_tutorial_finish_if_done(void) {
         if (tutorial_finished()) {
             const bool was_skipped = tutorial_was_skipped();
+            poly_tutorial_forget_passes();
             // Order matters. tutorial_stop() restores the parked layout, drops any
             // layer a chapter left held, blanks every panel and invalidates the
             // dirty-window boxes; THEN the brightness is restored, THEN the legends are
@@ -1245,9 +1247,19 @@ static bool     s_tutorial_armed  = false;
 // set in process_record_user(), which only ever runs on the master, so the slave had
 // NO local trigger and that one message was the entire mechanism. Losing it left the
 // slave dark for the whole session, with the master happily running the lesson.
+// Forget the tour's let-through presses. ⚠️ An entry is removed only when its key's
+// release arrives while the lesson runs, so a lesson that ENDS with a passed key still
+// held (Intl held on an Intl step, Esc held to skip) leaks it; after four leaks a later
+// MO() release would be swallowed and its layer left on. Cleared at every arming and at
+// the finish edge.
+static void poly_tutorial_forget_passes(void) {
+    for (uint8_t i = 0; i < TUT_PASS_MAX; ++i) s_tut_pass_row[i] = s_tut_pass_col[i] = 0xFFu;
+}
+
 static void arm_tutorial_after_intro(void) {
     s_tutorial_armed = true;
     s_tut_skip_since = 0;
+    poly_tutorial_forget_passes();
     // Level, not edge: the bit rides every sync for the whole of Eden (seconds), so it
     // has many chances to land rather than one. ⚠️ tutorial_sync_fill() PRESERVES it
     // (the two writers of tut[0] must not fight), so it is retired with the rest of

@@ -1940,3 +1940,24 @@ Hardware feedback:
   end of the show, black stage and tail included.
 - **Fewer and slower stars**: 3 slots at ~25 %, 3.6 s each, over the longer window;
   about a third fewer are lit at any moment than in round 31.
+
+## Round 33 — a wipe instead of the dark cut, and the menus cascade in
+
+- **The wipe (`TUT_LANG_WIPE`, 1.5 s).** Between an item's name and its layout, the
+  dark cut is gone. A ring sweeps in from a corner, and every key it passes turns into
+  the new layout. The name's letters stay until the ring reaches them
+  (`tutorial_wipe_covers()`). The corner takes turns, item by item: top-left,
+  top-right, bottom-left, bottom-right, then again (`tut_set_wipe_origins()`, the
+  outermost key of the top or bottom display row). Only the master's table is used,
+  because the ring's start slot already rides the sync (`tut[4]`). A corner without a
+  panel falls back to the dark cut for that item alone (unit-tested). The name that
+  opens each item keeps its own dark cut.
+- **The cascade after a tab.** After a region tab, an emoji tab or the emoji page key,
+  the three content rows are hidden. Then each key appears in raster order across the
+  whole board and fades up: 1.8 s first to last, 360 ms per key. The moment is a pure
+  function of the key's board position, so both halves agree without a sync byte. The
+  tab row and the bottom row do not cascade. Those tour steps dwell 3.1 s.
+- **The recents row stays dark for the whole lesson** (`tutorial_hides_recent()`: the
+  MRU keys of `_LL` and `_EMJ` and their Preset/Clear controls). On a new board they are
+  empty or the factory's, and a lit row reads as something the lesson points at. Base,
+  beside them, keeps its legend, because the tour asks for it next.

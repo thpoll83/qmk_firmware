@@ -125,6 +125,13 @@
 // The repaint to dark takes ~110 ms per half, so this is about as short as it can be
 // and still be seen as dark.
 #define TUT_DARK_MS          200u
+// The WIPE: after a name, instead of the dark cut, a ring sweeps in from a corner and
+// every key it passes turns into the new layout. The corner takes turns item by item —
+// top-left, top-right, bottom-left, bottom-right, then again (hardware round 33). The
+// same board-scale ring as the reveal (its radius clears corner to corner), on its own,
+// shorter clock.
+#define TUT_LANG_WIPE_MS    1500u
+#define TUT_WIPE_CORNERS       4u
 #define TUT_FINALE_MS       3000u
 
 // ---- the KEY TOUR: the language menu, then the emoji menu -------------------
@@ -199,6 +206,7 @@ typedef enum {
     TUT_LANG_INTRO,     // "It speaks your language"
     TUT_LANG_DARK,      // every key dark for TUT_DARK_MS, then `dark_next`
     TUT_LANG_NAME,      // board dark, the next item's name spelled across the middle row
+    TUT_LANG_WIPE,      // a ring from a corner turns each key it passes into the item
     TUT_LANG_SHOW,      // one preview item on screen; re-entered once per item
     TUT_LANG_MORE,      // "160 | LAYOUTS" on the keys: there are many more
     TUT_LANG_MORE2,     // "10 | SCRIPTS"
@@ -275,7 +283,7 @@ static inline bool tut_phase_is_intro(uint8_t p) {
 // master's elapsed time over the link (tutorial_sync_fill), so the slave's wave starts
 // where the master's already is rather than trailing it by the sync latency.
 static inline bool tut_phase_is_wave(uint8_t p) {
-    return p == TUT_RIPPLE || p == TUT_BOARD_REVEAL;
+    return p == TUT_RIPPLE || p == TUT_BOARD_REVEAL || p == TUT_LANG_WIPE;
 }
 
 // Every phase from the reveal on shows the WHOLE board — only the reveal itself is
@@ -284,7 +292,7 @@ static inline bool tut_phase_is_wave(uint8_t p) {
 // board (around the words they spell, for the last three).
 static inline bool tut_phase_shows_all(uint8_t p) {
     return p >= TUT_BOARD_SHOW && p < TUT_DONE && p != TUT_LANG_DARK && p != TUT_LANG_NAME &&
-           p != TUT_LANG_MORE && p != TUT_LANG_MORE2;
+           p != TUT_LANG_WIPE && p != TUT_LANG_MORE && p != TUT_LANG_MORE2;
 }
 
 
@@ -309,6 +317,7 @@ typedef struct {
     uint8_t  n_preview;         // how many preview items this board can render
     uint8_t  preview;           // which one TUT_LANG_SHOW is on
     uint8_t  dark_next;         // the phase TUT_LANG_DARK hands over to
+    uint8_t  wipe_origin[TUT_WIPE_CORNERS]; // TUT_LANG_WIPE's ring, by item; NONE = dark cut
     // ---- the key tour (set by tut_set_tour; defaults to empty) ----
     uint8_t  tour[TUT_TOUR_MAX];      // the keys to press, in order
     uint8_t  tour_dwell[TUT_TOUR_MAX];// TUT_TOUR_SEEN per step, 100 ms units (0 = default)
@@ -329,6 +338,10 @@ void tut_init(tut_state_t *st, const uint8_t slots[TUT_LETTERS],
 // welcome was already said by the tail of the Eden intro (startup_anim.c), where the
 // stars keep falling on a dark board until the letter selection begins.
 void tut_begin_at_letters(tut_state_t *st, uint32_t now);
+
+// The keys TUT_LANG_WIPE's ring starts from, in turn: item i uses corner i % 4. A corner
+// of TUT_SLOT_NONE keeps the dark cut for that item. nullptr clears all four.
+void tut_set_wipe_origins(tut_state_t *st, const uint8_t corners[TUT_WIPE_CORNERS]);
 
 // Chapter 3's input, resolved from the flashed fonts by the caller: how many
 // languages/scripts can actually be drawn (0 skips straight from the board reveal to the

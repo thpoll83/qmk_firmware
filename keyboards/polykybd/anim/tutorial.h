@@ -82,6 +82,9 @@ uint8_t tutorial_tour_target(void);
 // The slot of tour step `step` as THIS half knows it: on the slave, the key the master
 // sent while that step was live (tut[5]), not the slave's own draw.
 uint8_t tutorial_tour_slot(uint8_t step);
+// Provided by poly_keymap.c: the step just pressed changed a menu's content (a tab, the
+// emoji page), so its keys cascade in.
+bool tutorial_tour_cascade(void);
 // Go back to waiting on tour step `step` (master; see tut_tour_rewind()).
 void    tutorial_tour_rewind(uint8_t step);
 bool    tutorial_tour_seen(void);
@@ -95,8 +98,10 @@ int16_t tutorial_preview_index(void);
 // The preview item being named or shown, as a row of poly_keymap.c's table (0xFF: none).
 // Both halves answer: the master from its own state, the slave from the sync.
 uint8_t tutorial_preview_entry(void);
-// True while the board is dark and spelling the next item's name.
+// True while the board spells the next item's name (and during the wipe that replaces it).
 bool tutorial_naming(void);
+// True where the wipe's ring has already turned this key into the new item.
+bool tutorial_wipe_covers(uint8_t row, uint8_t col);
 // True in the (postponed) layer chapter's hold phases — the only time a layer key may act.
 bool tutorial_in_layer_chapter(void);
 // True while the board spells how many layouts and scripts there are (TUT_LANG_MORE).
@@ -194,6 +199,9 @@ uint8_t tutorial_slot_at(uint8_t row, uint8_t col);
 // Is this one of the two chrome keys with a label to show right now (Esc, or the
 // top-right outer key)? And draw that label into the selected, cleared buffer.
 bool tutorial_is_chrome_key(uint8_t row, uint8_t col);
+// Provided by poly_keymap.c: a menu's recents key (an MRU entry or its Preset/Clear
+// control) on the layer this key currently shows. The lesson keeps them dark.
+bool tutorial_hides_recent(uint8_t row, uint8_t col);
 void tutorial_draw_chrome(uint8_t row, uint8_t col);
 
 // ---- chapter 3 (master side; the table lives with the fonts in poly_keymap.c) ----

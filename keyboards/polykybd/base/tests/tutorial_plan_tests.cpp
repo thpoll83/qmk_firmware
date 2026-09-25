@@ -393,7 +393,8 @@ TEST(TutorialLayer, ThePhasePredicatesCoverExactlyTheRightPhases) {
         EXPECT_FALSE(tut_phase_is_exclusive(p))
             << "phase " << (int)p << " claims the panels; see the note above";
         EXPECT_EQ(tut_phase_is_intro(p), p != TUT_DONE) << "phase " << (int)p;
-        EXPECT_EQ(tut_phase_is_wave(p), p == TUT_RIPPLE || p == TUT_BOARD_REVEAL)
+        EXPECT_EQ(tut_phase_is_wave(p),
+                  p == TUT_RIPPLE || p == TUT_BOARD_REVEAL || p == TUT_LANG_WIPE)
             << "phase " << (int)p;
     }
 }
@@ -1207,6 +1208,65 @@ TEST(TutorialBoard, BeginAtLettersSkipsTheWelcomeOnlyAtTheStart) {
     EXPECT_EQ(late.phase, phase) << "never rewinds a lesson already under way";
 }
 
+// With origins, a name hands to the WIPE (a wave from that item's corner, the item live
+// from its start) instead of the dark cut; the next item's wipe starts from the next
+// corner.
+TEST(TutorialBoard, WipeReplacesTheCutBeforeTheLayout) {
+    uint32_t      now = 0;
+    tut_state_t   st  = AtChapterThree3(&now, 0, 2);
+    const uint8_t corners[TUT_WIPE_CORNERS] = {L(0), R(7), L(32), R(39)};
+    tut_set_wipe_origins(&st, corners);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    PastDark(&st, &now, TUT_LANG_NAME);
+    const uint8_t seq = st.ripple_seq;
+    FinishPhase(&st, &now, TUT_LANG_NAME_MS);
+    ASSERT_EQ(st.phase, TUT_LANG_WIPE);
+    EXPECT_TRUE(tut_phase_is_wave(st.phase));
+    EXPECT_FALSE(tut_phase_shows_all(st.phase)) << "the wipe decides key by key";
+    EXPECT_NE(st.ripple_seq, seq) << "the slave would never start its ring";
+    EXPECT_EQ(st.ripple_slot, L(0)) << "item 0 starts top-left";
+    EXPECT_EQ(tut_preview_index(&st), 0) << "the item is live while the ring draws it";
+    EXPECT_EQ(tut_preview_pos(&st), 0);
+    FinishPhase(&st, &now, TUT_LANG_WIPE_MS);
+    EXPECT_EQ(st.phase, TUT_LANG_SHOW);
+    FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
+    PastDark(&st, &now, TUT_LANG_NAME);
+    EXPECT_EQ(tut_preview_pos(&st), 1);
+    FinishPhase(&st, &now, TUT_LANG_NAME_MS);
+    ASSERT_EQ(st.phase, TUT_LANG_WIPE);
+    EXPECT_EQ(st.ripple_slot, R(7)) << "item 1 starts top-right";
+}
+
+// The corners take turns and wrap, and a missing corner falls back to the dark cut for
+// that item alone.
+TEST(TutorialBoard, WipeCornersTakeTurnsAndAMissingOneCuts) {
+    uint32_t      now = 0;
+    tut_state_t   st  = AtChapterThree3(&now, 0, 6);
+    const uint8_t corners[TUT_WIPE_CORNERS] = {L(0), R(7), TUT_SLOT_NONE, R(39)};
+    tut_set_wipe_origins(&st, corners);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    const uint8_t want[6] = {L(0), R(7), TUT_SLOT_NONE, R(39), L(0), R(7)};
+    for (uint8_t i = 0; i < 6; ++i) {
+        PastDark(&st, &now, TUT_LANG_NAME);
+        ASSERT_EQ(tut_preview_pos(&st), i);
+        FinishPhase(&st, &now, TUT_LANG_NAME_MS);
+        if (want[i] == TUT_SLOT_NONE) {
+            EXPECT_EQ(st.phase, TUT_LANG_DARK) << "item " << (int)i;
+            PastDark(&st, &now, TUT_LANG_SHOW);
+        } else {
+            ASSERT_EQ(st.phase, TUT_LANG_WIPE) << "item " << (int)i;
+            EXPECT_EQ(st.ripple_slot, want[i]) << "item " << (int)i;
+            FinishPhase(&st, &now, TUT_LANG_WIPE_MS);
+        }
+        ASSERT_EQ(st.phase, TUT_LANG_SHOW);
+        FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
+    }
+}
+
 TEST(TutorialBoard, TourIsCapped) {
     tut_state_t st{};
     tut_init(&st, nullptr, nullptr, 0);
@@ -1294,7 +1354,8 @@ TEST(TutorialBoard, SkipEndsItMidPreview) {
 TEST(TutorialBoard, ShowsAllCoversExactlyThePostRevealPhases) {
     for (uint8_t p = 0; p <= TUT_DONE; ++p) {
         const bool want = p >= TUT_BOARD_SHOW && p <= TUT_FINALE && p != TUT_LANG_DARK &&
-                          p != TUT_LANG_NAME && p != TUT_LANG_MORE && p != TUT_LANG_MORE2;
+                          p != TUT_LANG_NAME && p != TUT_LANG_WIPE && p != TUT_LANG_MORE &&
+                          p != TUT_LANG_MORE2;
         EXPECT_EQ(tut_phase_shows_all(p), want) << "phase " << (int)p;
     }
 }

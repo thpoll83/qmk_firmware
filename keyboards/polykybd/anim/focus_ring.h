@@ -26,8 +26,9 @@ void poly_focus_cancel(void);
 // the last stretch. `already_ms` back-dates the start, so the slave's front lands where
 // the master's already is (the master sends its own elapsed; the two MCUs share no
 // clock). The tutorial lights each key as this front passes its centre, and the ring's
-// own repaint is what draws the legend there.
-void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms);
+// own repaint is what draws the legend there. `run_ms` is the front's whole run (0 = the
+// reveal's TUT_BOARD_REVEAL_MS); the language wipe runs it faster.
+void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms, uint32_t run_ms);
 bool poly_focus_active(void);
 
 // ---- the two hooks --------------------------------------------------------

@@ -28,6 +28,7 @@ static bool       s_live;
 static int16_t    s_cx, s_cy;         // the ripple's origin, board units
 static uint32_t   s_start;
 static bool       s_sweep;            // board-reveal profile (see poly_focus_start_sweep)
+static uint32_t   s_sweep_ms;         // that profile's run: the reveal's, or the wipe's
 static uint8_t    s_scan;             // round-robin cursor over this half's slots
 static uint8_t    s_marked[(POLY_FOCUS_KEYS + 7) / 8];   // keys currently carrying ink
 
@@ -73,7 +74,8 @@ static void focus_start(uint8_t slot, bool sweep, uint32_t already_ms) {
 }
 
 void poly_focus_start(uint8_t slot) { focus_start(slot, false, 0); }
-void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms) {
+void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms, uint32_t run_ms) {
+    s_sweep_ms = run_ms ? run_ms : TUT_BOARD_REVEAL_MS;
     focus_start(slot, true, already_ms);
 }
 
@@ -101,8 +103,8 @@ static uint8_t focus_sweep_density(uint8_t p) {
 static bool focus_latch(void) {
     const uint32_t el = timer_elapsed32(s_start);
     if (s_sweep) {
-        if (el >= TUT_BOARD_REVEAL_MS) return false;
-        const uint8_t  p = (uint8_t)((el * 255u) / TUT_BOARD_REVEAL_MS);
+        if (el >= s_sweep_ms) return false;
+        const uint8_t  p = (uint8_t)((el * 255u) / s_sweep_ms);
         const uint16_t r = tut_sweep_radius(p);
         s_dens = focus_sweep_density(p);
         s_band = tut_ring_bounds(r, POLY_FOCUS_SWEEP_W);
@@ -264,7 +266,9 @@ void poly_focus_tick(void) {
 
 #else   // split42: no per-keycap ripple
 void poly_focus_start(uint8_t slot) { (void)slot; }
-void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms) { (void)slot; (void)already_ms; }
+void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms, uint32_t run_ms) {
+    (void)slot; (void)already_ms; (void)run_ms;
+}
 void poly_focus_cancel(void) {}
 bool poly_focus_active(void) { return false; }
 void poly_focus_tick(void) {}

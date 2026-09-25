@@ -4148,6 +4148,18 @@ static bool tutorial_is_skip_key(uint8_t row, uint8_t col) {
 
 uint8_t tutorial_slot_at(uint8_t row, uint8_t col) { return tutorial_slot_of(row, col); }
 
+// The menus' recents (the bottom row of _LL and _EMJ, and its Preset/Clear controls)
+// stay dark for the whole lesson: on a new board they are empty or the factory's, and a
+// lit row reads as something the lesson points at (hardware round 33). Base, beside
+// them, keeps its legend; the tour asks for it next.
+bool tutorial_hides_recent(uint8_t row, uint8_t col) {
+    const uint16_t kc = display_keycode_at(get_local_layer(), row, col);
+    return (kc >= KC_EMJ_MRU_BASE && kc < KC_EMJ_MRU_BASE + MRU_CAP) ||
+           (kc >= KC_LANG_MRU_BASE && kc < KC_LANG_MRU_BASE + MRU_CAP) ||
+           kc == KC_EMJ_PRESET || kc == KC_EMJ_CLEAR || kc == KC_LANG_PRESET ||
+           kc == KC_LANG_CLEAR;
+}
+
 // The two chrome keys are the two halves of the skip gesture (tutorial_is_skip_key):
 // Esc at left display (0,0) says how to leave, and its mirror — right display (0,6),
 // the OUTER edge — shows the chapter. Either still skips when held.
@@ -4377,11 +4389,13 @@ typedef struct {
 
 static const tut_tour_kind_info_t k_tour_kind[] = {
     [TUT_TOUR_LANG]        = {_LL,   0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
-    [TUT_TOUR_LCAT]        = {_LL,   0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
+    // A tab's dwell holds the cascade (tutorial.c, ~2.2 s with the last fade) plus a
+    // moment to look.
+    [TUT_TOUR_LCAT]        = {_LL,   0xFFu,     0u, 31u, TUT_PROG_LANGMENU},
     [TUT_TOUR_BASE_LL]     = {0xFFu, 0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
     [TUT_TOUR_EMJ]         = {_EMJ,  0xFFu,     0u, 0u, TUT_PROG_EMOJI},
-    [TUT_TOUR_ECAT]        = {_EMJ,  0xFFu,     0u, 0u, TUT_PROG_EMOJI},
-    [TUT_TOUR_EPAGE]       = {_EMJ,  0xFFu,     0u, 0u, TUT_PROG_EMOJI},
+    [TUT_TOUR_ECAT]        = {_EMJ,  0xFFu,     0u, 31u, TUT_PROG_EMOJI},
+    [TUT_TOUR_EPAGE]       = {_EMJ,  0xFFu,     0u, 31u, TUT_PROG_EMOJI},
     [TUT_TOUR_BASE_EMJ]    = {0xFFu, 0xFFu,     0u, 0u, TUT_PROG_EMOJI},
     // A held layer: allowed, never forced, 3 s to look at it.
     [TUT_TOUR_FN]          = {0xFFu, _FL,       0u, 30u, TUT_PROG_LAYERS},
@@ -4519,6 +4533,15 @@ static uint8_t tut_tour_layer(void) {
     if (step < 0 || step >= s_tour_n) return 0xFFu;
     if (tutorial_tour_seen()) return tut_step_info(step)->after;
     return step == 0 ? 0xFFu : tut_step_info(step - 1)->after;
+}
+
+// Did the step just pressed change a menu's CONTENT (a region tab, an emoji tab, the
+// emoji page)? Then its keys cascade in (tutorial.c).
+bool tutorial_tour_cascade(void) {
+    const int16_t step = tutorial_tour_step();
+    if (step < 0 || step >= s_tour_n || !tutorial_tour_seen()) return false;
+    const uint8_t k = s_tour_kind[step];
+    return k == TUT_TOUR_LCAT || k == TUT_TOUR_ECAT || k == TUT_TOUR_EPAGE;
 }
 
 // A layer the current step lets the user HOLD (Fn, Num, Intl), or 0xFF.
@@ -4832,6 +4855,7 @@ static void tut_draw_heavy(uint32_t cp) {
 static uint8_t tut_name_key(uint8_t row, uint8_t col, uint32_t *cp, const uint8_t **tile) {
     const bool more = tutorial_telling_more();
     if (!more && !tutorial_naming()) return 0;
+    if (tutorial_wipe_covers(row, col)) return 0;   // the ring has drawn the item here
     const uint8_t slot = tutorial_slot_of(row, col);
     if (slot == TUT_SLOT_NONE) return 0;
     const uint8_t side = TUT_SLOT_RIGHT(slot) ? 1u : 0u;

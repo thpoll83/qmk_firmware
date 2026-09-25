@@ -165,6 +165,106 @@ static void tutorial_pulse_tick(uint32_t now) {
     tut_panel_contrast(s_pulse_idx, tut_pulse_level(now, tut_normal_contrast()));
 }
 
+// ---- the CASCADE after a menu tab (experiment, 2026-09-25) -------------------
+// "When a tab has been pressed, quickly fade in the item key by key, left to right, line
+// by line, top to bottom." The content keys (the three rows between the tab row and the
+// bottom row) are hidden, then each one appears at its own moment in raster order across
+// the WHOLE board and fades up over TUT_CASC_FADE_MS. The moment is a pure function of
+// the key's board position, so both halves agree without a sync byte: row by row, and
+// within a row by board x. The bottom row (Base, and the recents the lesson hides) stays
+// put: the next step asks for Base. Round 33 doubled both times ("2 times slower").
+#define TUT_CASC_MS     1800u   // first content key to last
+#define TUT_CASC_FADE_MS 360u   // each key's own fade-in
+#define TUT_CASC_ROWS      3u   // display rows 1..3
+#define TUT_CASC_TICK_MS  30u
+static uint8_t  s_casc_drawn[5];        // this half's display slots 0..39 already drawn
+static uint8_t  s_casc_full[5];         // …and faded all the way up
+static uint32_t s_casc_start;           // the phase_start the bits belong to
+static uint32_t s_casc_at;
+
+static bool tut_bit(const uint8_t *m, uint8_t i) { return (m[i >> 3] & (1u << (i & 7))) != 0; }
+static void tut_set_bit(uint8_t *m, uint8_t i)  { m[i >> 3] |= (uint8_t)(1u << (i & 7)); }
+
+// When this half's display slot `idx` appears, in ms from the press, or 0 for a key that
+// does not cascade (the tab row, the bottom row, a slot with no panel).
+static uint32_t tut_casc_due(bool right, uint8_t idx) {
+    const uint8_t dr = (uint8_t)(idx / 8u);
+    if (dr == 0u || dr > TUT_CASC_ROWS) return 0u;
+    const sa_geom_t g  = startup_anim_key_geom(right, idx);
+    const uint32_t  bw = startup_anim_board_w();
+    if (!g.valid || bw == 0u) return 0u;
+    const uint32_t x = (uint32_t)(g.cx < 0 ? 0 : g.cx);
+    return (TUT_CASC_MS * ((uint32_t)(dr - 1u) * bw + (x > bw ? bw : x))) /
+           (TUT_CASC_ROWS * bw);
+}
+
+static bool tut_casc_hidden(uint8_t row, uint8_t col) {
+    if (!tutorial_tour_cascade()) return false;
+    const uint8_t slot = tutorial_slot_at(row, col);
+    if (slot == TUT_SLOT_NONE) return false;
+    return timer_elapsed32(s_st.phase_start) <
+           tut_casc_due(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot));
+}
+
+// Draw each due key once and fade it up. Every TUT_CASC_TICK_MS, on both halves.
+static void tutorial_cascade_tick(uint32_t now) {
+    if (!tutorial_tour_cascade()) return;
+    if (s_casc_start != s_st.phase_start) {
+        s_casc_start = s_st.phase_start;
+        for (uint8_t i = 0; i < sizeof(s_casc_drawn); ++i) s_casc_drawn[i] = s_casc_full[i] = 0;
+        s_casc_at = now - TUT_CASC_TICK_MS;
+    }
+    if ((uint32_t)(now - s_casc_at) < TUT_CASC_TICK_MS) return;
+    s_casc_at = now;
+    const bool     right = !is_left_side();
+    const uint32_t el    = (uint32_t)(now - s_st.phase_start);
+    const uint8_t  full  = tut_normal_contrast();
+    for (uint8_t idx = 0; idx < TUT_NUM_KEYS; ++idx) {
+        if (tut_bit(s_casc_full, idx)) continue;
+        const uint32_t due = tut_casc_due(right, idx);
+        if (due == 0u || el < due) continue;
+        sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
+        const uint32_t into = el - due;
+        const uint8_t  lvl  = into >= TUT_CASC_FADE_MS
+                                  ? full
+                                  : (uint8_t)(((uint32_t)full *
+                                               tut_fade_contrast((uint8_t)((into * 255u) / TUT_CASC_FADE_MS))) /
+                                              255u);
+        if (!tut_bit(s_casc_drawn, idx)) {
+            // Same draw as the focus ring's repaint: tracked, so the next full render
+            // diffs against what is really on the panel.
+            kdisp_set_contrast(lvl);
+            kdisp_track_panel(idx);
+            kdisp_set_buffer(0x00);
+            (void)poly_focus_draw_legend(TUT_SLOT(right ? 1 : 0, idx));
+            kdisp_set_gfx_erase(false);
+            kdisp_send_window();
+            tut_set_bit(s_casc_drawn, idx);
+        } else {
+            kdisp_set_contrast(lvl);
+        }
+        if (lvl == full) tut_set_bit(s_casc_full, idx);
+    }
+}
+
+// The outermost key of display row `dr` on one half: the lowest board x on the left, the
+// highest on the right. TUT_SLOT_NONE when the row has no panel (the wipe then falls back
+// to the dark cut for that item).
+static uint8_t tut_corner_slot(bool right, uint8_t dr) {
+    uint8_t best = TUT_SLOT_NONE;
+    int16_t bx   = 0;
+    for (uint8_t c = 0; c < 8u; ++c) {
+        const uint8_t   idx = (uint8_t)(dr * 8u + c);
+        const sa_geom_t g   = startup_anim_key_geom(right, idx);
+        if (!g.valid) continue;
+        if (best == TUT_SLOT_NONE || (right ? g.cx > bx : g.cx < bx)) {
+            best = TUT_SLOT(right ? 1 : 0, idx);
+            bx   = g.cx;
+        }
+    }
+    return best;
+}
+
 // ---- lifecycle ------------------------------------------------------------
 
 void tutorial_start(uint32_t seed) {
@@ -219,6 +319,14 @@ void tutorial_start(uint32_t seed) {
     // key, and that is not necessarily the master. Only the master's preview count
     // matters — it owns the phase machine.
     if (is_usb_host_side()) tut_set_chapter3(&s_st, tutorial_preview_prepare());
+    // The wipe's four corners, in the order they take turns. Only the master's table is
+    // used (the slot rides the sync), but both halves can compute it.
+    {
+        const uint8_t corners[TUT_WIPE_CORNERS] = {
+            tut_corner_slot(false, 0u), tut_corner_slot(true, 0u),
+            tut_corner_slot(false, 4u), tut_corner_slot(true, 4u)};
+        tut_set_wipe_origins(&s_st, corners);
+    }
     // The key tour on BOTH halves, from each half's copy of the one keymap: the pulse runs
     // on whichever half owns the key being asked for, and the status prose names it. Only
     // the step index crosses the link (tut[2]).
@@ -333,6 +441,8 @@ bool tutorial_key_visible(uint8_t row, uint8_t col) {
     // The two top outer keys are the lesson's chrome — Esc says how to leave, its mirror
     // on the right says how far along you are — so neither is hidden once it is talking.
     if (s_st.phase != TUT_BLANK && tutorial_is_chrome_key(row, col)) return true;
+    if (tutorial_hides_recent(row, col)) return false;   // the menus' recents row
+    if (tut_casc_hidden(row, col)) return false;   // not its turn in the cascade yet
     if (tut_phase_shows_all(s_st.phase)) return true;
     switch (s_st.phase) {
         case TUT_DONE:
@@ -341,6 +451,10 @@ bool tutorial_key_visible(uint8_t row, uint8_t col) {
         // A letter blinking off and back on as the wave passes would read as a fault.
         case TUT_BOARD_REVEAL:
             return tutorial_key_in_chapter_set(row, col, false) || tut_reveal_reached(row, col);
+        // The wipe: a key shows the new item once the ring from its corner has passed it;
+        // until then it stays dark (or keeps its letter of the name, a chrome key above).
+        case TUT_LANG_WIPE:
+            return tut_reveal_reached(row, col);
         // The name's letters (and the "more" screen's words) are chrome keys (above), so
         // everything else goes dark.
         case TUT_LANG_DARK:
@@ -385,7 +499,9 @@ bool tutorial_was_skipped(void) { return s_st.skipped; }
 // ordinary letter ring.
 static void tutorial_start_ring(uint8_t slot) {
     if (s_st.phase == TUT_BOARD_REVEAL) {
-        poly_focus_start_sweep(slot, timer_elapsed32(s_st.phase_start));
+        poly_focus_start_sweep(slot, timer_elapsed32(s_st.phase_start), TUT_BOARD_REVEAL_MS);
+    } else if (s_st.phase == TUT_LANG_WIPE) {
+        poly_focus_start_sweep(slot, timer_elapsed32(s_st.phase_start), TUT_LANG_WIPE_MS);
     } else {
         poly_focus_start(slot);
     }
@@ -471,6 +587,7 @@ void tutorial_tick(void) {
         if ((uint32_t)(now - s_sync_at) >= TUT_SYNC_REARM_MS) s_sync_dirty = true;
     }
     tutorial_pulse_tick(now);
+    tutorial_cascade_tick(now);
     // ⚠️ NOTHING IS RENDERED HERE ANY MORE. The board draws itself through
     // update_displays(), the ripple is the focus service, and the status panels are
     // drawn by oled_task_user(). What is left is the phase machine and the push to the
@@ -488,13 +605,20 @@ uint8_t tutorial_preview_entry(void) {
     // as the screen it leads to) and the row it was sent.
     if (!is_usb_host_side()) {
         const uint8_t p = (s_st.phase == TUT_LANG_DARK) ? s_st.dark_next : s_st.phase;
-        return (p == TUT_LANG_NAME || p == TUT_LANG_SHOW) ? s_preview_tbl : 0xFFu;
+        return (p == TUT_LANG_NAME || p == TUT_LANG_WIPE || p == TUT_LANG_SHOW) ? s_preview_tbl
+                                                                                 : 0xFFu;
     }
     const int16_t pos = tut_preview_pos(&s_st);
     return pos < 0 ? 0xFFu : tutorial_preview_table_row((uint8_t)pos);
 }
 
-bool tutorial_naming(void) { return s_active && s_st.phase == TUT_LANG_NAME; }
+// The wipe keeps the name on the keys the ring has not reached yet.
+bool tutorial_naming(void) {
+    return s_active && (s_st.phase == TUT_LANG_NAME || s_st.phase == TUT_LANG_WIPE);
+}
+bool tutorial_wipe_covers(uint8_t row, uint8_t col) {
+    return s_active && s_st.phase == TUT_LANG_WIPE && tut_reveal_reached(row, col);
+}
 bool tutorial_in_layer_chapter(void) {
     return s_active && (s_st.phase == TUT_LAYER_WAIT || s_st.phase == TUT_LAYER_SWEEP ||
                         s_st.phase == TUT_LAYER_HELD);
@@ -664,7 +788,8 @@ bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
         changed        = true;
     }
     const uint8_t named = (in[1] == TUT_LANG_DARK) ? in[5] : in[1];
-    if ((named == TUT_LANG_NAME || named == TUT_LANG_SHOW) && s_preview_tbl != in[2]) {
+    if ((named == TUT_LANG_NAME || named == TUT_LANG_WIPE || named == TUT_LANG_SHOW) &&
+        s_preview_tbl != in[2]) {
         s_preview_tbl = in[2];
         changed       = true;
     }
@@ -784,6 +909,7 @@ const uint32_t *tutorial_line(uint8_t which) {
         case TUT_LANG_INTRO:
             return left ? U"It speaks" : U"your language";
         case TUT_LANG_NAME:
+        case TUT_LANG_WIPE:
         case TUT_LANG_SHOW:
             // A question rather than a label ("Now in" read as static, hardware): the
             // phrase rotates with the item, and the name finishes the sentence.
@@ -874,6 +1000,7 @@ bool tutorial_tour_seen(void) { return false; }
 int16_t tutorial_preview_index(void) { return -1; }
 uint8_t tutorial_preview_entry(void) { return 0xFFu; }
 bool tutorial_naming(void) { return false; }
+bool tutorial_wipe_covers(uint8_t row, uint8_t col) { (void)row; (void)col; return false; }
 bool tutorial_in_layer_chapter(void) { return false; }
 bool tutorial_telling_more(void) { return false; }
 bool tutorial_more_scripts(void) { return false; }

@@ -27,6 +27,7 @@ static uint32_t tut_phase_ms(uint8_t phase) {
         case TUT_LANG_MORE:    return TUT_LANG_MORE_MS;
         case TUT_LANG_MORE2:   return TUT_LANG_MORE_MS;
         case TUT_LANG_DARK:    return TUT_DARK_MS;
+        case TUT_LANG_WIPE:    return TUT_LANG_WIPE_MS;
         case TUT_TOUR_SEEN:    return TUT_TOUR_SEEN_MS;
         case TUT_FINALE:       return TUT_FINALE_MS;
         default:            return 0;
@@ -67,6 +68,7 @@ void tut_init(tut_state_t *st, const uint8_t slots[TUT_LETTERS],
     st->n_preview   = 0;
     st->preview     = 0;
     st->dark_next   = TUT_LANG_NAME;
+    for (uint8_t i = 0; i < TUT_WIPE_CORNERS; ++i) st->wipe_origin[i] = TUT_SLOT_NONE;
     st->n_tour      = 0;
     st->tour_i      = 0;
     for (uint8_t i = 0; i < TUT_TOUR_MAX; ++i) {
@@ -98,6 +100,11 @@ void tut_begin_at_letters(tut_state_t *st, uint32_t now) {
     if (st->phase != TUT_BLANK && st->phase != TUT_TEXT) return;
     st->step = 0;
     tut_enter(st, TUT_LETTER_IN, now);
+}
+
+void tut_set_wipe_origins(tut_state_t *st, const uint8_t corners[TUT_WIPE_CORNERS]) {
+    for (uint8_t i = 0; i < TUT_WIPE_CORNERS; ++i)
+        st->wipe_origin[i] = corners ? corners[i] : (uint8_t)TUT_SLOT_NONE;
 }
 
 void tut_set_chapter3(tut_state_t *st, uint8_t n_preview) {
@@ -140,7 +147,9 @@ bool tut_tour_press(tut_state_t *st, uint8_t slot, uint32_t now) {
 }
 
 int16_t tut_preview_index(const tut_state_t *st) {
-    if (st->phase != TUT_LANG_SHOW || st->preview >= st->n_preview) return -1;
+    // The wipe draws the item as its ring passes, so the item is live from its start.
+    if (st->phase != TUT_LANG_SHOW && st->phase != TUT_LANG_WIPE) return -1;
+    if (st->preview >= st->n_preview) return -1;
     return st->preview;
 }
 
@@ -177,7 +186,7 @@ uint8_t tut_pulse_level(uint32_t t_ms, uint8_t full) {
 
 int16_t tut_preview_pos(const tut_state_t *st) {
     const uint8_t p = (st->phase == TUT_LANG_DARK) ? st->dark_next : st->phase;
-    if (p != TUT_LANG_NAME && p != TUT_LANG_SHOW) return -1;
+    if (p != TUT_LANG_NAME && p != TUT_LANG_WIPE && p != TUT_LANG_SHOW) return -1;
     if (st->preview >= st->n_preview) return -1;
     return st->preview;
 }
@@ -292,7 +301,19 @@ bool tut_tick(tut_state_t *st, uint32_t now) {
             tut_enter(st, st->dark_next, now);
             return true;
         case TUT_LANG_NAME:
-            tut_enter_dark(st, TUT_LANG_SHOW, now);
+            if (st->wipe_origin[st->preview % TUT_WIPE_CORNERS] != TUT_SLOT_NONE) {
+                // A wave: bump the sequence so the slave arms its own ring from the
+                // same key, as the board reveal does. The slot rides the sync, so the
+                // slave needs no copy of the corner table.
+                st->ripple_slot = st->wipe_origin[st->preview % TUT_WIPE_CORNERS];
+                st->ripple_seq++;
+                tut_enter(st, TUT_LANG_WIPE, now);
+            } else {
+                tut_enter_dark(st, TUT_LANG_SHOW, now);
+            }
+            return true;
+        case TUT_LANG_WIPE:
+            tut_enter(st, TUT_LANG_SHOW, now);
             return true;
         case TUT_LANG_SHOW:
             // NAME then SHOW per item: the phase clock is the item clock.

@@ -45,6 +45,11 @@ check "lang_flags.json" \
       "$QMK/keyboards/polykybd/base/fonts/generated/lang_flags.json" \
       "$HOST/polyhost/res/fontpack/lang_flags.json"
 
+echo "--- QMK keycode table (qmk -> host layout editor) ---"
+check "keycodes.h" \
+      "$QMK/quantum/keycodes.h" \
+      "$HOST/polyhost/res/keycodes.h"
+
 echo "--- mirrored skills (qmk <-> host) ---"
 for s in add-gated-hid-command mutation-test-suite polykybd-github-release \
          session-retro triage-pr-review update-polykybd-docs \

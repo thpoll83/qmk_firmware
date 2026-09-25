@@ -538,6 +538,7 @@ static uint8_t g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;
 static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
 // Chapter 3's language/script preview; defined beside the tutorial's keymap helpers.
 static uint8_t poly_tutorial_apply_preview(void);
+static uint32_t tut_name_letter(uint8_t row, uint8_t col);   // the spelled preview name
 // The user's own default LAYOUT, parked while the tutorial runs. 0xFF = nothing parked.
 // ⚠️ This is poly's def_layer (a layer INDEX _L0.._L4, the Qwerty/Colemak/Neo choice),
 // NOT the momentary layer stack — layer_clear() does not touch it, which is why the
@@ -3979,13 +3980,22 @@ static const uint32_t *tutorial_chrome_label(uint8_t row, uint8_t col) {
 }
 
 bool tutorial_is_chrome_key(uint8_t row, uint8_t col) {
-    return tutorial_chrome_label(row, col) != NULL;
+    return tutorial_chrome_label(row, col) != NULL || tut_name_letter(row, col) != 0;
 }
 
 // Esc's label is a HINT_MID two-line stack drawn like any static legend on a non-thumb
 // row; the progress is one big run in the keycap face, centred both ways (its ink spans
 // rows 1..20 at the usual baseline 23, so baseline 32 puts it at 10..29 of the 40).
 void tutorial_draw_chrome(uint8_t row, uint8_t col) {
+    const uint32_t letter = tut_name_letter(row, col);
+    if (letter != 0) {
+        if (!tutorial_draw_key_letter(letter)) {
+            const uint32_t txt[2] = {letter, 0};
+            draw_legend_cx_cy(txt, 32, KDISP_CY_DEFAULT);
+        }
+        kdisp_set_gfx_erase(false);
+        return;
+    }
     const uint32_t *t = tutorial_chrome_label(row, col);
     if (t == NULL) return;
     if (tutorial_slot_of(row, col) == TUT_SLOT(0, 0)) {
@@ -4015,8 +4025,8 @@ typedef struct {
 // fantasy faces. Order is the order shown.
 static const tut_preview_t s_tut_preview_all[] = {
     {false, LANG_ELGR,      U"Greek"},
-    {false, LANG_RURU,      U"Russian"},
     {false, LANG_ARSA,      U"Arabic"},
+    {false, LANG_HIIN,      U"Hindi"},
     {false, LANG_JAJP,      U"Japanese"},
     {false, LANG_KOKR,      U"Korean"},
     {true,  GLYPH_TENGWAR,  U"Elvish"},
@@ -4067,27 +4077,77 @@ uint8_t tutorial_lang_slot(void) {
     return TUT_SLOT_NONE;
 }
 
-// The master's live preview entry, or NULL.
+uint8_t tutorial_preview_table_row(uint8_t pos) {
+    return pos < s_tut_preview_n ? s_tut_preview[pos] : 0xFFu;
+}
+
+// The master's live preview entry (applied only while SHOWN), or NULL.
 static const tut_preview_t *tut_preview_live(void) {
     const int16_t i = tutorial_preview_index();
     if (i < 0 || i >= s_tut_preview_n) return NULL;
     return &s_tut_preview_all[s_tut_preview[i]];
 }
 
-// Named from what THIS half draws: a script override wins, as it does in the renderer.
+// The item being named or shown, on either half (the slave is sent the table row).
+static const tut_preview_t *tut_preview_current(void) {
+    const uint8_t row = tutorial_preview_entry();
+    return row < TUT_PREVIEW_ALL ? &s_tut_preview_all[row] : NULL;
+}
+
 const uint32_t *tutorial_preview_name(void) {
-    const poly_sync_t *ls = get_local_state();
-    for (uint8_t i = 0; i < TUT_PREVIEW_ALL; ++i) {
-        const tut_preview_t *e = &s_tut_preview_all[i];
-        if (e->script && ls->glyph_script != GLYPH_STD && e->value == ls->glyph_script) return e->name;
-    }
-    if (ls->glyph_script == GLYPH_STD) {
-        for (uint8_t i = 0; i < TUT_PREVIEW_ALL; ++i) {
-            const tut_preview_t *e = &s_tut_preview_all[i];
-            if (!e->script && e->value == ls->lang) return e->name;
+    const tut_preview_t *e = tut_preview_current();
+    return e != NULL ? e->name : U"...";
+}
+
+// ---- the name spelled across the middle row (TUT_LANG_NAME) ----
+// The middle display row (row 2) of BOTH halves, ordered left to right by the keys'
+// board x. Both halves build the same list from the same geometry table, so each can
+// tell which letter lands on its own keys without asking the other. Built once.
+#define TUT_NAME_ROW      2u
+#define TUT_NAME_KEYS_MAX 16u
+static uint8_t s_tut_name_keys[TUT_NAME_KEYS_MAX];   // packed slots, board order
+static uint8_t s_tut_name_n = 0xFFu;                 // 0xFF = not built yet
+
+static void tut_name_keys_build(void) {
+    int16_t xs[TUT_NAME_KEYS_MAX];
+    s_tut_name_n = 0;
+    for (uint8_t side = 0; side < 2; ++side) {
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            const uint8_t   idx = (uint8_t)(TUT_NAME_ROW * MATRIX_COLS + c);
+            const sa_geom_t g   = startup_anim_key_geom(side != 0, idx);
+            if (!g.valid || s_tut_name_n >= TUT_NAME_KEYS_MAX) continue;
+            // insertion sort on x
+            uint8_t k = s_tut_name_n++;
+            while (k > 0 && xs[k - 1] > g.cx) {
+                xs[k] = xs[k - 1];
+                s_tut_name_keys[k] = s_tut_name_keys[k - 1];
+                --k;
+            }
+            xs[k] = g.cx;
+            s_tut_name_keys[k] = TUT_SLOT(side, idx);
         }
     }
-    return U"...";
+}
+
+// The capital this key spells while the board is naming an item, or 0.
+static uint32_t tut_name_letter(uint8_t row, uint8_t col) {
+    if (!tutorial_naming()) return 0;
+    const tut_preview_t *e = tut_preview_current();
+    if (e == NULL) return 0;
+    const uint8_t slot = tutorial_slot_of(row, col);
+    if (slot == TUT_SLOT_NONE) return 0;
+    if (s_tut_name_n == 0xFFu) tut_name_keys_build();
+    uint8_t len = 0;
+    while (e->name[len] != 0) ++len;
+    if (len == 0 || len > s_tut_name_n) return 0;
+    const uint8_t start = (uint8_t)((s_tut_name_n - len) / 2u);
+    for (uint8_t k = 0; k < len; ++k) {
+        if (s_tut_name_keys[start + k] != slot) continue;
+        uint32_t ch = e->name[k];
+        if (ch >= 'a' && ch <= 'z') ch -= 'a' - 'A';
+        return ch;
+    }
+    return 0;
 }
 
 // The language preview's bookkeeping. s_tut_real_lang is the user's language while a

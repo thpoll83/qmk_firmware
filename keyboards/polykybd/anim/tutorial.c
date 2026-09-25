@@ -62,6 +62,10 @@ static uint32_t    s_sync_at;                       // last push
 // heavy work to housekeeping (fw_staging_finalize_defer_reload). Same fix here: the
 // handler only records the intent, tutorial_tick() acts on it.
 static bool        s_start_pending;
+// The preview item's row in poly_keymap.c's table, as the SLAVE was told it. The slave
+// never builds the table's renderable subset (only the master does, at start), so it is
+// sent the absolute row: both halves hold the same const table.
+static uint8_t     s_preview_tbl = 0xFFu;
 
 // ---- small helpers --------------------------------------------------------
 
@@ -278,6 +282,9 @@ bool tutorial_key_visible(uint8_t row, uint8_t col) {
         // A letter blinking off and back on as the wave passes would read as a fault.
         case TUT_BOARD_REVEAL:
             return tutorial_key_in_chapter_set(row, col, false) || tut_reveal_reached(row, col);
+        // The name's letters are chrome keys (above), so everything else goes dark.
+        case TUT_LANG_NAME:
+            return false;
         // Chapter 1 opens on a dark, still board — the lit set is simply empty.
         case TUT_BLANK:
         case TUT_TEXT:
@@ -382,6 +389,22 @@ int16_t tutorial_preview_index(void) {
     return tut_preview_index(&s_st);
 }
 
+uint8_t tutorial_preview_entry(void) {
+    if (!s_active || (s_st.phase != TUT_LANG_NAME && s_st.phase != TUT_LANG_SHOW)) return 0xFFu;
+    if (!is_usb_host_side()) return s_preview_tbl;
+    const int16_t pos = tut_preview_pos(&s_st);
+    return pos < 0 ? 0xFFu : tutorial_preview_table_row((uint8_t)pos);
+}
+
+bool tutorial_naming(void) { return s_active && s_st.phase == TUT_LANG_NAME; }
+
+// A capital on a keycap, one tier larger than the legend face when that tier is flashed,
+// centred in the whole 72x40 window. Used to spell a preview item's name.
+bool tutorial_draw_key_letter(uint32_t cp) {
+    static const uint32_t tiers[] = {TUT_LETTER_TIER_BASE, 0u};
+    return tut_draw_letter_tiered(cp, tiers, 2, BUFFER_X, SCREEN_WIDTH, SCREEN_HEIGHT);
+}
+
 static bool tut_chrome_live(void) {
     return s_active && s_st.phase != TUT_BLANK && s_st.phase != TUT_DONE;
 }
@@ -425,7 +448,9 @@ void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]) {
     out[0] = (uint8_t)((s_active ? TUT_SYNC_ACTIVE : 0u) |
                       ((uint8_t)(s_st.step << TUT_SYNC_STEP_SHIFT) & TUT_SYNC_STEP_MASK));
     out[1] = s_st.phase;
-    out[2] = tut_current_slot(&s_st);
+    // tut[2] is the lit letter in chapter 1 and the preview item's table row while an item
+    // is named or shown — the slave needs the row to spell the name and to title it.
+    out[2] = (tut_preview_pos(&s_st) >= 0) ? tutorial_preview_entry() : tut_current_slot(&s_st);
     out[3] = s_st.ripple_seq;
     out[4] = s_st.ripple_slot;
     // How far OUR ripple has already run. Sent every push, not just the first, so a
@@ -494,9 +519,15 @@ bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
     }
     // The slave is told which key is lit rather than deriving it: it holds no step
     // list, and two independent choices could disagree.
-    if (s_st.step < TUT_LETTERS && s_st.slots[s_st.step] != in[2]) {
+    // ⚠️ Only in chapter 1: tut[2] carries the preview row in chapter 3, and writing that
+    // into a letter slot would be harmless today and wrong the day chapter 1 is re-entered.
+    if (in[1] <= TUT_GAP && s_st.step < TUT_LETTERS && s_st.slots[s_st.step] != in[2]) {
         s_st.slots[s_st.step] = in[2];
         changed               = true;
+    }
+    if ((in[1] == TUT_LANG_NAME || in[1] == TUT_LANG_SHOW) && s_preview_tbl != in[2]) {
+        s_preview_tbl = in[2];
+        changed       = true;
     }
     if (in[3] != s_seen_seq) {
         s_seen_seq        = in[3];
@@ -589,6 +620,7 @@ const uint32_t *tutorial_line(uint8_t which) {
             return left ? U"72 screens," : U"one keyboard";
         case TUT_LANG_INTRO:
             return left ? U"It speaks" : U"your language";
+        case TUT_LANG_NAME:
         case TUT_LANG_SHOW: {
             // The name comes from what THIS half is drawing (its synced lang / script),
             // not from a preview index: the slave is never told the index, and a name
@@ -667,6 +699,9 @@ bool tutorial_hold(uint8_t kind, bool pressed, uint8_t slot) {
 
 void tutorial_skip(void) {}
 int16_t tutorial_preview_index(void) { return -1; }
+uint8_t tutorial_preview_entry(void) { return 0xFFu; }
+bool tutorial_naming(void) { return false; }
+bool tutorial_draw_key_letter(uint32_t cp) { (void)cp; return false; }
 const uint32_t *tutorial_skip_label(void) { return NULL; }
 const uint32_t *tutorial_progress_label(void) { return NULL; }
 void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]) {

@@ -1675,3 +1675,32 @@ screen to be read.
   since a trail key the ring does not repaint would neither show nor clear its sparks.
   ⚠️ The trail roughly triples the keys repainted per frame; if the front stutters on
   hardware, shorten `POLY_FOCUS_TRAIL` first.
+
+## Round 24 — names before glyphs, Hindi for Russian, stars in Eden, suspend (2026-09-25)
+
+- **The reveal stuttered with the 220-unit spark trail**, as predicted; it is 80 now
+  (about one key width).
+- **Russian is out of the preview tour** — politically too delicate at the moment.
+  Hindi (Devanagari) took its place: Greek, Arabic, Hindi, Japanese, Korean, then the
+  scripts.
+- **Each item is NAMED first.** `TUT_LANG_NAME` (1 s) darkens the board and spells the
+  name across the middle display row, one capital per keycap, in the larger latin tier
+  when it is flashed. The row is 14 keys, 7 per half (display row 2; index 23 has no
+  panel on either half), ordered by board x, and each half builds the same ordering
+  from the shared geometry table, so it knows its own letters without asking. A name
+  therefore spans the split (GRE | EK).
+  ⚠️ The slave needs to know WHICH item: `tut[2]` carries the item's table ROW during
+  the name and show phases (the slave never builds the renderable subset, so a position
+  in it would mean nothing there), and the chapter-1 slot write on the slave is now
+  gated to chapter-1 phases so the row cannot land in a letter slot.
+  The status panel's title now comes from that row too, not from reading the synced
+  lang/script back, which could not name an item that is not applied yet.
+- **Eden's letter fade has stars.** Each keycap gets two chances; a hash picks ~43 % of
+  them, a time within the 3.2 s fade and a spot. A star is 1 px, then a 5-px plus, then
+  1 px, over 650 ms. Drawn after the dither dissolve, so the dither never eats one.
+- ⚠️ **The tutorial's status screen ignored `STATUS_DISP_ON`.** Suspend clears the flag
+  and the sync calls `oled_off()`, but the tutorial branch of `oled_task_user()` redraws
+  every tick, and a redraw switches the SSD1306 back on. The slave's loop keeps running
+  while the host sleeps, so its panel stayed lit on "Braille" at full brightness after
+  the computer shut down (hardware). The branch now turns the panel off while the flag
+  is clear; the lesson resumes on wake.

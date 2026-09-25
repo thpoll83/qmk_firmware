@@ -25,6 +25,13 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 #define SA_INTRO_MS 5000    // sparks stream + converge, letters form, sparks wink out
 #define SA_HOLD_MS  5000    // hold the PolyKybd logo (letters up)
 #define SA_FADE_MS  3200    // final fade: the letters dissolve to black (slow, gradual)
+// Stars that twinkle while the letters fade: each keycap has SA_STAR_SLOTS chances, a
+// hash decides which slots are used (so the stars land "here and there"), when each
+// lights within the fade and where. A star grows 1 px -> a 5-px plus -> 1 px -> gone
+// over SA_STAR_LIFE_MS. Drawn AFTER the letter dissolve, so the dither never eats one.
+#define SA_STAR_SLOTS    2
+#define SA_STAR_USE      110   // of 255: ~43 % of slots light at all
+#define SA_STAR_LIFE_MS  650
 #define SA_BLACK_MS 1000    // hold on black at the end before the normal display returns
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS + SA_BLACK_MS)
 // The background sparkle haze dissolves EARLY and SLOWLY: it begins the moment the hold
@@ -285,6 +292,28 @@ static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16
     }
 }
 
+// The fade-out stars for one keycap, `fe` ms into the final fade. Pure function of the
+// key index and the time, so both halves (and every frame) agree without any state.
+static void sa_plot_stars(uint8_t *buf, uint8_t idx, uint32_t fe) {
+    for (uint8_t k = 0; k < SA_STAR_SLOTS; ++k) {
+        const uint32_t seed = (uint32_t)idx * SA_STAR_SLOTS + k + 1u;
+        if (sa_hash8(seed * 5u + 3u) >= SA_STAR_USE) continue;
+        const uint32_t t0 = ((uint32_t)sa_hash8(seed * 7u + 1u) * (SA_FADE_MS - SA_STAR_LIFE_MS)) / 255u;
+        if (fe < t0 || fe >= t0 + SA_STAR_LIFE_MS) continue;
+        const uint32_t age = fe - t0;
+        const int16_t  sx  = (int16_t)(4 + sa_hash8(seed * 11u + 5u) % (SCREEN_WIDTH - 8));
+        const int16_t  sy  = (int16_t)(4 + sa_hash8(seed * 13u + 9u) % (SCREEN_HEIGHT - 8));
+        sa_set(buf, sx, sy);
+        // The middle of its life: the plus. Before and after: the single pixel.
+        if (age >= SA_STAR_LIFE_MS / 5u && age < (SA_STAR_LIFE_MS * 3u) / 5u) {
+            sa_set(buf, (int16_t)(sx - 1), sy);
+            sa_set(buf, (int16_t)(sx + 1), sy);
+            sa_set(buf, sx, (int16_t)(sy - 1));
+            sa_set(buf, sx, (int16_t)(sy + 1));
+        }
+    }
+}
+
 static void sa_render_frame(uint32_t el) {
     const bool left = is_left_side();
     const sa_key_geom_t *T = left ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
@@ -410,6 +439,8 @@ static void sa_render_frame(uint32_t el) {
                     if (sa_noise((int16_t)(lx + idx * 13), (int16_t)(ly + idx * 7)) < letter_fade)
                         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
         }
+
+        if (letter_fade) sa_plot_stars(buf, idx, el - SA_INTRO_MS - SA_HOLD_MS);
 
         kdisp_send_window();   // 360 B (visible cols/pages) not the full 1024 B — faster SPI
     }

@@ -930,6 +930,16 @@ bool oled_task_user(void) {
         // the whole point of intro mode, where the keycaps have gone back to rendering
         // themselves.
         oled_scroll_off();
+        // ⚠️ Obey the status-display flag. Suspend clears STATUS_DISP_ON and the sync
+        // turns the panel off with oled_off(), but this branch redraws every tick and a
+        // redraw switches the SSD1306 straight back on. The SLAVE's main loop keeps
+        // running while the host sleeps, so its panel stayed lit on the last lesson
+        // screen at full brightness ("the slave status display kept displaying
+        // 'Braille' and never turned off", hardware). The lesson resumes on wake.
+        if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
+            oled_off();
+            return false;
+        }
         oled_tutorial_screen();
 #ifdef POLYKYBD_DOOM
     } else if (doom_mode_active() || get_local_state()->doom_ctl) {

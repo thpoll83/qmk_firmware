@@ -87,8 +87,8 @@ void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms) {
 // back, re-rolled every SPARK_TICK_MS so they twinkle rather than sit still. Sparks are
 // 2x2 px (a 1 px dot barely reads on a keycap) and at most SPARK_MAX/255 (~5 %) of those cells
 // light, so they stay "here and there". ⚠️ Every key the trail covers is repainted each
-// frame, so TRAIL is a cost dial as much as a look: ~3 key widths.
-#define POLY_FOCUS_TRAIL         220u
+// frame, so TRAIL is a cost dial as much as a look: about one key width now.
+#define POLY_FOCUS_TRAIL          80u   // 220 stuttered on hardware (~3x the keys per frame)
 #define POLY_FOCUS_SPARK_MAX      12u
 #define POLY_FOCUS_SPARK_TICK_MS  90u
 static uint8_t focus_sweep_density(uint8_t p) {

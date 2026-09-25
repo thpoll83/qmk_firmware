@@ -76,6 +76,13 @@ void tutorial_skip(void);
 // Chapter 3: the preview item the MASTER should show right now, or -1 for none (also
 // -1 on the slave, which only renders what the sync carries).
 int16_t tutorial_preview_index(void);
+// The preview item being named or shown, as a row of poly_keymap.c's table (0xFF: none).
+// Both halves answer: the master from its own state, the slave from the sync.
+uint8_t tutorial_preview_entry(void);
+// True while the board is dark and spelling the next item's name.
+bool tutorial_naming(void);
+// Draw a capital centred on the selected keycap buffer (the name's letters).
+bool tutorial_draw_key_letter(uint32_t cp);
 
 // The lesson's chrome, or NULL when it should show nothing: Esc reads "Hold to / skip...",
 // and the mirrored top-right outer key shows the chapter ("2/3").
@@ -173,8 +180,10 @@ void tutorial_draw_chrome(uint8_t row, uint8_t col);
 uint8_t tutorial_preview_prepare(void);
 // The slot of the Lang key on the base layer, either half, or TUT_SLOT_NONE.
 uint8_t tutorial_lang_slot(void);
-// The status-panel name of whatever language or script THIS half is drawing now.
+// The status-panel name of the preview item being named or shown.
 const uint32_t *tutorial_preview_name(void);
+// Map a position in the renderable subset (master only) to its table row.
+uint8_t tutorial_preview_table_row(uint8_t pos);
 
 // A chapter's LIT SET, as a bitmap over THIS HALF's display slots. TUT_SET_SHIFT is the
 // plain A-Z keys plus both shifts; TUT_SET_LAYER is the letters plus the layer keys.

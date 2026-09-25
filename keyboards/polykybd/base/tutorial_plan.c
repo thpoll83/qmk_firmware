@@ -22,6 +22,7 @@ static uint32_t tut_phase_ms(uint8_t phase) {
         case TUT_BOARD_REVEAL: return TUT_BOARD_REVEAL_MS;
         case TUT_BOARD_SHOW:   return TUT_BOARD_SHOW_MS;
         case TUT_LANG_INTRO:   return TUT_LANG_INTRO_MS;
+        case TUT_LANG_NAME:    return TUT_LANG_NAME_MS;
         case TUT_LANG_SHOW:    return TUT_LANG_ITEM_MS;
         case TUT_LANG_POINT:   return TUT_LANG_POINT_MS;
         case TUT_FINALE:       return TUT_FINALE_MS;
@@ -82,6 +83,12 @@ void tut_set_chapter3(tut_state_t *st, uint8_t lang_slot, uint8_t n_preview) {
 
 int16_t tut_preview_index(const tut_state_t *st) {
     if (st->phase != TUT_LANG_SHOW || st->preview >= st->n_preview) return -1;
+    return st->preview;
+}
+
+int16_t tut_preview_pos(const tut_state_t *st) {
+    if (st->phase != TUT_LANG_NAME && st->phase != TUT_LANG_SHOW) return -1;
+    if (st->preview >= st->n_preview) return -1;
     return st->preview;
 }
 
@@ -180,13 +187,16 @@ bool tut_tick(tut_state_t *st, uint32_t now) {
             return true;
         case TUT_LANG_INTRO:
             st->preview = 0;
+            tut_enter(st, TUT_LANG_NAME, now);
+            return true;
+        case TUT_LANG_NAME:
             tut_enter(st, TUT_LANG_SHOW, now);
             return true;
         case TUT_LANG_SHOW:
-            // One phase, re-entered per item: the phase clock is the item clock.
+            // NAME then SHOW per item: the phase clock is the item clock.
             if ((uint8_t)(st->preview + 1u) < st->n_preview) {
                 st->preview++;
-                tut_enter(st, TUT_LANG_SHOW, now);
+                tut_enter(st, TUT_LANG_NAME, now);
             } else {
                 // No reset of `preview` needed: tut_preview_index() answers -1 in every
                 // phase but TUT_LANG_SHOW, which is what ends the last item's preview.

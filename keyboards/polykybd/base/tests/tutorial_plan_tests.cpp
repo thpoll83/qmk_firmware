@@ -1092,10 +1092,17 @@ TEST(TutorialBoard, RunsRevealShowLanguagesPointFinaleDone) {
     EXPECT_EQ(tut_preview_index(&st), -1) << "no item is live before the first one";
     FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
     for (int16_t i = 0; i < 3; ++i) {
+        // Named first, on a dark board: the preview is NOT applied yet.
+        EXPECT_EQ(st.phase, TUT_LANG_NAME);
+        EXPECT_EQ(tut_preview_pos(&st), i);
+        EXPECT_EQ(tut_preview_index(&st), -1) << "the name comes before the glyphs";
+        FinishPhase(&st, &now, TUT_LANG_NAME_MS);
         EXPECT_EQ(st.phase, TUT_LANG_SHOW);
         EXPECT_EQ(tut_preview_index(&st), i);
+        EXPECT_EQ(tut_preview_pos(&st), i);
         FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
     }
+    EXPECT_EQ(tut_preview_pos(&st), -1);
     EXPECT_EQ(st.phase, TUT_LANG_POINT);
     EXPECT_EQ(tut_preview_index(&st), -1) << "the last item must not stay applied";
     EXPECT_EQ(tut_point_slot(&st), LANG_KEY);
@@ -1123,6 +1130,7 @@ TEST(TutorialBoard, NoLangKeySkipsThePointer) {
     FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
     FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
     FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    FinishPhase(&st, &now, TUT_LANG_NAME_MS);
     FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
     EXPECT_EQ(st.phase, TUT_FINALE);
 }
@@ -1134,6 +1142,7 @@ TEST(TutorialBoard, LangPointFiresTheRingImmediately) {
     FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
     FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
     FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    FinishPhase(&st, &now, TUT_LANG_NAME_MS);
     FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
     ASSERT_EQ(st.phase, TUT_LANG_POINT);
     const uint8_t seq = st.ripple_seq;
@@ -1155,6 +1164,7 @@ TEST(TutorialBoard, SkipEndsItMidPreview) {
     FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
     FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
     FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    FinishPhase(&st, &now, TUT_LANG_NAME_MS);
     ASSERT_EQ(tut_preview_index(&st), 0);
     tut_skip(&st, now);
     EXPECT_EQ(st.phase, TUT_DONE);
@@ -1164,7 +1174,7 @@ TEST(TutorialBoard, SkipEndsItMidPreview) {
 // Only the reveal decides key by key; every later chapter-3 phase shows the whole board.
 TEST(TutorialBoard, ShowsAllCoversExactlyThePostRevealPhases) {
     for (uint8_t p = 0; p <= TUT_DONE; ++p) {
-        const bool want = p >= TUT_BOARD_SHOW && p <= TUT_FINALE;
+        const bool want = p >= TUT_BOARD_SHOW && p <= TUT_FINALE && p != TUT_LANG_NAME;
         EXPECT_EQ(tut_phase_shows_all(p), want) << "phase " << (int)p;
     }
 }

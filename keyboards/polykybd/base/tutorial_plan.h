@@ -109,6 +109,9 @@
 // One language or script on screen. ⚠️ Long enough to READ a whole board of unfamiliar
 // glyphs; the repaint itself takes ~110 ms per half, so most of this is looking.
 #define TUT_LANG_ITEM_MS    2200u
+// Before each item the board goes dark and spells the item's NAME across the middle row,
+// one letter per keycap, so the reader knows what they are about to look at.
+#define TUT_LANG_NAME_MS    1000u
 #define TUT_LANG_POINT_MS   4500u   // the ring circles the Lang key; informational, timed
 #define TUT_FINALE_MS       3000u
 
@@ -152,6 +155,7 @@ typedef enum {
     TUT_BOARD_REVEAL,   // a wave from the last Shift lights every key it passes
     TUT_BOARD_SHOW,     // the whole board, still: "72 screens"
     TUT_LANG_INTRO,     // "It speaks your language"
+    TUT_LANG_NAME,      // board dark, the next item's name spelled across the middle row
     TUT_LANG_SHOW,      // one preview item on screen; re-entered once per item
     TUT_LANG_POINT,     // the ring circles the Lang key: where to change it for real
     TUT_FINALE,         // "You're ready!"
@@ -229,8 +233,9 @@ static inline bool tut_phase_is_wave(uint8_t p) {
 
 // Every phase from the reveal on shows the WHOLE board — only the reveal itself is
 // still deciding key by key.
+// TUT_LANG_NAME is the exception: it darkens the board around the name it spells.
 static inline bool tut_phase_shows_all(uint8_t p) {
-    return p >= TUT_BOARD_SHOW && p < TUT_DONE;
+    return p >= TUT_BOARD_SHOW && p < TUT_DONE && p != TUT_LANG_NAME;
 }
 
 // Which chapter (1-based) a phase belongs to, for the count on the Esc keycap. The
@@ -278,8 +283,11 @@ void tut_init(tut_state_t *st, const uint8_t slots[TUT_LETTERS],
 // from the board reveal to the finale, which is what a board with no font pack gets).
 void tut_set_chapter3(tut_state_t *st, uint8_t lang_slot, uint8_t n_preview);
 
-// The preview item to show right now, or -1 outside TUT_LANG_SHOW.
+// The preview item to APPLY to the board right now, or -1 outside TUT_LANG_SHOW.
 int16_t tut_preview_index(const tut_state_t *st);
+// The item the chapter is ON — being named (TUT_LANG_NAME) or shown (TUT_LANG_SHOW) —
+// or -1 elsewhere.
+int16_t tut_preview_pos(const tut_state_t *st);
 
 // Advance the timed phases. Returns true when the phase changed (the caller then
 // repaints / pushes state to the other half). Never leaves TUT_LETTER_WAIT — only a

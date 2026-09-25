@@ -69,6 +69,7 @@
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
+#include "anim/lang_sparkle.h"             // lang_sparkle_tick()
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
@@ -1747,6 +1748,7 @@ void housekeeping_task_user(void) {
             sync_and_refresh_displays();
             // After the render, so a change it just drew has already started the cascade.
             menu_cascade_tick();
+            lang_sparkle_tick();   // the language preview's twinkles; self-gating
         }
         // Advance the focus ripple, if one is live. Self-gating and bounded to
         // POLY_FOCUS_SLICE_MS, so an idle keyboard pays a single boolean test.
@@ -4099,6 +4101,12 @@ static uint16_t display_keycode_at(const poly_layer_t *lyr, uint8_t row, uint8_t
 // lesson had darkened. The ARC is not gated on this — see the note in focus_ring.h; the
 // ring has to cross the whole board. The visibility question has ONE answer and both the
 // normal render path and the ripple ask it here.
+// Does the tutorial leave this key lit? Always true outside the lesson.
+bool poly_slot_visible(uint8_t slot) {
+    uint8_t r, c;
+    return tutorial_matrix_of(slot, &r, &c) && tutorial_key_visible(r, c);
+}
+
 bool poly_focus_draw_legend(uint8_t slot) {
     uint8_t r, c;
     if (!tutorial_matrix_of(slot, &r, &c)) return false;

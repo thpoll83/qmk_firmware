@@ -1997,3 +1997,20 @@ Hardware feedback:
 - ⚠️ The legend makes TEN macro calls, and the host's `expand_function_macros()`
   stopped after six: the glyph loader dropped the macro and the key drew its own name.
   The host bound is 64 now (PolyKybdHost `tools/oled_preview.py`).
+
+## Round 36 — the Shift reveal cascades, 30 % faster, sparkles on the layouts
+
+- The Shift chapter's reveal (`TUT_REVEAL`) brings the letters and both shifts in with
+  the menu cascade instead of all at once: `tutorial_cascade_signature()` hands the
+  cascade a board-mode signature (`0x03…`) for the phase, which spans display rows
+  1..4 so the shifts come in too. Keys the tutorial keeps dark are skipped without a
+  latch or a send (`poly_slot_visible()`).
+- The cascade is 30 % faster: 1008 ms first to last, 202 ms per key. `TUT_REVEAL_MS`
+  (1400) still covers it with ~160 ms to spare.
+- ⚠️ A cascade cut short now asks for a full repaint (`request_disp_refresh()`): its
+  undrawn keys were never on the panel, and the diffing renderer had no reason to
+  draw them, so a slave that saw the next phase a sync early would keep them dark.
+- While a language layout is shown (`TUT_LANG_SHOW`), keys twinkle
+  (`anim/lang_sparkle.c`): up to three at a time per half, a new one every 150 ms,
+  each a dot, a cross, a four-point star and back over 480 ms, with a black halo so
+  it reads over ink. Each half picks its own keys; nothing is synced.

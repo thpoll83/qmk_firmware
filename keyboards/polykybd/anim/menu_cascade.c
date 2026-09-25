@@ -14,17 +14,20 @@
 #include "startup_anim.h"           // startup_anim_key_geom / startup_anim_board_w
 #include "tutorial.h"               // tutorial_slot_at()
 #include "focus_ring.h"             // poly_focus_draw_legend()
+#include "base/update.h"            // request_disp_refresh()
 
 // Round 34: 20% faster than round 33's 1800/360 ("the fade in of the tab item maybe
-// 20% faster").
-#define CASC_MS      1440u   // first content key to last
-#define CASC_FADE_MS  288u   // each key's own fade-in
-#define CASC_ROWS       3u   // display rows 1..3; row 0 (tabs) and row 4 stay put
+// 20% faster"). Round 36: 30% faster again ("still too slow").
+#define CASC_MS      1008u   // first content key to last
+#define CASC_FADE_MS  202u   // each key's own fade-in
+#define CASC_ROWS       3u   // a menu: display rows 1..3; row 0 (tabs) and row 4 stay put
+#define CASC_BOARD_ROWS 4u   // the Shift reveal: rows 1..4, so the shifts come in too
 #define CASC_TICK_MS   30u
 #define CASC_KEYS      40u   // display slots per half (8 x 5, some phantom)
 
 static uint32_t s_sig;                 // the menu signature the cascade belongs to
 static bool     s_live;
+static bool     s_board;               // the tutorial's reveal, not a menu (see poll())
 static uint32_t s_start;
 static uint32_t s_at;
 static uint8_t  s_drawn[5];            // this half's display slots already drawn
@@ -36,21 +39,30 @@ static void set_bit(uint8_t *m, uint8_t i)  { m[i >> 3] |= (uint8_t)(1u << (i & 
 // When this half's display slot `idx` appears, in ms from the change, or 0 for a key
 // that does not cascade (the tab row, the bottom row, a slot with no panel).
 static uint32_t due_ms(bool right, uint8_t idx) {
-    const uint8_t dr = (uint8_t)(idx / 8u);
-    if (dr == 0u || dr > CASC_ROWS) return 0u;
+    const uint8_t dr   = (uint8_t)(idx / 8u);
+    const uint8_t rows = s_board ? CASC_BOARD_ROWS : CASC_ROWS;
+    if (dr == 0u || dr > rows) return 0u;
     const sa_geom_t g  = startup_anim_key_geom(right, idx);
     const uint32_t  bw = startup_anim_board_w();
     if (!g.valid || bw == 0u) return 0u;
     const uint32_t x = (uint32_t)(g.cx < 0 ? 0 : g.cx);
     // +1 so the first key's moment is never 0 (0 means "does not cascade").
-    return 1u + (CASC_MS * ((uint32_t)(dr - 1u) * bw + (x > bw ? bw : x))) / (CASC_ROWS * bw);
+    return 1u + (CASC_MS * ((uint32_t)(dr - 1u) * bw + (x > bw ? bw : x))) / ((uint32_t)rows * bw);
 }
 
 static void poll(void) {
-    const uint32_t sig = poly_menu_signature();
+    // The tutorial's Shift reveal first: while it runs, the base layer is up and the
+    // menu signature is 0 anyway, so the two never compete.
+    uint32_t sig = tutorial_cascade_signature();
+    if (sig == 0u) sig = poly_menu_signature();
     if (sig == s_sig) return;
-    s_sig  = sig;
-    s_live = sig != 0u;
+    // ⚠️ Cut short with keys still waiting (the reveal ends, or the slave sees the next
+    // phase a sync early): those keys were never drawn, and the diffing renderer has
+    // no reason to draw them now, so they would stay dark. Ask for a full repaint.
+    if (s_live && sig == 0u) request_disp_refresh();
+    s_sig   = sig;
+    s_live  = sig != 0u;
+    s_board = (sig >> 24) == 0x03u;
     if (!s_live) return;
     s_start = timer_read32();
     s_at    = s_start - CASC_TICK_MS;
@@ -98,6 +110,13 @@ void menu_cascade_tick(void) {
         if (due == 0u) continue;
         if (el < due) {
             done = false;
+            continue;
+        }
+        // A key the tutorial keeps dark (the reveal covers every key in its rows, the
+        // lit set is a few of them) is left alone: no latch, no send.
+        if (!poly_slot_visible(TUT_SLOT(right ? 1 : 0, idx))) {
+            set_bit(s_drawn, idx);
+            set_bit(s_full, idx);
             continue;
         }
         sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());

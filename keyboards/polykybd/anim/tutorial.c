@@ -315,6 +315,18 @@ void tutorial_stop(void) {
 }
 
 bool tutorial_active(void)    { return s_active; }
+
+// The Shift chapter's reveal brings the lit set in with the menu cascade
+// (anim/menu_cascade.h) rather than all at once. Both halves know the phase from the
+// sync, so each runs the same cascade from its own clock.
+uint32_t tutorial_cascade_signature(void) {
+    return (s_active && s_st.phase == TUT_REVEAL) ? 0x03000000u : 0u;
+}
+
+// A language layout is on the keys and still: the sparkles (anim/lang_sparkle.h) run.
+bool tutorial_sparkle_live(void) {
+    return s_active && s_st.phase == TUT_LANG_SHOW;
+}
 bool tutorial_exclusive(void) { return s_active && tut_phase_is_exclusive(s_st.phase); }
 bool tutorial_intro_mode(void){ return s_active && tut_phase_is_intro(s_st.phase); }
 
@@ -894,6 +906,8 @@ uint32_t tutorial_big_letter(void) {
 void tutorial_start(uint32_t seed) { (void)seed; }
 void tutorial_stop(void) {}
 bool tutorial_active(void) { return false; }
+uint32_t tutorial_cascade_signature(void) { return 0u; }
+bool tutorial_sparkle_live(void) { return false; }
 bool tutorial_exclusive(void) { return false; }
 bool tutorial_intro_mode(void) { return false; }
 bool tutorial_caps_hold(void) { return false; }

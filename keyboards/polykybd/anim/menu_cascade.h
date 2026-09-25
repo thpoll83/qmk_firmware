@@ -5,6 +5,8 @@
 // is entered, or a tab / the page key is pressed), the three content rows appear key
 // by key — left to right across the whole board, row by row — each fading up. The tab
 // row and the bottom row stay put. In the first-run tutorial and outside it alike.
+// The tutorial borrows it once more for the Shift chapter's reveal: the lit set (the
+// letters and both shifts) comes in the same way, over rows 1..4.
 //
 // ⚠️ No sync byte: each half detects the change from state it already has (the synced
 // layer, region, category and page), and a key's moment is a pure function of its
@@ -18,6 +20,7 @@
 uint32_t poly_menu_signature(void);    // what the menu shows; 0 = not on a menu layer
 uint8_t  poly_panel_full_contrast(void);   // a keycap's normal level right now (0 = off)
 bool     poly_render_live(void);       // the last update_displays() pass reached the keycaps
+bool     poly_slot_visible(uint8_t slot);   // the tutorial leaves this key lit (true outside it)
 
 // Is this key (matrix row incl. the half's offset, col) still waiting for its turn?
 // Asked by update_displays() and the focus ring before drawing a legend. Also where a

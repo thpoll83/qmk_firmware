@@ -31,6 +31,12 @@ void tutorial_stop(void);
 // process_record_user() must swallow, and the idle fade must be held off.
 bool tutorial_active(void);
 
+// Non-zero while the Shift chapter's reveal is cascading its lit set in; the menu
+// cascade takes it ahead of the menu signature. 0 otherwise.
+uint32_t tutorial_cascade_signature(void);
+// True while a language layout is shown (TUT_LANG_SHOW): the sparkles run.
+bool tutorial_sparkle_live(void);
+
 // ---- the two halves (see the architectural note in base/tutorial_plan.h) ----
 // EXCLUSIVE: chapter 1. The tutorial's sliced renderer owns every panel, and
 // update_displays() must stay out.

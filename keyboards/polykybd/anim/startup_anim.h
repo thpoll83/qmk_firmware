@@ -34,6 +34,11 @@
 // another, so the two kinds of display visibly disagreed ("the status displays were
 // brighter than the keys", hardware). The user's own, persisted level returns after.
 #define POLY_INTRO_CONTRAST 128u
+// The STATUS panel's level for the same span. ⚠️ Not POLY_INTRO_CONTRAST: the 128x64
+// status panel carries thin one-pixel prose, and at the keycaps' register value it read
+// as the dimmer of the two ("the status display is not bright enough", hardware). Full
+// register is what makes the text match the keycaps' big legends by eye.
+#define POLY_INTRO_STATUS_BRIGHT 255u
 #include <stdbool.h>
 #include <stdint.h>
 

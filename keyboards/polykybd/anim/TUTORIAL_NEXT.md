@@ -55,8 +55,14 @@ The lesson's chrome: **Esc reads "Hold to / skip..."** and its mirror, the **top
 outer key, shows the chapter** (`1/3`…`3/3`). Holding either still skips. Design and
 traps: `TUTORIAL.md` round 22.
 
-**Test build:** `-e POLYKYBD_TUTORIAL_TEST=yes` starts the tutorial ~1.5 s after every
-reset, with no Eden and no marker check, so a round is a replug. Never in a release.
+4. **The key tour** (round 29): the Lang key, the six region tabs and Base, then the
+   emoji key, four category tabs and Base. Each key is pointed at, pulses and must be
+   pressed; the press acts for real.
+
+**Test build:** `-e POLYKYBD_TUTORIAL_TEST=yes` plays Eden + the tutorial once per
+flashed build: the boot marker is keyed to the build stamp, so a new image plays, a
+finished lesson stays finished across restarts, and RESET Eden replays it. Never in a
+release.
 
 ---
 

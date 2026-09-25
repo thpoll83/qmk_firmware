@@ -512,6 +512,11 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 // fade-out: the panel now dims WITH the keycaps over FADE_TRANSITION_TIME instead
 // of holding full until the pulse starts, identically on both halves.
 static uint8_t status_oled_level(bool idle) {
+    // ⚠️ The tutorial owns the status panel's level. Without this, any contrast change
+    // during the lesson (the tutorial forces the keycaps' own level on its start edge)
+    // ran the branch in sync_and_refresh_displays() and dropped the panel back to the
+    // user's mapped level, which tops out at OLED_BRIGHTNESS (60).
+    if (tutorial_active()) return (uint8_t)POLY_INTRO_STATUS_BRIGHT;
     return idle ? POLY_STATUS_IDLE_BRIGHT : poly_status_brightness(get_local_state()->contrast);
 }
 
@@ -537,6 +542,11 @@ static bool g_force_layer_resync = true;
 static uint8_t g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;
 
 static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
+// The key-tour press that was let through, so its RELEASE goes through too: LCAT and
+// KC_BASE act on the release (poly_custom_key_action), and a swallowed release would
+// leave them doing nothing. 0xFF = none.
+static uint8_t  s_tut_pass_row    = 0xFFu;
+static uint8_t  s_tut_pass_col    = 0xFFu;
 // Chapter 3's language/script preview; defined beside the tutorial's keymap helpers.
 static uint8_t poly_tutorial_apply_preview(void);
 static uint32_t tut_name_letter(uint8_t row, uint8_t col);   // the spelled preview name
@@ -582,6 +592,24 @@ void tutorial_restore_layout(void) {
 // Shared by the EXCLUSIVE branch (chapter 1) and the NORMAL branch (intro mode), so the
 // skip gesture, the slave push and the teardown exist once rather than once per mode.
 
+static uint8_t tutorial_slot_of(uint8_t row, uint8_t col);
+
+// The key tour: does this event ACT rather than being swallowed? Only the press of the
+// key being asked for, and later that same key's release. Everything else falls to the
+// swallow below it, so an emoji or language slot stays inert mid-lesson.
+static bool poly_tutorial_tour_passes(keyrecord_t *record) {
+    const uint8_t row = record->event.key.row, col = record->event.key.col;
+    if (!record->event.pressed) {
+        if (row != s_tut_pass_row || col != s_tut_pass_col) return false;
+        s_tut_pass_row = s_tut_pass_col = 0xFFu;
+        return true;
+    }
+    if (!tutorial_tour_press(tutorial_slot_of(row, col))) return false;
+    s_tut_pass_row = row;
+    s_tut_pass_col = col;
+    return true;
+}
+
 // The documented skip: hold either outer-edge top key. A held key emits no events, so
 // the duration is measured here rather than in process_record.
 static void poly_tutorial_skip_if_held(void) {
@@ -609,18 +637,29 @@ static void poly_tutorial_publish_active(void) {
 // latched by a TO() press, or anything not yet thought of — put it back. Master only:
 // the slave renders from the synced poly_layer_t, which follows. Cheap: one compare per
 // pass, and a repark only on a real drift.
+static uint8_t tut_tour_layer(void);
 static void poly_tutorial_hold_lesson_layer(void) {
     if (!is_usb_host_side() || !tutorial_active() || tutorial_in_layer_chapter()) return;
-    const layer_state_t want = (layer_state_t)1 << _L0;
-    poly_layer_t       *ll   = access_local_layer();
+    // The key tour opens the language and emoji menus for real, so there the lesson's
+    // layer is _L0 plus whatever the current step says. ⚠️ ENFORCED, not just allowed: the
+    // press that opens a menu is let through to act, and if it did not (a keymap whose
+    // key does something else), the guard still puts the menu the lesson is talking
+    // about on screen rather than leaving the prose describing a layer nobody sees.
+    const uint8_t       extra = tut_tour_layer();
+    const layer_state_t base  = (layer_state_t)1 << _L0;
+    const layer_state_t want  = base | (extra != 0xFFu ? (layer_state_t)1 << extra : 0);
+    poly_layer_t       *ll    = access_local_layer();
     // def_layer too: display_keycode_at() ORs it into the stack, so a stray one would
     // letter the keys from another layer just as surely.
-    if (layer_state == want && ll->def_layer == _L0) return;
+    // `| base`: TO(_EMJ) turns off every other layer, _L0 included. The emoji layer
+    // covers the board either way, so that is not a drift worth a repaint.
+    if ((layer_state | base) == want && ll->def_layer == _L0) return;
     uprintf("Tutorial: layer drifted (state 0x%08lX, def %u), back to _L0\n",
             (unsigned long)layer_state, (unsigned)ll->def_layer);
     ll->def_layer = _L0;
     layer_clear();
     layer_on(_L0);
+    if (extra != 0xFFu) layer_on(extra);
     ll->layer = layer_state;
     request_disp_refresh();
 }
@@ -4062,6 +4101,10 @@ typedef struct {
     // attached vowel signs, or glyphs the fonts lack — pre-rendered offline into keycap
     // tiles (tools/gen_tutorial_names.py -> anim/tutorial_names_gen.h).
     const tut_name_strip_t *strip;
+    // The left status panel's lead-in; the right panel finishes it with `name`. ONE per
+    // row, never a rotation: a 5-phrase cycle over 11 items repeated itself, and every
+    // script said "Or write in" ("make sure there is no repeating text", hardware).
+    const uint32_t *lead;
 } tut_preview_t;
 
 // A tour, not a catalogue: scripts that look nothing like each other, then the
@@ -4072,17 +4115,17 @@ typedef struct {
 // fonts; the rest are pre-rendered strips — joined Arabic, Devanagari with its attached
 // vowel signs, and 日本語 / 한국어, whose glyphs the keycap fonts do not carry.
 static const tut_preview_t s_tut_preview_all[] = {
-    {false, LANG_ELGR,      U"Greek",    U"\u0395\u039B\u039B\u0397\u039D\u0399\u039A\u0391", false, NULL}, // ΕΛΛΗΝΙΚΑ
-    {false, LANG_ARSA,      U"Arabic",   NULL, false, &TUT_NAME_STRIP_AR},                            // العربية
-    {false, LANG_HEIL,      U"Hebrew",   U"\u05E2\u05D1\u05E8\u05D9\u05EA", true, NULL},            // עברית
-    {false, LANG_HIIN,      U"Hindi",    NULL, false, &TUT_NAME_STRIP_HI},                            // हिन्दी
-    {false, LANG_THTH,      U"Thai",     U"\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22", false, NULL}, // ภาษาไทย
-    {false, LANG_JAJP,      U"Japanese", NULL, false, &TUT_NAME_STRIP_JA},                            // 日本語
-    {false, LANG_KOKR,      U"Korean",   NULL, false, &TUT_NAME_STRIP_KO},                            // 한국어
-    {true,  GLYPH_TENGWAR,  U"Elvish",   NULL, false, NULL},
-    {true,  GLYPH_RUNES,    U"Runes",    NULL, false, NULL},
-    {true,  GLYPH_AUREBESH, U"Aurebesh", NULL, false, NULL},
-    {true,  GLYPH_BRAILLE,  U"Braille",  NULL, false, NULL},
+    {false, LANG_ELGR,      U"Greek",    U"\u0395\u039B\u039B\u0397\u039D\u0399\u039A\u0391", false, NULL, U"How about"}, // ΕΛΛΗΝΙΚΑ
+    {false, LANG_ARSA,      U"Arabic",   NULL, false, &TUT_NAME_STRIP_AR, U"You may speak"},             // العربية
+    {false, LANG_HEIL,      U"Hebrew",   U"\u05E2\u05D1\u05E8\u05D9\u05EA", true, NULL, U"Or perhaps"},  // עברית
+    {false, LANG_HIIN,      U"Hindi",    NULL, false, &TUT_NAME_STRIP_HI, U"Maybe you read"},            // हिन्दी
+    {false, LANG_THTH,      U"Thai",     U"\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22", false, NULL, U"Do you speak"}, // ภาษาไทย
+    {false, LANG_JAJP,      U"Japanese", NULL, false, &TUT_NAME_STRIP_JA, U"Or is it"},                  // 日本語
+    {false, LANG_KOKR,      U"Korean",   NULL, false, &TUT_NAME_STRIP_KO, U"Perhaps even"},              // 한국어
+    {true,  GLYPH_TENGWAR,  U"Elvish",   NULL, false, NULL, U"Write in"},
+    {true,  GLYPH_RUNES,    U"Runes",    NULL, false, NULL, U"Carve some"},
+    {true,  GLYPH_AUREBESH, U"Aurebesh", NULL, false, NULL, U"Sci-fi fans:"},
+    {true,  GLYPH_BRAILLE,  U"Braille",  NULL, false, NULL, U"Read by touch:"},
 };
 #define TUT_PREVIEW_ALL (sizeof(s_tut_preview_all) / sizeof(s_tut_preview_all[0]))
 _Static_assert(TUT_PREVIEW_ALL <= TUT_PREVIEW_MAX, "preview table exceeds the plan's cap");
@@ -4127,6 +4170,116 @@ uint8_t tutorial_lang_slot(void) {
     return TUT_SLOT_NONE;
 }
 
+// ---- the key tour: the language menu, then the emoji menu -----------------------
+// Each step is a real key on a real layer; the lesson points at it, the user presses it,
+// and it ACTS (see the pass-through in process_record_user()). The kinds and the layer
+// each step leaves on are kept here beside the slots, on both halves, so the status
+// prose and the layer guard need nothing but the step index.
+typedef enum {
+    TUT_TOUR_LANG = 0,   // the Lang key: opens _LL
+    TUT_TOUR_LCAT,       // a region tab on _LL (arg = region)
+    TUT_TOUR_BASE_LL,    // KC_BASE on _LL: back to the letters
+    TUT_TOUR_EMJ,        // TO(_EMJ) on the base layer
+    TUT_TOUR_ECAT,       // a category tab on _EMJ (arg = category)
+    TUT_TOUR_BASE_EMJ,   // KC_BASE on _EMJ
+} tut_tour_kind_t;
+
+// A few emoji tabs rather than all twelve — the menu is taught by then, and the point is
+// the variety: two tabs on each half, so the ring crosses the split.
+static const uint8_t s_tut_emj_tabs[] = {0, 4, 7, 8};   // smileys, animals, travel, sports
+
+static uint8_t s_tour_kind[TUT_TOUR_MAX];
+static uint8_t s_tour_arg[TUT_TOUR_MAX];
+static uint8_t s_tour_after[TUT_TOUR_MAX];   // the layer on top of _L0 once pressed; 0xFF none
+static uint8_t s_tour_n;
+
+// The first key on `layer` holding `kc` that has a panel, or TUT_SLOT_NONE.
+static uint8_t tut_find_slot(uint8_t layer, uint16_t kc) {
+    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            if (keymaps[layer][r][c] != kc) continue;
+            const uint8_t slot = tutorial_slot_of(r, c);
+            if (slot != TUT_SLOT_NONE) return slot;
+        }
+    }
+    return TUT_SLOT_NONE;
+}
+
+static void tut_tour_add(uint8_t *out, uint8_t kind, uint8_t arg, uint8_t slot, uint8_t after) {
+    if (slot == TUT_SLOT_NONE || s_tour_n >= TUT_TOUR_MAX) return;
+    s_tour_kind[s_tour_n]  = kind;
+    s_tour_arg[s_tour_n]   = arg;
+    s_tour_after[s_tour_n] = after;
+    out[s_tour_n++]        = slot;
+}
+
+uint8_t tutorial_tour_build(uint8_t out[TUT_TOUR_MAX], uint8_t *split) {
+    s_tour_n = 0;
+    // A menu whose opening key is missing is skipped whole: its tabs cannot be reached.
+    const uint8_t lang = tutorial_lang_slot();
+    if (lang != TUT_SLOT_NONE) {
+        tut_tour_add(out, TUT_TOUR_LANG, 0, lang, _LL);
+        for (uint8_t r = 0; r < NUM_LANG_REGIONS; ++r) {
+            tut_tour_add(out, TUT_TOUR_LCAT, r, tut_find_slot(_LL, LCAT(r)), _LL);
+        }
+        tut_tour_add(out, TUT_TOUR_BASE_LL, 0, tut_find_slot(_LL, KC_BASE), 0xFFu);
+    }
+    *split = s_tour_n;
+    const uint8_t emj = tut_find_slot(_BL, TO(_EMJ));
+    if (emj != TUT_SLOT_NONE) {
+        tut_tour_add(out, TUT_TOUR_EMJ, 0, emj, _EMJ);
+        for (uint8_t i = 0; i < sizeof(s_tut_emj_tabs); ++i) {
+            tut_tour_add(out, TUT_TOUR_ECAT, s_tut_emj_tabs[i],
+                         tut_find_slot(_EMJ, KC_EMJ_CAT(s_tut_emj_tabs[i])), _EMJ);
+        }
+        tut_tour_add(out, TUT_TOUR_BASE_EMJ, 0, tut_find_slot(_EMJ, KC_BASE), 0xFFu);
+    }
+    return s_tour_n;
+}
+
+// The layer the lesson should be on right now, on top of _L0 (0xFF: _L0 alone). While a
+// step WAITS, it is what the previous step left on; once pressed, what this one did.
+static uint8_t tut_tour_layer(void) {
+    const int16_t step = tutorial_tour_step();
+    if (step < 0 || step >= s_tour_n) return 0xFFu;
+    if (tutorial_tour_seen()) return s_tour_after[step];
+    return step == 0 ? 0xFFu : s_tour_after[step - 1];
+}
+
+// The status prose: the LEFT panel opens the sentence, the right finishes it. Every
+// line is different — the same words twice read as the board repeating itself.
+const uint32_t *tutorial_tour_line(uint8_t step, bool left) {
+    if (step >= s_tour_n) return NULL;
+    switch (s_tour_kind[step]) {
+        case TUT_TOUR_LANG:     return left ? U"Pick yours in" : U"the Lang menu";
+        case TUT_TOUR_BASE_LL:  return left ? U"Back to" : U"your letters";
+        case TUT_TOUR_EMJ:      return left ? U"Now for" : U"some emoji";
+        case TUT_TOUR_BASE_EMJ: return left ? U"And home" : U"again";
+        case TUT_TOUR_LCAT: {
+            static const uint32_t *const lines[NUM_LANG_REGIONS][2] = {
+                {U"From Canada", U"to Chile"},       // America
+                {U"All across", U"Europe"},
+                {U"The Middle", U"East"},
+                {U"Languages of", U"Africa"},
+                {U"The whole of", U"Asia"},
+                {U"And down to", U"Oceania"},
+            };
+            const uint8_t r = s_tour_arg[step];
+            return r < NUM_LANG_REGIONS ? lines[r][left ? 0 : 1] : NULL;
+        }
+        case TUT_TOUR_ECAT:
+            switch (s_tour_arg[step]) {
+                case 0:  return left ? U"Smileys" : U"and faces";
+                case 4:  return left ? U"Animals," : U"big and small";
+                case 7:  return left ? U"Travel" : U"and places";
+                case 8:  return left ? U"Sports" : U"and games";
+                default: return left ? U"More" : U"emoji";
+            }
+        default:
+            return NULL;
+    }
+}
+
 uint8_t tutorial_preview_table_row(uint8_t pos) {
     return pos < s_tut_preview_n ? s_tut_preview[pos] : 0xFFu;
 }
@@ -4149,18 +4302,11 @@ const uint32_t *tutorial_preview_name(void) {
     return e != NULL ? e->name : U"...";
 }
 
-// The status panels read as one sentence: a lead-in on the left, the name on the right.
-// Rotated by the item's table row — the one thing both halves know — so consecutive
-// items never repeat the same words. A glyph script is written, not spoken.
+// The status panels read as one sentence: the row's own lead-in on the left, the name on
+// the right. Keyed by the table row — the one thing both halves know.
 const uint32_t *tutorial_preview_phrase(void) {
-    static const uint32_t *const spoken[] = {
-        U"How about", U"You may speak", U"Or perhaps", U"Maybe you read", U"Do you speak",
-    };
-    const tut_preview_t *e   = tut_preview_current();
-    const uint8_t        row = tutorial_preview_entry();
-    if (e == NULL) return U"How about";
-    if (e->script) return U"Or write in";
-    return spoken[row % (sizeof(spoken) / sizeof(spoken[0]))];
+    const tut_preview_t *e = tut_preview_current();
+    return e != NULL ? e->lead : U"...";
 }
 
 // Which half spells the NATIVE name for this item: alternating by table row, so the
@@ -5506,7 +5652,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // (nothing should reach the host mid-lesson) and consumed here instead. Swallowed
     // in process_record_user rather than on the release edge — an OSL layer
     // re-dispatches a release-edge action up to three times.
-    if (tutorial_active()) {
+    if (tutorial_active() && !poly_tutorial_tour_passes(record)) {
         const uint8_t row = record->event.key.row, col = record->event.key.col;
         // ⚠️ SHIFT IS THE ONE EXCEPTION, and it has to be a real one. Chapter 2 asks
         // the user to hold Shift and watch every legend change — and the legends follow
@@ -6645,18 +6791,16 @@ void keyboard_post_init_user(void) {
     // and poly_arm_tutorial_after_intro() all still work, so the tutorial can be driven
     // by hand for testing without this define.
 #if defined(POLYKYBD_BOOT_INTRO) || defined(POLYKYBD_TUTORIAL_TEST)
-#    ifdef POLYKYBD_TUTORIAL_TEST
-    // Test build: the REAL first-run path — Eden, then the tutorial — on every reset,
-    // with the marker ignored. ⚠️ It used to start the tutorial directly from
-    // housekeeping on each half's own timer, and that raced: the master's sync word
-    // read zero ("stop") until its first tutorial push, so an ordinary state sync that
-    // landed after the SLAVE had started tore the slave's lesson down (hardware: "the
-    // slave stayed at the default layer"). The Eden hand-off has no such window —
-    // ARMED is set right here, before the first sync — so the test build uses it.
-    const bool first_run = true;
-    uprintf("Tutorial TEST build: Eden + tutorial on every reset\n");
-#    else
+    // ⚠️ The TEST build respects the marker too. It used to force this true on every
+    // reset, and a tester who had FINISHED the lesson saw it again after a restart. The
+    // test build's marker is keyed to the build instead (boot_done_value() in state.c),
+    // so each newly flashed image plays once and a finished lesson stays finished; RESET
+    // Eden replays it by hand. It still uses the Eden hand-off (ARMED is set right here,
+    // before the first sync), never a direct start from each half's own timer, which
+    // raced and left the slave on the default layer.
     const bool first_run = boot_intro_pending();
+#    ifdef POLYKYBD_TUTORIAL_TEST
+    uprintf("Tutorial TEST build: first-run %s\n", first_run ? "pending" : "already played");
 #    endif
     if (first_run) {
         arm_tutorial_after_intro();

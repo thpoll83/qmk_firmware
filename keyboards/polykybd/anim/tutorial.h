@@ -70,6 +70,15 @@ bool tutorial_press(uint8_t slot);
 // Master only — the slave learns about it through the ordinary ripple sync.
 bool tutorial_hold(uint8_t kind, bool pressed, uint8_t slot);
 
+// The key tour: a key was pressed, by slot. True when it is the key being asked for — the
+// caller then lets this press AND its release act for real (the tab switches, the layer
+// opens); false, and the caller swallows it. Master only.
+bool tutorial_tour_press(uint8_t slot);
+// The tour step being asked for or just pressed, or -1 outside the tour; and whether it
+// has been pressed (the dwell on its result).
+int16_t tutorial_tour_step(void);
+bool    tutorial_tour_seen(void);
+
 // End it now: the hold-Esc gesture, or a remote disable over HID.
 void tutorial_skip(void);
 
@@ -192,6 +201,13 @@ const uint32_t *tutorial_preview_name(void);
 const uint32_t *tutorial_preview_phrase(void);
 // Map a position in the renderable subset (master only) to its table row.
 uint8_t tutorial_preview_table_row(uint8_t pos);
+
+// ---- the key tour (poly_keymap.c resolves the keys from the keymap) ----
+// Fill `out` with the tour's slots in the order they are asked for and return how many;
+// `*split` is the first emoji step. Called on BOTH halves at tutorial_start().
+uint8_t tutorial_tour_build(uint8_t out[TUT_TOUR_MAX], uint8_t *split);
+// The status prose for a tour step, this half's half of the sentence.
+const uint32_t *tutorial_tour_line(uint8_t step, bool left);
 
 // A chapter's LIT SET, as a bitmap over THIS HALF's display slots. TUT_SET_SHIFT is the
 // plain A-Z keys plus both shifts; TUT_SET_LAYER is the letters plus the layer keys.

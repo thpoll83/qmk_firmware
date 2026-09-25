@@ -1580,6 +1580,7 @@ keys.
 
 `TUT_SHIFT_HELD` (second hand) → `TUT_BOARD_REVEAL` → `TUT_BOARD_SHOW` →
 `TUT_LANG_INTRO` → `TUT_LANG_SHOW` × N → `TUT_LANG_POINT` → `TUT_FINALE` → `TUT_DONE`.
+(Round 29 replaced `TUT_LANG_POINT` with the key tour and added the dark cut; see there.)
 About 45 s on top of chapters 1–2 with the full nine-item list. `TUT_LANG_SHOW` is ONE
 phase re-entered per item, so the phase clock is the item clock and nothing new crosses
 the link. The layer chapter stays postponed; it now sits between Shift and the reveal
@@ -1815,3 +1816,45 @@ Hardware feedback, all in one round:
   each: `160 | LAYOUTS`, then `10 | SCRIPTS` — number on the left half, word on the right,
   both on the middle row, in `FreeSansBold24pt7b`, the heavy face of the boot splash and
   the BOOT-/LOADER! message (`tut_draw_heavy()`).
+
+## Round 29 — the marker, the dark cut, one phrase per item, and the key tour
+
+Hardware feedback:
+- **"I completed the tutorial, but after a restart it showed up again."** That was the
+  test build doing what it was written to do: `POLYKYBD_TUTORIAL_TEST` forced `first_run`
+  on every reset. It now reads the marker like a normal build, but the value it stores
+  as "played" is a hash of `QMK_GIT_HASH QMK_BUILDDATE` (`boot_done_value()` in
+  `state.c`). A newly flashed test image therefore plays once, a finished lesson stays
+  finished, and RESET Eden still replays it. A normal build stores the fixed
+  `BOOT_INTRO_DONE`, unchanged.
+- **The status panel was too dim.** Two causes. The keycaps' register value (128) reads
+  dimmer on the 128x64 panel's thin prose, so the status panel now runs at
+  `POLY_INTRO_STATUS_BRIGHT` (255) during the lesson. ⚠️ And the tutorial's own edge
+  write did not hold: `status_oled_level()`, which the housekeeping contrast branch calls
+  on any contrast change, dropped the panel back to the user's mapped level (at most
+  `OLED_BRIGHTNESS`, 60). It now returns the tutorial level while the tutorial runs.
+- **A 200 ms dark cut** (`TUT_LANG_DARK`, `TUT_DARK_MS`) before every name, every board of
+  glyphs, and both "more" screens. One phase with a `dark_next` field rather than four
+  phases; `tut[5]` carries `dark_next` to the slave (the phase has no wave to time). The
+  status panels do NOT go dark: `tutorial_line()` reads the cut as the screen it leads to.
+- **No repeated lead-in.** Each preview row carries its own `lead` ("How about", "You may
+  speak", …, "Read by touch:"). The old 5-phrase rotation repeated over 11 items and every
+  script said "Or write in".
+- **The key tour** replaces the timed `TUT_LANG_POINT`. `TUT_TOUR_WAIT` points the ring
+  and the pulse at `tour[tour_i]` with no timeout; the press moves to `TUT_TOUR_SEEN`
+  (1.6 s on the result), then the next key. The keys are resolved from the keymap by
+  `tutorial_tour_build()` on BOTH halves: the Lang key, `LCAT(0..5)` and `KC_BASE` on
+  `_LL`, then `TO(_EMJ)`, emoji tabs 0/4/7/8 (two per half) and `KC_BASE` on `_EMJ`.
+  Only the step index crosses the link (`tut[2]`).
+  - ⚠️ **The asked-for key ACTS; every other key stays swallowed.** `poly_tutorial_tour_passes()`
+    lets that one press through, and later that same key's RELEASE: `LCAT` and `KC_BASE`
+    act on the release, and a swallowed release would make them do nothing. It FALLS
+    THROUGH the rest of `process_record_user()` instead of returning true, because the
+    custom keycodes are handled at its tail (`poly_custom_key_action`), which a
+    `return true` would skip.
+  - ⚠️ **The layer guard ENFORCES the tour's layer**, not just allows it
+    (`tut_tour_layer()`): `_L0` plus what the last pressed step opened. So the menu the
+    prose describes is on screen even if the key did not open it, and `KC_BASE` cannot
+    leave a menu behind. `TO(_EMJ)` turns `_L0` off, which is not counted as drift.
+  - Progress: 1 opening, 2-3 letters, 4-5 one Shift each, 6 the reveal, 7 the
+    languages, 8 the language menu, 9 the emoji menu, 10 the close.

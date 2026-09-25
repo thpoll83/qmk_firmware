@@ -536,8 +536,30 @@ const char* glyph_size_name(uint8_t size) {
 void note_boot_flags(uint8_t flags) {
     g_boot_flags = flags;
 }
+// The value that means "played". A normal build writes the fixed BOOT_INTRO_DONE.
+//
+// ⚠️ A TEST build writes a value derived from its own build stamp instead. It used to
+// ignore the marker and replay on every reset, which read as a bug once a tester had
+// finished the lesson ("I complete the tutorial, but after a restart it showed up
+// again", hardware). Keying the marker to the build keeps both halves of what a test
+// build needs: a NEWLY flashed image plays once (its value differs from what the last
+// build stored), and a finished lesson stays finished across restarts. RESET Eden still
+// re-arms it by hand.
+#ifdef POLYKYBD_TUTORIAL_TEST
+#    include "version.h"   // QMK_GIT_HASH, QMK_BUILDDATE
+static uint8_t boot_done_value(void) {
+    static const char stamp[] = QMK_GIT_HASH QMK_BUILDDATE;
+    uint8_t h = 0x5Au;
+    for (uint8_t i = 0; stamp[i] != '\0'; ++i) h = (uint8_t)((h * 31u) ^ (uint8_t)stamp[i]);
+    // 0 is RESET Eden's "pending" and 0xFF an erased byte; neither may mean "played".
+    return (h == 0u || h == 0xFFu) ? BOOT_INTRO_DONE : h;
+}
+#else
+static uint8_t boot_done_value(void) { return BOOT_INTRO_DONE; }
+#endif
+
 bool boot_intro_pending(void) {
-    return g_boot_flags != BOOT_INTRO_DONE;
+    return g_boot_flags != boot_done_value();
 }
 // Marks the boot-intro-played tail byte dirty once the intro has finished. The
 // actual EEPROM write is deferred to the next centralized flush (save_all_dirty at
@@ -545,8 +567,8 @@ bool boot_intro_pending(void) {
 // housekeeping task. Worst case on power loss before a flush: the one-time intro
 // replays next boot (cosmetic, harmless).
 void mark_boot_intro_done(void) {
-    if (g_boot_flags == BOOT_INTRO_DONE) return;
-    g_boot_flags = BOOT_INTRO_DONE;
+    if (g_boot_flags == boot_done_value()) return;
+    g_boot_flags = boot_done_value();
     // ⚠️ Written STRAIGHT THROUGH, not via g_boot_dirty. The deferred path only flushes
     // at suspend / shutdown / the store key, so a user who finishes the tutorial and
     // then pulls the cable would be shown the whole first-run experience again on every

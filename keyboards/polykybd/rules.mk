@@ -476,9 +476,10 @@ ifeq ($(strip $(POLYKYBD_BOOT_INTRO)), yes)
 endif
 
 # Tutorial TEST build: `-e POLYKYBD_TUTORIAL_TEST=yes` plays the first-run experience
-# (Eden, then the tutorial) on EVERY reset, ignoring the boot marker, so a lesson can be
-# retried by replugging. It is the same boot path POLYKYBD_BOOT_INTRO gates, so it also
-# exercises the pre-watchdog start. ⚠️ TEST BUILDS ONLY.
+# (Eden, then the tutorial) once per FLASHED BUILD: the boot marker's "played" value is
+# keyed to the build stamp (boot_done_value() in state.c), so a new image plays, a
+# finished lesson stays finished, and RESET Eden replays it. It is the same boot path
+# POLYKYBD_BOOT_INTRO gates, so it also exercises the pre-watchdog start. ⚠️ TEST BUILDS ONLY.
 ifeq ($(strip $(POLYKYBD_TUTORIAL_TEST)), yes)
     OPT_DEFS += -DPOLYKYBD_TUTORIAL_TEST
 endif

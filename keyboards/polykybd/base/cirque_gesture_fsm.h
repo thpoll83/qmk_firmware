@@ -264,6 +264,7 @@ typedef struct {
     uint16_t mhist_x[3], mhist_y[3];
     int32_t  fx_q4, fy_q4; /* low-passed position, sixteenths */
     int32_t  res_x, res_y; /* speed-scaling remainder         */
+    bool     z_dipped;     /* z fell into the release band; re-anchor on recovery */
     uint8_t  mhist_n;
     uint32_t r0;       /* radius at touchdown, real units */
     uint32_t r_floor;  /* min(r0, arming radius): an inward drag is measured from here */

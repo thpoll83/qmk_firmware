@@ -757,6 +757,22 @@ TEST(CirqueGesture, LiftOffWanderDoesNotMoveTheCursor) {
     EXPECT_EQ(after - before, 0) << "lift-off wander moved the cursor " << after - before << " units";
 }
 
+TEST(CirqueGesture, PressureRecoveryDoesNotReplayTheWander) {
+    /* The other half of the lift-off gate (CodeRabbit, #311). If z dips into the
+     * release band and comes back up, the filter has been following the wander the
+     * whole time. Without re-anchoring on recovery, it walks the cursor back from the
+     * wandered position to where the finger really is: the wander, replayed in
+     * reverse. */
+    Runner r;
+    for (int i = 0; i < 10; i++) r.feed(MID_X, MID_Y, 40);
+    const int before = std::abs(r.dx_total) + std::abs(r.dy_total);
+    for (int i = 1; i <= 4; i++) r.feed((uint16_t)(MID_X + i * 30), (uint16_t)(MID_Y - i * 20), 13);
+    for (int i = 0; i < 10; i++) r.feed(MID_X, MID_Y, 40); /* pressure back, finger never moved */
+    const int after = std::abs(r.dx_total) + std::abs(r.dy_total);
+    EXPECT_LE(after - before, 2) << "recovering from a pressure dip moved the cursor " << after - before << " units";
+    EXPECT_LE(r.step_max, 2);
+}
+
 TEST(CirqueGesture, AnOutwardDragFromTheWedgeStillAbortsTheDial) {
     /* The floor only moved the INWARD test. Outward is still measured from the
      * touchdown radius, so a drag that starts in the wedge and runs out to the rim is

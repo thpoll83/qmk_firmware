@@ -93,6 +93,9 @@ so a quick short move already ran at double speed ("acceleration starts too fast
 The cursor also ignores samples whose z sits in the release band (`Z_RELEASE..Z_TOUCH`).
 As a finger lifts, the reported position wanders, and on a short move that wander was
 larger than the move. The tap test already ignored those samples.
+When z comes back up, the filter, the cursor origin and the residual are re-anchored
+to the current position. Otherwise the filter walks the cursor back from the wandered
+position, replaying the wander in reverse.
 
 ## One image for either side — analysed 2026-09-15, NOT implemented
 

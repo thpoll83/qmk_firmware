@@ -401,8 +401,15 @@ bool tutorial_naming(void) { return s_active && s_st.phase == TUT_LANG_NAME; }
 // A capital on a keycap, one tier larger than the legend face when that tier is flashed,
 // centred in the whole 72x40 window. Used to spell a preview item's name.
 bool tutorial_draw_key_letter(uint32_t cp) {
-    static const uint32_t tiers[] = {TUT_LETTER_TIER_BASE, 0u};
-    return tut_draw_letter_tiered(cp, tiers, 2, BUFFER_X, SCREEN_WIDTH, SCREEN_HEIGHT);
+    // ⚠️ The larger tier is a RELOCATION of the latin codepoints (0xF0000 + cp), so only a
+    // latin capital may be looked up there. Any other codepoint lands on whatever glyph
+    // happens to sit at 0xF0000 + cp — rendering the name previews showed にほ as "k{"
+    // and ไท as "[n" before this guard. Everything else draws at its own codepoint.
+    static const uint32_t latin[]  = {TUT_LETTER_TIER_BASE, 0u};
+    static const uint32_t native[] = {0u};
+    const bool is_latin = (cp >= 'A' && cp <= 'Z');
+    return tut_draw_letter_tiered(cp, is_latin ? latin : native, is_latin ? 2 : 1,
+                                  BUFFER_X, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
 // Two or more characters on one keycap, centred from their measured box. Drawn through

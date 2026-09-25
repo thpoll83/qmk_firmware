@@ -293,15 +293,16 @@ void kdisp_draw_glyph_rot_half_at(const GFXfont *const *fonts, uint8_t num_fonts
     const int32_t cx = rot.cx, cy = rot.cy;
     const int32_t x0 = rot.x0, y0 = rot.y0;
     const int16_t hw = rot.w, hh = rot.h;
+    const uint8_t n = rot.n;   // 2 = half, 3 = third (see KDISP_ROT_THIRD_STEP)
 
     for (int16_t dy = 0; dy < hh; ++dy) {
         for (int16_t dx = 0; dx < hw; ++dx) {
             bool lit = false;
-            for (uint8_t o = 0; o < 4 && !lit; ++o) {
-                // The full-resolution destination pixel this quarter stands for,
+            for (uint8_t o = 0; o < n * n && !lit; ++o) {
+                // The full-resolution destination pixel this sub-cell stands for,
                 // expressed centre-relative so the inverse rotation is a pure rotate.
-                const int32_t fx = (((int32_t)(dx * 2 + (o & 1u))) << 8) + x0;
-                const int32_t fy = (((int32_t)(dy * 2 + (o >> 1))) << 8) + y0;
+                const int32_t fx = (((int32_t)(dx * n + (o % n))) << 8) + x0;
+                const int32_t fy = (((int32_t)(dy * n + (o / n))) << 8) + y0;
                 const int32_t sx = ((fx * ct + fy * st) >> 8) + cx;
                 const int32_t sy = ((-fx * st + fy * ct) >> 8) + cy;
                 // Round to the nearest source pixel; both are non-negative here only
@@ -777,6 +778,8 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
             case U'\x15':   // ROT: rotate the next codepoint counter-clockwise and halve it,
                             //   plotting at the cursor with no advance (as HALF does). Next TWO
                             //   codepoints are the angle in 15-degree steps (1..24) and the glyph.
+                            //   25..48 is the same angle drawn at one THIRD instead of half
+                            //   (KDISP_ROT_THIRD_STEP, font_lookup.h).
                             //   ⚠️ The angle can never be 0 — a 0 codepoint terminates the string —
                             //   which costs nothing, since a 0-degree turn is what \x0F already is.
                 if (text[1] && text[2]) {
@@ -786,8 +789,9 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
                 break;
             case U'\x13':   // BADGE: a lock-indicator box at the cursor. Next THREE codepoints
                             //   are w, h and style — 1 = 2px outline (released), 2 = solid
-                            //   (engaged); pair the solid with \x14 to punch the glyph back
-                            //   out of it, the way ICON_CAPSLOCK_ON is drawn.
+                            //   (engaged), 3 = 1px outline (the context-menu frame); pair the
+                            //   solid with \x14 to punch the glyph back out of it, the way
+                            //   ICON_CAPSLOCK_ON is drawn.
                             //
                             //   ⚠️ The radius is FIXED at KDISP_BADGE_RADIUS rather than taken
                             //   as an argument, because the whole point is to match the baked
@@ -796,9 +800,10 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
                             //   rounder radius for the run-dialog hint; do not merge them.
                             //   ⚠️ style cannot be 0: a 0 codepoint terminates the string.
                 if (text[1] && text[2] && text[3]) {
+                    // style 3 = a 1px outline, the context-menu legend's frame.
                     kdisp_draw_badge_rect(x_cursor, y_cursor, (int8_t)text[1], (int8_t)text[2],
                                           KDISP_BADGE_RADIUS,
-                                          (text[3] == 2) ? 0 : KDISP_BADGE_BORDER);
+                                          (text[3] == 2) ? 0 : (text[3] == 3) ? 1 : KDISP_BADGE_BORDER);
                     text += 3;
                 }
                 break;

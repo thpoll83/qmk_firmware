@@ -548,6 +548,23 @@ TEST_F(FontBboxTest, RotHalfExtentSwapsTheAxesAtNinetyDegrees) {
     EXPECT_EQ(rot.h, 10);
 }
 
+// Steps 25..48 draw the same turn at one THIRD (KDISP_ROT_THIRD_STEP): the known
+// answers are again the 0- and 90-degree cases, by arithmetic.
+TEST_F(FontBboxTest, RotThirdExtentIsTheThirdSizeAtZeroAndNinetyDegrees) {
+    kdisp_rot_half_t rot;
+    kdisp_gfx_rot_half_extent(20, 30, 24, &rot);   // 0 degrees, half: 24 % 24 == 0
+    EXPECT_EQ(rot.n, 2);
+    EXPECT_EQ(rot.w, 10);
+    kdisp_gfx_rot_half_extent(20, 30, 48, &rot);   // 0 degrees, third
+    EXPECT_EQ(rot.n, 3);
+    EXPECT_EQ(rot.w, 7);    // ceil(20/3)
+    EXPECT_EQ(rot.h, 10);   // ceil(30/3)
+    kdisp_gfx_rot_half_extent(20, 30, 30, &rot);   // 30 - 24 == 6: 90 degrees, third
+    EXPECT_EQ(rot.n, 3);
+    EXPECT_EQ(rot.w, 10);
+    EXPECT_EQ(rot.h, 7);
+}
+
 TEST_F(FontBboxTest, AbsoluteMeasuresARotatedCompositeGlyph) {
     // ROT plots at the cursor too. The extent must be the ROTATED one — a rotated
     // box is wider than the original — and it must come from the same helper the

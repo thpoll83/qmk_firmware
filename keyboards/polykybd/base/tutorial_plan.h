@@ -130,7 +130,7 @@
 // top-left, top-right, bottom-left, bottom-right, then again (hardware round 33). The
 // same board-scale ring as the reveal (its radius clears corner to corner), on its own,
 // shorter clock.
-#define TUT_LANG_WIPE_MS    1500u
+#define TUT_LANG_WIPE_MS    1650u
 #define TUT_WIPE_CORNERS       4u
 #define TUT_FINALE_MS       3000u
 

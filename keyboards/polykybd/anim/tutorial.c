@@ -165,88 +165,6 @@ static void tutorial_pulse_tick(uint32_t now) {
     tut_panel_contrast(s_pulse_idx, tut_pulse_level(now, tut_normal_contrast()));
 }
 
-// ---- the CASCADE after a menu tab (experiment, 2026-09-25) -------------------
-// "When a tab has been pressed, quickly fade in the item key by key, left to right, line
-// by line, top to bottom." The content keys (the three rows between the tab row and the
-// bottom row) are hidden, then each one appears at its own moment in raster order across
-// the WHOLE board and fades up over TUT_CASC_FADE_MS. The moment is a pure function of
-// the key's board position, so both halves agree without a sync byte: row by row, and
-// within a row by board x. The bottom row (Base, and the recents the lesson hides) stays
-// put: the next step asks for Base. Round 33 doubled both times ("2 times slower").
-#define TUT_CASC_MS     1800u   // first content key to last
-#define TUT_CASC_FADE_MS 360u   // each key's own fade-in
-#define TUT_CASC_ROWS      3u   // display rows 1..3
-#define TUT_CASC_TICK_MS  30u
-static uint8_t  s_casc_drawn[5];        // this half's display slots 0..39 already drawn
-static uint8_t  s_casc_full[5];         // …and faded all the way up
-static uint32_t s_casc_start;           // the phase_start the bits belong to
-static uint32_t s_casc_at;
-
-static bool tut_bit(const uint8_t *m, uint8_t i) { return (m[i >> 3] & (1u << (i & 7))) != 0; }
-static void tut_set_bit(uint8_t *m, uint8_t i)  { m[i >> 3] |= (uint8_t)(1u << (i & 7)); }
-
-// When this half's display slot `idx` appears, in ms from the press, or 0 for a key that
-// does not cascade (the tab row, the bottom row, a slot with no panel).
-static uint32_t tut_casc_due(bool right, uint8_t idx) {
-    const uint8_t dr = (uint8_t)(idx / 8u);
-    if (dr == 0u || dr > TUT_CASC_ROWS) return 0u;
-    const sa_geom_t g  = startup_anim_key_geom(right, idx);
-    const uint32_t  bw = startup_anim_board_w();
-    if (!g.valid || bw == 0u) return 0u;
-    const uint32_t x = (uint32_t)(g.cx < 0 ? 0 : g.cx);
-    return (TUT_CASC_MS * ((uint32_t)(dr - 1u) * bw + (x > bw ? bw : x))) /
-           (TUT_CASC_ROWS * bw);
-}
-
-static bool tut_casc_hidden(uint8_t row, uint8_t col) {
-    if (!tutorial_tour_cascade()) return false;
-    const uint8_t slot = tutorial_slot_at(row, col);
-    if (slot == TUT_SLOT_NONE) return false;
-    return timer_elapsed32(s_st.phase_start) <
-           tut_casc_due(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot));
-}
-
-// Draw each due key once and fade it up. Every TUT_CASC_TICK_MS, on both halves.
-static void tutorial_cascade_tick(uint32_t now) {
-    if (!tutorial_tour_cascade()) return;
-    if (s_casc_start != s_st.phase_start) {
-        s_casc_start = s_st.phase_start;
-        for (uint8_t i = 0; i < sizeof(s_casc_drawn); ++i) s_casc_drawn[i] = s_casc_full[i] = 0;
-        s_casc_at = now - TUT_CASC_TICK_MS;
-    }
-    if ((uint32_t)(now - s_casc_at) < TUT_CASC_TICK_MS) return;
-    s_casc_at = now;
-    const bool     right = !is_left_side();
-    const uint32_t el    = (uint32_t)(now - s_st.phase_start);
-    const uint8_t  full  = tut_normal_contrast();
-    for (uint8_t idx = 0; idx < TUT_NUM_KEYS; ++idx) {
-        if (tut_bit(s_casc_full, idx)) continue;
-        const uint32_t due = tut_casc_due(right, idx);
-        if (due == 0u || el < due) continue;
-        sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
-        const uint32_t into = el - due;
-        const uint8_t  lvl  = into >= TUT_CASC_FADE_MS
-                                  ? full
-                                  : (uint8_t)(((uint32_t)full *
-                                               tut_fade_contrast((uint8_t)((into * 255u) / TUT_CASC_FADE_MS))) /
-                                              255u);
-        if (!tut_bit(s_casc_drawn, idx)) {
-            // Same draw as the focus ring's repaint: tracked, so the next full render
-            // diffs against what is really on the panel.
-            kdisp_set_contrast(lvl);
-            kdisp_track_panel(idx);
-            kdisp_set_buffer(0x00);
-            (void)poly_focus_draw_legend(TUT_SLOT(right ? 1 : 0, idx));
-            kdisp_set_gfx_erase(false);
-            kdisp_send_window();
-            tut_set_bit(s_casc_drawn, idx);
-        } else {
-            kdisp_set_contrast(lvl);
-        }
-        if (lvl == full) tut_set_bit(s_casc_full, idx);
-    }
-}
-
 // The outermost key of display row `dr` on one half: the lowest board x on the left, the
 // highest on the right. TUT_SLOT_NONE when the row has no panel (the wipe then falls back
 // to the dark cut for that item).
@@ -442,7 +360,6 @@ bool tutorial_key_visible(uint8_t row, uint8_t col) {
     // on the right says how far along you are — so neither is hidden once it is talking.
     if (s_st.phase != TUT_BLANK && tutorial_is_chrome_key(row, col)) return true;
     if (tutorial_hides_recent(row, col)) return false;   // the menus' recents row
-    if (tut_casc_hidden(row, col)) return false;   // not its turn in the cascade yet
     if (tut_phase_shows_all(s_st.phase)) return true;
     switch (s_st.phase) {
         case TUT_DONE:
@@ -587,7 +504,6 @@ void tutorial_tick(void) {
         if ((uint32_t)(now - s_sync_at) >= TUT_SYNC_REARM_MS) s_sync_dirty = true;
     }
     tutorial_pulse_tick(now);
-    tutorial_cascade_tick(now);
     // ⚠️ NOTHING IS RENDERED HERE ANY MORE. The board draws itself through
     // update_displays(), the ripple is the focus service, and the status panels are
     // drawn by oled_task_user(). What is left is the phase machine and the push to the

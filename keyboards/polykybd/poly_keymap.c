@@ -68,6 +68,7 @@
 #include "anim/tutorial.h"
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
+#include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
@@ -246,6 +247,31 @@ static uint8_t overlay_flags = 0;
 // early-returning for idle / Eden / DOOM). On the mode->render edge we invalidate
 // the dirty-window bboxes so the first awake render erases whatever the mode drew.
 static bool s_disp_render_active = false;
+
+// ---- the menu cascade's view of this file (anim/menu_cascade.h) ----------------
+bool poly_render_live(void) { return s_disp_render_active; }
+
+// What the language / emoji menu shows right now, or 0 when neither is up. Built from
+// SYNCED state only (the layer, the region and page, the category and page), so the
+// slave computes the same value from its own copy and cascades on the same change.
+uint32_t poly_menu_signature(void) {
+    const uint8_t top = get_highest_layer(get_local_layer()->layer);
+    if (top == _LL) {
+        return 0x01000000u | ((uint32_t)lang_active_region() << 8) | lang_active_page();
+    }
+    if (top == _EMJ) {
+        return 0x02000000u | ((uint32_t)emj_active_category() << 8) | emj_active_page();
+    }
+    return 0u;
+}
+
+// The level update_displays() gives a keycap: the tutorial's one uniform level while it
+// runs, the user's brightness otherwise, 0 while the panels are off.
+uint8_t poly_panel_full_contrast(void) {
+    const uint8_t c = get_local_state()->contrast;
+    if (c == DISP_OFF) return 0u;
+    return tutorial_active() ? (uint8_t)POLY_INTRO_CONTRAST : (uint8_t)(c - 1u);
+}
 
 // Continuously suppress RGB on the bridge when display is off.
 // The split transport may re-enable RGB by copying master's rgb_matrix_config; this
@@ -1713,6 +1739,8 @@ void housekeeping_task_user(void) {
                 poly_tutorial_finish_if_done();
             }
             sync_and_refresh_displays();
+            // After the render, so a change it just drew has already started the cascade.
+            menu_cascade_tick();
         }
         // Advance the focus ripple, if one is live. Self-gating and bounded to
         // POLY_FOCUS_SLICE_MS, so an idle keyboard pays a single boolean test.
@@ -4069,6 +4097,7 @@ bool poly_focus_draw_legend(uint8_t slot) {
     uint8_t r, c;
     if (!tutorial_matrix_of(slot, &r, &c)) return false;
     if (!tutorial_key_visible(r, c)) return false;
+    if (menu_cascade_hidden(r, c)) return false;   // not its turn in the cascade yet
     // The chrome keys show the lesson's labels, here as in update_displays(), or a ring
     // crossing one would paint "Esc" back for a frame.
     if (tutorial_is_chrome_key(r, c)) {
@@ -4389,13 +4418,13 @@ typedef struct {
 
 static const tut_tour_kind_info_t k_tour_kind[] = {
     [TUT_TOUR_LANG]        = {_LL,   0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
-    // A tab's dwell holds the cascade (tutorial.c, ~2.2 s with the last fade) plus a
-    // moment to look.
-    [TUT_TOUR_LCAT]        = {_LL,   0xFFu,     0u, 31u, TUT_PROG_LANGMENU},
+    // A tab's dwell holds the cascade (anim/menu_cascade.c, ~1.7 s with the last fade)
+    // plus a moment to look.
+    [TUT_TOUR_LCAT]        = {_LL,   0xFFu,     0u, 26u, TUT_PROG_LANGMENU},
     [TUT_TOUR_BASE_LL]     = {0xFFu, 0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
     [TUT_TOUR_EMJ]         = {_EMJ,  0xFFu,     0u, 0u, TUT_PROG_EMOJI},
-    [TUT_TOUR_ECAT]        = {_EMJ,  0xFFu,     0u, 31u, TUT_PROG_EMOJI},
-    [TUT_TOUR_EPAGE]       = {_EMJ,  0xFFu,     0u, 31u, TUT_PROG_EMOJI},
+    [TUT_TOUR_ECAT]        = {_EMJ,  0xFFu,     0u, 26u, TUT_PROG_EMOJI},
+    [TUT_TOUR_EPAGE]       = {_EMJ,  0xFFu,     0u, 26u, TUT_PROG_EMOJI},
     [TUT_TOUR_BASE_EMJ]    = {0xFFu, 0xFFu,     0u, 0u, TUT_PROG_EMOJI},
     // A held layer: allowed, never forced, 3 s to look at it.
     [TUT_TOUR_FN]          = {0xFFu, _FL,       0u, 30u, TUT_PROG_LAYERS},
@@ -4432,14 +4461,23 @@ static const tut_tour_kind_info_t *tut_step_info(int16_t step) {
 // letter on the master; the slave builds with any seed and is SENT the two slots over
 // the link (tut[5]), so the halves cannot disagree about which keys to point at.
 static bool tut_choose_intl(uint32_t seed, uint16_t *letter, uint8_t *alt_slot) {
+    // Vowels only (hardware round 34): their accents are the ones a reader recognises
+    // (é, ü, å), where a consonant's row is mostly marks nobody types. The pass over
+    // every letter stays as the fallback, for a keymap that moved all five vowels off
+    // the base layer.
+    static const uint16_t k_vowels[] = {KC_A, KC_E, KC_I, KC_O, KC_U};
     uint16_t cand[26];
     uint8_t  n = 0;
-    for (uint16_t kc = KC_A; kc <= KC_Z; ++kc) {
-        if (!latin_has_row(kc) || tut_find_slot(_BL, kc) == TUT_SLOT_NONE) continue;
-        const uint8_t row = latin_picker_row(kc, false);
-        uint8_t       on_page = latin_variation_count(row);
-        if (on_page > LATIN_PICKER_SLOTS) on_page = LATIN_PICKER_SLOTS;
-        if (on_page >= 3) cand[n++] = kc;
+    for (uint8_t pass = 0; pass < 2 && n == 0; ++pass) {
+        const uint8_t count = pass == 0 ? (uint8_t)(sizeof(k_vowels) / sizeof(k_vowels[0])) : (uint8_t)26u;
+        for (uint8_t i = 0; i < count; ++i) {
+            const uint16_t kc = pass == 0 ? k_vowels[i] : (uint16_t)(KC_A + i);
+            if (!latin_has_row(kc) || tut_find_slot(_BL, kc) == TUT_SLOT_NONE) continue;
+            const uint8_t row = latin_picker_row(kc, false);
+            uint8_t       on_page = latin_variation_count(row);
+            if (on_page > LATIN_PICKER_SLOTS) on_page = LATIN_PICKER_SLOTS;
+            if (on_page >= 3) cand[n++] = kc;
+        }
     }
     if (n == 0) return false;
     const uint16_t kc  = cand[seed % n];
@@ -4533,15 +4571,6 @@ static uint8_t tut_tour_layer(void) {
     if (step < 0 || step >= s_tour_n) return 0xFFu;
     if (tutorial_tour_seen()) return tut_step_info(step)->after;
     return step == 0 ? 0xFFu : tut_step_info(step - 1)->after;
-}
-
-// Did the step just pressed change a menu's CONTENT (a region tab, an emoji tab, the
-// emoji page)? Then its keys cascade in (tutorial.c).
-bool tutorial_tour_cascade(void) {
-    const int16_t step = tutorial_tour_step();
-    if (step < 0 || step >= s_tour_n || !tutorial_tour_seen()) return false;
-    const uint8_t k = s_tour_kind[step];
-    return k == TUT_TOUR_LCAT || k == TUT_TOUR_ECAT || k == TUT_TOUR_EPAGE;
 }
 
 // A layer the current step lets the user HOLD (Fn, Num, Intl), or 0xFF.
@@ -5053,6 +5082,25 @@ void reset_idle_jitter(void) {
 // there is nothing to clear away from, so the clear just eats a dark halo out of
 // the fill around every glyph. Pass 0 there.
 static void draw_legend_cx_cy(const uint32_t* text, int8_t y, int8_t cy_radius) {
+    // ⚠️ A legend that MOVEs (\x0E) places its art at ABSOLUTE buffer positions, laid
+    // out against the whole cell already, so it is drawn unshifted. Centring shifts the
+    // origin, which moves the relatively placed glyphs and not the MOVE'd ones: the
+    // context-menu lines slid left under their own pointer on the bottom row (hardware
+    // round 34). The scan skips each op's ARGUMENTS, since a coordinate or a size can
+    // be the byte 0x0E too (the same trap the bbox walker documents for MOVE).
+    for (const uint32_t* p = text; *p; ++p) {
+        uint8_t args = 0;
+        switch (*p) {
+            case U'\x0E':
+                kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, y, text, cy_radius);
+                return;
+            case U'\x0F': case U'\x11': args = 1; break;   // HALF / THIN glyph
+            case U'\x12': case U'\x15': args = 2; break;   // FRAME (w,h) / ROT (step,glyph)
+            case U'\x13': args = 3; break;                  // BADGE (w,h,style)
+            default: break;
+        }
+        for (; args > 0 && p[1]; --args) ++p;
+    }
     while (*text == U' ') text++;          // drop manual leading padding (skews bbox)
     int8_t lo = 0, hi = 0;
     kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, text, &lo, &hi);
@@ -5272,6 +5320,13 @@ void update_displays(enum refresh_mode mode) {
                         // each answers tutorial_key_visible() from its own keymap and
                         // the phase it already has from the ordinary tutorial sync. No
                         // extra state crosses the link.
+                        kdisp_set_buffer(0x00);
+                        kdisp_send_window();
+                        doom_handled = true;
+                    } else if (menu_cascade_hidden((uint8_t)(r + offset), c)) {
+                        // A menu's content rows appear key by key (anim/menu_cascade.h);
+                        // until its turn a key stays dark. Asked on both halves, from
+                        // each one's own synced menu state.
                         kdisp_set_buffer(0x00);
                         kdisp_send_window();
                         doom_handled = true;

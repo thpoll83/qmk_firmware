@@ -2096,11 +2096,14 @@
                                         //   st = BADGE_OFF outline / BADGE_ON solid
 #define BADGE_OFF        U"\x01"      // ...released: a 2px rounded outline
 #define BADGE_ON         U"\x02"      // ...engaged: the same silhouette, solid
+#define BADGE_LINE       U"\x03"      // ...a 1px outline (the context-menu frame)
 #define HINT_ERASE       U"\x14"      // draw the REST of the string as a HOLE, not as ink
 #define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
 #define HINT_ROT(step, cp) U"\x15" step cp  // rotate cp CCW by step*15 deg, halve it,
                                           // and plot at the cursor (no advance)
 #define ROT_CCW_120      U"\x08"      // 8 * 15 deg = 120 deg counter-clockwise
+#define ROT_CCW_120_THIRD U"\x20"     // the same turn at ONE THIRD scale (8 + 24; see
+                                    //   KDISP_ROT_THIRD_STEP in base/font_lookup.h)
 #define HINT_THIN        U"\x11"       // as HINT_HALF but DECIMATING (see disp_array.h)
 #define HINT_FRAME(sz)   U"\x12" sz    // 2px nested rounded rect of size (w,h) = sz at cursor
 #define HINT_RESET       U"\x18"       // reset cursor to the text origin
@@ -2329,12 +2332,23 @@
 // along an axis. 120 deg counter-clockwise from "rightwards" lands on the up-and-left
 // tilt a pointer is drawn at.
 //
-// Geometry is measured: the cell inks x11..59 y9..36 in a 0..71 x 0..39 window, so it is
-// centred horizontally to within half a pixel, with the tip clear of the bottom line
-// rather than overlapping it.
-#define HINT_POS_CTXPTR             	U"\x42" U"\x0C"   // (66,12) buffer: the pointer's top-left
-#define ICON_CONTEXT_MENU           	U" " U"\x2630" HINT_MOVE(HINT_POS_CTXPTR) \
-                                    	HINT_ROT(ROT_CCW_120, U"\x27A4")
+// Every part is placed ABSOLUTELY (hardware round 34): the lines at cursor (39,23), a
+// 1px frame one pixel clear of them, and the pointer at one third scale beside it. The
+// three together ink x41..85 y7..32, centred in the 72x40 cell to half a pixel.
+// ⚠️ ALL absolute, because the bottom row CENTRES its legend by shifting the origin
+// (draw_legend_cx_cy()), and a MOVE'd part does not follow the shift: with the lines
+// laid out relatively and only the pointer MOVE'd, the lines moved and the pointer
+// stayed, painting over them. A legend that MOVEs is drawn unshifted there now.
+//
+// Positions measured in the keycap preview model (keycap-layout-preview skill): the
+// frame is (41,7) 33x26, the lines ink 43..71 x 9..30, the pointer 76..85 x 20..32.
+#define HINT_POS_CTXLINES           	U"\x27" U"\x17"   // (39,23) cursor: the lines' origin
+#define HINT_POS_CTXFRAME           	U"\x29" U"\x07"   // (41,7)  buffer: the frame's top-left
+#define HINT_SZ_CTXFRAME            	U"\x21" U"\x1A"   // 33x26
+#define HINT_POS_CTXPTR             	U"\x48" U"\x12"   // (72,18) buffer: the pointer's top-left
+#define ICON_CONTEXT_MENU           	HINT_MOVE(HINT_POS_CTXLINES) U"\x2630" \
+                                    	HINT_MOVE(HINT_POS_CTXFRAME) HINT_BADGE(HINT_SZ_CTXFRAME, BADGE_LINE) \
+                                    	HINT_MOVE(HINT_POS_CTXPTR) HINT_ROT(ROT_CCW_120_THIRD, U"\x27A4")
 
 // Brightness keys — one resident IconsFont glyph each (base/fonts/gfx_icons.h).
 // The status OLED already says "brightness" with a sun, so the keycaps use the

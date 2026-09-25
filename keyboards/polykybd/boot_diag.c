@@ -402,7 +402,13 @@ void boot_substep(uint8_t sub, uint8_t sub_total) {
 // ── The final boot render: per-key breadcrumbs + a watchdog guard ───────────
 // See boot_diag.h (boot_render_mark) for what this instruments and why that span
 // has no other evidence.
-static bool s_render_guard = false;
+static bool s_render_guard = false;   // the watchdog is armed for this render
+// The breadcrumbs (panel sub-steps, phase stamps) run for EVERY final render, guard
+// or not. ⚠️ They used to share s_render_guard, so a boot that followed a watchdog
+// reset here skipped the marks too: the panel froze at "100%" with no sub-steps, the
+// exact screen that says nothing about where it stopped, on the one boot most likely
+// to wedge in the same place again (hardware, 2026-09-25).
+static bool s_render_marks = false;
 
 // The denominator the panel shows: every key update_displays() walks on this half,
 // KC_NO holes included, because the mark is stamped before the keycode is looked at.
@@ -424,6 +430,7 @@ static bool render_guard_already_fired(void) {
 }
 
 static void boot_render_guard_begin(void) {
+    s_render_marks = true;
     if (render_guard_already_fired()) {
         return;
     }
@@ -434,6 +441,7 @@ static void boot_render_guard_begin(void) {
 }
 
 static void boot_render_guard_end(void) {
+    s_render_marks = false;
     s_render_guard = false;
     // The watchdog stays ARMED on purpose: crash_watchdog_start() is the next line
     // of keyboard_post_init_user(), and from there the main loop feeds it.
@@ -493,13 +501,15 @@ static void usb_watch(uint8_t key) {
 }
 
 void boot_render_mark(uint8_t row, uint8_t col) {
-    if (!s_render_guard) {
+    if (!s_render_marks) {
         return;
     }
     const uint8_t key = (uint8_t)(row * MATRIX_COLS + col + 1);   // 1-based, of BOOT_RENDER_KEYS
     // A long render must not trip the guard; a stalled one must. Each key gets the
     // full CRASH_WATCHDOG_MS, so what the reset means is "one keycap took 8 s".
-    crash_watchdog_feed();
+    if (s_render_guard) {
+        crash_watchdog_feed();
+    }
     (void)crash_phase_enter(CRASH_PHASE_BOOT,
                             (uint16_t)(((uint16_t)POLY_SPLASH_STEPS << 8) | key));
     usb_watch(key);

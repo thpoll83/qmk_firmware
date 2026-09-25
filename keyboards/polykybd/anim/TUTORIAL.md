@@ -1961,3 +1961,29 @@ Hardware feedback:
   MRU keys of `_LL` and `_EMJ` and their Preset/Clear controls). On a new board they are
   empty or the factory's, and a lit row reads as something the lesson points at. Base,
   beside them, keeps its legend, because the tour asks for it next.
+
+## Round 34 — the cascade leaves the tutorial, a smaller menu pointer, vowels
+
+- **The menu cascade is a keyboard feature now** (`anim/menu_cascade.c`), not a
+  tutorial one. Whenever the language or emoji layer shows new items (the layer is
+  entered, a tab or the page key is pressed), the three content rows appear key by key
+  and fade up: 1.44 s first to last, 288 ms per key (20 % faster than round 33). The tab
+  row and the bottom row stay put. Each half notices the change from its own synced
+  menu state (`poly_menu_signature()`), and a key's moment is a pure function of its
+  board position, so there is no sync byte. The change is noticed inside the visibility
+  query `update_displays()` asks, so the first render after it already hides the rows.
+  The tutorial's tab steps dwell 2.6 s.
+- **The wipe runs 10 % slower**: `TUT_LANG_WIPE_MS` 1650.
+- **The Intl letter is a vowel** (a, e, i, o, u), with every letter as the fallback.
+- **The boot render's sub-steps always paint.** A boot that followed a watchdog reset
+  in the final render skipped the guard, and that skipped the per-row marks too: the
+  panel froze at "100%" with nothing to say where. The marks and the watchdog are
+  separate flags now (`boot_diag.c`).
+- **The context-menu legend** (not a tutorial change, found in this round): on the
+  bottom row only its lines moved and the pointer stayed, painting over them.
+  `draw_legend_cx_cy()` now draws a legend that MOVEs unshifted, since its parts are
+  already laid out against the whole cell. The legend itself is redrawn with absolute
+  parts: the lines, a 1 px frame one pixel clear of them (`BADGE_LINE`, badge style 3),
+  and the pointer at one third scale (ROT steps 25..48, `KDISP_ROT_THIRD_STEP`), 10x13
+  instead of 15x19. The host's `tools/oled_preview.py` ports both op changes and renders
+  the legend pixel-identical to the keycap preview model.

@@ -837,8 +837,9 @@ Three rules that bind code outside it:
   conclude "it printed nothing" from one that structurally cannot carry it.
 - ⚠️ **The final boot render is ~40 blocking `spiSend()` calls with no timeout**
   (`osalThreadSuspendS`), which is where a cold-boot wedge has actually landed. A
-  watchdog guard covers just that span, armed with `crash_watchdog_arm()` — never
-  `crash_watchdog_start()`, which declares the boot survived.
+  watchdog guard covers boot step 5 (core1 up, 63%) through that render, armed with
+  `crash_watchdog_arm()` — never `crash_watchdog_start()`, which declares the boot
+  survived. A new slow step in that window must feed it.
 - ⚠️ **A watchdog reset runs NO code**, so it never reaches the crash-loop halt in
   `record_and_reboot()`. Any watchdog armed inside boot must be one-shot, or a hang
   that recurs every boot becomes a reboot loop.

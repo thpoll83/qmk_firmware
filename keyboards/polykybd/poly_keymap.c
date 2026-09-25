@@ -7060,6 +7060,9 @@ void keyboard_post_init_user(void) {
     if (need_reset) {
         uprintf("Keymap layer enum changed (fmt %u) - resetting dynamic keymap\n",
                 (unsigned)stored_fmt);
+        // The late-boot watchdog guard is armed here (boot_diag.c, from step 5): give
+        // this one-time rewrite of a few kB of EEPROM the full CRASH_WATCHDOG_MS.
+        crash_watchdog_feed();
         dynamic_keymap_reset_poly();
         stamp_keymap_layers_fmt();
     }

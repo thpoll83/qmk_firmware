@@ -223,64 +223,76 @@ static inline uint8_t sa_bg(int16_t gx, int16_t gy, uint8_t tp, uint8_t tprg,
 
 // Each spark is ONE L→R comet: a bright head + a continuous horizontal trail drawn behind
 // it. (The old discrete phase-offset "trail" spaced its dots ~49 board-px apart, so it read
-// as scattered dots, not a streak.) The heads are the same for every keycap (board-space),
-// so build them ONCE per frame here, then each key just filters+rotates+draws its comet.
+// as scattered dots, not a streak.) The heads are the same for every keycap (board-space).
 // `thick` = trail is 2 px tall (brighter/bolder) vs 1 px; `tlen` = this comet's trail length.
+//
+// ⚠️ COMPUTED PER KEY, NOT CACHED. A spark is a pure function of its index and the frame's
+// (el, cv, spark_fade), so the 340-entry per-frame table this used to build (2040 B of
+// SRAM, on a chip with ~1.7 KB free) cached nothing a few multiplies cannot redo. Each
+// keycap now recomputes the heads it needs: ~340 cheap hash evaluations per key (fewer
+// in the idle loop, which drops ~63 % after two hashes), a few percent of a frame. The
+// frame's parameters are LATCHED once per frame (sa_build_sparks), so every key still
+// draws the same instant — the property the table existed for.
+// Borrowing the 32 KB overlay buffer instead was considered and rejected: the idle Eden
+// screensaver draws these same sparks while an app's overlays are loaded, so it would
+// wipe them on every screensaver and force a full overlay resend on wake.
 typedef struct { int16_t sx, sy; uint8_t thick, tlen; } sa_spark_pt_t;
-static sa_spark_pt_t s_spark_pts[SA_NSPARK];
-static uint16_t      s_spark_n;
-// The spark loop counter and s_spark_n are uint16_t. A uint8_t counter silently
-// wraps 255->0 when SA_NSPARK > 255, so `s < SA_NSPARK` never ends -> infinite loop
-// (QMK builds don't enable -Wtype-limits, so the compiler won't warn). This makes
-// the build FAIL instead if SA_NSPARK is ever raised past what the counter holds.
-_Static_assert(SA_NSPARK <= UINT16_MAX, "SA_NSPARK exceeds the uint16_t spark loop counter range");
+static uint32_t s_spk_el;      // the frame's time, converge and fade, latched per frame
+static uint8_t  s_spk_cv;
+static uint8_t  s_spk_fade;
 static uint8_t       s_brow[SCREEN_WIDTH];   // one 2x2-block row of background density (sa_bg)
 
 static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
-    const int16_t margin = SA_BOARD_W / 8;
-    s_spark_n = 0;
-    for (uint16_t s = 0; s < SA_NSPARK; ++s) {   // uint16_t: SA_NSPARK may exceed 255 (see _Static_assert)
-        // Staggered death: each spark winks out once the rising `spark_fade` passes its
-        // own hash threshold — so the sparks disappear a few at a time, not all at once.
-        if (sa_hash8(s * 3u + 7u) < spark_fade) continue;
-        // Idle screensaver thins the field out for a calmer look + lighter render
-        // (fewer comet trails to plot → snappier). ~160/256 skipped ≈ 37% kept.
-        if (s_loop && sa_hash8(s * 19u + 11u) < 190u) continue;
-        uint8_t  p0   = sa_hash8(s * 2u + 1u);
-        // Speed 1..8 in the boot intro; idle uses a WIDER 1..16 spread so the comets
-        // clearly move at different speeds (some crawl, some drift), and the extra
-        // el-shift below keeps even the fast ones slower than the boot streak.
-        uint8_t  spd  = s_loop ? (1u + (sa_hash8(s * 7u + 3u) & 15u))
-                               : (1u + (sa_hash8(s * 7u + 3u) & 7u));
-        int16_t  lane = (int16_t)(((uint32_t)sa_hash8(s * 5u + 9u) * SA_BOARD_H) >> 8);
-        uint8_t  bw   = 1u + (sa_hash8(s * 11u + 2u) & 3u);
-        uint8_t  ph   = sa_hash8(s * 13u + 5u);
-        int16_t  bob  = 6 + (int16_t)(sa_hash8(s * 17u) & 31u);
-        uint8_t  hv   = sa_hash8(s * 23u + 4u);                   // per-spark look variety
+    s_spk_el   = el;
+    s_spk_cv   = cv;
+    s_spk_fade = spark_fade;
+}
+
+// Spark `s` in this frame, or false when it is not lit (winked out, or thinned in idle).
+static bool sa_spark_at(uint16_t s, sa_spark_pt_t *pt) {
+    const uint32_t el         = s_spk_el;
+    const uint8_t  cv         = s_spk_cv;
+    const int16_t  margin     = SA_BOARD_W / 8;
+    // Staggered death: each spark winks out once the rising `spark_fade` passes its
+    // own hash threshold — so the sparks disappear a few at a time, not all at once.
+    if (sa_hash8(s * 3u + 7u) < s_spk_fade) return false;
+    // Idle screensaver thins the field out for a calmer look + lighter render
+    // (fewer comet trails to plot → snappier). ~160/256 skipped ≈ 37% kept.
+    if (s_loop && sa_hash8(s * 19u + 11u) < 190u) return false;
+    uint8_t  p0   = sa_hash8(s * 2u + 1u);
+    // Speed 1..8 in the boot intro; idle uses a WIDER 1..16 spread so the comets
+    // clearly move at different speeds (some crawl, some drift), and the extra
+    // el-shift below keeps even the fast ones slower than the boot streak.
+    uint8_t  spd  = s_loop ? (1u + (sa_hash8(s * 7u + 3u) & 15u))
+                           : (1u + (sa_hash8(s * 7u + 3u) & 7u));
+    int16_t  lane = (int16_t)(((uint32_t)sa_hash8(s * 5u + 9u) * SA_BOARD_H) >> 8);
+    uint8_t  bw   = 1u + (sa_hash8(s * 11u + 2u) & 3u);
+    uint8_t  ph   = sa_hash8(s * 13u + 5u);
+    int16_t  bob  = 6 + (int16_t)(sa_hash8(s * 17u) & 31u);
+    uint8_t  hv   = sa_hash8(s * 23u + 4u);                   // per-spark look variety
+    // Idle screensaver drifts much slower than the boot intro: shift `el` two more
+    // bits so the L→R comets and their vertical bob crawl (a calm sleeping-keyboard
+    // drift). Boot intro keeps the faster streak.
+    uint8_t tsh = s_loop ? 7 : 4;
+    uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> tsh) * spd));  // head phase (streams L→R)
+    int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
+    int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> (uint8_t)(tsh + 1)) * bw + ph)) - 128) * bob) >> 7));
+    if (cv) {   // converge toward the letter target
         const sa_target_t *tgt = &SA_TARGETS[s % SA_NUM_TARGETS];
-        // Idle screensaver drifts much slower than the boot intro: shift `el` two more
-        // bits so the L→R comets and their vertical bob crawl (a calm sleeping-keyboard
-        // drift). Boot intro keeps the faster streak.
-        uint8_t tsh = s_loop ? 7 : 4;
-        uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> tsh) * spd));  // head phase (streams L→R)
-        int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
-        int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> (uint8_t)(tsh + 1)) * bw + ph)) - 128) * bob) >> 7));
-        if (cv) {   // converge toward the letter target
-            sx = (int16_t)(sx + (((int32_t)(tgt->cx - sx) * cv) >> 8));
-            sy = (int16_t)(sy + (((int32_t)(tgt->cy - sy) * cv) >> 8));
-        }
-        s_spark_pts[s_spark_n].sx    = sx;
-        s_spark_pts[s_spark_n].sy    = sy;
-        s_spark_pts[s_spark_n].thick = (hv & 1u) ? 2u : 1u;       // ~half are 2 px (brighter)
-        // Trail length: the boot intro uses short 8..23 px comets; the idle screensaver
-        // (s_loop) uses MUCH longer 36..51 px trails so each comet drags a long, sparse,
-        // dither-faded ghost tail across the keys — the "ghosting" persistence look (a
-        // true keep-lit-pixels framebuffer won't fit in RAM). The fade formula below
-        // (255 - k*230/tlen) stretches with tlen, so the longer tail fades gradually.
-        uint8_t base_tlen = (uint8_t)(8u + (hv >> 4));
-        s_spark_pts[s_spark_n].tlen  = s_loop ? (uint8_t)(base_tlen + 28u) : base_tlen;
-        s_spark_n++;
+        sx = (int16_t)(sx + (((int32_t)(tgt->cx - sx) * cv) >> 8));
+        sy = (int16_t)(sy + (((int32_t)(tgt->cy - sy) * cv) >> 8));
     }
+    pt->sx    = sx;
+    pt->sy    = sy;
+    pt->thick = (hv & 1u) ? 2u : 1u;       // ~half are 2 px (brighter)
+    // Trail length: the boot intro uses short 8..23 px comets; the idle screensaver
+    // (s_loop) uses MUCH longer 36..51 px trails so each comet drags a long, sparse,
+    // dither-faded ghost tail across the keys — the "ghosting" persistence look (a
+    // true keep-lit-pixels framebuffer won't fit in RAM). The fade formula below
+    // (255 - k*230/tlen) stretches with tlen, so the longer tail fades gradually.
+    uint8_t base_tlen = (uint8_t)(8u + (hv >> 4));
+    pt->tlen  = s_loop ? (uint8_t)(base_tlen + 28u) : base_tlen;
+    return true;
 }
 
 // Draw each comet that touches this keycap: a bright head + a horizontal trail extending
@@ -289,16 +301,20 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
 // on their own panel, which still reads as a comet). sa_set clips, so an over-inclusive cull
 // is fine.
 static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16_t cosv, int16_t sinv) {
-    // Idle screensaver uses long ghost trails (see sa_build_sparks); widen the cull
+    // Idle screensaver uses long ghost trails (see sa_spark_at); widen the cull
     // margin so a comet whose head has streamed off the right of this key still draws
     // its long tail here instead of being skipped.
     const int16_t cull = s_loop ? (int16_t)(40 + 56) : (int16_t)(40 + SA_TRAIL_MAX);
-    for (uint16_t i = 0; i < s_spark_n; ++i) {
-        int16_t ddx = (int16_t)(s_spark_pts[i].sx - g->cx);
-        int16_t ddy = (int16_t)(s_spark_pts[i].sy - g->cy);
+    // uint16_t: SA_NSPARK may exceed 255, and a uint8_t counter would wrap forever.
+    _Static_assert(SA_NSPARK <= UINT16_MAX, "SA_NSPARK exceeds the uint16_t spark loop counter range");
+    for (uint16_t i = 0; i < SA_NSPARK; ++i) {
+        sa_spark_pt_t sp;
+        if (!sa_spark_at(i, &sp)) continue;
+        int16_t ddx = (int16_t)(sp.sx - g->cx);
+        int16_t ddy = (int16_t)(sp.sy - g->cy);
         if (ddx <= -cull || ddx >= cull || ddy <= -40 || ddy >= 40) continue;
-        const bool    thick = (s_spark_pts[i].thick == 2u);
-        const uint8_t tlen  = s_spark_pts[i].tlen;
+        const bool    thick = (sp.thick == 2u);
+        const uint8_t tlen  = sp.tlen;
         int16_t hx, hy;
         if (rot) {
             hx = (int16_t)(36 + ((ddx * cosv + ddy * sinv) >> 7));

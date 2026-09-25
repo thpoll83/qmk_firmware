@@ -542,6 +542,10 @@ static bool g_force_layer_resync = true;
 static uint8_t g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;
 
 static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
+// ONE buffer for the status prose built at run time (a preview name + "?", "letter X").
+// The two builders never speak in the same phase, and every caller draws the line
+// before asking for another, so they share it rather than holding 64 B each.
+static uint32_t s_tut_prose[16];
 // The key-tour presses that were let through, so their RELEASES go through too: LCAT
 // and KC_BASE act on the release (poly_custom_key_action), and a swallowed release would
 // leave them doing nothing. SEVERAL, not one: the Intl chapter has Intl held while Ctrl,
@@ -4323,9 +4327,6 @@ static const uint8_t s_tut_emj_right[] = {7, 8, 9};    // travel, sports, tools 
 
 static uint8_t s_tour_kind[TUT_TOUR_MAX];
 static uint8_t s_tour_arg[TUT_TOUR_MAX];
-static uint8_t s_tour_after[TUT_TOUR_MAX];   // the layer on top of _L0 once pressed; 0xFF none
-static uint8_t s_tour_allow[TUT_TOUR_MAX];   // a HELD layer allowed but not enforced; 0xFF none
-static uint8_t s_tour_need[TUT_TOUR_MAX];    // TUT_NEED_* / TUT_INERT
 static uint8_t s_tour_n;
 
 // ⚠️ The accent the Intl chapter picks is KEPT: the one setting a lesson deliberately
@@ -4351,23 +4352,52 @@ static uint16_t latin_slot_keycode(uint8_t n) {
     return n == 10 ? KC_LAT10 : KC_LAT11;
 }
 
-static tut_tour_step_t *s_tour_out;   // the caller's array while building
+// Everything about a step that follows from its KIND, in flash. These used to be three
+// per-step RAM arrays filled beside the slots (84 B of SRAM on a chip with ~1.7 KB free)
+// holding nothing a kind does not already decide.
+typedef struct {
+    uint8_t after;   // the layer on top of _L0 once pressed; 0xFF none (ENFORCED)
+    uint8_t allow;   // a layer the user may HOLD here, allowed but never forced; 0xFF none
+    uint8_t need;    // TUT_NEED_* / TUT_INERT
+    uint8_t dwell;   // TUT_TOUR_SEEN in 100 ms units (0 = the default)
+    uint8_t prog;    // the progress keycap's value
+} tut_tour_kind_info_t;
 
-static bool tut_tour_add_ex(uint8_t kind, uint8_t arg, uint8_t slot, uint8_t after,
-                            uint8_t allow, uint8_t need, uint8_t dwell, uint8_t prog) {
-    if (slot == TUT_SLOT_NONE || s_tour_n >= TUT_TOUR_MAX) return false;
-    s_tour_kind[s_tour_n]  = kind;
-    s_tour_arg[s_tour_n]   = arg;
-    s_tour_after[s_tour_n] = after;
-    s_tour_allow[s_tour_n] = allow;
-    s_tour_need[s_tour_n]  = need;
-    s_tour_out[s_tour_n]   = (tut_tour_step_t){slot, dwell, prog};
+static const tut_tour_kind_info_t k_tour_kind[] = {
+    [TUT_TOUR_LANG]        = {_LL,   0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
+    [TUT_TOUR_LCAT]        = {_LL,   0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
+    [TUT_TOUR_BASE_LL]     = {0xFFu, 0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
+    [TUT_TOUR_EMJ]         = {_EMJ,  0xFFu,     0u, 0u, TUT_PROG_EMOJI},
+    [TUT_TOUR_ECAT]        = {_EMJ,  0xFFu,     0u, 0u, TUT_PROG_EMOJI},
+    [TUT_TOUR_EPAGE]       = {_EMJ,  0xFFu,     0u, 0u, TUT_PROG_EMOJI},
+    [TUT_TOUR_BASE_EMJ]    = {0xFFu, 0xFFu,     0u, 0u, TUT_PROG_EMOJI},
+    // A held layer: allowed, never forced, 3 s to look at it.
+    [TUT_TOUR_FN]          = {0xFFu, _FL,       0u, 30u, TUT_PROG_LAYERS},
+    [TUT_TOUR_NUM]         = {0xFFu, _NL,       0u, 30u, TUT_PROG_LAYERS},
+    [TUT_TOUR_INTL_LOOK]   = {0xFFu, _ADDLANG1, 0u, 30u, TUT_PROG_INTL},
+    // "Hold Intl again" only arms the next step: almost no dwell.
+    [TUT_TOUR_INTL_ARM]    = {0xFFu, _ADDLANG1, 0u, 3u, TUT_PROG_INTL},
+    [TUT_TOUR_INTL_CTRL]   = {0xFFu, _ADDLANG1, TUT_NEED_INTL | TUT_NEED_CLOSED, 5u, TUT_PROG_INTL},
+    [TUT_TOUR_INTL_LETTER] = {0xFFu, _ADDLANG1, TUT_NEED_INTL | TUT_NEED_PICKER, 8u, TUT_PROG_INTL},
+    [TUT_TOUR_INTL_ALT]    = {0xFFu, _ADDLANG1, TUT_NEED_INTL | TUT_NEED_PICKER, 0u, TUT_PROG_INTL},
+    [TUT_TOUR_INTL_AGAIN]  = {0xFFu, _ADDLANG1, 0u, 3u, TUT_PROG_INTL},
+    [TUT_TOUR_INTL_TYPE]   = {0xFFu, _ADDLANG1, TUT_NEED_INTL | TUT_INERT, 20u, TUT_PROG_INTL},
+};
+_Static_assert(sizeof(k_tour_kind) / sizeof(k_tour_kind[0]) == TUT_TOUR_INTL_TYPE + 1u,
+               "every tour kind needs a k_tour_kind row");
+
+// Append one step (skipped when its key has no panel, or the tour is full).
+static void tut_tour_add(tut_tour_step_t *out, uint8_t kind, uint8_t arg, uint8_t slot) {
+    if (slot == TUT_SLOT_NONE || s_tour_n >= TUT_TOUR_MAX) return;
+    s_tour_kind[s_tour_n] = kind;
+    s_tour_arg[s_tour_n]  = arg;
+    out[s_tour_n]         = (tut_tour_step_t){slot, k_tour_kind[kind].dwell, k_tour_kind[kind].prog};
     s_tour_n++;
-    return true;
 }
 
-static void tut_tour_add(uint8_t kind, uint8_t arg, uint8_t slot, uint8_t after, uint8_t prog) {
-    (void)tut_tour_add_ex(kind, arg, slot, after, 0xFFu, 0u, 0u, prog);
+// The kind info for step `step` (callers bound-check it first).
+static const tut_tour_kind_info_t *tut_step_info(int16_t step) {
+    return &k_tour_kind[s_tour_kind[step]];
 }
 
 // Choose the Intl chapter's letter and accent: a letter on the base layer with at least
@@ -4404,24 +4434,23 @@ static bool tut_choose_intl(uint32_t seed, uint16_t *letter, uint8_t *alt_slot) 
 }
 
 uint8_t tutorial_tour_build(tut_tour_step_t out[TUT_TOUR_MAX], uint32_t seed) {
-    s_tour_n   = 0;
-    s_tour_out = out;
+    s_tour_n = 0;
     // A menu whose opening key is missing is skipped whole: its tabs cannot be reached.
     const uint8_t lang = tutorial_lang_slot();
     if (lang != TUT_SLOT_NONE) {
-        tut_tour_add(TUT_TOUR_LANG, 0, lang, _LL, TUT_PROG_LANGMENU);
+        tut_tour_add(out, TUT_TOUR_LANG, 0, lang);
         // Every region tab but the one already open: pressing it would change nothing on
         // screen. The region is synced, so both halves skip the same tab and agree on the
         // steps. (The empty-region test is a guard only; all six regions carry languages.)
         for (uint8_t r = 0; r < NUM_LANG_REGIONS; ++r) {
             if (r == lang_active_region() || lang_region_count(r) == 0) continue;
-            tut_tour_add(TUT_TOUR_LCAT, r, tut_find_slot(_LL, LCAT(r)), _LL, TUT_PROG_LANGMENU);
+            tut_tour_add(out, TUT_TOUR_LCAT, r, tut_find_slot(_LL, LCAT(r)));
         }
-        tut_tour_add(TUT_TOUR_BASE_LL, 0, tut_find_slot(_LL, KC_BASE), 0xFFu, TUT_PROG_LANGMENU);
+        tut_tour_add(out, TUT_TOUR_BASE_LL, 0, tut_find_slot(_LL, KC_BASE));
     }
     const uint8_t emj = tut_find_slot(_BL, TO(_EMJ));
     if (emj != TUT_SLOT_NONE) {
-        tut_tour_add(TUT_TOUR_EMJ, 0, emj, _EMJ, TUT_PROG_EMOJI);
+        tut_tour_add(out, TUT_TOUR_EMJ, 0, emj);
         uint8_t tabs[2 * TUT_EMJ_TABS_PER_HALF];
         uint8_t n_tabs = 0;
         for (uint8_t half = 0; half < 2; ++half) {
@@ -4440,21 +4469,17 @@ uint8_t tutorial_tour_build(tut_tour_step_t out[TUT_TOUR_MAX], uint32_t seed) {
             if (emj_page_count(tabs[i]) > 1) page_after = i;
         }
         for (uint8_t i = 0; i < n_tabs; ++i) {
-            tut_tour_add(TUT_TOUR_ECAT, tabs[i], tut_find_slot(_EMJ, KC_EMJ_CAT(tabs[i])), _EMJ,
-                         TUT_PROG_EMOJI);
+            tut_tour_add(out, TUT_TOUR_ECAT, tabs[i], tut_find_slot(_EMJ, KC_EMJ_CAT(tabs[i])));
             if (i == page_after) {
-                tut_tour_add(TUT_TOUR_EPAGE, 0, tut_find_slot(_EMJ, KC_EMJ_PAGE_NEXT), _EMJ,
-                             TUT_PROG_EMOJI);
+                tut_tour_add(out, TUT_TOUR_EPAGE, 0, tut_find_slot(_EMJ, KC_EMJ_PAGE_NEXT));
             }
         }
-        tut_tour_add(TUT_TOUR_BASE_EMJ, 0, tut_find_slot(_EMJ, KC_BASE), 0xFFu, TUT_PROG_EMOJI);
+        tut_tour_add(out, TUT_TOUR_BASE_EMJ, 0, tut_find_slot(_EMJ, KC_BASE));
     }
     // Hold Fn, then hold Num: a layer that exists only while its key is down, so the
     // step ALLOWS the layer rather than enforcing it, and dwells 3 s to look at it.
-    (void)tut_tour_add_ex(TUT_TOUR_FN, 0, tut_find_slot(_BL, MO(_FL)), 0xFFu, _FL, 0u, 30u,
-                          TUT_PROG_LAYERS);
-    (void)tut_tour_add_ex(TUT_TOUR_NUM, 0, tut_find_slot(_BL, MO(_NL)), 0xFFu, _NL, 0u, 30u,
-                          TUT_PROG_LAYERS);
+    tut_tour_add(out, TUT_TOUR_FN, 0, tut_find_slot(_BL, MO(_FL)));
+    tut_tour_add(out, TUT_TOUR_NUM, 0, tut_find_slot(_BL, MO(_NL)));
     // The Intl chapter. Skipped whole if the board has no Intl key, no Ctrl, or no letter
     // with accents to pick from.
     const uint8_t intl = tut_find_slot(_BL, MO(_ADDLANG1));
@@ -4464,20 +4489,14 @@ uint8_t tutorial_tour_build(tut_tour_step_t out[TUT_TOUR_MAX], uint32_t seed) {
     if (intl != TUT_SLOT_NONE && ctrl != TUT_SLOT_NONE && tut_choose_intl(seed, &letter, &alt)) {
         const uint8_t lslot = tut_find_slot(_BL, letter);
         const uint8_t aslot = tut_find_slot(_ADDLANG1, latin_slot_keycode(alt));
-        const uint8_t I = _ADDLANG1;
-        (void)tut_tour_add_ex(TUT_TOUR_INTL_LOOK, 0, intl, 0xFFu, I, 0u, 30u, TUT_PROG_INTL);
-        (void)tut_tour_add_ex(TUT_TOUR_INTL_ARM, 0, intl, 0xFFu, I, 0u, 3u, TUT_PROG_INTL);
-        (void)tut_tour_add_ex(TUT_TOUR_INTL_CTRL, 0, ctrl, 0xFFu, I,
-                              TUT_NEED_INTL | TUT_NEED_CLOSED, 5u, TUT_PROG_INTL);
-        (void)tut_tour_add_ex(TUT_TOUR_INTL_LETTER, 0, lslot, 0xFFu, I,
-                              TUT_NEED_INTL | TUT_NEED_PICKER, 8u, TUT_PROG_INTL);
-        (void)tut_tour_add_ex(TUT_TOUR_INTL_ALT, alt, aslot, 0xFFu, I,
-                              TUT_NEED_INTL | TUT_NEED_PICKER, 0u, TUT_PROG_INTL);
-        (void)tut_tour_add_ex(TUT_TOUR_INTL_AGAIN, 0, intl, 0xFFu, I, 0u, 3u, TUT_PROG_INTL);
-        (void)tut_tour_add_ex(TUT_TOUR_INTL_TYPE, 0, lslot, 0xFFu, I,
-                              TUT_NEED_INTL | TUT_INERT, 20u, TUT_PROG_INTL);
+        tut_tour_add(out, TUT_TOUR_INTL_LOOK, 0, intl);
+        tut_tour_add(out, TUT_TOUR_INTL_ARM, 0, intl);
+        tut_tour_add(out, TUT_TOUR_INTL_CTRL, 0, ctrl);
+        tut_tour_add(out, TUT_TOUR_INTL_LETTER, 0, lslot);
+        tut_tour_add(out, TUT_TOUR_INTL_ALT, alt, aslot);
+        tut_tour_add(out, TUT_TOUR_INTL_AGAIN, 0, intl);
+        tut_tour_add(out, TUT_TOUR_INTL_TYPE, 0, lslot);
     }
-    s_tour_out = NULL;
     return s_tour_n;
 }
 
@@ -4486,14 +4505,14 @@ uint8_t tutorial_tour_build(tut_tour_step_t out[TUT_TOUR_MAX], uint32_t seed) {
 static uint8_t tut_tour_layer(void) {
     const int16_t step = tutorial_tour_step();
     if (step < 0 || step >= s_tour_n) return 0xFFu;
-    if (tutorial_tour_seen()) return s_tour_after[step];
-    return step == 0 ? 0xFFu : s_tour_after[step - 1];
+    if (tutorial_tour_seen()) return tut_step_info(step)->after;
+    return step == 0 ? 0xFFu : tut_step_info(step - 1)->after;
 }
 
 // A layer the current step lets the user HOLD (Fn, Num, Intl), or 0xFF.
 static uint8_t tut_tour_allowed_layer(void) {
     const int16_t step = tutorial_tour_step();
-    return (step < 0 || step >= s_tour_n) ? 0xFFu : s_tour_allow[step];
+    return (step < 0 || step >= s_tour_n) ? 0xFFu : tut_step_info(step)->allow;
 }
 
 // Can the current step's key be pressed right now? Only the Intl chapter says no: its
@@ -4502,7 +4521,7 @@ static uint8_t tut_tour_allowed_layer(void) {
 static bool tut_tour_step_ready(void) {
     const int16_t step = tutorial_tour_step();
     if (step < 0 || step >= s_tour_n) return true;
-    const uint8_t need = s_tour_need[step];
+    const uint8_t need = tut_step_info(step)->need;
     if ((need & TUT_NEED_INTL) && !IS_LAYER_ON(_ADDLANG1)) return false;
     if ((need & TUT_NEED_PICKER) && !s_picker_latched) return false;
     if ((need & TUT_NEED_CLOSED) && s_picker_latched) return false;
@@ -4511,7 +4530,7 @@ static bool tut_tour_step_ready(void) {
 
 static bool tut_tour_step_inert(void) {
     const int16_t step = tutorial_tour_step();
-    return step >= 0 && step < s_tour_n && (s_tour_need[step] & TUT_INERT) != 0u;
+    return step >= 0 && step < s_tour_n && (tut_step_info(step)->need & TUT_INERT) != 0u;
 }
 
 // Master, every housekeeping pass: the Intl picker only exists while Intl is held, so a
@@ -4521,7 +4540,7 @@ static bool tut_tour_step_inert(void) {
 static void poly_tutorial_tour_rewind_if_let_go(void) {
     const int16_t step = tutorial_tour_step();
     if (step < 0 || step >= s_tour_n || tutorial_tour_seen()) return;
-    const uint8_t need = s_tour_need[step];
+    const uint8_t need = tut_step_info(step)->need;
     if (!(need & (TUT_NEED_INTL | TUT_NEED_PICKER))) return;
     uint8_t back = 0xFFu;
     if ((need & TUT_NEED_INTL) && !IS_LAYER_ON(_ADDLANG1)) {
@@ -4546,7 +4565,7 @@ static void poly_tutorial_tour_rewind_if_let_go(void) {
 // draw said "letter Y" on the right panel while the ring and the pulse sat on E
 // (hardware). tutorial_tour_slot() is the synced key on the slave.
 static const uint32_t *tut_letter_words(const uint32_t *prefix) {
-    static uint32_t buf[16];
+    uint32_t *const buf = s_tut_prose;
     uint8_t         n = 0;
     while (prefix[n] != 0 && n < 13) { buf[n] = prefix[n]; n++; }
     uint32_t cp = 0;
@@ -4642,7 +4661,7 @@ static const tut_preview_t *tut_preview_current(void) {
 // The status panel's name ends the lead-in's question, so it carries the "?". Only the
 // PANEL: the keys spell `name` itself, where a "?" would be a keycap of its own.
 const uint32_t *tutorial_preview_name(void) {
-    static uint32_t      buf[16];
+    uint32_t *const      buf = s_tut_prose;
     const tut_preview_t *e = tut_preview_current();
     if (e == NULL) return U"...";
     uint8_t n = 0;

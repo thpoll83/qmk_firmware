@@ -13,7 +13,7 @@
 #include "side.h"                           // is_left_side()
 #include "bridge_helper.h"                  // is_usb_host_side() — for the startup trace
 #include QMK_KEYBOARD_H                     // get_key_disp_bitmask, NUM_SHIFT_REGISTERS
-#include "base/fonts/FreeSansBold24pt7b.h"  // splash glyph font
+#include "poly_util.h"                      // poly_heavy_font(): the splash face, one copy
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
 #include "../poly_keymap.h"
 
@@ -417,7 +417,7 @@ static void sa_render_frame(uint32_t el) {
         if (sparks) sa_plot_sparks(buf, g, rot, cosv, sinv);
 
         if (letters && L[idx]) {
-            const GFXfont *const lf[1] = { &FreeSansBold24pt7b };
+            const GFXfont *const lf[1] = { poly_heavy_font() };
             uint32_t txt[2] = { L[idx], 0 };
             kdisp_write_gfx_text(lf, 1, 49, 38, txt);
         }

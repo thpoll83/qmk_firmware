@@ -6287,7 +6287,7 @@ bool process_detected_host_os_kb(os_variant_t os) {
 // digit shown on each half tells us how far that half got before it stopped.
 static void boot_trace(const uint32_t* digit) {
     clear_all_displays();
-    display_message(1, 1, digit, &FreeSansBold24pt7b);
+    display_message(1, 1, digit, poly_heavy_font());
 }
 #endif
 

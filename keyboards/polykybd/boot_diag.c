@@ -19,11 +19,11 @@
 #include "oled_helper.h"       // oled_boot_progress()
 #include "base/update.h"       // enum refresh_mode / ALL_AT_ONCE
 #include "base/disp_array.h"   // GFXfont type
-// Only the single splash font is needed. Don't pull in gfx_used_fonts.h — the
-// generated category headers it aggregates have external linkage and may be
-// included by exactly one TU (poly_keymap.c). FreeSansBold24pt7b.h is
-// self-contained (static const), so this TU gets its own copy.
-#include "base/fonts/FreeSansBold24pt7b.h"   // FreeSansBold24pt7b
+// The splash font comes from poly_heavy_font() (poly_util.h), NOT from including
+// FreeSansBold24pt7b.h here: that header defines its tables static, so every TU that
+// included it linked its own ~10 KB copy — three in the image before this was merged.
+// Don't pull in gfx_used_fonts.h either: the generated category headers it aggregates
+// have external linkage and may be included by exactly one TU (poly_keymap.c).
 #include "hardware/clocks.h"                          // clock_get_hz()
 #include "hardware/structs/vreg_and_chip_reset.h"     // core-voltage select
 
@@ -557,8 +557,8 @@ void splash_progress(uint8_t step) {
     }
 
     clear_all_displays();
-    display_message_progressive(1, 1, r1_word, &FreeSansBold24pt7b, 0, solid_count);
-    display_message_progressive(r2_row, 1, r2_word, &FreeSansBold24pt7b, r1_vis, solid_count);
+    display_message_progressive(1, 1, r1_word, poly_heavy_font(), 0, solid_count);
+    display_message_progressive(r2_row, 1, r2_word, poly_heavy_font(), r1_vis, solid_count);
 
     if (step == 1) {
         // Hold the all-dim preview briefly so the eye registers the whole logo

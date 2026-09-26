@@ -264,7 +264,19 @@ void poly_focus_tick(void) {
     }
 }
 
+bool poly_focus_sweep_band(poly_focus_band_t *out) {
+    // Only the board-sized profile: the small ring that points at a key has no LEDs.
+    if (!s_active || !s_live || !s_sweep) return false;
+    out->cx     = s_cx;
+    out->cy     = s_cy;
+    out->outer2 = s_cull.outer2;
+    out->inner2 = s_cull.inner2;
+    out->dens   = s_dens;
+    return true;
+}
+
 #else   // split42: no per-keycap ripple
+bool poly_focus_sweep_band(poly_focus_band_t *out) { (void)out; return false; }
 void poly_focus_start(uint8_t slot) { (void)slot; }
 void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms, uint32_t run_ms) {
     (void)slot; (void)already_ms; (void)run_ms;

@@ -47,6 +47,17 @@ void poly_focus_overlay(uint8_t disp_idx, const sa_geom_t *g);
 // pass or two, which is invisible at this speed.
 void poly_focus_tick(void);
 
+// The band a BOARD-SIZED sweep (the reveal, a language wipe) latched this frame, for the
+// key LEDs under it (anim/tutorial_rgb.c): the centre in board units, the squared bounds
+// of the band grown by a keycap half-diagonal, and the density 0..255. False when no
+// sweep is live; the small ring that points at a key never answers.
+typedef struct {
+    int16_t  cx, cy;
+    uint32_t outer2, inner2;
+    uint8_t  dens;
+} poly_focus_band_t;
+bool poly_focus_sweep_band(poly_focus_band_t *out);
+
 // Provided by poly_keymap.c: redraw one key's ordinary legend into the scratch buffer.
 // The panel is already selected and the buffer cleared; the caller sends.
 //

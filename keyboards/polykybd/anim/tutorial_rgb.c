@@ -11,10 +11,12 @@
 #include "startup_anim.h"           // startup_anim_rainbow_level()
 #include "tutorial.h"
 #include "menu_cascade.h"           // menu_cascade_key_level()
+#include "focus_ring.h"             // poly_focus_sweep_band()
 
 // Raw LED values, not scaled by RGB_MATRIX_MAXIMUM_BRIGHTNESS. For scale, the flash
 // cue breathes at 5..36.
 #define TRGB_PULSE_VAL   40u    // the key the lesson points at, at the top of its pulse
+#define TRGB_SWEEP_VAL   40u    // a key under a board-wide sweep, at full density
 #define TRGB_NAME_VAL    16u    // a letter of a spelled language name: "very lightly"
 #define TRGB_NAME_FLOOR  150u   // of 255: the name's pulse only dips to here
 #define TRGB_SAT         230u   // a touch of white in every colour
@@ -144,9 +146,30 @@ bool tutorial_rgb_paint(void) {
     const uint8_t nhue  = k_hues[(uint8_t)(tutorial_preview_entry() * 4u) % TRGB_NHUES];
     const uint8_t nwave = (uint8_t)(TRGB_NAME_FLOOR + ((255u - TRGB_NAME_FLOOR) * wave) / 255u);
 
+    // A board-wide sweep (the reveal, a language wipe) lights the keys under its band,
+    // each fading once it has passed. One colour per sweep, the same on both halves:
+    // the centre, the phase and the preview item are all synced.
+    poly_focus_band_t band;
+    const bool    sweep = poly_focus_sweep_band(&band);
+    const uint8_t shue  = sweep ? k_hues[(uint8_t)(band.cx * 3 + band.cy * 5 + tutorial_rgb_phase() +
+                                                   tutorial_preview_entry() * 2u) % TRGB_NHUES]
+                                : 0u;
+
     for (uint8_t i = lo; i < hi; ++i) {
         const uint8_t slot = s_led_slot[i];
         uint8_t target = 0u, hue = s_hue[i], val = 0u;
+        if (sweep && slot != TUT_SLOT_NONE) {
+            const sa_geom_t g = startup_anim_key_geom(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot));
+            if (g.valid) {
+                const int32_t  dx = (int32_t)g.cx - band.cx, dy = (int32_t)g.cy - band.cy;
+                const uint32_t d2 = (uint32_t)(dx * dx + dy * dy);
+                if (d2 <= band.outer2 && d2 >= band.inner2) {
+                    target = band.dens;
+                    hue    = shue;
+                    val    = TRGB_SWEEP_VAL;
+                }
+            }
+        }
         if (slot != TUT_SLOT_NONE && slot == pslot) {
             target = wave;
             hue    = phue;

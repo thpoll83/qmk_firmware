@@ -2080,9 +2080,13 @@ Hardware feedback:
   brightness (`RGB_MATRIX_DEFAULT_SPD` / `_VAL`) without saving, fades it out through the
   brightness while POLYKYBD is written, and restores the user's mode, colour and speed.
   The split transport carries the mode to the slave; the slave only stands aside.
-- **The rings carry no colour any more.** Only the key the lesson points at glows, pulsing
-  in step with its keycap (`tut_pulse_level()`, the same curve and clock), in one colour
-  for as long as it is asked for.
+- **The small ring that points at a key carries no colour any more.** That key glows
+  instead, pulsing in step with its keycap (`tut_pulse_level()`, the same curve and
+  clock), in one colour for as long as it is asked for.
+- **The big board-wide sweeps keep it** (the board reveal, each language wipe): the keys
+  under the band light in the sweep's colour and fade once it has passed.
+  `poly_focus_sweep_band()` answers only for the sweep profile, so the pointing ring
+  cannot light anything.
 - **A spelled language name** glows very lightly in that language's colour, fades in key
   by key with the name's cascade (`menu_cascade_key_level()`), and breathes between 60 %
   and 100 % of its level.

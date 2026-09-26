@@ -107,6 +107,8 @@ bool tutorial_naming(void);
 // and whether the next item's name alone is on the keys (TUT_LANG_NAME).
 uint8_t tutorial_rgb_phase(void);
 bool    tutorial_showing_name(void);
+// The key the lesson is pulsing right now (TUT_SLOT packing), or TUT_SLOT_NONE.
+uint8_t tutorial_pulsed_slot(void);
 // Provided by poly_keymap.c: does this key carry a letter of the spelled name?
 bool    tutorial_is_name_key(uint8_t row, uint8_t col);
 // True where the wipe's ring has already turned this key into the new item.

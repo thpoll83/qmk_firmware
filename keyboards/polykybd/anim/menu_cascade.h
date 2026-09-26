@@ -29,3 +29,8 @@ bool     poly_slot_visible(uint8_t slot);   // the tutorial leaves this key lit 
 bool menu_cascade_hidden(uint8_t row, uint8_t col);
 // Draw each due key and fade it up. Housekeeping, both halves; self-gating.
 void menu_cascade_tick(void);
+
+// How far this half's key (display index `idx`) has faded in, 0..255, on the cascade
+// running now; 255 when no cascade runs or the key does not cascade. For the key LEDs,
+// which fade in with the keys (anim/tutorial_rgb.c).
+uint8_t menu_cascade_key_level(bool right, uint8_t idx);

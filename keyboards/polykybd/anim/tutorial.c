@@ -551,6 +551,7 @@ uint8_t tutorial_preview_entry(void) {
 // agree: the phase, which with the ring's centre picks each ring's colour, and whether
 // the next item's name is on the keys.
 uint8_t tutorial_rgb_phase(void) { return s_active ? (uint8_t)s_st.phase : 0xFFu; }
+uint8_t tutorial_pulsed_slot(void) { return s_active ? tut_pulse_slot(&s_st) : TUT_SLOT_NONE; }
 bool    tutorial_showing_name(void) { return s_active && s_st.phase == TUT_LANG_NAME; }
 
 // The wipe keeps the name on the keys the ring has not reached yet.
@@ -947,6 +948,7 @@ int16_t tutorial_preview_index(void) { return -1; }
 uint8_t tutorial_preview_entry(void) { return 0xFFu; }
 bool tutorial_naming(void) { return false; }
 uint8_t tutorial_rgb_phase(void) { return 0xFFu; }
+uint8_t tutorial_pulsed_slot(void) { return 0xFFu; }
 bool    tutorial_showing_name(void) { return false; }
 bool tutorial_wipe_covers(uint8_t row, uint8_t col) { (void)row; (void)col; return false; }
 bool tutorial_in_layer_chapter(void) { return false; }

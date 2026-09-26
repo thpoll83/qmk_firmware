@@ -2071,3 +2071,20 @@ Hardware feedback:
     mode resumes afterwards.
 - **The progress key is smaller:** "3/10" is drawn in the 19 px UI face (`HINT_MID`, the
   size of Esc's "Hold to skip..."), not the keycap face.
+
+## Round 40 — the stock rainbow, a pulse instead of ring colours, mixed hues
+
+- **The opening rainbow is the stock effect now**, not a copy painted from the indicator
+  hook ("faster and smoother, like the default when the keyboard gets a fresh
+  firmware"). The master switches the matrix to `CYCLE_LEFT_RIGHT` at the stock speed and
+  brightness (`RGB_MATRIX_DEFAULT_SPD` / `_VAL`) without saving, fades it out through the
+  brightness while POLYKYBD is written, and restores the user's mode, colour and speed.
+  The split transport carries the mode to the slave; the slave only stands aside.
+- **The rings carry no colour any more.** Only the key the lesson points at glows, pulsing
+  in step with its keycap (`tut_pulse_level()`, the same curve and clock), in one colour
+  for as long as it is asked for.
+- **A spelled language name** glows very lightly in that language's colour, fades in key
+  by key with the name's cascade (`menu_cascade_key_level()`), and breathes between 60 %
+  and 100 % of its level.
+- **No pure red, green or blue:** every colour comes from a table of in-between hues,
+  at saturation 230. A glow that is no longer wanted fades out in the colour it had.

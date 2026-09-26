@@ -118,6 +118,16 @@ bool menu_cascade_hidden(uint8_t row, uint8_t col) {
     return false;
 }
 
+uint8_t menu_cascade_key_level(bool right, uint8_t idx) {
+    if (!s_live) return 255u;
+    const uint32_t due = due_ms(right, idx);
+    if (due == 0u) return 255u;
+    const uint32_t el = timer_elapsed32(s_start);
+    if (el < due) return 0u;
+    const uint32_t into = el - due;
+    return into >= CASC_FADE_MS ? 255u : (uint8_t)((into * 255u) / CASC_FADE_MS);
+}
+
 void menu_cascade_tick(void) {
     poll();
     if (!s_live) return;
@@ -210,5 +220,10 @@ bool menu_cascade_hidden(uint8_t row, uint8_t col) {
     return false;
 }
 void menu_cascade_tick(void) {}
+uint8_t menu_cascade_key_level(bool right, uint8_t idx) {
+    (void)right;
+    (void)idx;
+    return 255u;
+}
 
 #endif

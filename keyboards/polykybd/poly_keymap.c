@@ -4974,6 +4974,15 @@ uint8_t poly_reported_lang(void) {
     return cur;
 }
 
+// The language to STORE. Only the master keeps s_tut_real_lang; the slave receives the
+// preview through the ordinary sync and cannot tell it from the user's language. So
+// while the lesson runs the slave keeps the language it already stored, or a flush
+// then (a suspend, SAVE_EEPROM) would persist a board-only preview on that half.
+uint8_t poly_persisted_lang(void) {
+    if (!is_keyboard_master() && tutorial_active()) return load_user_eeconf().lang;
+    return poly_reported_lang();
+}
+
 // Master only, once per housekeeping pass: write or retire the preview. Returns the
 // glyph script the board should DRAW (the preview's, or the user's own).
 static uint8_t poly_tutorial_apply_preview(void) {

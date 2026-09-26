@@ -799,6 +799,10 @@ bool boot_intro_pending(void);
 // OS layout to whatever GET_LANG says, so reading local_state->lang there would carry a
 // board-only preview into the OS. Defined in poly_keymap.c.
 uint8_t poly_reported_lang(void);
+// The language to PERSIST: poly_reported_lang(), except on the slave while the tutorial
+// runs, where it is the language already stored (the slave cannot tell a synced
+// preview from the real one). Defined in poly_keymap.c.
+uint8_t poly_persisted_lang(void);
 // Persist BOOT_INTRO_DONE (one-time tail-byte write) so the intro won't replay.
 void mark_boot_intro_done(void);
 // Clear the marker (straight-through write) so the intro + tutorial replay next boot.

@@ -166,7 +166,8 @@ run on it (`test_no_crash_record`). What is worth knowing:
     panel names the row on a board nobody can attach to, and the archived record names
     the exact key. ⚠️ A stop that MOVES between boots (key 16, then key 18) rules out a
     bad glyph or a missing font entry outright — those stop at the same key every time.
-  - a **watchdog guard across that render only** (below), which turns the wedge into a
+  - a **watchdog guard from boot step 5 to the end of post_init** (below; it covered
+    the final render only until round 34 of the tutorial), which turns the wedge into a
     reset that records.
   - `usb_watch()` samples `USBD1.state` per key and, on a change, displaces the label
     line with `USB 4>2 @18` — ACTIVE(4) -> READY(2) is a bus reset, (5) a suspend. One
@@ -203,9 +204,21 @@ run on it (`test_no_crash_record`). What is worth knowing:
     chip simply resets. A hang that recurs every boot would therefore reboot-loop
     forever. The guard is one-shot for exactly that reason: it skips itself when
     `crash_record_fresh()` plus the archived record say the previous boot already died
-    under it (`kind=watchdog`, phase BOOT, high byte `POLY_SPLASH_STEPS`). One reset,
-    one record, then the old wedge — which BOOTSEL still recovers, and which leaves the
-    panel readable for a photograph instead of resetting it away every 8 s.
+    under it (`kind=watchdog`, phase BOOT, step 5 or later). One reset, one record,
+    then the old wedge — which BOOTSEL still recovers, and which leaves the panel
+    readable for a photograph instead of resetting it away every 8 s.
+  - ⚠️ **Widened to step 5 (2026-09-25)**, because a master wedged at "63%, 4 / 4":
+    `fw_staging_init()` had returned and `splash_progress(6)` never repainted, the same
+    63% -> 75% gap this file names, and outside the old guard there was no reset and so
+    nothing for `polyctl crash show` to read. The guard is armed by
+    `boot_guard_milestone()` at step 5 (core1 up) and fed at every milestone, sub-step
+    and render key; the one-time keymap discard between steps 6 and 7 feeds it once per layer and
+    before the macro clear (`dynamic_keymap_reset_poly()`), so no single span of its
+    EEPROM writes has to fit the whole discard into 8 s.
+    Inside each milestone, `splash_progress()` stamps two finer breadcrumbs:
+    `0xSSE1` before the status-panel paint (I2C) and `0xSSE2` before the logo draw
+    (keycap SPI), plus `0x08E3` before the final dwell. So `phase=1:0x06E1` reads
+    "the 75% panel paint never returned".
 
 - **A crash loop halts instead of looping forever**: `consecutive` counts
   back-to-back records and past `CRASH_LOOP_LIMIT` (5) the handler parks in `wfi`

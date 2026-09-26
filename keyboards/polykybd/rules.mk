@@ -138,7 +138,7 @@ OS_DETECTION_ENABLE = yes
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
 # covers emoji/emoji_layer.c and hints/os_hints.c.
-POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c base/tutorial_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/font_lookup.c base/crash_record.c base/hand_stamp.c slave_data.c
+POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/font_lookup.c base/crash_record.c base/hand_stamp.c slave_data.c
 SRC += $(POLY_SRC)
 
 # emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
@@ -466,13 +466,29 @@ OPT_DEFS += -DFW_REQUIRE_SIGNATURE
 #
 # ⚠️ TEST BUILDS ONLY -- never ship this in a release image. A normal build
 # compiles the inline no-ops in crash_test.h and pays nothing.
-# First-run boot intro (Eden + the tutorial), opt-in: `-e POLYKYBD_BOOT_INTRO=yes`.
-# ⚠️ Default OFF on purpose — see the long note at the guard in poly_keymap.c. It runs
-# in the pre-watchdog boot window, and boot auto-play was previously disabled after an
-# unexplained startup hang. Do not flip this default until a cold boot has been run on
-# hardware.
+# First-run boot intro (Eden + the tutorial): ON by default since 1.0.0; opt out with
+# `-e POLYKYBD_BOOT_INTRO=no`. It plays once per board (the EEPROM marker), and again
+# only after RESET Eden. See the note at the guard in poly_keymap.c for why the old
+# "default OFF" is lifted.
+# ⚠️ HIL images default it OFF: a rig board boots with a pending marker, nobody presses
+# a key, so the lesson would never finish and would own the displays, the brightness
+# and the layer stack for every graded test after the boot. A HIL build that wants it
+# can still pass `-e POLYKYBD_BOOT_INTRO=yes`.
+ifneq ($(filter yes left right,$(strip $(POLYKYBD_HIL))),)
+    POLYKYBD_BOOT_INTRO ?= no
+endif
+POLYKYBD_BOOT_INTRO ?= yes
 ifeq ($(strip $(POLYKYBD_BOOT_INTRO)), yes)
     OPT_DEFS += -DPOLYKYBD_BOOT_INTRO
+endif
+
+# Tutorial TEST build: `-e POLYKYBD_TUTORIAL_TEST=yes` plays the first-run experience
+# (Eden, then the tutorial) once per FLASHED BUILD: the boot marker's "played" value is
+# keyed to the build stamp (boot_done_value() in state.c), so a new image plays, a
+# finished lesson stays finished, and RESET Eden replays it. It is the same boot path
+# POLYKYBD_BOOT_INTRO gates, so it also exercises the pre-watchdog start. ⚠️ TEST BUILDS ONLY.
+ifeq ($(strip $(POLYKYBD_TUTORIAL_TEST)), yes)
+    OPT_DEFS += -DPOLYKYBD_TUTORIAL_TEST
 endif
 
 ifeq ($(strip $(POLYKYBD_CRASH_TEST)), yes)

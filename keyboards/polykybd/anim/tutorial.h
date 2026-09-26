@@ -31,6 +31,12 @@ void tutorial_stop(void);
 // process_record_user() must swallow, and the idle fade must be held off.
 bool tutorial_active(void);
 
+// Non-zero while the Shift chapter's reveal or a preview item's name is cascading in;
+// the menu cascade takes it ahead of the menu signature. 0 otherwise.
+uint32_t tutorial_cascade_signature(void);
+// True while a language layout is shown (TUT_LANG_SHOW): the sparkles run.
+bool tutorial_sparkle_live(void);
+
 // ---- the two halves (see the architectural note in base/tutorial_plan.h) ----
 // EXCLUSIVE: chapter 1. The tutorial's sliced renderer owns every panel, and
 // update_displays() must stay out.
@@ -70,8 +76,56 @@ bool tutorial_press(uint8_t slot);
 // Master only — the slave learns about it through the ordinary ripple sync.
 bool tutorial_hold(uint8_t kind, bool pressed, uint8_t slot);
 
+// The key tour: a key was pressed, by slot. True when it is the key being asked for — the
+// caller then lets this press AND its release act for real (the tab switches, the layer
+// opens); false, and the caller swallows it. Master only.
+bool tutorial_tour_press(uint8_t slot);
+// The tour step being asked for or just pressed, or -1 outside the tour; and whether it
+// has been pressed (the dwell on its result).
+int16_t tutorial_tour_step(void);
+// The slot of that step's key, or TUT_SLOT_NONE.
+uint8_t tutorial_tour_target(void);
+// The slot of tour step `step` as THIS half knows it: on the slave, the key the master
+// sent while that step was live (tut[5]), not the slave's own draw.
+uint8_t tutorial_tour_slot(uint8_t step);
+// Go back to waiting on tour step `step` (master; see tut_tour_rewind()).
+void    tutorial_tour_rewind(uint8_t step);
+bool    tutorial_tour_seen(void);
+
 // End it now: the hold-Esc gesture, or a remote disable over HID.
 void tutorial_skip(void);
+
+// Chapter 3: the preview item the MASTER should show right now, or -1 for none (also
+// -1 on the slave, which only renders what the sync carries).
+int16_t tutorial_preview_index(void);
+// The preview item being named or shown, as a row of poly_keymap.c's table (0xFF: none).
+// Both halves answer: the master from its own state, the slave from the sync.
+uint8_t tutorial_preview_entry(void);
+// True while the board spells the next item's name (and during the wipe that replaces it).
+bool tutorial_naming(void);
+// For the key LEDs (anim/tutorial_rgb.c): the lesson's phase (0xFF when not running),
+// and whether the next item's name alone is on the keys (TUT_LANG_NAME).
+uint8_t tutorial_rgb_phase(void);
+bool    tutorial_showing_name(void);
+// The key the lesson is pulsing right now (TUT_SLOT packing), or TUT_SLOT_NONE.
+uint8_t tutorial_pulsed_slot(void);
+// Provided by poly_keymap.c: does this key carry a letter of the spelled name?
+bool    tutorial_is_name_key(uint8_t row, uint8_t col);
+// True where the wipe's ring has already turned this key into the new item.
+bool tutorial_wipe_covers(uint8_t row, uint8_t col);
+// True in the (postponed) layer chapter's hold phases — the only time a layer key may act.
+bool tutorial_in_layer_chapter(void);
+// True while the board spells how many layouts and scripts there are (TUT_LANG_MORE).
+bool tutorial_telling_more(void);
+// Which of the two: false = the layouts screen, true = the scripts screen.
+bool tutorial_more_scripts(void);
+// Draw a capital centred on the selected keycap buffer (the name's letters).
+bool tutorial_draw_key_letter(uint32_t cp);
+
+// The lesson's chrome, or NULL when it should show nothing: Esc reads "Hold to / skip...",
+// and the mirrored top-right outer key shows the chapter ("2/3").
+const uint32_t *tutorial_skip_label(void);
+const uint32_t *tutorial_progress_label(void);
 
 // ---- split sync -----------------------------------------------------------
 // The master owns the step machine; the slave draws the keys that land on its own
@@ -109,6 +163,12 @@ const uint32_t *tutorial_line(uint8_t which);
 // a 20 px drop straight out of the band. The caller draws each with its own
 // single-font array, which is what keeps both on their own baseline.
 uint32_t tutorial_line_icon(uint8_t which);
+
+// A keycap LEGEND to draw after that line inside a rounded frame, or NULL. Used where
+// the key's legend is not a word the prose can say (the Intl picker's Á»Æ). Drawn with
+// the keycaps' own font list, so the panel shows the same glyphs the key does; the
+// legend must be resident-font text for the same first-boot reason as the line.
+const uint32_t *tutorial_line_key(uint8_t which);
 
 // ---- provided by poly_keymap.c (it owns the keymap and the display map) ----
 // Fill `out` with the packed slots of keys hosting a plain A-Z letter on the base
@@ -149,6 +209,44 @@ bool tutorial_key_in_chapter_set(uint8_t row, uint8_t col, bool layer_chapter);
 
 // Does this matrix position resolve to `slot`?
 bool tutorial_slot_matches(uint8_t slot, uint8_t row, uint8_t col);
+
+// The packed display slot at a matrix position on THIS half, or TUT_SLOT_NONE.
+uint8_t tutorial_slot_at(uint8_t row, uint8_t col);
+
+// Is this one of the two chrome keys with a label to show right now (Esc, or the
+// top-right outer key)? And draw that label into the selected, cleared buffer.
+bool tutorial_is_chrome_key(uint8_t row, uint8_t col);
+// Provided by poly_keymap.c: a menu's recents key (an MRU entry or its Preset/Clear
+// control) on the layer this key currently shows. The lesson keeps them dark.
+bool tutorial_hides_recent(uint8_t row, uint8_t col);
+void tutorial_draw_chrome(uint8_t row, uint8_t col);
+
+// ---- chapter 3 (master side; the table lives with the fonts in poly_keymap.c) ----
+// Build the list of languages and glyph scripts this board can actually draw, and
+// return how many. Called once at tutorial_start() on the master.
+uint8_t tutorial_preview_prepare(void);
+// The slot of the Lang key on the base layer, either half, or TUT_SLOT_NONE.
+uint8_t tutorial_lang_slot(void);
+// The status-panel name of the preview item being named or shown.
+const uint32_t *tutorial_preview_name(void);
+// The left panel's lead-in for that item ("How about", "You may speak", ...).
+const uint32_t *tutorial_preview_phrase(void);
+// Map a position in the renderable subset (master only) to its table row.
+uint8_t tutorial_preview_table_row(uint8_t pos);
+
+// ---- the key tour (poly_keymap.c resolves the keys from the keymap) ----
+// Fill `out` with the tour's steps in the order they are asked for and return how many.
+// Called on BOTH halves at tutorial_start(); `seed` picks the Intl chapter's letter and
+// accent on the master (the slave is sent the keys, so its seed does not matter).
+uint8_t tutorial_tour_build(tut_tour_step_t out[TUT_TOUR_MAX], uint32_t seed);
+// The status prose for a tour step, this half's half of the sentence; `seen` is the
+// dwell after the press.
+const uint32_t *tutorial_tour_line(uint8_t step, bool left, bool seen);
+// The LEGEND of the key a tour step asks for, when the words cannot name that key, or
+// NULL. The Intl chapter's "tap Ctrl" is the case: on the Intl layer the Ctrl keycap
+// reads Á»Æ (INTL_PICKER_LEGEND), so the word "Ctrl" points at nothing the user can
+// see. The panel draws this legend inside a keycap-shaped frame after the line.
+const uint32_t *tutorial_tour_key(uint8_t step, bool left, bool seen);
 
 // A chapter's LIT SET, as a bitmap over THIS HALF's display slots. TUT_SET_SHIFT is the
 // plain A-Z keys plus both shifts; TUT_SET_LAYER is the letters plus the layer keys.

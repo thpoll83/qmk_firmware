@@ -11,6 +11,7 @@
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/fw_staging.h"
+#include "base/fontpack.h"      // g_all_fonts: a framed keycap legend draws as the key does
 #include "base/status_brightness.h"   // poly_status_brightness() — the live panel level
 #include "poly_keymap.h"         // poly_fw_screen() / poly_fw_hold_active()
 #include "poly_macro.h"          // POLY_MACRO_COUNT
@@ -800,6 +801,13 @@ static bool s_tut_oled_raised = false;
 
 // Pixels between a tutorial line and its trailing icon.
 #define TUT_ICON_GAP 3
+// A framed keycap legend (tutorial_line_key) is a rounded SQUARE, the shape of a key
+// seen from above: gap after the word, the legend's minimum inset inside the 2 px
+// frame, and the corner radius. For Á»Æ (54 px wide) that is a 62x62 square, which
+// still clears the 64-row panel; the side is capped at the band minus one row each way.
+#define TUT_KEY_GAP 5
+#define TUT_KEY_PAD 2
+#define TUT_KEY_R   8
 
 void oled_tutorial_screen(void) {
     const GFXfont*  small   = &NotoSans_Regular_Small_15px7b;
@@ -843,6 +851,19 @@ void oled_tutorial_screen(void) {
 
             // The icon joins the line as one centred unit — measured, not guessed, so
             // "SHIFT" does not stay centred with the glyph hanging off the right edge.
+            // A framed keycap legend joins the same way, one unit with the words.
+            const uint32_t* key = tutorial_line_key(i);
+            int8_t          kx0 = 0, kx1 = 0, ky0 = 0, ky1 = 0;
+            int8_t          key_side = 0;
+            if (key) {
+                kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, key, &kx0, &kx1, &ky0, &ky1);
+                const int8_t need_w = (int8_t)(kx1 - kx0 + 1 + 2 * TUT_KEY_PAD + 4);
+                const int8_t need_h = (int8_t)(ky1 - ky0 + 1 + 2 * TUT_KEY_PAD + 4);
+                key_side = need_w > need_h ? need_w : need_h;
+                if (key_side > band - 2) key_side = (int8_t)(band - 2);
+                w = (int8_t)(w + TUT_KEY_GAP + key_side);
+            }
+
             const uint32_t  cp        = tutorial_line_icon(i);
             const uint32_t  icon[2]   = {cp, 0};
             int8_t          ix0 = 0, ix1 = 0, iy0 = 0, iy1 = 0;
@@ -865,6 +886,18 @@ void oled_tutorial_screen(void) {
                                      (int8_t)(x + x0 + (x1 - x0 + 1) + TUT_ICON_GAP - ix0),
                                      ibase, icon);
             }
+            if (key) {
+                // Two nested round-rects for a 2 px border, as the RGB speed box.
+                // Centred on the band, the legend centred in the square from its bbox.
+                const int8_t fx = (int8_t)(x + x0 + (x1 - x0 + 1) + TUT_KEY_GAP);
+                const int8_t fy = (int8_t)(band * slot + (band - key_side) / 2);
+                kdisp_draw_round_rect(fx, fy, key_side, key_side, TUT_KEY_R);
+                kdisp_draw_round_rect((int8_t)(fx + 1), (int8_t)(fy + 1),
+                                      (int8_t)(key_side - 2), (int8_t)(key_side - 2), TUT_KEY_R - 1);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count,
+                                     (int8_t)(fx + (key_side - (kx1 - kx0 + 1)) / 2 - kx0),
+                                     (int8_t)(fy + (key_side - (ky1 - ky0 + 1)) / 2 - ky0), key);
+            }
             slot++;
         }
     }
@@ -875,14 +908,18 @@ void oled_tutorial_screen(void) {
 bool oled_task_user(void) {
     // Brightness ownership for the tutorial, on its edges only (an unconditional
     // oled_set_brightness every tick would be pointless I2C traffic).
-    if (tutorial_active() != s_tut_oled_raised) {
-        s_tut_oled_raised = tutorial_active();
+    // Eden's welcome tail belongs to the lesson too (it says the lesson's first words).
+    const bool tut_owns_panel = tutorial_active() || startup_anim_welcome();
+    if (tut_owns_panel != s_tut_oled_raised) {
+        s_tut_oled_raised = tut_owns_panel;
         // ⚠️ Restore to the LIVE level, not the compile-time OLED_BRIGHTNESS. The
         // status panel tracks the synced contrast (status_oled_level() in
         // poly_keymap.c is the same expression), so handing back the constant made
         // the tutorial's exit undo whatever brightness the user had set.
+        // During the tutorial: POLY_INTRO_STATUS_BRIGHT (see startup_anim.h for why it
+        // is not the keycaps' own register value).
         oled_set_brightness(s_tut_oled_raised
-                                ? 255
+                                ? POLY_INTRO_STATUS_BRIGHT
                                 : poly_status_brightness(get_local_state()->contrast));
     }
 
@@ -920,7 +957,13 @@ bool oled_task_user(void) {
         // BELOW the firmware block on purpose — a signing question, a live flash, an
         // apply or a restart outranks the intro, and poly_prepare_for_flash() stops a
         // one-shot anyway. Above everything else, which would all paint something.
+        // The exception is the welcome tail (startup_anim_welcome()): the lesson's first
+        // words, drawn by the lesson's own screen, while the stars still fall.
         oled_scroll_off();
+        if (startup_anim_welcome() && (get_local_state()->flags & STATUS_DISP_ON) != 0) {
+            oled_tutorial_screen();
+            return false;
+        }
         oled_off();
         return false;
     } else if (tutorial_active()) {
@@ -930,6 +973,16 @@ bool oled_task_user(void) {
         // the whole point of intro mode, where the keycaps have gone back to rendering
         // themselves.
         oled_scroll_off();
+        // ⚠️ Obey the status-display flag. Suspend clears STATUS_DISP_ON and the sync
+        // turns the panel off with oled_off(), but this branch redraws every tick and a
+        // redraw switches the SSD1306 straight back on. The SLAVE's main loop keeps
+        // running while the host sleeps, so its panel stayed lit on the last lesson
+        // screen at full brightness ("the slave status display kept displaying
+        // 'Braille' and never turned off", hardware). The lesson resumes on wake.
+        if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
+            oled_off();
+            return false;
+        }
         oled_tutorial_screen();
 #ifdef POLYKYBD_DOOM
     } else if (doom_mode_active() || get_local_state()->doom_ctl) {

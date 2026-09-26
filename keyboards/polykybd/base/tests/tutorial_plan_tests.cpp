@@ -192,10 +192,10 @@ TEST(TutorialShift, ATapStillFinishesTheChapter) {
     // one opens.
     EXPECT_EQ(st.phase, TUT_SHIFT_AGAIN);
     ClearShiftStage(&st, &now);
-    // ⚠️ Chapter 3 is POSTPONED — the shift chapter ends the tutorial for now. This is
-    // the one assertion that pins the postponement; everything else about chapter 3 is
+    // ⚠️ The LAYER chapter is postponed: Shift hands over to the board reveal, not to
+    // TUT_LAYER_WAIT. This is the one assertion that pins that; the layer chapter is
     // still implemented and still tested below, entered directly.
-    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_EQ(st.phase, TUT_BOARD_REVEAL);
     EXPECT_FALSE(st.skipped);
 }
 
@@ -213,7 +213,7 @@ TEST(TutorialShift, PointsAtTheLeftHandFirstAndThenTheRight) {
     EXPECT_EQ(tut_point_slot(&st), SHIFT_R) << "the second stage asks for the OTHER hand";
 
     ClearShiftStage(&st, &now);
-    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_EQ(st.phase, TUT_BOARD_REVEAL);
 }
 
 // ⚠️ The whole reason the second stage exists: both stages must not be clearable with
@@ -243,7 +243,9 @@ TEST(TutorialShift, OneShiftBoardFinishesAfterASingleStage) {
     st.phase       = TUT_SHIFT_WAIT;
     st.phase_start = now;
     ClearShiftStage(&st, &now);
-    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_EQ(st.phase, TUT_BOARD_REVEAL);
+    // With no right Shift the reveal starts from the left one.
+    EXPECT_EQ(st.ripple_slot, SHIFT_L);
 }
 
 // ⚠️ The pointing ring RE-FIRES while the chapter waits. Chapter 1's ring is struck by
@@ -391,7 +393,9 @@ TEST(TutorialLayer, ThePhasePredicatesCoverExactlyTheRightPhases) {
         EXPECT_FALSE(tut_phase_is_exclusive(p))
             << "phase " << (int)p << " claims the panels; see the note above";
         EXPECT_EQ(tut_phase_is_intro(p), p != TUT_DONE) << "phase " << (int)p;
-        EXPECT_EQ(tut_phase_is_wave(p), p == TUT_RIPPLE) << "phase " << (int)p;
+        EXPECT_EQ(tut_phase_is_wave(p),
+                  p == TUT_RIPPLE || p == TUT_BOARD_REVEAL || p == TUT_LANG_WIPE)
+            << "phase " << (int)p;
     }
 }
 
@@ -1037,6 +1041,396 @@ TEST(TutorialSyncWord, NeitherFlagStops) {
     // left in it must still read as a stop.
     for (uint8_t step = 0; step < 4; ++step) {
         EXPECT_TRUE(tut_sync_word_stops((uint8_t)(step << TUT_SYNC_STEP_SHIFT)));
+    }
+}
+
+// ---- chapter 3: the board reveal, languages and scripts -----------------------
+
+// Run chapters 1 and 2 and stop at the start of the board reveal.
+static tut_state_t AtChapterThree3(uint32_t *now, uint8_t n_tour, uint8_t n_preview) {
+    tut_state_t st = AtChapterTwo(now);
+    tut_set_chapter3(&st, n_preview);
+    // lang key, two tabs, base
+    const tut_tour_step_t tour[4] = {{R(33), 0, 6}, {L(1), 0, 6}, {L(2), 0, 7}, {L(30), 0, 9}};
+    tut_set_tour(&st, tour, n_tour);
+    FinishPhase(&st, now, TUT_REVEAL_MS);
+    ClearShiftStage(&st, now);
+    ClearShiftStage(&st, now);
+    EXPECT_EQ(st.phase, TUT_BOARD_REVEAL);
+    return st;
+}
+
+// The reveal is a WAVE: it must bump the ripple sequence, or the slave never starts its
+// half of it, and it must start from the Shift that was just held.
+TEST(TutorialBoard, RevealStartsFromTheLastShiftAndBumpsTheSequence) {
+    // The sequence at the end of chapter 1 (one bump per letter). Chapter 2 bumps it
+    // only for its pointing rings, so compare against a run that stops just before the
+    // reveal rather than against a constant.
+    uint32_t    t0     = 0;
+    tut_state_t before = AtChapterTwo(&t0);
+    tut_set_chapter3(&before, 3);
+    FinishPhase(&before, &t0, TUT_REVEAL_MS);
+    ClearShiftStage(&before, &t0);
+    before.shift_stage = 1;
+    ASSERT_EQ(before.phase, TUT_SHIFT_AGAIN);
+    const uint8_t seq_before_last_stage = before.ripple_seq;
+    ClearShiftStage(&before, &t0);
+    ASSERT_EQ(before.phase, TUT_BOARD_REVEAL);
+    EXPECT_NE(before.ripple_seq, seq_before_last_stage) << "the slave would never start";
+    EXPECT_EQ(before.ripple_slot, SHIFT_R);
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 4, 3);
+    EXPECT_EQ(st.ripple_slot, SHIFT_R);
+    EXPECT_TRUE(tut_phase_is_wave(st.phase));
+}
+
+// Finish a dark cut and land on the phase after it.
+static void PastDark(tut_state_t *st, uint32_t *now, uint8_t want_next) {
+    ASSERT_EQ(st->phase, TUT_LANG_DARK);
+    EXPECT_EQ(st->dark_next, want_next);
+    EXPECT_FALSE(tut_phase_shows_all(st->phase)) << "the cut is dark";
+    FinishPhase(st, now, TUT_DARK_MS);
+    EXPECT_EQ(st->phase, want_next);
+}
+
+TEST(TutorialBoard, RunsRevealShowLanguagesTourFinaleDone) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 4, 3);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    EXPECT_EQ(st.phase, TUT_BOARD_SHOW);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    EXPECT_EQ(st.phase, TUT_LANG_INTRO);
+    EXPECT_EQ(tut_preview_index(&st), -1) << "no item is live before the first one";
+    FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    for (int16_t i = 0; i < 3; ++i) {
+        // A dark cut, then the name on a dark board: the preview is NOT applied yet.
+        EXPECT_EQ(tut_preview_pos(&st), i) << "the cut already knows the next item";
+        PastDark(&st, &now, TUT_LANG_NAME);
+        EXPECT_EQ(tut_preview_pos(&st), i);
+        EXPECT_EQ(tut_preview_index(&st), -1) << "the name comes before the glyphs";
+        FinishPhase(&st, &now, TUT_LANG_NAME_MS);
+        EXPECT_EQ(tut_preview_index(&st), -1) << "not during the cut before the glyphs";
+        PastDark(&st, &now, TUT_LANG_SHOW);
+        EXPECT_EQ(tut_preview_index(&st), i);
+        EXPECT_EQ(tut_preview_pos(&st), i);
+        FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
+    }
+    EXPECT_EQ(tut_preview_pos(&st), -1);
+    EXPECT_EQ(tut_preview_index(&st), -1) << "the last item must not stay applied";
+    PastDark(&st, &now, TUT_LANG_MORE);
+    FinishPhase(&st, &now, TUT_LANG_MORE_MS);
+    PastDark(&st, &now, TUT_LANG_MORE2);
+    FinishPhase(&st, &now, TUT_LANG_MORE_MS);
+    // The tour: each key waits for its press, then dwells on what it did.
+    const uint8_t want[4] = {R(33), L(1), L(2), L(30)};
+    for (uint8_t i = 0; i < 4; ++i) {
+        ASSERT_EQ(st.phase, TUT_TOUR_WAIT) << "step " << (int)i;
+        EXPECT_EQ(tut_tour_index(&st), i);
+        EXPECT_EQ(tut_point_slot(&st), want[i]);
+        EXPECT_EQ(tut_pulse_slot(&st), want[i]);
+        EXPECT_TRUE(tut_phase_shows_all(st.phase));
+        now += 60000u;
+        tut_tick(&st, now);
+        EXPECT_EQ(st.phase, TUT_TOUR_WAIT) << "a wait never times out";
+        EXPECT_FALSE(tut_tour_press(&st, L(9), now)) << "a wrong key does nothing";
+        EXPECT_TRUE(tut_tour_press(&st, want[i], now));
+        EXPECT_EQ(st.phase, TUT_TOUR_SEEN);
+        EXPECT_EQ(tut_tour_index(&st), i);
+        EXPECT_FALSE(tut_tour_press(&st, want[i], now)) << "a second press is not a step";
+        FinishPhase(&st, &now, TUT_TOUR_SEEN_MS);
+    }
+    EXPECT_EQ(st.phase, TUT_FINALE);
+    EXPECT_EQ(tut_tour_index(&st), -1);
+    FinishPhase(&st, &now, TUT_FINALE_MS);
+    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_FALSE(st.skipped);
+}
+
+// A board with no font pack can render no language but its own and no script at all:
+// the reveal then hands straight to the key tour.
+TEST(TutorialBoard, NoPreviewItemsGoesStraightToTheTour) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 4, 0);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    EXPECT_EQ(st.phase, TUT_TOUR_WAIT);
+    EXPECT_EQ(tut_tour_index(&st), 0);
+}
+
+TEST(TutorialBoard, NoTourGoesToTheFinale) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 0, 1);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    PastDark(&st, &now, TUT_LANG_NAME);
+    FinishPhase(&st, &now, TUT_LANG_NAME_MS);
+    PastDark(&st, &now, TUT_LANG_SHOW);
+    FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
+    PastDark(&st, &now, TUT_LANG_MORE);
+    FinishPhase(&st, &now, TUT_LANG_MORE_MS);
+    PastDark(&st, &now, TUT_LANG_MORE2);
+    FinishPhase(&st, &now, TUT_LANG_MORE_MS);
+    EXPECT_EQ(st.phase, TUT_FINALE);
+    EXPECT_FALSE(tut_tour_press(&st, R(33), now));
+}
+
+// Each tour key is pointed at the moment it is asked for, like the Shift pointers.
+TEST(TutorialBoard, EveryTourStepFiresTheRingImmediately) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 4, 0);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    for (uint8_t i = 0; i < 2; ++i) {
+        ASSERT_EQ(st.phase, TUT_TOUR_WAIT);
+        const uint8_t seq = st.ripple_seq;
+        tut_tick(&st, now + 1u);
+        EXPECT_NE(st.ripple_seq, seq) << "step " << (int)i;
+        EXPECT_EQ(st.ripple_slot, st.tour[i]);
+        ASSERT_TRUE(tut_tour_press(&st, st.tour[i], now));
+        FinishPhase(&st, &now, TUT_TOUR_SEEN_MS);
+    }
+}
+
+// The welcome can be said by Eden's tail instead; the lesson then opens on the first
+// letter, and only from the opening phases.
+TEST(TutorialBoard, BeginAtLettersSkipsTheWelcomeOnlyAtTheStart) {
+    tut_state_t st = Start(0);
+    tut_begin_at_letters(&st, 5);
+    EXPECT_EQ(st.phase, TUT_LETTER_IN);
+    EXPECT_EQ(st.step, 0);
+    EXPECT_EQ(tut_current_slot(&st), st.slots[0]);
+    EXPECT_EQ(tut_progress(&st), 2u);
+    uint32_t    now = 0;
+    tut_state_t late = AtChapterTwo(&now);
+    const uint8_t phase = late.phase;
+    tut_begin_at_letters(&late, now);
+    EXPECT_EQ(late.phase, phase) << "never rewinds a lesson already under way";
+}
+
+// With origins, a name hands to the WIPE (a wave from that item's corner, the item live
+// from its start) instead of the dark cut; the next item's wipe starts from the next
+// corner.
+TEST(TutorialBoard, WipeReplacesTheCutBeforeTheLayout) {
+    uint32_t      now = 0;
+    tut_state_t   st  = AtChapterThree3(&now, 0, 2);
+    const uint8_t corners[TUT_WIPE_CORNERS] = {L(0), R(7), L(32), R(39)};
+    tut_set_wipe_origins(&st, corners);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    PastDark(&st, &now, TUT_LANG_NAME);
+    const uint8_t seq = st.ripple_seq;
+    FinishPhase(&st, &now, TUT_LANG_NAME_MS);
+    ASSERT_EQ(st.phase, TUT_LANG_WIPE);
+    EXPECT_TRUE(tut_phase_is_wave(st.phase));
+    EXPECT_FALSE(tut_phase_shows_all(st.phase)) << "the wipe decides key by key";
+    EXPECT_NE(st.ripple_seq, seq) << "the slave would never start its ring";
+    EXPECT_EQ(st.ripple_slot, L(0)) << "item 0 starts top-left";
+    EXPECT_EQ(tut_preview_index(&st), 0) << "the item is live while the ring draws it";
+    EXPECT_EQ(tut_preview_pos(&st), 0);
+    FinishPhase(&st, &now, TUT_LANG_WIPE_MS);
+    EXPECT_EQ(st.phase, TUT_LANG_SHOW);
+    FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
+    PastDark(&st, &now, TUT_LANG_NAME);
+    EXPECT_EQ(tut_preview_pos(&st), 1);
+    FinishPhase(&st, &now, TUT_LANG_NAME_MS);
+    ASSERT_EQ(st.phase, TUT_LANG_WIPE);
+    EXPECT_EQ(st.ripple_slot, R(7)) << "item 1 starts top-right";
+}
+
+// The corners take turns and wrap, and a missing corner falls back to the dark cut for
+// that item alone.
+TEST(TutorialBoard, WipeCornersTakeTurnsAndAMissingOneCuts) {
+    uint32_t      now = 0;
+    tut_state_t   st  = AtChapterThree3(&now, 0, 6);
+    const uint8_t corners[TUT_WIPE_CORNERS] = {L(0), R(7), TUT_SLOT_NONE, R(39)};
+    tut_set_wipe_origins(&st, corners);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    const uint8_t want[6] = {L(0), R(7), TUT_SLOT_NONE, R(39), L(0), R(7)};
+    for (uint8_t i = 0; i < 6; ++i) {
+        PastDark(&st, &now, TUT_LANG_NAME);
+        ASSERT_EQ(tut_preview_pos(&st), i);
+        FinishPhase(&st, &now, TUT_LANG_NAME_MS);
+        if (want[i] == TUT_SLOT_NONE) {
+            EXPECT_EQ(st.phase, TUT_LANG_DARK) << "item " << (int)i;
+            PastDark(&st, &now, TUT_LANG_SHOW);
+        } else {
+            ASSERT_EQ(st.phase, TUT_LANG_WIPE) << "item " << (int)i;
+            EXPECT_EQ(st.ripple_slot, want[i]) << "item " << (int)i;
+            FinishPhase(&st, &now, TUT_LANG_WIPE_MS);
+        }
+        ASSERT_EQ(st.phase, TUT_LANG_SHOW);
+        FinishPhase(&st, &now, TUT_LANG_ITEM_MS);
+    }
+}
+
+TEST(TutorialBoard, TourIsCapped) {
+    tut_state_t st{};
+    tut_init(&st, nullptr, nullptr, 0);
+    tut_tour_step_t many[40];
+    for (uint8_t i = 0; i < 40; ++i) many[i] = {L(i % 30), 0, 6};
+    tut_set_tour(&st, many, 40);
+    EXPECT_EQ(st.n_tour, TUT_TOUR_MAX);
+    tut_set_tour(&st, nullptr, 5);
+    EXPECT_EQ(st.n_tour, 0);
+}
+
+// Each step's dwell is its own: 0 is the default, anything else is in 100 ms units.
+TEST(TutorialBoard, TourDwellIsPerStep) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 0, 0);
+    const tut_tour_step_t steps[3] = {{L(1), 0, 6}, {L(2), 3, 6}, {L(3), 30, 6}};
+    tut_set_tour(&st, steps, 3);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    const uint32_t want[3] = {TUT_TOUR_SEEN_MS, 300u, 3000u};
+    for (uint8_t i = 0; i < 3; ++i) {
+        ASSERT_EQ(st.phase, TUT_TOUR_WAIT);
+        ASSERT_TRUE(tut_tour_press(&st, steps[i].slot, now));
+        tut_tick(&st, now + want[i] - 1u);
+        EXPECT_EQ(st.phase, TUT_TOUR_SEEN) << "step " << (int)i << " left early";
+        now += want[i];
+        tut_tick(&st, now);
+        EXPECT_NE(st.phase, TUT_TOUR_SEEN) << "step " << (int)i << " overstayed";
+    }
+    EXPECT_EQ(st.phase, TUT_FINALE);
+}
+
+// A held-key sequence rewinds to the step that asks for the hold again.
+TEST(TutorialBoard, TourRewindWaitsOnTheEarlierStepAndPointsAtIt) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 4, 0);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    ASSERT_TRUE(tut_tour_press(&st, st.tour[0], now));
+    FinishPhase(&st, &now, TUT_TOUR_SEEN_MS);
+    ASSERT_TRUE(tut_tour_press(&st, st.tour[1], now));
+    FinishPhase(&st, &now, TUT_TOUR_SEEN_MS);
+    ASSERT_EQ(st.tour_i, 2);
+    tut_tour_rewind(&st, 1, now);
+    EXPECT_EQ(st.phase, TUT_TOUR_WAIT);
+    EXPECT_EQ(st.tour_i, 1);
+    const uint8_t seq = st.ripple_seq;
+    tut_tick(&st, now + 1u);
+    EXPECT_NE(st.ripple_seq, seq) << "the rewound step is pointed at at once";
+    EXPECT_EQ(st.ripple_slot, st.tour[1]);
+    tut_tour_rewind(&st, 9, now);
+    EXPECT_EQ(st.tour_i, 1) << "rewinding past the end is ignored";
+}
+
+TEST(TutorialBoard, TourRewindIsIgnoredOutsideTheTour) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 4, 0);
+    tut_tour_rewind(&st, 0, now);
+    EXPECT_EQ(st.phase, TUT_BOARD_REVEAL);
+}
+
+TEST(TutorialBoard, PreviewCountIsCapped) {
+    tut_state_t st{};
+    tut_init(&st, nullptr, nullptr, 0);
+    tut_set_chapter3(&st, 200);
+    EXPECT_EQ(st.n_preview, TUT_PREVIEW_MAX);
+}
+
+TEST(TutorialBoard, SkipEndsItMidPreview) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterThree3(&now, 4, 3);
+    FinishPhase(&st, &now, TUT_BOARD_REVEAL_MS);
+    FinishPhase(&st, &now, TUT_BOARD_SHOW_MS);
+    FinishPhase(&st, &now, TUT_LANG_INTRO_MS);
+    PastDark(&st, &now, TUT_LANG_NAME);
+    FinishPhase(&st, &now, TUT_LANG_NAME_MS);
+    PastDark(&st, &now, TUT_LANG_SHOW);
+    ASSERT_EQ(tut_preview_index(&st), 0);
+    tut_skip(&st, now);
+    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_EQ(tut_preview_index(&st), -1) << "a skip must drop the preview too";
+}
+
+// Only the reveal decides key by key; every later chapter-3 phase shows the whole board.
+TEST(TutorialBoard, ShowsAllCoversExactlyThePostRevealPhases) {
+    for (uint8_t p = 0; p <= TUT_DONE; ++p) {
+        const bool want = p >= TUT_BOARD_SHOW && p <= TUT_FINALE && p != TUT_LANG_DARK &&
+                          p != TUT_LANG_NAME && p != TUT_LANG_WIPE && p != TUT_LANG_MORE &&
+                          p != TUT_LANG_MORE2;
+        EXPECT_EQ(tut_phase_shows_all(p), want) << "phase " << (int)p;
+    }
+}
+
+TEST(TutorialProgressSteps, CountsOneToTenAcrossTheWholeLesson) {
+    uint32_t    now = 0;
+    tut_state_t st  = Start(now);
+    tut_set_chapter3(&st, 4);
+    const tut_tour_step_t tour[4] = {{R(33), 0, 6}, {L(1), 0, 7}, {L(2), 0, 8}, {L(30), 0, 9}};
+    tut_set_tour(&st, tour, 4);
+    uint8_t last = tut_progress(&st);
+    EXPECT_EQ(last, 1u);
+    // Walk every timed phase and every wait to the end; the count must never go back
+    // and must end on the last step.
+    for (int guard = 0; guard < 200 && st.phase != TUT_DONE; ++guard) {
+        switch (st.phase) {
+            case TUT_LETTER_WAIT: tut_press(&st, st.slots[st.step], now); break;
+            case TUT_SHIFT_WAIT:
+            case TUT_SHIFT_AGAIN: tut_hold(&st, TUT_HOLD_SHIFT, true, tut_point_slot(&st), now); break;
+            case TUT_TOUR_WAIT: tut_tour_press(&st, tut_point_slot(&st), now); break;
+            default: now += 60000u; tut_tick(&st, now); break;
+        }
+        const uint8_t p = tut_progress(&st);
+        EXPECT_GE(p, last) << "phase " << (int)st.phase;
+        EXPECT_LE(p, TUT_PROGRESS_STEPS);
+        last = p;
+    }
+    EXPECT_EQ(st.phase, TUT_DONE);
+    EXPECT_EQ(last, TUT_PROGRESS_STEPS);
+}
+
+TEST(TutorialProgressSteps, UsesEveryStep) {
+    // Each of the ten steps must actually be shown somewhere in a normal run.
+    uint32_t    now = 0;
+    tut_state_t st  = Start(now);
+    tut_set_chapter3(&st, 4);
+    const tut_tour_step_t tour[4] = {{R(33), 0, 6}, {L(1), 0, 7}, {L(2), 0, 8}, {L(30), 0, 9}};
+    tut_set_tour(&st, tour, 4);
+    bool seen[TUT_PROGRESS_STEPS + 1] = {};
+    for (int guard = 0; guard < 200 && st.phase != TUT_DONE; ++guard) {
+        seen[tut_progress(&st)] = true;
+        switch (st.phase) {
+            case TUT_LETTER_WAIT: tut_press(&st, st.slots[st.step], now); break;
+            case TUT_SHIFT_WAIT:
+            case TUT_SHIFT_AGAIN: tut_hold(&st, TUT_HOLD_SHIFT, true, tut_point_slot(&st), now); break;
+            case TUT_TOUR_WAIT: tut_tour_press(&st, tut_point_slot(&st), now); break;
+            default: now += 60000u; tut_tick(&st, now); break;
+        }
+    }
+    for (uint8_t i = 1; i <= TUT_PROGRESS_STEPS; ++i) EXPECT_TRUE(seen[i]) << "step " << (int)i;
+}
+
+TEST(TutorialPulse, PulsesTheKeyTheLessonWaitsFor) {
+    uint32_t    now = 0;
+    tut_state_t st  = AtChapterTwo(&now);
+    EXPECT_EQ(tut_pulse_slot(&st), TUT_SLOT_NONE) << "the reveal is not a wait";
+    FinishPhase(&st, &now, TUT_REVEAL_MS);
+    EXPECT_EQ(tut_pulse_slot(&st), SHIFT_L);
+    tut_state_t c1 = Start(0);
+    FinishPhase(&c1, &now, TUT_BLANK_MS);
+    FinishPhase(&c1, &now, TUT_TEXT_MS);
+    EXPECT_EQ(tut_pulse_slot(&c1), TUT_SLOT_NONE) << "not while the letter fades in";
+    FinishPhase(&c1, &now, TUT_LETTER_IN_MS);
+    EXPECT_EQ(tut_pulse_slot(&c1), c1.slots[0]);
+}
+
+TEST(TutorialPulse, LevelBreathesBetweenFloorAndFull) {
+    const uint8_t lo = (uint8_t)((255u * TUT_PULSE_FLOOR) / 255u);
+    EXPECT_EQ(tut_pulse_level(0, 255), lo);
+    EXPECT_EQ(tut_pulse_level(TUT_PULSE_PERIOD_MS / 2u, 255), 255u);
+    EXPECT_EQ(tut_pulse_level(TUT_PULSE_PERIOD_MS, 255), lo) << "periodic";
+    for (uint32_t t = 0; t < TUT_PULSE_PERIOD_MS; t += 10) {
+        const uint8_t v = tut_pulse_level(t, 200);
+        EXPECT_GE(v, (200u * TUT_PULSE_FLOOR) / 255u);
+        EXPECT_LE(v, 200u);
     }
 }
 

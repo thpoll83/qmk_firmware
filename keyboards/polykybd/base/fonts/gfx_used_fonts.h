@@ -56,6 +56,7 @@ const GFXfont* const RESIDENT_FONTS [] = {
   &NotoSans_Regular_Greek_14pt16b,
   &NotoSans_Regular_LetterMod_14pt16b,
   &NotoSans_Regular_SZ_14pt16b,
+  &IconsPuaFont,
 };
 
 #define RESIDENT_FONT_COUNT (sizeof(RESIDENT_FONTS) / sizeof(GFXfont*))

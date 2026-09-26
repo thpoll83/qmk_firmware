@@ -27,6 +27,18 @@
 //   be a brightness/coverage ramp over the first N frames, gated on s_loop == false so
 //   the looping idle screensaver (which is meant to already be running) is unaffected.
 #pragma once
+
+// ONE brightness for the whole first-run experience — the Eden intro and the tutorial —
+// on the keycaps AND the status panels (contrast register, of 255). The keycaps used to
+// run Eden at 255 and the tutorial at the user's level while the status panels sat at
+// another, so the two kinds of display visibly disagreed ("the status displays were
+// brighter than the keys", hardware). The user's own, persisted level returns after.
+#define POLY_INTRO_CONTRAST 128u
+// The STATUS panel's level for the same span. ⚠️ Not POLY_INTRO_CONTRAST: the 128x64
+// status panel carries thin one-pixel prose, and at the keycaps' register value it read
+// as the dimmer of the two ("the status display is not bright enough", hardware). Full
+// register is what makes the text match the keycaps' big legends by eye.
+#define POLY_INTRO_STATUS_BRIGHT 255u
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -40,6 +52,16 @@ void startup_anim_start(void);
 void startup_anim_start_loop(uint8_t contrast);
 // Stop immediately (idle wake / suspend). Safe to call when not running.
 void startup_anim_stop(void);
+// The tutorial follows this one-shot: run the WELCOME TAIL (the black stage lengthened,
+// stars still falling, the status panels saying the welcome). Set when the tutorial is
+// armed, on each half; a plain flag, safe from the split-protocol thread.
+void startup_anim_set_tail(bool on);
+// True during the black stage + tail of a one-shot with the tail armed: the status
+// panels show the tutorial's welcome.
+bool startup_anim_welcome(void);
+// Did the show that just ended say the welcome? Consumed by tutorial_start(), which then
+// opens on the first letter instead of saying it again.
+bool startup_anim_take_welcome_said(void);
 // True while the LOOPING screensaver owns the keycaps (idle Eden). Distinguishes it
 // from the one-shot boot/KC_EDEN animation, which callers gate differently.
 bool startup_anim_is_loop(void);
@@ -47,6 +69,9 @@ bool startup_anim_is_loop(void);
 void startup_anim_tick(void);
 // True while the animation owns the keycaps — update_displays() must early-return.
 bool startup_anim_active(void);
+// The opening rainbow's level, 255..0: full from the start of the one-shot show, fading
+// to 0 as POLYKYBD is first written. 0 outside the one-shot show (and in the idle loop).
+uint8_t startup_anim_rainbow_level(void);
 
 // Per-key board geometry, for other renderers that work in the same board space (the
 // first-run tutorial's ripple). Returning the rotation ALREADY resolved to cos/sin

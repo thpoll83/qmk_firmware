@@ -68,6 +68,9 @@
 #include "anim/tutorial.h"
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
+#include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
+#include "anim/lang_sparkle.h"             // lang_sparkle_tick()
+#include "anim/tutorial_rgb.h"             // the key LEDs during the show and the lesson
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
@@ -100,6 +103,7 @@
 #include "layers.h"
 #include "keycode_helper.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
+#include "anim/tutorial_names_gen.h"   // pre-rendered native language names
 #include "anim/startup_anim.h"   // one-time procedural boot animation (split72; no-op stubs on split42)
 #include "polymod_os_actions.h"
 #include "uni.h"
@@ -246,6 +250,31 @@ static uint8_t overlay_flags = 0;
 // the dirty-window bboxes so the first awake render erases whatever the mode drew.
 static bool s_disp_render_active = false;
 
+// ---- the menu cascade's view of this file (anim/menu_cascade.h) ----------------
+bool poly_render_live(void) { return s_disp_render_active; }
+
+// What the language / emoji menu shows right now, or 0 when neither is up. Built from
+// SYNCED state only (the layer, the region and page, the category and page), so the
+// slave computes the same value from its own copy and cascades on the same change.
+uint32_t poly_menu_signature(void) {
+    const uint8_t top = get_highest_layer(get_local_layer()->layer);
+    if (top == _LL) {
+        return 0x01000000u | ((uint32_t)lang_active_region() << 8) | lang_active_page();
+    }
+    if (top == _EMJ) {
+        return 0x02000000u | ((uint32_t)emj_active_category() << 8) | emj_active_page();
+    }
+    return 0u;
+}
+
+// The level update_displays() gives a keycap: the tutorial's one uniform level while it
+// runs, the user's brightness otherwise, 0 while the panels are off.
+uint8_t poly_panel_full_contrast(void) {
+    const uint8_t c = get_local_state()->contrast;
+    if (c == DISP_OFF) return 0u;
+    return tutorial_active() ? (uint8_t)POLY_INTRO_CONTRAST : (uint8_t)(c - 1u);
+}
+
 // Continuously suppress RGB on the bridge when display is off.
 // The split transport may re-enable RGB by copying master's rgb_matrix_config; this
 // indicator callback runs every render cycle (before flush) and zeros the LED buffer,
@@ -299,6 +328,7 @@ bool rgb_matrix_indicators_kb(void) {
             return false;
         }
     }
+    if (tutorial_rgb_paint()) return false;   // the first-run show and the lesson
     return rgb_matrix_indicators_user();
 }
 
@@ -511,6 +541,11 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 // fade-out: the panel now dims WITH the keycaps over FADE_TRANSITION_TIME instead
 // of holding full until the pulse starts, identically on both halves.
 static uint8_t status_oled_level(bool idle) {
+    // ⚠️ The tutorial owns the status panel's level. Without this, any contrast change
+    // during the lesson (the tutorial forces the keycaps' own level on its start edge)
+    // ran the branch in sync_and_refresh_displays() and dropped the panel back to the
+    // user's mapped level, which tops out at OLED_BRIGHTNESS (60).
+    if (tutorial_active() || startup_anim_welcome()) return (uint8_t)POLY_INTRO_STATUS_BRIGHT;
     return idle ? POLY_STATUS_IDLE_BRIGHT : poly_status_brightness(get_local_state()->contrast);
 }
 
@@ -536,6 +571,37 @@ static bool g_force_layer_resync = true;
 static uint8_t g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;
 
 static uint32_t s_tut_skip_since  = 0;   // 0 = the skip key is not being held
+// ONE buffer for the status prose built at run time (a preview name + "?", "letter X").
+// The two builders never speak in the same phase, and every caller draws the line
+// before asking for another, so they share it rather than holding 64 B each.
+static uint32_t s_tut_prose[16];
+// The key-tour presses that were let through, so their RELEASES go through too: LCAT
+// and KC_BASE act on the release (poly_custom_key_action), and a swallowed release would
+// leave them doing nothing. SEVERAL, not one: the Intl chapter has Intl held while Ctrl,
+// a letter and an accent are pressed, and each needs its own release. 0xFF = free.
+#define TUT_PASS_MAX 4u
+static uint8_t  s_tut_pass_row[TUT_PASS_MAX] = {0xFFu, 0xFFu, 0xFFu, 0xFFu};
+static uint8_t  s_tut_pass_col[TUT_PASS_MAX] = {0xFFu, 0xFFu, 0xFFu, 0xFFu};
+static void     poly_tutorial_forget_passes(void);
+// Chapter 3's language/script preview; defined beside the tutorial's keymap helpers.
+static uint8_t poly_tutorial_apply_preview(void);
+// Master only: write the preview (or the user's own glyph script) into the synced state.
+// ⚠️ Called from the tutorial branch BEFORE its slave push and its render, and again
+// from the master block of housekeeping. It used to run only there — AFTER the tutorial
+// branch had already pushed the new phase to the slave and rendered — so each board of
+// glyphs was first drawn in the PREVIOUS item's language and repainted a pass later
+// ("I can still see the previous script and then it changes", hardware). Idempotent.
+static void poly_apply_draw_script(void) {
+    const uint8_t draw_script = poly_tutorial_apply_preview();
+    if (access_local_state()->glyph_script != draw_script) {
+        access_local_state()->glyph_script = draw_script;
+        request_disp_refresh();   // script changed -> re-render letter/digit legends
+    }
+}
+static uint32_t tut_name_letter(uint8_t row, uint8_t col);   // the spelled preview name
+static uint8_t  tut_name_key(uint8_t row, uint8_t col, uint32_t *cp, const uint8_t **tile);
+static void     tut_draw_name_tile(const uint8_t *tile);
+static void     tut_draw_heavy(uint32_t cp);
 // The user's own default LAYOUT, parked while the tutorial runs. 0xFF = nothing parked.
 // ⚠️ This is poly's def_layer (a layer INDEX _L0.._L4, the Qwerty/Colemak/Neo choice),
 // NOT the momentary layer stack — layer_clear() does not touch it, which is why the
@@ -575,6 +641,41 @@ void tutorial_restore_layout(void) {
 // Shared by the EXCLUSIVE branch (chapter 1) and the NORMAL branch (intro mode), so the
 // skip gesture, the slave push and the teardown exist once rather than once per mode.
 
+static uint8_t tutorial_slot_of(uint8_t row, uint8_t col);
+
+// The key tour: does this event ACT rather than being swallowed? Only the press of the
+// key being asked for, and later that same key's release. Everything else falls to the
+// swallow below it, so an emoji or language slot stays inert mid-lesson.
+static bool tut_tour_step_ready(void);
+static bool tut_tour_step_inert(void);
+static bool poly_tutorial_tour_passes(keyrecord_t *record) {
+    const uint8_t row = record->event.key.row, col = record->event.key.col;
+    if (!record->event.pressed) {
+        for (uint8_t i = 0; i < TUT_PASS_MAX; ++i) {
+            if (s_tut_pass_row[i] == row && s_tut_pass_col[i] == col) {
+                s_tut_pass_row[i] = s_tut_pass_col[i] = 0xFFu;
+                return true;
+            }
+        }
+        return false;
+    }
+    // Not yet: the Intl chapter's Ctrl, letter and accent only mean what the lesson says
+    // with Intl held and the picker in the right state. Swallowed until then.
+    if (!tut_tour_step_ready()) return false;
+    const bool inert = tut_tour_step_inert();   // read BEFORE the press moves the step
+    if (!tutorial_tour_press(tutorial_slot_of(row, col))) return false;
+    // Accepted but held back from the board: the lesson moves on, nothing is typed.
+    if (inert) return false;
+    for (uint8_t i = 0; i < TUT_PASS_MAX; ++i) {
+        if (s_tut_pass_row[i] == 0xFFu) {
+            s_tut_pass_row[i] = row;
+            s_tut_pass_col[i] = col;
+            break;
+        }
+    }
+    return true;
+}
+
 // The documented skip: hold either outer-edge top key. A held key emits no events, so
 // the duration is measured here rather than in process_record.
 static void poly_tutorial_skip_if_held(void) {
@@ -584,7 +685,63 @@ static void poly_tutorial_skip_if_held(void) {
     }
 }
 
+// ⚠️ The master's tut[0] must say ACTIVE for as long as a lesson runs, not only from the
+// first successful tutorial push. tut[] rides EVERY poly_sync_t send, and a zero word is
+// "stop" to a slave already in the tutorial (tut_sync_word_stops). Before this, any
+// ordinary state sync the master sent between starting and its first push — a host
+// language or brightness change at connect — could end the slave's lesson. Only the
+// flag byte is written here: the rest of the word changes per pass during a wave, and
+// writing it every pass would make every pass a state diff and a full repaint.
+static void poly_tutorial_publish_active(void) {
+    if (is_usb_host_side() && tutorial_active()) {
+        access_local_state()->tut[0] |= TUT_SYNC_ACTIVE;
+    }
+}
+
+// ⚠️ Belt to the layer-key swallow's braces: outside the layer chapter the lesson runs on
+// _L0 and nothing else, so if the layer stack is ever found elsewhere — an emoji layer
+// latched by a TO() press, or anything not yet thought of — put it back. Master only:
+// the slave renders from the synced poly_layer_t, which follows. Cheap: one compare per
+// pass, and a repark only on a real drift.
+static uint8_t tut_tour_layer(void);
+static uint8_t tut_tour_allowed_layer(void);
+static void    poly_tutorial_tour_rewind_if_let_go(void);
+static void poly_tutorial_hold_lesson_layer(void) {
+    if (!is_usb_host_side() || !tutorial_active() || tutorial_in_layer_chapter()) return;
+    // The key tour opens the language and emoji menus for real, so there the lesson's
+    // layer is _L0 plus whatever the current step says. ⚠️ ENFORCED, not just allowed: the
+    // press that opens a menu is let through to act, and if it did not (a keymap whose
+    // key does something else), the guard still puts the menu the lesson is talking
+    // about on screen rather than leaving the prose describing a layer nobody sees.
+    const uint8_t       extra = tut_tour_layer();
+    const layer_state_t base  = (layer_state_t)1 << _L0;
+    const layer_state_t want  = base | (extra != 0xFFu ? (layer_state_t)1 << extra : 0);
+    poly_layer_t       *ll    = access_local_layer();
+    // def_layer too: display_keycode_at() ORs it into the stack, so a stray one would
+    // letter the keys from another layer just as surely.
+    // `| base`: TO(_EMJ) turns off every other layer, _L0 included. The emoji layer
+    // covers the board either way, so that is not a drift worth a repaint.
+    // A layer the step lets the user HOLD (Fn, Num, Intl) is allowed on top, never
+    // forced: forcing it would leave it on after the finger lifts.
+    const uint8_t       hold  = tut_tour_allowed_layer();
+    const layer_state_t held  = hold != 0xFFu ? want | ((layer_state_t)1 << hold) : want;
+    if (((layer_state | base) == want || (layer_state | base) == held) && ll->def_layer == _L0) {
+        return;
+    }
+    uprintf("Tutorial: layer drifted (state 0x%08lX, def %u), back to _L0\n",
+            (unsigned long)layer_state, (unsigned)ll->def_layer);
+    ll->def_layer = _L0;
+    layer_clear();
+    layer_on(_L0);
+    if (extra != 0xFFu) layer_on(extra);
+    ll->layer = layer_state;
+    request_disp_refresh();
+}
+
 static void poly_tutorial_push_sync(void) {
+    if (is_usb_host_side() && tutorial_active()) poly_tutorial_tour_rewind_if_let_go();
+    poly_tutorial_hold_lesson_layer();
+    poly_tutorial_publish_active();
     poly_tutorial_skip_if_held();
         // Push the step/ripple to the slave: it draws the keys that land on its own
         // half. Gated on the transport being up (non-blocking) for the same reason
@@ -616,12 +773,19 @@ static void poly_tutorial_push_sync(void) {
 static void poly_tutorial_finish_if_done(void) {
         if (tutorial_finished()) {
             const bool was_skipped = tutorial_was_skipped();
+            poly_tutorial_forget_passes();
             // Order matters. tutorial_stop() restores the parked layout, drops any
             // layer a chapter left held, blanks every panel and invalidates the
             // dirty-window boxes; THEN the brightness is restored, THEN the legends are
             // redrawn — so the panels are never repainted against stale state, and the
             // legends drawn are the ones the board will actually type.
             tutorial_stop();
+            // Hand back the user's language and glyph script BEFORE the teardown
+            // repaint below. tutorial_stop() retires the preview, but the state only
+            // follows at the master block's poly_apply_draw_script(), later in the same
+            // pass: a skip mid-preview repainted one frame, and synced it to the slave,
+            // in the previewed language (review of #313). Idempotent on the normal end.
+            if (is_usb_host_side()) poly_apply_draw_script();
             // ⚠️ RETIRE THE SYNC WORD FIRST — BEFORE the teardown's own
             // sync_and_refresh_displays() below. tut[0] still holds whatever the last
             // push wrote (ACTIVE, and the ARMED level Eden handed over), and both are
@@ -758,6 +922,13 @@ void sync_and_refresh_displays(void) {
         // The host's real caps lock is untouched; only the LOCAL snapshot the renderer
         // reads is forced, and only while chapter 1 is up.
         if (tutorial_caps_hold()) access_local_layer()->led_state.caps_lock = true;
+        // The same for Num Lock on the Num layer: with the host's Num Lock off the keypad
+        // keys draw their navigation legends (arrows, Ins, Del), so "hold Num" showed a
+        // layer without a single number on it (hardware). Display only, lesson only; the
+        // lesson swallows the keypad presses, so nothing typed disagrees with the legend.
+        if (tutorial_active() && get_highest_layer(access_local_layer()->layer) == _NL) {
+            access_local_layer()->led_state.num_lock = true;
+        }
         access_local_layer()->mods = get_mods();
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         // Force one layer push to the slave after boot even with no diff: each half
@@ -1118,14 +1289,29 @@ static bool     s_tutorial_armed  = false;
 // set in process_record_user(), which only ever runs on the master, so the slave had
 // NO local trigger and that one message was the entire mechanism. Losing it left the
 // slave dark for the whole session, with the master happily running the lesson.
+// Forget the tour's let-through presses. ⚠️ An entry is removed only when its key's
+// release arrives while the lesson runs, so a lesson that ENDS with a passed key still
+// held (Intl held on an Intl step, Esc held to skip) leaks it; after four leaks a later
+// MO() release would be swallowed and its layer left on. Cleared at every arming and at
+// the finish edge.
+static void poly_tutorial_forget_passes(void) {
+    for (uint8_t i = 0; i < TUT_PASS_MAX; ++i) s_tut_pass_row[i] = s_tut_pass_col[i] = 0xFFu;
+}
+
 static void arm_tutorial_after_intro(void) {
     s_tutorial_armed = true;
     s_tut_skip_since = 0;
+    poly_tutorial_forget_passes();
     // Level, not edge: the bit rides every sync for the whole of Eden (seconds), so it
     // has many chances to land rather than one. ⚠️ tutorial_sync_fill() PRESERVES it
     // (the two writers of tut[0] must not fight), so it is retired with the rest of
     // the word at the teardown in poly_tutorial_finish_if_done() — not by the start.
     access_local_state()->tut[0] |= TUT_SYNC_ARMED;
+    // Eden says the welcome in its tail and keeps the stars falling until the first
+    // letter (startup_anim.c, SA_TAIL_MS). A plain flag: this also runs on the slave's
+    // split-protocol thread (poly_arm_tutorial_after_intro), where nothing may touch
+    // the panels.
+    startup_anim_set_tail(true);
 }
 
 // Called from the split handler on the slave when the master's sync says the first-run
@@ -1147,6 +1333,7 @@ void housekeeping_task_user(void) {
     (void)crash_phase_enter(CRASH_PHASE_LOOP, 0);
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
+    tutorial_rgb_tick(); // …and own it through the first-run show and the lesson
 #endif
     fw_screen_tick();   // ...and keep the status OLED on the matching firmware screen
 
@@ -1460,6 +1647,8 @@ void housekeeping_task_user(void) {
         // before the boot-animation block below and owns the LOOPING variant; the
         // block below is for the ONE-SHOT boot/KC_EDEN animation only.
         eden_idle_tick();
+        // An Eden replay the split handler recorded (it may not start one itself).
+        split_sync_drain_anim_replay();
         // One-time startup animation: render a frame while active (both halves
         // render their own keycaps). On the finishing edge, persist the "played"
         // marker and request a normal refresh so the base legends come back. Gated
@@ -1512,6 +1701,7 @@ void housekeeping_task_user(void) {
                     // tutorial_start() -> tutorial_enter_base_layout(), so both halves
                     // do it rather than only the one that owns this arm site.
                     tutorial_start(timer_read32());
+                    poly_tutorial_publish_active();
                     if (!tutorial_active()) {                        // nothing to teach
                         fw_staging_core1_lockout_begin();            // see the teardown
                         mark_boot_intro_done();
@@ -1554,6 +1744,9 @@ void housekeeping_task_user(void) {
             // step. tutorial_tick() does NOT touch a panel outside chapter 1.
             if (tutorial_active()) {
                 tutorial_tick();
+                // The preview for the phase just entered, before anything draws or is
+                // pushed (see poly_apply_draw_script()).
+                if (is_usb_host_side()) poly_apply_draw_script();
                 if (s_tut_skip_since != 0 &&
                     timer_elapsed32(s_tut_skip_since) >= TUT_SKIP_HOLD_MS) {
                     s_tut_skip_since = 0;
@@ -1563,6 +1756,9 @@ void housekeeping_task_user(void) {
                 poly_tutorial_finish_if_done();
             }
             sync_and_refresh_displays();
+            // After the render, so a change it just drew has already started the cascade.
+            menu_cascade_tick();
+            lang_sparkle_tick();   // the language preview's twinkles; self-gating
         }
         // Advance the focus ripple, if one is live. Self-gating and bounded to
         // POLY_FOCUS_SLICE_MS, so an idle keyboard pays a single boolean test.
@@ -1744,10 +1940,10 @@ void housekeeping_task_user(void) {
         }
         // Master-authoritative glyph-script override; the slave adopts it via
         // copy_local_state and re-renders its own legends on the synced diff.
-        if (access_local_state()->glyph_script != get_glyph_script()) {
-            access_local_state()->glyph_script = get_glyph_script();
-            request_disp_refresh();   // script changed -> re-render letter/digit legends
-        }
+        // The tutorial's chapter 3 may be previewing a language or script: it writes
+        // that over the board's state for a couple of seconds at a time and hands back
+        // the script to draw. Outside the tutorial this is get_glyph_script().
+        poly_apply_draw_script();
         // Master-authoritative keycap legend size, adopted + re-rendered by the
         // slave the same way.
         if (access_local_state()->glyph_size != get_glyph_size()) {
@@ -3454,13 +3650,28 @@ static void render_mru_ctrl_key(bool preset) {
 // Language region tab — the continent name centred in the keycap (continent
 // silhouettes will replace the text later). The active-tab frame / inactive
 // bottom bar is drawn separately by lang_draw_tab_indicator/bottom.
+//
+// In the _Small_ 15px face, the macro caption's ladder: the 10px _Nano_ face read as
+// "really small" (hardware). Measured from the glyph tables, the widest label ("Mid
+// East") is 60 px against the 66 px between the active frame's 3-px rails; _Mid_ 19px
+// would be 77 px and overflow on four of the six. A future label too wide for _Small_
+// drops to _Nano_ with its text intact rather than being clipped.
+#define LANG_TAB_MAX_W  (SCREEN_WIDTH - 8)   // inside the rails, 1 px air each side
 static void render_lang_region_tab(uint16_t keycode) {
+    static const GFXfont* const small[] = { &NotoSans_Regular_Small_15px7b };
     const uint32_t* label = lang_region_label((uint8_t)(keycode - KC_LANG_CAT_BASE));
+    const GFXfont* const* f = small;
     int8_t lo = 0, hi = 0;
-    kdisp_gfx_text_bounds(lang_label_fonts, 1, label, &lo, &hi);
-    int8_t w = (int8_t)(hi - lo);
-    int8_t x = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2 - lo);
-    kdisp_write_gfx_text(lang_label_fonts, 1, x, 22, label);
+    kdisp_gfx_text_bounds(f, 1, label, &lo, &hi);
+    int8_t baseline = 25;   // cap height 11 rows centred in rows 3..36 (frame/underline clear)
+    if (hi - lo + 1 > LANG_TAB_MAX_W) {
+        f        = lang_label_fonts;
+        baseline = 22;
+        kdisp_gfx_text_bounds(f, 1, label, &lo, &hi);
+    }
+    const int8_t w = (int8_t)(hi - lo + 1);
+    const int8_t x = (int8_t)(BUFFER_X + (SCREEN_WIDTH - w) / 2 - lo);
+    kdisp_write_gfx_text(f, 1, x, baseline, label);
 }
 
 // MRU recents (emoji or language) get a full-width bar along the TOP edge —
@@ -3900,12 +4111,54 @@ static uint16_t display_keycode_at(const poly_layer_t *lyr, uint8_t row, uint8_t
 // lesson had darkened. The ARC is not gated on this — see the note in focus_ring.h; the
 // ring has to cross the whole board. The visibility question has ONE answer and both the
 // normal render path and the ripple ask it here.
+// Does the tutorial leave this key lit? Always true outside the lesson.
+bool poly_slot_visible(uint8_t slot) {
+    uint8_t r, c;
+    return tutorial_matrix_of(slot, &r, &c) && tutorial_key_visible(r, c);
+}
+
 bool poly_focus_draw_legend(uint8_t slot) {
     uint8_t r, c;
     if (!tutorial_matrix_of(slot, &r, &c)) return false;
     if (!tutorial_key_visible(r, c)) return false;
+    if (menu_cascade_hidden(r, c)) return false;   // not its turn in the cascade yet
+    // The chrome keys show the lesson's labels, here as in update_displays(), or a ring
+    // crossing one would paint "Esc" back for a frame.
+    if (tutorial_is_chrome_key(r, c)) {
+        tutorial_draw_chrome(r, c);
+        return true;
+    }
     tutorial_draw_board_legend(slot);
     return true;
+}
+
+// The language menu's keys that are drawn by a bespoke renderer rather than from a
+// legend: a language slot or MRU recent (country flag + tiny code), an MRU Preset/Clear
+// control, a region tab. Draws into the CLEARED buffer and returns true, or returns
+// false for any other key. ⚠️ ONE copy for update_displays() and the tutorial's focus
+// ring: the ring redraws the legend under itself, and while it knew only the static-text
+// / render_key() pair, every flag and tab it crossed on the language layer went BLANK
+// ("the screen is totally blank as soon as the ring touches them", hardware).
+static bool render_menu_key(uint16_t keycode, led_t state, uint8_t current_lang) {
+    const int16_t lang_idx = lang_index_for_keycode(keycode);
+    if (lang_idx >= 0) {
+        draw_mru_top_bar(keycode);
+        render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state),
+                             current_lang);
+        return true;
+    }
+    if (keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET || keycode == KC_EMJ_CLEAR ||
+        keycode == KC_LANG_CLEAR) {
+        render_mru_ctrl_key(keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET);
+        return true;
+    }
+    if (keycode >= KC_LANG_CAT_BASE && keycode < KC_LANG_PAGE_PREV) {
+        lang_draw_tab_indicator(keycode);
+        lang_draw_tab_bottom(keycode);
+        render_lang_region_tab(keycode);
+        return true;
+    }
+    return false;
 }
 
 void tutorial_draw_board_legend(uint8_t slot) {
@@ -3916,6 +4169,13 @@ void tutorial_draw_board_legend(uint8_t slot) {
     const led_t   state = local_layer->led_state;
     const uint8_t mods  = local_layer->mods;
     const uint16_t keycode = display_keycode_at(local_layer, r, c);
+
+    // The menus' bespoke keys, then the emoji tab frames and the MRU bar — the same
+    // order update_displays() draws them in.
+    if (render_menu_key(keycode, state, get_local_state()->lang)) return;
+    emj_draw_tab_indicator(keycode);
+    emj_draw_tab_bottom(keycode);
+    draw_mru_top_bar(keycode);
 
     // ⚠️ The PAIR, in update_displays()' own order: to_static_text() first, render_key()
     // only when it returned NULL. render_key() alone draws nothing at all for a key
@@ -3937,6 +4197,823 @@ void tutorial_draw_board_legend(uint8_t slot) {
 static bool tutorial_is_skip_key(uint8_t row, uint8_t col) {
     const uint8_t slot = tutorial_slot_of(row, col);
     return slot == TUT_SLOT(0, 0) || slot == TUT_SLOT(1, 6);
+}
+
+uint8_t tutorial_slot_at(uint8_t row, uint8_t col) { return tutorial_slot_of(row, col); }
+
+// The menus' recents (the bottom row of _LL and _EMJ, and its Preset/Clear controls)
+// stay dark for the whole lesson: on a new board they are empty or the factory's, and a
+// lit row reads as something the lesson points at (hardware round 33). Base, beside
+// them, keeps its legend; the tour asks for it next.
+bool tutorial_hides_recent(uint8_t row, uint8_t col) {
+    const uint16_t kc = display_keycode_at(get_local_layer(), row, col);
+    return (kc >= KC_EMJ_MRU_BASE && kc < KC_EMJ_MRU_BASE + MRU_CAP) ||
+           (kc >= KC_LANG_MRU_BASE && kc < KC_LANG_MRU_BASE + MRU_CAP) ||
+           kc == KC_EMJ_PRESET || kc == KC_EMJ_CLEAR || kc == KC_LANG_PRESET ||
+           kc == KC_LANG_CLEAR;
+}
+
+// The two chrome keys are the two halves of the skip gesture (tutorial_is_skip_key):
+// Esc at left display (0,0) says how to leave, and its mirror — right display (0,6),
+// the OUTER edge — shows the chapter. Either still skips when held.
+static const uint32_t *tutorial_chrome_label(uint8_t row, uint8_t col) {
+    const uint8_t slot = tutorial_slot_of(row, col);
+    // The key the tour is asking for shows its OWN legend, even where the chrome sits:
+    // the emoji page arrow is the progress key's position, and a key labelled "9/10"
+    // cannot be asked for as "the next page".
+    if (slot != TUT_SLOT_NONE && slot == tutorial_tour_target()) return NULL;
+    if (slot == TUT_SLOT(0, 0)) return tutorial_skip_label();
+    if (slot == TUT_SLOT(1, 6)) return tutorial_progress_label();
+    return NULL;
+}
+
+bool tutorial_is_name_key(uint8_t row, uint8_t col) { return tut_name_letter(row, col) != 0; }
+
+bool tutorial_is_chrome_key(uint8_t row, uint8_t col) {
+    return tutorial_chrome_label(row, col) != NULL || tut_name_letter(row, col) != 0;
+}
+
+// Esc's label is a HINT_MID two-line stack drawn like any static legend on a non-thumb
+// row; the progress is one HINT_MID run, centred both ways.
+void tutorial_draw_chrome(uint8_t row, uint8_t col) {
+    uint32_t       name_cp   = 0;
+    const uint8_t *name_tile = NULL;
+    switch (tut_name_key(row, col, &name_cp, &name_tile)) {
+        case 1:
+            (void)tutorial_draw_key_letter(name_cp);   // latin capitals one tier up
+            kdisp_set_gfx_erase(false);
+            return;
+        case 2:
+            tut_draw_name_tile(name_tile);
+            return;
+        case 3:
+            tut_draw_heavy(name_cp);
+            kdisp_set_gfx_erase(false);
+            return;
+        default:
+            break;
+    }
+    const uint32_t *t = tutorial_chrome_label(row, col);
+    if (t == NULL) return;
+    if (tutorial_slot_of(row, col) == TUT_SLOT(0, 0)) {
+        kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, t,
+                                KDISP_CY_DEFAULT);
+    } else {
+        // The progress: one HINT_MID run, centred both ways (the face's digits sit 13 px
+        // above the baseline, so baseline 26 centres them on the 40 px panel).
+        draw_legend_cx_cy(t, 26, KDISP_CY_DEFAULT);
+    }
+    kdisp_set_gfx_erase(false);
+}
+
+// ---- chapter 3: languages and glyph scripts, previewed on the board only ----------
+//
+// ⚠️ BOARD-ONLY. The host polls GET_LANG every second and SWITCHES THE OS LAYOUT to
+// match (PolyHost's language-changed flow), so a preview written into
+// local_state->lang would retype the user's OS in Greek. poly_reported_lang() is what
+// GET_LANG and the EEPROM save read instead, and it answers with the REAL language for
+// as long as a preview is on screen. The glyph script needs no such guard: cmd 30 and
+// the save both read get_glyph_script(), which the preview never touches.
+typedef struct {
+    bool            script;   // false = a keyboard language (LANG_*), true = GLYPH_*
+    uint8_t         value;
+    const uint32_t *name;     // Latin name: status panel + the LEFT half's keys. ASCII.
+    // The language's own name for itself, for the RIGHT half's keys, one character per
+    // keycap. NULL for a glyph script (its keys spell `name` through the script) and for
+    // a name drawn from `strip`.
+    const uint32_t *native;
+    bool            rtl;      // native reads right to left: laid out from the right
+    // A name the keycap renderer cannot spell character by character — joined letters,
+    // attached vowel signs, or glyphs the fonts lack — pre-rendered offline into keycap
+    // tiles (tools/gen_tutorial_names.py -> anim/tutorial_names_gen.h).
+    const tut_name_strip_t *strip;
+    // The left status panel's lead-in; the right panel finishes it with `name` and a
+    // "?" (tutorial_preview_name()), so every lead-in must open a QUESTION. ONE per row,
+    // never a rotation: a 5-phrase cycle over 11 items repeated itself, and every script
+    // said "Or write in" ("make sure there is no repeating text", hardware).
+    const uint32_t *lead;
+} tut_preview_t;
+
+// A tour, not a catalogue: scripts that look nothing like each other, then the
+// fantasy faces. Order is the order shown.
+//
+// Every native name is the LANGUAGE's name for itself (한국어, not the script's name
+// 한글). The ones spelled per key are scripts whose letters stand alone and are in the
+// fonts; the rest are pre-rendered strips — joined Arabic, Devanagari with its attached
+// vowel signs, and 日本語 / 한국어, whose glyphs the keycap fonts do not carry.
+static const tut_preview_t s_tut_preview_all[] = {
+    {false, LANG_ELGR,      U"Greek",    U"\u0395\u039B\u039B\u0397\u039D\u0399\u039A\u0391", false, NULL, U"How about"}, // ΕΛΛΗΝΙΚΑ
+    {false, LANG_ARSA,      U"Arabic",   NULL, false, &TUT_NAME_STRIP_AR, U"Do you speak"},             // العربية
+    {false, LANG_HEIL,      U"Hebrew",   U"\u05E2\u05D1\u05E8\u05D9\u05EA", true, NULL, U"Or perhaps"},  // עברית
+    {false, LANG_HIIN,      U"Hindi",    NULL, false, &TUT_NAME_STRIP_HI, U"Maybe you read"},            // हिन्दी
+    {false, LANG_THTH,      U"Thai",     U"\u0E20\u0E32\u0E29\u0E32\u0E44\u0E17\u0E22", false, NULL, U"Or do you type"}, // ภาษาไทย
+    {false, LANG_JAJP,      U"Japanese", NULL, false, &TUT_NAME_STRIP_JA, U"Or is it"},                  // 日本語
+    {false, LANG_KOKR,      U"Korean",   NULL, false, &TUT_NAME_STRIP_KO, U"Perhaps even"},              // 한국어
+    {true,  GLYPH_TENGWAR,  U"Elvish",   NULL, false, NULL, U"Fancy some"},
+    {true,  GLYPH_RUNES,    U"Runes",    NULL, false, NULL, U"Or carving"},
+    {true,  GLYPH_AUREBESH, U"Aurebesh", NULL, false, NULL, U"Into sci-fi,"},
+    {true,  GLYPH_BRAILLE,  U"Braille",  NULL, false, NULL, U"Or by touch,"},
+};
+#define TUT_PREVIEW_ALL (sizeof(s_tut_preview_all) / sizeof(s_tut_preview_all[0]))
+_Static_assert(TUT_PREVIEW_ALL <= TUT_PREVIEW_MAX, "preview table exceeds the plan's cap");
+
+static uint8_t s_tut_preview[TUT_PREVIEW_ALL];   // indices into the table, renderable only
+static uint8_t s_tut_preview_n;
+
+// Can this board draw the entry? Asked of the fonts actually flashed, through the same
+// lookup the renderer uses: on a fresh board with no font pack every non-Latin entry
+// fails here and the chapter shows only the reveal, rather than a board of blanks.
+static bool tut_preview_renderable(const tut_preview_t *e) {
+    uint32_t cp = 0;
+    if (e->script) {
+        cp = glyph_script_codepoint(e->value, KC_A);
+    } else {
+        const uint32_t *t = translate_keycode(e->value, KC_A, false, false);
+        cp = (t != NULL) ? t[0] : 0;
+    }
+    return cp != 0 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL;
+}
+
+uint8_t tutorial_preview_prepare(void) {
+    s_tut_preview_n = 0;
+    const uint8_t own = poly_reported_lang();
+    for (uint8_t i = 0; i < TUT_PREVIEW_ALL; ++i) {
+        const tut_preview_t *e = &s_tut_preview_all[i];
+        // A Greek user's board already speaks Greek: showing it would change nothing.
+        if (!e->script && e->value == own) continue;
+        if (tut_preview_renderable(e)) s_tut_preview[s_tut_preview_n++] = i;
+    }
+    return s_tut_preview_n;
+}
+
+uint8_t tutorial_lang_slot(void) {
+    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            if (keymaps[_BL][r][c] != KC_LANG) continue;
+            const uint8_t slot = tutorial_slot_of(r, c);
+            if (slot != TUT_SLOT_NONE) return slot;
+        }
+    }
+    return TUT_SLOT_NONE;
+}
+
+// ---- the key tour: the language menu, then the emoji menu -----------------------
+// Each step is a real key on a real layer; the lesson points at it, the user presses it,
+// and it ACTS (see the pass-through in process_record_user()). The kinds and the layer
+// each step leaves on are kept here beside the slots, on both halves, so the status
+// prose and the layer guard need nothing but the step index.
+typedef enum {
+    TUT_TOUR_LANG = 0,   // the Lang key: opens _LL
+    TUT_TOUR_LCAT,       // a region tab on _LL (arg = region)
+    TUT_TOUR_BASE_LL,    // KC_BASE on _LL: back home
+    TUT_TOUR_EMJ,        // TO(_EMJ) on the base layer
+    TUT_TOUR_ECAT,       // a category tab on _EMJ (arg = category)
+    TUT_TOUR_EPAGE,      // KC_EMJ_PAGE_NEXT on _EMJ
+    TUT_TOUR_BASE_EMJ,   // KC_BASE on _EMJ
+    TUT_TOUR_FN,         // hold MO(_FL) and look
+    TUT_TOUR_NUM,        // hold MO(_NL) and look
+    // ---- the Intl chapter: the only sequence whose steps need a key HELD ----
+    TUT_TOUR_INTL_LOOK,  // hold Intl: every letter shows its chosen accent
+    TUT_TOUR_INTL_ARM,   // hold Intl again (the picker needs it held throughout)
+    TUT_TOUR_INTL_CTRL,  // tap Ctrl: the picker opens
+    TUT_TOUR_INTL_LETTER,// press the chosen letter: its accents fill the number row
+    TUT_TOUR_INTL_ALT,   // press the chosen accent: saved, the picker closes
+    TUT_TOUR_INTL_AGAIN, // hold Intl once more
+    TUT_TOUR_INTL_TYPE,  // press the letter: it now shows the new accent (INERT)
+} tut_tour_kind_t;
+
+// What a step needs to be pressable, beyond being the key the ring is on.
+#define TUT_NEED_INTL    0x01u   // Intl held (_ADDLANG1 on)
+#define TUT_NEED_PICKER  0x02u   // the picker latched (Intl + Ctrl tapped)
+#define TUT_NEED_CLOSED  0x04u   // the picker NOT latched (the Ctrl tap must open it)
+#define TUT_INERT        0x08u   // accepted, but the press does NOT reach the board: the
+                                 // Intl letter would type its accent into whatever app
+                                 // has focus, which a lesson must never do
+
+// A few emoji tabs rather than all twelve — the menu is taught by then, and the point is
+// the variety: two tabs on each half, so the ring crosses the split. Candidates per half
+// in preference order; the ACTIVE category is skipped (pressing the tab that is already
+// open changes nothing on screen — "we should not ask to press the first tab which is
+// active by default", hardware), so each half has a spare.
+static const uint8_t s_tut_emj_left[]  = {0, 4, 5};    // smileys, animals, food (cats 0-5)
+static const uint8_t s_tut_emj_right[] = {7, 8, 9};    // travel, sports, tools  (cats 6-11)
+#define TUT_EMJ_TABS_PER_HALF 2u
+
+// Progress keycap per section (base/tutorial_plan.c has the first five).
+#define TUT_PROG_LANGMENU 6u
+#define TUT_PROG_EMOJI    7u
+#define TUT_PROG_LAYERS   8u
+#define TUT_PROG_INTL     9u
+
+static uint8_t s_tour_kind[TUT_TOUR_MAX];
+static uint8_t s_tour_arg[TUT_TOUR_MAX];
+static uint8_t s_tour_n;
+
+// ⚠️ The accent the Intl chapter picks is KEPT: the one setting a lesson deliberately
+// changes, agreed for this instance ("for that one instance it would be fine to accept
+// the alternative"). Everything else the lesson touches — the layout, the layers, the
+// preview language — is handed back.
+
+// The first key on `layer` holding `kc` that has a panel, or TUT_SLOT_NONE.
+static uint8_t tut_find_slot(uint8_t layer, uint16_t kc) {
+    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            if (keymaps[layer][r][c] != kc) continue;
+            const uint8_t slot = tutorial_slot_of(r, c);
+            if (slot != TUT_SLOT_NONE) return slot;
+        }
+    }
+    return TUT_SLOT_NONE;
+}
+
+// The picker keycode for slot n (KC_LAT10/11 are not contiguous with 0..9).
+static uint16_t latin_slot_keycode(uint8_t n) {
+    if (n <= 9) return (uint16_t)(KC_LAT0 + n);
+    return n == 10 ? KC_LAT10 : KC_LAT11;
+}
+
+// Everything about a step that follows from its KIND, in flash. These used to be three
+// per-step RAM arrays filled beside the slots (84 B of SRAM on a chip with ~1.7 KB free)
+// holding nothing a kind does not already decide.
+typedef struct {
+    uint8_t after;   // the layer on top of _L0 once pressed; 0xFF none (ENFORCED)
+    uint8_t allow;   // a layer the user may HOLD here, allowed but never forced; 0xFF none
+    uint8_t need;    // TUT_NEED_* / TUT_INERT
+    uint8_t dwell;   // TUT_TOUR_SEEN in 100 ms units (0 = the default)
+    uint8_t prog;    // the progress keycap's value
+} tut_tour_kind_info_t;
+
+static const tut_tour_kind_info_t k_tour_kind[] = {
+    [TUT_TOUR_LANG]        = {_LL,   0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
+    // A tab's dwell holds the cascade (anim/menu_cascade.c, ~1.7 s with the last fade)
+    // plus a moment to look.
+    [TUT_TOUR_LCAT]        = {_LL,   0xFFu,     0u, 26u, TUT_PROG_LANGMENU},
+    [TUT_TOUR_BASE_LL]     = {0xFFu, 0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
+    [TUT_TOUR_EMJ]         = {_EMJ,  0xFFu,     0u, 0u, TUT_PROG_EMOJI},
+    [TUT_TOUR_ECAT]        = {_EMJ,  0xFFu,     0u, 26u, TUT_PROG_EMOJI},
+    [TUT_TOUR_EPAGE]       = {_EMJ,  0xFFu,     0u, 26u, TUT_PROG_EMOJI},
+    [TUT_TOUR_BASE_EMJ]    = {0xFFu, 0xFFu,     0u, 0u, TUT_PROG_EMOJI},
+    // A held layer: allowed, never forced, 3 s to look at it.
+    [TUT_TOUR_FN]          = {0xFFu, _FL,       0u, 30u, TUT_PROG_LAYERS},
+    [TUT_TOUR_NUM]         = {0xFFu, _NL,       0u, 30u, TUT_PROG_LAYERS},
+    [TUT_TOUR_INTL_LOOK]   = {0xFFu, _ADDLANG1, 0u, 30u, TUT_PROG_INTL},
+    // "Hold Intl again" only arms the next step: almost no dwell.
+    [TUT_TOUR_INTL_ARM]    = {0xFFu, _ADDLANG1, 0u, 3u, TUT_PROG_INTL},
+    [TUT_TOUR_INTL_CTRL]   = {0xFFu, _ADDLANG1, TUT_NEED_INTL | TUT_NEED_CLOSED, 5u, TUT_PROG_INTL},
+    [TUT_TOUR_INTL_LETTER] = {0xFFu, _ADDLANG1, TUT_NEED_INTL | TUT_NEED_PICKER, 8u, TUT_PROG_INTL},
+    [TUT_TOUR_INTL_ALT]    = {0xFFu, _ADDLANG1, TUT_NEED_INTL | TUT_NEED_PICKER, 0u, TUT_PROG_INTL},
+    [TUT_TOUR_INTL_AGAIN]  = {0xFFu, _ADDLANG1, 0u, 3u, TUT_PROG_INTL},
+    [TUT_TOUR_INTL_TYPE]   = {0xFFu, _ADDLANG1, TUT_NEED_INTL | TUT_INERT, 20u, TUT_PROG_INTL},
+};
+_Static_assert(sizeof(k_tour_kind) / sizeof(k_tour_kind[0]) == TUT_TOUR_INTL_TYPE + 1u,
+               "every tour kind needs a k_tour_kind row");
+
+// Append one step (skipped when its key has no panel, or the tour is full).
+static void tut_tour_add(tut_tour_step_t *out, uint8_t kind, uint8_t arg, uint8_t slot) {
+    if (slot == TUT_SLOT_NONE || s_tour_n >= TUT_TOUR_MAX) return;
+    s_tour_kind[s_tour_n] = kind;
+    s_tour_arg[s_tour_n]  = arg;
+    out[s_tour_n]         = (tut_tour_step_t){slot, k_tour_kind[kind].dwell, k_tour_kind[kind].prog};
+    s_tour_n++;
+}
+
+// The kind info for step `step` (callers bound-check it first).
+static const tut_tour_kind_info_t *tut_step_info(int16_t step) {
+    return &k_tour_kind[s_tour_kind[step]];
+}
+
+// Choose the Intl chapter's letter and accent: a letter on the base layer with at least
+// three accents on the picker's first page, and an accent that is NOT the one already
+// picked (choosing the current one would change nothing on screen). `seed` varies the
+// letter on the master; the slave builds with any seed and is SENT the two slots over
+// the link (tut[5]), so the halves cannot disagree about which keys to point at.
+static bool tut_choose_intl(uint32_t seed, uint16_t *letter, uint8_t *alt_slot) {
+    // Vowels only (hardware round 34): their accents are the ones a reader recognises
+    // (é, ü, å), where a consonant's row is mostly marks nobody types. The pass over
+    // every letter stays as the fallback, for a keymap that moved all five vowels off
+    // the base layer.
+    static const uint16_t k_vowels[] = {KC_A, KC_E, KC_I, KC_O, KC_U};
+    uint16_t cand[26];
+    uint8_t  n = 0;
+    for (uint8_t pass = 0; pass < 2 && n == 0; ++pass) {
+        const uint8_t count = pass == 0 ? (uint8_t)(sizeof(k_vowels) / sizeof(k_vowels[0])) : (uint8_t)26u;
+        for (uint8_t i = 0; i < count; ++i) {
+            const uint16_t kc = pass == 0 ? k_vowels[i] : (uint16_t)(KC_A + i);
+            if (!latin_has_row(kc) || tut_find_slot(_BL, kc) == TUT_SLOT_NONE) continue;
+            const uint8_t row = latin_picker_row(kc, false);
+            uint8_t       on_page = latin_variation_count(row);
+            if (on_page > LATIN_PICKER_SLOTS) on_page = LATIN_PICKER_SLOTS;
+            if (on_page >= 3) cand[n++] = kc;
+        }
+    }
+    if (n == 0) return false;
+    const uint16_t kc  = cand[seed % n];
+    const uint8_t  row = latin_picker_row(kc, false);
+    uint8_t        on_page = latin_variation_count(row);
+    if (on_page > LATIN_PICKER_SLOTS) on_page = LATIN_PICKER_SLOTS;
+    const uint8_t cur = latin_pick_get(get_global_latin_table()->ex,
+                                       latin_pick_field(latin_target_slot(kc), false));
+    for (uint8_t k = 0; k < on_page; ++k) {
+        const uint8_t s = (uint8_t)((1u + (seed >> 8) + k) % on_page);
+        if (s == cur) continue;
+        if (tut_find_slot(_ADDLANG1, latin_slot_keycode(s)) == TUT_SLOT_NONE) continue;
+        *letter   = kc;
+        *alt_slot = s;
+        return true;
+    }
+    return false;
+}
+
+uint8_t tutorial_tour_build(tut_tour_step_t out[TUT_TOUR_MAX], uint32_t seed) {
+    s_tour_n = 0;
+    // A menu whose opening key is missing is skipped whole: its tabs cannot be reached.
+    const uint8_t lang = tutorial_lang_slot();
+    if (lang != TUT_SLOT_NONE) {
+        tut_tour_add(out, TUT_TOUR_LANG, 0, lang);
+        // Every region tab but the one already open: pressing it would change nothing on
+        // screen. The region is synced, so both halves skip the same tab and agree on the
+        // steps. (The empty-region test is a guard only; all six regions carry languages.)
+        for (uint8_t r = 0; r < NUM_LANG_REGIONS; ++r) {
+            if (r == lang_active_region() || lang_region_count(r) == 0) continue;
+            tut_tour_add(out, TUT_TOUR_LCAT, r, tut_find_slot(_LL, LCAT(r)));
+        }
+        tut_tour_add(out, TUT_TOUR_BASE_LL, 0, tut_find_slot(_LL, KC_BASE));
+    }
+    const uint8_t emj = tut_find_slot(_BL, TO(_EMJ));
+    if (emj != TUT_SLOT_NONE) {
+        tut_tour_add(out, TUT_TOUR_EMJ, 0, emj);
+        uint8_t tabs[2 * TUT_EMJ_TABS_PER_HALF];
+        uint8_t n_tabs = 0;
+        for (uint8_t half = 0; half < 2; ++half) {
+            const uint8_t *cand = half ? s_tut_emj_right : s_tut_emj_left;
+            uint8_t        took = 0;
+            for (uint8_t i = 0; i < 3 && took < TUT_EMJ_TABS_PER_HALF; ++i) {
+                if (cand[i] == emj_active_category() || emj_page_count(cand[i]) == 0) continue;
+                tabs[n_tabs++] = cand[i];
+                took++;
+            }
+        }
+        // The page key follows the last tab whose category HAS a second page, so the
+        // press visibly turns it (the arrow is blank on a one-page category).
+        uint8_t page_after = 0xFFu;
+        for (uint8_t i = 0; i < n_tabs; ++i) {
+            if (emj_page_count(tabs[i]) > 1) page_after = i;
+        }
+        for (uint8_t i = 0; i < n_tabs; ++i) {
+            tut_tour_add(out, TUT_TOUR_ECAT, tabs[i], tut_find_slot(_EMJ, KC_EMJ_CAT(tabs[i])));
+            if (i == page_after) {
+                tut_tour_add(out, TUT_TOUR_EPAGE, 0, tut_find_slot(_EMJ, KC_EMJ_PAGE_NEXT));
+            }
+        }
+        tut_tour_add(out, TUT_TOUR_BASE_EMJ, 0, tut_find_slot(_EMJ, KC_BASE));
+    }
+    // Hold Fn, then hold Num: a layer that exists only while its key is down, so the
+    // step ALLOWS the layer rather than enforcing it, and dwells 3 s to look at it.
+    tut_tour_add(out, TUT_TOUR_FN, 0, tut_find_slot(_BL, MO(_FL)));
+    tut_tour_add(out, TUT_TOUR_NUM, 0, tut_find_slot(_BL, MO(_NL)));
+    // The Intl chapter. Skipped whole if the board has no Intl key, no Ctrl, or no letter
+    // with accents to pick from.
+    const uint8_t intl = tut_find_slot(_BL, MO(_ADDLANG1));
+    const uint8_t ctrl = tut_find_slot(_BL, KC_LEFT_CTRL);
+    uint16_t      letter = KC_NO;
+    uint8_t       alt    = 0;
+    if (intl != TUT_SLOT_NONE && ctrl != TUT_SLOT_NONE && tut_choose_intl(seed, &letter, &alt)) {
+        const uint8_t lslot = tut_find_slot(_BL, letter);
+        const uint8_t aslot = tut_find_slot(_ADDLANG1, latin_slot_keycode(alt));
+        tut_tour_add(out, TUT_TOUR_INTL_LOOK, 0, intl);
+        tut_tour_add(out, TUT_TOUR_INTL_ARM, 0, intl);
+        tut_tour_add(out, TUT_TOUR_INTL_CTRL, 0, ctrl);
+        tut_tour_add(out, TUT_TOUR_INTL_LETTER, 0, lslot);
+        tut_tour_add(out, TUT_TOUR_INTL_ALT, alt, aslot);
+        tut_tour_add(out, TUT_TOUR_INTL_AGAIN, 0, intl);
+        tut_tour_add(out, TUT_TOUR_INTL_TYPE, 0, lslot);
+    }
+    return s_tour_n;
+}
+
+// The layer the lesson should be on right now, on top of _L0 (0xFF: _L0 alone). While a
+// step WAITS, it is what the previous step left on; once pressed, what this one did.
+static uint8_t tut_tour_layer(void) {
+    const int16_t step = tutorial_tour_step();
+    if (step < 0 || step >= s_tour_n) return 0xFFu;
+    if (tutorial_tour_seen()) return tut_step_info(step)->after;
+    return step == 0 ? 0xFFu : tut_step_info(step - 1)->after;
+}
+
+// A layer the current step lets the user HOLD (Fn, Num, Intl), or 0xFF.
+static uint8_t tut_tour_allowed_layer(void) {
+    const int16_t step = tutorial_tour_step();
+    return (step < 0 || step >= s_tour_n) ? 0xFFu : tut_step_info(step)->allow;
+}
+
+// Can the current step's key be pressed right now? Only the Intl chapter says no: its
+// Ctrl, letter and accent do something else entirely without Intl held and the picker
+// in the right state (the letter would TYPE its accent).
+static bool tut_tour_step_ready(void) {
+    const int16_t step = tutorial_tour_step();
+    if (step < 0 || step >= s_tour_n) return true;
+    const uint8_t need = tut_step_info(step)->need;
+    if ((need & TUT_NEED_INTL) && !IS_LAYER_ON(_ADDLANG1)) return false;
+    if ((need & TUT_NEED_PICKER) && !s_picker_latched) return false;
+    if ((need & TUT_NEED_CLOSED) && s_picker_latched) return false;
+    return true;
+}
+
+static bool tut_tour_step_inert(void) {
+    const int16_t step = tutorial_tour_step();
+    return step >= 0 && step < s_tour_n && (tut_step_info(step)->need & TUT_INERT) != 0u;
+}
+
+// Master, every housekeeping pass: the Intl picker only exists while Intl is held, so a
+// user who lets go mid-sequence would face a Ctrl or a letter that no longer does what
+// the lesson says. Rewind to the step that asks for the hold again; and a picker closed
+// by a second Ctrl tap rewinds to the Ctrl step.
+static void poly_tutorial_tour_rewind_if_let_go(void) {
+    const int16_t step = tutorial_tour_step();
+    if (step < 0 || step >= s_tour_n || tutorial_tour_seen()) return;
+    const uint8_t need = tut_step_info(step)->need;
+    if (!(need & (TUT_NEED_INTL | TUT_NEED_PICKER))) return;
+    uint8_t back = 0xFFu;
+    if ((need & TUT_NEED_INTL) && !IS_LAYER_ON(_ADDLANG1)) {
+        const uint8_t want = (s_tour_kind[step] == TUT_TOUR_INTL_TYPE) ? TUT_TOUR_INTL_AGAIN
+                                                                       : TUT_TOUR_INTL_ARM;
+        for (int16_t i = step - 1; i >= 0; --i) {
+            if (s_tour_kind[i] == want) { back = (uint8_t)i; break; }
+        }
+    } else if ((need & TUT_NEED_PICKER) && !s_picker_latched) {
+        for (int16_t i = step - 1; i >= 0; --i) {
+            if (s_tour_kind[i] == TUT_TOUR_INTL_CTRL) { back = (uint8_t)i; break; }
+        }
+    }
+    if (back != 0xFFu) tutorial_tour_rewind(back);
+}
+
+// "letter X" for the Intl chapter's prose, the letter in capitals.
+//
+// ⚠️ Read from the KEY the letter step points at, never from a variable holding the
+// draw. The letter is drawn at random on the MASTER; the slave builds its own tour with
+// its own seed and only learns the master's key over the link. Prose from the local
+// draw said "letter Y" on the right panel while the ring and the pulse sat on E
+// (hardware). tutorial_tour_slot() is the synced key on the slave.
+static const uint32_t *tut_letter_words(const uint32_t *prefix) {
+    uint32_t *const buf = s_tut_prose;
+    uint8_t         n = 0;
+    while (prefix[n] != 0 && n < 13) { buf[n] = prefix[n]; n++; }
+    uint32_t cp = 0;
+    for (uint8_t i = 0; i < s_tour_n; ++i) {
+        if (s_tour_kind[i] == TUT_TOUR_INTL_LETTER) {
+            cp = tutorial_slot_letter(tutorial_tour_slot(i));
+            break;
+        }
+    }
+    buf[n++] = cp != 0 ? cp : (uint32_t)'?';
+    buf[n]   = 0;
+    return buf;
+}
+
+// The status prose: the LEFT panel opens the sentence, the right finishes it. Every
+// line is different — the same words twice read as the board repeating itself.
+// `seen` is the dwell after the press, where a held layer is on screen.
+const uint32_t *tutorial_tour_line(uint8_t step, bool left, bool seen) {
+    if (step >= s_tour_n) return NULL;
+    switch (s_tour_kind[step]) {
+        case TUT_TOUR_LANG:     return left ? U"Pick yours in" : U"the Lang menu";
+        case TUT_TOUR_BASE_LL:  return left ? U"Now back" : U"home";
+        case TUT_TOUR_EMJ:      return left ? U"Now for" : U"some emoji";
+        case TUT_TOUR_BASE_EMJ: return left ? U"And home" : U"again";
+        case TUT_TOUR_EPAGE:    return left ? U"Flip to" : U"the next page";
+        case TUT_TOUR_FN:
+            if (seen) return left ? U"F1 to F12," : U"and more";
+            return left ? U"Hold Fn for" : U"the F-keys";
+        case TUT_TOUR_NUM:
+            if (seen) return left ? U"Digits and" : U"math keys";
+            return left ? U"Hold Num for" : U"a number pad";
+        case TUT_TOUR_INTL_LOOK:
+            if (seen) return left ? U"Each letter's" : U"chosen accent";
+            return left ? U"Hold Intl" : U"for accents";
+        case TUT_TOUR_INTL_ARM:   return left ? U"Hold Intl" : U"once more";
+        case TUT_TOUR_INTL_CTRL:
+            if (seen) return left ? U"The picker" : U"is open";
+            // The key is drawn, not named: tutorial_tour_key() frames its legend.
+            return left ? U"Keep holding," : U"tap";
+        case TUT_TOUR_INTL_LETTER:
+            if (seen) return left ? U"Its accents" : U"are on top";
+            return left ? U"Pick the" : tut_letter_words(U"letter ");
+        case TUT_TOUR_INTL_ALT:
+            if (seen) return left ? U"Saved for" : tut_letter_words(U"the ");
+            return left ? U"Now take" : U"the lit accent";
+        case TUT_TOUR_INTL_AGAIN: return left ? U"Hold Intl" : U"one last time";
+        case TUT_TOUR_INTL_TYPE:
+            if (seen) return left ? U"That's how" : U"accents work";
+            return left ? U"And press" : tut_letter_words(U"the ");
+        case TUT_TOUR_LCAT: {
+            static const uint32_t *const lines[NUM_LANG_REGIONS][2] = {
+                {U"From Canada", U"to Chile"},       // America
+                {U"All across", U"Europe"},
+                {U"The Middle", U"East"},
+                {U"Languages of", U"Africa"},
+                {U"The whole of", U"Asia"},
+                {U"And down to", U"Oceania"},
+            };
+            const uint8_t r = s_tour_arg[step];
+            return r < NUM_LANG_REGIONS ? lines[r][left ? 0 : 1] : NULL;
+        }
+        case TUT_TOUR_ECAT:
+            switch (s_tour_arg[step]) {
+                case 0:  return left ? U"Smileys" : U"and faces";
+                case 4:  return left ? U"Animals," : U"big and small";
+                case 5:  return left ? U"Plants" : U"and food";
+                case 9:  return left ? U"Tools" : U"and objects";
+                case 7:  return left ? U"Travel" : U"and places";
+                case 8:  return left ? U"Sports" : U"and games";
+                default: return left ? U"More" : U"emoji";
+            }
+        default:
+            return NULL;
+    }
+}
+
+const uint32_t *tutorial_tour_key(uint8_t step, bool left, bool seen) {
+    if (step >= s_tour_n || left || seen) return NULL;
+    // ⚠️ The same macro the Ctrl keycap draws on this layer (to_static_text), so the
+    // panel cannot name a legend the key no longer shows.
+    return s_tour_kind[step] == TUT_TOUR_INTL_CTRL ? INTL_PICKER_LEGEND : NULL;
+}
+
+uint8_t tutorial_preview_table_row(uint8_t pos) {
+    return pos < s_tut_preview_n ? s_tut_preview[pos] : 0xFFu;
+}
+
+// The master's live preview entry (applied only while SHOWN), or NULL.
+static const tut_preview_t *tut_preview_live(void) {
+    const int16_t i = tutorial_preview_index();
+    if (i < 0 || i >= s_tut_preview_n) return NULL;
+    return &s_tut_preview_all[s_tut_preview[i]];
+}
+
+// The item being named or shown, on either half (the slave is sent the table row).
+static const tut_preview_t *tut_preview_current(void) {
+    const uint8_t row = tutorial_preview_entry();
+    return row < TUT_PREVIEW_ALL ? &s_tut_preview_all[row] : NULL;
+}
+
+// The status panel's name ends the lead-in's question, so it carries the "?". Only the
+// PANEL: the keys spell `name` itself, where a "?" would be a keycap of its own.
+const uint32_t *tutorial_preview_name(void) {
+    uint32_t *const      buf = s_tut_prose;
+    const tut_preview_t *e = tut_preview_current();
+    if (e == NULL) return U"...";
+    uint8_t n = 0;
+    while (e->name[n] != 0 && n < 14) { buf[n] = e->name[n]; n++; }
+    buf[n++] = '?';
+    buf[n]   = 0;
+    return buf;
+}
+
+// The status panels read as one sentence: the row's own lead-in on the left, the name on
+// the right. Keyed by the table row — the one thing both halves know.
+const uint32_t *tutorial_preview_phrase(void) {
+    const tut_preview_t *e = tut_preview_current();
+    return e != NULL ? e->lead : U"...";
+}
+
+// Which half spells the NATIVE name for this item: alternating by table row, so the
+// Latin name is not always on the same side ("too static", hardware). The name row is
+// the one thing both halves know about the item, so they agree without being told.
+static bool tut_native_on(uint8_t side) {
+    const uint8_t row = tutorial_preview_entry();
+    const uint8_t native_side = (row & 1u) ? 0u : 1u;
+    return side == native_side;
+}
+
+// ---- the name spelled on the keys (TUT_LANG_NAME) ----
+// One half: the Latin name; the other: the language's own name (they swap sides from one
+// item to the next, tut_native_on()), per character or as
+// pre-rendered tiles; a glyph script spells its Latin name through its own glyphs. A
+// name of up to 7 units sits on the middle display row (row 2); a longer one is split
+// over row 1 and row 2, the first half on top. Every letter row has 7 panels per half,
+// ordered here by board x, built once per half from the shared geometry table.
+#define TUT_NAME_ROW_TOP  1u
+#define TUT_NAME_ROW      2u
+#define TUT_NAME_KEYS     7u
+#define TUT_NAME_UNITS   14u
+#define TUT_SCRATCH_STRIDE 128   // scratch bytes per page row (as focus_ring.c)
+static uint8_t s_tut_name_keys[2][2][TUT_NAME_KEYS];   // [side][row 1/2] display idx, by x
+static uint8_t s_tut_name_n[2][2];
+static bool    s_tut_name_built[2];
+
+static void tut_name_keys_build(uint8_t side) {
+    for (uint8_t r = 0; r < 2; ++r) {
+        int16_t        xs[TUT_NAME_KEYS];
+        const uint8_t  drow = r == 0 ? TUT_NAME_ROW_TOP : TUT_NAME_ROW;
+        uint8_t       *keys = s_tut_name_keys[side][r];
+        uint8_t        n    = 0;
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            const uint8_t   idx = (uint8_t)(drow * MATRIX_COLS + c);
+            const sa_geom_t g   = startup_anim_key_geom(side != 0, idx);
+            if (!g.valid || n >= TUT_NAME_KEYS) continue;
+            uint8_t k = n++;
+            while (k > 0 && xs[k - 1] > g.cx) {       // insertion sort on x
+                xs[k]   = xs[k - 1];
+                keys[k] = keys[k - 1];
+                --k;
+            }
+            xs[k]   = g.cx;
+            keys[k] = idx;
+        }
+        s_tut_name_n[side][r] = n;
+    }
+    s_tut_name_built[side] = true;
+}
+
+// The units a half spells for `e`, in left-to-right order: the native name when
+// `native`, else the Latin one. Returns the count.
+static uint8_t tut_name_units(const tut_preview_t *e, bool native, uint32_t out[TUT_NAME_UNITS]) {
+    uint8_t n = 0;
+    if (!native || (!e->script && e->native == NULL)) {
+        for (; e->name[n] != 0 && n < TUT_NAME_UNITS; ++n) {
+            uint32_t ch = e->name[n];
+            if (ch >= 'a' && ch <= 'z') ch -= 'a' - 'A';
+            out[n] = ch;
+        }
+        return n;
+    }
+    if (e->script) {   // a glyph script: the Latin name through the script
+        for (; e->name[n] != 0 && n < TUT_NAME_UNITS; ++n) {
+            uint32_t ch = e->name[n];
+            if (ch >= 'a' && ch <= 'z') ch -= 'a' - 'A';
+            const uint32_t cp = (ch >= 'A' && ch <= 'Z')
+                                    ? glyph_script_codepoint(e->value, (uint16_t)(KC_A + (ch - 'A')))
+                                    : 0u;
+            out[n] = cp != 0 ? cp : ch;
+        }
+        return n;
+    }
+    while (e->native[n] != 0 && n < TUT_NAME_UNITS) ++n;
+    for (uint8_t i = 0; i < n; ++i) {
+        // Right to left: the FIRST character goes on the RIGHTMOST key.
+        out[i] = e->native[e->rtl ? (uint8_t)(n - 1u - i) : i];
+    }
+    return n;
+}
+
+// How a name of `n` units splits: up to 7 fill row 2 alone; more put the larger half on
+// row 1.
+static uint8_t tut_name_top(uint8_t n) {
+    return n > TUT_NAME_KEYS ? (uint8_t)((n + 1u) / 2u) : 0u;
+}
+
+// Which of `n` units lands on key `idx` of this half, or -1: the first `top` units on
+// row 1, the rest on row 2, each row centred on its own keys.
+static int8_t tut_name_slot_unit(uint8_t side, uint8_t idx, uint8_t n, uint8_t top) {
+    for (uint8_t r = 0; r < 2; ++r) {
+        const uint8_t first = r == 0 ? 0u : top;
+        const uint8_t count = r == 0 ? top : (uint8_t)(n - top);
+        const uint8_t avail = s_tut_name_n[side][r];
+        if (count == 0 || count > avail) continue;
+        // Centred, and when the spare key count is odd the odd key goes to the OUTER
+        // edge, so the word leans toward the split (keys are ordered by board x, so the
+        // split is the right end of the left half and the left end of the right half).
+        const uint8_t slack = (uint8_t)(avail - count);
+        const uint8_t start = side == 0 ? (uint8_t)((slack + 1u) / 2u) : (uint8_t)(slack / 2u);
+        for (uint8_t k = 0; k < count; ++k) {
+            if (s_tut_name_keys[side][r][start + k] == idx) return (int8_t)(first + k);
+        }
+    }
+    return -1;
+}
+
+// What this key shows while the board is naming an item (or on the "more" screens).
+// Returns 0 (not a name key), 1 (a character in *cp), 2 (a pre-rendered tile in *tile)
+// or 3 (a character in *cp, drawn in the heavy splash face).
+// The "more" screens, one at a time: the NUMBER on the left half and the WORD on the
+// right — first the layouts this firmware knows, then the alternative glyph scripts.
+// Read from the enums, so the screens stay true as languages and scripts are added.
+// Returns the unit count for THIS half's middle row.
+static uint8_t tut_more_units(bool right, bool scripts, uint32_t out[TUT_NAME_UNITS]) {
+    uint8_t n = 0;
+    if (right) {
+        const uint32_t *word = scripts ? U"SCRIPTS" : U"LAYOUTS";
+        for (; word[n] != 0 && n < TUT_NAME_UNITS; ++n) out[n] = word[n];
+        return n;
+    }
+    char     digits[6];
+    uint8_t  nd = 0;
+    uint16_t v  = scripts ? (uint16_t)(GLYPH_SCRIPT_COUNT - 1) : (uint16_t)NUM_LANG;
+    do { digits[nd++] = (char)('0' + v % 10u); v /= 10u; } while (v != 0 && nd < sizeof(digits));
+    while (nd > 0) out[n++] = (uint32_t)digits[--nd];
+    return n;
+}
+
+// The heavy splash face (the one "BOOT- / LOADER!" and the POLY KYBD splash use),
+// one character centred on the selected keycap from its measured box.
+static void tut_draw_heavy(uint32_t cp) {
+    const GFXfont *const one[1] = {poly_heavy_font()};   // not the header: see poly_util.h
+    const uint32_t       txt[2] = {cp, 0};
+    int8_t               x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+    kdisp_gfx_text_bbox(one, 1, txt, &x0, &x1, &y0, &y1);
+    kdisp_write_gfx_text(one, 1, (int8_t)(BUFFER_X + (SCREEN_WIDTH - (x1 - x0 + 1)) / 2 - x0),
+                         (int8_t)((SCREEN_HEIGHT - (y1 - y0 + 1)) / 2 - y0), txt);
+}
+
+static uint8_t tut_name_key(uint8_t row, uint8_t col, uint32_t *cp, const uint8_t **tile) {
+    const bool more = tutorial_telling_more();
+    if (!more && !tutorial_naming()) return 0;
+    if (tutorial_wipe_covers(row, col)) return 0;   // the ring has drawn the item here
+    const uint8_t slot = tutorial_slot_of(row, col);
+    if (slot == TUT_SLOT_NONE) return 0;
+    const uint8_t side = TUT_SLOT_RIGHT(slot) ? 1u : 0u;
+    if (!s_tut_name_built[side]) tut_name_keys_build(side);
+    uint32_t units[TUT_NAME_UNITS];
+    if (more) {
+        const uint8_t n = tut_more_units(side != 0, tutorial_more_scripts(), units);
+        const int8_t  u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n, 0);
+        if (u < 0) return 0;
+        *cp = units[u];
+        return 3;   // heavy face
+    }
+    const tut_preview_t *e = tut_preview_current();
+    if (e == NULL) return 0;
+    const bool native = tut_native_on(side);
+    if (native && e->strip != NULL) {
+        const uint8_t n = e->strip->n;
+        const int8_t  u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n, tut_name_top(n));
+        if (u < 0) return 0;
+        *tile = e->strip->tiles + (size_t)u * 360u;
+        return 2;
+    }
+    const uint8_t n = tut_name_units(e, native, units);
+    const int8_t  u = tut_name_slot_unit(side, TUT_SLOT_IDX(slot), n, tut_name_top(n));
+    if (u < 0) return 0;
+    *cp = units[u];
+    return 1;
+}
+
+static uint32_t tut_name_letter(uint8_t row, uint8_t col) {
+    uint32_t       cp   = 0;
+    const uint8_t *tile = NULL;
+    return tut_name_key(row, col, &cp, &tile) != 0 ? 1u : 0u;
+}
+
+// Blit a 72x40 pre-rendered tile (row-major, 9 bytes per row, MSB first) into the
+// selected, cleared scratch buffer.
+static void tut_draw_name_tile(const uint8_t *tile) {
+    uint8_t *buf = get_scratch_buffer();
+    for (uint8_t ly = 0; ly < SCREEN_HEIGHT; ++ly) {
+        for (uint8_t lx = 0; lx < SCREEN_WIDTH; ++lx) {
+            if (tile[ly * 9u + (lx >> 3)] & (0x80u >> (lx & 7u))) {
+                buf[(size_t)(ly >> 3) * TUT_SCRATCH_STRIDE + (BUFFER_X + lx)] |=
+                    (uint8_t)(1u << (ly & 7));
+            }
+        }
+    }
+}
+
+// The language preview's bookkeeping. s_tut_real_lang is the user's language while a
+// preview is written over it (0xFF = no preview); s_tut_written_lang is what we wrote,
+// so a host SET_LANG that lands mid-preview is recognised as the new real value rather
+// than being overwritten and then "restored" to the old one.
+static uint8_t s_tut_real_lang    = 0xFF;
+static uint8_t s_tut_written_lang = 0xFF;
+
+uint8_t poly_reported_lang(void) {
+    const uint8_t cur = get_local_state()->lang;
+    if (s_tut_real_lang != 0xFF && cur == s_tut_written_lang) return s_tut_real_lang;
+    return cur;
+}
+
+// The language to STORE. Only the master keeps s_tut_real_lang; the slave receives the
+// preview through the ordinary sync and cannot tell it from the user's language. So
+// while the lesson runs the slave keeps the language it already stored, or a flush
+// then (a suspend, SAVE_EEPROM) would persist a board-only preview on that half.
+uint8_t poly_persisted_lang(void) {
+    if (!is_keyboard_master() && tutorial_active()) return load_user_eeconf().lang;
+    return poly_reported_lang();
+}
+
+// Master only, once per housekeeping pass: write or retire the preview. Returns the
+// glyph script the board should DRAW (the preview's, or the user's own).
+static uint8_t poly_tutorial_apply_preview(void) {
+    poly_sync_t          *ls = access_local_state();
+    const tut_preview_t *e  = tut_preview_live();
+    if (e != NULL && !e->script) {
+        if (s_tut_real_lang == 0xFF || ls->lang != s_tut_written_lang) {
+            s_tut_real_lang = ls->lang;           // first item, or the host moved it
+        }
+        if (ls->lang != e->value) {
+            ls->lang = e->value;
+            request_disp_refresh();
+        }
+        s_tut_written_lang = e->value;
+    } else if (s_tut_real_lang != 0xFF) {
+        if (ls->lang == s_tut_written_lang && ls->lang != s_tut_real_lang) {
+            ls->lang = s_tut_real_lang;
+            request_disp_refresh();
+        }
+        s_tut_real_lang    = 0xFF;
+        s_tut_written_lang = 0xFF;
+    }
+    return (e != NULL && e->script) ? e->value : get_glyph_script();
 }
 
 bool eden_idle_erase_legend(uint8_t disp_idx) {
@@ -4049,6 +5126,25 @@ void reset_idle_jitter(void) {
 // there is nothing to clear away from, so the clear just eats a dark halo out of
 // the fill around every glyph. Pass 0 there.
 static void draw_legend_cx_cy(const uint32_t* text, int8_t y, int8_t cy_radius) {
+    // ⚠️ A legend that MOVEs (\x0E) places its art at ABSOLUTE buffer positions, laid
+    // out against the whole cell already, so it is drawn unshifted. Centring shifts the
+    // origin, which moves the relatively placed glyphs and not the MOVE'd ones: the
+    // context-menu lines slid left under their own pointer on the bottom row (hardware
+    // round 34). The scan skips each op's ARGUMENTS, since a coordinate or a size can
+    // be the byte 0x0E too (the same trap the bbox walker documents for MOVE).
+    for (const uint32_t* p = text; *p; ++p) {
+        uint8_t args = 0;
+        switch (*p) {
+            case U'\x0E':
+                kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, y, text, cy_radius);
+                return;
+            case U'\x0F': case U'\x11': args = 1; break;   // HALF / THIN glyph
+            case U'\x12': case U'\x15': args = 2; break;   // FRAME (w,h) / ROT (step,glyph)
+            case U'\x13': args = 3; break;                  // BADGE (w,h,style)
+            default: break;
+        }
+        for (; args > 0 && p[1]; --args) ++p;
+    }
     while (*text == U' ') text++;          // drop manual leading padding (skews bbox)
     int8_t lo = 0, hi = 0;
     kdisp_gfx_text_bounds(g_all_fonts, g_all_font_count, text, &lo, &hi);
@@ -4225,7 +5321,9 @@ void update_displays(enum refresh_mode mode) {
                     // pass-through no-op in non-doom builds and while unarmed).
                     keycode = doom_egg_menu_keycode(keycode, (uint8_t)(r + offset), c);
                     kdisp_enable(true);
-                    kdisp_set_contrast((uint8_t)(local_state->contrast-1));
+                    // The tutorial's one uniform level (see set_displays()).
+                    kdisp_set_contrast(tutorial_active() ? (uint8_t)POLY_INTRO_CONTRAST
+                                                         : (uint8_t)(local_state->contrast - 1));
                     // Doom control pad (this only ever renders on the SLAVE
                     // half — the master early-returns above while the game
                     // runs): the outer two columns become ESC + weapon slots,
@@ -4247,6 +5345,18 @@ void update_displays(enum refresh_mode mode) {
                         kdisp_send_window();
                         doom_handled = true;
                     } else if (tutorial_intro_mode() &&
+                               tutorial_is_chrome_key((uint8_t)(r + offset), c)) {
+                        // The tutorial's chrome: "Hold to / skip..." on Esc, the chapter
+                        // on its mirror at the top-right outer edge. A preview name's
+                        // letters are chrome too, and cascade in (anim/menu_cascade.h):
+                        // until its turn such a key stays dark.
+                        kdisp_set_buffer(0x00);
+                        if (!menu_cascade_hidden((uint8_t)(r + offset), c)) {
+                            tutorial_draw_chrome((uint8_t)(r + offset), c);
+                        }
+                        kdisp_send_window();
+                        doom_handled = true;
+                    } else if (tutorial_intro_mode() &&
                                !tutorial_key_visible((uint8_t)(r + offset), c)) {
                         // The tutorial's intro mode: the board is drawing NORMALLY, and
                         // the only thing the lesson does is darken what it is not asking
@@ -4258,6 +5368,13 @@ void update_displays(enum refresh_mode mode) {
                         // each answers tutorial_key_visible() from its own keymap and
                         // the phase it already has from the ordinary tutorial sync. No
                         // extra state crosses the link.
+                        kdisp_set_buffer(0x00);
+                        kdisp_send_window();
+                        doom_handled = true;
+                    } else if (menu_cascade_hidden((uint8_t)(r + offset), c)) {
+                        // A menu's content rows appear key by key (anim/menu_cascade.h);
+                        // until its turn a key stays dark. Asked on both halves, from
+                        // each one's own synced menu state.
                         kdisp_set_buffer(0x00);
                         kdisp_send_window();
                         doom_handled = true;
@@ -4379,26 +5496,9 @@ void update_displays(enum refresh_mode mode) {
                     if (doom_handled) {
                         // rendered above
                     } else if(keycode!=KC_TRNS) {
-                        int16_t lang_idx = lang_index_for_keycode(keycode);
-                        if (lang_idx >= 0) {
-                            // Language layer: country flag + tiny language code
-                            // (paged slots and the top-row MRU recents alike).
-                            kdisp_set_buffer(0x00);
-                            draw_mru_top_bar(keycode);
-                            render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state), local_state->lang);
-                            kdisp_send_window();
-                        } else if (keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET ||
-                                   keycode == KC_EMJ_CLEAR  || keycode == KC_LANG_CLEAR) {
-                            // Top-row MRU controls: "Preset" / "Clear".
-                            kdisp_set_buffer(0x00);
-                            render_mru_ctrl_key(keycode == KC_EMJ_PRESET || keycode == KC_LANG_PRESET);
-                            kdisp_send_window();
-                        } else if (keycode >= KC_LANG_CAT_BASE && keycode < KC_LANG_PAGE_PREV) {
-                            // Language region tab — continent label + active frame.
-                            kdisp_set_buffer(0x00);
-                            lang_draw_tab_indicator(keycode);
-                            lang_draw_tab_bottom(keycode);
-                            render_lang_region_tab(keycode);
+                        // The language menu's bespoke keys; see render_menu_key().
+                        kdisp_set_buffer(0x00);
+                        if (render_menu_key(keycode, state, local_state->lang)) {
                             kdisp_send_window();
                         } else {
                         const uint32_t* text = to_static_text(keycode, state);
@@ -4866,10 +5966,27 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         }
         case KC_EDEN:
             if (!act) break;
-            // ⚠️ PROTOTYPE BEHAVIOUR: this runs Eden AND the tutorial on the spot so the
-            // whole sequence can be retried without rebooting. The SHIPPING semantics
-            // (anim/TUTORIAL.md) are different: this key RE-ARMS the first-run
-            // experience for the next startup and only replays the animation now.
+            // RESET Eden: clear the boot marker, then play Eden AND the tutorial now.
+            //
+            // ⚠️ TUTORIAL.md §3 asks for "clear the marker, replay only the animation" as
+            // the shipping behaviour, with the tutorial waiting for the next boot. That
+            // was tried with a Shift modifier for the run-now path, and SHIFT CANNOT BE
+            // HELD HERE: KC_EDEN lives on _SL, whose two Shift positions are
+            // KC_SETTINGS_MORE and KC_NO, so the tutorial became unreachable from the
+            // keyboard ("I only see the animation", hardware). Until the shipping split is
+            // decided, the key does both.
+            //
+            // The marker clear still matters for a cold-boot test: the tutorial re-stamps
+            // it only at done/skip, so unplugging mid-lesson leaves it cleared and the
+            // next power-up plays the first-run experience.
+            //
+            // ⚠️ Clearing only THIS half's marker is enough: at boot the master bumps
+            // anim_nonce when it starts the intro, and that replays Eden on a slave whose
+            // own marker is already consumed (split_sync.c, the anim_replay guard).
+            // ⚠️ EEPROM writes run with the QSPI out of XIP; halt core1 across it.
+            fw_staging_core1_lockout_begin();
+            rearm_boot_intro();
+            fw_staging_core1_lockout_end();
             arm_tutorial_after_intro();
             // Trigger the startup ("Eden") animation NOW on this (master) half and bump
             // the synced nonce so the slave plays in lockstep (the nonce is delivered by
@@ -5026,7 +6143,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // (nothing should reach the host mid-lesson) and consumed here instead. Swallowed
     // in process_record_user rather than on the release edge — an OSL layer
     // re-dispatches a release-edge action up to three times.
-    if (tutorial_active()) {
+    if (tutorial_active() && !poly_tutorial_tour_passes(record)) {
         const uint8_t row = record->event.key.row, col = record->event.key.col;
         // ⚠️ SHIFT IS THE ONE EXCEPTION, and it has to be a real one. Chapter 2 asks
         // the user to hold Shift and watch every legend change — and the legends follow
@@ -5049,15 +6166,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             tutorial_hold(TUT_HOLD_SHIFT, record->event.pressed, tutorial_slot_of(row, col));
             return true;        // let QMK register/unregister it
         }
-        if (tutorial_is_chapter3_key(kc)) {
-            tutorial_hold(TUT_HOLD_LAYER, record->event.pressed, tutorial_slot_of(row, col));
-            return true;
-        }
         if (tutorial_is_layer_key(kc)) {
-            // A layer key the chapter is not asking for still must not be SWALLOWED —
-            // swallowing a layer key's release leaves the board stuck on that layer,
-            // which is the exact bug MO(_ADDLANG1) shipped. It simply drives nothing.
-            return true;
+            // The layer chapter's momentary key acts for real, but only IN that chapter.
+            if (tutorial_is_chapter3_key(kc) && tutorial_in_layer_chapter()) {
+                tutorial_hold(TUT_HOLD_LAYER, record->event.pressed, tutorial_slot_of(row, col));
+                return true;
+            }
+            // ⚠️ Every other layer key: swallow the PRESS, pass the RELEASE. Passing the
+            // press let TO(_EMJ) — beside B on the base layer, and DARK in chapter 1 —
+            // move the whole board onto the emoji layer, where it latched: every letter
+            // key showed an emoji for the rest of the lesson (hardware). "Hidden" is two
+            // invariants, blank AND inert, and this key was only blank.
+            // The release still goes through: swallowing a layer key's release leaves the
+            // board stuck on that layer (the bug MO(_ADDLANG1) shipped), and a release
+            // with no press behind it is a no-op for MO/TO/TG/OSL and for KC_BASE, which
+            // acts on the press.
+            return !record->event.pressed;
         }
         if (record->event.pressed) {
             // A press that is not the key being asked for does NOTHING, deliberately:
@@ -5710,6 +6834,13 @@ void show_splash_screen(void) {
 
 // Configures all displays with contrast level; shows idle pulsating animation if enabled.
 void set_displays(uint8_t contrast, bool idle) {
+    // The tutorial runs every keycap at the one first-run level (POLY_INTRO_CONTRAST),
+    // whatever brightness is set or pushed meanwhile; OFF (suspend) still turns them off.
+    // The finish edge calls this again once the tutorial is no longer active, which is
+    // what hands the user's own level back.
+    if (!idle && contrast != DISP_OFF && tutorial_active()) {
+        contrast = (uint8_t)(POLY_INTRO_CONTRAST + 1u);   // this function stores level+1
+    }
     if(idle) {
         kdisp_idle(contrast);
     } else {
@@ -5793,7 +6924,7 @@ bool process_detected_host_os_kb(os_variant_t os) {
 // digit shown on each half tells us how far that half got before it stopped.
 static void boot_trace(const uint32_t* digit) {
     clear_all_displays();
-    display_message(1, 1, digit, &FreeSansBold24pt7b);
+    display_message(1, 1, digit, poly_heavy_font());
 }
 #endif
 
@@ -5971,6 +7102,9 @@ void keyboard_post_init_user(void) {
     if (need_reset) {
         uprintf("Keymap layer enum changed (fmt %u) - resetting dynamic keymap\n",
                 (unsigned)stored_fmt);
+        // The late-boot watchdog guard is armed here (boot_diag.c, from step 5): give
+        // this one-time rewrite of a few kB of EEPROM the full CRASH_WATCHDOG_MS.
+        crash_watchdog_feed();
         dynamic_keymap_reset_poly();
         stamp_keymap_layers_fmt();
     }
@@ -6120,11 +7254,8 @@ void keyboard_post_init_user(void) {
     // procedural intro once, then persist BOOT_INTRO_DONE (in the housekeeping
     // finish edge). Each half reads its own flag and animates its own keycaps.
     note_boot_flags(ee.boot_flags);
-    // Boot-time auto-play of the Eden animation is intentionally NOT started here:
-    // running it during boot was wedging a half (see the startup logs in
-    // startup_anim.c). The animation is triggered on demand by the KC_EDEN key
-    // instead (process_record_user), when the board is fully up and the split link
-    // is live. Re-enable a guarded boot auto-play once the startup hang is understood.
+    // The boot-time auto-play of Eden that used to wedge a half is the first-run
+    // trigger below; see the note there for what the hang was and why it is fixed.
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"4");
 #endif
@@ -6138,22 +7269,42 @@ void keyboard_post_init_user(void) {
     // ⚠️ boot_intro_pending() had NO callers before this — the marker, the pending check
     // and the finish edge all existed, but nothing ever started the animation at boot.
     //
-    // ⚠️ OPT-IN, AND DELIBERATELY OFF BY DEFAULT (`-e POLYKYBD_BOOT_INTRO=yes`).
-    // This is the ONE path that runs before the board is fully up, and the comment a
-    // few lines above says why that matters: boot auto-play was disabled after a
-    // startup hang that was never root-caused, and the note asks for it back only
-    // "once the startup hang is understood". It is not understood. Until a cold boot
-    // has actually been exercised on hardware, a default-on trigger here would put an
-    // unproven animation plus a tutorial on every first boot of every board, in the
-    // one window with no watchdog, no crash record and no console (CRASH_DIAGNOSTICS.md
-    // — crash_watchdog_start() is still several lines below this point).
-    // Everything the feature needs stays compiled and reachable: KC_EDEN, HID cmd 28
-    // and poly_arm_tutorial_after_intro() all still work, so the tutorial can be driven
-    // by hand for testing without this define.
-#ifdef POLYKYBD_BOOT_INTRO
-    if (boot_intro_pending()) {
+    // ON BY DEFAULT since 1.0.0 (`-e POLYKYBD_BOOT_INTRO=no` opts out; HIL images
+    // default it off, see rules.mk). It was off for a long time because boot auto-play
+    // had wedged a half and the hang was never understood. It is understood now: the
+    // master bumps anim_nonce at boot, and the SLAVE's poly-sync handler started Eden
+    // RIGHT THERE — on the split-protocol thread (serial_protocol.c's SlaveThread,
+    // HIGHPRIO), concurrently with the slave's own post_init. Both wrote the keycap SPI
+    // bus at once and the slave parked forever in a spiSend() with no timeout, status
+    // panel frozen at "100%" with no render sub-steps (hardware, 2026-09-25). The
+    // handler now only records the request and housekeeping starts it
+    // (split_sync_drain_anim_replay()). The rounds of tutorial testing since have run
+    // this exact path on every reset (POLYKYBD_TUTORIAL_TEST) without a recurrence.
+    // What runs HERE is cheap — arming, and startup_anim_start()'s contrast write; the
+    // frames render from housekeeping, after crash_watchdog_start() below.
+#if defined(POLYKYBD_BOOT_INTRO) || defined(POLYKYBD_TUTORIAL_TEST)
+    // ⚠️ The TEST build respects the marker too. It used to force this true on every
+    // reset, and a tester who had FINISHED the lesson saw it again after a restart. The
+    // test build's marker is keyed to the build instead (boot_done_value() in state.c),
+    // so each newly flashed image plays once and a finished lesson stays finished; RESET
+    // Eden replays it by hand. It still uses the Eden hand-off (ARMED is set right here,
+    // before the first sync), never a direct start from each half's own timer, which
+    // raced and left the slave on the default layer.
+    const bool first_run = boot_intro_pending();
+#    ifdef POLYKYBD_TUTORIAL_TEST
+    uprintf("Tutorial TEST build: first-run %s\n", first_run ? "pending" : "already played");
+#    endif
+    if (first_run) {
         arm_tutorial_after_intro();
         startup_anim_start();
+        // ⚠️ The master's marker decides for BOTH halves. RESET Eden runs on the
+        // master only and so clears only the master's marker; a slave that already
+        // saw the tutorial reads DONE and would sit out the first run. The nonce
+        // replays Eden there exactly as KC_EDEN does (split_sync.c's anim_replay), and
+        // is a no-op on a slave already animating from its own pending marker.
+        // is_keyboard_master(), not is_usb_host_side(): the bridge role is not known
+        // yet this early, while QMK's split role is.
+        if (is_keyboard_master()) local_state->anim_nonce++;
     }
 #endif
     // LAST: arm the hardware watchdog. Everything above may block for seconds

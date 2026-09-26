@@ -19,11 +19,30 @@ static uint32_t tut_phase_ms(uint8_t phase) {
         case TUT_LAYER_SWEEP: return TUT_SWEEP_MS;
         case TUT_LAYER_HELD:  return TUT_LAYER_HELD_MS;
         case TUT_NOTATION:    return TUT_NOTATION_MS;
+        case TUT_BOARD_REVEAL: return TUT_BOARD_REVEAL_MS;
+        case TUT_BOARD_SHOW:   return TUT_BOARD_SHOW_MS;
+        case TUT_LANG_INTRO:   return TUT_LANG_INTRO_MS;
+        case TUT_LANG_NAME:    return TUT_LANG_NAME_MS;
+        case TUT_LANG_SHOW:    return TUT_LANG_ITEM_MS;
+        case TUT_LANG_MORE:    return TUT_LANG_MORE_MS;
+        case TUT_LANG_MORE2:   return TUT_LANG_MORE_MS;
+        case TUT_LANG_DARK:    return TUT_DARK_MS;
+        case TUT_LANG_WIPE:    return TUT_LANG_WIPE_MS;
+        case TUT_TOUR_SEEN:    return TUT_TOUR_SEEN_MS;
+        case TUT_FINALE:       return TUT_FINALE_MS;
         default:            return 0;
     }
 }
 
 static uint8_t tut_point_slot_of(const tut_state_t *st, uint8_t phase);
+
+// The current phase's duration: the table, except that TUT_TOUR_SEEN is per step.
+static uint32_t tut_phase_dur(const tut_state_t *st) {
+    if (st->phase == TUT_TOUR_SEEN && st->tour_i < st->n_tour && st->tour_dwell[st->tour_i] != 0u) {
+        return (uint32_t)st->tour_dwell[st->tour_i] * 100u;
+    }
+    return tut_phase_ms(st->phase);
+}
 
 static void tut_enter(tut_state_t *st, uint8_t phase, uint32_t now) {
     st->phase       = phase;
@@ -46,6 +65,17 @@ void tut_init(tut_state_t *st, const uint8_t slots[TUT_LETTERS],
     st->skipped     = false;
     st->shift_stage = 0;
     st->point_at    = now;
+    st->n_preview   = 0;
+    st->preview     = 0;
+    st->dark_next   = TUT_LANG_NAME;
+    for (uint8_t i = 0; i < TUT_WIPE_CORNERS; ++i) st->wipe_origin[i] = TUT_SLOT_NONE;
+    st->n_tour      = 0;
+    st->tour_i      = 0;
+    for (uint8_t i = 0; i < TUT_TOUR_MAX; ++i) {
+        st->tour[i]       = TUT_SLOT_NONE;
+        st->tour_dwell[i] = 0;
+        st->tour_prog[i]  = 0;
+    }
     for (uint8_t i = 0; i < TUT_LETTERS; ++i) {
         st->slots[i] = slots ? slots[i] : TUT_SLOT_NONE;
     }
@@ -59,11 +89,130 @@ static uint8_t tut_point_slot_of(const tut_state_t *st, uint8_t phase) {
     switch (phase) {
         case TUT_SHIFT_WAIT:  return st->shift_slots[0];
         case TUT_SHIFT_AGAIN: return st->shift_slots[1];
+        case TUT_TOUR_WAIT:   return st->tour_i < st->n_tour ? st->tour[st->tour_i] : TUT_SLOT_NONE;
         default:              return TUT_SLOT_NONE;
     }
 }
 
 uint8_t tut_point_slot(const tut_state_t *st) { return tut_point_slot_of(st, st->phase); }
+
+void tut_begin_at_letters(tut_state_t *st, uint32_t now) {
+    if (st->phase != TUT_BLANK && st->phase != TUT_TEXT) return;
+    st->step = 0;
+    tut_enter(st, TUT_LETTER_IN, now);
+}
+
+void tut_set_wipe_origins(tut_state_t *st, const uint8_t corners[TUT_WIPE_CORNERS]) {
+    for (uint8_t i = 0; i < TUT_WIPE_CORNERS; ++i)
+        st->wipe_origin[i] = corners ? corners[i] : (uint8_t)TUT_SLOT_NONE;
+}
+
+void tut_set_chapter3(tut_state_t *st, uint8_t n_preview) {
+    st->n_preview = (n_preview > TUT_PREVIEW_MAX) ? (uint8_t)TUT_PREVIEW_MAX : n_preview;
+}
+
+void tut_set_tour(tut_state_t *st, const tut_tour_step_t *steps, uint8_t n) {
+    if (!steps) n = 0;
+    if (n > TUT_TOUR_MAX) n = (uint8_t)TUT_TOUR_MAX;
+    for (uint8_t i = 0; i < TUT_TOUR_MAX; ++i) {
+        st->tour[i]       = (i < n) ? steps[i].slot : TUT_SLOT_NONE;
+        st->tour_dwell[i] = (i < n) ? steps[i].dwell_100ms : 0u;
+        st->tour_prog[i]  = (i < n) ? steps[i].progress : 0u;
+    }
+    st->n_tour = n;
+    st->tour_i = 0;
+}
+
+void tut_tour_rewind(tut_state_t *st, uint8_t step, uint32_t now) {
+    if (step >= st->n_tour) return;
+    if (st->phase != TUT_TOUR_WAIT && st->phase != TUT_TOUR_SEEN) return;
+    st->tour_i = step;
+    tut_enter(st, TUT_TOUR_WAIT, now);
+}
+
+int16_t tut_tour_index(const tut_state_t *st) {
+    if (st->phase != TUT_TOUR_WAIT && st->phase != TUT_TOUR_SEEN) return -1;
+    if (st->tour_i >= st->n_tour) return -1;
+    return st->tour_i;
+}
+
+bool tut_tour_press(tut_state_t *st, uint8_t slot, uint32_t now) {
+    if (st->phase != TUT_TOUR_WAIT || st->tour_i >= st->n_tour) return false;
+    // ⚠️ Only the key the ring is on. Every other key stays inert — the same silence a
+    // wrong letter gets in chapter 1 — which is also what keeps an emoji slot or a
+    // language slot from typing or switching the host mid-lesson.
+    if (slot == TUT_SLOT_NONE || slot != st->tour[st->tour_i]) return false;
+    tut_enter(st, TUT_TOUR_SEEN, now);
+    return true;
+}
+
+int16_t tut_preview_index(const tut_state_t *st) {
+    // The wipe draws the item as its ring passes, so the item is live from its start.
+    if (st->phase != TUT_LANG_SHOW && st->phase != TUT_LANG_WIPE) return -1;
+    if (st->preview >= st->n_preview) return -1;
+    return st->preview;
+}
+
+// 1 the opening, 2 the letters, 3 the two Shifts, 4 the reveal, 5 the languages; the
+// key tour's steps carry their own value (6 the Lang menu, 7 emoji, 8 Fn and Num, 9
+// Intl, set by the caller), and 10 the close.
+uint8_t tut_progress(const tut_state_t *st) {
+    const uint8_t p = st->phase;
+    if (p <= TUT_TEXT) return 1u;
+    if (p <= TUT_GAP) return 2u;
+    if (p < TUT_BOARD_REVEAL) return 3u;             // both Shifts (+ the postponed layer chapter)
+    if (p <= TUT_LANG_INTRO) return 4u;
+    if (p <= TUT_LANG_MORE2) return 5u;
+    if (p == TUT_TOUR_WAIT || p == TUT_TOUR_SEEN) {
+        const uint8_t v = st->tour_i < st->n_tour ? st->tour_prog[st->tour_i] : 0u;
+        return (v == 0u || v > TUT_PROGRESS_STEPS) ? 8u : v;
+    }
+    return TUT_PROGRESS_STEPS;
+}
+
+uint8_t tut_pulse_slot(const tut_state_t *st) {
+    if (st->phase == TUT_LETTER_WAIT) return tut_current_slot(st);
+    return tut_point_slot(st);
+}
+
+uint8_t tut_pulse_level(uint32_t t_ms, uint8_t full) {
+    const uint32_t half = TUT_PULSE_PERIOD_MS / 2u;
+    const uint32_t ph   = t_ms % TUT_PULSE_PERIOD_MS;
+    const uint32_t tri  = ph < half ? ph : TUT_PULSE_PERIOD_MS - ph;      // 0..half
+    const uint8_t  ease = tut_fade_contrast((uint8_t)((tri * 255u) / half)); // 0..255
+    const uint32_t lo   = ((uint32_t)full * TUT_PULSE_FLOOR) / 255u;
+    return (uint8_t)(lo + (((uint32_t)full - lo) * ease) / 255u);
+}
+
+int16_t tut_preview_pos(const tut_state_t *st) {
+    const uint8_t p = (st->phase == TUT_LANG_DARK) ? st->dark_next : st->phase;
+    if (p != TUT_LANG_NAME && p != TUT_LANG_WIPE && p != TUT_LANG_SHOW) return -1;
+    if (st->preview >= st->n_preview) return -1;
+    return st->preview;
+}
+
+// The board reveal starts from the Shift the user last held — the right one when the
+// board has it, since that is the stage that just ended — and bumps the ripple sequence
+// so the slave arms its own wavefront from the same key.
+static void tut_enter_reveal(tut_state_t *st, uint32_t now) {
+    uint8_t origin = st->shift_slots[1];
+    if (origin == TUT_SLOT_NONE) origin = st->shift_slots[0];
+    st->ripple_slot = origin;
+    st->ripple_seq++;
+    tut_enter(st, TUT_BOARD_REVEAL, now);
+}
+
+// After the languages: the key tour if the board has one, else finish.
+static void tut_enter_after_preview(tut_state_t *st, uint32_t now) {
+    st->tour_i = 0;
+    tut_enter(st, st->n_tour > 0 ? TUT_TOUR_WAIT : TUT_FINALE, now);
+}
+
+// The dark cut, then `next`.
+static void tut_enter_dark(tut_state_t *st, uint8_t next, uint32_t now) {
+    st->dark_next = next;
+    tut_enter(st, TUT_LANG_DARK, now);
+}
 
 // Re-fire the pointing ring if this phase is pointing and the period has elapsed.
 // Returns true when it fired (the caller then syncs, and the ring starts on both
@@ -85,7 +234,7 @@ bool tut_tick(tut_state_t *st, uint32_t now) {
     // that early return can never run on the phases that need a pointer.
     const bool pointed = tut_point_tick(st, now);
 
-    const uint32_t dur = tut_phase_ms(st->phase);
+    const uint32_t dur = tut_phase_dur(st);
     if (dur == 0) return pointed;                     // waiting on the user, not the clock
     // Modular subtraction, so the 49.7-day timer wrap cannot strand a phase (the same
     // arithmetic base/update.c had to be corrected to).
@@ -122,16 +271,72 @@ bool tut_tick(tut_state_t *st, uint32_t now) {
                 tut_enter(st, TUT_SHIFT_AGAIN, now);   // which points at the other one at once
                 return true;
             }
-            // ⚠️ CHAPTER 3 IS POSTPONED, not deleted. The layer chapter's phases, its
-            // lit set, its prose and its tests are all still here and still covered —
-            // only this one transition is redirected, so restoring it is a one-line
-            // change. Shift has to feel right before a second chapter rides on the
-            // same machinery.
-            tut_enter(st, TUT_DONE, now);
+            // ⚠️ THE LAYER CHAPTER IS POSTPONED, not deleted. Its phases, its lit set,
+            // its prose and its tests are all still here and still covered — only this
+            // one transition is redirected. Chapter 3 is now the board reveal and the
+            // languages; restoring the layer chapter means routing here to
+            // TUT_LAYER_WAIT and sending TUT_NOTATION on to the reveal.
+            tut_enter_reveal(st, now);
             return true;
         case TUT_LAYER_SWEEP: tut_enter(st, TUT_LAYER_HELD, now); return true;
         case TUT_LAYER_HELD:  tut_enter(st, TUT_NOTATION, now);   return true;
         case TUT_NOTATION:    tut_enter(st, TUT_DONE, now);       return true;
+        case TUT_BOARD_REVEAL: tut_enter(st, TUT_BOARD_SHOW, now); return true;
+        case TUT_BOARD_SHOW:
+            // No renderable language or script (a board with no font pack yet): the
+            // reveal alone is the chapter, and the board goes straight to the finale.
+            if (st->n_preview == 0) {
+                tut_enter_after_preview(st, now);
+            } else {
+                tut_enter(st, TUT_LANG_INTRO, now);
+            }
+            return true;
+        // Every screen of the tour is preceded by the dark cut: NAME, SHOW and the two
+        // "more" screens.
+        case TUT_LANG_INTRO:
+            st->preview = 0;
+            tut_enter_dark(st, TUT_LANG_NAME, now);
+            return true;
+        case TUT_LANG_DARK:
+            tut_enter(st, st->dark_next, now);
+            return true;
+        case TUT_LANG_NAME:
+            if (st->wipe_origin[st->preview % TUT_WIPE_CORNERS] != TUT_SLOT_NONE) {
+                // A wave: bump the sequence so the slave arms its own ring from the
+                // same key, as the board reveal does. The slot rides the sync, so the
+                // slave needs no copy of the corner table.
+                st->ripple_slot = st->wipe_origin[st->preview % TUT_WIPE_CORNERS];
+                st->ripple_seq++;
+                tut_enter(st, TUT_LANG_WIPE, now);
+            } else {
+                tut_enter_dark(st, TUT_LANG_SHOW, now);
+            }
+            return true;
+        case TUT_LANG_WIPE:
+            tut_enter(st, TUT_LANG_SHOW, now);
+            return true;
+        case TUT_LANG_SHOW:
+            // NAME then SHOW per item: the phase clock is the item clock.
+            if ((uint8_t)(st->preview + 1u) < st->n_preview) {
+                st->preview++;
+                tut_enter_dark(st, TUT_LANG_NAME, now);
+            } else {
+                // No reset of `preview` needed: tut_preview_index() answers -1 in every
+                // phase but TUT_LANG_SHOW, which is what ends the last item's preview.
+                tut_enter_dark(st, TUT_LANG_MORE, now);
+            }
+            return true;
+        case TUT_LANG_MORE:   tut_enter_dark(st, TUT_LANG_MORE2, now); return true;
+        case TUT_LANG_MORE2:  tut_enter_after_preview(st, now); return true;
+        case TUT_TOUR_SEEN:
+            if ((uint8_t)(st->tour_i + 1u) < st->n_tour) {
+                st->tour_i++;
+                tut_enter(st, TUT_TOUR_WAIT, now);   // which points at the next key at once
+            } else {
+                tut_enter(st, TUT_FINALE, now);
+            }
+            return true;
+        case TUT_FINALE:      tut_enter(st, TUT_DONE, now);   return true;
         default: return false;
     }
 }
@@ -216,7 +421,7 @@ uint8_t tut_current_slot(const tut_state_t *st) {
 }
 
 uint8_t tut_phase_progress(const tut_state_t *st, uint32_t now) {
-    const uint32_t dur = tut_phase_ms(st->phase);
+    const uint32_t dur = tut_phase_dur(st);
     if (dur == 0) return 255;
     const uint32_t el = (uint32_t)(now - st->phase_start);
     if (el >= dur) return 255;

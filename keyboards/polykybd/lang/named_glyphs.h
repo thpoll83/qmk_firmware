@@ -2096,11 +2096,15 @@
                                         //   st = BADGE_OFF outline / BADGE_ON solid
 #define BADGE_OFF        U"\x01"      // ...released: a 2px rounded outline
 #define BADGE_ON         U"\x02"      // ...engaged: the same silhouette, solid
+#define BADGE_LINE       U"\x03"      // ...a 1px outline (the context-menu frame)
+#define BADGE_SQUARE     U"\x04"      // ...solid with square corners (the context-menu bars)
 #define HINT_ERASE       U"\x14"      // draw the REST of the string as a HOLE, not as ink
 #define HINT_HALF        U"\x0F"       // draw the NEXT glyph half-scale (2x2-OR) at cursor
 #define HINT_ROT(step, cp) U"\x15" step cp  // rotate cp CCW by step*15 deg, halve it,
                                           // and plot at the cursor (no advance)
 #define ROT_CCW_120      U"\x08"      // 8 * 15 deg = 120 deg counter-clockwise
+#define ROT_CCW_120_THIRD U"\x20"     // the same turn at ONE THIRD scale (8 + 24; see
+                                    //   KDISP_ROT_THIRD_STEP in base/font_lookup.h)
 #define HINT_THIN        U"\x11"       // as HINT_HALF but DECIMATING (see disp_array.h)
 #define HINT_FRAME(sz)   U"\x12" sz    // 2px nested rounded rect of size (w,h) = sz at cursor
 #define HINT_RESET       U"\x18"       // reset cursor to the text origin
@@ -2323,18 +2327,14 @@
 // de-facto reference is the OEM legend on the physical Menu/Application key -- a menu
 // with a pointer on it, which is exactly what this draws.
 //
-// ⚠️ The pointer is a ROTATED U+27A4 because the pack contains no cursor: every
-// diagonal arrow (U+2196..99, U+2B08..0B) and every filled triangle (U+25E2..E5,
-// U+25B6, U+25C0) is MISSING from it, measured, so the only arrowheads available point
-// along an axis. 120 deg counter-clockwise from "rightwards" lands on the up-and-left
-// tilt a pointer is drawn at.
-//
-// Geometry is measured: the cell inks x11..59 y9..36 in a 0..71 x 0..39 window, so it is
-// centred horizontally to within half a pixel, with the tip clear of the bottom line
-// rather than overlapping it.
-#define HINT_POS_CTXPTR             	U"\x42" U"\x0C"   // (66,12) buffer: the pointer's top-left
-#define ICON_CONTEXT_MENU           	U" " U"\x2630" HINT_MOVE(HINT_POS_CTXPTR) \
-                                    	HINT_ROT(ROT_CCW_120, U"\x27A4")
+// ⚠️ ONE baked glyph (IconsPuaFont, base/fonts/gfx_icons.h), not a display list. It was
+// built from ops for rounds 34-35: three square BADGEs, a 1px frame and a ROTATED U+27A4
+// at one third scale, because the pack has no cursor glyph. Round 41 asked for a real
+// mouse pointer cut out of the bars by a dark halo, which no op can draw, so the design
+// was drawn as a 31x24 bitmap. IconsFont was full, which is why it opened the plane-16
+// private-use range. A single glyph also centres like any other legend, so the
+// bottom-row trap the absolute layout existed for (round 34) no longer applies.
+#define ICON_CONTEXT_MENU           	U"\x100000"
 
 // Brightness keys — one resident IconsFont glyph each (base/fonts/gfx_icons.h).
 // The status OLED already says "brightness" with a sun, so the keycaps use the

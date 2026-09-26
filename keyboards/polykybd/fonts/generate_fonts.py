@@ -182,9 +182,12 @@ def render_settings(entries, symbols, order, categories, sources) -> dict:
 
 def full_order(index: dict, symbols: list[str]) -> list[str]:
     """The full font priority order: prepended fonts, then the generated ones,
-    then any pack-only extras (e.g. flags) appended at the end of the pack."""
+    then any pack-only extras (e.g. flags) appended at the end of the pack, then
+    the resident `append_fonts`. ⚠️ Those go LAST so that adding one moves no pack
+    font's position — the position is the gidx every bundle stores."""
     extras = [e["symbol"] for e in index.get("pack_extra_fonts", [])]
-    return list(index.get("prepend_fonts", [])) + list(symbols) + extras
+    return (list(index.get("prepend_fonts", [])) + list(symbols) + extras
+            + list(index.get("append_fonts", [])))
 
 
 def compose_index(index: dict, categories: dict, cat_blocks: dict,
@@ -269,7 +272,8 @@ def main() -> None:
     bundles = None
     if not args.only:                             # --only never rewrites the index
         # Resident set: prepend + index.resident_fonts + every resident category.
-        resident = set(index.get("prepend_fonts", [])) | set(index.get("resident_fonts", []))
+        resident = (set(index.get("prepend_fonts", [])) | set(index.get("append_fonts", []))
+                    | set(index.get("resident_fonts", [])))
         for cat, meta in categories.items():
             if meta.get("resident") and cat_blocks.get(cat):
                 resident |= set(fontpack.parse_gfx_header(

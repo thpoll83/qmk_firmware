@@ -20,6 +20,7 @@
 #include "startup_anim.h"           // sa_geom_t / startup_anim_key_geom
 
 #include "base/fontpack.h"   // g_all_fonts / g_all_font_count
+#include "state.h"           // get_local_state()->contrast, for the pulse's full level
 
 // The letter is drawn in the NORMAL keycap face, one tier larger — the same relocated
 // `latinbig` glyphs the legend-size feature uses (M = 0xF0000, see glyph_size_base[] in
@@ -62,6 +63,10 @@ static uint32_t    s_sync_at;                       // last push
 // heavy work to housekeeping (fw_staging_finalize_defer_reload). Same fix here: the
 // handler only records the intent, tutorial_tick() acts on it.
 static bool        s_start_pending;
+// The preview item's row in poly_keymap.c's table, as the SLAVE was told it. The slave
+// never builds the table's renderable subset (only the master does, at start), so it is
+// sent the absolute row: both halves hold the same const table.
+static uint8_t     s_preview_tbl = 0xFFu;
 
 // ---- small helpers --------------------------------------------------------
 
@@ -120,6 +125,64 @@ static bool tut_draw_letter_tiered(uint32_t cp, const uint32_t *tiers, uint8_t n
 // no way to express. Running LETTER_IN/WAIT in intro mode and RIPPLE exclusively would
 // hand the panels back and forth twice per letter — six ~107 ms full repaints inside a
 // chapter whose whole point is calm. So the mode stays, and only the DRAW is borrowed.
+// ---- the pulse on the key to press ------------------------------------------
+// ONE panel's contrast, re-written every TUT_PULSE_TICK_MS. update_displays() writes
+// every key's contrast back to the normal level on each repaint, so the pulse re-asserts
+// itself rather than setting a value once. Both halves run it for the keys on their own
+// half; each knows the phase and the pulsed slot from the ordinary sync.
+#define TUT_PULSE_TICK_MS 30u
+static uint8_t  s_pulse_idx = 0xFFu;    // this half's display index being pulsed
+static uint32_t s_pulse_at;
+
+// The pulse peaks at the tutorial's one uniform level (see set_displays()), or 0 while
+// the panels are off (suspend), so a sleeping board never lights a key.
+static uint8_t tut_normal_contrast(void) {
+    return get_local_state()->contrast == DISP_OFF ? 0 : (uint8_t)POLY_INTRO_CONTRAST;
+}
+
+static void tut_panel_contrast(uint8_t idx, uint8_t level) {
+    sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
+    kdisp_set_contrast(level);
+}
+
+static void tutorial_pulse_stop(void) {
+    if (s_pulse_idx == 0xFFu) return;
+    tut_panel_contrast(s_pulse_idx, tut_normal_contrast());
+    s_pulse_idx = 0xFFu;
+}
+
+static void tutorial_pulse_tick(uint32_t now) {
+    const uint8_t slot = tut_pulse_slot(&s_st);
+    const bool    mine = slot != TUT_SLOT_NONE && TUT_SLOT_RIGHT(slot) == !is_left_side();
+    const uint8_t idx  = mine ? TUT_SLOT_IDX(slot) : 0xFFu;
+    if (idx != s_pulse_idx) {
+        tutorial_pulse_stop();          // hand the previous key its normal level back
+        s_pulse_idx = idx;
+        s_pulse_at  = now - TUT_PULSE_TICK_MS;
+    }
+    if (s_pulse_idx == 0xFFu || (uint32_t)(now - s_pulse_at) < TUT_PULSE_TICK_MS) return;
+    s_pulse_at = now;
+    tut_panel_contrast(s_pulse_idx, tut_pulse_level(now, tut_normal_contrast()));
+}
+
+// The outermost key of display row `dr` on one half: the lowest board x on the left, the
+// highest on the right. TUT_SLOT_NONE when the row has no panel (the wipe then falls back
+// to the dark cut for that item).
+static uint8_t tut_corner_slot(bool right, uint8_t dr) {
+    uint8_t best = TUT_SLOT_NONE;
+    int16_t bx   = 0;
+    for (uint8_t c = 0; c < 8u; ++c) {
+        const uint8_t   idx = (uint8_t)(dr * 8u + c);
+        const sa_geom_t g   = startup_anim_key_geom(right, idx);
+        if (!g.valid) continue;
+        if (best == TUT_SLOT_NONE || (right ? g.cx > bx : g.cx < bx)) {
+            best = TUT_SLOT(right ? 1 : 0, idx);
+            bx   = g.cx;
+        }
+    }
+    return best;
+}
+
 // ---- lifecycle ------------------------------------------------------------
 
 void tutorial_start(uint32_t seed) {
@@ -161,6 +224,39 @@ void tutorial_start(uint32_t seed) {
     tutorial_shift_slots(shifts);
     tutorial_enter_base_layout();
     tut_init(&s_st, s_slots, shifts, timer_read32());
+    // Eden's tail already said the welcome over falling stars: open on the first letter.
+    // A tail armed on a show that has since ended (the slave can be armed late, after its
+    // own Eden) is dropped here, so it cannot lengthen an unrelated replay later.
+    const bool welcome_said = startup_anim_take_welcome_said();
+    if (!startup_anim_active()) startup_anim_set_tail(false);
+    if (welcome_said) tut_begin_at_letters(&s_st, timer_read32());
+    // Chapter 3's inputs. Only the master's count matters — it owns the phase machine —
+    // and it is computed from the fonts actually flashed, so a board with no font pack
+    // skips the languages instead of showing a board of blank keycaps.
+    // ⚠️ The Lang key's slot on BOTH halves: the pulse runs on whichever half owns the
+    // key, and that is not necessarily the master. Only the master's preview count
+    // matters — it owns the phase machine.
+    if (is_usb_host_side()) tut_set_chapter3(&s_st, tutorial_preview_prepare());
+    // The wipe's four corners, in the order they take turns. Only the master's table is
+    // used (the slot rides the sync), but both halves can compute it.
+    {
+        const uint8_t corners[TUT_WIPE_CORNERS] = {
+            tut_corner_slot(false, 0u), tut_corner_slot(true, 0u),
+            tut_corner_slot(false, 4u), tut_corner_slot(true, 4u)};
+        tut_set_wipe_origins(&s_st, corners);
+    }
+    // The key tour on BOTH halves, from each half's copy of the one keymap: the pulse runs
+    // on whichever half owns the key being asked for, and the status prose names it. Only
+    // the step index crosses the link (tut[2]).
+    {
+        tut_tour_step_t tour[TUT_TOUR_MAX];
+        const uint8_t   n = tutorial_tour_build(tour, seed);
+        tut_set_tour(&s_st, tour, n);
+        if (is_usb_host_side()) {
+            uprintf("Tutorial chapter 3: %u preview item(s), tour %u key(s)\n",
+                    (unsigned)s_st.n_preview, (unsigned)n);
+        }
+    }
     s_active     = true;
     s_sync_dirty = is_usb_host_side();
     s_seen_seq   = s_st.ripple_seq;
@@ -177,6 +273,7 @@ void tutorial_start(uint32_t seed) {
 
 void tutorial_stop(void) {
     if (!s_active) return;
+    tutorial_pulse_stop();
     s_active     = false;
     // Hand the board back on the user's own layout, with nothing held over from a
     // chapter. Both halves, for the same reason the park is on both.
@@ -199,7 +296,7 @@ void tutorial_stop(void) {
     sr_shift_out_0_latch(NUM_SHIFT_REGISTERS);   // all panels on this half
     kdisp_set_buffer(0x00);
     kdisp_send_window();
-    kdisp_set_contrast(255);
+    kdisp_set_contrast(POLY_INTRO_CONTRAST);     // the finish edge's set_displays() then restores the user's level
     // ⚠️ This invalidate is NOT belt-and-braces — it is THE fix, and the reason is
     // worth knowing. update_displays() is reached only through the refresh drain, and
     // housekeeping does not call sync_and_refresh_displays() while the tutorial owns
@@ -218,6 +315,25 @@ void tutorial_stop(void) {
 }
 
 bool tutorial_active(void)    { return s_active; }
+
+// The Shift chapter's reveal brings the lit set in with the menu cascade
+// (anim/menu_cascade.h) rather than all at once, and so does each preview item's name
+// (Latin on one half, native on the other) and the two "more" screens' words. The phase
+// and the item index are in the signature, so every screen cascades afresh. Both halves
+// know both from the sync, so each runs the same cascade from its own clock.
+uint32_t tutorial_cascade_signature(void) {
+    if (!s_active) return 0u;
+    if (s_st.phase == TUT_REVEAL) return 0x03000000u;
+    if (s_st.phase == TUT_LANG_NAME || s_st.phase == TUT_LANG_MORE || s_st.phase == TUT_LANG_MORE2) {
+        return 0x04000000u | ((uint32_t)s_st.phase << 8) | s_st.preview;
+    }
+    return 0u;
+}
+
+// A language layout is on the keys and still: the sparkles (anim/lang_sparkle.h) run.
+bool tutorial_sparkle_live(void) {
+    return s_active && s_st.phase == TUT_LANG_SHOW;
+}
 bool tutorial_exclusive(void) { return s_active && tut_phase_is_exclusive(s_st.phase); }
 bool tutorial_intro_mode(void){ return s_active && tut_phase_is_intro(s_st.phase); }
 
@@ -242,11 +358,46 @@ bool tutorial_caps_hold(void) {
 // shifts; chapter 3 the letters and the layer keys. ⚠️ Answered from the LOCAL keymap on
 // whichever half is asking, so the slave hides the same keys without being told —
 // update_displays() runs on both halves and both know the phase from the ordinary sync.
+// Has the board-reveal front passed this key's centre yet? Measured on THIS half's own
+// clock and geometry, the same curve the focus ring draws the front on, so a key lights
+// as the ring crosses it.
+static bool tut_reveal_reached(uint8_t row, uint8_t col) {
+    const uint8_t slot = tutorial_slot_at(row, col);
+    if (slot == TUT_SLOT_NONE || s_st.ripple_slot == TUT_SLOT_NONE) return false;
+    const sa_geom_t k = startup_anim_key_geom(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot));
+    const sa_geom_t o = startup_anim_key_geom(TUT_SLOT_RIGHT(s_st.ripple_slot),
+                                              TUT_SLOT_IDX(s_st.ripple_slot));
+    if (!k.valid || !o.valid) return false;
+    const int32_t  dx = (int32_t)k.cx - o.cx, dy = (int32_t)k.cy - o.cy;
+    const uint32_t r  = tut_sweep_radius(tut_phase_progress(&s_st, timer_read32()));
+    return (uint32_t)(dx * dx + dy * dy) <= r * r;
+}
+
 bool tutorial_key_visible(uint8_t row, uint8_t col) {
     if (!s_active) return true;
+    // The two top outer keys are the lesson's chrome — Esc says how to leave, its mirror
+    // on the right says how far along you are — so neither is hidden once it is talking.
+    if (s_st.phase != TUT_BLANK && tutorial_is_chrome_key(row, col)) return true;
+    if (tutorial_hides_recent(row, col)) return false;   // the menus' recents row
+    if (tut_phase_shows_all(s_st.phase)) return true;
     switch (s_st.phase) {
         case TUT_DONE:
             return true;
+        // ⚠️ Keys the Shift chapter already showed STAY lit; the front only adds keys.
+        // A letter blinking off and back on as the wave passes would read as a fault.
+        case TUT_BOARD_REVEAL:
+            return tutorial_key_in_chapter_set(row, col, false) || tut_reveal_reached(row, col);
+        // The wipe: a key shows the new item once the ring from its corner has passed it;
+        // until then it stays dark (or keeps its letter of the name, a chrome key above).
+        case TUT_LANG_WIPE:
+            return tut_reveal_reached(row, col);
+        // The name's letters (and the "more" screen's words) are chrome keys (above), so
+        // everything else goes dark.
+        case TUT_LANG_DARK:
+        case TUT_LANG_NAME:
+        case TUT_LANG_MORE:
+        case TUT_LANG_MORE2:
+            return false;
         // Chapter 1 opens on a dark, still board — the lit set is simply empty.
         case TUT_BLANK:
         case TUT_TEXT:
@@ -279,10 +430,23 @@ bool tutorial_was_skipped(void) { return s_st.skipped; }
 // shift edge, and chapter 2's pointing re-fire on a timer), and giving each its own
 // poly_focus_start() call is how the third one would ship doing nothing on the master
 // while working perfectly on the slave, which reads it off the wire.
+// The reveal arms the BOARD-sized profile, back-dated by how far `phase_start` already
+// is, so the ring and tut_reveal_reached() run on one clock. Everything else is the
+// ordinary letter ring.
+static void tutorial_start_ring(uint8_t slot) {
+    if (s_st.phase == TUT_BOARD_REVEAL) {
+        poly_focus_start_sweep(slot, timer_elapsed32(s_st.phase_start), TUT_BOARD_REVEAL_MS);
+    } else if (s_st.phase == TUT_LANG_WIPE) {
+        poly_focus_start_sweep(slot, timer_elapsed32(s_st.phase_start), TUT_LANG_WIPE_MS);
+    } else {
+        poly_focus_start(slot);
+    }
+}
+
 static void tutorial_arm_ring_if_new(void) {
     if (s_st.ripple_seq == s_seen_seq) return;
     s_seen_seq = s_st.ripple_seq;
-    poly_focus_start(s_st.ripple_slot);
+    tutorial_start_ring(s_st.ripple_slot);
 }
 
 bool tutorial_press(uint8_t slot) {
@@ -302,6 +466,35 @@ bool tutorial_hold(uint8_t kind, bool pressed, uint8_t slot) {
     tutorial_arm_ring_if_new();
     s_sync_dirty = true;
     return true;
+}
+
+bool tutorial_tour_press(uint8_t slot) {
+    if (!s_active || !is_usb_host_side()) return false;
+    if (!tut_tour_press(&s_st, slot, timer_read32())) return false;
+    s_sync_dirty = true;
+    return true;
+}
+
+int16_t tutorial_tour_step(void) { return s_active ? tut_tour_index(&s_st) : -1; }
+uint8_t tutorial_tour_slot(uint8_t step) {
+    return (s_active && step < s_st.n_tour) ? s_st.tour[step] : TUT_SLOT_NONE;
+}
+
+uint8_t tutorial_tour_target(void) {
+    const int16_t i = tutorial_tour_step();
+    return i < 0 ? TUT_SLOT_NONE : s_st.tour[i];
+}
+bool    tutorial_tour_seen(void) { return s_active && s_st.phase == TUT_TOUR_SEEN; }
+
+void tutorial_tour_rewind(uint8_t step) {
+    if (!s_active || !is_usb_host_side()) return;
+    const uint8_t before = s_st.tour_i;
+    tut_tour_rewind(&s_st, step, timer_read32());
+    if (s_st.tour_i != before) {
+        uprintf("Tutorial: tour step %u needs its key held, back to step %u\n",
+                (unsigned)before, (unsigned)s_st.tour_i);
+        s_sync_dirty = true;
+    }
 }
 
 void tutorial_skip(void) {
@@ -329,10 +522,101 @@ void tutorial_tick(void) {
         // start (or came up late) joins in within a few hundred ms.
         if ((uint32_t)(now - s_sync_at) >= TUT_SYNC_REARM_MS) s_sync_dirty = true;
     }
+    tutorial_pulse_tick(now);
     // ⚠️ NOTHING IS RENDERED HERE ANY MORE. The board draws itself through
     // update_displays(), the ripple is the focus service, and the status panels are
     // drawn by oled_task_user(). What is left is the phase machine and the push to the
     // other half — which is all this ever should have been.
+}
+
+int16_t tutorial_preview_index(void) {
+    if (!s_active) return -1;
+    return tut_preview_index(&s_st);
+}
+
+uint8_t tutorial_preview_entry(void) {
+    if (!s_active) return 0xFFu;
+    // The slave keeps no preview counter: it answers from the phase (the dark cut counts
+    // as the screen it leads to) and the row it was sent.
+    if (!is_usb_host_side()) {
+        const uint8_t p = (s_st.phase == TUT_LANG_DARK) ? s_st.dark_next : s_st.phase;
+        return (p == TUT_LANG_NAME || p == TUT_LANG_WIPE || p == TUT_LANG_SHOW) ? s_preview_tbl
+                                                                                 : 0xFFu;
+    }
+    const int16_t pos = tut_preview_pos(&s_st);
+    return pos < 0 ? 0xFFu : tutorial_preview_table_row((uint8_t)pos);
+}
+
+// For the key LEDs (anim/tutorial_rgb.c), both from the synced state so the two halves
+// agree: the phase, which with the ring's centre picks each ring's colour, and whether
+// the next item's name is on the keys.
+uint8_t tutorial_rgb_phase(void) { return s_active ? (uint8_t)s_st.phase : 0xFFu; }
+uint8_t tutorial_pulsed_slot(void) { return s_active ? tut_pulse_slot(&s_st) : TUT_SLOT_NONE; }
+bool    tutorial_showing_name(void) { return s_active && s_st.phase == TUT_LANG_NAME; }
+
+// The wipe keeps the name on the keys the ring has not reached yet.
+bool tutorial_naming(void) {
+    return s_active && (s_st.phase == TUT_LANG_NAME || s_st.phase == TUT_LANG_WIPE);
+}
+bool tutorial_wipe_covers(uint8_t row, uint8_t col) {
+    return s_active && s_st.phase == TUT_LANG_WIPE && tut_reveal_reached(row, col);
+}
+bool tutorial_in_layer_chapter(void) {
+    return s_active && (s_st.phase == TUT_LAYER_WAIT || s_st.phase == TUT_LAYER_SWEEP ||
+                        s_st.phase == TUT_LAYER_HELD);
+}
+bool tutorial_telling_more(void) {
+    return s_active && (s_st.phase == TUT_LANG_MORE || s_st.phase == TUT_LANG_MORE2);
+}
+bool tutorial_more_scripts(void) { return s_active && s_st.phase == TUT_LANG_MORE2; }
+
+// A capital on a keycap, one tier larger than the legend face when that tier is flashed,
+// centred in the whole 72x40 window. Used to spell a preview item's name.
+bool tutorial_draw_key_letter(uint32_t cp) {
+    // ⚠️ The larger tier is a RELOCATION of the latin codepoints (0xF0000 + cp), so only a
+    // latin capital may be looked up there. Any other codepoint lands on whatever glyph
+    // happens to sit at 0xF0000 + cp — rendering the name previews showed にほ as "k{"
+    // and ไท as "[n" before this guard. Everything else draws at its own codepoint.
+    static const uint32_t latin[]  = {TUT_LETTER_TIER_BASE, 0u};
+    static const uint32_t native[] = {0u};
+    // Digits too: the "more" screen's numbers, and the latinbig bundle carries 0-9.
+    const bool is_latin = (cp >= 'A' && cp <= 'Z') || (cp >= '0' && cp <= '9');
+    return tut_draw_letter_tiered(cp, is_latin ? latin : native, is_latin ? 2 : 1,
+                                  BUFFER_X, SCREEN_WIDTH, SCREEN_HEIGHT);
+}
+
+static bool tut_chrome_live(void) {
+    return s_active && s_st.phase != TUT_BLANK && s_st.phase != TUT_DONE;
+}
+
+// The Esc keycap: "Hold to / skip...". ⚠️ Neither stock two-line stack fits it — the top
+// line has ascenders (H l d t) AND the bottom a descender (p), which MID_TWO_LINE's note
+// says a 40 px panel cannot hold under its spacing. Measured with the host preview's own
+// renderer (tools/oled_preview.py): MID_TWO_LINE's lift clips 4 px off the top,
+// MID_TWO_WORD's push 8 px off the bottom; lift 4 x 2 px / push 2 x 2 px clips none and
+// leaves a 4 px gap between the lines.
+const uint32_t *tutorial_skip_label(void) {
+    if (!tut_chrome_live()) return NULL;
+    return HINT_MID U"\f\f\f\f" U"Hold to" U"\r\v\x05\x05" U"skip...";
+}
+
+// The right key mirroring Esc: how far along the lesson is, "3/10". Built into a buffer
+// because the numerator moves; TUT_PROGRESS_STEPS even steps, not chapters.
+const uint32_t *tutorial_progress_label(void) {
+    static uint32_t buf[7];
+    if (!tut_chrome_live()) return NULL;
+    uint8_t       n = 0;
+    const uint8_t p = tut_progress(&s_st);
+    // Round 39: the 19 px UI face, the size of Esc's "Hold to skip...", not the keycap
+    // face ("the progress on the right top is too present - it should be smaller").
+    buf[n++] = 0x16u;   // HINT_MID
+    if (p >= 10u) buf[n++] = (uint32_t)('0' + p / 10u);
+    buf[n++] = (uint32_t)('0' + p % 10u);
+    buf[n++] = '/';
+    if (TUT_PROGRESS_STEPS >= 10u) buf[n++] = (uint32_t)('0' + TUT_PROGRESS_STEPS / 10u);
+    buf[n++] = (uint32_t)('0' + TUT_PROGRESS_STEPS % 10u);
+    buf[n]   = 0;
+    return buf;
 }
 
 // ---- split sync -----------------------------------------------------------
@@ -351,16 +635,34 @@ void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]) {
     out[0] = (uint8_t)((s_active ? TUT_SYNC_ACTIVE : 0u) |
                       ((uint8_t)(s_st.step << TUT_SYNC_STEP_SHIFT) & TUT_SYNC_STEP_MASK));
     out[1] = s_st.phase;
-    out[2] = tut_current_slot(&s_st);
+    // tut[2] is the lit letter in chapter 1 and the preview item's table row while an item
+    // is named or shown — the slave needs the row to spell the name and to title it.
+    // …and the tour step during the key tour.
+    if (tut_tour_index(&s_st) >= 0) {
+        out[2] = (uint8_t)tut_tour_index(&s_st);
+    } else {
+        out[2] = (tut_preview_pos(&s_st) >= 0) ? tutorial_preview_entry() : tut_current_slot(&s_st);
+    }
     out[3] = s_st.ripple_seq;
     out[4] = s_st.ripple_slot;
     // How far OUR ripple has already run. Sent every push, not just the first, so a
     // lost frame costs the slave a later start rather than a permanently offset wave.
     // ⚠️ BOTH wave phases. Chapter 2's sweep rides the same machinery, so leaving it
     // out here would reproduce exactly the seam-step the letter ripple was fixed for.
-    out[5] = tut_phase_is_wave(s_st.phase)
-                 ? tut_elapsed_encode(timer_elapsed32(s_st.phase_start))
-                 : 0u;
+    // The dark cut sends where it is going instead: the slave's status line reads the
+    // next screen's words through it, and never has a wave to run in that phase. The
+    // tour sends the key it is asking for: the Intl chapter's letter and accent are drawn
+    // at RANDOM on the master, so the slave's own build cannot know them, and its pulse
+    // needs the real key.
+    if (tut_phase_is_wave(s_st.phase)) {
+        out[5] = tut_elapsed_encode(timer_elapsed32(s_st.phase_start));
+    } else if (s_st.phase == TUT_LANG_DARK) {
+        out[5] = s_st.dark_next;
+    } else if (tut_tour_index(&s_st) >= 0) {
+        out[5] = s_st.tour[s_st.tour_i];
+    } else {
+        out[5] = 0u;
+    }
 }
 
 bool tutorial_sync_says_armed(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
@@ -420,10 +722,35 @@ bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
     }
     // The slave is told which key is lit rather than deriving it: it holds no step
     // list, and two independent choices could disagree.
-    if (s_st.step < TUT_LETTERS && s_st.slots[s_st.step] != in[2]) {
+    // ⚠️ Only in chapter 1: tut[2] carries the preview row in chapter 3, and writing that
+    // into a letter slot would be harmless today and wrong the day chapter 1 is re-entered.
+    if (in[1] <= TUT_GAP && s_st.step < TUT_LETTERS && s_st.slots[s_st.step] != in[2]) {
         s_st.slots[s_st.step] = in[2];
         changed               = true;
     }
+    if (in[1] == TUT_LANG_DARK && s_st.dark_next != in[5]) {
+        s_st.dark_next = in[5];
+        changed        = true;
+    }
+    const uint8_t named = (in[1] == TUT_LANG_DARK) ? in[5] : in[1];
+    if ((named == TUT_LANG_NAME || named == TUT_LANG_WIPE || named == TUT_LANG_SHOW) &&
+        s_preview_tbl != in[2]) {
+        s_preview_tbl = in[2];
+        changed       = true;
+    }
+    if ((in[1] == TUT_TOUR_WAIT || in[1] == TUT_TOUR_SEEN) && in[2] < TUT_TOUR_MAX) {
+        if (s_st.tour_i != in[2]) {
+            s_st.tour_i = in[2];
+            changed     = true;
+        }
+        if (s_st.tour[in[2]] != in[5]) {
+            s_st.tour[in[2]] = in[5];
+            changed          = true;
+        }
+    }
+    // The shift stage is not sent; the second wait implies it. The progress keycap sits on
+    // the right half, which is usually the slave, and counts the two hands separately.
+    if (in[1] == TUT_SHIFT_AGAIN) s_st.shift_stage = 1;
     if (in[3] != s_seen_seq) {
         s_seen_seq        = in[3];
         s_st.ripple_seq   = in[3];
@@ -444,7 +771,7 @@ bool tutorial_sync_apply(const uint8_t in[TUTORIAL_SYNC_BYTES]) {
         // from now, which is why the master keeps sending its own elapsed.
         // s_seen_seq was adopted above, so tutorial_arm_ring_if_new() stays a no-op
         // here: on the slave the ring is armed from the wire, not from a local press.
-        poly_focus_start(in[4]);
+        tutorial_start_ring(in[4]);
         changed           = true;
     }
     return changed;
@@ -467,6 +794,11 @@ void tutorial_sync_sent(void)    { s_sync_dirty = false; s_sync_at = timer_read3
 // second line is deliberately unused for now — one short line per panel is calmer than
 // two, and leaves room for the letter the confirmation draws large.
 const uint32_t *tutorial_line(uint8_t which) {
+    // Before the lesson starts: Eden's welcome tail (startup_anim_welcome()) says the
+    // opening words, the same ones TUT_TEXT says when there is no tail.
+    if (!s_active && which == 0 && startup_anim_welcome()) {
+        return is_left_side() ? U"Welcome" : U"to PolyKybd";
+    }
     // ⚠️ `which` used to be rejected unless 0 — the second line was deliberately unused
     // while every screen was one short phrase. TUT_NOTATION needs it, so the gate is
     // now per-phase (every other case still returns NULL for line 1 by falling off its
@@ -474,7 +806,10 @@ const uint32_t *tutorial_line(uint8_t which) {
     if (!s_active || which > 1) return NULL;
     if (which == 1 && s_st.phase != TUT_NOTATION) return NULL;
     const bool left = is_left_side();
-    switch (s_st.phase) {
+    // The dark cut is for the KEYS; the status panels already say what comes next, so
+    // they do not flicker with it.
+    const uint8_t phase = (s_st.phase == TUT_LANG_DARK) ? s_st.dark_next : s_st.phase;
+    switch (phase) {
         case TUT_BLANK:
             return NULL;
         case TUT_TEXT:
@@ -496,6 +831,9 @@ const uint32_t *tutorial_line(uint8_t which) {
             return left ? U"Press and hold" : U"SHIFT";
         case TUT_SHIFT_SWEEP:
         case TUT_SHIFT_HELD:
+            // The second hand: the same thing again, so ask rather than tell. A question
+            // ends in "?" on the panel that ends the sentence.
+            if (s_st.shift_stage == 1) return left ? U"Isn't that" : U"...nice?";
             return left ? U"All keys" : U"react...";
         case TUT_SHIFT_AGAIN:
             // The second hand. "Try again" rather than "now the right one": the ring
@@ -509,6 +847,29 @@ const uint32_t *tutorial_line(uint8_t which) {
             // The LEFT panel draws the layer symbol large instead of a line — the
             // symbol changing IS the lesson, so it is the thing on the panel.
             return left ? NULL : U"a whole layer";
+        case TUT_BOARD_REVEAL:
+            return left ? U"Every key" : U"is a screen";
+        case TUT_BOARD_SHOW:
+            return left ? U"72 screens," : U"one keyboard";
+        case TUT_LANG_INTRO:
+            return left ? U"It speaks" : U"your language";
+        case TUT_LANG_NAME:
+        case TUT_LANG_WIPE:
+        case TUT_LANG_SHOW:
+            // A question rather than a label ("Now in" read as static, hardware): the
+            // phrase rotates with the item, and the name finishes the sentence.
+            return left ? tutorial_preview_phrase() : tutorial_preview_name();
+        case TUT_LANG_MORE:
+            return left ? U"...and many" : U"more layouts";
+        case TUT_LANG_MORE2:
+            return left ? U"...plus" : U"fun scripts";
+        case TUT_TOUR_WAIT:
+        case TUT_TOUR_SEEN: {
+            const int16_t step = tut_tour_index(&s_st);
+            return step < 0 ? NULL : tutorial_tour_line((uint8_t)step, left, phase == TUT_TOUR_SEEN);
+        }
+        case TUT_FINALE:
+            return left ? U"You're" : U"ready!";
         case TUT_NOTATION:
             // ⚠️ FOUR short lines, two per panel, reading left to right then down.
             // This is the only screen with a second line: three marks do not fit in
@@ -539,6 +900,14 @@ uint32_t tutorial_line_icon(uint8_t which) {
     }
 }
 
+// The keycap legend for the line, framed by the caller. Only the tour's WAIT: once the
+// key has been pressed the words move on ("The picker is open") and name no key.
+const uint32_t *tutorial_line_key(uint8_t which) {
+    if (!s_active || which != 0 || s_st.phase != TUT_TOUR_WAIT) return NULL;
+    const int16_t step = tut_tour_index(&s_st);
+    return step < 0 ? NULL : tutorial_tour_key((uint8_t)step, is_left_side(), false);
+}
+
 // The status panel has 64 rows rather than the keycap's 40, so it can take the L cut.
 bool tutorial_draw_big_letter(int8_t ox, uint8_t w, uint8_t h) {
     static const uint32_t tiers[] = {TUT_LETTER_TIER_L, TUT_LETTER_TIER_BASE, 0u};
@@ -562,6 +931,8 @@ uint32_t tutorial_big_letter(void) {
 void tutorial_start(uint32_t seed) { (void)seed; }
 void tutorial_stop(void) {}
 bool tutorial_active(void) { return false; }
+uint32_t tutorial_cascade_signature(void) { return 0u; }
+bool tutorial_sparkle_live(void) { return false; }
 bool tutorial_exclusive(void) { return false; }
 bool tutorial_intro_mode(void) { return false; }
 bool tutorial_caps_hold(void) { return false; }
@@ -575,6 +946,25 @@ bool tutorial_hold(uint8_t kind, bool pressed, uint8_t slot) {
 }
 
 void tutorial_skip(void) {}
+bool tutorial_tour_press(uint8_t slot) { (void)slot; return false; }
+int16_t tutorial_tour_step(void) { return -1; }
+void tutorial_tour_rewind(uint8_t step) { (void)step; }
+uint8_t tutorial_tour_target(void) { return TUT_SLOT_NONE; }
+uint8_t tutorial_tour_slot(uint8_t step) { (void)step; return TUT_SLOT_NONE; }
+bool tutorial_tour_seen(void) { return false; }
+int16_t tutorial_preview_index(void) { return -1; }
+uint8_t tutorial_preview_entry(void) { return 0xFFu; }
+bool tutorial_naming(void) { return false; }
+uint8_t tutorial_rgb_phase(void) { return 0xFFu; }
+uint8_t tutorial_pulsed_slot(void) { return 0xFFu; }
+bool    tutorial_showing_name(void) { return false; }
+bool tutorial_wipe_covers(uint8_t row, uint8_t col) { (void)row; (void)col; return false; }
+bool tutorial_in_layer_chapter(void) { return false; }
+bool tutorial_telling_more(void) { return false; }
+bool tutorial_more_scripts(void) { return false; }
+bool tutorial_draw_key_letter(uint32_t cp) { (void)cp; return false; }
+const uint32_t *tutorial_skip_label(void) { return NULL; }
+const uint32_t *tutorial_progress_label(void) { return NULL; }
 void tutorial_sync_fill(uint8_t out[TUTORIAL_SYNC_BYTES]) {
     for (uint8_t i = 0; i < TUTORIAL_SYNC_BYTES; ++i) out[i] = 0;
 }
@@ -584,6 +974,7 @@ bool tutorial_sync_pending(void) { return false; }
 void tutorial_sync_sent(void) {}
 const uint32_t *tutorial_line(uint8_t which) { (void)which; return NULL; }
 uint32_t tutorial_line_icon(uint8_t which) { (void)which; return 0; }
+const uint32_t *tutorial_line_key(uint8_t which) { (void)which; return NULL; }
 uint32_t tutorial_big_letter(void) { return 0; }
 bool tutorial_draw_big_letter(int8_t ox, uint8_t w, uint8_t h) {
     (void)ox; (void)w; (void)h; return false;

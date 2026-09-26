@@ -19,11 +19,11 @@
 #include "oled_helper.h"       // oled_boot_progress()
 #include "base/update.h"       // enum refresh_mode / ALL_AT_ONCE
 #include "base/disp_array.h"   // GFXfont type
-// Only the single splash font is needed. Don't pull in gfx_used_fonts.h — the
-// generated category headers it aggregates have external linkage and may be
-// included by exactly one TU (poly_keymap.c). FreeSansBold24pt7b.h is
-// self-contained (static const), so this TU gets its own copy.
-#include "base/fonts/FreeSansBold24pt7b.h"   // FreeSansBold24pt7b
+// The splash font comes from poly_heavy_font() (poly_util.h), NOT from including
+// FreeSansBold24pt7b.h here: that header defines its tables static, so every TU that
+// included it linked its own ~10 KB copy — three in the image before this was merged.
+// Don't pull in gfx_used_fonts.h either: the generated category headers it aggregates
+// have external linkage and may be included by exactly one TU (poly_keymap.c).
 #include "hardware/clocks.h"                          // clock_get_hz()
 #include "hardware/structs/vreg_and_chip_reset.h"     // core-voltage select
 
@@ -347,6 +347,7 @@ static uint8_t utext_visible_len(const uint32_t* s) {
 // Which milestone we are inside, so boot_substep() can draw the right percent and
 // stamp the right high byte without the caller repeating itself.
 static uint8_t  s_boot_step = 0;
+static void boot_guard_milestone(uint8_t step);   // the late-boot guard, below
 // (tag, ms) per milestone, where tag is the SAME encoding the crash breadcrumb
 // uses: a bare step, or step<<8 | sub. 24 entries covers 8 milestones plus room
 // for sub-steps without a bounds worry.
@@ -392,6 +393,7 @@ void boot_substep(uint8_t sub, uint8_t sub_total) {
     // Same breadcrumb the milestones write, so whatever reset finally happens
     // archives the SUB-step rather than only the step it was inside.
     (void)crash_phase_enter(CRASH_PHASE_BOOT, tag);
+    boot_guard_milestone(s_boot_step);
     boot_timing_mark(tag);
     // Percent line only. The keycap splash is untouched: its solidify count belongs
     // to the milestone, and repainting 72 displays per sub-step would itself be a
@@ -399,32 +401,59 @@ void boot_substep(uint8_t sub, uint8_t sub_total) {
     oled_boot_progress(s_boot_step, POLY_SPLASH_STEPS, sub, sub_total, NULL);
 }
 
-// ── The final boot render: per-key breadcrumbs + a watchdog guard ───────────
-// See boot_diag.h (boot_render_mark) for what this instruments and why that span
-// has no other evidence.
-static bool s_render_guard = false;
+// ── The LATE-BOOT watchdog guard: step 5 to the end of post_init ─────────────
+// See boot_diag.h (boot_render_mark) for what the final render instruments and why
+// that span has no other evidence.
+//
+// The guard used to cover the final render only. Round 34 of the tutorial caught a
+// master wedged at "63%, 4 / 4" — fw_staging_init() had returned, splash_progress(6)
+// never repainted — i.e. in the same 63% -> 75% gap CRASH_DIAGNOSTICS.md names, and
+// with no watchdog there, no reset and no record: `polyctl crash show` had nothing to
+// read. So it is armed at step 5 (core1 up, the gap boot hangs keep landing in) and fed
+// at every milestone, sub-step and render key after it. A wedge there becomes ONE
+// reset with a `kind=watchdog phase=1:0xSSNN` record.
+static bool s_render_guard = false;   // the watchdog is armed (late boot, render included)
+// The breadcrumbs (panel sub-steps, phase stamps) run for EVERY final render, guard
+// or not. ⚠️ They used to share s_render_guard, so a boot that followed a watchdog
+// reset here skipped the marks too: the panel froze at "100%" with no sub-steps, the
+// exact screen that says nothing about where it stopped, on the one boot most likely
+// to wedge in the same place again (hardware, 2026-09-25).
+static bool s_render_marks = false;
 
 // The denominator the panel shows: every key update_displays() walks on this half,
 // KC_NO holes included, because the mark is stamped before the keycode is looked at.
 // 40 on split72 (5 x 8), 24 on split42 (4 x 6).
 #define BOOT_RENDER_KEYS ((uint8_t)(MATRIX_ROWS_PER_SIDE * MATRIX_COLS))
 
+// The first milestone the guard covers.
+#define BOOT_GUARD_FROM_STEP 5u
+
+// The boot step a BOOT breadcrumb names: a bare step, or step<<8 | sub / key / 0xEx.
+static uint8_t boot_step_of(uint16_t arg) {
+    return (arg & 0xFF00u) ? (uint8_t)(arg >> 8) : (uint8_t)arg;
+}
+
 // Skip the guard when the PREVIOUS boot already died under it. The record is
 // archived by then, so a second reset adds nothing — and without this a board that
 // hangs here on every boot would reboot-loop, because the crash-loop halt lives in
 // the fault handler and a watchdog reset runs no code at all. One reset, one
 // record, then the old wedge, which BOOTSEL still recovers.
-static bool render_guard_already_fired(void) {
+static bool boot_guard_already_fired(void) {
     poly_crash_record_t rec;
     if (!crash_record_fresh() || !crash_record_archived(&rec)) {
         return false;
     }
     return rec.kind == CRASH_KIND_WATCHDOG && rec.phase == CRASH_PHASE_BOOT &&
-           (uint8_t)(rec.phase_arg >> 8) == POLY_SPLASH_STEPS;
+           boot_step_of(rec.phase_arg) >= BOOT_GUARD_FROM_STEP;
 }
 
-static void boot_render_guard_begin(void) {
-    if (render_guard_already_fired()) {
+// Arm at step 5, or feed an armed guard at any later milestone.
+static void boot_guard_milestone(uint8_t step) {
+    if (s_render_guard) {
+        crash_watchdog_feed();
+        return;
+    }
+    if (step != BOOT_GUARD_FROM_STEP || boot_guard_already_fired()) {
         return;
     }
     s_render_guard = true;
@@ -433,8 +462,17 @@ static void boot_render_guard_begin(void) {
     crash_watchdog_arm();
 }
 
+static void boot_render_guard_begin(void) {
+    s_render_marks = true;
+    // The guard was armed at step 5 (or deliberately not, after it fired last boot);
+    // the render only feeds it, per key.
+    if (s_render_guard) {
+        crash_watchdog_feed();
+    }
+}
+
 static void boot_render_guard_end(void) {
-    s_render_guard = false;
+    s_render_marks = false;
     // The watchdog stays ARMED on purpose: crash_watchdog_start() is the next line
     // of keyboard_post_init_user(), and from there the main loop feeds it.
 }
@@ -493,13 +531,15 @@ static void usb_watch(uint8_t key) {
 }
 
 void boot_render_mark(uint8_t row, uint8_t col) {
-    if (!s_render_guard) {
+    if (!s_render_marks) {
         return;
     }
     const uint8_t key = (uint8_t)(row * MATRIX_COLS + col + 1);   // 1-based, of BOOT_RENDER_KEYS
     // A long render must not trip the guard; a stalled one must. Each key gets the
     // full CRASH_WATCHDOG_MS, so what the reset means is "one keycap took 8 s".
-    crash_watchdog_feed();
+    if (s_render_guard) {
+        crash_watchdog_feed();
+    }
     (void)crash_phase_enter(CRASH_PHASE_BOOT,
                             (uint16_t)(((uint16_t)POLY_SPLASH_STEPS << 8) | key));
     usb_watch(key);
@@ -547,7 +587,15 @@ void splash_progress(uint8_t step) {
     // Open this milestone for boot_substep(), and time the span that just ended.
     // SPLASH_DONE is stamped as the step count so the table's last row reads "8".
     s_boot_step = final ? POLY_SPLASH_STEPS : step;
+    boot_guard_milestone(s_boot_step);
     boot_timing_mark(s_boot_step);
+
+    // ⚠️ Finer breadcrumbs INSIDE the milestone, 0xE1.. so they cannot collide with a
+    // sub-step (1..N) or a render key (1..40): the status-panel paint is I2C, the logo
+    // is keycap SPI, and "hung in step 6" cannot tell the two apart. A record reading
+    // phase=1:0x06E1 means the panel paint never returned; 0x06E2, the logo draw.
+    const uint16_t in_step = (uint16_t)((uint16_t)s_boot_step << 8);
+    (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(in_step | 0xE1u));
 
     // ...and put the same milestone somewhere a human can read off a wedged board.
     // Skipped for step 1: that one runs in keyboard_pre_init_user(), and QMK does not
@@ -556,9 +604,10 @@ void splash_progress(uint8_t step) {
         oled_boot_progress(final ? POLY_SPLASH_STEPS : step, POLY_SPLASH_STEPS, 0, 0, NULL);
     }
 
+    (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(in_step | 0xE2u));
     clear_all_displays();
-    display_message_progressive(1, 1, r1_word, &FreeSansBold24pt7b, 0, solid_count);
-    display_message_progressive(r2_row, 1, r2_word, &FreeSansBold24pt7b, r1_vis, solid_count);
+    display_message_progressive(1, 1, r1_word, poly_heavy_font(), 0, solid_count);
+    display_message_progressive(r2_row, 1, r2_word, poly_heavy_font(), r1_vis, solid_count);
 
     if (step == 1) {
         // Hold the all-dim preview briefly so the eye registers the whole logo
@@ -570,6 +619,7 @@ void splash_progress(uint8_t step) {
         // Boot complete: dwell on the finished splash, then hand the keycaps
         // over to the real legends — the same tail show_splash_screen() always
         // ran, now deferred to the end of boot so the reveal is meaningful.
+        (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(in_step | 0xE3u));
         wait_ms(400);
         boot_render_guard_begin();
         update_displays(ALL_AT_ONCE);

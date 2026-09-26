@@ -83,8 +83,17 @@ typedef struct {
     int32_t ct, st;   // cos / sin of the applied angle
     int32_t cx, cy;   // centre of the source box
     int32_t x0, y0;   // origin of the rotated frame
-    int16_t w, h;     // plotted (halved) output size, in pixels
+    int16_t w, h;     // plotted (downscaled) output size, in pixels
+    uint8_t n;        // the downscale: 2 (half) for steps 1..24, 3 (third) for 25..48
 } kdisp_rot_half_t;
+
+// The ROT op's argument carries the SCALE as well as the angle: steps 1..24 turn by
+// step*15 degrees and halve, steps 25..48 turn by (step-24)*15 degrees and draw at one
+// third. The third was added for the context-menu pointer, which the half-scale ➤
+// drew larger than the menu it points at (hardware round 34); the pack has no smaller
+// arrowhead and the resident IconsFont is full. Folding it into the angle byte keeps
+// ONE op and ONE geometry function for the drawer and both bounding boxes.
+#define KDISP_ROT_THIRD_STEP 24u
 
 void kdisp_gfx_rot_half_extent(int16_t w, int16_t h, uint8_t step, kdisp_rot_half_t *out);
 

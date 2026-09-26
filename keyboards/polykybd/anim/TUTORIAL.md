@@ -1567,3 +1567,560 @@ configured.
 **What would flip the default:** a cold boot exercised on hardware (step 1 of
 `TUTORIAL_NEXT.md`), which only the user can run. Until then the gate is the honest
 statement of what has and has not been tested.
+
+## Round 22 — chapter 3: the board reveal, languages and scripts (2026-09-24)
+
+*"It's a bit too fast — the tutorial needs more steps first. We have to teach all the
+features and make a wow effect."* Scope agreed for this round: the languages and glyph
+scripts as a **board-only preview**, a **chapter count on the Esc keycap** that is also
+the hold-to-exit key, and a **board reveal after Shift**, where the lesson stops hiding
+keys.
+
+### The chain
+
+`TUT_SHIFT_HELD` (second hand) → `TUT_BOARD_REVEAL` → `TUT_BOARD_SHOW` →
+`TUT_LANG_INTRO` → `TUT_LANG_SHOW` × N → `TUT_LANG_POINT` → `TUT_FINALE` → `TUT_DONE`.
+(Round 29 replaced `TUT_LANG_POINT` with the key tour and added the dark cut; see there.)
+About 45 s on top of chapters 1–2 with the full nine-item list. `TUT_LANG_SHOW` is ONE
+phase re-entered per item, so the phase clock is the item clock and nothing new crosses
+the link. The layer chapter stays postponed; it now sits between Shift and the reveal
+if it is ever restored.
+
+### The reveal is the focus ring at board scale
+
+`poly_focus_start_sweep()` is a second PROFILE of the same ring, not a second renderer:
+radius on `tut_sweep_radius()` out to `TUT_SWEEP_MAX_R` over `TUT_BOARD_REVEAL_MS`, a
+20-unit band, solid until the last quarter. A key becomes visible when the front passes
+its centre (`tut_reveal_reached()`), and the ring's own repaint is what draws its legend
+there, so nothing else has to know a reveal is happening.
+- ⚠️ **Keys chapter 2 already showed stay lit.** The front only ADDS keys; a letter going
+  dark and relighting as the wave reached it would read as a fault.
+- ⚠️ **The ring and the visibility test must run on one clock.** The slave's ring used to
+  start "from now" on receipt; for the reveal it is back-dated by the master's elapsed
+  (`poly_focus_start_sweep(slot, already_ms)`), the same number that back-dates
+  `phase_start`. Otherwise the slave lights keys ahead of its own wavefront.
+- `TUT_BOARD_REVEAL` is a wave phase, so its elapsed rides `tut[5]` like the letter
+  ripple's.
+
+### ⚠️ A language preview must not reach the host
+
+The host polls `GET_LANG` every second and **switches the OS layout to match**
+(PolyHost's language-changed flow). Writing a preview into `local_state->lang` is the
+only way to get it onto both halves' keycaps, so `GET_LANG` (`hid_com.c` case 7) and
+`save_user_settings()` now read `poly_reported_lang()`, which answers with the user's
+real language while a preview is on screen. A host `SET_LANG` that lands mid-preview is
+recognised (the value is no longer the one the preview wrote) and becomes the new real
+language instead of being overwritten and later "restored" to the old one.
+- The glyph script needs no guard: cmd 30 and the EEPROM save read `get_glyph_script()`,
+  and the preview only changes what the master writes into `local_state->glyph_script`.
+- ⚠️ The SLAVE still marks its settings dirty when the synced language changes, so a
+  flush that lands mid-preview can store the preview on the slave. The restore marks it
+  dirty again, so it converges at the next flush. Not fixed, because the slave never
+  answers `GET_LANG` and its stored language is overwritten by the master's sync at boot.
+
+### Only what the board can draw
+
+`tutorial_preview_prepare()` keeps an entry only when the glyph for `KC_A` in that
+language or script resolves in the flashed fonts, through the same lookup the renderer
+uses. A first-boot board with no font pack gets `n_preview == 0`, and the chapter goes
+straight from the reveal to the finale rather than showing a board of blank keycaps.
+The user's own language is skipped; showing it would change nothing.
+
+### Pacing
+
+`TUT_TEXT_MS` 2000 → 2600, `TUT_GAP_MS` 700 → 1000, `TUT_SHIFT_HELD_MS` 2000 → 2600.
+
+### Not verified on hardware
+
+All of it. In particular: whether the reveal front keeps up (a 20-unit band crosses up
+to ~20 keys per frame per half, against a 3 ms slice), whether `MID_TWO_LINE("2/3",
+"Hold=exit")` fits the Esc keycap without clipping, and how long each script needs on
+screen to be read.
+
+### Round 22, part 2 — the chrome keys and a test build
+
+- **Esc reads "Hold to / skip..."; the top-right outer key shows the chapter.** They are
+  the two halves of the existing skip gesture, so either still ends the lesson when held.
+- ⚠️ **Neither stock two-line stack fits "Hold to / skip...".** The top line has ascenders
+  and the bottom a descender, the combination `MID_TWO_LINE`'s note says a 40 px panel
+  cannot hold. Measured with `tools/oled_preview.py`'s renderer, which reproduces the
+  known-good "RESET / Eden" with zero clipped pixels: `MID_TWO_LINE` spacing clips 4 px off
+  the top, `MID_TWO_WORD` 8 px off the bottom, and lift 4 × 2 px with push 2 × 2 px clips
+  none and leaves a 4 px gap. The progress run ("1/3") sits at rows 1..20 on baseline 23,
+  so it is drawn on baseline 32 to centre it.
+- **`POLYKYBD_TUTORIAL_TEST=yes`** starts the tutorial from housekeeping ~1.5 s after every
+  reset, with no Eden and no marker check. It starts outside the pre-watchdog window on
+  purpose, so a test build does not exercise the boot path `POLYKYBD_BOOT_INTRO` is gated
+  for.
+
+## Round 23 — the slave that sat out, and the reveal's sparks (2026-09-24)
+
+- ⚠️ **A zero sync word STOPPED a slave that started first.** The test build started
+  the tutorial on each half's own timer. The master's `tut[0]` stayed zero until its
+  first tutorial push, and `tut[]` rides every `poly_sync_t` send, so an ordinary state
+  sync in that window (a host language or brightness change at connect) was read by the
+  already-running slave as "stop": it tore its lesson down and showed normal legends
+  ("the slave stayed at the default layer", hardware, intermittent).
+  Two fixes. The master now writes `TUT_SYNC_ACTIVE` into `tut[0]` on every pass while a
+  lesson runs (`poly_tutorial_publish_active()`), and right at the Eden hand-off, so no
+  send can carry a zero word mid-lesson. Only the flag byte: the rest of the word changes
+  per pass during a wave, and writing it every pass would make every pass a state diff and
+  a full repaint. And the test build no longer starts the tutorial on a timer at all.
+- **`POLYKYBD_TUTORIAL_TEST` now plays Eden, then the tutorial, on every reset** — the
+  real first-run path with the marker ignored. That path never had the race, because
+  `TUT_SYNC_ARMED` is set in post_init before the first sync. It also means every test
+  boot exercises the pre-watchdog start `POLYKYBD_BOOT_INTRO` is gated for.
+- **The reveal front is wider (20 → 44 units) and leaves a spark trail.** Behind the
+  front, 2x2-px sparks light at up to ~5 % of cells, thinning to none ~220 units back,
+  and re-roll every 90 ms so they twinkle and die out. The cull band covers the trail,
+  since a trail key the ring does not repaint would neither show nor clear its sparks.
+  ⚠️ The trail roughly triples the keys repainted per frame; if the front stutters on
+  hardware, shorten `POLY_FOCUS_TRAIL` first.
+
+## Round 24 — names before glyphs, Hindi for Russian, stars in Eden, suspend (2026-09-25)
+
+- **The reveal stuttered with the 220-unit spark trail**, as predicted; it is 80 now
+  (about one key width).
+- **Russian is out of the preview tour** — politically too delicate at the moment.
+  Hindi (Devanagari) took its place: Greek, Arabic, Hindi, Japanese, Korean, then the
+  scripts.
+- **Each item is NAMED first.** `TUT_LANG_NAME` (1 s) darkens the board and spells the
+  name across the middle display row, one capital per keycap, in the larger latin tier
+  when it is flashed. The row is 14 keys, 7 per half (display row 2; index 23 has no
+  panel on either half), ordered by board x, and each half builds the same ordering
+  from the shared geometry table, so it knows its own letters without asking. A name
+  therefore spans the split (GRE | EK).
+  ⚠️ The slave needs to know WHICH item: `tut[2]` carries the item's table ROW during
+  the name and show phases (the slave never builds the renderable subset, so a position
+  in it would mean nothing there), and the chapter-1 slot write on the slave is now
+  gated to chapter-1 phases so the row cannot land in a letter slot.
+  The status panel's title now comes from that row too, not from reading the synced
+  lang/script back, which could not name an item that is not applied yet.
+- **Eden's letter fade has stars.** Each keycap gets two chances; a hash picks ~43 % of
+  them, a time within the 3.2 s fade and a spot. A star is 1 px, then a 5-px plus, then
+  1 px, over 650 ms. Drawn after the dither dissolve, so the dither never eats one.
+- ⚠️ **The tutorial's status screen ignored `STATUS_DISP_ON`.** Suspend clears the flag
+  and the sync calls `oled_off()`, but the tutorial branch of `oled_task_user()` redraws
+  every tick, and a redraw switches the SSD1306 back on. The slave's loop keeps running
+  while the host sleeps, so its panel stayed lit on "Braille" at full brightness after
+  the computer shut down (hardware). The branch now turns the panel off while the flag
+  is clear; the lesson resumes on wake.
+
+### Round 24, part 2 — the name in two scripts
+
+The name is now spelled TWICE: the Latin name on the LEFT half's middle row, and the name
+in the language's own script on the RIGHT half's (a glyph script spells the Latin name
+through its own glyphs). Every letter row has 7 panels per half, so an 8-unit name puts
+its last two units on the last key (JAPANE|SE, ΕΛΛΗΝΙ|ΚΑ).
+- The native spellings are KEYBOARD units, since the keycap renderer has no shaper:
+  Devanagari with its vowel signs and virama as separate characters, Arabic laid out
+  from the right, Japanese in hiragana.
+- ⚠️ **Korean is CONJOINING jamo (U+1100 initials, U+1161 vowels), not the compatibility
+  jamo at U+3131** — no font here carries U+3131.., nor precomposed syllables, nor the
+  final-consonant forms (U+11A8..), so finals are written in their initial form, as on
+  the Korean keycaps. Every native codepoint was checked with `tools/oled_preview.py`'s
+  font loader, and every name row rendered with 0 clipped pixels.
+
+## Round 25 — language names, not script names; pre-rendered where the keys cannot spell
+
+- **Every native name is the LANGUAGE's name for itself** (한국어, not 한글; 日本語;
+  ΕΛΛΗΝΙΚΑ). List: Greek, Arabic, Hebrew, Hindi, Thai, Japanese, Korean, then the
+  glyph scripts Elvish, Runes, Aurebesh, Braille.
+- ⚠️ **Joined and attached scripts cannot be spelled one character per key.** The keycap
+  renderer draws one glyph at a time with no shaper, so Arabic's joins and Devanagari's
+  vowel signs and conjuncts fall apart, and 日本語 / 한국어 have no glyphs in the keycap
+  fonts at all (only kana and conjoining jamo). Those four are PRE-RENDERED:
+  `tools/gen_tutorial_names.py` shapes each with HarfBuzz from the Noto fonts listed in
+  `fonts/noto-fonts.yaml` (weight 500, 1 bit), cuts it into 72x40 tiles on one common
+  baseline — one grapheme cluster per key for Hindi/Japanese/Korean, key-width pieces cut
+  at glyph boundaries for Arabic — and writes `anim/tutorial_names_gen.h` (3240 bytes).
+  The tiles are in VISUAL order, so Arabic reads right to left across its keys with no
+  special case. Tiles need no font pack, so these names show on a board that has none.
+- **Long names use two rows.** Up to 7 units sit on display row 2; more are split over
+  rows 1 and 2, the larger half on top, each row centred (GREEK over ΕΛΛΗ/ΝΙΚΑ,
+  JAPA/NESE, AURE/BESH).
+- ⚠️ `tutorial_draw_key_letter()` looked every single character up at 0xF0000 + cp (the
+  latinbig relocation); for a non-Latin codepoint that is an unrelated glyph — にほ drew
+  as "k{". Only A–Z take the larger tier now.
+- `tools/tutorial_name_sheet.py` renders every item's name screen as the keys draw it,
+  reading the pre-rendered tiles out of the generated header. Its item list is a replica
+  of `s_tut_preview_all[]` — change both.
+
+### Round 25, part 2 — "and many more", and Thai
+
+- **`TUT_LANG_MORE` (3 s) closes the tour**: the board goes dark and the keys read
+  `160 / LAYOUTS` on the left and `10 / SCRIPTS` on the right (number on row 1, word on
+  row 2), with "...and many / more to pick" on the status panels. Both numbers are read
+  from `NUM_LANG` and `GLYPH_SCRIPT_COUNT - 1`, so the screen cannot go stale. A board
+  that previewed nothing (no font pack) skips it — "more" after an empty tour is wrong.
+  Digits use the larger latin tier too; the latinbig bundle carries 0-9.
+- **Thai compared three ways** (keycap font per character, Noto Sans Thai per character,
+  Noto word strip): the keycap font's Thai IS essentially Noto Sans Thai, a size smaller,
+  so per-character pre-rendering buys nothing. The word strip reads as a word, and
+  `gen_tutorial_names.py` now takes a `|` in the text as a forced cut (`ภาษา|ไทย`,
+  "language" | "Thai") so a strip never breaks mid-word. Cluster offsets from uharfbuzz's
+  `add_str` are CHARACTER indices, not UTF-8 bytes.
+
+## Round 26 — the emoji layer took over the lesson
+
+⚠️ **Layer keys passed straight through the tutorial's key swallow**, a rule written so
+that a layer key's RELEASE can never be eaten (the MO(_ADDLANG1) bug). It let the PRESS
+through too, and `TO(_EMJ)` sits beside B on the base layer — dark in chapter 1, so
+blank but not inert. One press moved the board to the emoji layer, where `TO()` latches,
+and every letter key showed an emoji for the rest of the lesson (hardware).
+- A layer key's press is now swallowed during the tutorial, except the layer chapter's
+  own momentary key IN that chapter (`tutorial_in_layer_chapter()`); its release still
+  passes, which is a no-op for a press that never happened.
+- `poly_tutorial_hold_lesson_layer()` re-parks the master on `_L0` (layer stack AND
+  `def_layer`) if either is found anywhere else outside the layer chapter, and logs
+  `Tutorial: layer drifted (...)` so a future cause names itself on the console.
+
+## Round 27 — pacing, a pulse, ten steps, and one brightness
+
+Hardware feedback, all in one round:
+- **Eden's stars start with the scanline wipe** (not the final fade) and live 1.6 s
+  instead of 0.65 s; 3 slots per keycap at ~39 %.
+- **The key to press PULSES.** `tut_pulse_slot()` names it — the lit letter while it
+  waits, and whatever the pointing ring circles (both Shifts, the Lang key) — and
+  `tut_pulse_level()` eases its panel's contrast between 24/255 of full and full over
+  1.4 s. Both are pure and unit-tested; `tutorial_pulse_tick()` re-writes that ONE
+  panel's contrast every 30 ms, because `update_displays()` writes every key's contrast
+  back on each repaint. ⚠️ The Lang key's slot is now resolved on BOTH halves: the pulse
+  runs on the half that owns the key, which need not be the master.
+- **Progress counts in ten steps**, not three chapters (`tut_progress()`): opening, each
+  letter, each Shift, the reveal, the first and second half of the tour, and the close.
+  A walk through a whole run pins that it never goes backwards and uses all ten.
+- **The tour is twice as slow**: name 2 s, glyphs 4.4 s.
+- **"Now in" is gone**: the left status panel rotates "How about" / "You may speak" /
+  "Or perhaps" / "Maybe you read" / "Do you speak" by the item's table row (scripts get
+  "Or write in"), and the right panel finishes with the name.
+- **Latin and native swap halves from item to item** (`tut_native_on()`, by table-row
+  parity — the one thing both halves know about the item).
+- **One brightness for the whole first run**: `POLY_INTRO_CONTRAST` (128 of 255) on the
+  keycaps AND the status panels, through Eden and the tutorial. `set_displays()` forces it
+  while the tutorial is active (OFF still turns panels off), `update_displays()`'s per-key
+  write uses it, and the status panel's tutorial edge sets it. The finish edge's
+  `set_displays()` runs after the tutorial is inactive, which hands the user's persisted
+  level back.
+
+## Round 28 — stars from the solid logo, lean inward, two heavy closing screens
+
+- **Eden's stars open when POLYKYBD is solid**: `SA_STAR_START_MS` is the end of the
+  letters' dither-in (tt 165 of 256 of the intro, ~3.2 s), not the scanline wipe. The
+  window is ~10 s now, so five slots per keycap.
+- **Names get 3 s** to be read (was 2).
+- **A name leans toward the split when it cannot centre exactly**: with an odd number of
+  spare keys the spare goes to the OUTER edge (`tut_name_slot_unit()`); keys are ordered by
+  board x, so that is the left end of the left half and the right end of the right half.
+- **The closing screen is TWO screens**, `TUT_LANG_MORE` then `TUT_LANG_MORE2`, 2.6 s
+  each: `160 | LAYOUTS`, then `10 | SCRIPTS` — number on the left half, word on the right,
+  both on the middle row, in `FreeSansBold24pt7b`, the heavy face of the boot splash and
+  the BOOT-/LOADER! message (`tut_draw_heavy()`).
+
+## Round 29 — the marker, the dark cut, one phrase per item, and the key tour
+
+Hardware feedback:
+- **"I completed the tutorial, but after a restart it showed up again."** That was the
+  test build doing what it was written to do: `POLYKYBD_TUTORIAL_TEST` forced `first_run`
+  on every reset. It now reads the marker like a normal build, but the value it stores
+  as "played" is a hash of `QMK_GIT_HASH QMK_BUILDDATE` (`boot_done_value()` in
+  `state.c`). A newly flashed test image therefore plays once, a finished lesson stays
+  finished, and RESET Eden still replays it. A normal build stores the fixed
+  `BOOT_INTRO_DONE`, unchanged.
+- **The status panel was too dim.** Two causes. The keycaps' register value (128) reads
+  dimmer on the 128x64 panel's thin prose, so the status panel now runs at
+  `POLY_INTRO_STATUS_BRIGHT` (255) during the lesson. ⚠️ And the tutorial's own edge
+  write did not hold: `status_oled_level()`, which the housekeeping contrast branch calls
+  on any contrast change, dropped the panel back to the user's mapped level (at most
+  `OLED_BRIGHTNESS`, 60). It now returns the tutorial level while the tutorial runs.
+- **A 200 ms dark cut** (`TUT_LANG_DARK`, `TUT_DARK_MS`) before every name, every board of
+  glyphs, and both "more" screens. One phase with a `dark_next` field rather than four
+  phases; `tut[5]` carries `dark_next` to the slave (the phase has no wave to time). The
+  status panels do NOT go dark: `tutorial_line()` reads the cut as the screen it leads to.
+- **No repeated lead-in.** Each preview row carries its own `lead` ("How about", "You may
+  speak", …, "Read by touch:"). The old 5-phrase rotation repeated over 11 items and every
+  script said "Or write in".
+- **The key tour** replaces the timed `TUT_LANG_POINT`. `TUT_TOUR_WAIT` points the ring
+  and the pulse at `tour[tour_i]` with no timeout; the press moves to `TUT_TOUR_SEEN`
+  (1.6 s on the result), then the next key. The keys are resolved from the keymap by
+  `tutorial_tour_build()` on BOTH halves: the Lang key, `LCAT(0..5)` and `KC_BASE` on
+  `_LL`, then `TO(_EMJ)`, emoji tabs 0/4/7/8 (two per half) and `KC_BASE` on `_EMJ`.
+  Only the step index crosses the link (`tut[2]`).
+  - ⚠️ **The asked-for key ACTS; every other key stays swallowed.** `poly_tutorial_tour_passes()`
+    lets that one press through, and later that same key's RELEASE: `LCAT` and `KC_BASE`
+    act on the release, and a swallowed release would make them do nothing. It FALLS
+    THROUGH the rest of `process_record_user()` instead of returning true, because the
+    custom keycodes are handled at its tail (`poly_custom_key_action`), which a
+    `return true` would skip.
+  - ⚠️ **The layer guard ENFORCES the tour's layer**, not just allows it
+    (`tut_tour_layer()`): `_L0` plus what the last pressed step opened. So the menu the
+    prose describes is on screen even if the key did not open it, and `KC_BASE` cannot
+    leave a menu behind. `TO(_EMJ)` turns `_L0` off, which is not counted as drift.
+  - Progress: 1 opening, 2-3 letters, 4-5 one Shift each, 6 the reveal, 7 the
+    languages, 8 the language menu, 9 the emoji menu, 10 the close.
+
+## Round 30 — slower stars, the stale script, the ring on the menus, the active tab
+
+Hardware feedback:
+- **Eden's stars**: 2.8 s each (was 1.6), ~25 % of four slots per keycap (was ~39 % of
+  five), and five shapes (`sa_star_shape()`): plus, eight-point cross, diamond, a small
+  form that turns from + to x, and a thin spike. Each passes through five equal stages:
+  pixel, small, full, small, pixel.
+- **"When the screens come back I can still see the previous script, then it
+  changes."** An ordering bug, not a render one. `poly_tutorial_apply_preview()` ran in
+  housekeeping's master block, AFTER the tutorial branch had ticked into `TUT_LANG_SHOW`,
+  pushed that phase to the slave and rendered. So every board of glyphs was drawn once
+  in the previous language, then again a pass later. `poly_apply_draw_script()` now runs
+  right after `tutorial_tick()`, before the push and the render, so both halves get the
+  phase and the language in one packet and draw once.
+- **The ring blanked language keys.** The ring redraws the legend under itself through
+  `tutorial_draw_board_legend()`, which knew only the static-text / `render_key()` pair.
+  Flags, region tabs and MRU controls are drawn by bespoke branches of
+  `update_displays()`, so every such key the ring crossed went dark. Those branches are
+  one function now, `render_menu_key()`, used by both; the ring also draws the emoji tab
+  frames and the MRU bar.
+- **The active tab is not asked for**: the tour skips the region already open (all six
+  regions carry languages; an old comment in `lang_layer.h` claiming Africa and Oceania
+  were empty was stale, and is corrected), and the emoji tabs are two per half from a preference list that skips
+  the open category. Region and category are synced, so both halves build the same tour.
+- **The emoji page key** (`TUT_TOUR_EPAGE`, `KC_EMJ_PAGE_NEXT`) follows the last chosen
+  tab whose category has a second page. ⚠️ That key sits where the progress chrome is
+  (right half, top-right outer key), so `tutorial_chrome_label()` gives up the chrome for
+  whatever key the tour is asking for: a key reading "9/10" cannot be asked for as "the
+  next page".
+
+## Round 31 — questions end in "?", the layer and Intl chapters
+
+Hardware feedback:
+- **A question on the status panels ends in "?"**, on the panel that ends the sentence.
+  Every preview lead-in opens a question now ("Do you speak" | "Arabic?"), and
+  `tutorial_preview_name()` adds the "?" to the PANEL name only; the keys still spell
+  the bare name. The second Shift says "Isn't that" | "...nice?".
+- **"Back to your letters" assumed a layout we do not know**: "Now back" | "home".
+- **The tour continues past the menus** (all in `tutorial_tour_build()`):
+  - Hold **Fn**, then hold **Num**: 3 s each to look at the layer.
+  - **Intl**: hold it (each letter's chosen accent); hold it again and tap **Ctrl**
+    (the picker opens); press the **letter** the tour drew at random (its accents fill
+    the number row); press the **accent** the tour picked (saved, the picker closes);
+    hold Intl one last time and press the letter (its new accent). Then "You're ready!".
+- ⚠️ **A step can now need a key HELD.** `tut_tour_step_t` carries a per-step dwell and
+  progress value; the binding keeps per-step `allow` (a layer the user may hold,
+  allowed by the guard but never forced — forcing it would leave it on after the finger
+  lifts) and `need` bits. The Intl picker exists only while Intl is held, so the Ctrl,
+  letter and accent steps refuse a press until Intl is down and the picker is in the
+  right state, and `poly_tutorial_tour_rewind_if_let_go()` rewinds to "Hold Intl" when
+  the user lets go (`tut_tour_rewind()`, unit-tested). Without the gate, the letter
+  pressed under Intl with the picker closed would TYPE its accent into the focused app.
+- ⚠️ **The last Intl press is INERT**: accepted, never passed to the board, for the same
+  reason. The released keys of passed presses are tracked in a 4-entry set, because
+  Intl is still held while Ctrl, the letter and the accent come and go.
+- **The chosen accent is KEPT** after the lesson (agreed for this one setting). The
+  letter and the accent are drawn on the master; `tut[5]` carries the tour's target key
+  in tour phases, so the slave pulses the right key without knowing the draw.
+- Progress: 1 opening, 2 letters, 3 Shifts, 4 reveal, 5 languages, 6 Lang menu,
+  7 emoji, 8 Fn and Num, 9 Intl, 10 close.
+
+## Round 32 — the prose named the wrong letter; stars until the first letter
+
+- **"Press the Y" while E was lit.** The Intl letter is drawn at random on the MASTER.
+  The slave built its tour with its own seed and, although the master sends it the live
+  target key (`tut[5]`), the prose read the letter out of a variable holding the LOCAL
+  draw. The right panel is usually the slave, so its half of "Pick the | letter Y"
+  disagreed with the ring. The prose now reads the letter from the letter step's synced
+  key (`tutorial_tour_slot()` → `tutorial_slot_letter()`), and the draw variable is gone.
+  The general rule: on the slave, anything the master DREW is known only as what the
+  link carried; a local re-derivation of it is a second, different draw.
+- **The stars keep falling until the letter selection.** When the tutorial follows,
+  Eden runs a WELCOME TAIL (`startup_anim_set_tail()`, set with the tutorial's arming,
+  on both halves): the black stage lengthens by `SA_TAIL_MS` (2.6 s), the stars keep
+  falling on the dark board, and the status panels say "Welcome | to PolyKybd" through
+  the lesson's own screen (`startup_anim_welcome()`). The tutorial then opens straight
+  on the first letter (`tut_begin_at_letters()`, unit-tested), so the tail REPLACES
+  `TUT_BLANK` + `TUT_TEXT` rather than adding to them. The star window now runs to the
+  end of the show, black stage and tail included.
+- **Fewer and slower stars**: 3 slots at ~25 %, 3.6 s each, over the longer window;
+  about a third fewer are lit at any moment than in round 31.
+
+## Round 33 — a wipe instead of the dark cut, and the menus cascade in
+
+- **The wipe (`TUT_LANG_WIPE`, 1.5 s).** Between an item's name and its layout, the
+  dark cut is gone. A ring sweeps in from a corner, and every key it passes turns into
+  the new layout. The name's letters stay until the ring reaches them
+  (`tutorial_wipe_covers()`). The corner takes turns, item by item: top-left,
+  top-right, bottom-left, bottom-right, then again (`tut_set_wipe_origins()`, the
+  outermost key of the top or bottom display row). Only the master's table is used,
+  because the ring's start slot already rides the sync (`tut[4]`). A corner without a
+  panel falls back to the dark cut for that item alone (unit-tested). The name that
+  opens each item keeps its own dark cut.
+- **The cascade after a tab.** After a region tab, an emoji tab or the emoji page key,
+  the three content rows are hidden. Then each key appears in raster order across the
+  whole board and fades up: 1.8 s first to last, 360 ms per key. The moment is a pure
+  function of the key's board position, so both halves agree without a sync byte. The
+  tab row and the bottom row do not cascade. Those tour steps dwell 3.1 s.
+- **The recents row stays dark for the whole lesson** (`tutorial_hides_recent()`: the
+  MRU keys of `_LL` and `_EMJ` and their Preset/Clear controls). On a new board they are
+  empty or the factory's, and a lit row reads as something the lesson points at. Base,
+  beside them, keeps its legend, because the tour asks for it next.
+
+## Round 34 — the cascade leaves the tutorial, a smaller menu pointer, vowels
+
+- **The menu cascade is a keyboard feature now** (`anim/menu_cascade.c`), not a
+  tutorial one. Whenever the language or emoji layer shows new items (the layer is
+  entered, a tab or the page key is pressed), the three content rows appear key by key
+  and fade up: 1.44 s first to last, 288 ms per key (20 % faster than round 33). The tab
+  row and the bottom row stay put. Each half notices the change from its own synced
+  menu state (`poly_menu_signature()`), and a key's moment is a pure function of its
+  board position, so there is no sync byte. The change is noticed inside the visibility
+  query `update_displays()` asks, so the first render after it already hides the rows.
+  The tutorial's tab steps dwell 2.6 s.
+- **The wipe runs 10 % slower**: `TUT_LANG_WIPE_MS` 1650.
+- **The Intl letter is a vowel** (a, e, i, o, u), with every letter as the fallback.
+- **The boot render's sub-steps always paint.** A boot that followed a watchdog reset
+  in the final render skipped the guard, and that skipped the per-row marks too: the
+  panel froze at "100%" with nothing to say where. The marks and the watchdog are
+  separate flags now (`boot_diag.c`).
+- **The context-menu legend** (not a tutorial change, found in this round): on the
+  bottom row only its lines moved and the pointer stayed, painting over them.
+  `draw_legend_cx_cy()` now draws a legend that MOVEs unshifted, since its parts are
+  already laid out against the whole cell. The legend itself is redrawn with absolute
+  parts: the lines, a 1 px frame one pixel clear of them (`BADGE_LINE`, badge style 3),
+  and the pointer at one third scale (ROT steps 25..48, `KDISP_ROT_THIRD_STEP`), 10x13
+  instead of 15x19. The host's `tools/oled_preview.py` ports both op changes and renders
+  the legend pixel-identical to the keycap preview model.
+
+## Round 35 — the context-menu icon, narrower
+
+- The bars are 80 % of the glyph's width (23 of 29 px), so they are three square
+  badges now (`BADGE_SQUARE`, style 4) rather than U+2630: no op scales a glyph on one
+  axis. The frame keeps a 2 px margin (29x28), and the pointer's top is level with the
+  first bar. The parts ink x43..83 y6..33, centred to half a pixel.
+- ⚠️ The legend makes TEN macro calls, and the host's `expand_function_macros()`
+  stopped after six: the glyph loader dropped the macro and the key drew its own name.
+  The host bound is 64 now (PolyKybdHost `tools/oled_preview.py`).
+
+## Round 36 — the Shift reveal cascades, 30 % faster, sparkles on the layouts
+
+- The Shift chapter's reveal (`TUT_REVEAL`) brings the letters and both shifts in with
+  the menu cascade instead of all at once: `tutorial_cascade_signature()` hands the
+  cascade a board-mode signature (`0x03…`) for the phase, which spans display rows
+  1..4 so the shifts come in too. Keys the tutorial keeps dark are skipped without a
+  latch or a send (`poly_slot_visible()`).
+- The cascade is 30 % faster: 1008 ms first to last, 202 ms per key. `TUT_REVEAL_MS`
+  (1400) still covers it with ~160 ms to spare.
+- ⚠️ A cascade cut short now asks for a full repaint (`request_disp_refresh()`): its
+  undrawn keys were never on the panel, and the diffing renderer had no reason to
+  draw them, so a slave that saw the next phase a sync early would keep them dark.
+- While a language layout is shown (`TUT_LANG_SHOW`), keys twinkle
+  (`anim/lang_sparkle.c`): up to three at a time per half, a new one every 150 ms,
+  each a dot, a cross, a four-point star and back over 480 ms, with a black halo so
+  it reads over ink. Each half picks its own keys; nothing is synced.
+- Each preview item's name (Latin on one half, native on the other) and the words of
+  the two "more" screens cascade in the same way, over display rows 1..2 where they
+  sit (signature `0x04 | phase | item`, so every screen starts afresh). They are
+  chrome keys, so `update_displays()`' chrome branch now asks `menu_cascade_hidden()`
+  too; the focus ring's draw already did.
+
+## Round 37 — physical rows for the cascade, numbers on the Num layer
+
+- ⚠️ **The cascade counted DISPLAY rows, and the thumb cluster is not laid out like
+  the rest.** "Lang" at matrix (4,7) and "PgDn" at (9,0) sit on the keyboard's fourth
+  row (keyboard.json `y`=3) but on the fifth display row, so both were treated as the
+  bottom row and drawn at once while their row faded in (hardware). The cascade now
+  reads each panel's physical row from `anim/menu_cascade_rows.h`, generated from
+  `split72/keyboard.json` by `tools/gen_cascade_rows.py` (`--check` says whether it is
+  stale). The generator takes the right-half column fold from `check_disp_index.py`'s
+  reading of `key_display_index()`, so the two cannot disagree about a key's panel.
+  Both Shifts sit on physical row 3, so the reveal now spans rows 1..3.
+- With the host's Num Lock off, the keypad keys draw their navigation legends, so
+  "hold Num" showed a layer without a number on it. While the lesson runs and `_NL` is
+  the top layer, the local display snapshot holds Num Lock on, next to the Caps hold.
+  The host's lock is untouched, and the lesson swallows the keypad presses.
+
+## Round 38 — the cascade zooms each key in
+
+- Each key now zooms in over its existing 202 ms fade: a 2x2 dot at the keycap centre
+  (0..67 ms), then the real legend at half size (..135 ms), then full size. The spread
+  (1008 ms) and the fade are unchanged. The half frame is the legend drawn as usual and
+  shrunk 2:1 about the centre by `kdisp_zoom_half_window()` (each output pixel ORs a
+  2x2 block, so 1 px strokes survive).
+- Cost: three sends per key instead of one, about 200 ms more SPI across the whole
+  cascade, spread over its 30 ms ticks. The dot's send covers only its few columns
+  (the dirty-window scan). The shrink is ~3,000 pixel reads in RAM.
+- A full render landing mid-zoom would paint the full legend over a preview frame, so
+  `menu_cascade_hidden()` keeps a key that is mid-zoom dark and the tick repaints its
+  current frame. `s_in_draw` lets the tick's own legend draw through that gate.
+
+## Round 39 — no dot on a blank key, 25 % faster, the key LEDs, a smaller progress
+
+- **The cascade skips the dot on a key with nothing on it** ("we should not show the 2x2
+  dot if there is nothing displayed"). The tick now draws the legend first and asks
+  `kdisp_window_is_blank()`; a blank key is finished as it stands, with no frames.
+- **25 % faster again:** 756 ms first to last, 152 ms per key (dot to 50 ms, half size to
+  101 ms). The two zoom frames make a key recognisable sooner, so the spread can shrink.
+- **The key LEDs** (`anim/tutorial_rgb.c`), painted from `rgb_matrix_indicators_kb()`:
+  - Eden opens on the stock left-to-right rainbow, which fades out while POLYKYBD is
+    first written (tt 130..165 of the intro, the letters' dither-in).
+  - Any focus ring (a key being pointed at, the board reveal, a language wipe) lights
+    the keys under its band faintly (raw value 40 at most), in a colour of its own, and
+    each key fades over 450 ms once the band has passed. The colour is a hash of the
+    ring's centre, the phase and the preview item, so both halves pick the same one
+    without a shared counter.
+  - A language's spelled name glows very lightly (raw ~16) in that language's colour.
+  - While the show or the lesson runs, the module OWNS the matrix: every other LED is
+    dark, and RGB is switched on without saving if the user had it off. The user's own
+    mode resumes afterwards.
+- **The progress key is smaller:** "3/10" is drawn in the 19 px UI face (`HINT_MID`, the
+  size of Esc's "Hold to skip..."), not the keycap face.
+
+## Round 40 — the stock rainbow, a pulse instead of ring colours, mixed hues
+
+- **The opening rainbow is the stock effect now**, not a copy painted from the indicator
+  hook ("faster and smoother, like the default when the keyboard gets a fresh
+  firmware"). The master switches the matrix to `CYCLE_LEFT_RIGHT` at the stock speed and
+  brightness (`RGB_MATRIX_DEFAULT_SPD` / `_VAL`) without saving, fades it out through the
+  brightness while POLYKYBD is written, and restores the user's mode, colour and speed.
+  The split transport carries the mode to the slave; the slave only stands aside.
+- **The small ring that points at a key carries no colour any more.** That key glows
+  instead, pulsing in step with its keycap (`tut_pulse_level()`, the same curve and
+  clock), in one colour for as long as it is asked for.
+- **The big board-wide sweeps keep it** (the board reveal, each language wipe): the keys
+  under the band light in the sweep's colour and fade once it has passed.
+  `poly_focus_sweep_band()` answers only for the sweep profile, so the pointing ring
+  cannot light anything.
+- **A spelled language name** glows very lightly in that language's colour, fades in key
+  by key with the name's cascade (`menu_cascade_key_level()`), and breathes between 60 %
+  and 100 % of its level.
+- **No pure red, green or blue:** every colour comes from a table of in-between hues,
+  at saturation 230. A glow that is no longer wanted fades out in the colour it had.
+
+## Round 41 — the picker key drawn on the panel, colours that survive dimming
+
+- **"tap Ctrl" named a key nobody can see.** On the Intl layer the Ctrl keycap reads
+  `Á»Æ` (`INTL_PICKER_LEGEND`), so the right panel now says "tap" followed by that
+  legend inside a rounded square, a 62x62 double-line frame (r=8) the shape of a key
+  seen from above. `tutorial_tour_key()` returns the legend from the same macro the
+  keycap draws, and `oled_tutorial_screen()` draws it with the keycaps' own font list
+  (`g_all_fonts`), so the panel and the key cannot disagree. The glyphs are resident
+  (`NotoSans_Regular_SupAndExtA_14pt16b`), so it draws with no font pack.
+- ⚠️ **A dim mix collapses to its stronger channel.** Orange at value 5 is r=5 g=2, and
+  a channel under ~3 does not light, so a fading orange read as red. Each hue now has a
+  floor, the lowest value at which its weaker channel reaches `TRGB_MIN_CH` (4): a pulse
+  swings between that floor and its peak, and a fade goes dark at the floor rather than
+  passing through the primary. Saturation is 255 now: the white tint of s=230 was ~10 %
+  of the value, the first part to vanish, so the colour drifted as it faded.
+- **Language-name keys breathe one by one**: each key's pulse clock is offset by
+  `TRGB_NAME_STAGGER_MS` (571 ms) per slot, over the full pulse depth (about 7..16 at a
+  peak of 16) so the stagger can be seen.
+
+## Round 42 — a brighter, faster opening rainbow; the context-menu key redrawn
+
+- **The opening rainbow did not flow**: at the stock `RGB_MATRIX_DEFAULT_VAL` (20) each
+  channel has ~20 levels, so neighbouring keys jumped between colours. It now runs at
+  the board's ceiling (`RGB_MATRIX_MAXIMUM_BRIGHTNESS`, 100) and speed 48 instead of
+  25: the effect's clock is speed/4+1, so 13 vs 7, about 5 s a cycle instead of 9.
+- **The context-menu key (`KC_APP`) is option E** of the five offered: three list bars
+  and a mouse pointer, the pointer cut out of the lower two bars by a 1 px dark halo.
+  No display-list op can cut a halo, so it is ONE baked 31x24 glyph, and since
+  IconsFont was full it opened a new resident range, `IconsPuaFont` at U+100000
+  (`base/fonts/gfx_icons.h`, `FONT_PACK.md`). All eight bundles stay byte-identical.
+  Not a tutorial change, found in this round.

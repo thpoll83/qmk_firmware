@@ -13,7 +13,7 @@
 #include "side.h"                           // is_left_side()
 #include "bridge_helper.h"                  // is_usb_host_side() — for the startup trace
 #include QMK_KEYBOARD_H                     // get_key_disp_bitmask, NUM_SHIFT_REGISTERS
-#include "base/fonts/FreeSansBold24pt7b.h"  // splash glyph font
+#include "poly_util.h"                      // poly_heavy_font(): the splash face, one copy
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
 #include "../poly_keymap.h"
 
@@ -25,8 +25,31 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 #define SA_INTRO_MS 5000    // sparks stream + converge, letters form, sparks wink out
 #define SA_HOLD_MS  5000    // hold the PolyKybd logo (letters up)
 #define SA_FADE_MS  3200    // final fade: the letters dissolve to black (slow, gradual)
+// Stars that twinkle from the moment POLYKYBD is solid (SA_STAR_START_MS) to the end of
+// the fade. Each keycap has SA_STAR_SLOTS chances, a hash decides which are
+// used (so the stars land "here and there"), when each lights within that window, where,
+// and which of SA_STAR_SHAPES it is. Each star swells over SA_STAR_LIFE_MS through five
+// equal stages — a pixel, its small form, its full form, the small form, a pixel — and
+// is gone. Drawn LAST, so neither the scanline wipe nor the dither eats one.
+// History (hardware): 650 ms "came and disappeared too quickly"; 1.6 s was "still too
+// fast", with one shape (a 5-px plus) and ~39 % of five slots lit, "reduce the amount a
+// bit"; 2.8 s and ~25 % of four slots was "still a little less and slower". Now 3.6 s,
+// ~25 % of THREE slots, spread over a window that the welcome tail lengthens by 2.6 s,
+// so about a third fewer are lit at any moment.
+#define SA_STAR_SLOTS    3
+#define SA_STAR_USE      64    // of 255: ~25 % of slots light at all
+#define SA_STAR_LIFE_MS  3600
+#define SA_STAR_SHAPES   5
 #define SA_BLACK_MS 1000    // hold on black at the end before the normal display returns
 #define SA_TOTAL_MS (SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS + SA_BLACK_MS)
+// The WELCOME TAIL: when the tutorial follows (startup_anim_set_tail()), the black stage
+// runs this much longer, the stars keep falling on the dark board, and the status panels
+// say the tutorial's welcome ("Welcome | to PolyKybd"). The tutorial then opens straight
+// on the first letter (tut_begin_at_letters()), so the stars last "until we really
+// reached the letter selection" (hardware). It REPLACES the tutorial's own dark
+// TUT_BLANK + TUT_TEXT opening rather than adding to it: the welcome shows for the black
+// stage plus this, 3.6 s, against the 2.6 s TUT_TEXT gave it.
+#define SA_TAIL_MS  2600
 // The background sparkle haze dissolves EARLY and SLOWLY: it begins the moment the hold
 // starts (letters just formed) and clears over SA_BG_FADE_MS, so the dots fade away while
 // the clean letters stay up — rather than lingering behind them until the final fade.
@@ -46,6 +69,15 @@ extern bool eden_idle_erase_legend(uint8_t disp_idx);
 // static_assert rather than a comment asking the next editor to remember.
 #define SA_LINE_CLEAR_DELAY_MS  1000
 #define SA_LINE_CLEAR_AT_MS     (SA_BG_FADE_START_MS + SA_BG_FADE_MS + SA_LINE_CLEAR_DELAY_MS)
+// The star window: from the moment the POLYKYBD letters are SOLID (the dither-in ends at
+// tt 165 of 256 of the intro, see `letter_in` in sa_render_frame) to the end of the fade.
+// It opened at the scanline wipe before; "the sparks can start already when we write
+// POLYKYBD solid" (hardware).
+// The window runs to the END of the show (the black stage, and the welcome tail when there
+// is one): each star is placed so it finishes inside it.
+#define SA_STAR_START_MS        ((SA_INTRO_MS * 165u) / 256u)
+#define SA_STAR_WINDOW_MS       (SA_TOTAL_MS - SA_STAR_START_MS)
+_Static_assert(SA_STAR_WINDOW_MS > SA_STAR_LIFE_MS, "a star must fit in its window");
 #define SA_LINE_CLEAR_SPREAD_MS 1200
 _Static_assert(SA_LINE_CLEAR_AT_MS + SA_LINE_CLEAR_SPREAD_MS < SA_INTRO_MS + SA_HOLD_MS,
                "the staggered scanline must finish before the letters start dissolving");
@@ -76,6 +108,12 @@ _Static_assert(sizeof(SA_GEOM_RIGHT) / sizeof(SA_GEOM_RIGHT[0]) == SA_NUM_KEYS,
 
 static bool     s_active;
 static bool     s_loop;       // true: idle screensaver — restart at the end instead of ending
+static bool     s_tail;       // the welcome tail is armed: the tutorial follows this show
+static bool     s_tail_said;  // this show ended having said the welcome (consumed once)
+
+// The one-shot's length: the welcome tail adds SA_TAIL_MS.
+static uint32_t sa_total_ms(void) { return SA_TOTAL_MS + (s_tail ? SA_TAIL_MS : 0u); }
+static uint32_t sa_star_window_ms(void) { return sa_total_ms() - SA_STAR_START_MS; }
 static uint32_t s_start;
 static uint32_t s_next_log;   // next elapsed-ms threshold at which to emit a progress log
 static uint32_t s_last_frame; // last idle-loop frame time (frame-rate throttle, loop only)
@@ -185,64 +223,76 @@ static inline uint8_t sa_bg(int16_t gx, int16_t gy, uint8_t tp, uint8_t tprg,
 
 // Each spark is ONE L→R comet: a bright head + a continuous horizontal trail drawn behind
 // it. (The old discrete phase-offset "trail" spaced its dots ~49 board-px apart, so it read
-// as scattered dots, not a streak.) The heads are the same for every keycap (board-space),
-// so build them ONCE per frame here, then each key just filters+rotates+draws its comet.
+// as scattered dots, not a streak.) The heads are the same for every keycap (board-space).
 // `thick` = trail is 2 px tall (brighter/bolder) vs 1 px; `tlen` = this comet's trail length.
+//
+// ⚠️ COMPUTED PER KEY, NOT CACHED. A spark is a pure function of its index and the frame's
+// (el, cv, spark_fade), so the 340-entry per-frame table this used to build (2040 B of
+// SRAM, on a chip with ~1.7 KB free) cached nothing a few multiplies cannot redo. Each
+// keycap now recomputes the heads it needs: ~340 cheap hash evaluations per key (fewer
+// in the idle loop, which drops ~63 % after two hashes), a few percent of a frame. The
+// frame's parameters are LATCHED once per frame (sa_build_sparks), so every key still
+// draws the same instant — the property the table existed for.
+// Borrowing the 32 KB overlay buffer instead was considered and rejected: the idle Eden
+// screensaver draws these same sparks while an app's overlays are loaded, so it would
+// wipe them on every screensaver and force a full overlay resend on wake.
 typedef struct { int16_t sx, sy; uint8_t thick, tlen; } sa_spark_pt_t;
-static sa_spark_pt_t s_spark_pts[SA_NSPARK];
-static uint16_t      s_spark_n;
-// The spark loop counter and s_spark_n are uint16_t. A uint8_t counter silently
-// wraps 255->0 when SA_NSPARK > 255, so `s < SA_NSPARK` never ends -> infinite loop
-// (QMK builds don't enable -Wtype-limits, so the compiler won't warn). This makes
-// the build FAIL instead if SA_NSPARK is ever raised past what the counter holds.
-_Static_assert(SA_NSPARK <= UINT16_MAX, "SA_NSPARK exceeds the uint16_t spark loop counter range");
+static uint32_t s_spk_el;      // the frame's time, converge and fade, latched per frame
+static uint8_t  s_spk_cv;
+static uint8_t  s_spk_fade;
 static uint8_t       s_brow[SCREEN_WIDTH];   // one 2x2-block row of background density (sa_bg)
 
 static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
-    const int16_t margin = SA_BOARD_W / 8;
-    s_spark_n = 0;
-    for (uint16_t s = 0; s < SA_NSPARK; ++s) {   // uint16_t: SA_NSPARK may exceed 255 (see _Static_assert)
-        // Staggered death: each spark winks out once the rising `spark_fade` passes its
-        // own hash threshold — so the sparks disappear a few at a time, not all at once.
-        if (sa_hash8(s * 3u + 7u) < spark_fade) continue;
-        // Idle screensaver thins the field out for a calmer look + lighter render
-        // (fewer comet trails to plot → snappier). ~160/256 skipped ≈ 37% kept.
-        if (s_loop && sa_hash8(s * 19u + 11u) < 190u) continue;
-        uint8_t  p0   = sa_hash8(s * 2u + 1u);
-        // Speed 1..8 in the boot intro; idle uses a WIDER 1..16 spread so the comets
-        // clearly move at different speeds (some crawl, some drift), and the extra
-        // el-shift below keeps even the fast ones slower than the boot streak.
-        uint8_t  spd  = s_loop ? (1u + (sa_hash8(s * 7u + 3u) & 15u))
-                               : (1u + (sa_hash8(s * 7u + 3u) & 7u));
-        int16_t  lane = (int16_t)(((uint32_t)sa_hash8(s * 5u + 9u) * SA_BOARD_H) >> 8);
-        uint8_t  bw   = 1u + (sa_hash8(s * 11u + 2u) & 3u);
-        uint8_t  ph   = sa_hash8(s * 13u + 5u);
-        int16_t  bob  = 6 + (int16_t)(sa_hash8(s * 17u) & 31u);
-        uint8_t  hv   = sa_hash8(s * 23u + 4u);                   // per-spark look variety
+    s_spk_el   = el;
+    s_spk_cv   = cv;
+    s_spk_fade = spark_fade;
+}
+
+// Spark `s` in this frame, or false when it is not lit (winked out, or thinned in idle).
+static bool sa_spark_at(uint16_t s, sa_spark_pt_t *pt) {
+    const uint32_t el         = s_spk_el;
+    const uint8_t  cv         = s_spk_cv;
+    const int16_t  margin     = SA_BOARD_W / 8;
+    // Staggered death: each spark winks out once the rising `spark_fade` passes its
+    // own hash threshold — so the sparks disappear a few at a time, not all at once.
+    if (sa_hash8(s * 3u + 7u) < s_spk_fade) return false;
+    // Idle screensaver thins the field out for a calmer look + lighter render
+    // (fewer comet trails to plot → snappier). ~160/256 skipped ≈ 37% kept.
+    if (s_loop && sa_hash8(s * 19u + 11u) < 190u) return false;
+    uint8_t  p0   = sa_hash8(s * 2u + 1u);
+    // Speed 1..8 in the boot intro; idle uses a WIDER 1..16 spread so the comets
+    // clearly move at different speeds (some crawl, some drift), and the extra
+    // el-shift below keeps even the fast ones slower than the boot streak.
+    uint8_t  spd  = s_loop ? (1u + (sa_hash8(s * 7u + 3u) & 15u))
+                           : (1u + (sa_hash8(s * 7u + 3u) & 7u));
+    int16_t  lane = (int16_t)(((uint32_t)sa_hash8(s * 5u + 9u) * SA_BOARD_H) >> 8);
+    uint8_t  bw   = 1u + (sa_hash8(s * 11u + 2u) & 3u);
+    uint8_t  ph   = sa_hash8(s * 13u + 5u);
+    int16_t  bob  = 6 + (int16_t)(sa_hash8(s * 17u) & 31u);
+    uint8_t  hv   = sa_hash8(s * 23u + 4u);                   // per-spark look variety
+    // Idle screensaver drifts much slower than the boot intro: shift `el` two more
+    // bits so the L→R comets and their vertical bob crawl (a calm sleeping-keyboard
+    // drift). Boot intro keeps the faster streak.
+    uint8_t tsh = s_loop ? 7 : 4;
+    uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> tsh) * spd));  // head phase (streams L→R)
+    int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
+    int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> (uint8_t)(tsh + 1)) * bw + ph)) - 128) * bob) >> 7));
+    if (cv) {   // converge toward the letter target
         const sa_target_t *tgt = &SA_TARGETS[s % SA_NUM_TARGETS];
-        // Idle screensaver drifts much slower than the boot intro: shift `el` two more
-        // bits so the L→R comets and their vertical bob crawl (a calm sleeping-keyboard
-        // drift). Boot intro keeps the faster streak.
-        uint8_t tsh = s_loop ? 7 : 4;
-        uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> tsh) * spd));  // head phase (streams L→R)
-        int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
-        int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> (uint8_t)(tsh + 1)) * bw + ph)) - 128) * bob) >> 7));
-        if (cv) {   // converge toward the letter target
-            sx = (int16_t)(sx + (((int32_t)(tgt->cx - sx) * cv) >> 8));
-            sy = (int16_t)(sy + (((int32_t)(tgt->cy - sy) * cv) >> 8));
-        }
-        s_spark_pts[s_spark_n].sx    = sx;
-        s_spark_pts[s_spark_n].sy    = sy;
-        s_spark_pts[s_spark_n].thick = (hv & 1u) ? 2u : 1u;       // ~half are 2 px (brighter)
-        // Trail length: the boot intro uses short 8..23 px comets; the idle screensaver
-        // (s_loop) uses MUCH longer 36..51 px trails so each comet drags a long, sparse,
-        // dither-faded ghost tail across the keys — the "ghosting" persistence look (a
-        // true keep-lit-pixels framebuffer won't fit in RAM). The fade formula below
-        // (255 - k*230/tlen) stretches with tlen, so the longer tail fades gradually.
-        uint8_t base_tlen = (uint8_t)(8u + (hv >> 4));
-        s_spark_pts[s_spark_n].tlen  = s_loop ? (uint8_t)(base_tlen + 28u) : base_tlen;
-        s_spark_n++;
+        sx = (int16_t)(sx + (((int32_t)(tgt->cx - sx) * cv) >> 8));
+        sy = (int16_t)(sy + (((int32_t)(tgt->cy - sy) * cv) >> 8));
     }
+    pt->sx    = sx;
+    pt->sy    = sy;
+    pt->thick = (hv & 1u) ? 2u : 1u;       // ~half are 2 px (brighter)
+    // Trail length: the boot intro uses short 8..23 px comets; the idle screensaver
+    // (s_loop) uses MUCH longer 36..51 px trails so each comet drags a long, sparse,
+    // dither-faded ghost tail across the keys — the "ghosting" persistence look (a
+    // true keep-lit-pixels framebuffer won't fit in RAM). The fade formula below
+    // (255 - k*230/tlen) stretches with tlen, so the longer tail fades gradually.
+    uint8_t base_tlen = (uint8_t)(8u + (hv >> 4));
+    pt->tlen  = s_loop ? (uint8_t)(base_tlen + 28u) : base_tlen;
+    return true;
 }
 
 // Draw each comet that touches this keycap: a bright head + a horizontal trail extending
@@ -251,16 +301,20 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
 // on their own panel, which still reads as a comet). sa_set clips, so an over-inclusive cull
 // is fine.
 static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16_t cosv, int16_t sinv) {
-    // Idle screensaver uses long ghost trails (see sa_build_sparks); widen the cull
+    // Idle screensaver uses long ghost trails (see sa_spark_at); widen the cull
     // margin so a comet whose head has streamed off the right of this key still draws
     // its long tail here instead of being skipped.
     const int16_t cull = s_loop ? (int16_t)(40 + 56) : (int16_t)(40 + SA_TRAIL_MAX);
-    for (uint16_t i = 0; i < s_spark_n; ++i) {
-        int16_t ddx = (int16_t)(s_spark_pts[i].sx - g->cx);
-        int16_t ddy = (int16_t)(s_spark_pts[i].sy - g->cy);
+    // uint16_t: SA_NSPARK may exceed 255, and a uint8_t counter would wrap forever.
+    _Static_assert(SA_NSPARK <= UINT16_MAX, "SA_NSPARK exceeds the uint16_t spark loop counter range");
+    for (uint16_t i = 0; i < SA_NSPARK; ++i) {
+        sa_spark_pt_t sp;
+        if (!sa_spark_at(i, &sp)) continue;
+        int16_t ddx = (int16_t)(sp.sx - g->cx);
+        int16_t ddy = (int16_t)(sp.sy - g->cy);
         if (ddx <= -cull || ddx >= cull || ddy <= -40 || ddy >= 40) continue;
-        const bool    thick = (s_spark_pts[i].thick == 2u);
-        const uint8_t tlen  = s_spark_pts[i].tlen;
+        const bool    thick = (sp.thick == 2u);
+        const uint8_t tlen  = sp.tlen;
         int16_t hx, hy;
         if (rot) {
             hx = (int16_t)(36 + ((ddx * cosv + ddy * sinv) >> 7));
@@ -282,6 +336,67 @@ static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16
                 if (thick) sa_set(buf, (int16_t)(hx - k), hy + 1);   // 2 px tall trail
             }
         }
+    }
+}
+
+// One star's pixels at `stage` 0..4 of its life (0 and 4 the bare pixel, 2 the peak).
+// Shapes, small form -> full form:
+//   0 plus        +      -> a plus with 2-px arms
+//   1 cross       x      -> an eight-point star (x and + together)
+//   2 diamond     +      -> the four points at distance 2, centre lit
+//   3 turning     +      -> x (the small form rotates through the peak)
+//   4 spike       +      -> a thin plus with 3-px arms, the centre ring dark
+static void sa_star_shape(uint8_t *buf, int16_t x, int16_t y, uint8_t shape, uint8_t stage) {
+    const uint8_t form = (stage == 2) ? 2 : (stage == 1 || stage == 3) ? 1 : 0;   // dot/small/full
+#define SA_P(dx, dy) sa_set(buf, (int16_t)(x + (dx)), (int16_t)(y + (dy)))
+    if (form == 0) { SA_P(0, 0); return; }
+    const bool x_small = (shape == 1);
+    if (form == 1) {
+        SA_P(0, 0);
+        if (x_small) { SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1); }
+        else         { SA_P(-1, 0);  SA_P(1, 0);  SA_P(0, -1); SA_P(0, 1); }
+        return;
+    }
+    switch (shape) {
+        case 0:
+            SA_P(0, 0);
+            for (int8_t d = 1; d <= 2; ++d) { SA_P(-d, 0); SA_P(d, 0); SA_P(0, -d); SA_P(0, d); }
+            break;
+        case 1:
+            SA_P(0, 0);
+            SA_P(-1, 0); SA_P(1, 0); SA_P(0, -1); SA_P(0, 1);
+            SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
+            break;
+        case 2:
+            SA_P(0, 0);
+            SA_P(-2, 0); SA_P(2, 0); SA_P(0, -2); SA_P(0, 2);
+            SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
+            break;
+        case 3:
+            SA_P(0, 0); SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
+            break;
+        default:
+            SA_P(0, 0);
+            for (int8_t d = 2; d <= 3; ++d) { SA_P(-d, 0); SA_P(d, 0); SA_P(0, -d); SA_P(0, d); }
+            break;
+    }
+#undef SA_P
+}
+
+// The stars for one keycap, `fe` ms into the star window (letters solid .. end of fade).
+// Pure function of the key index and the time, so both halves (and every frame) agree
+// without any state.
+static void sa_plot_stars(uint8_t *buf, uint8_t idx, uint32_t fe) {
+    for (uint8_t k = 0; k < SA_STAR_SLOTS; ++k) {
+        const uint32_t seed = (uint32_t)idx * SA_STAR_SLOTS + k + 1u;
+        if (sa_hash8(seed * 5u + 3u) >= SA_STAR_USE) continue;
+        const uint32_t t0 = ((uint32_t)sa_hash8(seed * 7u + 1u) * (sa_star_window_ms() - SA_STAR_LIFE_MS)) / 255u;
+        if (fe < t0 || fe >= t0 + SA_STAR_LIFE_MS) continue;
+        const uint32_t age   = fe - t0;
+        const int16_t  sx    = (int16_t)(4 + sa_hash8(seed * 11u + 5u) % (SCREEN_WIDTH - 8));
+        const int16_t  sy    = (int16_t)(4 + sa_hash8(seed * 13u + 9u) % (SCREEN_HEIGHT - 8));
+        const uint8_t  shape = (uint8_t)(sa_hash8(seed * 17u + 2u) % SA_STAR_SHAPES);
+        sa_star_shape(buf, sx, sy, shape, (uint8_t)((age * 5u) / SA_STAR_LIFE_MS));
     }
 }
 
@@ -340,7 +455,12 @@ static void sa_render_frame(uint32_t el) {
         kdisp_set_buffer(0x00);
         uint8_t *buf = get_scratch_buffer();
 
-        if (black) { kdisp_send_window(); continue; }   // just push the cleared (black) buffer
+        // Black stage (and the welcome tail): nothing but the stars, still falling.
+        if (black) {
+            sa_plot_stars(buf, idx, el - SA_STAR_START_MS);
+            kdisp_send_window();
+            continue;
+        }
 
         // Background = plasma haze + dissolved ring, computed on a 2x2 grid (sa_bg is
         // the expensive part: 3 sines + the ring); the per-pixel noise compare keeps the
@@ -378,7 +498,7 @@ static void sa_render_frame(uint32_t el) {
         if (sparks) sa_plot_sparks(buf, g, rot, cosv, sinv);
 
         if (letters && L[idx]) {
-            const GFXfont *const lf[1] = { &FreeSansBold24pt7b };
+            const GFXfont *const lf[1] = { poly_heavy_font() };
             uint32_t txt[2] = { L[idx], 0 };
             kdisp_write_gfx_text(lf, 1, 49, 38, txt);
         }
@@ -410,6 +530,8 @@ static void sa_render_frame(uint32_t el) {
                     if (sa_noise((int16_t)(lx + idx * 13), (int16_t)(ly + idx * 7)) < letter_fade)
                         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
         }
+
+        if (el >= SA_STAR_START_MS) sa_plot_stars(buf, idx, el - SA_STAR_START_MS);
 
         kdisp_send_window();   // 360 B (visible cols/pages) not the full 1024 B — faster SPI
     }
@@ -537,14 +659,30 @@ sa_geom_t startup_anim_key_geom(bool right, uint8_t idx) {
 uint16_t startup_anim_board_w(void) { return SA_BOARD_W; }
 uint16_t startup_anim_board_h(void) { return SA_BOARD_H; }
 
-void startup_anim_start(void) { sa_begin(false, 255); }
+void startup_anim_start(void) { sa_begin(false, POLY_INTRO_CONTRAST); }
 
 void startup_anim_start_loop(uint8_t contrast) {
     if (s_active && s_loop) return;              // already looping — don't restart mid-cycle
     sa_begin(true, contrast ? contrast : 1);
 }
 
+void startup_anim_set_tail(bool on) { s_tail = on; }
+
+bool startup_anim_welcome(void) {
+    if (!s_active || s_loop || !s_tail) return false;
+    return timer_elapsed32(s_start) >= (uint32_t)(SA_INTRO_MS + SA_HOLD_MS + SA_FADE_MS);
+}
+
+bool startup_anim_take_welcome_said(void) {
+    const bool said = s_tail_said;
+    s_tail_said     = false;
+    return said;
+}
+
 void startup_anim_stop(void) {
+    // An interrupted show said no welcome, and the tail must not outlive it.
+    s_tail      = false;
+    s_tail_said = false;
     s_active = false;
     s_loop   = false;
     // Drop any partially-rendered frame — the keycaps are handed straight back to
@@ -557,6 +695,19 @@ void startup_anim_stop(void) {
 bool startup_anim_is_loop(void) { return s_active && s_loop; }
 
 bool startup_anim_active(void) { return s_active; }
+
+// The one-shot show opens on the stock rainbow, and it fades out while POLYKYBD is
+// first written: the letters dither in over tt 130..165 of the intro (see `letter_in`
+// in sa_render_frame), and the rainbow goes from full to nothing over the same span.
+uint8_t startup_anim_rainbow_level(void) {
+    if (!s_active || s_loop) return 0u;
+    const uint32_t el   = timer_elapsed32(s_start);
+    const uint32_t from = ((uint32_t)SA_INTRO_MS * 130u) / 256u;
+    const uint32_t to   = ((uint32_t)SA_INTRO_MS * 165u) / 256u;
+    if (el <= from) return 255u;
+    if (el >= to) return 0u;
+    return (uint8_t)(255u - ((el - from) * 255u) / (to - from));
+}
 
 void startup_anim_tick(void) {
     if (!s_active) return;
@@ -604,9 +755,11 @@ void startup_anim_tick(void) {
         }
         return;
     }
-    if (el >= SA_TOTAL_MS) {
-        s_active = false;
-        uprintf("Eden done (%lums)\n", (unsigned long)el);
+    if (el >= sa_total_ms()) {
+        s_active    = false;
+        s_tail_said = s_tail;
+        s_tail      = false;
+        uprintf("Eden done (%lums%s)\n", (unsigned long)el, s_tail_said ? ", welcome said" : "");
         return;
     }
     // Emit a progress line ~once/second BEFORE rendering the frame, so if the render
@@ -622,6 +775,9 @@ void startup_anim_tick(void) {
 void startup_anim_start(void) {}
 void startup_anim_start_loop(uint8_t contrast) { (void)contrast; }
 void startup_anim_stop(void) {}
+void startup_anim_set_tail(bool on) { (void)on; }
+bool startup_anim_welcome(void) { return false; }
+bool startup_anim_take_welcome_said(void) { return false; }
 bool startup_anim_is_loop(void) { return false; }
 void startup_anim_tick(void) {}
 bool startup_anim_active(void) { return false; }

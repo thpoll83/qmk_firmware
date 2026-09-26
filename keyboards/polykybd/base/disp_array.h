@@ -197,6 +197,12 @@ uint8_t* get_scratch_buffer(void);
 int16_t get_scratch_buffer_size(void);
 
 void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height);
+// The same rectangle, cleared to black (buffer coordinates, like kdisp_fill_rect).
+void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height);
+// Shrink the keycap window's contents to half size about its centre (2x2 OR).
+void kdisp_zoom_half_window(void);
+// True when the keycap window of the scratch buffer has no pixel set.
+bool kdisp_window_is_blank(void);
 
 void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r);
 // The lock-badge shape: solid when `border` is 0, otherwise a ring that thick.

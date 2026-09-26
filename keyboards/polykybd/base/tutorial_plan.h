@@ -14,7 +14,7 @@
 
 // ---- timeline (ms) --------------------------------------------------------
 #define TUT_BLANK_MS      600u   // after Eden: everything dark and still
-#define TUT_TEXT_MS      2000u   // status line up, keycaps still dark. ⚠️ This is the
+#define TUT_TEXT_MS      2600u   // status line up, keycaps still dark. ⚠️ This is the
                                  // FIRST thing a new keyboard says and it spans both
                                  // panels, so it is read, not glanced at — 900 ms was
                                  // gone before the second half had been taken in.
@@ -58,11 +58,11 @@
 #define TUT_RIPPLE_MAX_R  205u   // gone by here: a 131-unit (~1.8 key) dissolve
 #define TUT_RIPPLE_MS   2200u    // the ring's whole life, ~792 ms per key width
 
-#define TUT_GAP_MS        700u   // stillness before the next letter fades in
+#define TUT_GAP_MS       1000u   // stillness before the next letter fades in (700 read as rushed)
 
 // ---- chapter 2 ------------------------------------------------------------
 #define TUT_REVEAL_MS    1400u   // the lit set emerging out of the dark
-#define TUT_SHIFT_HELD_MS 2000u  // ⚠️ a DWELL, not a requirement to keep holding: the
+#define TUT_SHIFT_HELD_MS 2600u  // ⚠️ a DWELL, not a requirement to keep holding: the
                                  // chapter ends on the clock, so a user who taps Shift
                                  // and lets go still sees the board change and change
                                  // back rather than being told they did it wrong.
@@ -97,6 +97,80 @@
 // pointing wait re-fires it on this period for as long as it waits.
 #define TUT_POINT_PERIOD_MS 3000u
 
+// ---- chapter 3: the board reveal, then languages and scripts -------------------
+// The reveal is the moment the lesson stops hiding keys. A wavefront leaves the Shift
+// the user just held and every key it passes lights with its own legend, until all 72
+// are on. It rides the chapter-2 SWEEP geometry (TUT_SWEEP_MAX_R clears the board from
+// any key) but is slow on purpose: this is the "wow", not a modifier that has to feel
+// immediate.
+#define TUT_BOARD_REVEAL_MS 2400u
+#define TUT_BOARD_SHOW_MS   2800u   // "72 screens" — the whole board, still
+#define TUT_LANG_INTRO_MS   2600u
+// One language or script on screen. ⚠️ Long enough to READ a whole board of unfamiliar
+// glyphs; the repaint itself takes ~110 ms per half, so most of this is looking. 2200 ms
+// "passes too fast — humans need a moment to read the language and then see the keys"
+// (hardware); doubled with the name below.
+#define TUT_LANG_ITEM_MS    4400u
+// Before each item the board goes dark and spells the item's NAME on the keys, Latin on
+// one half and the language's own script on the other, so the reader knows what they
+// are about to look at.
+#define TUT_LANG_NAME_MS    3000u   // 2000 left too little time to read the name (hardware)
+// After the last item: the board says how many more there are — two screens, the
+// layouts first and then the scripts, each a number on one half and the word on the
+// other, in the heavy splash face.
+#define TUT_LANG_MORE_MS    2600u
+// Before each name, each board of glyphs and each "more" screen, every key goes dark
+// for this long. ⚠️ A cut, not a fade: going straight from one full board to the next
+// read as one blur of changing keys ("always blank all keys for 200 msec", hardware).
+// The repaint to dark takes ~110 ms per half, so this is about as short as it can be
+// and still be seen as dark.
+#define TUT_DARK_MS          200u
+// The WIPE: after a name, instead of the dark cut, a ring sweeps in from a corner and
+// every key it passes turns into the new layout. The corner takes turns item by item —
+// top-left, top-right, bottom-left, bottom-right, then again (hardware round 33). The
+// same board-scale ring as the reveal (its radius clears corner to corner), on its own,
+// shorter clock.
+#define TUT_LANG_WIPE_MS    1650u
+#define TUT_WIPE_CORNERS       4u
+#define TUT_FINALE_MS       3000u
+
+// ---- the KEY TOUR: the language menu, then the emoji menu -------------------
+// After the languages, the lesson asks for real keys, one at a time: the Lang key, each
+// region tab, the key back to base, then the emoji key, a few category tabs, and base
+// again. Each is a WAIT with no timeout, pointed at by the ring and the pulse; the press
+// ACTS for real (the tab switches, the layer opens), then the board dwells on the result.
+// The keys are resolved from the keymap by the caller and handed in (tut_set_tour), so
+// this file only counts through them.
+// Round 31 extended it past the menus: hold Fn, hold Num, then the Intl chapter (hold
+// it, hold it and tap Ctrl, pick a letter, pick its accent, hold it and press the
+// letter). About 23 steps on the default keymap.
+#define TUT_TOUR_MAX      28u
+#define TUT_TOUR_SEEN_MS 1600u   // looking at what the press did before the next key
+
+// One step of the tour, as the caller resolves it. `dwell_100ms` is how long
+// TUT_TOUR_SEEN holds after the press (0 = TUT_TOUR_SEEN_MS): a held layer wants
+// longer to look at, and a step that only arms the next one (hold Intl, THEN tap Ctrl)
+// wants almost none. `progress` is the step's value on the progress keycap (0 = 8).
+typedef struct {
+    uint8_t slot;
+    uint8_t dwell_100ms;
+    uint8_t progress;
+} tut_tour_step_t;
+
+// The preview list is a board-side table (it knows which fonts are flashed). This file
+// only counts through it, so the cap is the one thing it has to know.
+#define TUT_PREVIEW_MAX 16u
+
+// The progress keycap counts in TUT_PROGRESS_STEPS even steps, NOT in chapters: three
+// chapters read as a counter that barely moves ("we need more steps — divide in 10").
+#define TUT_PROGRESS_STEPS 10u
+
+// ---- the PULSE on the key to press ----------------------------------------
+// The key the lesson is waiting for breathes: its panel's contrast eases between a low
+// floor and full over TUT_PULSE_PERIOD_MS, so it can be found at a glance.
+#define TUT_PULSE_PERIOD_MS 1400u
+#define TUT_PULSE_FLOOR     24u      // of 255: dim, never off (an OFF key reads as broken)
+
 #define TUT_SKIP_HOLD_MS 1000u   // hold Esc this long to skip
 
 #define TUT_LETTERS 3            // step 1 asks for three keys
@@ -126,6 +200,20 @@ typedef enum {
     TUT_LAYER_SWEEP,    // the same repaint wave, a different payload
     TUT_LAYER_HELD,     // the layer's legends, status showing which layer
     TUT_NOTATION,       // status only: what the marks on a layer key mean
+    // ---- chapter 3: the board reveal, languages and scripts ----
+    TUT_BOARD_REVEAL,   // a wave from the last Shift lights every key it passes
+    TUT_BOARD_SHOW,     // the whole board, still: "72 screens"
+    TUT_LANG_INTRO,     // "It speaks your language"
+    TUT_LANG_DARK,      // every key dark for TUT_DARK_MS, then `dark_next`
+    TUT_LANG_NAME,      // board dark, the next item's name spelled across the middle row
+    TUT_LANG_WIPE,      // a ring from a corner turns each key it passes into the item
+    TUT_LANG_SHOW,      // one preview item on screen; re-entered once per item
+    TUT_LANG_MORE,      // "160 | LAYOUTS" on the keys: there are many more
+    TUT_LANG_MORE2,     // "10 | SCRIPTS"
+    // ---- the key tour: the language menu, then the emoji menu ----
+    TUT_TOUR_WAIT,      // the ring and the pulse on tour[tour_i]; no timeout
+    TUT_TOUR_SEEN,      // it was pressed and acted; the board shows the result
+    TUT_FINALE,         // "You're ready!"
     TUT_DONE,           // finished or skipped — the caller tears down
 } tut_phase_t;
 
@@ -191,11 +279,23 @@ static inline bool tut_phase_is_intro(uint8_t p) {
     return p != TUT_DONE;
 }
 
-// The wave phases — chapter 1's ripple only, now that the chapter-2 repaint front is
-// gone (the normal renderer repaints, so there is nothing for a front to drive).
+// The wave phases: chapter 1's ripple and the chapter-3 board reveal. Both carry the
+// master's elapsed time over the link (tutorial_sync_fill), so the slave's wave starts
+// where the master's already is rather than trailing it by the sync latency.
 static inline bool tut_phase_is_wave(uint8_t p) {
-    return p == TUT_RIPPLE;
+    return p == TUT_RIPPLE || p == TUT_BOARD_REVEAL || p == TUT_LANG_WIPE;
 }
+
+// Every phase from the reveal on shows the WHOLE board — only the reveal itself is
+// still deciding key by key.
+// The dark cut, the name and the two "more" screens are the exceptions: they darken the
+// board (around the words they spell, for the last three).
+static inline bool tut_phase_shows_all(uint8_t p) {
+    return p >= TUT_BOARD_SHOW && p < TUT_DONE && p != TUT_LANG_DARK && p != TUT_LANG_NAME &&
+           p != TUT_LANG_WIPE && p != TUT_LANG_MORE && p != TUT_LANG_MORE2;
+}
+
+
 
 // The two shift keys, in the order chapter 2 asks for them.
 #define TUT_SHIFT_STAGES 2
@@ -213,6 +313,17 @@ typedef struct {
     uint32_t point_at;          // ms stamp of the last pointing-ring fire
     uint8_t  ripple_seq;        // bumped per accepted press; the slave starts on receipt
     uint8_t  ripple_slot;       // where the live ripple came from
+    // ---- chapter 3 (set by tut_set_chapter3; defaults to "none") ----
+    uint8_t  n_preview;         // how many preview items this board can render
+    uint8_t  preview;           // which one TUT_LANG_SHOW is on
+    uint8_t  dark_next;         // the phase TUT_LANG_DARK hands over to
+    uint8_t  wipe_origin[TUT_WIPE_CORNERS]; // TUT_LANG_WIPE's ring, by item; NONE = dark cut
+    // ---- the key tour (set by tut_set_tour; defaults to empty) ----
+    uint8_t  tour[TUT_TOUR_MAX];      // the keys to press, in order
+    uint8_t  tour_dwell[TUT_TOUR_MAX];// TUT_TOUR_SEEN per step, 100 ms units (0 = default)
+    uint8_t  tour_prog[TUT_TOUR_MAX]; // the progress keycap's value per step
+    uint8_t  n_tour;
+    uint8_t  tour_i;                  // the step being asked for / just pressed
     bool     hold_on;           // is the chapter's held key down right now
     bool     skipped;           // DONE was reached by the skip gesture, not by finishing
 } tut_state_t;
@@ -222,6 +333,57 @@ typedef struct {
 // chapter 2 points at and accepts, TUT_SLOT_NONE for one this board does not have.
 void tut_init(tut_state_t *st, const uint8_t slots[TUT_LETTERS],
               const uint8_t shift_slots[TUT_SHIFT_STAGES], uint32_t now);
+
+// Start at the first letter, skipping TUT_BLANK and TUT_TEXT. For a lesson whose
+// welcome was already said by the tail of the Eden intro (startup_anim.c), where the
+// stars keep falling on a dark board until the letter selection begins.
+void tut_begin_at_letters(tut_state_t *st, uint32_t now);
+
+// The keys TUT_LANG_WIPE's ring starts from, in turn: item i uses corner i % 4. A corner
+// of TUT_SLOT_NONE keeps the dark cut for that item. nullptr clears all four.
+void tut_set_wipe_origins(tut_state_t *st, const uint8_t corners[TUT_WIPE_CORNERS]);
+
+// Chapter 3's input, resolved from the flashed fonts by the caller: how many
+// languages/scripts can actually be drawn (0 skips straight from the board reveal to the
+// key tour, which is what a board with no font pack gets).
+void tut_set_chapter3(tut_state_t *st, uint8_t n_preview);
+
+// The key tour, resolved from the keymap by the caller: `n` steps in the order they are
+// asked for (capped at TUT_TOUR_MAX). n = 0 skips the tour.
+void tut_set_tour(tut_state_t *st, const tut_tour_step_t *steps, uint8_t n);
+
+// Go back to waiting on `step` (no-op past the end). For a sequence that only works
+// while a key is HELD — the Intl picker closes the moment Intl is let go — the caller
+// rewinds to the step that asks for the hold again rather than leaving the user facing
+// a key that can no longer do what the lesson says.
+void tut_tour_rewind(tut_state_t *st, uint8_t step, uint32_t now);
+
+// The tour step being asked for (TUT_TOUR_WAIT) or just pressed (TUT_TOUR_SEEN), or -1.
+int16_t tut_tour_index(const tut_state_t *st);
+
+// A key was pressed during the tour. True if it was the one being asked for: the state
+// moves to TUT_TOUR_SEEN and the caller lets the press ACT. False: nothing happens, and
+// the caller swallows it.
+bool tut_tour_press(tut_state_t *st, uint8_t slot, uint32_t now);
+
+// Progress 1..TUT_PROGRESS_STEPS for the progress keycap: the opening, the letters, the
+// Shifts, the reveal, the languages, then each tour step's own value (tut_tour_step_t),
+// and the close.
+uint8_t tut_progress(const tut_state_t *st);
+
+// The key that should PULSE right now — the one the lesson is waiting for — or
+// TUT_SLOT_NONE: the lit letter while it waits, and whatever the pointing ring circles.
+uint8_t tut_pulse_slot(const tut_state_t *st);
+
+// The pulse's contrast at time `t_ms` for a panel whose normal contrast is `full`: eased
+// (smoothstep) between TUT_PULSE_FLOOR/255 of `full` and `full`, period TUT_PULSE_PERIOD_MS.
+uint8_t tut_pulse_level(uint32_t t_ms, uint8_t full);
+
+// The preview item to APPLY to the board right now, or -1 outside TUT_LANG_SHOW.
+int16_t tut_preview_index(const tut_state_t *st);
+// The item the chapter is ON — being named (TUT_LANG_NAME), shown (TUT_LANG_SHOW), or
+// about to be either (the dark cut before them) — or -1 elsewhere.
+int16_t tut_preview_pos(const tut_state_t *st);
 
 // Advance the timed phases. Returns true when the phase changed (the caller then
 // repaints / pushes state to the other half). Never leaves TUT_LETTER_WAIT — only a

@@ -2049,3 +2049,25 @@ Hardware feedback:
 - A full render landing mid-zoom would paint the full legend over a preview frame, so
   `menu_cascade_hidden()` keeps a key that is mid-zoom dark and the tick repaints its
   current frame. `s_in_draw` lets the tick's own legend draw through that gate.
+
+## Round 39 — no dot on a blank key, 25 % faster, the key LEDs, a smaller progress
+
+- **The cascade skips the dot on a key with nothing on it** ("we should not show the 2x2
+  dot if there is nothing displayed"). The tick now draws the legend first and asks
+  `kdisp_window_is_blank()`; a blank key is finished as it stands, with no frames.
+- **25 % faster again:** 756 ms first to last, 152 ms per key (dot to 50 ms, half size to
+  101 ms). The two zoom frames make a key recognisable sooner, so the spread can shrink.
+- **The key LEDs** (`anim/tutorial_rgb.c`), painted from `rgb_matrix_indicators_kb()`:
+  - Eden opens on the stock left-to-right rainbow, which fades out while POLYKYBD is
+    first written (tt 130..165 of the intro, the letters' dither-in).
+  - Any focus ring (a key being pointed at, the board reveal, a language wipe) lights
+    the keys under its band faintly (raw value 40 at most), in a colour of its own, and
+    each key fades over 450 ms once the band has passed. The colour is a hash of the
+    ring's centre, the phase and the preview item, so both halves pick the same one
+    without a shared counter.
+  - A language's spelled name glows very lightly (raw ~16) in that language's colour.
+  - While the show or the lesson runs, the module OWNS the matrix: every other LED is
+    dark, and RGB is switched on without saving if the user had it off. The user's own
+    mode resumes afterwards.
+- **The progress key is smaller:** "3/10" is drawn in the 19 px UI face (`HINT_MID`, the
+  size of Esc's "Hold to skip..."), not the keycap face.

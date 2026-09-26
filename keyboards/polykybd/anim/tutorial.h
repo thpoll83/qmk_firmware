@@ -103,6 +103,12 @@ int16_t tutorial_preview_index(void);
 uint8_t tutorial_preview_entry(void);
 // True while the board spells the next item's name (and during the wipe that replaces it).
 bool tutorial_naming(void);
+// For the key LEDs (anim/tutorial_rgb.c): the lesson's phase (0xFF when not running),
+// and whether the next item's name alone is on the keys (TUT_LANG_NAME).
+uint8_t tutorial_rgb_phase(void);
+bool    tutorial_showing_name(void);
+// Provided by poly_keymap.c: does this key carry a letter of the spelled name?
+bool    tutorial_is_name_key(uint8_t row, uint8_t col);
 // True where the wipe's ring has already turned this key into the new item.
 bool tutorial_wipe_covers(uint8_t row, uint8_t col);
 // True in the (postponed) layer chapter's hold phases — the only time a layer key may act.

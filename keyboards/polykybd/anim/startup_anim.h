@@ -69,6 +69,9 @@ bool startup_anim_is_loop(void);
 void startup_anim_tick(void);
 // True while the animation owns the keycaps — update_displays() must early-return.
 bool startup_anim_active(void);
+// The opening rainbow's level, 255..0: full from the start of the one-shot show, fading
+// to 0 as POLYKYBD is first written. 0 outside the one-shot show (and in the idle loop).
+uint8_t startup_anim_rainbow_level(void);
 
 // Per-key board geometry, for other renderers that work in the same board space (the
 // first-run tutorial's ripple). Returning the rotation ALREADY resolved to cos/sin

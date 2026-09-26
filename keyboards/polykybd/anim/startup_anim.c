@@ -696,6 +696,19 @@ bool startup_anim_is_loop(void) { return s_active && s_loop; }
 
 bool startup_anim_active(void) { return s_active; }
 
+// The one-shot show opens on the stock rainbow, and it fades out while POLYKYBD is
+// first written: the letters dither in over tt 130..165 of the intro (see `letter_in`
+// in sa_render_frame), and the rainbow goes from full to nothing over the same span.
+uint8_t startup_anim_rainbow_level(void) {
+    if (!s_active || s_loop) return 0u;
+    const uint32_t el   = timer_elapsed32(s_start);
+    const uint32_t from = ((uint32_t)SA_INTRO_MS * 130u) / 256u;
+    const uint32_t to   = ((uint32_t)SA_INTRO_MS * 165u) / 256u;
+    if (el <= from) return 255u;
+    if (el >= to) return 0u;
+    return (uint8_t)(255u - ((el - from) * 255u) / (to - from));
+}
+
 void startup_anim_tick(void) {
     if (!s_active) return;
     uint32_t el = timer_elapsed32(s_start);

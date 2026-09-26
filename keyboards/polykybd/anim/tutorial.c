@@ -547,6 +547,12 @@ uint8_t tutorial_preview_entry(void) {
     return pos < 0 ? 0xFFu : tutorial_preview_table_row((uint8_t)pos);
 }
 
+// For the key LEDs (anim/tutorial_rgb.c), both from the synced state so the two halves
+// agree: the phase, which with the ring's centre picks each ring's colour, and whether
+// the next item's name is on the keys.
+uint8_t tutorial_rgb_phase(void) { return s_active ? (uint8_t)s_st.phase : 0xFFu; }
+bool    tutorial_showing_name(void) { return s_active && s_st.phase == TUT_LANG_NAME; }
+
 // The wipe keeps the name on the keys the ring has not reached yet.
 bool tutorial_naming(void) {
     return s_active && (s_st.phase == TUT_LANG_NAME || s_st.phase == TUT_LANG_WIPE);
@@ -596,10 +602,13 @@ const uint32_t *tutorial_skip_label(void) {
 // The right key mirroring Esc: how far along the lesson is, "3/10". Built into a buffer
 // because the numerator moves; TUT_PROGRESS_STEPS even steps, not chapters.
 const uint32_t *tutorial_progress_label(void) {
-    static uint32_t buf[6];
+    static uint32_t buf[7];
     if (!tut_chrome_live()) return NULL;
     uint8_t       n = 0;
     const uint8_t p = tut_progress(&s_st);
+    // Round 39: the 19 px UI face, the size of Esc's "Hold to skip...", not the keycap
+    // face ("the progress on the right top is too present - it should be smaller").
+    buf[n++] = 0x16u;   // HINT_MID
     if (p >= 10u) buf[n++] = (uint32_t)('0' + p / 10u);
     buf[n++] = (uint32_t)('0' + p % 10u);
     buf[n++] = '/';
@@ -937,6 +946,8 @@ bool tutorial_tour_seen(void) { return false; }
 int16_t tutorial_preview_index(void) { return -1; }
 uint8_t tutorial_preview_entry(void) { return 0xFFu; }
 bool tutorial_naming(void) { return false; }
+uint8_t tutorial_rgb_phase(void) { return 0xFFu; }
+bool    tutorial_showing_name(void) { return false; }
 bool tutorial_wipe_covers(uint8_t row, uint8_t col) { (void)row; (void)col; return false; }
 bool tutorial_in_layer_chapter(void) { return false; }
 bool tutorial_telling_more(void) { return false; }

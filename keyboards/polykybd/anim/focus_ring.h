@@ -47,6 +47,17 @@ void poly_focus_overlay(uint8_t disp_idx, const sa_geom_t *g);
 // pass or two, which is invisible at this speed.
 void poly_focus_tick(void);
 
+// The band this frame latched, for the key LEDs under it (anim/tutorial_rgb.c): the
+// centre in board units, the squared bounds of the band grown by a keycap
+// half-diagonal (a key is "under the ring" when any of it is), and the density 0..255.
+// False when no ring is live.
+typedef struct {
+    int16_t  cx, cy;
+    uint32_t outer2, inner2;
+    uint8_t  dens;
+} poly_focus_band_t;
+bool poly_focus_led_band(poly_focus_band_t *out);
+
 // Provided by poly_keymap.c: redraw one key's ordinary legend into the scratch buffer.
 // The panel is already selected and the buffer cleared; the caller sends.
 //

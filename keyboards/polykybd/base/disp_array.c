@@ -405,6 +405,15 @@ void kdisp_zoom_half_window(void) {
     }
 }
 
+bool kdisp_window_is_blank(void) {
+    for (int y = 0; y < SCREEN_HEIGHT; ++y) {
+        for (int x = 0; x < SCREEN_WIDTH; ++x) {
+            if ((scratch_buffer[GET_BUFFER_OFFSET(BUFFER_X + x, y)] >> (y & 7)) & 1) return false;
+        }
+    }
+    return true;
+}
+
 void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height) {
     for (int x = x_start; x < (x_start + width); ++x) {
         for (int y = y_start; y < (y_start + height); ++y) {

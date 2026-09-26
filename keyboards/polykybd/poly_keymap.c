@@ -70,6 +70,7 @@
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
 #include "anim/lang_sparkle.h"             // lang_sparkle_tick()
+#include "anim/tutorial_rgb.h"             // the key LEDs during the show and the lesson
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
@@ -327,6 +328,7 @@ bool rgb_matrix_indicators_kb(void) {
             return false;
         }
     }
+    if (tutorial_rgb_paint()) return false;   // the first-run show and the lesson
     return rgb_matrix_indicators_user();
 }
 
@@ -1331,6 +1333,7 @@ void housekeeping_task_user(void) {
     (void)crash_phase_enter(CRASH_PHASE_LOOP, 0);
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
+    tutorial_rgb_tick(); // …and own it through the first-run show and the lesson
 #endif
     fw_screen_tick();   // ...and keep the status OLED on the matching firmware screen
 
@@ -4224,13 +4227,14 @@ static const uint32_t *tutorial_chrome_label(uint8_t row, uint8_t col) {
     return NULL;
 }
 
+bool tutorial_is_name_key(uint8_t row, uint8_t col) { return tut_name_letter(row, col) != 0; }
+
 bool tutorial_is_chrome_key(uint8_t row, uint8_t col) {
     return tutorial_chrome_label(row, col) != NULL || tut_name_letter(row, col) != 0;
 }
 
 // Esc's label is a HINT_MID two-line stack drawn like any static legend on a non-thumb
-// row; the progress is one big run in the keycap face, centred both ways (its ink spans
-// rows 1..20 at the usual baseline 23, so baseline 32 puts it at 10..29 of the 40).
+// row; the progress is one HINT_MID run, centred both ways.
 void tutorial_draw_chrome(uint8_t row, uint8_t col) {
     uint32_t       name_cp   = 0;
     const uint8_t *name_tile = NULL;
@@ -4255,7 +4259,9 @@ void tutorial_draw_chrome(uint8_t row, uint8_t col) {
         kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, t,
                                 KDISP_CY_DEFAULT);
     } else {
-        draw_legend_cx_cy(t, 32, KDISP_CY_DEFAULT);
+        // The progress: one HINT_MID run, centred both ways (the face's digits sit 13 px
+        // above the baseline, so baseline 26 centres them on the 40 px panel).
+        draw_legend_cx_cy(t, 26, KDISP_CY_DEFAULT);
     }
     kdisp_set_gfx_erase(false);
 }

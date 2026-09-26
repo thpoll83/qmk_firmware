@@ -18,9 +18,10 @@
 #include "base/update.h"            // request_disp_refresh()
 
 // Round 34: 20% faster than round 33's 1800/360 ("the fade in of the tab item maybe
-// 20% faster"). Round 36: 30% faster again ("still too slow").
-#define CASC_MS      1008u   // first content key to last
-#define CASC_FADE_MS  202u   // each key's own fade-in
+// 20% faster"). Round 36: 30% faster again ("still too slow"). Round 39: 25% faster
+// again, since the two zoom frames make each key recognisable sooner.
+#define CASC_MS       756u   // first content key to last
+#define CASC_FADE_MS  152u   // each key's own fade-in
 // Rows are PHYSICAL rows (menu_cascade_rows.h), counted from 0 at the top.
 #define CASC_ROWS       3u   // a menu: rows 1..3; row 0 (tabs) and row 4 stay put
 #define CASC_BOARD_ROWS 3u   // the Shift reveal: rows 1..3, the letters and both shifts
@@ -28,8 +29,8 @@
 #define CASC_TICK_MS   30u
 // Round 38: each key ZOOMS in over its fade — a 2x2 dot at the centre, then the real
 // legend at half size, then full size. Same timing as before; two preview frames.
-#define CASC_ZOOM_DOT_MS  (CASC_FADE_MS / 3u)        // 0..67 ms: the dot
-#define CASC_ZOOM_HALF_MS ((CASC_FADE_MS * 2u) / 3u) // ..135 ms: half size, then full
+#define CASC_ZOOM_DOT_MS  (CASC_FADE_MS / 3u)        // 0..50 ms: the dot
+#define CASC_ZOOM_HALF_MS ((CASC_FADE_MS * 2u) / 3u) // ..101 ms: half size, then full
 enum { ZOOM_NONE = 0, ZOOM_DOT, ZOOM_HALF, ZOOM_FULL };
 #define CASC_KEYS      40u   // display slots per half (8 x 5, some phantom)
 
@@ -166,14 +167,26 @@ void menu_cascade_tick(void) {
             kdisp_set_contrast(lvl);
             kdisp_track_panel(idx);
             kdisp_set_buffer(0x00);
+            s_in_draw = true;
+            (void)poly_focus_draw_legend(TUT_SLOT(right ? 1 : 0, idx));
+            s_in_draw = false;
+            kdisp_set_gfx_erase(false);
+            // Round 39: a key with nothing on it gets no dot either ("we should not show
+            // the 2x2 dot if there is nothing displayed", hardware). It is finished as
+            // it stands, blank.
+            const bool blank = kdisp_window_is_blank();
+            if (blank) {
+                s_stage[idx] = ZOOM_FULL;
+                kdisp_set_contrast(full);
+                kdisp_send_window();
+                set_bit(s_full, idx);
+                continue;
+            }
             if (want == ZOOM_DOT) {
+                kdisp_set_buffer(0x00);
                 kdisp_fill_rect((int8_t)(BUFFER_X + SCREEN_WIDTH / 2 - 1), (int8_t)(SCREEN_HEIGHT / 2 - 1), 2, 2);
-            } else {
-                s_in_draw = true;
-                (void)poly_focus_draw_legend(TUT_SLOT(right ? 1 : 0, idx));
-                s_in_draw = false;
-                kdisp_set_gfx_erase(false);
-                if (want == ZOOM_HALF) kdisp_zoom_half_window();
+            } else if (want == ZOOM_HALF) {
+                kdisp_zoom_half_window();
             }
             kdisp_send_window();
             s_stage[idx] = want;

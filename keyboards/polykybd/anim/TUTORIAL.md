@@ -2092,3 +2092,22 @@ Hardware feedback:
   and 100 % of its level.
 - **No pure red, green or blue:** every colour comes from a table of in-between hues,
   at saturation 230. A glow that is no longer wanted fades out in the colour it had.
+
+## Round 41 — the picker key drawn on the panel, colours that survive dimming
+
+- **"tap Ctrl" named a key nobody can see.** On the Intl layer the Ctrl keycap reads
+  `Á»Æ` (`INTL_PICKER_LEGEND`), so the right panel now says "tap" followed by that
+  legend inside a rounded square, a 62x62 double-line frame (r=8) the shape of a key
+  seen from above. `tutorial_tour_key()` returns the legend from the same macro the
+  keycap draws, and `oled_tutorial_screen()` draws it with the keycaps' own font list
+  (`g_all_fonts`), so the panel and the key cannot disagree. The glyphs are resident
+  (`NotoSans_Regular_SupAndExtA_14pt16b`), so it draws with no font pack.
+- ⚠️ **A dim mix collapses to its stronger channel.** Orange at value 5 is r=5 g=2, and
+  a channel under ~3 does not light, so a fading orange read as red. Each hue now has a
+  floor, the lowest value at which its weaker channel reaches `TRGB_MIN_CH` (4): a pulse
+  swings between that floor and its peak, and a fade goes dark at the floor rather than
+  passing through the primary. Saturation is 255 now: the white tint of s=230 was ~10 %
+  of the value, the first part to vanish, so the colour drifted as it faded.
+- **Language-name keys breathe one by one**: each key's pulse clock is offset by
+  `TRGB_NAME_STAGGER_MS` (571 ms) per slot, over the full pulse depth (about 7..16 at a
+  peak of 16) so the stagger can be seen.

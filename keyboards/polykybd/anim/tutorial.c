@@ -900,6 +900,14 @@ uint32_t tutorial_line_icon(uint8_t which) {
     }
 }
 
+// The keycap legend for the line, framed by the caller. Only the tour's WAIT: once the
+// key has been pressed the words move on ("The picker is open") and name no key.
+const uint32_t *tutorial_line_key(uint8_t which) {
+    if (!s_active || which != 0 || s_st.phase != TUT_TOUR_WAIT) return NULL;
+    const int16_t step = tut_tour_index(&s_st);
+    return step < 0 ? NULL : tutorial_tour_key((uint8_t)step, is_left_side(), false);
+}
+
 // The status panel has 64 rows rather than the keycap's 40, so it can take the L cut.
 bool tutorial_draw_big_letter(int8_t ox, uint8_t w, uint8_t h) {
     static const uint32_t tiers[] = {TUT_LETTER_TIER_L, TUT_LETTER_TIER_BASE, 0u};
@@ -966,6 +974,7 @@ bool tutorial_sync_pending(void) { return false; }
 void tutorial_sync_sent(void) {}
 const uint32_t *tutorial_line(uint8_t which) { (void)which; return NULL; }
 uint32_t tutorial_line_icon(uint8_t which) { (void)which; return 0; }
+const uint32_t *tutorial_line_key(uint8_t which) { (void)which; return NULL; }
 uint32_t tutorial_big_letter(void) { return 0; }
 bool tutorial_draw_big_letter(int8_t ox, uint8_t w, uint8_t h) {
     (void)ox; (void)w; (void)h; return false;

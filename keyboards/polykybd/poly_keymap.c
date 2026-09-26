@@ -4694,7 +4694,8 @@ const uint32_t *tutorial_tour_line(uint8_t step, bool left, bool seen) {
         case TUT_TOUR_INTL_ARM:   return left ? U"Hold Intl" : U"once more";
         case TUT_TOUR_INTL_CTRL:
             if (seen) return left ? U"The picker" : U"is open";
-            return left ? U"Keep holding," : U"tap Ctrl";
+            // The key is drawn, not named: tutorial_tour_key() frames its legend.
+            return left ? U"Keep holding," : U"tap";
         case TUT_TOUR_INTL_LETTER:
             if (seen) return left ? U"Its accents" : U"are on top";
             return left ? U"Pick the" : tut_letter_words(U"letter ");
@@ -4730,6 +4731,13 @@ const uint32_t *tutorial_tour_line(uint8_t step, bool left, bool seen) {
         default:
             return NULL;
     }
+}
+
+const uint32_t *tutorial_tour_key(uint8_t step, bool left, bool seen) {
+    if (step >= s_tour_n || left || seen) return NULL;
+    // ⚠️ The same macro the Ctrl keycap draws on this layer (to_static_text), so the
+    // panel cannot name a legend the key no longer shows.
+    return s_tour_kind[step] == TUT_TOUR_INTL_CTRL ? INTL_PICKER_LEGEND : NULL;
 }
 
 uint8_t tutorial_preview_table_row(uint8_t pos) {

@@ -164,6 +164,12 @@ const uint32_t *tutorial_line(uint8_t which);
 // single-font array, which is what keeps both on their own baseline.
 uint32_t tutorial_line_icon(uint8_t which);
 
+// A keycap LEGEND to draw after that line inside a rounded frame, or NULL. Used where
+// the key's legend is not a word the prose can say (the Intl picker's Á»Æ). Drawn with
+// the keycaps' own font list, so the panel shows the same glyphs the key does; the
+// legend must be resident-font text for the same first-boot reason as the line.
+const uint32_t *tutorial_line_key(uint8_t which);
+
 // ---- provided by poly_keymap.c (it owns the keymap and the display map) ----
 // Fill `out` with the packed slots of keys hosting a plain A-Z letter on the base
 // layer, both halves, skipping keys with no OLED behind them. Returns the count.
@@ -236,6 +242,11 @@ uint8_t tutorial_tour_build(tut_tour_step_t out[TUT_TOUR_MAX], uint32_t seed);
 // The status prose for a tour step, this half's half of the sentence; `seen` is the
 // dwell after the press.
 const uint32_t *tutorial_tour_line(uint8_t step, bool left, bool seen);
+// The LEGEND of the key a tour step asks for, when the words cannot name that key, or
+// NULL. The Intl chapter's "tap Ctrl" is the case: on the Intl layer the Ctrl keycap
+// reads Á»Æ (INTL_PICKER_LEGEND), so the word "Ctrl" points at nothing the user can
+// see. The panel draws this legend inside a keycap-shaped frame after the line.
+const uint32_t *tutorial_tour_key(uint8_t step, bool left, bool seen);
 
 // A chapter's LIT SET, as a bitmap over THIS HALF's display slots. TUT_SET_SHIFT is the
 // plain A-Z keys plus both shifts; TUT_SET_LAYER is the letters plus the layer keys.

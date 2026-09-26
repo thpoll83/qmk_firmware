@@ -18,9 +18,21 @@
 #define TRGB_PULSE_VAL   40u    // the key the lesson points at, at the top of its pulse
 #define TRGB_SWEEP_VAL   40u    // a key under a board-wide sweep, at full density
 #define TRGB_NAME_VAL    16u    // a letter of a spelled language name: "very lightly"
-#define TRGB_NAME_FLOOR  150u   // of 255: the name's pulse only dips to here
-#define TRGB_SAT         230u   // a touch of white in every colour
 #define TRGB_FALL_MS     450u   // a glow that is no longer wanted fades this slowly
+// Round 41: a dim mix collapses to its STRONGER channel ("an orange becomes red when
+// fading out"). Orange at value 5 is r=5 g=2, and a channel below about 3 does not
+// light reliably. So each colour has a floor: the lowest value at which its weaker channel
+// still reaches TRGB_MIN_CH. A pulse swings between that floor and its peak; a fade
+// goes dark at the floor instead of passing through the primary.
+// ⚠️ Full saturation for the same reason: the white tint of s=230 is ~10% of the value,
+// the first thing to vanish when dimmed, so the colour drifted as it faded. Every hue
+// below is already a two-channel mix, which is what "never pure R, G or B" asks.
+#define TRGB_SAT         255u
+#define TRGB_MIN_CH      4u
+// Name keys breathe out of step with each other ("pulse individually"): each key's
+// pulse clock is offset by this much per slot. Not a divisor of the 1400 ms period, so
+// neighbouring slots land far apart in phase.
+#define TRGB_NAME_STAGGER_MS 571u
 
 // Round 40: no pure red, green or blue ("always mix the colour"). QMK hues: red 0,
 // green 85, blue 170; every entry here sits between two of them.
@@ -116,9 +128,35 @@ static void build_map(void) {
     s_map_built = true;
 }
 
-static void set_hsv(uint8_t led, uint8_t h, uint8_t v) {
+// The lowest value at which hue `h` still shows both of its channels.
+static uint8_t hue_floor(uint8_t h) {
+    const rgb_t   c  = hsv_to_rgb((hsv_t){h, TRGB_SAT, 255u});
+    uint8_t       mn = 255u;
+    if (c.r && c.r < mn) mn = c.r;
+    if (c.g && c.g < mn) mn = c.g;
+    if (c.b && c.b < mn) mn = c.b;
+    return (uint8_t)((TRGB_MIN_CH * 255u + mn - 1u) / mn);
+}
+
+// Level 0..255 of a glow whose peak is `val`, drawn in hue `h`. Below the hue's floor
+// the key is dark: that is what keeps a fading orange from reading as red.
+static void set_glow(uint8_t led, uint8_t h, uint8_t val, uint8_t lvl) {
+    const uint8_t v = (uint8_t)(((uint16_t)val * lvl) / 255u);
+    if (v < hue_floor(h)) {
+        rgb_matrix_set_color(led, 0, 0, 0);
+        return;
+    }
     const rgb_t c = hsv_to_rgb((hsv_t){h, TRGB_SAT, v});
     rgb_matrix_set_color(led, c.r, c.g, c.b);
+}
+
+// A pulse between the hue's floor and its peak: the ease of `wave` (0..255) mapped
+// onto the levels that still show the colour, so the bottom of a breath is the colour
+// dimmed, never its primary and never off.
+static uint8_t pulse_lvl(uint8_t h, uint8_t val, uint8_t wave) {
+    const uint16_t fl = ((uint16_t)hue_floor(h) * 255u + val - 1u) / val;   // floor as a level
+    const uint16_t lo = fl > 255u ? 255u : fl;
+    return (uint8_t)(lo + ((255u - lo) * wave) / 255u);
 }
 
 bool tutorial_rgb_paint(void) {
@@ -141,10 +179,10 @@ bool tutorial_rgb_paint(void) {
     // know the slot and the phase from the sync, so both pick the same colour.
     const uint8_t pslot = tutorial_pulsed_slot();
     const uint8_t phue  = k_hues[(uint8_t)(pslot * 7u + tutorial_rgb_phase() * 3u) % TRGB_NHUES];
-    // A language name: its colour, fading in with each key's cascade, breathing gently.
+    // A language name: its colour, fading in with each key's cascade, each key breathing
+    // on its own clock (see TRGB_NAME_STAGGER_MS).
     const bool    named = tutorial_showing_name();
     const uint8_t nhue  = k_hues[(uint8_t)(tutorial_preview_entry() * 4u) % TRGB_NHUES];
-    const uint8_t nwave = (uint8_t)(TRGB_NAME_FLOOR + ((255u - TRGB_NAME_FLOOR) * wave) / 255u);
 
     // A board-wide sweep (the reveal, a language wipe) lights the keys under its band,
     // each fading once it has passed. One colour per sweep, the same on both halves:
@@ -171,13 +209,16 @@ bool tutorial_rgb_paint(void) {
             }
         }
         if (slot != TUT_SLOT_NONE && slot == pslot) {
-            target = wave;
+            target = pulse_lvl(phue, TRGB_PULSE_VAL, wave);
             hue    = phue;
             val    = TRGB_PULSE_VAL;
         } else if (named && slot != TUT_SLOT_NONE && s_led_rc[i] != 0xFFu &&
                    tutorial_is_name_key((uint8_t)(s_led_rc[i] >> 4), (uint8_t)(s_led_rc[i] & 0x0Fu))) {
-            const uint8_t in = menu_cascade_key_level(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot));
-            target = (uint8_t)(((uint16_t)in * nwave) / 255u);
+            const uint8_t in    = menu_cascade_key_level(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot));
+            // Full pulse depth, floor to peak: at a peak of 16 that is about 7..16, still
+            // "very lightly", and the per-key stagger needs the depth to be seen at all.
+            const uint8_t kwave = tut_pulse_level(now + (uint32_t)slot * TRGB_NAME_STAGGER_MS, 255u);
+            target = (uint8_t)(((uint16_t)in * pulse_lvl(nhue, TRGB_NAME_VAL, kwave)) / 255u);
             hue    = nhue;
             val    = TRGB_NAME_VAL;
         }
@@ -188,13 +229,13 @@ bool tutorial_rgb_paint(void) {
             s_hue[i] = hue;
             s_val[i] = val;
             s_lvl[i] = (uint8_t)lvl;
-            set_hsv(i, hue, (uint8_t)((val * lvl) / 255u));
+            set_glow(i, hue, val, (uint8_t)lvl);
             continue;
         }
         // No longer wanted: fade out in the colour it had.
         lvl      = lvl < down ? 0u : lvl - down;
         s_lvl[i] = (uint8_t)lvl;
-        set_hsv(i, s_hue[i], (uint8_t)((s_val[i] * lvl) / 255u));
+        set_glow(i, s_hue[i], s_val[i], (uint8_t)lvl);
     }
     return true;
 }

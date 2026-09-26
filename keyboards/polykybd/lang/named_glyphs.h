@@ -2327,38 +2327,14 @@
 // de-facto reference is the OEM legend on the physical Menu/Application key -- a menu
 // with a pointer on it, which is exactly what this draws.
 //
-// ⚠️ The pointer is a ROTATED U+27A4 because the pack contains no cursor: every
-// diagonal arrow (U+2196..99, U+2B08..0B) and every filled triangle (U+25E2..E5,
-// U+25B6, U+25C0) is MISSING from it, measured, so the only arrowheads available point
-// along an axis. 120 deg counter-clockwise from "rightwards" lands on the up-and-left
-// tilt a pointer is drawn at.
-//
-// Every part is placed ABSOLUTELY: the three bars, a 1px frame two pixels clear of
-// them, and the pointer at one third scale, its top level with the first bar. The
-// parts ink x43..83 y6..33, centred in the 72x40 cell to half a pixel.
-// ⚠️ ALL absolute, because the bottom row CENTRES its legend by shifting the origin
-// (draw_legend_cx_cy()), and a MOVE'd part does not follow the shift: with the lines
-// laid out relatively and only the pointer MOVE'd, the lines moved and the pointer
-// stayed, painting over them (round 34). A legend that MOVEs is drawn unshifted there.
-//
-// ⚠️ The bars are three square BADGEs, not U+2630: round 35 asked for them at 80 % of
-// the glyph's 29px, and no op scales a glyph on one axis. 23x4 each, 9px apart, the
-// glyph's own bar height and pitch.
-//
-// Positions measured in the keycap preview model (keycap-layout-preview skill): bars
-// x46..68 at y9/18/27, frame (43,6) 29x28, pointer x74..83 y9..21.
-#define HINT_POS_CTXBAR1            	U"\x2E" U"\x09"   // (46,9)  buffer: bar 1 top-left
-#define HINT_POS_CTXBAR2            	U"\x2E" U"\x12"   // (46,18)
-#define HINT_POS_CTXBAR3            	U"\x2E" U"\x1B"   // (46,27)
-#define HINT_SZ_CTXBAR              	U"\x17" U"\x04"   // 23x4
-#define HINT_POS_CTXFRAME           	U"\x2B" U"\x06"   // (43,6)  buffer: the frame's top-left
-#define HINT_SZ_CTXFRAME            	U"\x1D" U"\x1C"   // 29x28
-#define HINT_POS_CTXPTR             	U"\x46" U"\x07"   // (70,7)  buffer: the pointer's top-left
-#define ICON_CONTEXT_MENU           	HINT_MOVE(HINT_POS_CTXBAR1) HINT_BADGE(HINT_SZ_CTXBAR, BADGE_SQUARE) \
-                                    	HINT_MOVE(HINT_POS_CTXBAR2) HINT_BADGE(HINT_SZ_CTXBAR, BADGE_SQUARE) \
-                                    	HINT_MOVE(HINT_POS_CTXBAR3) HINT_BADGE(HINT_SZ_CTXBAR, BADGE_SQUARE) \
-                                    	HINT_MOVE(HINT_POS_CTXFRAME) HINT_BADGE(HINT_SZ_CTXFRAME, BADGE_LINE) \
-                                    	HINT_MOVE(HINT_POS_CTXPTR) HINT_ROT(ROT_CCW_120_THIRD, U"\x27A4")
+// ⚠️ ONE baked glyph (IconsPuaFont, base/fonts/gfx_icons.h), not a display list. It was
+// built from ops for rounds 34-35: three square BADGEs, a 1px frame and a ROTATED U+27A4
+// at one third scale, because the pack has no cursor glyph. Round 41 asked for a real
+// mouse pointer cut out of the bars by a dark halo, which no op can draw, so the design
+// was drawn as a 31x24 bitmap. IconsFont was full, which is why it opened the plane-16
+// private-use range. A single glyph also centres like any other legend, so the
+// bottom-row trap the absolute layout existed for (round 34) no longer applies.
+#define ICON_CONTEXT_MENU           	U"\x100000"
 
 // Brightness keys — one resident IconsFont glyph each (base/fonts/gfx_icons.h).
 // The status OLED already says "brightness" with a sun, so the keycaps use the

@@ -105,4 +105,68 @@ const GFXfont HelperFont PROGMEM = {
   20  // height
  };
 
-// Approx. 3228 bytes
+// ---- IconsPuaFont: resident icons in a private-use range of their own --------------
+// IconsFont is full: every C1 slot 0x7F..0xA0 holds a glyph, and 0xA1 is the first
+// real Latin-1 character (¡), which IconsFont would shadow. A second hand-drawn icon
+// table therefore starts a fresh range in supplementary private-use plane 16
+// (U+100000..), which no generated font touches: the BMP private-use area holds the
+// pack's flags, matras and glyph-script blocks, and plane 15 the larger legend sizes.
+//
+// ⚠️ It is RESIDENT but listed LAST in the font order (fonts.yaml index.append_fonts),
+// not prepended like IconsFont. Every pack font's stored index is its position in that
+// order, so a font added at the front would move all of them and change every bundle's
+// bytes. At the end it moves nothing. Its range overlaps no other font, so its place
+// in the lookup order does not matter.
+//
+// yAdvance 40, IconsFont's: kdisp_write_gfx_char shifts a glyph by
+// (font->yAdvance - fonts[0]->yAdvance), and fonts[0] is IconsFont.
+const uint8_t IconsPuaBitmaps[] PROGMEM = {
+  /* 0x100000 ICON_CONTEXT_MENU 31x24: three list bars and a mouse pointer, the pointer
+     cut out of the lower two bars by a 1 px dark halo (hardware round 41, option E).
+     .############################..
+     ##############################.
+     ##############################.
+     ##############################.
+     .############################..
+     ...............................
+     ...............................
+     ...............................
+     ...............................
+     .####################...#####..
+     #####################.#..#####.
+     #####################.##..####.
+     #####################.###..###.
+     .####################.####..#..
+     ......................#####....
+     ......................######...
+     ......................#######..
+     ......................########.
+     .####################.#########
+     #####################.######...
+     #####################.###.###..
+     #####################.##..###..
+     .####################.#....###.
+     ...........................###.
+     ⚠️ A block comment, not //: the host's header parser (tools/gfx_font.py) strips
+     only block comments inside a bitmap, so a // line's "0x100000" read as data. */
+  0x0E, 0x1C, 0x38, 0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C,
+  0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C,
+  0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C,
+  0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C,
+  0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C, 0x1F, 0x3E, 0x7C,
+  0x1F, 0x3E, 0x7C, 0x1F, 0x00, 0x00, 0x1F, 0xFC, 0x7F, 0x1F, 0xF8, 0x3F,
+  0x1F, 0xF2, 0x1F, 0x1F, 0xE6, 0x0F, 0x1F, 0xCE, 0x3F, 0x1F, 0x9E, 0xFF,
+  0x1F, 0x3E, 0xF7, 0x0E, 0x1C, 0xC6, 0x00, 0x00, 0x04,
+};
+
+const GFXglyph IconsPuaGlyphs[] PROGMEM = {
+  {     0,  31,  24,  33,    1,  -15 },   // 0x100000 ICON_CONTEXT_MENU
+};
+
+const GFXfont IconsPuaFont PROGMEM = {
+  (uint8_t  *)IconsPuaBitmaps,
+  (GFXglyph *)IconsPuaGlyphs, 0x100000, 0x100000,
+  40
+};
+
+// Approx. 3321 bytes

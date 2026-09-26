@@ -780,7 +780,9 @@ The font pack itself — the eight `PlyF` bundles, the slot layout and the HID t
 is [`keyboards/polykybd/FONT_PACK.md`](keyboards/polykybd/FONT_PACK.md). ⚠️ **`g_all_fonts`
 is scanned FRONT TO BACK and resident is always in front**, so adding a whole new
 resident FONT shifts every pack font's gidx and forces a full-pack reship; extend the
-resident `IconsFont` instead. ⚠️ **Never do heavy work in a split-transaction handler** —
+resident `IconsFont` instead. It is FULL, so a new icon goes in its plane-16 twin
+`IconsPuaFont`, which `fonts.yaml` `append_fonts` orders LAST so no pack font moves
+(`FONT_PACK.md`). ⚠️ **Never do heavy work in a split-transaction handler** —
 re-CRCing the whole pack inside a ~20 ms RPC callback made the master report a perfect
 flash as a CRC failure. ⚠️ **Because FONTPACK writes IN PLACE, a slot is valid as soon as
 the last chunk lands — COMMIT is not what makes it so.** The `reship-fontpack-bundle`

@@ -314,6 +314,7 @@ def resident_symbols(cfg: dict, fonts_dir: Path) -> set[str]:
     """Symbols that stay compiled into the firmware (NOT in the pack)."""
     idx = cfg.get("index", {})
     res = set(idx.get("prepend_fonts", []))      # IconsFont etc.
+    res |= set(idx.get("append_fonts", []))      # IconsPuaFont: resident, ordered last
     res |= set(idx.get("resident_fonts", []))    # UI-chrome fonts in packed cats
     cats = cfg["categories"]
     for cat, meta in cats.items():
@@ -501,7 +502,8 @@ def manifest_from_texts(order: list[str], category_texts: dict[str, str],
     regenerated header set.
     """
     idx = cfg.get("index", {})
-    resident = set(idx.get("prepend_fonts", [])) | set(idx.get("resident_fonts", []))
+    resident = (set(idx.get("prepend_fonts", [])) | set(idx.get("append_fonts", []))
+                | set(idx.get("resident_fonts", [])))
     parsed: dict[str, ParsedFont] = {}
     cats = cfg["categories"]
     for cat, text in category_texts.items():

@@ -53,8 +53,15 @@ static uint32_t s_last;
 
 // The opening rainbow is the STOCK effect ("like the default when the keyboard gets a
 // fresh firmware"), not a copy of it: the master switches the matrix to
-// CYCLE_LEFT_RIGHT at the stock speed and brightness, without saving, and fades it out
+// CYCLE_LEFT_RIGHT (brighter and faster than stock, see below), without saving, and fades it out
 // through the brightness. The split transport carries the mode to the slave.
+// Round 42: the stock DEFAULT_VAL (20) looked stepped rather than flowing — at a value
+// of 20 each channel has ~20 levels, so neighbouring keys jump between colours. The
+// intro runs the rainbow at the board's ceiling instead, and about twice the stock
+// speed (48 vs 25: the effect's clock is speed/4+1, so 13 vs 7, ~5 s a cycle, not ~9).
+#define TRGB_RAINBOW_VAL RGB_MATRIX_MAXIMUM_BRIGHTNESS
+#define TRGB_RAINBOW_SPD 48u
+
 static bool    s_rb_on;
 static uint8_t s_saved_mode, s_saved_speed;
 static hsv_t   s_saved_hsv;
@@ -86,9 +93,9 @@ static void rainbow_tick(void) {
         s_saved_speed  = rgb_matrix_get_speed();
         s_rb_val       = 0xFFu;
         rgb_matrix_mode_noeeprom(RGB_MATRIX_CYCLE_LEFT_RIGHT);
-        rgb_matrix_set_speed_noeeprom(RGB_MATRIX_DEFAULT_SPD);
+        rgb_matrix_set_speed_noeeprom(TRGB_RAINBOW_SPD);
     }
-    const uint8_t v = (uint8_t)((RGB_MATRIX_DEFAULT_VAL * (uint16_t)rb) / 255u);
+    const uint8_t v = (uint8_t)((TRGB_RAINBOW_VAL * (uint16_t)rb) / 255u);
     if (v != s_rb_val) {
         s_rb_val = v;
         rgb_matrix_sethsv_noeeprom(0, 255, v);

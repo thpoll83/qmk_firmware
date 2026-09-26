@@ -2111,3 +2111,16 @@ Hardware feedback:
 - **Language-name keys breathe one by one**: each key's pulse clock is offset by
   `TRGB_NAME_STAGGER_MS` (571 ms) per slot, over the full pulse depth (about 7..16 at a
   peak of 16) so the stagger can be seen.
+
+## Round 42 — a brighter, faster opening rainbow; the context-menu key redrawn
+
+- **The opening rainbow did not flow**: at the stock `RGB_MATRIX_DEFAULT_VAL` (20) each
+  channel has ~20 levels, so neighbouring keys jumped between colours. It now runs at
+  the board's ceiling (`RGB_MATRIX_MAXIMUM_BRIGHTNESS`, 100) and speed 48 instead of
+  25: the effect's clock is speed/4+1, so 13 vs 7, about 5 s a cycle instead of 9.
+- **The context-menu key (`KC_APP`) is option E** of the five offered: three list bars
+  and a mouse pointer, the pointer cut out of the lower two bars by a 1 px dark halo.
+  No display-list op can cut a halo, so it is ONE baked 31x24 glyph, and since
+  IconsFont was full it opened a new resident range, `IconsPuaFont` at U+100000
+  (`base/fonts/gfx_icons.h`, `FONT_PACK.md`). All eight bundles stay byte-identical.
+  Not a tutorial change, found in this round.

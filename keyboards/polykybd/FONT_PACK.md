@@ -173,6 +173,15 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   16 pt `0x9A`/`0x9B` pair to the plain base-font `">_"` + a drawn frame, and the
   Win+`+`/`-` magnifier from resident `0x9E`/`0x9F` to the pack 🔍 with a
   programmatically-drawn `+`/`-`, reclaiming those C1 slots — 2026-07.)
+- ⚠️ **`IconsFont` is FULL (0x7F..0xA0), so a new icon goes in `IconsPuaFont`** (same
+  header), a second hand-drawn resident table in supplementary private-use plane 16
+  (U+100000..). It is listed under `index.append_fonts` in `fonts.yaml`, which puts it
+  at the END of the order: every pack font keeps its position, so no bundle byte
+  changes (verified with `reship_bundles.py --check`, all eight identical). Extend it
+  like IconsFont: append bitmap bytes and a `GFXglyph`, bump `last`. ⚠️ Label the
+  bitmap with a `/* */` comment, never `//`: the host's `tools/gfx_font.py` strips only
+  block comments inside a bitmap, so a `//` label's `0x100000` is read as a data byte.
+  First glyph: `ICON_CONTEXT_MENU` (2026-09, qmk#313).
   - ⚠️ **IconsFont is a range font `0x80..last`; slots `0xA0`+ COLLIDE with printable
     Latin-1** (`0xA0` nbsp, `0xA2..0xA5` = ¢£¤¥, …). Because `IconsFont` is
     `g_all_fonts[0]` it **wins** the lookup, so a custom icon parked at e.g. `0xA4`

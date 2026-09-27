@@ -112,11 +112,11 @@ run on it (`test_no_crash_record`). What is worth knowing:
   watchdog reset mid-copy is the brick this whole area guards against). A new
   blocking path longer than 8 s needs a `crash_watchdog_feed()` inside it — or
   the record it produces will say so, which is the point.
-- ⚠️ **BOOT IS THE ONE UNWATCHED WINDOW, and that is why a boot hang stays
+- ⚠️ **EARLY BOOT IS THE UNWATCHED WINDOW, and that is why an early boot hang stays
   unexplained.** `crash_watchdog_start()` is the LAST line of
   `keyboard_post_init_user()` — deliberately, because the steps above it may block for
-  seconds — so the whole of `pre_init` + `post_init` runs with no watchdog. A stall
-  anywhere in there is PERMANENT: no reset, no record, no console line, and the board
+  seconds. `boot_guard_milestone()` arms a late-boot guard at step 5 (below), so only
+  the boot path BEFORE step 5 runs with no watchdog. A stall there is PERMANENT: no reset, no record, no console line, and the board
   sits on the splash until it is unplugged. Every field report of "the master did not
   restart, unplugging brought it back" lands in this window, which is exactly why it
   keeps being re-reported as "still not clear why".
@@ -191,8 +191,9 @@ run on it (`test_no_crash_record`). What is worth knowing:
   thing that blocks when the other half is missing. It needs measured per-milestone
   boot timings first.
 
-  What #301 does instead is arm it across the **final render alone** — every slow step
-  is above that line — through two deliberate pieces:
+  What #301 did instead was arm it across the **final render alone**; round 34 of the
+  tutorial widened that to **boot step 5 through the end of post_init**, final render
+  included. Two deliberate pieces make that safe:
 
   - **`crash_watchdog_arm()` is `crash_watchdog_start()` without the bookkeeping.**
     It reprograms the same 8 s timeout and touches neither `consecutive` nor the phase,
@@ -352,9 +353,13 @@ servicing that timeout. `core1_trampoline` already masks core1's IRQs as its fir
 instruction, so the core1 launch window the `cpsid i` fix was about is closed.
 
 To name the stall, a sub-step paint renders one OLED block per call and stamps each
-first (`boot_paint_mark()`):
+call first (`boot_paint_mark()`):
 
-    arg = step << 8 | 0x80 | core1_entered << 6 | ((sub - 1) & 3) << 4 | block
+    arg = step << 8 | 0x80 | core1_entered << 6 | ((sub - 1) & 3) << 4 | call
+
+`call` is the 0-based ORDINAL of the render call, not a physical block number: QMK's
+OLED driver keeps its dirty mask private, and each call renders the next dirty block in
+ascending order. So `call = n` means n blocks had already gone out.
 
 `core1_entered` is `g_core1_entered`, set by core1 inside `core1_entry()` once its IRQs
 are masked and cleared by core0 before the launch. Reading a record:
@@ -362,8 +367,8 @@ are masked and cleared by core0 before the launch. Reading a record:
 | arg | means |
 |---|---|
 | `0x0504` | sub-step 4 stamped, paint not reached (or older firmware) |
-| `0x05F3` | step 5, core1 in its entry, sub-step 4, block 3 being written |
+| `0x05F3` | step 5, core1 in its entry, sub-step 4, fourth render call in flight |
 | `0x05B3` | the same with core1 NOT yet in `core1_entry()` |
 
 After the paint returns the tag goes back to the plain sub-step (`0x0504`), so a
-record naming a block always means the paint was in flight.
+record naming a call always means the paint was in flight.

@@ -444,8 +444,8 @@ void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_to
     // Synchronous, for the usual reason: the step this announces may be the one that
     // never returns, and a frame left for the next oled_render() tick is a frame the
     // hung board never shows. One block per call (OLED_UPDATE_PROCESS_LIMIT is 1) with
-    // a breadcrumb before each, so a wedge inside the paint names its block — see
-    // boot_paint_mark(). A call with nothing dirty returns at once.
+    // a breadcrumb before each, so a wedge inside the paint names how many blocks had
+    // gone out — see boot_paint_mark(). A call with nothing dirty returns at once.
     for (uint8_t n = 0; n < OLED_BLOCK_COUNT; ++n) {
         boot_paint_mark(n);
         oled_render_dirty(false);

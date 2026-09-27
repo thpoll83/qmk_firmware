@@ -157,15 +157,6 @@ static void build_map(void) {
     s_map_built = true;
 }
 
-// `val` scaled so hue `h` is no brighter than TRGB_LUMA_REF (Rec. 709 luma weights).
-static uint8_t hue_val(uint8_t h, uint8_t val) {
-    const rgb_t    c = hsv_to_rgb((hsv_t){h, TRGB_SAT, 255u});
-    const uint16_t y = (uint16_t)((54u * c.r + 183u * c.g + 19u * c.b) >> 8);
-    if (y <= TRGB_LUMA_REF) return val;
-    const uint8_t v = (uint8_t)(((uint16_t)val * TRGB_LUMA_REF + y / 2u) / y);
-    return (val != 0u && v == 0u) ? 1u : v;   // pulse_lvl() divides by it
-}
-
 // The lowest value at which hue `h` still shows its two strongest channels.
 static uint8_t hue_floor(uint8_t h) {
     const rgb_t   c  = hsv_to_rgb((hsv_t){h, TRGB_SAT, 255u});
@@ -176,6 +167,19 @@ static uint8_t hue_floor(uint8_t h) {
     const uint16_t mn = md ? md : 1u;
     return (uint8_t)((TRGB_MIN_CH * 255u + mn - 1u) / mn);
 }
+
+// `val` scaled so hue `h` is no brighter than TRGB_LUMA_REF (Rec. 709 luma weights).
+static uint8_t hue_val(uint8_t h, uint8_t val) {
+    const rgb_t    c = hsv_to_rgb((hsv_t){h, TRGB_SAT, 255u});
+    const uint16_t y = (uint16_t)((54u * c.r + 183u * c.g + 19u * c.b) >> 8);
+    if (y <= TRGB_LUMA_REF) return val;
+    const uint8_t v = (uint8_t)(((uint16_t)val * TRGB_LUMA_REF + y / 2u) / y);
+    // Never below the hue's own floor: hue 64 at the name peak scaled to 7 against a
+    // floor of 8, so set_glow() drew those keys dark (found in review).
+    const uint8_t fl = hue_floor(h);
+    return (val != 0u && v < fl) ? fl : v;
+}
+
 
 // Level 0..255 of a glow whose peak is `val`, drawn in hue `h`. Below the hue's floor
 // the key is dark: that is what keeps a fading orange from reading as red.

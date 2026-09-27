@@ -393,15 +393,19 @@ static uint8_t s_boot_sub = 0;   // the sub-step whose panel paint is in flight
 // ⚠️ Per-BLOCK breadcrumbs for a sub-step's status-panel paint. A master wedged at
 // "63%, 4 / 4" with the "4" half drawn left `phase=1:0x0504`: the paint started and
 // never returned, and a status-panel write has a 100 ms I2C timeout, so something
-// stopped core0 servicing that timeout. The stamp names the block that was being
-// written and whether core1 had reached core1_entry() by then:
-//     low byte = 0x80 | core1_entered << 6 | ((sub - 1) & 3) << 4 | block (0..15)
-// so 0x05C3 reads: step 5, core1 in its entry, sub-step 1, block 3. Milestone paints
+// stopped core0 servicing that timeout. The stamp names how far into the paint it was
+// and whether core1 had reached core1_entry() by then:
+//     low byte = 0x80 | core1_entered << 6 | ((sub - 1) & 3) << 4 | call (0..15)
+// `call` is the ORDINAL of the render call, not a physical block: the QMK driver keeps
+// its dirty mask private, and each call renders the next dirty block in ascending
+// order, so a stall at call n means n blocks had already gone out. A call with nothing
+// left to render returns at once, so it cannot be where a paint stalls.
+// 0x05C3 reads: step 5, core1 in its entry, sub-step 1, fourth render call. Milestone paints
 // keep their 0xE1 stamp; render keys are 1..40 and sub-steps 1..N, so 0x80+ is free.
-void boot_paint_mark(uint8_t block) {
+void boot_paint_mark(uint8_t call) {
     if (s_boot_step == 0 || s_boot_sub == 0) return;
     const uint8_t lo = (uint8_t)(0x80u | ((g_core1_entered ? 1u : 0u) << 6) |
-                                 (((s_boot_sub - 1u) & 3u) << 4) | (block & 0x0Fu));
+                                 (((s_boot_sub - 1u) & 3u) << 4) | (call & 0x0Fu));
     (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(((uint16_t)s_boot_step << 8) | lo));
 }
 

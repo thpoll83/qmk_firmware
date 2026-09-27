@@ -29,12 +29,15 @@ KINDS = {0: "none", 1: "hardfault", 2: "unhandled", 3: "watchdog", 4: "halt"}
 
 def _decode_boot_arg(arg):
     hi, lo = arg >> 8, arg & 0xFF
+    if hi == 0:
+        return f"step {lo} (milestone)"   # splash_progress()'s bare step stamp
     step, core1 = hi & 0x0F, (hi >> 4) & 1
     if 0x80 <= lo <= 0xBF:
         return (f"step {step}, sub-step paint in flight: core1_entered={core1}, "
-                f"sub={((lo >> 4) & 3) + 1} (mod 4), render call {lo & 0x0F}")
-    if lo in (0xE1, 0xE2):
-        return f"step {step}, {'status-panel paint' if lo == 0xE1 else 'logo draw'} (milestone)"
+                f"sub={((lo >> 4) & 3) + 1} (mod 4), render call {(lo & 0x0F) + 1} of 16 (1-based)")
+    marks = {0xE1: "status-panel paint", 0xE2: "logo draw", 0xE3: "final dwell + render"}
+    if lo in marks:
+        return f"step {step}, {marks[lo]} (milestone)"
     return f"step {step}, sub-step/render key {lo}"
 
 

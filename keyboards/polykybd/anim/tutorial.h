@@ -252,6 +252,8 @@ const uint32_t *tutorial_tour_line(uint8_t step, bool left, bool seen);
 // reads Á»Æ (INTL_PICKER_LEGEND), so the word "Ctrl" points at nothing the user can
 // see. The panel draws this legend inside a keycap-shaped frame after the line.
 const uint32_t *tutorial_tour_key(uint8_t step, bool left, bool seen);
+// The emoji an emoji-tour step shows after its left status line, or 0. A pack glyph.
+uint32_t tutorial_tour_emoji(uint8_t step);
 
 // A chapter's LIT SET, as a bitmap over THIS HALF's display slots. TUT_SET_SHIFT is the
 // plain A-Z keys plus both shifts; TUT_SET_LAYER is the letters plus the layer keys.

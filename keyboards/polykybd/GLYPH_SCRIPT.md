@@ -67,3 +67,13 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
   `test_glyph_script_round_trip` (`min_protocol: 9`) + `test_glyph_script_expansion`
   (`min_protocol: 10`, walks values 2/6/10 + out-of-range NACK).
 
+
+## Braille is synthesized, not rendered (hardware round 45)
+
+DejaVu Sans grid-fitted at this size drew the dots as 6x6 squares. Every Braille cell
+is the same six-dot grid, so `generate_fonts.py` draws the font itself
+(`synth_braille`, selected by `synth: braille` in `fonts.yaml`): 8 px round dots on a
+12 px pitch, a 20x32 cell. It emits the same header text fontconvert would, under the
+old symbol name, so no index moves; the fantasy bundle was reshipped as v6. ⚠️ The
+keycap centres a legend on its INK bbox, so a cell with no bottom-row dot (a, b, c…)
+sits lower than a full one, as it always has. That is pre-existing, not new here.

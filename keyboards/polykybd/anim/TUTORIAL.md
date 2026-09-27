@@ -2171,3 +2171,18 @@ U+100025 inside the one `IconsFont`. FONT_PACK.md has the current layout.
   and the user asked for CTX in a micro script on the right. The bars are 3 px, and a
   hand-drawn 3x5 CTX sits beside the top bar, so `ICON_CONTEXT_MENU` (U+100000) is
   45x22. Option C (2 px bars) is the fallback if this still reads heavy.
+
+## Round 45
+
+- **Lesson colours: brightness evened out per hue.** "Still too bright, some are ok."
+  At one LED value the hues differ 3x in luma (yellow 237, violet 73 of 255), so
+  `hue_val()` scales each hue down to at most luma `TRGB_LUMA_REF` (110), where the hues
+  reported as fine already sit.
+- **"10 FUN | SCRIPTS"** on the scripts count screen (a space key between the number
+  and FUN). The layouts screen already read "160 | LAYOUTS".
+- **Emoji on the emoji-tour status lines.** The LEFT line gets a trailing pack emoji
+  (`tutorial_tour_emoji()`): 😄 for "Now for | some emoji" and smileys, 🐘 animals,
+  🌻 plants, 🔨 tools, ✈ travel, ⚽ sports, 🎉 the rest. The left lines are 38..62 px,
+  so a full-size emoji still fits 128 px; after the right line it would not. Skipped
+  when the pack lacks the glyph.
+- **Braille with round dots** (fantasy bundle v6): see GLYPH_SCRIPT.md.

@@ -209,7 +209,7 @@ typedef enum {
     TUT_LANG_WIPE,      // a ring from a corner turns each key it passes into the item
     TUT_LANG_SHOW,      // one preview item on screen; re-entered once per item
     TUT_LANG_MORE,      // "160 | LAYOUTS" on the keys: there are many more
-    TUT_LANG_MORE2,     // "10 | SCRIPTS"
+    TUT_LANG_MORE2,     // "10 FUN | SCRIPTS"
     // ---- the key tour: the language menu, then the emoji menu ----
     TUT_TOUR_WAIT,      // the ring and the pulse on tour[tour_i]; no timeout
     TUT_TOUR_SEEN,      // it was pressed and acted; the board shows the result

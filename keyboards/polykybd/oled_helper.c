@@ -790,7 +790,8 @@ const uint8_t wpm_gauge_bitmap[] PROGMEM = {
 
 // First-run tutorial prose: at most two centred lines, resident-font ASCII only (at
 // first boot the font pack may never have been flashed, so a pack glyph here would
-// render as nothing on the very first screen a new user sees).
+// render as nothing on the very first screen a new user sees). The one pack glyph is
+// the emoji tour's trailing emoji, which is skipped when the pack lacks it.
 //
 // ⚠️ The panel normally runs at OLED_BRIGHTNESS (60 of 255, ~24%) — deliberately dim
 // for a status readout, too dim for the one screen that has to be read across a desk.
@@ -835,12 +836,16 @@ void oled_tutorial_screen(void) {
         return;
     }
 
-    // ⚠️ A trailing icon is drawn with its OWN single-font array, never appended to the
-    // line. The status face covers 0x20..0x7E, so the glyph is not in it; and
-    // kdisp_write_gfx_char baseline-aligns every glyph to fonts[0], so a two-font array
+    // ⚠️ A trailing icon is drawn with its OWN font array, never appended to the line.
+    // The status face covers 0x20..0x7E, so the glyph is not in it; and
+    // kdisp_write_gfx_char baseline-aligns every glyph to fonts[0], so {small, IconsFont}
     // would drop the icon by (IconsFont 40 - small 20) = 20 px, straight out of its
     // band. Two calls, two arrays, two correct baselines.
-    const GFXfont* icon_fonts[] = {&IconsFont};
+    // Round 45: g_all_fonts rather than {&IconsFont} alone, so a trailing icon can
+    // also be a pack emoji. IconsFont is g_all_fonts[0], so the baseline reference is
+    // the same one; every icon is placed from its own bbox anyway.
+    const GFXfont* const* icon_fonts  = g_all_fonts;
+    const uint8_t         icon_nfonts = g_all_font_count;
 
     const uint32_t* lines[2] = {l0, l1};
     const uint8_t   count    = (uint8_t)((l0 ? 1 : 0) + (l1 ? 1 : 0));
@@ -881,12 +886,15 @@ void oled_tutorial_screen(void) {
                 w      = (int8_t)(w + hold_w);
             }
 
-            const uint32_t  cp        = tutorial_line_icon(i);
+            uint32_t        cp        = tutorial_line_icon(i);
+            // A pack glyph (an emoji) is missing until the pack is flashed: draw nothing
+            // rather than reserve space for a blank.
+            if (cp && kdisp_gfx_glyph_font(icon_fonts, icon_nfonts, cp, NULL) == NULL) cp = 0;
             const uint32_t  icon[2]   = {cp, 0};
             int8_t          ix0 = 0, ix1 = 0, iy0 = 0, iy1 = 0;
             int8_t          icon_w    = 0;
             if (cp) {
-                kdisp_gfx_text_bbox(icon_fonts, 1, icon, &ix0, &ix1, &iy0, &iy1);
+                kdisp_gfx_text_bbox(icon_fonts, icon_nfonts, icon, &ix0, &ix1, &iy0, &iy1);
                 icon_w = (int8_t)(ix1 - ix0 + 1 + TUT_ICON_GAP);
                 w      = (int8_t)(w + icon_w);
             }
@@ -906,7 +914,7 @@ void oled_tutorial_screen(void) {
                 // Centred on the TEXT's own band, from the icon's bbox — the two faces
                 // have different heights, so sharing a baseline would sit it low.
                 const int8_t ibase = (int8_t)(band * slot + band / 2 - (iy0 + iy1) / 2);
-                kdisp_write_gfx_text(icon_fonts, 1,
+                kdisp_write_gfx_text(icon_fonts, icon_nfonts,
                                      (int8_t)(x + x0 + (x1 - x0 + 1) + TUT_ICON_GAP - ix0),
                                      ibase, icon);
             }

@@ -886,7 +886,13 @@ const uint32_t *tutorial_line(uint8_t which) {
 // has one: the word SHIFT alone is a label, and the ⇧ is what a user matches against
 // the keycap they are being pointed at — the same glyph that key renders.
 uint32_t tutorial_line_icon(uint8_t which) {
-    if (!s_active || which != 0 || is_left_side()) return 0;
+    if (!s_active || which != 0) return 0;
+    if (is_left_side()) {
+        // Round 45: an emoji after the emoji tour's left line.
+        if (s_st.phase != TUT_TOUR_WAIT && s_st.phase != TUT_TOUR_SEEN) return 0;
+        const int16_t step = tut_tour_index(&s_st);
+        return step < 0 ? 0 : tutorial_tour_emoji((uint8_t)step);
+    }
     switch (s_st.phase) {
         case TUT_REVEAL:
         case TUT_SHIFT_WAIT:

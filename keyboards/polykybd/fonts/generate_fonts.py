@@ -108,6 +108,68 @@ def build_argv(fc: str, e: dict, sources: dict, root: Path) -> list[str]:
     return argv
 
 
+def synth_braille(e: dict) -> str:
+    """A Braille glyph-script font drawn in Python rather than rendered by fontconvert.
+
+    Every Braille cell is the same six-dot grid, so there is nothing a TTF adds, and
+    grid-fitting DejaVu at this size squared the dots (hardware round 45: "the square
+    dots are not as nice as round dots would be"). Emits the same header text
+    fontconvert would: bitmaps column-native (cb bytes per column, LSB = top), each
+    glyph trimmed to its ink with offsets kept on the full cell.
+    """
+    d, pitch = int(e["dot"]), int(e["pitch"])
+    first = int(str(e["extra_args"][0]).replace("-F", ""), 0)
+    seq = [int(t, 16) for t in str(e["sequence"]).replace(" ", "").split(",")]
+    name = e["symbol"]
+    c, r = (d - 1) / 2, d / 2
+    disc = [[(x - c) ** 2 + (y - c) ** 2 <= (r - 0.15) ** 2 + 0.5 for x in range(d)] for y in range(d)]
+    cell_h = 2 * pitch + d
+    top = -(cell_h + (int(e["yadvance"]) - cell_h) // 2)      # centre the full cell
+    xoff = int(e.get("x_offset", 6))
+    xadv = pitch + d + 2 * xoff
+    bitmaps, glyphs = [], []
+    for cp in seq:
+        bits = cp - 0x2800
+        ink = set()
+        for b in range(6):
+            if bits >> b & 1:
+                cx, cy = (0, b) if b < 3 else (1, b - 3)
+                for y in range(d):
+                    for x in range(d):
+                        if disc[y][x]:
+                            ink.add((cx * pitch + x, cy * pitch + y))
+        x0, y0 = min(x for x, _ in ink), min(y for _, y in ink)
+        w = max(x for x, _ in ink) - x0 + 1
+        h = max(y for _, y in ink) - y0 + 1
+        cb = (h + 7) >> 3
+        off = len(bitmaps)
+        for x in range(w):
+            for pg in range(cb):
+                v = 0
+                for k in range(8):
+                    if (x0 + x, y0 + pg * 8 + k) in ink:
+                        v |= 1 << k
+                bitmaps.append(v)
+        glyphs.append((off, w, h, xadv, xoff + x0, top + y0, cp))
+    seq_txt = ", ".join(f"{cp:X}" for cp in seq)
+    out = [f"// synthesized by generate_fonts.py synth_braille: {d} px round dots, pitch {pitch} px",
+           "", f"/* sequence: {seq_txt} */",
+           f"const uint8_t {name}Bitmaps[] PROGMEM = {{"]
+    rows = [", ".join(f"0x{v:02X}" for v in bitmaps[i:i + 12]) for i in range(0, len(bitmaps), 12)]
+    out += [f"  {r_}," for r_ in rows[:-1]] + [f"  {rows[-1]} }};", ""]
+    out.append(f"const GFXglyph {name}Glyphs[] PROGMEM = {{")
+    out.append("// bmpOff,   w,   h,xAdv, xOff, yOff      sequence")
+    for i, (off, w, h, xa, xo, yo, cp) in enumerate(glyphs):
+        end = " };" if i == len(glyphs) - 1 else ","
+        out.append(f"  {{ {off:5d}, {w:3d}, {h:3d}, {xa:3d}, {xo:4d}, {yo:4d} }}{end}   // seq[{i}] U+{cp:04X}")
+    out += ["", f"const GFXfont {name} PROGMEM = {{",
+            f"  (uint8_t  *){name}Bitmaps,", f"  (GFXglyph *){name}Glyphs,",
+            f"  0x{first:X}, // first", f"  0x{first + len(seq) - 1:X}, // last",
+            f"  {int(e['yadvance'])}   //height", " };", "",
+            f"// Approx. {len(bitmaps) + 7 * len(glyphs) + 7} bytes"]
+    return "\n".join(out) + "\n"
+
+
 def render(fc: str, entries, sources, categories, root: Path, quiet: bool):
     """Run fontconvert for each entry. Returns (cat_blocks, ordered_symbols)."""
     if not (shutil.which(fc) or Path(fc).exists()):
@@ -118,12 +180,15 @@ def render(fc: str, entries, sources, categories, root: Path, quiet: bool):
     symbols: list[str] = []
     for i, entry in enumerate(entries):
         e = resolve(entry, categories)
-        argv = build_argv(fc, e, sources, root)
-        res = subprocess.run(argv, capture_output=True, text=True)
-        if res.returncode != 0:
-            sys.exit(f"fontconvert failed for entry {i} ({e.get('variant')}):\n"
-                     f"  cmd: {' '.join(argv)}\n{res.stderr}")
-        out = res.stdout
+        if e.get("synth") == "braille":
+            out = synth_braille(e)
+        else:
+            argv = build_argv(fc, e, sources, root)
+            res = subprocess.run(argv, capture_output=True, text=True)
+            if res.returncode != 0:
+                sys.exit(f"fontconvert failed for entry {i} ({e.get('variant')}):\n"
+                         f"  cmd: {' '.join(argv)}\n{res.stderr}")
+            out = res.stdout
         m = GFXFONT_RE.search(out)
         if not m:
             sys.exit(f"no GFXfont symbol in fontconvert output for entry {i} "

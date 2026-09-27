@@ -4733,6 +4733,30 @@ const uint32_t *tutorial_tour_line(uint8_t step, bool left, bool seen) {
     }
 }
 
+// Round 45: the emoji steps show one emoji on the status panel, after the LEFT line
+// ("Smileys 😄 | and faces"). The left lines are the short ones (38..62 px), so a
+// full-size emoji (up to 45 px) still fits the 128 px panel; after the right line it
+// would not ("big and small" is 97 px). A pack glyph, so the caller draws it only when
+// the font pack actually has it.
+uint32_t tutorial_tour_emoji(uint8_t step) {
+    if (step >= s_tour_n) return 0;
+    switch (s_tour_kind[step]) {
+        case TUT_TOUR_EMJ: return 0x1F604;   // 😄
+        case TUT_TOUR_ECAT:
+            switch (s_tour_arg[step]) {
+                case 0:  return 0x1F604;     // 😄 smileys and faces
+                case 4:  return 0x1F418;     // 🐘 animals, big and small
+                case 5:  return 0x1F33B;     // 🌻 plants and food
+                case 9:  return 0x1F528;     // 🔨 tools and objects
+                case 7:  return 0x2708;      // ✈ travel and places
+                case 8:  return 0x26BD;      // ⚽ sports and games
+                default: return 0x1F389;     // 🎉 more emoji
+            }
+        default:
+            return 0;
+    }
+}
+
 const uint32_t *tutorial_tour_key(uint8_t step, bool left, bool seen) {
     if (step >= s_tour_n || left || seen) return NULL;
     // The keycap draws INTL_PICKER_LEGEND in its 14 pt face; the panel draws the same
@@ -4889,7 +4913,8 @@ static int8_t tut_name_slot_unit(uint8_t side, uint8_t idx, uint8_t n, uint8_t t
 // Returns 0 (not a name key), 1 (a character in *cp), 2 (a pre-rendered tile in *tile)
 // or 3 (a character in *cp, drawn in the heavy splash face).
 // The "more" screens, one at a time: the NUMBER on the left half and the WORD on the
-// right — first the layouts this firmware knows, then the alternative glyph scripts.
+// right — first the layouts this firmware knows ("160 | LAYOUTS"), then the alternative
+// glyph scripts ("10 FUN | SCRIPTS").
 // Read from the enums, so the screens stay true as languages and scripts are added.
 // Returns the unit count for THIS half's middle row.
 static uint8_t tut_more_units(bool right, bool scripts, uint32_t out[TUT_NAME_UNITS]) {
@@ -4904,6 +4929,12 @@ static uint8_t tut_more_units(bool right, bool scripts, uint32_t out[TUT_NAME_UN
     uint16_t v  = scripts ? (uint16_t)(GLYPH_SCRIPT_COUNT - 1) : (uint16_t)NUM_LANG;
     do { digits[nd++] = (char)('0' + v % 10u); v /= 10u; } while (v != 0 && nd < sizeof(digits));
     while (nd > 0) out[n++] = (uint32_t)digits[--nd];
+    // Round 45: "10 FUN | SCRIPTS". The space is a key left blank (the heavy face's
+    // space has no ink).
+    if (scripts) {
+        static const uint32_t fun[] = {' ', 'F', 'U', 'N'};
+        for (uint8_t i = 0; i < 4u && n < TUT_NAME_UNITS; ++i) out[n++] = fun[i];
+    }
     return n;
 }
 

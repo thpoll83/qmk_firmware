@@ -36,6 +36,11 @@
 // a fade, which leaves a two-channel mix, never a primary.
 #define TRGB_SAT         220u
 #define TRGB_MIN_CH      4u
+// Round 45: "still too bright, some are ok". At one LED value the hues differ in
+// brightness by 3x: yellow is luma 237 of 255 and violet 73, because green dominates
+// what the eye sees. Each hue's value is scaled so no hue is brighter than luma
+// TRGB_LUMA_REF, which is where the hues reported as fine already sit.
+#define TRGB_LUMA_REF    110u
 // Name keys breathe out of step with each other ("pulse individually"): each key's
 // pulse clock is offset by this much per slot. Not a divisor of the 1400 ms period, so
 // neighbouring slots land far apart in phase.
@@ -151,6 +156,15 @@ static void build_map(void) {
     s_map_built = true;
 }
 
+// `val` scaled so hue `h` is no brighter than TRGB_LUMA_REF (Rec. 709 luma weights).
+static uint8_t hue_val(uint8_t h, uint8_t val) {
+    const rgb_t    c = hsv_to_rgb((hsv_t){h, TRGB_SAT, 255u});
+    const uint16_t y = (uint16_t)((54u * c.r + 183u * c.g + 19u * c.b) >> 8);
+    if (y <= TRGB_LUMA_REF) return val;
+    const uint8_t v = (uint8_t)(((uint16_t)val * TRGB_LUMA_REF + y / 2u) / y);
+    return (val != 0u && v == 0u) ? 1u : v;   // pulse_lvl() divides by it
+}
+
 // The lowest value at which hue `h` still shows its two strongest channels.
 static uint8_t hue_floor(uint8_t h) {
     const rgb_t   c  = hsv_to_rgb((hsv_t){h, TRGB_SAT, 255u});
@@ -165,6 +179,7 @@ static uint8_t hue_floor(uint8_t h) {
 // Level 0..255 of a glow whose peak is `val`, drawn in hue `h`. Below the hue's floor
 // the key is dark: that is what keeps a fading orange from reading as red.
 static void set_glow(uint8_t led, uint8_t h, uint8_t val, uint8_t lvl) {
+    val = hue_val(h, val);
     const uint8_t v = (uint8_t)(((uint16_t)val * lvl) / 255u);
     if (v < hue_floor(h)) {
         rgb_matrix_set_color(led, 0, 0, 0);
@@ -180,6 +195,7 @@ static void set_glow(uint8_t led, uint8_t h, uint8_t val, uint8_t lvl) {
 // onto the levels that still show the colour, so the bottom of a breath is the colour
 // dimmed, never its primary and never off.
 static uint8_t pulse_lvl(uint8_t h, uint8_t val, uint8_t wave) {
+    val = hue_val(h, val);
     const uint16_t fl = ((uint16_t)hue_floor(h) * 255u + val - 1u) / val;   // floor as a level
     const uint16_t lo = fl > 255u ? 255u : fl;
     return (uint8_t)(lo + ((255u - lo) * wave) / 255u);

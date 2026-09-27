@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "oled_helper.h"
 #include "anim/tutorial.h"
+#include "boot_diag.h"      // boot_paint_mark()
 #include "anim/startup_anim.h"
 #include "layer_names.h"
 
@@ -11,6 +12,7 @@
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/fw_staging.h"
+#include "base/fontpack.h"      // g_all_fonts: a framed keycap legend draws as the key does
 #include "base/status_brightness.h"   // poly_status_brightness() — the live panel level
 #include "poly_keymap.h"         // poly_fw_screen() / poly_fw_hold_active()
 #include "poly_macro.h"          // POLY_MACRO_COUNT
@@ -441,8 +443,13 @@ void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_to
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
     // Synchronous, for the usual reason: the step this announces may be the one that
     // never returns, and a frame left for the next oled_render() tick is a frame the
-    // hung board never shows.
-    oled_render_dirty(true);
+    // hung board never shows. One block per call (OLED_UPDATE_PROCESS_LIMIT is 1) with
+    // a breadcrumb before each, so a wedge inside the paint names how many blocks had
+    // gone out — see boot_paint_mark(). A call with nothing dirty returns at once.
+    for (uint8_t n = 0; n < OLED_BLOCK_COUNT; ++n) {
+        boot_paint_mark(n);
+        oled_render_dirty(false);
+    }
 }
 
 // "⭯Applying  Restarts⭯" — ONE screen for the whole apply, and the one frozen on the
@@ -789,7 +796,8 @@ const uint8_t wpm_gauge_bitmap[] PROGMEM = {
 
 // First-run tutorial prose: at most two centred lines, resident-font ASCII only (at
 // first boot the font pack may never have been flashed, so a pack glyph here would
-// render as nothing on the very first screen a new user sees).
+// render as nothing on the very first screen a new user sees). The one pack glyph is
+// the emoji tour's trailing emoji, which is skipped when the pack lacks it.
 //
 // ⚠️ The panel normally runs at OLED_BRIGHTNESS (60 of 255, ~24%) — deliberately dim
 // for a status readout, too dim for the one screen that has to be read across a desk.
@@ -800,6 +808,19 @@ static bool s_tut_oled_raised = false;
 
 // Pixels between a tutorial line and its trailing icon.
 #define TUT_ICON_GAP 3
+// A framed keycap legend (tutorial_line_key) is a rounded SQUARE, the shape of a key
+// seen from above: gap after the word, the legend's inset inside the 1 px frame, and the
+// corner radius. The legend is ONE baked glyph sized for this panel
+// (ICON_INTL_PICKER_SMALL, 36x23), so the square is 44x44 (hardware round 43: 62 with
+// the keycap's 14 pt face and a 2 px frame read as too big). The glyph carries blank
+// rows under the letters as tall as the accent, so centring its box centres the
+// capitals. The side is capped at the band minus one row each way.
+#define TUT_KEY_GAP 5
+#define TUT_KEY_PAD 3
+#define TUT_KEY_R   5
+
+// Pixels between the press-and-hold icon and the words after it.
+#define TUT_HOLD_GAP 4
 
 void oled_tutorial_screen(void) {
     const GFXfont*  small   = &NotoSans_Regular_Small_15px7b;
@@ -821,12 +842,16 @@ void oled_tutorial_screen(void) {
         return;
     }
 
-    // ⚠️ A trailing icon is drawn with its OWN single-font array, never appended to the
-    // line. The status face covers 0x20..0x7E, so the glyph is not in it; and
-    // kdisp_write_gfx_char baseline-aligns every glyph to fonts[0], so a two-font array
+    // ⚠️ A trailing icon is drawn with its OWN font array, never appended to the line.
+    // The status face covers 0x20..0x7E, so the glyph is not in it; and
+    // kdisp_write_gfx_char baseline-aligns every glyph to fonts[0], so {small, IconsFont}
     // would drop the icon by (IconsFont 40 - small 20) = 20 px, straight out of its
     // band. Two calls, two arrays, two correct baselines.
-    const GFXfont* icon_fonts[] = {&IconsFont};
+    // Round 45: g_all_fonts rather than {&IconsFont} alone, so a trailing icon can
+    // also be a pack emoji. IconsFont is g_all_fonts[0], so the baseline reference is
+    // the same one; every icon is placed from its own bbox anyway.
+    const GFXfont* const* icon_fonts  = g_all_fonts;
+    const uint8_t         icon_nfonts = g_all_font_count;
 
     const uint32_t* lines[2] = {l0, l1};
     const uint8_t   count    = (uint8_t)((l0 ? 1 : 0) + (l1 ? 1 : 0));
@@ -843,27 +868,88 @@ void oled_tutorial_screen(void) {
 
             // The icon joins the line as one centred unit — measured, not guessed, so
             // "SHIFT" does not stay centred with the glyph hanging off the right edge.
-            const uint32_t  cp        = tutorial_line_icon(i);
+            // A framed keycap legend joins the same way, one unit with the words.
+            const uint32_t* key = tutorial_line_key(i);
+            int8_t          kx0 = 0, kx1 = 0, ky0 = 0, ky1 = 0;
+            int8_t          key_side = 0;
+            if (key) {
+                kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, key, &kx0, &kx1, &ky0, &ky1);
+                const int8_t need_w = (int8_t)(kx1 - kx0 + 1 + 2 * TUT_KEY_PAD + 2);
+                const int8_t need_h = (int8_t)(ky1 - ky0 + 1 + 2 * TUT_KEY_PAD + 2);
+                key_side = need_w > need_h ? need_w : need_h;
+                if (key_side > band - 2) key_side = (int8_t)(band - 2);
+                w = (int8_t)(w + TUT_KEY_GAP + key_side);
+            }
+
+            // The press-and-hold icon LEADS the line, one unit with the words.
+            const uint32_t hold    = tutorial_line_lead_icon(i);
+            const uint32_t hold_s[2] = {hold, 0};
+            int8_t         hx0 = 0, hx1 = 0, hy0 = 0, hy1 = 0;
+            int8_t         hold_w = 0;
+            if (hold) {
+                kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, hold_s, &hx0, &hx1, &hy0, &hy1);
+                hold_w = (int8_t)(hx1 - hx0 + 1 + TUT_HOLD_GAP);
+                w      = (int8_t)(w + hold_w);
+            }
+
+            uint32_t        cp        = tutorial_line_icon(i);
+            // A pack glyph (an emoji) is missing until the pack is flashed: draw nothing
+            // rather than reserve space for a blank.
+            if (cp && kdisp_gfx_glyph_font(icon_fonts, icon_nfonts, cp, NULL) == NULL) cp = 0;
             const uint32_t  icon[2]   = {cp, 0};
             int8_t          ix0 = 0, ix1 = 0, iy0 = 0, iy1 = 0;
             int8_t          icon_w    = 0;
+            // A pack emoji is drawn at HALF size (hardware round 46: full size read
+            // too big beside the 15 px line); a resident icon stays full size.
+            // Round 47/48: which half-size mode is per glyph. The DECIMATING half
+            // (every second pixel, kdisp_draw_glyph_thin_at) keeps the panels of ⚽
+            // apart; the 2x2-OR half reads better for the rest, 🙂 included (round 49).
+            const bool      icon_half = cp != 0u && cp < 0x100000u;
             if (cp) {
-                kdisp_gfx_text_bbox(icon_fonts, 1, icon, &ix0, &ix1, &iy0, &iy1);
-                icon_w = (int8_t)(ix1 - ix0 + 1 + TUT_ICON_GAP);
+                kdisp_gfx_text_bbox(icon_fonts, icon_nfonts, icon, &ix0, &ix1, &iy0, &iy1);
+                const int8_t iw = (int8_t)(ix1 - ix0 + 1);
+                icon_w = (int8_t)((icon_half ? (iw + 1) / 2 : iw) + TUT_ICON_GAP);
                 w      = (int8_t)(w + icon_w);
             }
 
-            int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2 - x0);
-            if (x < 0) x = 0;
-            const int8_t base = (int8_t)(band * slot + band / 2 - (y0 + y1) / 2);
+            int16_t start = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2);
+            if (start < 0) start = 0;
+            if (hold) {
+                // Centred on the text's band from its own box, like the trailing icon.
+                const int8_t hbase = (int8_t)(band * slot + band / 2 - (hy0 + hy1) / 2);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, (int8_t)(start - hx0), hbase, hold_s);
+            }
+            // x is the TEXT's origin; everything after the words is placed from it.
+            const int16_t x    = (int16_t)(start + hold_w - x0);
+            const int8_t  base = (int8_t)(band * slot + band / 2 - (y0 + y1) / 2);
             kdisp_write_gfx_text(fonts, 1, (int8_t)x, base, lines[i]);
-            if (cp) {
+            if (cp && icon_half) {
+                // Half size: the helper takes the literal top-left of the halved glyph,
+                // so centre that box on the band.
+                const int8_t ih = (int8_t)((iy1 - iy0 + 2) / 2);
+                const int8_t hx = (int8_t)(x + x0 + (x1 - x0 + 1) + TUT_ICON_GAP);
+                const int8_t hy = (int8_t)(band * slot + (band - ih) / 2);
+                if (cp == 0x26BDu) {
+                    kdisp_draw_glyph_thin_at(icon_fonts, icon_nfonts, hx, hy, cp);
+                } else {
+                    kdisp_draw_glyph_half_at(icon_fonts, icon_nfonts, hx, hy, cp);
+                }
+            } else if (cp) {
                 // Centred on the TEXT's own band, from the icon's bbox — the two faces
                 // have different heights, so sharing a baseline would sit it low.
                 const int8_t ibase = (int8_t)(band * slot + band / 2 - (iy0 + iy1) / 2);
-                kdisp_write_gfx_text(icon_fonts, 1,
+                kdisp_write_gfx_text(icon_fonts, icon_nfonts,
                                      (int8_t)(x + x0 + (x1 - x0 + 1) + TUT_ICON_GAP - ix0),
                                      ibase, icon);
+            }
+            if (key) {
+                // A 1 px rounded frame centred on the band, the glyph centred in it.
+                const int8_t fx = (int8_t)(x + x0 + (x1 - x0 + 1) + TUT_KEY_GAP);
+                const int8_t fy = (int8_t)(band * slot + (band - key_side) / 2);
+                kdisp_draw_round_rect(fx, fy, key_side, key_side, TUT_KEY_R);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count,
+                                     (int8_t)(fx + (key_side - (kx1 - kx0 + 1)) / 2 - kx0),
+                                     (int8_t)(fy + (key_side - (ky1 - ky0 + 1)) / 2 - ky0), key);
             }
             slot++;
         }
@@ -875,14 +961,18 @@ void oled_tutorial_screen(void) {
 bool oled_task_user(void) {
     // Brightness ownership for the tutorial, on its edges only (an unconditional
     // oled_set_brightness every tick would be pointless I2C traffic).
-    if (tutorial_active() != s_tut_oled_raised) {
-        s_tut_oled_raised = tutorial_active();
+    // Eden's welcome tail belongs to the lesson too (it says the lesson's first words).
+    const bool tut_owns_panel = tutorial_active() || startup_anim_welcome();
+    if (tut_owns_panel != s_tut_oled_raised) {
+        s_tut_oled_raised = tut_owns_panel;
         // ⚠️ Restore to the LIVE level, not the compile-time OLED_BRIGHTNESS. The
         // status panel tracks the synced contrast (status_oled_level() in
         // poly_keymap.c is the same expression), so handing back the constant made
         // the tutorial's exit undo whatever brightness the user had set.
+        // During the tutorial: POLY_INTRO_STATUS_BRIGHT (see startup_anim.h for why it
+        // is not the keycaps' own register value).
         oled_set_brightness(s_tut_oled_raised
-                                ? 255
+                                ? POLY_INTRO_STATUS_BRIGHT
                                 : poly_status_brightness(get_local_state()->contrast));
     }
 
@@ -920,7 +1010,13 @@ bool oled_task_user(void) {
         // BELOW the firmware block on purpose — a signing question, a live flash, an
         // apply or a restart outranks the intro, and poly_prepare_for_flash() stops a
         // one-shot anyway. Above everything else, which would all paint something.
+        // The exception is the welcome tail (startup_anim_welcome()): the lesson's first
+        // words, drawn by the lesson's own screen, while the stars still fall.
         oled_scroll_off();
+        if (startup_anim_welcome() && (get_local_state()->flags & STATUS_DISP_ON) != 0) {
+            oled_tutorial_screen();
+            return false;
+        }
         oled_off();
         return false;
     } else if (tutorial_active()) {
@@ -930,6 +1026,16 @@ bool oled_task_user(void) {
         // the whole point of intro mode, where the keycaps have gone back to rendering
         // themselves.
         oled_scroll_off();
+        // ⚠️ Obey the status-display flag. Suspend clears STATUS_DISP_ON and the sync
+        // turns the panel off with oled_off(), but this branch redraws every tick and a
+        // redraw switches the SSD1306 straight back on. The SLAVE's main loop keeps
+        // running while the host sleeps, so its panel stayed lit on the last lesson
+        // screen at full brightness ("the slave status display kept displaying
+        // 'Braille' and never turned off", hardware). The lesson resumes on wake.
+        if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
+            oled_off();
+            return false;
+        }
         oled_tutorial_screen();
 #ifdef POLYKYBD_DOOM
     } else if (doom_mode_active() || get_local_state()->doom_ctl) {

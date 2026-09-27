@@ -65,6 +65,14 @@ index:
   # Fonts inserted at the FRONT of ALL_FONTS, before the generated ones.
   prepend_fonts:
     - IconsFont
+  # Hand-drawn RESIDENT fonts placed at the END of the order instead. Empty today:
+  # IconsFont itself moved to plane 16 and holds every icon. Kept because it is the
+  # safe way to add a second resident font later.
+  # ⚠️ Each pack font's position in the order is the gidx its bundle stores, so a font
+  # prepended here would move every one of them and change all eight bundles' bytes.
+  # Appended, it moves nothing. Only for fonts whose range overlaps no other font,
+  # since last place loses every lookup tie.
+  append_fonts: []
   # Extra fonts kept RESIDENT (compiled in, never in the font pack) even though
   # their category is otherwise packed. These supply UI *chrome* that must render
   # with no pack present. NotoSansSymbols2 Arrows (U+2B6F–2BA0, ~0.9 KB) draws the
@@ -497,9 +505,13 @@ fonts:
   # APL & Braille use DejaVu Sans (smooth outline) instead of Unifont's 16 px bitmap.
   # DejaVu lacks the APL quad U+2395, so the 'l' key uses U+25A1 (□, visually identical).
   - {category: gscript, variant: _Apl_,      source: dejavu-sans, extra_args: ['-F0xEA00'], sequence: '237A, 22A5, 2229, 230A, 2208, 005F, 2207, 2206, 2373, 2218, 0027, 25A1, 007C, 22A4, 25CB, 002A, 003F, 2374, 2308, 007E, 2193, 222A, 2375, 2283, 2191, 2282, 00A8, 00AF, 003C, 2264, 003D, 2265, 003E, 2260, 2228, 2227'}
-  # Braille rendered larger (round dots need the size to read); still fits 40 px after
-  # the render_key bbox vertical-centering.
-  - {category: gscript, variant: _Braille_,  source: dejavu-sans, render_height: 44, extra_args: ['-F0xEA40'], sequence: '2801, 2803, 2809, 2819, 2811, 280B, 281B, 2813, 280A, 281A, 2805, 2807, 280D, 281D, 2815, 280F, 281F, 2817, 280E, 281E, 2825, 2827, 283A, 282D, 283D, 2835, 2801, 2803, 2809, 2819, 2811, 280B, 281B, 2813, 280A, 281A'}
+  # Braille is SYNTHESIZED (generate_fonts.py synth_braille), not rendered: every cell
+  # is the same six-dot grid, and grid-fitting DejaVu at this size squared the dots
+  # (hardware round 45). 8 px round dots on a 12 px pitch, a 20x32 cell centred in the
+  # 40 px line. `source` and `render_height` only feed the host render-settings file
+  # (mirrored byte-identically, so they stay as they were); fontconvert never runs for
+  # this entry. `symbol` keeps the old name so nothing downstream moves.
+  - {category: gscript, variant: _Braille_,  source: dejavu-sans, render_height: 44, synth: braille, dot: 8, pitch: 12, symbol: DejaVuSans_Braille_20pt7b, extra_args: ['-F0xEA40'], sequence: '2801, 2803, 2809, 2819, 2811, 280B, 281B, 2813, 280A, 281A, 2805, 2807, 280D, 281D, 2815, 280F, 281F, 2817, 280E, 281E, 2825, 2827, 283A, 282D, 283D, 2835, 2801, 2803, 2809, 2819, 2811, 280B, 281B, 2813, 280A, 281A'}
 
 # ── Bigger keycap legends (glyph size, HID cmd 34) ────────────────────────
 # Tier M — em 33 px (cap height 24 vs the base face's 20), emitted at

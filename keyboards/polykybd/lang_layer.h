@@ -20,7 +20,8 @@
 // region + page state and the slot<->LANG_* index mapping.
 
 // Number of continent regions (matches LANG_REGION_ORDER in the host's
-// services/lang_regions.py). Two of them (Africa, Oceania) are currently empty.
+// services/lang_regions.py). All six carry languages; REGION_OFFSET in lang_layer.c
+// has the counts (29 / 46 / 19 / 23 / 29 / 14).
 #define NUM_LANG_REGIONS 6
 
 #ifndef LANG_SLOTS_PER_PAGE

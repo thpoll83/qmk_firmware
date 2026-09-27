@@ -793,8 +793,21 @@ const char* glyph_size_name(uint8_t size);
 void note_boot_flags(uint8_t flags);
 // True until BOOT_INTRO_DONE has been persisted — i.e. the intro hasn't played.
 bool boot_intro_pending(void);
+
+// The language to REPORT (GET_LANG) and PERSIST: the user's own, even while the
+// tutorial's chapter 3 is previewing another one on the keycaps. The host switches the
+// OS layout to whatever GET_LANG says, so reading local_state->lang there would carry a
+// board-only preview into the OS. Defined in poly_keymap.c.
+uint8_t poly_reported_lang(void);
+// The language to PERSIST: poly_reported_lang(), except on the slave while the tutorial
+// runs, where it is the language already stored (the slave cannot tell a synced
+// preview from the real one). Defined in poly_keymap.c.
+uint8_t poly_persisted_lang(void);
 // Persist BOOT_INTRO_DONE (one-time tail-byte write) so the intro won't replay.
 void mark_boot_intro_done(void);
+// Clear the marker (straight-through write) so the intro + tutorial replay next boot.
+// Master-only by design: at boot the master's marker decides for both halves.
+void rearm_boot_intro(void);
 
 // The raw boot_flags byte, for the persistence half (save_user_boot_flags).
 uint8_t get_boot_flags(void);

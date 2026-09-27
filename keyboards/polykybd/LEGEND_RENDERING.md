@@ -307,7 +307,7 @@ drew an icon, and one pair of keys was replaced by a single state-reflecting key
   - A slash **composited over** the speaker cannot work, which is why the X sits
     BESIDE it: a legend display list has no erase op, so a lit slash over a solid
     glyph merges into it, and a dark-gap version would need a baked glyph — which the
-    **full** C1 band has no room for (see the icon-slot note above). The speaker is
+    C1 band had no room for when this was built (see the icon-slot note above). The speaker is
     only 19 px wide, so there is room for a separate mark at no cost.
 - **Scroll Lock keeps the word and gains a STATE badge**: `U"Scr"` + `ARROWS_DOWNSTOP`
   (U+2B73, the glyph the **status OLED** already lights for this state) at half size
@@ -319,8 +319,8 @@ drew an icon, and one pair of keys was replaced by a single state-reflecting key
     the L/R side marker** — so the half lost its side marker exactly while the lock was
     on. The keycap badge supersedes it, which is where Caps and Num are read from
     anyway. split42's panel never had one.
-  - ⚠️ **The badge is DRAWN, not baked**, and that is forced: the resident C1 band is
-    full (32/32), so there is nowhere to put the OFF/ON glyph pair Caps and Num each
+  - ⚠️ **The badge is DRAWN, not baked**, and that was forced: the resident C1 band was
+    full (32/32) at the time, so there was nowhere to put the OFF/ON glyph pair Caps and Num each
     get. **`HINT_BADGE` (`\x13`, args `w, h, style`)** draws either state — style 1 a
     2px outline, style 2 the solid — and **`HINT_ERASE` (`\x14`)** punches the arrow
     back out of the solid one; that knock-out is what makes the engaged state read as

@@ -80,6 +80,8 @@ void poly_announce_bootloader(void) {
     display_bootloader_message();
 }
 
+const GFXfont *poly_heavy_font(void) { return &FreeSansBold24pt7b; }
+
 void display_message(uint8_t row, uint8_t col, const uint32_t* message, const GFXfont* font) {
 
     const GFXfont* displayFont[] = { font };

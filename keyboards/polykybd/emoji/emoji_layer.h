@@ -55,6 +55,8 @@ void emj_apply_sync(uint8_t category, uint8_t page);
 // Accessors used by the split sync master side to read current state.
 uint8_t emj_active_category(void);
 uint8_t emj_active_page(void);
+// How many pages category `cat` has (0 for an unknown or empty category).
+uint8_t emj_page_count(uint8_t cat);
 
 // Draws a 3-px tab indicator on the active categor.
 // Call after kdisp_write_gfx_text but before kdisp_send_buffer.

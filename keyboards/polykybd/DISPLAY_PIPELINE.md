@@ -34,12 +34,10 @@ and relative links were adjusted to suit a standalone file.
     two faces sits on two baselines — `a»ñ` put its `a` 7 px high. Drawing a lone
     icon through a **single-font array** makes that adjustment 0, which is why the
     language flags use `{ &flag_font }`.
-  - ⚠️ **The resident C1 icon band `0x80–0x9F` is FULL (32/32), and `0xA0+` is not
-    an option** — it collides with printable Latin-1 and `IconsFont` is
-    `g_all_fonts[0]`, so a custom icon parked there silently shadows the real glyph.
-    The next resident icon has to go in the pack, or free a slot.
-    `python3 tools/check_icon_slots.py` is the only thing that can answer "is this
-    slot free?".
+  - **The resident icons live in plane-16 PUA (U+100000..)**, where they cannot
+    shadow a real character. They moved out of the C1 band `0x80–0x9F` after it
+    filled up (FONT_PACK.md). `python3 tools/check_icon_slots.py` is the only thing
+    that can answer "is this slot free?".
 - ⚠️ **`render_key()` and `to_static_text()` are a PAIR — both must normalise the
   keycode the same way, or a key draws its chrome and NO legend.** `update_displays()`
   consults `render_key()` exactly when `to_static_text()` returned NULL, which is

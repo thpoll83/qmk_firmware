@@ -85,7 +85,7 @@ def load():
     nano = bundle('NotoSans_Regular_Nano_10px7b')
     tiny = bundle('NotoSans_Regular_Nano_10px7b')
     icons = next((F[k], B[F[k]['bmp']], G[F[k]['gly']]) for k in F
-                 if F[k]['first'] <= 0x80 <= F[k]['last'] and F[k]['gly'] in G)
+                 if F[k]['first'] <= 0x100005 <= F[k]['last'] and F[k]['gly'] in G)
     world = bundle('NotoEmoji_Medium_World_20pt16b')
     return nano, tiny, icons, world
 
@@ -98,18 +98,25 @@ def _glyph(font, cp):
     return gl[cp - f['first']], bm
 
 
+def _lit(g, bm):
+    """Yield the lit (x, y) of a glyph. The data is COLUMN-NATIVE (OLED page
+    layout, as in kdisp_write_gfx_char and status_oled_preview.py): cb bytes per
+    column, 1 byte = 8 vertical pixels, LSB = top. Reading it as the classic
+    row-major Adafruit layout renders every glyph as dither noise."""
+    cb = (g['h'] + 7) >> 3
+    for gx in range(g['w']):
+        col = g['off'] + gx * cb
+        for gy in range(g['h']):
+            if bm[col + (gy >> 3)] & (1 << (gy & 7)):
+                yield gx, gy
+
+
 def draw_glyph(setpix, font, x, baseline, cp):
     g, bm = _glyph(font, cp)
     if not g:
         return 0
-    bo = g['off']; bit = 0; bits = 0
-    for gy in range(g['h']):
-        for gx in range(g['w']):
-            if (bit & 7) == 0:
-                bits = bm[bo]; bo += 1
-            if bits & 0x80:
-                setpix(x + g['xo'] + gx, baseline + g['yo'] + gy)
-            bits = (bits << 1) & 0xFF; bit += 1
+    for gx, gy in _lit(g, bm):
+        setpix(x + g['xo'] + gx, baseline + g['yo'] + gy)
     return g['xa']
 
 
@@ -136,14 +143,8 @@ def draw_glyph_half(setpix, font, x, top_y, cp):
     g, bm = _glyph(font, cp)
     if not g:
         return 0
-    bo = g['off']; bit = 0; bits = 0
-    for gy in range(g['h']):
-        for gx in range(g['w']):
-            if (bit & 7) == 0:
-                bits = bm[bo]; bo += 1
-            if bits & 0x80:
-                setpix(x + gx // 2, top_y + gy // 2)
-            bits = (bits << 1) & 0xFF; bit += 1
+    for gx, gy in _lit(g, bm):
+        setpix(x + gx // 2, top_y + gy // 2)
     return (g['h'] + 1) // 2
 
 
@@ -191,15 +192,15 @@ def build(side, nano, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0
     # Asymmetric halves: layout half = layer/layout/brightness/speed, lock half =
     # locks + language. Mirrors status_oled.c.
     if side == 'L':
-        draw_glyph(setp, icons, 0, 41, 0x80)
+        draw_glyph(setp, icons, 0, 41, 0x100005)   # ICON_LAYER
         draw_text(setp, tiny, 18, 38, '0')
         draw_text_center(setp, nano, LAYOUT_NAME_BASE, layout_name)
         draw_brightness(setp, contrast, 82)
         draw_bitmap(setp, WPM_BMP, (P_W - 11) // 2, 93, 11, 6)
         draw_text_center(setp, tiny, 110, str(wpm))
     else:
-        draw_glyph_center(setp, icons, 36, 0x8C)   # NumLock off
-        draw_glyph_center(setp, icons, 60, 0x8E)   # CapsLock off
+        draw_glyph_center(setp, icons, 36, 0x100011)   # NumLock off
+        draw_glyph_center(setp, icons, 60, 0x100013)   # CapsLock off
         gh = draw_glyph_half(setp, world, (P_W - 20) // 2, 68, 0x1F310)
         for half in range(2):
             draw_text_center(setp, tiny, 68 + gh + 12 + half * 12, lang[half * 3:half * 3 + 2])

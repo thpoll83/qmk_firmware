@@ -164,8 +164,8 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   (`base/fonts/gfx_icons.h`), NOT a new resident font.** `IconsFont` is `g_all_fonts[0]`
   (prepended), so *extending it with another glyph* (append bitmap bytes + a `GFXglyph`
   record, bump the font's `last`) shifts **no pack index** and needs no reship — it
-  ships with the firmware — the OS logos, mouse buttons and lock-key glyphs at
-  `0x94`–`0x99` etc. are exactly this. ⚠️ Adding a whole **new resident *font***
+  ships with the firmware — the OS logos, mouse buttons and lock-key glyphs are
+  exactly this. ⚠️ Adding a whole **new resident *font***
   instead (an extra entry in `index.resident_fonts`) prepends ahead of the pack →
   **every pack font's gidx shifts** → a full-pack reship; avoid that for one or two
   glyphs. (Conversely, when a hint can use a *pack* glyph or a base-font character,
@@ -173,55 +173,45 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   16 pt `0x9A`/`0x9B` pair to the plain base-font `">_"` + a drawn frame, and the
   Win+`+`/`-` magnifier from resident `0x9E`/`0x9F` to the pack 🔍 with a
   programmatically-drawn `+`/`-`, reclaiming those C1 slots — 2026-07.)
-  - ⚠️ **IconsFont is a range font `0x80..last`; slots `0xA0`+ COLLIDE with printable
-    Latin-1** (`0xA0` nbsp, `0xA2..0xA5` = ¢£¤¥, …). Because `IconsFont` is
-    `g_all_fonts[0]` it **wins** the lookup, so a custom icon parked at e.g. `0xA4`
-    *shadows* the real ¤ — and `CURRENCY_SIGN` (U+00A4) is used in real legends, so
-    those keys render the icon instead of the currency glyph (field/CodeRabbit,
-    2026-07). **Put custom resident icons in the non-printable C1 range `0x80–0x9F`
-    (or a real PUA), never `0xA0+`.** The Win-hint wave-D glyphs violated this
-    (`0xA2–0xA5` = settings/cast/sliders/restart) — **RESOLVED 2026-07**: all four
-    migrated to the pack (settings→⚙ U+2699, cast→📶 U+1F4F6, sliders→🎛 U+1F39B,
-    gfx-restart→🖵 U+1F5B5 + a half-scaled 🗘 overlay), so `IconsFont`'s `last` was
-    dropped from `0xA5` to `0x9F` — the whole `0xA0+` tail is gone and **no printable
-    Latin-1 is shadowed anymore** (¢£¤¥ render from NotoSans again).
-    - ⚠️ **The C1 band `0x80–0x9F` is now FULL — 32/32 slots.** The brightness-key
-      unification (2026-08-25) took the last nine: the five gaps `0x89 0x8A 0x93
-      0x9A 0x9B`, the dead `ICON_BACKSPACE` slot `0x8B`, and `0x9D 0x9E 0x9F` by
-      raising `last` `0x9C → 0x9F`. There is no room left for a tenth resident icon,
-      and `0xA0+` is not an option — see the shadowing trap above. The next one has
-      to go in the **pack** (a real PUA / an existing symbol codepoint), or free a
-      slot by migrating an existing icon there.
-    - ⚠️ **…and then it overflowed anyway. The two SHOULDERS `0x7F` and `0xA0` are
-      now taken, and they are the last of them.** The layer-key marks
-      (`ICON_LAYER_SWITCH` / `ICON_LAYER_ONESHOT`, 2026-09) needed two slots with
-      the band full, and were first parked at `0xA0`/`0xA1` — **shadowing ¡ on the
-      ~20 `es-*` layouts** that render `INVERTED_EMARK`, i.e. the exact trap this
-      section already described, one PR after it was written (caught in review, 2026-09).
-      They sit at `0x7F` (DEL) and `0xA0` (NBSP) instead: measured, **no other
-      resident font and no pack range covers either**, and neither appears in any
-      legend — a legend's space is `SPACE`/`ICON_SPACE`. `0xA1` is where the
-      fall-through to NotoSans genuinely begins, so there is no third shoulder.
-      The next icon after these goes in the **pack**, or frees a C1 slot.
-    - ⚠️ **The rule is ENFORCED now, not printed.** `check_icon_slots.py` used to
-      end with a caution line under the table and exit 0 regardless — which is how
-      a documented trap was walked into by someone who had run the gate. A glyph at
-      `C1_END`+ outside `SHOULDERS` is a **problem** and exits 1.
-    - **`python3 tools/check_icon_slots.py` is the gate, and it is the only thing
-      that can answer "is this slot free?"** — the named_glyphs sheet's own
-      "Distance Helper" column measures the sheet against *itself*, so a codepoint
-      that holds a real glyph but has no macro reads as free space. The script cross-
-      checks `gfx_icons.h` against `named_glyphs.h` in both directions (every glyph
-      named, every macro pointing at a real glyph) and exits 1 on either mismatch.
-      Run it after touching either file; picking an occupied slot otherwise fails
-      **silently**, because `IconsFont` is `g_all_fonts[0]` and simply wins.
-    - ⚠️ **A macro you want GONE cannot just be deleted — most of `named_glyphs.h`
-      is COG-GENERATED** (the block from `/*[[[cog` to `//[[[end]]]`, lines 9–1927,
-      comes from the glyph sheet). `ICON_BACKSPACE` lived there, so removing the line
-      would have come back on the next `cog -r lang/named_glyphs.h` and silently
-      re-aliased `0x8B` to a brightness sun. It is `#undef`'d in the hand-written
-      tail instead, which survives regeneration and turns any stale use into a
-      **compile error** rather than a wrong glyph.
+- **`IconsFont` lives in the plane-16 private-use area, U+100000..** (Supplementary
+  Private Use Area-B, U+100000–10FFFD, which Unicode reserves for private use and no
+  font here or in the pack covers). Extend it by appending bitmap bytes and a
+  `GFXglyph` and bumping `last`; nothing can be shadowed, so there is no slot budget.
+  ⚠️ Label a bitmap with a `/* */` comment, never `//`: the host's `tools/gfx_font.py`
+  strips only block comments inside a bitmap, so a `//` label's `0x100000` is read as a
+  data byte.
+  - **History: it used to own the C1 block `0x7F..0xA0`, and that band ran out.** It is
+    a range font and `g_all_fonts[0]`, so it wins every lookup inside its range: a
+    custom icon at `0xA4` shadowed the real ¤ (2026-07), and the layer-key marks, first
+    parked at `0xA0`/`0xA1`, shadowed ¡ on the ~20 `es-*` layouts (2026-09). The band
+    filled to 32/32 plus the two shoulders `0x7F`/`0xA0`, and the context-menu icon
+    then opened a second font, `IconsPuaFont`, at U+100000. qmk#313 moved every icon
+    there and merged the two back into one font (2026-09): the 34 C1 icons kept their
+    order at U+100004.. (`new = 0x100004 + (old − 0x7F)`), after the four already in
+    plane 16. The pixels are unchanged, and the pack bundles are byte-identical
+    (`reship_bundles.py --check`). ⚠️ Host code that hard-codes the old C1 values
+    (`shortcut_icons.py`, `status_screen.py`, `keycap_preview.py`, the preview tools)
+    needs the same remap, along with a re-export of the keycap preview data.
+  - **`python3 tools/check_icon_slots.py` is the gate, and it is the only thing that
+    can answer "is this slot free?"** The named_glyphs sheet's own "Distance Helper"
+    column measures the sheet against *itself*, so a codepoint that holds a real glyph
+    but has no macro reads as free space. The script cross-checks `gfx_icons.h` against
+    `named_glyphs.h` in both directions (every glyph named, every macro pointing at a
+    real glyph), checks the range stays inside plane-16 PUA, and exits 1 on any
+    mismatch.
+  - ⚠️ **A macro you want GONE cannot just be deleted — most of `named_glyphs.h`
+      is COG-GENERATED** (the block from `/*[[[cog` to `//[[[end]]]`) from the
+      `named_glyphs` sheet of `lang/lang_lut.xlsx`, so a line removed from the header
+      comes back on the next `cog -r lang/named_glyphs.h`. Remove the ROW from the
+      sheet, and never by saving the workbook through openpyxl (that drops every
+      cached formula result the cog blocks read). The sheet's formulas are
+      row-relative (`HEX2DEC(Bn)`, `Cn-Cn-1`), so a deleted row renumbers every row
+      below it and rewrites their references. `ICON_BACKSPACE` (row 18, a dead alias of
+      `0x8B`) was removed that way by editing `xl/worksheets/sheet1.xml` in the zip
+      directly: 3884 shifted formulas checked, the one reference to the deleted row
+      re-pointed at the row above, the other two sheets unchanged, and
+      `cogapp --check lang_lut.c` clean. ⚠️ The cog loop stops at the first EMPTY row,
+      so blanking a row instead of deleting it silently truncates every glyph after it.
   - **Removing a glyph from the MIDDLE of the range** (e.g. after migrating a hint
     to the pack): you can't delete it (the array must stay contiguous `first..last`).
     Turn its record into a **gap** `{off,0,0,0,0,0}` and drop its bitmap bytes, then

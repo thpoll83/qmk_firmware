@@ -27,6 +27,8 @@ static uint32_t   s_last_frame;
 static bool       s_live;
 static int16_t    s_cx, s_cy;         // the ripple's origin, board units
 static uint32_t   s_start;
+static bool       s_sweep;            // board-reveal profile (see poly_focus_start_sweep)
+static uint32_t   s_sweep_ms;         // that profile's run: the reveal's, or the wipe's
 static uint8_t    s_scan;             // round-robin cursor over this half's slots
 static uint8_t    s_marked[(POLY_FOCUS_KEYS + 7) / 8];   // keys currently carrying ink
 
@@ -35,6 +37,11 @@ static uint8_t    s_marked[(POLY_FOCUS_KEYS + 7) / 8];   // keys currently carry
 static tut_ring_t s_band;             // the drawn band
 static tut_ring_t s_cull;             // the band grown by a keycap half-diagonal
 static uint8_t    s_dens;
+// The reveal's SPARK TRAIL (sweep profile only): the annulus just behind the front,
+// from s_band.inner2 in to s_trail_in2, where sparse 2x2 sparks twinkle and thin out.
+static bool       s_trail;            // false for the letter ring
+static uint32_t   s_trail_in2;
+static uint8_t    s_spark_tick;       // time bucket: the sparks re-roll per bucket
 
 static inline bool bit_get(const uint8_t *m, uint8_t i) { return (m[i >> 3] >> (i & 7)) & 1u; }
 static inline void bit_set(uint8_t *m, uint8_t i, bool v) {
@@ -49,13 +56,15 @@ void poly_focus_cancel(void) {
     for (uint8_t i = 0; i < sizeof(s_marked); ++i) s_marked[i] = 0;
 }
 
-void poly_focus_start(uint8_t slot) {
+// Shared by both profiles. `already_ms` back-dates the start.
+static void focus_start(uint8_t slot, bool sweep, uint32_t already_ms) {
     if (slot == TUT_SLOT_NONE) { poly_focus_cancel(); return; }
     const sa_geom_t g = startup_anim_key_geom(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot));
     if (!g.valid) { poly_focus_cancel(); return; }
     s_cx         = g.cx;
     s_cy         = g.cy;
-    s_start      = timer_read32();
+    s_start      = timer_read32() - already_ms;
+    s_sweep      = sweep;
     s_scan       = 0;
     s_frame_busy = false;
     s_last_frame = timer_read32() - POLY_FOCUS_FRAME_MS;
@@ -64,9 +73,54 @@ void poly_focus_start(uint8_t slot) {
     // keys a restore, and the membership diff below is what pays it.
 }
 
+void poly_focus_start(uint8_t slot) { focus_start(slot, false, 0); }
+void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms, uint32_t run_ms) {
+    s_sweep_ms = run_ms ? run_ms : TUT_BOARD_REVEAL_MS;
+    focus_start(slot, true, already_ms);
+}
+
+// The reveal front: thicker than the letter ring so it reads as a wave rather than a
+// line at board scale, solid for most of its run, and eroding over the last quarter so
+// it dies at the board's far edge instead of vanishing in one frame.
+// 20 read as too thin for the board-wide wave ("could be a bit wider", hardware); 44 is
+// about 60 % of a keycap's width.
+#define POLY_FOCUS_SWEEP_W 44u
+// Behind the front: a trail of sparks, densest at the front and gone by TRAIL units
+// back, re-rolled every SPARK_TICK_MS so they twinkle rather than sit still. Sparks are
+// 2x2 px (a 1 px dot barely reads on a keycap) and at most SPARK_MAX/255 (~5 %) of those cells
+// light, so they stay "here and there". ⚠️ Every key the trail covers is repainted each
+// frame, so TRAIL is a cost dial as much as a look: about one key width now.
+#define POLY_FOCUS_TRAIL          80u   // 220 stuttered on hardware (~3x the keys per frame)
+#define POLY_FOCUS_SPARK_MAX      12u
+#define POLY_FOCUS_SPARK_TICK_MS  90u
+static uint8_t focus_sweep_density(uint8_t p) {
+    if (p < 192u) return 255u;
+    const uint16_t left = (uint16_t)(255u - p);          // 63 .. 0
+    return (uint8_t)((left * left * 255u) / (63u * 63u));  // quadratic, like the ripple
+}
+
 // Latch the wavefront for this pass. Returns false once the ripple is over.
 static bool focus_latch(void) {
     const uint32_t el = timer_elapsed32(s_start);
+    if (s_sweep) {
+        if (el >= s_sweep_ms) return false;
+        const uint8_t  p = (uint8_t)((el * 255u) / s_sweep_ms);
+        const uint16_t r = tut_sweep_radius(p);
+        s_dens = focus_sweep_density(p);
+        s_band = tut_ring_bounds(r, POLY_FOCUS_SWEEP_W);
+        const uint16_t in  = (r > POLY_FOCUS_SWEEP_W) ? (uint16_t)(r - POLY_FOCUS_SWEEP_W) : 0u;
+        const uint16_t tin = (in > POLY_FOCUS_TRAIL) ? (uint16_t)(in - POLY_FOCUS_TRAIL) : 0u;
+        s_trail      = true;
+        s_trail_in2  = (uint32_t)tin * tin;
+        s_spark_tick = (uint8_t)(el / POLY_FOCUS_SPARK_TICK_MS);
+        // The cull covers the band AND the trail behind it, or trail keys are never
+        // repainted and their sparks neither appear nor clear.
+        s_cull = tut_ring_bounds((uint16_t)(r + POLY_FOCUS_KEY_REACH),
+                                 (uint16_t)(POLY_FOCUS_SWEEP_W + POLY_FOCUS_TRAIL +
+                                            2 * POLY_FOCUS_KEY_REACH));
+        return true;
+    }
+    s_trail = false;
     if (el >= TUT_RIPPLE_MS) return false;
     const uint8_t  p = (uint8_t)((el * 255u) / TUT_RIPPLE_MS);
     const uint16_t r = tut_ripple_radius(p);
@@ -76,6 +130,22 @@ static bool focus_latch(void) {
     s_cull = tut_ring_bounds((uint16_t)(r + POLY_FOCUS_KEY_REACH),
                              (uint16_t)(w + 2 * POLY_FOCUS_KEY_REACH));
     return true;
+}
+
+// A spark in the trail behind the reveal front? Decided per 2x2 BOARD cell, so a spark
+// straddling a keycap edge stays one spark, and re-rolled per time bucket by offsetting
+// the hash, so the trail twinkles. Density falls linearly (in squared distance, close
+// enough for a sprinkle) from SPARK_MAX at the front to 0 at the trail's end.
+static bool focus_spark(int16_t gx, int16_t gy) {
+    const int32_t  dx = gx - s_cx, dy = gy - s_cy;
+    const uint32_t d2 = (uint32_t)(dx * dx) + (uint32_t)(dy * dy);
+    if (d2 >= s_band.inner2 || d2 < s_trail_in2) return false;
+    const uint32_t span = s_band.inner2 - s_trail_in2;
+    if (span == 0) return false;
+    const uint32_t dens = (POLY_FOCUS_SPARK_MAX * (d2 - s_trail_in2)) / span;
+    const int16_t  hx   = (int16_t)((gx >> 1) + s_spark_tick * 37);
+    const int16_t  hy   = (int16_t)((gy >> 1) + s_spark_tick * 91);
+    return tut_dither(hx, hy) < dens;
 }
 
 void poly_focus_overlay(uint8_t disp_idx, const sa_geom_t *g) {
@@ -104,7 +174,13 @@ void poly_focus_overlay(uint8_t disp_idx, const sa_geom_t *g) {
                 gx = (int16_t)(g->cx + dx);
                 gy = (int16_t)(g->cy + dy);
             }
-            if (!tut_ring_hit(&s_band, gx - s_cx, gy - s_cy)) continue;
+            if (!tut_ring_hit(&s_band, gx - s_cx, gy - s_cy)) {
+                if (!s_trail || !focus_spark(gx, gy)) continue;
+                buf[(size_t)(ly >> 3) * POLY_FOCUS_STRIDE + (BUFFER_X + lx)] |=
+                    (uint8_t)(1u << (ly & 7));
+                inked = true;
+                continue;
+            }
             // ⚠️ Dithered on the BOARD position, not the local pixel: on the local pixel
             // the identical pattern repeats on every keycap and the fade reads as a
             // screen door closing rather than ink eroding.
@@ -188,8 +264,23 @@ void poly_focus_tick(void) {
     }
 }
 
+bool poly_focus_sweep_band(poly_focus_band_t *out) {
+    // Only the board-sized profile: the small ring that points at a key has no LEDs.
+    if (!s_active || !s_live || !s_sweep) return false;
+    out->cx     = s_cx;
+    out->cy     = s_cy;
+    out->outer2 = s_cull.outer2;
+    out->inner2 = s_cull.inner2;
+    out->dens   = s_dens;
+    return true;
+}
+
 #else   // split42: no per-keycap ripple
+bool poly_focus_sweep_band(poly_focus_band_t *out) { (void)out; return false; }
 void poly_focus_start(uint8_t slot) { (void)slot; }
+void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms, uint32_t run_ms) {
+    (void)slot; (void)already_ms; (void)run_ms;
+}
 void poly_focus_cancel(void) {}
 bool poly_focus_active(void) { return false; }
 void poly_focus_tick(void) {}

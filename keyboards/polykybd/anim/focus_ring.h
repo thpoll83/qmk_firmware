@@ -20,6 +20,15 @@
 // call restarts it. TUT_SLOT_NONE cancels.
 void poly_focus_start(uint8_t slot);
 void poly_focus_cancel(void);
+
+// The BOARD REVEAL profile: the same ring, but board-sized and slow — it runs out to
+// TUT_SWEEP_MAX_R over TUT_BOARD_REVEAL_MS on the chapter-2 sweep curve, solid until
+// the last stretch. `already_ms` back-dates the start, so the slave's front lands where
+// the master's already is (the master sends its own elapsed; the two MCUs share no
+// clock). The tutorial lights each key as this front passes its centre, and the ring's
+// own repaint is what draws the legend there. `run_ms` is the front's whole run (0 = the
+// reveal's TUT_BOARD_REVEAL_MS); the language wipe runs it faster.
+void poly_focus_start_sweep(uint8_t slot, uint32_t already_ms, uint32_t run_ms);
 bool poly_focus_active(void);
 
 // ---- the two hooks --------------------------------------------------------
@@ -37,6 +46,17 @@ void poly_focus_overlay(uint8_t disp_idx, const sa_geom_t *g);
 // a dirty set at POLY_FOCUS_SLICE_MS per pass instead; on a dense frame the arc lags a
 // pass or two, which is invisible at this speed.
 void poly_focus_tick(void);
+
+// The band a BOARD-SIZED sweep (the reveal, a language wipe) latched this frame, for the
+// key LEDs under it (anim/tutorial_rgb.c): the centre in board units, the squared bounds
+// of the band grown by a keycap half-diagonal, and the density 0..255. False when no
+// sweep is live; the small ring that points at a key never answers.
+typedef struct {
+    int16_t  cx, cy;
+    uint32_t outer2, inner2;
+    uint8_t  dens;
+} poly_focus_band_t;
+bool poly_focus_sweep_band(poly_focus_band_t *out);
 
 // Provided by poly_keymap.c: redraw one key's ordinary legend into the scratch buffer.
 // The panel is already selected and the buffer cleared; the caller sends.

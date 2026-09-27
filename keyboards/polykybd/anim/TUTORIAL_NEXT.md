@@ -5,7 +5,10 @@ post-mortems. **This file is the worklist**: what is finished, what is deliberat
 postponed, and what a future session has to do to take it further. Read both before
 touching `anim/tutorial.c`, `base/tutorial_plan.[ch]` or `anim/focus_ring.[ch]`.
 
-Branch: `claude/eden-startup-tutorial-1exa5m`. Everything below is pushed there.
+Chapters 1–2 merged to `PolyKybd` in #306 and #309. Since 1.0.0 the boot trigger is
+**on by default** (`-e POLYKYBD_BOOT_INTRO=no` opts out); HIL images (`POLYKYBD_HIL=yes|left|right`)
+default it off, because a rig never presses a key. The boot hang that kept it opt-in is
+fixed (`TUTORIAL.md` round 29 onward, and the split handler thread rule in `CLAUDE.md`).
 
 ---
 
@@ -42,6 +45,27 @@ interrupted first run replays.
 - Whether the marker survives a **firmware flash** (it is EEPROM, so it should; the
   point of the marker living off Eden's finish edge was exactly this).
 
+### Chapter 3 (2026-09-24, not yet on hardware)
+3. **The board reveal, then languages and scripts.** After the second Shift a wave
+   leaves that key and lights every legend it passes ("Every key / is a screen", then
+   "72 screens, / one keyboard"). Then the board previews Greek, Russian, Arabic,
+   Japanese, Korean, Elvish, Runes, Aurebesh and Braille, about 2 s each, on the
+   keycaps only; the host keeps seeing the real language. The ring then circles the
+   Lang key, and a finale screen ends it.
+
+The lesson's chrome: **Esc reads "Hold to / skip..."** and its mirror, the **top-right
+outer key, shows the chapter** (`1/3`…`3/3`). Holding either still skips. Design and
+traps: `TUTORIAL.md` round 22.
+
+4. **The key tour** (round 29): the Lang key, the six region tabs and Base, then the
+   emoji key, four category tabs and Base. Each key is pointed at, pulses and must be
+   pressed; the press acts for real.
+
+**Test build:** `-e POLYKYBD_TUTORIAL_TEST=yes` plays Eden + the tutorial once per
+flashed build: the boot marker is keyed to the build stamp, so a new image plays, a
+finished lesson stays finished across restarts, and RESET Eden replays it. Never in a
+release.
+
 ---
 
 ## The postponed chapter
@@ -54,11 +78,12 @@ is redirected, in `tut_tick()`:
 ```c
 case TUT_SHIFT_HELD:
     ...
-    tut_enter(st, TUT_DONE, now);      // <- change to TUT_LAYER_WAIT to restore
+    tut_enter_reveal(st, now);         // <- change to TUT_LAYER_WAIT to restore
 ```
 
-`TutorialShift.ATapStillFinishesTheChapter` is the one assertion pinning the
-postponement; restoring the transition means updating that test and nothing else.
+To restore it, also send `TUT_NOTATION` on to `tut_enter_reveal()` instead of
+`TUT_DONE`, so chapter 3 still follows. `TutorialShift.ATapStillFinishesTheChapter` is
+the assertion pinning the postponement.
 
 Why it was held back: Shift had to feel right first, and the chapter-2 round found four
 separate bugs in the machinery chapter 3 would ride on.
@@ -72,16 +97,33 @@ the panel.
 ## Work still to do, in the order it should be done
 
 ### 1. A cold-boot round (blocking — nothing else is worth doing first)
-Flash a build, wipe the boot marker (or use a board that has never run it), power
-cycle, and watch the whole first-run sequence. Then power cycle again and confirm it
-does **not** replay. See "NOT verified" above.
 
-### 2. Restore the shipping `KC_EDEN` semantics
-`poly_keymap.c`'s `case KC_EDEN` currently carries a comment marked **PROTOTYPE
-BEHAVIOUR**: it arms the tutorial *and* replays Eden on the spot so the sequence can be
-retried without rebooting. The shipping behaviour is to **re-arm the first-run
-experience for the next startup** and only replay the animation now. Undo the prototype
-path once step 1 no longer needs it — and not before, or there is no way to retry.
+⚠️ **Until 2026-09-24 this round could not run: nothing in the firmware cleared the
+marker.** Every earlier round went through `KC_EDEN`, whose tutorial done/skip edge
+stamped `BOOT_INTRO_DONE` on both halves, so an opt-in build on any tested board booted
+straight to the legends. "Wipe the marker" named a step with no mechanism. RESET Eden
+now clears it (step 2), and at boot the master bumps `anim_nonce` so a slave whose own
+marker still reads DONE plays Eden anyway, through the `anim_replay` path `KC_EDEN`
+already proved on hardware.
+
+The procedure, on a `-e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_BOOT_INTRO=yes` build:
+
+1. Flash the `.bin`. It reboots; nothing plays, since the marker still reads DONE.
+2. Settings layer → tap **RESET Eden**. Eden and the tutorial run; **unplug during the
+   tutorial**, before it finishes, so the cleared marker is not re-stamped.
+3. Power up. Expect Eden on **both** halves, then chapter 1.
+4. Finish or skip the tutorial, then power cycle again. Expect **no** replay.
+
+Watch step 3 for a wedge in the boot window: no console reaches the host there, so a
+half stuck on the splash is the only sign.
+
+### 2. The `KC_EDEN` semantics — OPEN again
+RESET Eden clears the marker AND plays Eden plus the tutorial on the spot. The planned
+"clear the marker, replay only the animation" split was tried with Shift+RESET as the
+run-now path, and ⚠️ **Shift cannot be held on `_SL`** — both Shift positions there are
+other keys — so the tutorial became unreachable. Deciding the shipping behaviour needs a
+different gesture (or none). Only the master's EEPROM is written; the boot-time nonce
+covers the slave.
 
 ### 3. The HID enable/disable command (needed by the rig)
 So a host — and the HIL rig — can turn the tutorial on and off and read its state. Use
@@ -113,6 +155,11 @@ Use the **`update-polykybd-docs`** skill. ⚠️ **A docs PR ships the moment it
 (`deploy.yml` runs on push to `main`) while a firmware PR only bumps a version — so the
 page waits for the *release* that carries the tutorial, not merely for the firmware PR
 to merge. Say so in the docs PR body; nothing else will catch it.
+
+### 5b. A hardware round for chapter 3
+Check the reveal's speed and smoothness, the Esc label's fit, each preview's dwell,
+and that the tray/OS language does NOT change during the preview (watch the host's
+language indicator while Greek is on the keycaps).
 
 ### 6. Later chapters (optional, in this order)
 - **Chapter 4 — the settings layer.** What the layer holds and how to reach it.

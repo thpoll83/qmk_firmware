@@ -64,11 +64,13 @@ void kdisp_gfx_rot_half_extent(int16_t w, int16_t h, uint8_t step, kdisp_rot_hal
     }
     out->x0 = x0;
     out->y0 = y0;
-    // The rotation runs at full resolution and is halved afterwards (halving first
+    // The rotation runs at full resolution and is downscaled afterwards (scaling first
     // throws away the pixels the rotation needs to rebuild an edge), so the plotted
-    // size is the rotated extent halved — rounded UP, exactly as the drawer loops.
-    out->w = (int16_t)((((int16_t)(((x1 - x0) >> 8) + 1)) + 1) / 2);
-    out->h = (int16_t)((((int16_t)(((y1 - y0) >> 8) + 1)) + 1) / 2);
+    // size is the rotated extent divided by n — rounded UP, exactly as the drawer loops.
+    const int16_t n = (step > KDISP_ROT_THIRD_STEP) ? 3 : 2;
+    out->n = (uint8_t)n;
+    out->w = (int16_t)((((int16_t)(((x1 - x0) >> 8) + 1)) + n - 1) / n);
+    out->h = (int16_t)((((int16_t)(((y1 - y0) >> 8) + 1)) + n - 1) / n);
 }
 
 // One walk of the display list, shared by both bounding-box entry points below.

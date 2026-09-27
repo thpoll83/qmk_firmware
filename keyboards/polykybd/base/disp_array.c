@@ -293,15 +293,16 @@ void kdisp_draw_glyph_rot_half_at(const GFXfont *const *fonts, uint8_t num_fonts
     const int32_t cx = rot.cx, cy = rot.cy;
     const int32_t x0 = rot.x0, y0 = rot.y0;
     const int16_t hw = rot.w, hh = rot.h;
+    const uint8_t n = rot.n;   // 2 = half, 3 = third (see KDISP_ROT_THIRD_STEP)
 
     for (int16_t dy = 0; dy < hh; ++dy) {
         for (int16_t dx = 0; dx < hw; ++dx) {
             bool lit = false;
-            for (uint8_t o = 0; o < 4 && !lit; ++o) {
-                // The full-resolution destination pixel this quarter stands for,
+            for (uint8_t o = 0; o < n * n && !lit; ++o) {
+                // The full-resolution destination pixel this sub-cell stands for,
                 // expressed centre-relative so the inverse rotation is a pure rotate.
-                const int32_t fx = (((int32_t)(dx * 2 + (o & 1u))) << 8) + x0;
-                const int32_t fy = (((int32_t)(dy * 2 + (o >> 1))) << 8) + y0;
+                const int32_t fx = (((int32_t)(dx * n + (o % n))) << 8) + x0;
+                const int32_t fy = (((int32_t)(dy * n + (o / n))) << 8) + y0;
                 const int32_t sx = ((fx * ct + fy * st) >> 8) + cx;
                 const int32_t sy = ((-fx * st + fy * ct) >> 8) + cy;
                 // Round to the nearest source pixel; both are non-negative here only
@@ -377,6 +378,40 @@ void kdisp_draw_tab_underline(void) {
     for (uint8_t x = BUFFER_X; x < BUFFER_X + SCREEN_WIDTH; ++x) {
         scratch_buffer[p * BUFFER_BYTE_WIDTH + x] |= 0xE0;   // rows 37..39
     }
+}
+
+// Shrink what is in the keycap window to half size about its centre: each output
+// pixel is the OR of a 2x2 block, so a 1px stroke survives. Used by the menu cascade's
+// zoom-in (anim/menu_cascade.c): draw the real legend, shrink it, send.
+void kdisp_zoom_half_window(void) {
+    enum { HW = SCREEN_WIDTH / 2, HH = SCREEN_HEIGHT / 2, HP = (HH + 7) / 8 };
+    uint8_t half[HP][HW];
+    memset(half, 0, sizeof(half));
+    for (int y = 0; y < HH; ++y) {
+        for (int x = 0; x < HW; ++x) {
+            const int sx = BUFFER_X + 2 * x, sy = 2 * y;
+            const bool on = ((scratch_buffer[GET_BUFFER_OFFSET(sx, sy)] >> (sy & 7)) & 1) ||
+                            ((scratch_buffer[GET_BUFFER_OFFSET(sx + 1, sy)] >> (sy & 7)) & 1) ||
+                            ((scratch_buffer[GET_BUFFER_OFFSET(sx, sy + 1)] >> ((sy + 1) & 7)) & 1) ||
+                            ((scratch_buffer[GET_BUFFER_OFFSET(sx + 1, sy + 1)] >> ((sy + 1) & 7)) & 1);
+            if (on) half[y >> 3][x] |= (uint8_t)(1u << (y & 7));
+        }
+    }
+    memset(scratch_buffer, 0, sizeof(scratch_buffer));
+    for (int y = 0; y < HH; ++y) {
+        for (int x = 0; x < HW; ++x) {
+            if ((half[y >> 3][x] >> (y & 7)) & 1) SET_PIXEL(BUFFER_X + HW / 2 + x, HH / 2 + y);
+        }
+    }
+}
+
+bool kdisp_window_is_blank(void) {
+    for (int y = 0; y < SCREEN_HEIGHT; ++y) {
+        for (int x = 0; x < SCREEN_WIDTH; ++x) {
+            if ((scratch_buffer[GET_BUFFER_OFFSET(BUFFER_X + x, y)] >> (y & 7)) & 1) return false;
+        }
+    }
+    return true;
 }
 
 void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height) {
@@ -777,6 +812,8 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
             case U'\x15':   // ROT: rotate the next codepoint counter-clockwise and halve it,
                             //   plotting at the cursor with no advance (as HALF does). Next TWO
                             //   codepoints are the angle in 15-degree steps (1..24) and the glyph.
+                            //   25..48 is the same angle drawn at one THIRD instead of half
+                            //   (KDISP_ROT_THIRD_STEP, font_lookup.h).
                             //   ⚠️ The angle can never be 0 — a 0 codepoint terminates the string —
                             //   which costs nothing, since a 0-degree turn is what \x0F already is.
                 if (text[1] && text[2]) {
@@ -786,8 +823,10 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
                 break;
             case U'\x13':   // BADGE: a lock-indicator box at the cursor. Next THREE codepoints
                             //   are w, h and style — 1 = 2px outline (released), 2 = solid
-                            //   (engaged); pair the solid with \x14 to punch the glyph back
-                            //   out of it, the way ICON_CAPSLOCK_ON is drawn.
+                            //   (engaged), 3 = 1px outline (the context-menu frame), 4 = square
+                            //   solid (the context-menu bars); pair the
+                            //   solid with \x14 to punch the glyph back out of it, the way
+                            //   ICON_CAPSLOCK_ON is drawn.
                             //
                             //   ⚠️ The radius is FIXED at KDISP_BADGE_RADIUS rather than taken
                             //   as an argument, because the whole point is to match the baked
@@ -796,9 +835,13 @@ static void gfx_text_run(const GFXfont *const *fonts, uint8_t num_fonts, int8_t 
                             //   rounder radius for the run-dialog hint; do not merge them.
                             //   ⚠️ style cannot be 0: a 0 codepoint terminates the string.
                 if (text[1] && text[2] && text[3]) {
+                    // style 3 = a 1px outline (the context-menu frame), 4 = a SQUARE
+                    // solid (its bars: a 4px-tall badge would lose its corner pixels).
                     kdisp_draw_badge_rect(x_cursor, y_cursor, (int8_t)text[1], (int8_t)text[2],
-                                          KDISP_BADGE_RADIUS,
-                                          (text[3] == 2) ? 0 : KDISP_BADGE_BORDER);
+                                          (text[3] == 4) ? 0 : KDISP_BADGE_RADIUS,
+                                          (text[3] == 2 || text[3] == 4) ? 0
+                                          : (text[3] == 3)               ? 1
+                                                                         : KDISP_BADGE_BORDER);
                     text += 3;
                 }
                 break;

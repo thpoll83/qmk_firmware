@@ -344,7 +344,7 @@ run on it (`test_no_crash_record`). What is worth knowing:
     (and is the qmk#271 discriminator working); leading with POR reads as a power
     cycle and would send a real diagnosis the wrong way.
 
-## Sub-step paint breadcrumbs (0xSS80..0xSSFF)
+## Sub-step paint breadcrumbs (0xSS80..0xSSBF, 0x1S80..0x1SBF)
 
 A master wedged at "63%, 4 / 4" with the "4" half drawn left `phase=1:0x0504`: the
 sub-step's status-panel paint started and never returned. Every panel write has a
@@ -355,7 +355,10 @@ instruction, so the core1 launch window the `cpsid i` fix was about is closed.
 To name the stall, a sub-step paint renders one OLED block per call and stamps each
 call first (`boot_paint_mark()`):
 
-    arg = step << 8 | 0x80 | core1_entered << 6 | ((sub - 1) & 3) << 4 | call
+    arg = (step | core1_entered << 4) << 8 | 0x80 | ((sub - 1) & 3) << 4 | call
+
+The core1 flag is bit 12, in the HIGH byte, so the low byte stays in `0x80..0xBF` and
+never collides with the in-milestone marks `0xE1` / `0xE2`.
 
 `call` is the 0-based ORDINAL of the render call, not a physical block number: QMK's
 OLED driver keeps its dirty mask private, and each call renders the next dirty block in
@@ -367,7 +370,7 @@ are masked and cleared by core0 before the launch. Reading a record:
 | arg | means |
 |---|---|
 | `0x0504` | sub-step 4 stamped, paint not reached (or older firmware) |
-| `0x05F3` | step 5, core1 in its entry, sub-step 4, fourth render call in flight |
+| `0x15B3` | step 5, core1 in its entry, sub-step 4, fourth render call in flight |
 | `0x05B3` | the same with core1 NOT yet in `core1_entry()` |
 
 After the paint returns the tag goes back to the plain sub-step (`0x0504`), so a

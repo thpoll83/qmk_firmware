@@ -395,18 +395,21 @@ static uint8_t s_boot_sub = 0;   // the sub-step whose panel paint is in flight
 // never returned, and a status-panel write has a 100 ms I2C timeout, so something
 // stopped core0 servicing that timeout. The stamp names how far into the paint it was
 // and whether core1 had reached core1_entry() by then:
-//     low byte = 0x80 | core1_entered << 6 | ((sub - 1) & 3) << 4 | call (0..15)
+//     arg = (step | core1_entered << 4) << 8 | 0x80 | ((sub - 1) & 3) << 4 | call
+// ⚠️ The core1 flag rides in the HIGH byte (bit 12), so the low byte stays in
+// 0x80..0xBF: with the flag in bit 6 it reached 0xE1/0xE2, which already mean
+// "milestone panel paint" / "logo draw" (found by the rig probe's decoder).
 // `call` is the ORDINAL of the render call, not a physical block: the QMK driver keeps
 // its dirty mask private, and each call renders the next dirty block in ascending
 // order, so a stall at call n means n blocks had already gone out. A call with nothing
 // left to render returns at once, so it cannot be where a paint stalls.
-// 0x05C3 reads: step 5, core1 in its entry, sub-step 1, fourth render call. Milestone paints
+// 0x1583 reads: step 5, core1 in its entry, sub-step 1, fourth render call. Milestone paints
 // keep their 0xE1 stamp; render keys are 1..40 and sub-steps 1..N, so 0x80+ is free.
 void boot_paint_mark(uint8_t call) {
     if (s_boot_step == 0 || s_boot_sub == 0) return;
-    const uint8_t lo = (uint8_t)(0x80u | ((g_core1_entered ? 1u : 0u) << 6) |
-                                 (((s_boot_sub - 1u) & 3u) << 4) | (call & 0x0Fu));
-    (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(((uint16_t)s_boot_step << 8) | lo));
+    const uint8_t hi = (uint8_t)(s_boot_step | (g_core1_entered ? 0x10u : 0u));
+    const uint8_t lo = (uint8_t)(0x80u | (((s_boot_sub - 1u) & 3u) << 4) | (call & 0x0Fu));
+    (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(((uint16_t)hi << 8) | lo));
 }
 
 void boot_substep(uint8_t sub, uint8_t sub_total) {
@@ -457,7 +460,8 @@ static bool s_render_marks = false;
 
 // The boot step a BOOT breadcrumb names: a bare step, or step<<8 | sub / key / 0xEx.
 static uint8_t boot_step_of(uint16_t arg) {
-    return (arg & 0xFF00u) ? (uint8_t)(arg >> 8) : (uint8_t)arg;
+    // Bit 12 is the paint breadcrumb's core1 flag, not part of the step.
+    return (arg & 0xFF00u) ? (uint8_t)((arg >> 8) & 0x0Fu) : (uint8_t)arg;
 }
 
 // Skip the guard when the PREVIOUS boot already died under it. The record is

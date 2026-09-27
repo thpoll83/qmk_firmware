@@ -34,7 +34,7 @@ def _decode_boot_arg(arg):
     step, core1 = hi & 0x0F, (hi >> 4) & 1
     if 0x80 <= lo <= 0xBF:
         return (f"step {step}, sub-step paint in flight: core1_entered={core1}, "
-                f"sub={((lo >> 4) & 3) + 1} (mod 4), render call {(lo & 0x0F) + 1} of 16 (1-based)")
+                f"sub={((lo >> 4) & 3) + 1} (mod 4), render call {(lo & 0x0F) + 1} (1-based)")
     marks = {0xE1: "status-panel paint", 0xE2: "logo draw", 0xE3: "final dwell + render"}
     if lo in marks:
         return f"step {step}, {marks[lo]} (milestone)"

@@ -200,7 +200,7 @@ void oled_update_buffer(void) {
     const bool locks_side = (!side_is_undecided() && !is_left_side());
     if (!locks_side) {
         // Layer icon + number
-        pdraw_glyph(g_all_fonts, g_all_font_count, 0, 41, 0x80 /*ICON_LAYER*/, buf);
+        pdraw_glyph(g_all_fonts, g_all_font_count, 0, 41, ICON_LAYER[0], buf);
         hex_to_u32_string(nbuf, sizeof(nbuf), get_highest_layer(gl->layer));
         pdraw_text(tinyFont, 1, 18, 38, nbuf, buf);
         // Layout name (short), Nano 10px at NATIVE size, centered. LAYOUT_NAME_BASE
@@ -213,8 +213,8 @@ void oled_update_buffer(void) {
         num_to_u32_string(nbuf, sizeof(nbuf), get_current_wpm());
         pdraw_text_center(tinyFont, 1, 110, nbuf, buf);
     } else {
-        pdraw_glyph_center(g_all_fonts, g_all_font_count, 36, gl->led_state.num_lock  ? 0x8D : 0x8C, buf);
-        pdraw_glyph_center(g_all_fonts, g_all_font_count, 60, gl->led_state.caps_lock ? 0x8F : 0x8E, buf);
+        pdraw_glyph_center(g_all_fonts, g_all_font_count, 36, gl->led_state.num_lock  ? ICON_NUMLOCK_ON[0] : ICON_NUMLOCK_OFF[0], buf);
+        pdraw_glyph_center(g_all_fonts, g_all_font_count, 60, gl->led_state.caps_lock ? ICON_CAPSLOCK_ON[0] : ICON_CAPSLOCK_OFF[0], buf);
         // Globe (half-scale) + the "xx-YY" code stacked under it, as split72 does in
         // its RGB-off column. One line will not do: "en-US" is 32px at 6pt, the exact
         // panel width, and the widest code ("mn-MN") is 40px.

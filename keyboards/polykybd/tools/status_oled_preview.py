@@ -95,7 +95,7 @@ def load_fonts():
     tiny = bundle('NotoSans_Regular_Nano_10px7b')   # language index only (see status_oled.c)
     icons = None
     for _n, f in F.items():
-        if f['first'] <= 0x80 <= f['last'] and f['gly'] in G:
+        if f['first'] <= 0x100005 <= f['last'] and f['gly'] in G:
             icons = (f, B[f['bmp']], G[f['gly']])
             break
     globe = bundle('NotoEmoji_Medium_World_20pt16b')
@@ -685,7 +685,7 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
     TEXT_X = 0 if lock_panel else (20 if rgb_on else 26)
     TEXT_R = 104 if lock_panel else 127
     # top line: layer + role icon + role word
-    draw(setp, icons, TEXT_X, TOP_BASE, [0x80])                 # ICON_LAYER
+    draw(setp, icons, TEXT_X, TOP_BASE, [0x100005])             # ICON_LAYER
     draw(setp, disp, TEXT_X + 20, TOP_BASE, s('0'))             # hex layer
     if lock_panel:
         draw_bitmap(setp, USB_BMP, TEXT_X + 38, 0)
@@ -696,8 +696,8 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
     # Lock LEDs render on the layout panel only (identical state on both halves) —
     # the RGB panel's column is the speed gauge now.
     if lock_panel:
-        draw(setp, icons, COL_X, 16, [0x8C])                    # NumLock off
-        draw(setp, icons, COL_X, CAPS_LOCK_BASE, [0x8E])        # CapsLock off
+        draw(setp, icons, COL_X, 16, [0x100011])                # NumLock off
+        draw(setp, icons, COL_X, CAPS_LOCK_BASE, [0x100013])    # CapsLock off
         draw(setp, small, COL_X + 6, SIDE_MARKER_BASE, s('L'))
     else:
         draw(setp, small, COL_X + 5, SIDE_MARKER_BASE, s('R'))

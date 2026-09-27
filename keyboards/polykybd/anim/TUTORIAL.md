@@ -2150,3 +2150,8 @@ Hardware feedback:
   saturation 170, and the colour is computed once at full value and scaled linearly
   rather than recomputed through `hsv_to_rgb` at a value of 10. The floor counts the
   third channel too (13 for every hue), and the name glow's peak rose 16 -> 20.
+
+⚠️ **Code points in the round notes above are historical.** Every resident icon moved
+to plane-16 PUA in qmk#313 (`new = 0x100004 + (old − 0x7F)`), so `0x7F`/`0xA0` and
+`IconsPuaFont` above now read as `ICON_LAYER_SWITCH` U+100004 / `ICON_LAYER_ONESHOT`
+U+100025 inside the one `IconsFont`. FONT_PACK.md has the current layout.

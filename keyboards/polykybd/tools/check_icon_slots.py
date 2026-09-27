@@ -2,15 +2,15 @@
 """Report which resident IconsFont codepoints are taken, free, or mis-named.
 
 `base/fonts/gfx_icons.h` is hand-maintained and is the only authority on which
-C1 slots hold a glyph. The named_glyphs sheet cannot answer that — its "Distance
+icon slots hold a glyph. The named_glyphs sheet cannot answer that — its "Distance
 Helper" column measures the sheet against ITSELF, so a codepoint that is taken in
-the font but absent from the sheet reads as free space. At the time of writing
-0x98/0x99/0x9C/0x9D were exactly that: real glyphs sitting inside a run the sheet
-reported as a 10-wide gap.
+the font but absent from the sheet reads as free space.
 
-Picking an occupied slot fails SILENTLY. IconsFont is g_all_fonts[0], so it wins
-the lookup and the wrong icon simply renders — the same shape as the documented
-0xA0+ trap, where a custom icon at 0xA4 shadowed the real ¤.
+IconsFont lives in the plane-16 private-use area (U+100000..U+10FFFD), which no
+other font and no real character uses. It used to own the C1 block 0x7F..0xA0,
+where every slot next to the band shadowed a real character (0xA1 is ¡, which the
+es-* layouts need). The move left the old gates below as one: the range must stay
+inside plane-16 PUA.
 
     python3 tools/check_icon_slots.py            # from keyboards/polykybd/
     python3 tools/check_icon_slots.py --free     # just the next free slot
@@ -24,28 +24,7 @@ KB   = os.path.dirname(HERE)
 ICONS = os.path.join(KB, "base", "fonts", "gfx_icons.h")
 NAMES = os.path.join(KB, "lang", "named_glyphs.h")
 
-# Latin-1 codepoints that must never hold a custom icon: IconsFont shadows them.
-PRINTABLE_LATIN1 = {0xA0: "nbsp", **{c: chr(c) for c in range(0xA1, 0x100)}}
-# End of the non-printable C1 block: the only band a custom icon may live in.
-C1_END = 0xA0
-# ⚠️ The two SHOULDERS of that band, and the only codepoints outside it a custom
-# icon may take. Both were measured (2026-09-23): NO other resident font and no
-# pack range covers either, and neither appears in any legend — 0x7F is DEL and
-# 0xA0 is NBSP, and a legend's space is SPACE/ICON_SPACE. 0xA1 is ¡, which ~20
-# es-* layouts render through INVERTED_EMARK, so the band genuinely stops there.
-# They exist because the C1 block filled up; the next icon after these has to go
-# in the PACK or free a C1 slot. Nothing else may be added to this set without
-# the same two measurements.
-SHOULDERS = {0x7F, 0xA0}
-
-
-def shadowed_by(cp):
-    """-> what a custom icon at `cp` would hide, for the failure message."""
-    if cp in PRINTABLE_LATIN1:
-        return f"Latin-1 {PRINTABLE_LATIN1[cp]!r}"
-    if 0x20 <= cp < 0x7F:
-        return f"ASCII {chr(cp)!r}"
-    return "a codepoint outside the C1 band"
+PUA_FIRST, PUA_LAST = 0x100000, 0x10FFFD   # Supplementary Private Use Area-B
 
 
 def icons_font():
@@ -67,11 +46,11 @@ def icons_font():
 
 
 def named():
-    """-> {cp: MACRO} for every named_glyphs macro pointing into 0x80..0xFF."""
+    """-> {cp: MACRO} for every single-codepoint named_glyphs macro in plane-16 PUA."""
     out = {}
     for line in open(NAMES, encoding="utf-8"):
-        m = re.match(r'#define\s+(\w+)\s+U"\\x([0-9A-Fa-f]{2,4})"\s*(?://.*)?$', line.strip())
-        if m:
+        m = re.match(r'#define\s+(\w+)\s+U"\\x([0-9A-Fa-f]{2,6})"\s*(?://.*)?$', line.strip())
+        if m and int(m.group(2), 16) >= PUA_FIRST:
             out[int(m.group(2), 16)] = m.group(1)
     return out
 
@@ -80,57 +59,38 @@ first, last, glyphs = icons_font()
 names = named()
 problems = []
 
-print(f"IconsFont range 0x{first:02X}..0x{last:02X}  ({len(glyphs)} glyphs)\n")
-print(f"{'cp':<6} {'glyph':<12} {'macro':<24} state")
-for cp in range(min(first, 0x80), max(last, C1_END) + 6):
+if not (PUA_FIRST <= first <= last <= PUA_LAST):
+    problems.append(f"IconsFont range U+{first:X}..U+{last:X} leaves plane-16 PUA "
+                    "and would shadow a real character")
+
+print(f"IconsFont range U+{first:X}..U+{last:X}  ({len(glyphs)} glyphs)\n")
+print(f"{'cp':<9} {'glyph':<8} {'macro':<24} state")
+for cp in range(first, max(last, max(names, default=last)) + 1):
     g = glyphs.get(cp)
     nm = names.get(cp, "")
     if cp > last:
-        # Past IconsFont's `last` these fall through to NotoSans, so a macro at
-        # 0xA0+ naming the real character is correct — the caution there is about
-        # putting a custom GLYPH at the codepoint, which would shadow it. Below
-        # 0xA0 there is no character to fall through to, so a macro with no glyph
-        # behind it is simply broken and used to print as consistent.
-        if cp < 0xA0 and nm:
-            problems.append(f"0x{cp:02X} macro {nm} points past IconsFont.last (no glyph)")
-            state = "past last, but NAMED"
-        elif cp in PRINTABLE_LATIN1:
-            state = f"Latin-1 {PRINTABLE_LATIN1[cp]!r} (never put a glyph here)"
-        else:
-            state = "free (past last)"
+        state = "past last, but NAMED" if nm else "free (past last)"
+        if nm:
+            problems.append(f"U+{cp:X} macro {nm} points past IconsFont.last (no glyph)")
     elif g:
         state = "taken"
-        if cp in SHOULDERS:
-            state = "taken (shoulder — nothing else covers it)"
-        elif not (0x80 <= cp < C1_END):
-            # ⚠️ This used to be a printed caution under the table and nothing more,
-            # so the layer-key marks were parked at 0xA0/0xA1 and shadowed ¡ on every
-            # es-* layout. A caution nobody has to act on is not a gate.
-            # ⚠️ The band is bounded at BOTH ends. IconsFont is g_all_fonts[0] and
-            # wins the lookup wherever it has a glyph, so one below 0x80 hides an
-            # ASCII character exactly as surely as one at 0xA1 hides ¡ — and the
-            # earlier form of this check only looked upward, so an icon parked at
-            # 0x7E would have replaced `~` with the gate still green.
-            problems.append(f"0x{cp:02X} holds a glyph but shadows {shadowed_by(cp)}")
-            state = "taken, SHADOWS A REAL CHARACTER"
         if not nm:
             state = "taken, UNNAMED"
-            problems.append(f"0x{cp:02X} has a glyph but no named_glyphs macro")
+            problems.append(f"U+{cp:X} has a glyph but no named_glyphs macro")
     else:
         state = "free (gap)"
         if nm:
-            problems.append(f"0x{cp:02X} macro {nm} points at an emptied gap")
+            problems.append(f"U+{cp:X} macro {nm} points at an emptied gap")
             state = "gap, but NAMED"
-    print(f"0x{cp:02X}   {(f'{g[0]}x{g[1]}' if g else '-'):<12} {nm:<24} {state}")
+    print(f"U+{cp:X}  {(f'{g[0]}x{g[1]}' if g else '-'):<8} {nm:<24} {state}")
 
-free = [cp for cp in range(0x80, C1_END) if cp not in glyphs]
-print(f"\nfree C1 slots: {', '.join(f'0x{c:02X}' for c in free) or '(none — the C1 range is full)'}")
-print("⚠️  0xA0+ is printable Latin-1; a custom icon there shadows a real character.")
-print(f"    the only exceptions are the shoulders "
-      f"{', '.join(f'0x{c:02X}' for c in sorted(SHOULDERS))} — see the note in this script.")
+free = [cp for cp in range(first, last + 1) if cp not in glyphs]
+nxt = free[0] if free else last + 1
+print(f"\nfree gaps: {', '.join(f'U+{c:X}' for c in free) or '(none)'}; "
+      f"otherwise extend `last` to U+{last + 1:X}")
 
 if "--free" in sys.argv:
-    print(f"\nnext free: 0x{free[0]:02X}" if free else "\nnext free: NONE")
+    print(f"\nnext free: U+{nxt:X}")
 
 if problems:
     print("\nPROBLEMS:")

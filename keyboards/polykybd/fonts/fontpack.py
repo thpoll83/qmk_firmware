@@ -314,7 +314,7 @@ def resident_symbols(cfg: dict, fonts_dir: Path) -> set[str]:
     """Symbols that stay compiled into the firmware (NOT in the pack)."""
     idx = cfg.get("index", {})
     res = set(idx.get("prepend_fonts", []))      # IconsFont etc.
-    res |= set(idx.get("append_fonts", []))      # IconsPuaFont: resident, ordered last
+    res |= set(idx.get("append_fonts", []))      # resident fonts ordered last (none today)
     res |= set(idx.get("resident_fonts", []))    # UI-chrome fonts in packed cats
     cats = cfg["categories"]
     for cat, meta in cats.items():

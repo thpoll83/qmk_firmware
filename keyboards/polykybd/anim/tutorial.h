@@ -172,7 +172,7 @@ const uint32_t *tutorial_line_key(uint8_t which);
 
 // A press-and-hold icon to draw BEFORE that line, or 0: set on every line whose words
 // ask the user to hold a key, and it alternates between two frames (up / pressed) on
-// its own clock, so the caller only has to redraw. A resident IconsPuaFont glyph.
+// its own clock, so the caller only has to redraw. A resident IconsFont glyph.
 uint32_t tutorial_line_lead_icon(uint8_t which);
 
 // ---- provided by poly_keymap.c (it owns the keymap and the display map) ----

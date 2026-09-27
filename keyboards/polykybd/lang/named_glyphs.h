@@ -17,8 +17,8 @@
     glyph_key = sheet["A2"].value
     # Column B = the real Unicode codepoint (HEX INPUT), emitted as a char32
     # (U"...") literal. SMP codepoints (emoji, symbols, the UI icons) are stored
-    # directly — no BMP Private-Use-Area shift. (The genuine custom icons at
-    # 0x80-0x93 have no Unicode codepoint and legitimately stay private.)
+    # directly — no BMP Private-Use-Area shift. (The genuine custom icons
+    # in plane-16 PUA U+100000.. have no Unicode codepoint and stay private.)
     glyph_code = sheet["B2"].value
     while glyph_key and glyph_code:
         cog.outl(f'#define {glyph_key : <28}\tU"\\x{glyph_code}"')
@@ -34,26 +34,26 @@
 #define EQUALS                      	U"\x3d"
 #define BACKSLASH                   	U"\x5c"
 #define GRAVE_ACCENT                	U"\x60"
-#define ICON_LAYER                  	U"\x80"
-#define ICON_UP                     	U"\x81"
-#define ICON_DOWN                   	U"\x82"
-#define ICON_LEFT                   	U"\x83"
-#define ICON_RIGHT                  	U"\x84"
-#define ICON_SPACE                  	U"\x85"
-#define ICON_LMB                    	U"\x86"
-#define ICON_MMB                    	U"\x87"
-#define ICON_RMB                    	U"\x88"
-#define ICON_NUMLOCK_OFF            	U"\x008C"
-#define ICON_NUMLOCK_ON             	U"\x008D"
-#define ICON_CAPSLOCK_OFF           	U"\x008E"
-#define ICON_CAPSLOCK_ON            	U"\x008F"
-#define ICON_SHIFT                  	U"\x90"
-#define ICON_SWITCH_ON              	U"\x91"
-#define ICON_SWITCH_OFF             	U"\x92"
-#define ICON_OS_WINDOWS             	U"\x94"
-#define ICON_OS_LINUX               	U"\x95"
-#define ICON_OS_ANDROID             	U"\x96"
-#define ICON_MAC_CONTROL            	U"\x97"
+#define ICON_LAYER                  	U"\x100005"
+#define ICON_UP                     	U"\x100006"
+#define ICON_DOWN                   	U"\x100007"
+#define ICON_LEFT                   	U"\x100008"
+#define ICON_RIGHT                  	U"\x100009"
+#define ICON_SPACE                  	U"\x10000A"
+#define ICON_LMB                    	U"\x10000B"
+#define ICON_MMB                    	U"\x10000C"
+#define ICON_RMB                    	U"\x10000D"
+#define ICON_NUMLOCK_OFF            	U"\x100011"
+#define ICON_NUMLOCK_ON             	U"\x100012"
+#define ICON_CAPSLOCK_OFF           	U"\x100013"
+#define ICON_CAPSLOCK_ON            	U"\x100014"
+#define ICON_SHIFT                  	U"\x100015"
+#define ICON_SWITCH_ON              	U"\x100016"
+#define ICON_SWITCH_OFF             	U"\x100017"
+#define ICON_OS_WINDOWS             	U"\x100019"
+#define ICON_OS_LINUX               	U"\x10001A"
+#define ICON_OS_ANDROID             	U"\x10001B"
+#define ICON_MAC_CONTROL            	U"\x10001C"
 #define INVERTED_EMARK              	U"\xa1"
 #define CENT_SIGN                   	U"\xa2"
 #define POUND_SIGN                  	U"\xa3"
@@ -1929,10 +1929,9 @@
 // (outside the cog table above) for the same reason as the hint glyphs below: a
 // `cog -r named_glyphs.h` regenerates that block from lang_lut.xlsx and would
 // delete anything hand-added inside it, taking keycode_helper.h's consumers with
-// it. ⚠️ The codepoints STRADDLE the C1 block — see the note in gfx_icons.h: the
-// block is full, and 0xA1 is ¡, which the es-* layouts need.
-#define ICON_LAYER_SWITCH           	U"\x7F"
-#define ICON_LAYER_ONESHOT          	U"\xA0"
+// it. Both sit in IconsFont's plane-16 PUA range (see the note in gfx_icons.h).
+#define ICON_LAYER_SWITCH           	U"\x100004"
+#define ICON_LAYER_ONESHOT          	U"\x100025"
 
 // OS-aware shortcut-preview hint glyphs (wave B). Real Noto codepoints rendered
 // from the font pack (NOT resident) — see keycode_to_disp_overlay() in
@@ -1967,8 +1966,8 @@
 // glyph) with the run-dialog frame drawn by keycode_hint_wants_frame().
 // Resident IconsFont OS logos (gfx_icons.h, 0x98/0x99) — the GUI/Super-key legend
 // for the host-detected Linux desktops (POLY_OS_LINUX_GNOME/KDE).
-#define ICON_OS_GNOME               	U"\x98"
-#define ICON_OS_KDE                 	U"\x99"
+#define ICON_OS_GNOME               	U"\x10001D"
+#define ICON_OS_KDE                 	U"\x10001E"
 // ---- Hint display-list building blocks --------------------------------------
 // A shortcut-hint string is a mini display list interpreted by
 // kdisp_write_gfx_text_cy() (base/disp_array.c). These macros name the control
@@ -2196,7 +2195,7 @@
 //   🖧 search network computers (Win+Ctrl+F)  🔊 volume mixer (Win+Ctrl+V)
 #define ICON_LIGHTNING              	U"\x26A1"   // Win+A action center / quick settings
 // (ICON_SYS_TRAY retired — Win+B now uses ICON_MAC_CONTROL; the 🔊 speaker moved to Win+Ctrl+V's ICON_VOLUME_MIXER)
-#define ICON_EXPLORER               	U"\x9C"     // Win+E (resident folder pixmap, gfx_icons.h)
+#define ICON_EXPLORER               	U"\x100021"     // Win+E (resident folder pixmap, gfx_icons.h)
 #define ICON_ACCESSIBILITY          	U"\x267F"
 #define ICON_FOCUS_WINDOW           	U"\x2752"   // Win+Home minimize all but active (shadowed window)
 #define ICON_SNAP_LEFT              	U"\x2347"   // Win+Left  snap window to left edge (⍇ APL quad-left, symbol font pack)
@@ -2259,8 +2258,8 @@
 // lock is engaged, exactly like Caps Lock and Num Lock beside it. `led_t.scroll_lock`
 // rides `poly_layer_t.led_state`, which is synced, so the slave half shows it too.
 //
-// ⚠️ The badge is DRAWN, not a glyph: the resident C1 band is full (32/32), so there
-// is nowhere to bake the OFF/ON pair Caps and Num each get. HINT_FRAME / HINT_BOX
+// ⚠️ The badge is DRAWN, not a glyph: it was built while the resident C1 band was
+// full, with nowhere to bake the OFF/ON pair Caps and Num each get. HINT_FRAME / HINT_BOX
 // draw the outline and the solid, and HINT_ERASE punches the arrow back out of the
 // solid one — which is what makes the engaged state read as inverted rather than as
 // a blob. The arrow is HINT_SMALL (half of 10x26 = 5x13), sized to clear the 2px
@@ -2312,7 +2311,7 @@
 
 // Media STOP is DRAWN, not baked: no filled square exists anywhere in the pack
 // (U+25A0, U+23F9, U+2B1B, U+25FC, U+25FE are all absent) and the resident C1 icon
-// band is full, so the solid HINT_BADGE is the only way to get one. 15x15 is
+// band was full when it was built, so the solid HINT_BADGE is the only way to get one. 15x15 is
 // measured against its own row rather than picked: the transport arrows
 // (ICON_LEFT/ICON_RIGHT, 7x13) ink y9..21, so a 15px square centred on y15 carries
 // the same visual weight - 20px read heavier than every key beside it.
@@ -2326,12 +2325,12 @@
 // de-facto reference is the OEM legend on the physical Menu/Application key -- a menu
 // with a pointer on it, which is exactly what this draws.
 //
-// ⚠️ ONE baked glyph (IconsPuaFont, base/fonts/gfx_icons.h), not a display list. It was
+// ⚠️ ONE baked glyph (IconsFont, base/fonts/gfx_icons.h), not a display list. It was
 // built from ops for rounds 34-35: three square BADGEs, a 1px frame and a ROTATED U+27A4
 // at one third scale, because the pack has no cursor glyph. Round 41 asked for a real
 // mouse pointer cut out of the bars by a dark halo, which no op can draw, so the design
-// was drawn as a 31x24 bitmap. IconsFont was full, which is why it opened the plane-16
-// private-use range. A single glyph also centres like any other legend, so the
+// was drawn as a 31x24 bitmap. The C1 band was full, which is why it opened the plane-16
+// private-use range that now holds every icon. A single glyph also centres like any other legend, so the
 // bottom-row trap the absolute layout existed for (round 34) no longer applies.
 #define ICON_CONTEXT_MENU           	U"\x100000"
 
@@ -2355,21 +2354,19 @@
 // quarter) lights none. Five steps would have put 50% and 75% on 2 and 3 of 5, i.e.
 // a meter misreporting the value it exists to state.
 //
-// ⚠️ These live in the C1 band 0x89-0x9F. Two of the slots are filled gaps and
-// three extended IconsFont's `last` 0x9C -> 0x9F; 0xA0+ stays off-limits because
-// IconsFont is g_all_fonts[0] and would shadow printable Latin-1 there. Run
+// These live in IconsFont's plane-16 PUA range. Run
 // `python3 tools/check_icon_slots.py` after touching any of this.
 //
 // ⚠️ KC_DMIN keeps a FILLED sun with zero rays, NOT a hollow one. It sets
 // brightness 2 of FULL_BRIGHT 50 — the dimmest LIT level, not off (DISP_OFF is
 // 0, MIN_BRIGHT is 1) — so a hollow sun would claim something the key does not do.
-#define ICON_BRIGHT_0               	U"\x0089"   // KC_DMIN  — no rays, staircase empty
-#define ICON_BRIGHT_1               	U"\x008A"   // KC_D1Q
-#define ICON_BRIGHT_2               	U"\x008B"   // KC_DHLF
-#define ICON_BRIGHT_3               	U"\x0093"   // KC_D3Q
-#define ICON_BRIGHT_4               	U"\x009A"   // KC_DMAX — full rays, staircase full
-#define ICON_BRIGHT_DOWN            	U"\x009B"   // KC_DDIM — small sun + '-'
-#define ICON_BRIGHT_UP              	U"\x009D"   // KC_DBRI — big sun + '+'
-#define ICON_BRIGHT_AUTO            	U"\x009E"   // KC_DAUTO while auto mode is ON
-#define ICON_BRIGHT_MAN             	U"\x009F"   // KC_DAUTO while auto mode is OFF
+#define ICON_BRIGHT_0               	U"\x10000E"   // KC_DMIN  — no rays, staircase empty
+#define ICON_BRIGHT_1               	U"\x10000F"   // KC_D1Q
+#define ICON_BRIGHT_2               	U"\x100010"   // KC_DHLF
+#define ICON_BRIGHT_3               	U"\x100018"   // KC_D3Q
+#define ICON_BRIGHT_4               	U"\x10001F"   // KC_DMAX — full rays, staircase full
+#define ICON_BRIGHT_DOWN            	U"\x100020"   // KC_DDIM — small sun + '-'
+#define ICON_BRIGHT_UP              	U"\x100022"   // KC_DBRI — big sun + '+'
+#define ICON_BRIGHT_AUTO            	U"\x100023"   // KC_DAUTO while auto mode is ON
+#define ICON_BRIGHT_MAN             	U"\x100024"   // KC_DAUTO while auto mode is OFF
 

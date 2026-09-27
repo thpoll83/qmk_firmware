@@ -2205,3 +2205,5 @@ U+100025 inside the one `IconsFont`. FONT_PACK.md has the current layout.
 - Lesson colours 5% dimmer: `TRGB_LUMA_REF` 80 → 76.
 - The status-panel emoji uses the DECIMATING half (`kdisp_draw_glyph_thin_at`) rather
   than the 2x2-OR one, which filled the emoji's inner lines into a blob.
+- Round 48: the half-size mode is per glyph. 😄 and ⚽ use the decimating half
+  (every second pixel); the other tour emoji use the 2x2-OR half.

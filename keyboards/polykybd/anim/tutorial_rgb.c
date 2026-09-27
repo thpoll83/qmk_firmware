@@ -41,7 +41,8 @@
 // what the eye sees. Each hue's value is scaled so no hue is brighter than luma
 // TRGB_LUMA_REF, which is where the hues reported as fine already sit.
 // Round 46: 110 was "still a bit too bright"; 80 is about 27% dimmer.
-#define TRGB_LUMA_REF    80u
+// Round 47: "only 5% less" -> 76.
+#define TRGB_LUMA_REF    76u
 // Name keys breathe out of step with each other ("pulse individually"): each key's
 // pulse clock is offset by this much per slot. Not a divisor of the 1400 ms period, so
 // neighbouring slots land far apart in phase.

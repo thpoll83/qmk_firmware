@@ -2199,3 +2199,9 @@ U+100025 inside the one `IconsFont`. FONT_PACK.md has the current layout.
   between a new name appearing and the first render or tick that polls for it. It now
   polls itself, as `menu_cascade_hidden()` always did, so a new name reads 0 until its
   keys are due.
+
+## Round 47
+
+- Lesson colours 5% dimmer: `TRGB_LUMA_REF` 80 → 76.
+- The status-panel emoji uses the DECIMATING half (`kdisp_draw_glyph_thin_at`) rather
+  than the 2x2-OR one, which filled the emoji's inner lines into a blob.

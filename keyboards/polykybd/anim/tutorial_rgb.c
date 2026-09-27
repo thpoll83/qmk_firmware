@@ -30,7 +30,11 @@
 // key keeps its ratio instead of going through hsv_to_rgb's rounding at a value of
 // 10. The floor now counts that third channel too, which puts it at 13 for every hue;
 // TRGB_NAME_VAL rose 16 -> 20 so the name glow still has room above it.
-#define TRGB_SAT         170u
+// Round 44: 170 "went too far — almost everything is white with some color". 220
+// keeps the third channel as a tint (34 of 255 at full value) instead of a wash. The
+// floor now counts the MIDDLE channel only: the tint may drop out near the bottom of
+// a fade, which leaves a two-channel mix, never a primary.
+#define TRGB_SAT         220u
 #define TRGB_MIN_CH      4u
 // Name keys breathe out of step with each other ("pulse individually"): each key's
 // pulse clock is offset by this much per slot. Not a divisor of the 1400 ms period, so
@@ -66,7 +70,8 @@ static uint32_t s_last;
 // the rainbow got a handful of frames a second. tutorial_rgb_tick() now drives the
 // missing three calls itself while the rainbow shows (TRGB_RAINBOW_PUMP).
 #define TRGB_RAINBOW_VAL RGB_MATRIX_DEFAULT_VAL
-#define TRGB_RAINBOW_SPD RGB_MATRIX_DEFAULT_SPD
+// Round 44: the defaults flow now; "speed it up a bit" -> stock speed plus 60%.
+#define TRGB_RAINBOW_SPD ((RGB_MATRIX_DEFAULT_SPD * 8u) / 5u)
 #define TRGB_RAINBOW_PUMP 3u
 
 static bool    s_rb_on;
@@ -146,13 +151,14 @@ static void build_map(void) {
     s_map_built = true;
 }
 
-// The lowest value at which hue `h` still shows both of its channels.
+// The lowest value at which hue `h` still shows its two strongest channels.
 static uint8_t hue_floor(uint8_t h) {
-    const rgb_t   c  = hsv_to_rgb((hsv_t){h, TRGB_SAT, 255u});   // every channel lit
-    uint8_t       mn = 255u;
-    if (c.r && c.r < mn) mn = c.r;
-    if (c.g && c.g < mn) mn = c.g;
-    if (c.b && c.b < mn) mn = c.b;
+    const rgb_t   c  = hsv_to_rgb((hsv_t){h, TRGB_SAT, 255u});
+    // The middle channel: the sum minus the largest and the smallest.
+    const uint8_t hi  = c.r > c.g ? (c.r > c.b ? c.r : c.b) : (c.g > c.b ? c.g : c.b);
+    const uint8_t lo  = c.r < c.g ? (c.r < c.b ? c.r : c.b) : (c.g < c.b ? c.g : c.b);
+    const uint16_t md = (uint16_t)c.r + c.g + c.b - hi - lo;
+    const uint16_t mn = md ? md : 1u;
     return (uint8_t)((TRGB_MIN_CH * 255u + mn - 1u) / mn);
 }
 

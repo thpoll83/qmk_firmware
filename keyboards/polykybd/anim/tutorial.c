@@ -906,7 +906,8 @@ uint32_t tutorial_line_icon(uint8_t which) {
 // WORDS rather than a list of phases, so a new line that says "hold" gets the icon
 // and a reworded one loses it, with nothing else to keep in step. The notation screen
 // is the one exception: its "no mark = hold" describes a key mark, it asks for nothing.
-#define TUT_HOLD_FRAME_MS 600u
+// Round 44: 600 ms per frame read as a flicker ("it has to be slower").
+#define TUT_HOLD_FRAME_MS 1200u
 uint32_t tutorial_line_lead_icon(uint8_t which) {
     if (!s_active || s_st.phase == TUT_NOTATION) return 0;
     const uint32_t *l = tutorial_line(which);

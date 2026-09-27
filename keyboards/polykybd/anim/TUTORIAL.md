@@ -2155,3 +2155,15 @@ Hardware feedback:
 to plane-16 PUA in qmk#313 (`new = 0x100004 + (old − 0x7F)`), so `0x7F`/`0xA0` and
 `IconsPuaFont` above now read as `ICON_LAYER_SWITCH` U+100004 / `ICON_LAYER_ONESHOT`
 U+100025 inside the one `IconsFont`. FONT_PACK.md has the current layout.
+
+## Round 44
+
+- **Opening rainbow faster and longer.** "Better now; speed it up a bit and make it last
+  longer": speed is stock × 1.6 (`TRGB_RAINBOW_SPD`, 25 → 40), and the rainbow stays full
+  until ~3.5 s and is gone by ~4.7 s (`startup_anim_rainbow_level`, 180/256..240/256 of
+  `SA_INTRO_MS`).
+- **Lesson colours less white.** Saturation 170 "went too far — almost everything is white
+  with some color". `TRGB_SAT` is 220, so the third channel is a tint (34 of 255). The dim
+  floor now counts the middle channel only: the tint may drop out at the bottom of a fade,
+  which leaves a two-channel mix, never a primary.
+- **Press-and-hold icon slower.** `TUT_HOLD_FRAME_MS` 600 → 1200.

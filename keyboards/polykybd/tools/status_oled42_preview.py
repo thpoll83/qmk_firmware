@@ -98,18 +98,25 @@ def _glyph(font, cp):
     return gl[cp - f['first']], bm
 
 
+def _lit(g, bm):
+    """Yield the lit (x, y) of a glyph. The data is COLUMN-NATIVE (OLED page
+    layout, as in kdisp_write_gfx_char and status_oled_preview.py): cb bytes per
+    column, 1 byte = 8 vertical pixels, LSB = top. Reading it as the classic
+    row-major Adafruit layout renders every glyph as dither noise."""
+    cb = (g['h'] + 7) >> 3
+    for gx in range(g['w']):
+        col = g['off'] + gx * cb
+        for gy in range(g['h']):
+            if bm[col + (gy >> 3)] & (1 << (gy & 7)):
+                yield gx, gy
+
+
 def draw_glyph(setpix, font, x, baseline, cp):
     g, bm = _glyph(font, cp)
     if not g:
         return 0
-    bo = g['off']; bit = 0; bits = 0
-    for gy in range(g['h']):
-        for gx in range(g['w']):
-            if (bit & 7) == 0:
-                bits = bm[bo]; bo += 1
-            if bits & 0x80:
-                setpix(x + g['xo'] + gx, baseline + g['yo'] + gy)
-            bits = (bits << 1) & 0xFF; bit += 1
+    for gx, gy in _lit(g, bm):
+        setpix(x + g['xo'] + gx, baseline + g['yo'] + gy)
     return g['xa']
 
 
@@ -136,14 +143,8 @@ def draw_glyph_half(setpix, font, x, top_y, cp):
     g, bm = _glyph(font, cp)
     if not g:
         return 0
-    bo = g['off']; bit = 0; bits = 0
-    for gy in range(g['h']):
-        for gx in range(g['w']):
-            if (bit & 7) == 0:
-                bits = bm[bo]; bo += 1
-            if bits & 0x80:
-                setpix(x + gx // 2, top_y + gy // 2)
-            bits = (bits << 1) & 0xFF; bit += 1
+    for gx, gy in _lit(g, bm):
+        setpix(x + gx // 2, top_y + gy // 2)
     return (g['h'] + 1) // 2
 
 

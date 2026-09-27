@@ -702,8 +702,9 @@ bool startup_anim_active(void) { return s_active; }
 uint8_t startup_anim_rainbow_level(void) {
     if (!s_active || s_loop) return 0u;
     const uint32_t el   = timer_elapsed32(s_start);
-    const uint32_t from = ((uint32_t)SA_INTRO_MS * 130u) / 256u;
-    const uint32_t to   = ((uint32_t)SA_INTRO_MS * 165u) / 256u;
+    // Round 43: runs longer — full until ~2.9 s, gone by ~4.0 s (was 2.5 s / 3.2 s).
+    const uint32_t from = ((uint32_t)SA_INTRO_MS * 150u) / 256u;
+    const uint32_t to   = ((uint32_t)SA_INTRO_MS * 205u) / 256u;
     if (el <= from) return 255u;
     if (el >= to) return 0u;
     return (uint8_t)(255u - ((el - from) * 255u) / (to - from));

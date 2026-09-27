@@ -17,17 +17,20 @@
 // cue breathes at 5..36.
 #define TRGB_PULSE_VAL   40u    // the key the lesson points at, at the top of its pulse
 #define TRGB_SWEEP_VAL   40u    // a key under a board-wide sweep, at full density
-#define TRGB_NAME_VAL    16u    // a letter of a spelled language name: "very lightly"
+#define TRGB_NAME_VAL    20u    // a letter of a spelled language name: "very lightly"
 #define TRGB_FALL_MS     450u   // a glow that is no longer wanted fades this slowly
 // Round 41: a dim mix collapses to its STRONGER channel ("an orange becomes red when
 // fading out"). Orange at value 5 is r=5 g=2, and a channel below about 3 does not
 // light reliably. So each colour has a floor: the lowest value at which its weaker channel
 // still reaches TRGB_MIN_CH. A pulse swings between that floor and its peak; a fade
 // goes dark at the floor instead of passing through the primary.
-// ⚠️ Full saturation for the same reason: the white tint of s=230 is ~10% of the value,
-// the first thing to vanish when dimmed, so the colour drifted as it faded. Every hue
-// below is already a two-channel mix, which is what "never pure R, G or B" asks.
-#define TRGB_SAT         255u
+// Round 43: mix all THREE channels ("mix R, G and B a bit more") and keep the mix
+// while dimming. Saturation 170 puts a third channel at a third of the strongest, and
+// the colour is computed ONCE at full value and scaled linearly (set_glow), so a dim
+// key keeps its ratio instead of going through hsv_to_rgb's rounding at a value of
+// 10. The floor now counts that third channel too, which puts it at 13 for every hue;
+// TRGB_NAME_VAL rose 16 -> 20 so the name glow still has room above it.
+#define TRGB_SAT         170u
 #define TRGB_MIN_CH      4u
 // Name keys breathe out of step with each other ("pulse individually"): each key's
 // pulse clock is offset by this much per slot. Not a divisor of the 1400 ms period, so
@@ -55,12 +58,16 @@ static uint32_t s_last;
 // fresh firmware"), not a copy of it: the master switches the matrix to
 // CYCLE_LEFT_RIGHT (brighter and faster than stock, see below), without saving, and fades it out
 // through the brightness. The split transport carries the mode to the slave.
-// Round 42: the stock DEFAULT_VAL (20) looked stepped rather than flowing — at a value
-// of 20 each channel has ~20 levels, so neighbouring keys jump between colours. The
-// intro runs the rainbow at the board's ceiling instead, and about twice the stock
-// speed (48 vs 25: the effect's clock is speed/4+1, so 13 vs 7, ~5 s a cycle, not ~9).
-#define TRGB_RAINBOW_VAL RGB_MATRIX_MAXIMUM_BRIGHTNESS
-#define TRGB_RAINBOW_SPD 48u
+// Round 43: exactly what a freshly flashed board shows — the stock mode, hue,
+// saturation, brightness and speed. Round 42 raised brightness and speed to cure a
+// rainbow that stepped instead of flowing; that was the wrong cause. The effect was
+// right, it was STARVED: QMK renders a frame over four rgb_matrix_task() calls
+// (start, render, flush, sync), one per main-loop pass, and an Eden pass is long, so
+// the rainbow got a handful of frames a second. tutorial_rgb_tick() now drives the
+// missing three calls itself while the rainbow shows (TRGB_RAINBOW_PUMP).
+#define TRGB_RAINBOW_VAL RGB_MATRIX_DEFAULT_VAL
+#define TRGB_RAINBOW_SPD RGB_MATRIX_DEFAULT_SPD
+#define TRGB_RAINBOW_PUMP 3u
 
 static bool    s_rb_on;
 static uint8_t s_saved_mode, s_saved_speed;
@@ -92,13 +99,13 @@ static void rainbow_tick(void) {
         s_saved_hsv    = rgb_matrix_get_hsv();
         s_saved_speed  = rgb_matrix_get_speed();
         s_rb_val       = 0xFFu;
-        rgb_matrix_mode_noeeprom(RGB_MATRIX_CYCLE_LEFT_RIGHT);
+        rgb_matrix_mode_noeeprom(RGB_MATRIX_DEFAULT_MODE);
         rgb_matrix_set_speed_noeeprom(TRGB_RAINBOW_SPD);
     }
     const uint8_t v = (uint8_t)((TRGB_RAINBOW_VAL * (uint16_t)rb) / 255u);
     if (v != s_rb_val) {
         s_rb_val = v;
-        rgb_matrix_sethsv_noeeprom(0, 255, v);
+        rgb_matrix_sethsv_noeeprom(RGB_MATRIX_DEFAULT_HUE, RGB_MATRIX_DEFAULT_SAT, v);
     }
 }
 
@@ -112,6 +119,10 @@ void tutorial_rgb_tick(void) {
         s_last = timer_read32();
     }
     rainbow_tick();
+    // Both halves: each renders its own LEDs, and each has a long Eden pass.
+    if (s_owned && startup_anim_rainbow_level() > 0u) {
+        for (uint8_t i = 0; i < TRGB_RAINBOW_PUMP; ++i) rgb_matrix_task();
+    }
     if (!want && s_owned) {
         s_owned = false;
         rainbow_end();
@@ -137,7 +148,7 @@ static void build_map(void) {
 
 // The lowest value at which hue `h` still shows both of its channels.
 static uint8_t hue_floor(uint8_t h) {
-    const rgb_t   c  = hsv_to_rgb((hsv_t){h, TRGB_SAT, 255u});
+    const rgb_t   c  = hsv_to_rgb((hsv_t){h, TRGB_SAT, 255u});   // every channel lit
     uint8_t       mn = 255u;
     if (c.r && c.r < mn) mn = c.r;
     if (c.g && c.g < mn) mn = c.g;
@@ -153,8 +164,10 @@ static void set_glow(uint8_t led, uint8_t h, uint8_t val, uint8_t lvl) {
         rgb_matrix_set_color(led, 0, 0, 0);
         return;
     }
-    const rgb_t c = hsv_to_rgb((hsv_t){h, TRGB_SAT, v});
-    rgb_matrix_set_color(led, c.r, c.g, c.b);
+    // Scale the full-value colour, rounding to nearest: the ratio survives the dimming.
+    const rgb_t full = hsv_to_rgb((hsv_t){h, TRGB_SAT, 255u});
+    rgb_matrix_set_color(led, (uint8_t)((full.r * v + 127u) / 255u), (uint8_t)((full.g * v + 127u) / 255u),
+                         (uint8_t)((full.b * v + 127u) / 255u));
 }
 
 // A pulse between the hue's floor and its peak: the ease of `wave` (0..255) mapped

@@ -7061,6 +7061,7 @@ void keyboard_post_init_user(void) {
 #endif
     splash_progress(4);                 // before core1 launch
 #ifdef USE_CORE1
+    g_core1_entered = 0u;
     multicore_launch_core1();
 #endif
 #ifdef FW_UP_BOOT_TRACE

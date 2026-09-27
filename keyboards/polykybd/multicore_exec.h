@@ -14,6 +14,9 @@
 // next packet until core1 catches up.
 bool core1_is_busy(void);
 
+// 1 once core1 has entered core1_entry() (IRQs masked); core0 clears it before launch.
+extern volatile uint32_t g_core1_entered;
+
 // Decompress the supplied buffer on core1, will block if previous decompression is still ongoing
 // All fragments have to be processed in order and until the end, no parallel processing possible
 // `visible` = this overlay's modifier variant is the one currently on screen; core1 only

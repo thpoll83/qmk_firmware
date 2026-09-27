@@ -28,6 +28,7 @@
 #include "hardware/structs/vreg_and_chip_reset.h"     // core-voltage select
 
 #include "boot_diag.h"
+#include "multicore_exec.h"    // g_core1_entered (boot_paint_mark)
 #include "base/hand_stamp.h"
 #include "poly_keymap.h"
 
@@ -387,6 +388,23 @@ void emit_boot_timing_line(void) {
     uprint("\n");
 }
 
+static uint8_t s_boot_sub = 0;   // the sub-step whose panel paint is in flight
+
+// ⚠️ Per-BLOCK breadcrumbs for a sub-step's status-panel paint. A master wedged at
+// "63%, 4 / 4" with the "4" half drawn left `phase=1:0x0504`: the paint started and
+// never returned, and a status-panel write has a 100 ms I2C timeout, so something
+// stopped core0 servicing that timeout. The stamp names the block that was being
+// written and whether core1 had reached core1_entry() by then:
+//     low byte = 0x80 | core1_entered << 6 | ((sub - 1) & 3) << 4 | block (0..15)
+// so 0x05C3 reads: step 5, core1 in its entry, sub-step 1, block 3. Milestone paints
+// keep their 0xE1 stamp; render keys are 1..40 and sub-steps 1..N, so 0x80+ is free.
+void boot_paint_mark(uint8_t block) {
+    if (s_boot_step == 0 || s_boot_sub == 0) return;
+    const uint8_t lo = (uint8_t)(0x80u | ((g_core1_entered ? 1u : 0u) << 6) |
+                                 (((s_boot_sub - 1u) & 3u) << 4) | (block & 0x0Fu));
+    (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(((uint16_t)s_boot_step << 8) | lo));
+}
+
 void boot_substep(uint8_t sub, uint8_t sub_total) {
     if (s_boot_step == 0 || sub == 0) return;   // no milestone open / nothing to say
     const uint16_t tag = (uint16_t)(((uint16_t)s_boot_step << 8) | sub);
@@ -398,7 +416,12 @@ void boot_substep(uint8_t sub, uint8_t sub_total) {
     // Percent line only. The keycap splash is untouched: its solidify count belongs
     // to the milestone, and repainting 72 displays per sub-step would itself be a
     // multi-hundred-ms span in the window we are trying to measure.
+    s_boot_sub = sub;
     oled_boot_progress(s_boot_step, POLY_SPLASH_STEPS, sub, sub_total, NULL);
+    s_boot_sub = 0;
+    // Back to the plain sub-step tag once the paint returned, so a later wedge in the
+    // same sub-step does not read as a paint that never finished.
+    (void)crash_phase_enter(CRASH_PHASE_BOOT, tag);
 }
 
 // ── The LATE-BOOT watchdog guard: step 5 to the end of post_init ─────────────

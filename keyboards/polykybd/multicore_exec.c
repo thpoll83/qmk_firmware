@@ -36,6 +36,11 @@ static volatile roi_update_data_t core1_roi;
 // that belongs to the fragment it is completing. See fill_overlay.c overlay_variant_visible.
 static volatile bool core1_visible = true;
 
+// Set by core1 once it is inside core1_entry() with IRQs masked; cleared by core0
+// before each launch. Read into the boot sub-step paint breadcrumbs (boot_diag.c), so a
+// watchdog record from the late-boot window says whether core1 had got that far.
+volatile uint32_t g_core1_entered = 0;
+
 typedef enum {
     CORE1_CMD_DECOMPRESS     = 0xcafe0001,
     CORE1_CMD_ROI_UPDATE     = 0xcafe0002,
@@ -62,6 +67,8 @@ void core1_entry(void) {
     // FIFO_ST and doesn't need an IRQ to wake — so masking all IRQs here is safe.
     // See keyboards/polykybd/CLAUDE.md for the full investigation.
     __asm volatile("cpsid i" ::: "memory");
+    g_core1_entered = 1u;
+    dmb();
     multicore_fifo_drain();
     while (true) {
         uint32_t cmd = multicore_fifo_pop_blocking();  // blocks if empty

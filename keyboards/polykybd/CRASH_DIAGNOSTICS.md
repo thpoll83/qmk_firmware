@@ -342,3 +342,28 @@ run on it (`test_no_crash_record`). What is worth knowing:
     brought it back. `WD_FORCE` set with `WD_TIMER` clear is the informative half
     (and is the qmk#271 discriminator working); leading with POR reads as a power
     cycle and would send a real diagnosis the wrong way.
+
+## Sub-step paint breadcrumbs (0xSS80..0xSSFF)
+
+A master wedged at "63%, 4 / 4" with the "4" half drawn left `phase=1:0x0504`: the
+sub-step's status-panel paint started and never returned. Every panel write has a
+100 ms I2C timeout, so the paint cannot hang by itself; something stopped core0
+servicing that timeout. `core1_trampoline` already masks core1's IRQs as its first
+instruction, so the core1 launch window the `cpsid i` fix was about is closed.
+
+To name the stall, a sub-step paint renders one OLED block per call and stamps each
+first (`boot_paint_mark()`):
+
+    arg = step << 8 | 0x80 | core1_entered << 6 | ((sub - 1) & 3) << 4 | block
+
+`core1_entered` is `g_core1_entered`, set by core1 inside `core1_entry()` once its IRQs
+are masked and cleared by core0 before the launch. Reading a record:
+
+| arg | means |
+|---|---|
+| `0x0504` | sub-step 4 stamped, paint not reached (or older firmware) |
+| `0x05F3` | step 5, core1 in its entry, sub-step 4, block 3 being written |
+| `0x05B3` | the same with core1 NOT yet in `core1_entry()` |
+
+After the paint returns the tag goes back to the plain sub-step (`0x0504`), so a
+record naming a block always means the paint was in flight.

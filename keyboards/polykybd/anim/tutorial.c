@@ -900,6 +900,25 @@ uint32_t tutorial_line_icon(uint8_t which) {
     }
 }
 
+// The press-and-hold icon that LEADS a line, or 0. Round 43: "hold" was easy to read
+// past, so every line that asks for it carries an icon that presses itself: the key
+// up with the arrow, then pressed flat onto the line, alternating. Derived from the
+// WORDS rather than a list of phases, so a new line that says "hold" gets the icon
+// and a reworded one loses it, with nothing else to keep in step. The notation screen
+// is the one exception: its "no mark = hold" describes a key mark, it asks for nothing.
+#define TUT_HOLD_FRAME_MS 600u
+uint32_t tutorial_line_lead_icon(uint8_t which) {
+    if (!s_active || s_st.phase == TUT_NOTATION) return 0;
+    const uint32_t *l = tutorial_line(which);
+    if (l == NULL) return 0;
+    for (; l[0] && l[1] && l[2] && l[3]; ++l) {
+        if ((l[0] | 0x20u) == 'h' && l[1] == 'o' && l[2] == 'l' && l[3] == 'd') {
+            return ((timer_read32() / TUT_HOLD_FRAME_MS) & 1u) ? ICON_HOLD_DOWN[0] : ICON_HOLD_UP[0];
+        }
+    }
+    return 0;
+}
+
 // The keycap legend for the line, framed by the caller. Only the tour's WAIT: once the
 // key has been pressed the words move on ("The picker is open") and name no key.
 const uint32_t *tutorial_line_key(uint8_t which) {
@@ -975,6 +994,7 @@ void tutorial_sync_sent(void) {}
 const uint32_t *tutorial_line(uint8_t which) { (void)which; return NULL; }
 uint32_t tutorial_line_icon(uint8_t which) { (void)which; return 0; }
 const uint32_t *tutorial_line_key(uint8_t which) { (void)which; return NULL; }
+uint32_t tutorial_line_lead_icon(uint8_t which) { (void)which; return 0; }
 uint32_t tutorial_big_letter(void) { return 0; }
 bool tutorial_draw_big_letter(int8_t ox, uint8_t w, uint8_t h) {
     (void)ox; (void)w; (void)h; return false;

@@ -170,6 +170,11 @@ uint32_t tutorial_line_icon(uint8_t which);
 // legend must be resident-font text for the same first-boot reason as the line.
 const uint32_t *tutorial_line_key(uint8_t which);
 
+// A press-and-hold icon to draw BEFORE that line, or 0: set on every line whose words
+// ask the user to hold a key, and it alternates between two frames (up / pressed) on
+// its own clock, so the caller only has to redraw. A resident IconsPuaFont glyph.
+uint32_t tutorial_line_lead_icon(uint8_t which);
+
 // ---- provided by poly_keymap.c (it owns the keymap and the display map) ----
 // Fill `out` with the packed slots of keys hosting a plain A-Z letter on the base
 // layer, both halves, skipping keys with no OLED behind them. Returns the count.

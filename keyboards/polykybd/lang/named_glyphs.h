@@ -2335,6 +2335,14 @@
 // bottom-row trap the absolute layout existed for (round 34) no longer applies.
 #define ICON_CONTEXT_MENU           	U"\x100000"
 
+// The Intl picker legend (INTL_PICKER_LEGEND, Á»Æ) at 18 px, for the tutorial's status
+// panel: the keycap's own 14 pt face made the framed key too big there (round 43).
+#define ICON_INTL_PICKER_SMALL      	U"\x100001"
+// Press and hold, two frames the tutorial alternates beside every "hold" line: the key
+// up with the arrow pushing, then pressed flat onto the line (round 43).
+#define ICON_HOLD_UP                	U"\x100002"
+#define ICON_HOLD_DOWN              	U"\x100003"
+
 // Brightness keys — one resident IconsFont glyph each (base/fonts/gfx_icons.h).
 // The status OLED already says "brightness" with a sun, so the keycaps use the
 // same sun and grow its RAYS with the level; a staircase beside it states the

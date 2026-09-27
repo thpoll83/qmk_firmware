@@ -2124,3 +2124,29 @@ Hardware feedback:
   IconsFont was full it opened a new resident range, `IconsPuaFont` at U+100000
   (`base/fonts/gfx_icons.h`, `FONT_PACK.md`). All eight bundles stay byte-identical.
   Not a tutorial change, found in this round.
+
+## Round 43 — a smaller picker key, a hold icon that presses itself, the stock rainbow
+
+- **The picker key on the status panel is smaller**: the keycap's 14 pt face made a
+  62 px square fill the panel. The three characters are baked at 18 px from
+  NotoSans-Regular (the source the keycap face comes from) as one resident glyph,
+  `ICON_INTL_PICKER_SMALL` (U+100001, `IconsPuaFont`), in a 44 px square with a 1 px
+  frame. The glyph carries blank rows under the letters as tall as the accent, so
+  centring its box centres the capitals ("the letters should move up").
+  ⚠️ The panel no longer draws the keycap's own macro: if `INTL_PICKER_LEGEND` changes,
+  re-bake the glyph.
+- **Press and hold has an icon**, because "hold" was easy to read past: a key with an
+  arrow, then the key pressed flat onto the line, alternating every 600 ms
+  (`ICON_HOLD_UP` / `ICON_HOLD_DOWN`, U+100002/3, one shared box so it moves rather than
+  jumps). `tutorial_line_lead_icon()` puts it before any line whose words contain
+  "hold", except the notation screen, where "no mark = hold" asks for nothing.
+- **The opening rainbow is the first-flash rainbow**: stock mode, hue, saturation,
+  brightness (20) and speed (25). Round 42's brighter, faster version treated the wrong
+  cause. The effect was STARVED: QMK renders a frame over four `rgb_matrix_task()`
+  calls, one per main-loop pass, and an Eden pass is long. While the rainbow shows,
+  `tutorial_rgb_tick()` makes the other three calls itself, so every pass renders a
+  frame. It also runs longer: full until ~2.9 s, gone by ~4.0 s.
+- **Tutorial colours mix all three channels and keep the mix while dimming**:
+  saturation 170, and the colour is computed once at full value and scaled linearly
+  rather than recomputed through `hsv_to_rgb` at a value of 10. The floor counts the
+  third channel too (13 for every hue), and the name glow's peak rose 16 -> 20.

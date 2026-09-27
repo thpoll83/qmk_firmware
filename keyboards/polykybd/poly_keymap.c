@@ -4735,9 +4735,11 @@ const uint32_t *tutorial_tour_line(uint8_t step, bool left, bool seen) {
 
 const uint32_t *tutorial_tour_key(uint8_t step, bool left, bool seen) {
     if (step >= s_tour_n || left || seen) return NULL;
-    // ⚠️ The same macro the Ctrl keycap draws on this layer (to_static_text), so the
-    // panel cannot name a legend the key no longer shows.
-    return s_tour_kind[step] == TUT_TOUR_INTL_CTRL ? INTL_PICKER_LEGEND : NULL;
+    // The keycap draws INTL_PICKER_LEGEND in its 14 pt face; the panel draws the same
+    // three characters baked at 18 px (ICON_INTL_PICKER_SMALL), because the 14 pt face
+    // made the framed key fill the panel. ⚠️ If the keycap legend ever changes, this
+    // glyph has to be re-baked (gfx_icons.h) or the panel names a key nobody can see.
+    return s_tour_kind[step] == TUT_TOUR_INTL_CTRL ? ICON_INTL_PICKER_SMALL : NULL;
 }
 
 uint8_t tutorial_preview_table_row(uint8_t pos) {

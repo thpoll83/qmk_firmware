@@ -802,12 +802,18 @@ static bool s_tut_oled_raised = false;
 // Pixels between a tutorial line and its trailing icon.
 #define TUT_ICON_GAP 3
 // A framed keycap legend (tutorial_line_key) is a rounded SQUARE, the shape of a key
-// seen from above: gap after the word, the legend's minimum inset inside the 2 px
-// frame, and the corner radius. For Á»Æ (54 px wide) that is a 62x62 square, which
-// still clears the 64-row panel; the side is capped at the band minus one row each way.
+// seen from above: gap after the word, the legend's inset inside the 1 px frame, and the
+// corner radius. The legend is ONE baked glyph sized for this panel
+// (ICON_INTL_PICKER_SMALL, 36x23), so the square is 44x44 (hardware round 43: 62 with
+// the keycap's 14 pt face and a 2 px frame read as too big). The glyph carries blank
+// rows under the letters as tall as the accent, so centring its box centres the
+// capitals. The side is capped at the band minus one row each way.
 #define TUT_KEY_GAP 5
-#define TUT_KEY_PAD 2
-#define TUT_KEY_R   8
+#define TUT_KEY_PAD 3
+#define TUT_KEY_R   5
+
+// Pixels between the press-and-hold icon and the words after it.
+#define TUT_HOLD_GAP 4
 
 void oled_tutorial_screen(void) {
     const GFXfont*  small   = &NotoSans_Regular_Small_15px7b;
@@ -857,11 +863,22 @@ void oled_tutorial_screen(void) {
             int8_t          key_side = 0;
             if (key) {
                 kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, key, &kx0, &kx1, &ky0, &ky1);
-                const int8_t need_w = (int8_t)(kx1 - kx0 + 1 + 2 * TUT_KEY_PAD + 4);
-                const int8_t need_h = (int8_t)(ky1 - ky0 + 1 + 2 * TUT_KEY_PAD + 4);
+                const int8_t need_w = (int8_t)(kx1 - kx0 + 1 + 2 * TUT_KEY_PAD + 2);
+                const int8_t need_h = (int8_t)(ky1 - ky0 + 1 + 2 * TUT_KEY_PAD + 2);
                 key_side = need_w > need_h ? need_w : need_h;
                 if (key_side > band - 2) key_side = (int8_t)(band - 2);
                 w = (int8_t)(w + TUT_KEY_GAP + key_side);
+            }
+
+            // The press-and-hold icon LEADS the line, one unit with the words.
+            const uint32_t hold    = tutorial_line_lead_icon(i);
+            const uint32_t hold_s[2] = {hold, 0};
+            int8_t         hx0 = 0, hx1 = 0, hy0 = 0, hy1 = 0;
+            int8_t         hold_w = 0;
+            if (hold) {
+                kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, hold_s, &hx0, &hx1, &hy0, &hy1);
+                hold_w = (int8_t)(hx1 - hx0 + 1 + TUT_HOLD_GAP);
+                w      = (int8_t)(w + hold_w);
             }
 
             const uint32_t  cp        = tutorial_line_icon(i);
@@ -874,9 +891,16 @@ void oled_tutorial_screen(void) {
                 w      = (int8_t)(w + icon_w);
             }
 
-            int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2 - x0);
-            if (x < 0) x = 0;
-            const int8_t base = (int8_t)(band * slot + band / 2 - (y0 + y1) / 2);
+            int16_t start = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2);
+            if (start < 0) start = 0;
+            if (hold) {
+                // Centred on the text's band from its own box, like the trailing icon.
+                const int8_t hbase = (int8_t)(band * slot + band / 2 - (hy0 + hy1) / 2);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, (int8_t)(start - hx0), hbase, hold_s);
+            }
+            // x is the TEXT's origin; everything after the words is placed from it.
+            const int16_t x    = (int16_t)(start + hold_w - x0);
+            const int8_t  base = (int8_t)(band * slot + band / 2 - (y0 + y1) / 2);
             kdisp_write_gfx_text(fonts, 1, (int8_t)x, base, lines[i]);
             if (cp) {
                 // Centred on the TEXT's own band, from the icon's bbox — the two faces
@@ -887,13 +911,10 @@ void oled_tutorial_screen(void) {
                                      ibase, icon);
             }
             if (key) {
-                // Two nested round-rects for a 2 px border, as the RGB speed box.
-                // Centred on the band, the legend centred in the square from its bbox.
+                // A 1 px rounded frame centred on the band, the glyph centred in it.
                 const int8_t fx = (int8_t)(x + x0 + (x1 - x0 + 1) + TUT_KEY_GAP);
                 const int8_t fy = (int8_t)(band * slot + (band - key_side) / 2);
                 kdisp_draw_round_rect(fx, fy, key_side, key_side, TUT_KEY_R);
-                kdisp_draw_round_rect((int8_t)(fx + 1), (int8_t)(fy + 1),
-                                      (int8_t)(key_side - 2), (int8_t)(key_side - 2), TUT_KEY_R - 1);
                 kdisp_write_gfx_text(g_all_fonts, g_all_font_count,
                                      (int8_t)(fx + (key_side - (kx1 - kx0 + 1)) / 2 - kx0),
                                      (int8_t)(fy + (key_side - (ky1 - ky0 + 1)) / 2 - ky0), key);

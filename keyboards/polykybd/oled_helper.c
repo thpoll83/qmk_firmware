@@ -899,9 +899,13 @@ void oled_tutorial_screen(void) {
             const uint32_t  icon[2]   = {cp, 0};
             int8_t          ix0 = 0, ix1 = 0, iy0 = 0, iy1 = 0;
             int8_t          icon_w    = 0;
+            // A pack emoji is drawn at HALF size (hardware round 46: full size read
+            // too big beside the 15 px line); a resident icon stays full size.
+            const bool      icon_half = cp != 0u && cp < 0x100000u;
             if (cp) {
                 kdisp_gfx_text_bbox(icon_fonts, icon_nfonts, icon, &ix0, &ix1, &iy0, &iy1);
-                icon_w = (int8_t)(ix1 - ix0 + 1 + TUT_ICON_GAP);
+                const int8_t iw = (int8_t)(ix1 - ix0 + 1);
+                icon_w = (int8_t)((icon_half ? (iw + 1) / 2 : iw) + TUT_ICON_GAP);
                 w      = (int8_t)(w + icon_w);
             }
 
@@ -916,7 +920,14 @@ void oled_tutorial_screen(void) {
             const int16_t x    = (int16_t)(start + hold_w - x0);
             const int8_t  base = (int8_t)(band * slot + band / 2 - (y0 + y1) / 2);
             kdisp_write_gfx_text(fonts, 1, (int8_t)x, base, lines[i]);
-            if (cp) {
+            if (cp && icon_half) {
+                // Half size: the helper takes the literal top-left of the halved glyph,
+                // so centre that box on the band.
+                const int8_t ih = (int8_t)((iy1 - iy0 + 2) / 2);
+                kdisp_draw_glyph_half_at(icon_fonts, icon_nfonts,
+                                         (int8_t)(x + x0 + (x1 - x0 + 1) + TUT_ICON_GAP),
+                                         (int8_t)(band * slot + (band - ih) / 2), cp);
+            } else if (cp) {
                 // Centred on the TEXT's own band, from the icon's bbox — the two faces
                 // have different heights, so sharing a baseline would sit it low.
                 const int8_t ibase = (int8_t)(band * slot + band / 2 - (iy0 + iy1) / 2);

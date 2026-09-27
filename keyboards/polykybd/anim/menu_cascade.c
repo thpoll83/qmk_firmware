@@ -119,6 +119,11 @@ bool menu_cascade_hidden(uint8_t row, uint8_t col) {
 }
 
 uint8_t menu_cascade_key_level(bool right, uint8_t idx) {
+    // ⚠️ Poll first, as menu_cascade_hidden() does. The RGB paint can run in the gap
+    // between a new name appearing and the first render or tick that polls; without
+    // this it read the PREVIOUS state, "no cascade", as 255 = fully in, and the new
+    // name's keys flashed their glow before the text had faded in (hardware round 46).
+    poll();
     if (!s_live) return 255u;
     const uint32_t due = due_ms(right, idx);
     if (due == 0u) return 255u;

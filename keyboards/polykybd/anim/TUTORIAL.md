@@ -2188,3 +2188,14 @@ U+100025 inside the one `IconsFont`. FONT_PACK.md has the current layout.
 - **Braille with round dots** (fantasy bundle v6): see GLYPH_SCRIPT.md.
 - **Context-menu icon, option C** (after trying A): 2 px bars and CTX in a 5x7 micro
   face, 2 px taller than A's 3x5. `ICON_CONTEXT_MENU` is 50x23.
+
+## Round 46
+
+- **Lesson colours dimmer again**: `TRGB_LUMA_REF` 110 → 80 ("still a bit too bright").
+- **Status-panel emoji at half size**, through `kdisp_draw_glyph_half_at()`. A resident
+  icon (plane-16 PUA) after a line stays full size.
+- **Name keys flashed before their text faded in.** `menu_cascade_key_level()` returned
+  255 ("fully in") whenever no cascade was live, and the RGB paint could run in the gap
+  between a new name appearing and the first render or tick that polls for it. It now
+  polls itself, as `menu_cascade_hidden()` always did, so a new name reads 0 until its
+  keys are due.

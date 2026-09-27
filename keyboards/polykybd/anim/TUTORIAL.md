@@ -2186,3 +2186,5 @@ U+100025 inside the one `IconsFont`. FONT_PACK.md has the current layout.
   so a full-size emoji still fits 128 px; after the right line it would not. Skipped
   when the pack lacks the glyph.
 - **Braille with round dots** (fantasy bundle v6): see GLYPH_SCRIPT.md.
+- **Context-menu icon, option C** (after trying A): 2 px bars and CTX in a 5x7 micro
+  face, 2 px taller than A's 3x5. `ICON_CONTEXT_MENU` is 50x23.

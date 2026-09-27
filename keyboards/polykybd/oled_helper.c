@@ -902,8 +902,8 @@ void oled_tutorial_screen(void) {
             // A pack emoji is drawn at HALF size (hardware round 46: full size read
             // too big beside the 15 px line); a resident icon stays full size.
             // Round 47/48: which half-size mode is per glyph. The DECIMATING half
-            // (every second pixel, kdisp_draw_glyph_thin_at) keeps the open faces of
-            // 😄 and ⚽ readable; the 2x2-OR half reads better for the rest.
+            // (every second pixel, kdisp_draw_glyph_thin_at) keeps the panels of ⚽
+            // apart; the 2x2-OR half reads better for the rest, 🙂 included (round 49).
             const bool      icon_half = cp != 0u && cp < 0x100000u;
             if (cp) {
                 kdisp_gfx_text_bbox(icon_fonts, icon_nfonts, icon, &ix0, &ix1, &iy0, &iy1);
@@ -929,7 +929,7 @@ void oled_tutorial_screen(void) {
                 const int8_t ih = (int8_t)((iy1 - iy0 + 2) / 2);
                 const int8_t hx = (int8_t)(x + x0 + (x1 - x0 + 1) + TUT_ICON_GAP);
                 const int8_t hy = (int8_t)(band * slot + (band - ih) / 2);
-                if (cp == 0x1F604u || cp == 0x26BDu) {
+                if (cp == 0x26BDu) {
                     kdisp_draw_glyph_thin_at(icon_fonts, icon_nfonts, hx, hy, cp);
                 } else {
                     kdisp_draw_glyph_half_at(icon_fonts, icon_nfonts, hx, hy, cp);

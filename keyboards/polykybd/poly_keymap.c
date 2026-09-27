@@ -4734,17 +4734,17 @@ const uint32_t *tutorial_tour_line(uint8_t step, bool left, bool seen) {
 }
 
 // Round 45: the emoji steps show one emoji on the status panel, after the LEFT line
-// ("Smileys 😄 | and faces"). The left lines are the short ones (38..62 px), so a
+// ("Smileys 🙂 | and faces"). The left lines are the short ones (38..62 px), so a
 // full-size emoji (up to 45 px) still fits the 128 px panel; after the right line it
 // would not ("big and small" is 97 px). A pack glyph, so the caller draws it only when
 // the font pack actually has it.
 uint32_t tutorial_tour_emoji(uint8_t step) {
     if (step >= s_tour_n) return 0;
     switch (s_tour_kind[step]) {
-        case TUT_TOUR_EMJ: return 0x1F604;   // 😄
+        case TUT_TOUR_EMJ: return 0x1F642;   // 🙂
         case TUT_TOUR_ECAT:
             switch (s_tour_arg[step]) {
-                case 0:  return 0x1F604;     // 😄 smileys and faces
+                case 0:  return 0x1F642;     // 🙂 smileys and faces
                 case 4:  return 0x1F418;     // 🐘 animals, big and small
                 case 5:  return 0x1F33B;     // 🌻 plants and food
                 case 9:  return 0x1F528;     // 🔨 tools and objects

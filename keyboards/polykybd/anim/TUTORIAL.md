@@ -2181,7 +2181,7 @@ U+100025 inside the one `IconsFont`. FONT_PACK.md has the current layout.
 - **"10 FUN | SCRIPTS"** on the scripts count screen (a space key between the number
   and FUN). The layouts screen already read "160 | LAYOUTS".
 - **Emoji on the emoji-tour status lines.** The LEFT line gets a trailing pack emoji
-  (`tutorial_tour_emoji()`): 😄 for "Now for | some emoji" and smileys, 🐘 animals,
+  (`tutorial_tour_emoji()`): 🙂 for (😄 until round 49) "Now for | some emoji" and smileys, 🐘 animals,
   🌻 plants, 🔨 tools, ✈ travel, ⚽ sports, 🎉 the rest. The left lines are 38..62 px,
   so a full-size emoji still fits 128 px; after the right line it would not. Skipped
   when the pack lacks the glyph.
@@ -2207,3 +2207,10 @@ U+100025 inside the one `IconsFont`. FONT_PACK.md has the current layout.
   than the 2x2-OR one, which filled the emoji's inner lines into a blob.
 - Round 48: the half-size mode is per glyph. 😄 and ⚽ use the decimating half
   (every second pixel); the other tour emoji use the 2x2-OR half.
+
+## Round 49
+
+- The smiley is 🙂 (U+1F642, slight smile) instead of 😄, drawn with the 2x2-OR half.
+  Of twelve smiling faces rendered in both modes, the decimating half broke every
+  outline into dots, and 😄's curved eyes survived neither mode. ⚽ is now the only
+  glyph on the decimating half.

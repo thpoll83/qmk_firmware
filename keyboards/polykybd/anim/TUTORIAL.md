@@ -2167,3 +2167,7 @@ U+100025 inside the one `IconsFont`. FONT_PACK.md has the current layout.
   floor now counts the middle channel only: the tint may drop out at the bottom of a fade,
   which leaves a two-channel mix, never a primary.
 - **Press-and-hold icon slower.** `TUT_HOLD_FRAME_MS` 600 → 1200.
+- **Context-menu icon, option A.** The 5 px bars were "too thick compared to the rest",
+  and the user asked for CTX in a micro script on the right. The bars are 3 px, and a
+  hand-drawn 3x5 CTX sits beside the top bar, so `ICON_CONTEXT_MENU` (U+100000) is
+  45x22. Option C (2 px bars) is the fallback if this still reads heavy.

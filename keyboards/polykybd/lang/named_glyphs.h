@@ -2330,7 +2330,9 @@
 // at one third scale, because the pack has no cursor glyph. Round 41 asked for a real
 // mouse pointer cut out of the bars by a dark halo, which no op can draw, so the design
 // was drawn as a 31x24 bitmap. The C1 band was full, which is why it opened the plane-16
-// private-use range that now holds every icon. A single glyph also centres like any other legend, so the
+// private-use range that now holds every icon.
+// Round 44: the bars are 3 px (5 px read "too thick compared to the rest") and a 3x5
+// micro CTX sits beside the top bar, so the glyph is 45x22. A single glyph also centres like any other legend, so the
 // bottom-row trap the absolute layout existed for (round 34) no longer applies.
 #define ICON_CONTEXT_MENU           	U"\x100000"
 

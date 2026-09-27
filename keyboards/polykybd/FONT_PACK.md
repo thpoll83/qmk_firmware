@@ -225,12 +225,18 @@ flashes all stale bundles, `flash <id>` force-flashes one).
       Run it after touching either file; picking an occupied slot otherwise fails
       **silently**, because `IconsFont` is `g_all_fonts[0]` and simply wins.
     - ⚠️ **A macro you want GONE cannot just be deleted — most of `named_glyphs.h`
-      is COG-GENERATED** (the block from `/*[[[cog` to `//[[[end]]]`, lines 9–1927,
-      comes from the glyph sheet). `ICON_BACKSPACE` lived there, so removing the line
-      would have come back on the next `cog -r lang/named_glyphs.h` and silently
-      re-aliased `0x8B` to a brightness sun. It is `#undef`'d in the hand-written
-      tail instead, which survives regeneration and turns any stale use into a
-      **compile error** rather than a wrong glyph.
+      is COG-GENERATED** (the block from `/*[[[cog` to `//[[[end]]]`) from the
+      `named_glyphs` sheet of `lang/lang_lut.xlsx`, so a line removed from the header
+      comes back on the next `cog -r lang/named_glyphs.h`. Remove the ROW from the
+      sheet, and never by saving the workbook through openpyxl (that drops every
+      cached formula result the cog blocks read). The sheet's formulas are
+      row-relative (`HEX2DEC(Bn)`, `Cn-Cn-1`), so a deleted row renumbers every row
+      below it and rewrites their references. `ICON_BACKSPACE` (row 18, a dead alias of
+      `0x8B`) was removed that way by editing `xl/worksheets/sheet1.xml` in the zip
+      directly: 3884 shifted formulas checked, the one reference to the deleted row
+      re-pointed at the row above, the other two sheets unchanged, and
+      `cogapp --check lang_lut.c` clean. ⚠️ The cog loop stops at the first EMPTY row,
+      so blanking a row instead of deleting it silently truncates every glyph after it.
   - **Removing a glyph from the MIDDLE of the range** (e.g. after migrating a hint
     to the pack): you can't delete it (the array must stay contiguous `first..last`).
     Turn its record into a **gap** `{off,0,0,0,0,0}` and drop its bitmap bytes, then

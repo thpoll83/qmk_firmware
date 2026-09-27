@@ -43,7 +43,6 @@
 #define ICON_LMB                    	U"\x86"
 #define ICON_MMB                    	U"\x87"
 #define ICON_RMB                    	U"\x88"
-#define ICON_BACKSPACE              	U"\x008B"
 #define ICON_NUMLOCK_OFF            	U"\x008C"
 #define ICON_NUMLOCK_ON             	U"\x008D"
 #define ICON_CAPSLOCK_OFF           	U"\x008E"
@@ -2366,10 +2365,3 @@
 #define ICON_BRIGHT_AUTO            	U"\x009E"   // KC_DAUTO while auto mode is ON
 #define ICON_BRIGHT_MAN             	U"\x009F"   // KC_DAUTO while auto mode is OFF
 
-// ⚠️ 0x8B was ICON_BACKSPACE, which nothing ever drew (verified: the macro had no
-// use outside its own definition, and no legend carried a raw \x8B). ICON_BRIGHT_2
-// now occupies that slot, so the old name is withdrawn rather than left pointing at
-// a sun. The #undef is here and not in the cog block above because that block is
-// GENERATED from the glyph sheet — deleting the line there would come back on the
-// next `cog -r lang/named_glyphs.h`, silently re-aliasing the slot.
-#undef ICON_BACKSPACE

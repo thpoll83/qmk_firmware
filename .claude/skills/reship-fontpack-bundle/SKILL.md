@@ -65,8 +65,9 @@ Repos (auto-discovered; override with `--qmk` / `--host`):
 
 4. **Verify**:
    ```bash
-   # host resource integrity + decode round-trip
-   cd ../PolyKybdHost && .venv/bin/python -m unittest discover -s tests/services -p "fontpack*_test.py"
+   # host resource integrity + decode round-trip, AND every test that renders the
+   # shipped bundles (glyph_script_preview_test pins the fantasy bundle's shapes)
+   cd ../PolyKybdHost && xvfb-run -a .venv/bin/python -m unittest discover -s tests/services -p "*_test.py"
    # cross-repo shared manifests must stay byte-identical
    cd ../qmk_firmware/keyboards/polykybd
    cmp fonts/noto-fonts.yaml ../../../PolyKybdHost/polyhost/res/fonts/noto-fonts.yaml
@@ -77,6 +78,13 @@ Repos (auto-discovered; override with `--qmk` / `--host`):
    ```
    The `fontpack_reader_test` validates each `bundles.json` `size`/`sha256` against
    the actual `.plyf`, so a green run proves the reship is self-consistent.
+   ⚠️ **`fontpack*_test.py` alone is NOT enough — run the whole `tests/services`
+   directory.** Other suites there render the SHIPPED bundles and assert things about
+   the glyphs, and a changed glyph can move them. The fantasy v6 reship (host#276,
+   round Braille dots) passed the `fontpack*` check, merged, and broke
+   `glyph_script_preview_test`'s Braille test: 8 px dots on a 12 px pitch made the
+   alphabet exactly 4× the 'a' dot, and the test asserted `> 4×`. PolyKybdHost has no
+   unit-test CI, so nothing caught it until the next full-suite baseline (host#277).
 
 5. **Commit on BOTH repos** (only when asked — per repo rules):
    - qmk (`PolyKybd` base): the changed `fontpack_bundles.manifest.json` +

@@ -1,7 +1,9 @@
 # Design: fewer reports per app switch (icon library + context coding)
 
-**Status:** agreed design, not started (2026-09-29). This covers the firmware,
-the host and the generator. The code changes will come as separate PRs.
+**Status:** phase 2 shipped as PRC (cmd 41, protocol v19). Phase 1 is agreed
+and not started; measured on top of PRC it still cuts cold-switch reports by
+more than half (§1.5). This covers the firmware, the host and the generator.
+The code changes will come as separate PRs.
 
 **Summary.** A cold app switch uploads every overlay image. Two independent
 phases cut the number of HID reports this takes:
@@ -74,21 +76,75 @@ ripple delete were already shared (Premiere, Resolve).
 
 ### 1.4 Expected effect
 
-Reports for a cold switch (all rows keep the per-image fallback to today's
-encodings):
+The planning estimate, made before either phase existed (all rows keep the
+per-image fallback to today's encodings):
 
 | | Word | JetBrains |
 |---|---|---|
-| Today | 71 | 208 |
+| Before PRC | 71 | 208 |
 | Phase 1: icon library | 16 | 66 |
 | Phase 2 alone: context coding | 43 | 107 |
 | Phase 2 alone, with 2 images per report | ~24 | ~57 |
 | Phase 1 + 2 | 11 | 35 |
 | Phase 1 + 2, with 2 images per report | ~9 | ~23 |
 
-Phase 1 under the agreed selection rule (§2.1): Word 34 library icons (2 fill
-reports) and 5 uploads; JetBrains 74 library icons (3 fill reports) and 25
-uploads, which are its app-only drawings and the ESC mark.
+### 1.5 Measured with PRC in place
+
+Phase 2 shipped as PRC (§3). Measured afterwards (2026-09-29, PolyKybdHost
+`main` 1.5.6) through the real `send_overlays_mru` against a fake device, cold
+(empty pool), for every distinct overlay set in `overlay-mapping.poly.yaml`:
+
+- **Today** is PRC, packing records into shared cmd 41 reports, with the older
+  encodings for the images PRC cannot fit.
+- **Library** intercepts each image whose pixels exactly match a library cell
+  from the generator: it is not uploaded and becomes one 9-bit fill pair,
+  27 per report (§2.6). The agreed column uses the selection rule of §2.1; the
+  "all" column puts every template icon except the ESC program mark in the
+  bundle, as an upper bound.
+- Mapping, prepare and enable reports are included and do not change.
+
+| App | Images | Today (PRC): reports / pauses | Library, agreed rule: reports / pauses | Library, all icons: reports |
+|---|---|---|---|---|
+| JetBrains (Windows) | 98 | 85 / 4 | 35 / 1 | 10 |
+| Calculator | 69 | 64 / 3 | 9 / 0 | 9 |
+| WinSCP | 67 | 62 / 3 | 11 / 0 | 10 |
+| paint.net | 70 | 58 / 3 | 11 / 0 | 8 |
+| Illustrator | 63 | 47 / 2 | 14 / 0 | 9 |
+| Photoshop | 63 | 46 / 2 | 17 / 0 | 9 |
+| Premiere | 47 | 43 / 2 | 11 / 0 | 8 |
+| Figma | 53 | 39 / 2 | 10 / 0 | 8 |
+| Windows Terminal | 43 | 37 / 1 | 8 / 0 | 8 |
+| VS Code | 38 | 34 / 1 | 16 / 0 | 7 |
+| Word | 39 | 30 / 1 | 10 / 0 | 7 |
+| Excel | 37 | 29 / 1 | 8 / 0 | 7 |
+| Explorer | 21 | 18 / 0 | 6 / 0 | 6 |
+| Chrome | 33 | 29 / 1 | 27 / 1 | 26 |
+| 11 sets without a generator spec | – | 176 | 176 | 176 |
+| **All 60 sets** | 2,141 | **1,882 / 65** | **776 / 9** | **581** |
+
+A pause is the 0.3 s rate-limit sleep after every 15 image reports. The library
+columns do not count the 1–3 fill reports towards that limit, so they may miss
+at most one pause.
+
+What this means:
+
+- **Phase 1 still more than halves the reports on top of PRC**: 1,882 to 776
+  over all sets, and 1,706 to 600 (35%) over the 49 sets that have a generator
+  spec. Almost every rate-limit pause goes (65 to 9). This is why phase 1 is
+  still worth building after PRC.
+- What remains is mostly each app's own custom drawings and its ESC mark
+  (JetBrains 35, VS Code 16). Putting every icon in the bundle would take the
+  49 spec'd sets to 405, at the cost of a bundle update whenever a template adds
+  a drawing.
+- **Sets without a generator spec gain nothing**: GIMP, Inkscape, Zoom, Slack,
+  Discord, Jira, Miro, KiCad, Bitbucket, web Outlook and the lock screen are
+  hand-made templates, so nothing places their icons in the bundle. Chrome is
+  the same case: 2 of its 33 images match. Each gains once it gets a spec.
+- Not counted: a library icon keeps one pool slot across apps, so a switch into
+  a second app that shares icons is partly warm.
+- Time is not measured here. The pre-PRC hardware log showed ~73 ms per image
+  report without saying whether the bridge or the render costs it, and PRC
+  decodes on core0. Step 0 of the rollout (§4) measures that split.
 
 ## 2. Phase 1: the icon library
 

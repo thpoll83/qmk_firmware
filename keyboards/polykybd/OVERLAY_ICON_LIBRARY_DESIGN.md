@@ -183,15 +183,16 @@ its 0x97000 (618,496 B) slot:
 
 ### 2.6 The fill command
 
-New core command **41 `FILL_POOL_FROM_ICON`**, `PROTOCOL_VERSION` 19, host gate
-`FEATURE_MIN_PROTOCOL["overlay_icons"] = 19`.
+New core command **42 `FILL_POOL_FROM_ICON`**, `PROTOCOL_VERSION` 20, host gate
+`FEATURE_MIN_PROTOCOL["overlay_icons"] = 20`. (Cmd 41 and v19 went to phase 2,
+which was implemented first.)
 
 It uses cmd 33's width-packed pair format:
 
 | Byte | Content |
 |---|---|
 | 0 | `P` |
-| 1 | 41 |
+| 1 | 42 |
 | 2 | value width in bits, 8..11 |
 | 3..63 | 61 bytes of `(pool slot, icon id)` pairs, each value at that width (`map_codec`) |
 
@@ -222,7 +223,7 @@ Firmware behaviour:
    into a small retry queue (4 × 64 B) drained by housekeeping, the same shape
    as the mapping repair. Unlike an image, a fill can be repaired, because the
    master still has the request.
-6. Add 41 to `doom_hid_frozen()` and to the `note_overlay_activity()` switch in
+6. Add 42 to `doom_hid_frozen()` and to the `note_overlay_activity()` switch in
    `hid_com.c`.
 7. Icon bundle absent: reply `!` with index 0, write nothing.
 
@@ -252,7 +253,7 @@ The `V` block reports **`min(master, slave)`** per bundle, for all nine bundles.
    cells (§2.4) and draws library cells from the bundle. Beside each template it
    writes `<stem>.icons.json`: `(variant, keycode) → icon_id`.
 3. **Send path.** In `send_overlays_mru`, a cell with a sidecar entry becomes a
-   fill pair when the device's protocol is ≥ 19 and its reported icon version
+   fill pair when the device's protocol is ≥ 20 and its reported icon version
    covers the id. Everything else uploads as today. The MRU content key for a
    fill is `("@icon", id)`, so apps sharing an icon share its pool slot.
 4. **Generic shortcut path.** `icon_catalog.render_overlay` concepts that are in
@@ -298,6 +299,15 @@ Alternatives measured and rejected:
 Seeding an adaptive model from the trained table came within 1% of the static
 table, so the static table is used: no per-image state, the simplest decoder.
 
+> **Implemented** on branch `claude/overlay-context-coding` (qmk `7db1b113`,
+> PolyKybdHost `c6aca3b6`) as cmd 41, protocol v19. It differs from the plan
+> below in three places: records are addressed by keycode + modifier like cmds
+> 16-19 rather than by pool slot, a record carries only context-coded images
+> (larger ones keep the old commands), and the decode runs on core0 because the
+> HID receive is already gated on core1 being idle. `PROTOCOL_HISTORY.md` v19
+> has the record layout. Measured through the host send path: cold-switch image
+> reports over all 118 templates fall from 4348 to 1753 (40%).
+
 ### 3.2 Per-image choice
 
 The host adds the context coder as a fifth candidate in
@@ -327,7 +337,8 @@ field packing is pinned in the implementation PR.
   pixels at roughly 100 cycles each: ~0.7 ms per icon at 200 MHz.
 - The slave receives the same compressed record over the bridge and decodes it
   itself. Smaller records also shorten the bridge transfer.
-- New command id and a protocol bump of its own (v20), independent of phase 1.
+- New command id and a protocol bump of its own, independent of phase 1 (done:
+  cmd 41, v19).
 
 ### 3.5 The table
 
@@ -344,7 +355,7 @@ field packing is pinned in the implementation PR.
    render and rest. That says how much of the ~73 ms per image report fewer
    reports actually save.
 1. **Phase 1 firmware:** layout v2, `PlyI` loader, slave versions and `min()` in
-   `V`, cmd 41 with bridge and retry queue, unit tests (pair parsing via
+   `V`, cmd 42 with bridge and retry queue, unit tests (pair parsing via
    `map_codec`, the blit), a HIL test (`add-hil-test`).
 2. **Phase 1 bundle and host:** `icon_ids.yaml`, bundle build from the
    generator, sidecars, regenerated templates, fill path, generic path, NOTICE.

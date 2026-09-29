@@ -181,7 +181,13 @@ string in a test.
   "not pushed yet" gets checked against the OLD head, fails, and the thread stays
   open with "I'll leave the finding open until the fix is pushed" (PolyKybdHost#265,
   2026-09-23: a second reply after the push was needed to close it). So: commit,
-  push, then reply with the sha.
+  push, then reply with the sha. It happened again on qmk_firmware#317 and
+  PolyKybdHost#291 (2026-09-29), where the replies went out before the push. The
+  recovery took under a minute each time: one more line on the thread,
+  "Pushed in `<sha>`. See `<file>:<line>`." CodeRabbit then read the commit,
+  confirmed the fix and resolved the thread. Name the call site for EACH half of
+  a two-sided fix: on #317 it confirmed only the master side until the reply named
+  the slave side's line too.
 - Post **one** comment, not one per finding. Table of findings → verdict, then a
   short section for what you declined and why. End with the attribution footer:
 
@@ -209,6 +215,16 @@ Review addressed in <sha>. Each finding was reproduced against the code before a
 
 - **Don't trust the walkthrough.** Every bot renders one; only some of them
   reviewed. Check §2 before reporting a PR as "reviewed, no findings".
+- ⚠️ **Resolving every inline thread is not the whole review.** CodeRabbit's
+  summary comment can name a defect that has no inline thread: the "Merge Risk"
+  prose and the "Security Architecture Review" section's retained concerns. On
+  PolyKybdHost#291 (2026-09-29) three threads were fixed and resolved, while the
+  summary also said *"a previously failed icon bundle can be retried on a keyboard
+  that no longer reports its flash slot"*. That was real: the font-pack
+  autocheck's retry list skipped the `device_has_slot()` check that its stale list
+  applies. Fixed in 01cfa47e. Read the summary's risk text and verify each claim
+  in it like an inline finding. There is no thread to reply on, so the commit
+  message is the record.
 - **Don't dump `get_comments` into context** — it will blow the token limit and
   cost you the turn. Parse the saved file.
 - **Don't batch-accept.** The autofix checkbox ("Push a commit to this branch")

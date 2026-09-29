@@ -17,6 +17,8 @@
 #include "base/map_codec.h"
 #include "base/overlay.h"
 #include "base/update.h"
+#include "base/ctx_codec.h"
+#include "base/ctx_table.h"
 #include "lang/lang_lut.h"
 
 #include <print.h>
@@ -280,6 +282,83 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
                 keycode, ctx_mod, pos_to_str(pos), get_fragment_context()->msg_count);
         }
     }
+}
+
+// A bridged context record (see receive_ctx_overlay_report) is the 4 box bytes
+// plus the payload; it has to fit the compressed transaction it rides in.
+_Static_assert(4 + HID_DATA_MAX - CTX_RECORD_HDR <= COMPRESSED_MAX,
+               "a cmd 41 record does not fit compressed_overlay_sync_t");
+
+// Decodes one context-coded image into pool slot `slot`: the step both halves run.
+// False, with the slot untouched, if the box does not fit the frame.
+bool ctx_overlay_apply(uint16_t slot, uint8_t top, uint8_t left, uint8_t height, uint8_t width,
+                       const uint8_t* payload, uint8_t len) {
+    return ctx_decode_roi(get_overlay(slot), top, left, height, width, payload, len, ctx_table_v1);
+}
+
+// Context-coded images (cmd 41, protocol v19). One report carries one or more
+// records back to back (base/ctx_codec.h); each is a whole image, so there is no
+// fragment context to keep between reports. Addressing, side resolution and the
+// visibility gate are the same as the RLE path above.
+//
+// ⚠️ Decoded on core0, in the HID handler. On USE_CORE1 builds the receive is
+// gated on core1 being idle (raw_hid_pre_receive_kb), so no RLE fragment can be
+// writing into the pool at the same time. Estimated, not yet measured on the
+// rig: ~150 cycles per ROI pixel, so ~0.7 ms for a 30x30 icon at 200 MHz and
+// ~2 ms for a full 72x40 frame. The perf harness's overlay burst would show it.
+uint8_t receive_ctx_overlay_report(const uint8_t* data, uint8_t avail) {
+    uint8_t     pos     = 0;
+    uint8_t     images  = 0;
+    ctx_record_t r;
+    uint8_t     n;
+    while ((n = ctx_parse_record(data + pos, avail - pos, &r)) != 0) {
+        pos += n;
+        if (r.keycode < KC_A || r.keycode > KC_RGUI) {
+            uprintf("Warning: context overlay for unsupported keycode 0x%x dropped.\n", r.keycode);
+            continue;
+        }
+        uint8_t  keycode = translate_a_to_z(r.keycode);
+        uint16_t idx;
+        if (!overlay_slot_index(keycode, &idx)) {
+            continue;
+        }
+        bool visible = overlay_visible(idx, r.modifier);
+        idx = adjust_overlay_idx_to_mod(idx, r.modifier);
+        idx = get_display_pool_slot(idx);
+
+        enum key_split_pos side = resolve_upload_side(keycode);
+        if (is_on_current_side(side)) {
+            (void)ctx_overlay_apply(idx, r.top, r.left, r.height, r.width, r.payload, r.len);   // box checked by the parser
+            mark_display_has_overlay_post_upload(idx);
+            // No update_performed() — see base/update.h.
+            if (visible) {
+                request_disp_refresh();
+            }
+        }
+        if (is_on_other_side(side)) {
+            // Rides the compressed transaction, flagged in `len` (split_sync.h):
+            // a new transaction id would cost the split42 transaction budget.
+            compressed_overlay_sync_t transfer;
+            transfer.adj_idx       = idx;
+            transfer.len           = CTX_BRIDGE_FLAG | (uint8_t)(4 + r.len);
+            transfer.compressed[0] = r.top;
+            transfer.compressed[1] = r.left;
+            transfer.compressed[2] = r.height;
+            transfer.compressed[3] = r.width;
+            memcpy(&transfer.compressed[4], r.payload, r.len);
+            // Same one-way street as the RLE path: the master keeps no copy of an
+            // other-side image. Classify the ack, never bool-test it.
+            if (!sync_succeeded(send_to_bridge(USER_SYNC_COMPRESSED_DATA, (void*)&transfer, sizeof(transfer), 10))) {
+                uprintf("Warning: context overlay for keycode 0x%x (idx %u) did not reach the slave.\n",
+                        keycode, idx);
+            }
+        }
+        images++;
+    }
+    if (pos < avail && data[pos] != 0) {
+        uprintf("Warning: malformed context overlay record at byte %u; rest of the report dropped.\n", pos);
+    }
+    return images;
 }
 
 // Unpacks `width`-bit overlay mapping pairs from `bytes` bytes of buffer and

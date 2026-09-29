@@ -413,6 +413,12 @@ contrast with their neighbour that the wire format does not show. The
   `TURN_OFF_TIME` is unchanged and deliberately not scaled by it. It is persisted as
   the enum **biased by one**, so a zero byte means "never chosen" — the property
   `idle_style_fmt` needed a whole second byte to provide.
+- ⚠️ **v19's context-coded overlays (cmd 41) decode against a FIXED table compiled
+  into both ends** (`base/ctx_table.h` ↔ the host's `res/ctx_table_v1.bin`). A table
+  that differs draws garbage with no error anywhere, so v1 is frozen and a retrained
+  table is a new protocol version. Its slave copy rides the compressed transaction
+  flagged by `CTX_BRIDGE_FLAG` in `len`, so **an RLE fragment length must stay below
+  0x80** (a `_Static_assert` holds it).
 - ⚠️ **The flat overlay index is the only ADDRESS an upload has, resolved through
   `overlay_map[]` — so `reset_overlay_mapping()`'s identity default is LOAD-BEARING FOR
   WRITES**, not a display convenience. Zeroing it sent every image to slot 0: nearly

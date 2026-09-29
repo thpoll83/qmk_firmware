@@ -15,6 +15,16 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first);
 // Fills region-of-interest of overlay buffer with data and syncs to bridge when needed.
 void fill_roi_overlay_buffer(uint8_t* data, bool first);
 
+// Decodes the context-coded images of one cmd 41 report (`avail` payload bytes)
+// into their pool slots, and bridges the ones the other half shows. Returns the
+// number of images it accepted.
+uint8_t receive_ctx_overlay_report(const uint8_t* data, uint8_t avail);
+
+// Decodes one context-coded image into pool slot `slot` (both halves). False,
+// with the slot untouched, if the box does not fit the frame.
+bool ctx_overlay_apply(uint16_t slot, uint8_t top, uint8_t left, uint8_t height, uint8_t width,
+                       const uint8_t* payload, uint8_t len);
+
 // Unpacks `width`-wide overlay mapping pairs from `bytes` bytes of buffer and
 // updates the display_to_pool array. `bytes`/`width` come from the command that
 // carried the stream — they are NOT globals, since cmd 21 and cmd 33 differ.

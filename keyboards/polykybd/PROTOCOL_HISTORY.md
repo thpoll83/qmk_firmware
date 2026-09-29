@@ -141,6 +141,33 @@ reading before you change either one.
     an explicit choice was indistinguishable from an unwritten byte. Biasing removes
     the collision at the source, costs one byte instead of two, and means a future
     change of the default cannot overwrite a real choice.
+  **v19** adds **context-coded overlay images** (cmd `41` / `0x29`). A report carries
+  whole images back to back as records: a 6-byte bit-field header (keycode, modifier,
+  ROI box, payload length, 4 reserved bits) and the payload; a keycode byte of 0 or the
+  end of the report ends the list. Each ROI pixel is range-coded against a probability
+  looked up in a fixed 1 KB table (`base/ctx_table.h`, table v1) by its 10 already
+  decoded neighbours. On the shipped templates an icon averages ~28 bytes against ~87
+  for the best of the four older encodings, so most images take one report and small
+  ones share it. The codec and the golden vectors are `base/ctx_codec.{c,h}` and
+  `base/tests/ctx_codec_tests.cpp` (`make test:polykybd_ctx_codec`).
+  - **The host picks it per image, only where it saves a report**, so the older
+    encodings stay in use and in the protocol. An image whose payload does not fit
+    one record (15 of 937 template cells) goes out the old way.
+  - ⚠️ **The table is part of the format.** Host (`polyhost/res/ctx_table_v1.bin`) and
+    firmware decode with the identical bytes or draw garbage with nothing reporting an
+    error. A retrained table is a new table and a new protocol version; v1 is frozen.
+    The firmware test pins its byte sum and three spot values.
+  - **Addressed like cmds 16-19** (keycode + modifier variant, through
+    `translate_a_to_z` and the pool mapping), so MRU and non-MRU uploads resolve the
+    same slot whichever encoding carried the image.
+  - **No new split transaction.** The slave copy rides `USER_SYNC_COMPRESSED_DATA` with
+    `CTX_BRIDGE_FLAG` (0x80) set in `len`; RLE fragments only ever use 60 and 62. The
+    split42 transaction budget is why. A frame that passes its CRC but describes no
+    valid image is answered `SYNC_NACK_REFUSED`.
+  - **Decoded on core0 in the HID handler**, not on core1: the receive is already
+    gated on core1 being idle, and an icon is estimated at ~0.7 ms (~150 cycles per
+    ROI pixel at 200 MHz; not yet measured on the rig). The slave
+    waits for core1 to go idle before decoding, like `core1_decompress_fragment`.
   ⚠️ QMK has **no `set_unicode_input_mode_noeeprom()`**; `unicode_config` is `extern`
   and `unicode_input_mode_set_kb()` is the notification the keycap legend rides on,
   so `apply_unicode_mode()` in `hid_com.c` is the persisting path minus one call —

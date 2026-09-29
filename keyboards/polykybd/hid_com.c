@@ -236,13 +236,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         const poly_layer_t* local_layer = get_local_layer();
         poly_sync_t* local_state = access_local_state();
         // Bulk overlay/mapping commands: plain (10), flags on/off (11/12), compressed
-        // (16/17), ROI (18/19), mapping (21). Two markers:
+        // (16/17), ROI (18/19), mapping (21/33), PRC-coded (41). Two markers:
         //  - note_overlay_activity() timestamps the burst so sync_and_refresh_displays()
         //    can coalesce the many per-report renders of a program switch into one.
         //  - loop_profile_note_overlay_cmd() tags the iteration for the timing profiler
         //    (no-op unless POLYKYBD_LOOP_PROFILE).
         switch (data[1]) {
-            case 10: case 11: case 12: case 16: case 17: case 18: case 19: case 21: case 33:
+            case 10: case 11: case 12: case 16: case 17: case 18: case 19: case 21: case 33: case 41:
                 note_overlay_activity();
                 loop_profile_note_overlay_cmd();
                 break;
@@ -758,6 +758,11 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         fill_roi_overlay_buffer(&data[HID_DATA_IDX], first);
                     }
                 }
+                break;
+            case 41: //PRC overlay images (protocol v19+)
+                // Whole images, one or more per report: no fragment context, no
+                // reply (a bulk write like 16-19). See base/prc_codec.h.
+                receive_prc_overlay_report(&data[HID_DATA_IDX], (uint8_t)(length - HID_DATA_IDX));
                 break;
             case 20: //set unicode input mode
                 // set_unicode_input_mode() is the SETTER. unicode_input_mode_set_user()

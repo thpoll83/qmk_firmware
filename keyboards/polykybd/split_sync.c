@@ -252,6 +252,33 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
     SYNC_VALIDATE_OR_RETURN(compressed_overlay_sync_t);
     note_overlay_activity();   // coalesce the slave's per-chunk renders (see update.h)
     const compressed_overlay_sync_t* ov = ((const compressed_overlay_sync_t *)in_data);
+    if (ov->len & PRC_BRIDGE_FLAG) {
+        // A whole PRC-coded image (cmd 41, see split_sync.h). It never touches
+        // the RLE fragment state (hid_bit_index / core1's bit index), so an RLE
+        // stream around it is unaffected.
+        uint8_t n = ov->len & (uint8_t)~PRC_BRIDGE_FLAG;
+        // A frame that passed its CRC but does not describe a valid image: asking
+        // again cannot change the answer, so refuse rather than invite retries.
+        if (n < 4 || n > COMPRESSED_MAX) {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_NACK_REFUSED;
+            return;
+        }
+#ifdef USE_CORE1
+        // core1 may still be decoding an RLE fragment; it could be the same slot
+        // if the host reused it. Wait, like core1_decompress_fragment does.
+        while (core1_is_busy()) {
+        }
+#endif
+        if (!prc_overlay_apply(ov->adj_idx, ov->compressed[0], ov->compressed[1], ov->compressed[2],
+                               ov->compressed[3], &ov->compressed[4], (uint8_t)(n - 4))) {
+            ((poly_sync_reply_t*)out_data)->ack = SYNC_NACK_REFUSED;
+            return;
+        }
+        mark_display_has_overlay_post_upload(ov->adj_idx);
+        request_disp_refresh();
+        ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+        return;
+    }
 #ifdef USE_CORE1
     //keycode info is lost, so KC_NO used (only used for diagnostics)
     // Bridged overlays carry only the pre-resolved pool slot (variant already folded

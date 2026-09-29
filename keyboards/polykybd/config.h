@@ -151,7 +151,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "1.0.0"
+#define FW_VERSION "1.1.0"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -238,7 +238,17 @@
 //      only and live in the `latinbig` font-pack bundle; without it (or for a
 //      non-latin legend) the render falls back to small, so the setting is
 //      always safe to accept.
-#define PROTOCOL_VERSION 18
+//  v19 SEND_PRC_OVERLAY (cmd 41 / 0x29): PRC (Predictive Range Coding) overlay
+//      images. One report carries one or more whole images as records
+//      (base/prc_codec.h); each pixel
+//      is range-coded against a probability from a FIXED 1 KB table compiled in
+//      (base/prc_table.h, table v1), indexed by 10 decoded neighbours. ~28 bytes
+//      per icon against ~87 for the best older encoding. The host picks it per
+//      image, only where it saves a report, so the four older encodings stay.
+//      ⚠️ The table is part of the format: a retrained table is a new table and a
+//      new protocol version, never an edit to v1. Bridged to the slave on the
+//      compressed transaction with PRC_BRIDGE_FLAG in `len` (split_sync.h).
+#define PROTOCOL_VERSION 19
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

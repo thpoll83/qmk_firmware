@@ -13,6 +13,7 @@
 #include "mru.h"
 
 #include "base/overlay.h"
+#include "base/icon_lib.h"   // cmd 42 fills bridged to this half (v20)
 #include "eeconfig.h"
 #include "eeprom.h"
 #include "nvm_eeprom_eeconfig_internal.h"
@@ -532,6 +533,25 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
     SYNC_VALIDATE_OR_RETURN(overlay_map_sync_t);
     note_overlay_activity();   // coalesce the slave's per-chunk renders (see update.h)
     const overlay_map_sync_t* data = (const overlay_map_sync_t *)in_data;
+    if (data->width & OVERLAY_MAP_ICON_FILL) {
+        // cmd 42: draw the icons from THIS half's library. A pool write only, the
+        // same class of work as the mapping and PRC handlers on this thread (no
+        // SPI, no shift registers). Refused, not acked, when any pair failed --
+        // most likely this half lacks the library -- so the master tells the host
+        // to upload those images as bitmaps, which reach both halves.
+#ifdef USE_CORE1
+        // core1 may still be decoding an RLE fragment into the pool; wait, like
+        // the PRC branch of the compressed handler.
+        while (core1_is_busy()) {
+        }
+#endif
+        const uint8_t width = (uint8_t)(data->width & ~OVERLAY_MAP_ICON_FILL);
+        uint8_t bad = iconlib_fill_pairs(data->mapping, data->bytes, width,
+                                         NUM_OVERLAY_SLOTS, get_overlay);
+        mark_filled_icon_slots(data->mapping, data->bytes, width, bad);
+        ((poly_sync_reply_t*)out_data)->ack = (bad == ICONLIB_FILL_OK) ? SYNC_ACK : SYNC_NACK_REFUSED;
+        return;
+    }
     // Render only if this chunk remapped an on-screen position (the slave has its own
     // displayed-slot set + synced mods); an all-off-screen chunk is shown by the
     // enable-overlays state sync (DISPLAY_OVERLAYS in OVERLAY_SYNCED_STATE_FLAGS).

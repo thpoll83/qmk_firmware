@@ -608,6 +608,12 @@ def build_bundles(order: list[str], resident: set[str], parsed: dict[str, Parsed
         for s in e.get("pack_extra", []):
             sym2bi[s] = i
 
+    # A `kind: icons` entry reserves a slot for the host-built PlyI icon bundle
+    # (OVERLAY_ICON_LIBRARY_DESIGN.md): it has no fonts and no .plyf here.
+    font_idx = [i for i, e in enumerate(lst) if e.get("kind", "fonts") == "fonts"]
+    for i, e in enumerate(lst):
+        if e.get("kind", "fonts") not in ("fonts", "icons"):
+            raise ValueError(f"bundle {e['id']!r}: unknown kind {e['kind']!r}")
     members: list[list[tuple[int, ParsedFont]]] = [[] for _ in lst]
     extra_n = 0
     for gi, sym in enumerate(order):
@@ -638,7 +644,8 @@ def build_bundles(order: list[str], resident: set[str], parsed: dict[str, Parsed
 
     cvers = content_versions or {}
     bundles = []
-    for i, e in enumerate(lst):
+    for i in font_idx:
+        e = lst[i]
         mem = members[i]
         for _, pf in mem:
             if len(pf.glyphs) != pf.expected_glyph_count():
@@ -668,6 +675,11 @@ def bundles_manifest_json(bundles: list[dict], layout: dict) -> str:
                         "slot_offset": b["slot"]["offset"], "slot_size": b["slot"]["size"],
                         "total_size": len(b["data"]), "font_count": len(b["fonts"]),
                         "fonts": b["fonts"]} for b in bundles]}
+    font_ids = {b["id"] for b in bundles}
+    doc["bundle_count"] = len(layout["slots"])
+    doc["reserved_slots"] = [{"id": s["id"], "index": s["index"], "kind": "icons",
+                              "slot_offset": s["offset"], "slot_size": s["size"]}
+                             for s in layout["slots"] if s["id"] not in font_ids]
     return json.dumps(doc, indent=2) + "\n"
 
 
@@ -682,12 +694,21 @@ def bundle_layout_header(bundles: list[dict], layout: dict) -> str:
         f"#define FONTPACK_DIR_OFFSET     0x{layout['dir_offset']:X}UL",
         f"#define FONTPACK_DIR_SIZE       0x{layout['dir_size']:X}UL",
         f"#define FONTPACK_SECTOR_SIZE    0x{layout['sector']:X}UL",
-        f"#define FONTPACK_BUNDLE_COUNT   {len(bundles)}u", "",
-        "// X(id, index, slot_offset, slot_size)",
-        "#define FONTPACK_BUNDLE_LIST \\"]
-    for b in bundles:
-        s = b["slot"]
-        lines.append(f"    X({b['id']}, {b['index']}, 0x{s['offset']:X}UL, "
+        f"#define FONTPACK_BUNDLE_COUNT   {len(layout['slots'])}u", ""]
+    # Every slot, font bundles and the icon library alike: the X-list is the slot
+    # table the firmware flashes into and reports versions for.
+    font_ids = {b["id"] for b in bundles}
+    icons = [s for s in layout["slots"] if s["id"] not in font_ids]
+    if len(icons) > 1:
+        raise ValueError("more than one icon bundle slot")
+    if icons:
+        lines += ["// The PlyI overlay icon library (HID cmd 42): validated by its own loader,",
+                  "// never by the font loader.",
+                  f"#define FONTPACK_ICONS_BUNDLE_ID {icons[0]['index']}u", ""]
+    lines += ["// X(id, index, slot_offset, slot_size)",
+              "#define FONTPACK_BUNDLE_LIST \\"]
+    for s in layout["slots"]:
+        lines.append(f"    X({s['id']}, {s['index']}, 0x{s['offset']:X}UL, "
                      f"0x{s['size']:X}UL) \\")
     lines[-1] = lines[-1].rstrip(" \\")     # drop trailing continuation
     lines.append("")

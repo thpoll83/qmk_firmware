@@ -46,6 +46,10 @@ void apply_overlay_action_flags(uint8_t flags);
 // at every press. In MRU mode display_has_overlay_bits is exclusively set by
 // set_packed_overlay_mapping for from-indices in the host's mapping.
 void mark_display_has_overlay_post_upload(uint16_t idx);
+// After a cmd 42 icon fill: mark_display_has_overlay_post_upload() for the pool
+// slot of each of the first `applied` pairs, as every image upload does (a no-op
+// under MIRROR_OVERLAYS, where the mapping sets the usage bits).
+void mark_filled_icon_slots(const uint8_t *pairs, uint8_t bytes, uint8_t width, uint8_t applied);
 
 uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods);
 

@@ -248,7 +248,7 @@
 //      ⚠️ The table is part of the format: a retrained table is a new table and a
 //      new protocol version, never an edit to v1. Bridged to the slave on the
 //      compressed transaction with PRC_BRIDGE_FLAG in `len` (split_sync.h).
-#define PROTOCOL_VERSION 19
+#define PROTOCOL_VERSION 20
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

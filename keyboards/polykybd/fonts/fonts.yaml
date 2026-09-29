@@ -119,7 +119,7 @@ index:
 # pack_extra symbol for the standalone flags); generate_fonts.py fails the build
 # if a bundle overflows its slot. Slot sizes are KB, multiples of 4 (sector).
 bundles:
-  layout_version: 1
+  layout_version: 2
   region_kb: 2048          # 2 MB fontpack window (FW_RESOURCE_OFFSET .. +2 MB)
   dir_sectors: 1           # 4 KB directory sector at the region base
   # NB: the `latin` category is resident: true (compiled into the firmware, the
@@ -151,8 +151,15 @@ bundles:
     # they can sit in the same front-to-back table as the resident 27 px
     # originals without ever winning a normal lookup — see the `latinbig`
     # category below. Last in the list, and the bundle most likely to grow if a
-    # further size is ever added, so it takes the tail slot.
-    - {id: latinbig, slot_kb: rest, categories: [latinbig]}
+    # further size is ever added. Layout v2 shrank it from the tail (604 KB) to
+    # 348 KB, still ~2.2x its ~159 KB, so the icon library could take the tail;
+    # its OFFSET is unchanged, so a deployed latinbig.plyf stays valid.
+    - {id: latinbig, slot_kb: 348,  categories: [latinbig]}
+    # Overlay icon library (HID cmd 42, protocol v20; OVERLAY_ICON_LIBRARY_DESIGN.md).
+    # kind: icons = a PlyI bundle the HOST builds from its overlay templates. It
+    # carries no fonts, so this build emits no .plyf for it: the entry only
+    # reserves the slot and gives it bundle id 8 in the GET_ID version block.
+    - {id: icons,    slot_kb: rest, kind: icons}
 
 # Each category -> one generated header, with defaults inherited by its fonts.
 categories:

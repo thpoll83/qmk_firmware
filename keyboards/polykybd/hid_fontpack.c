@@ -247,6 +247,11 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             if (master_ok && !is_doom) {
                 uint16_t cver = fontpack_bundle_version(s_fontpack_bundle);
                 memcpy(&data[3], &cver, 2);
+                // The 'V' block reports min(master, slave) (v20): record what the
+                // slave just committed so a perfect flash does not read as behind.
+                if (slave_ok) {
+                    fw_up_note_slave_bundle(s_fontpack_bundle, cver);
+                }
             }
             const char *outcome = ok ? (is_doom ? "installed" : "live")
                                      : !master_ok    ? "REJECTED (master finalize)"

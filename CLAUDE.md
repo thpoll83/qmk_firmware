@@ -419,6 +419,11 @@ contrast with their neighbour that the wire format does not show. The
   table is a new protocol version. Its slave copy rides the compressed transaction
   flagged by `PRC_BRIDGE_FLAG` in `len`, so **an RLE fragment length must stay below
   0x80** (a `_Static_assert` holds it).
+- ⚠️ **v20's icon fills (cmd 42) ride the MAPPING transaction, flagged by
+  `OVERLAY_MAP_ICON_FILL` (0x80) in `width`** — so no real mapping width may ever set
+  that bit. The icon bundle is a `PlyI` in font-pack slot 8 and is validated by
+  `base/icon_lib.c`, never by the font loader; the `V` block now reports
+  `min(master, slave)` per bundle.
 - ⚠️ **The flat overlay index is the only ADDRESS an upload has, resolved through
   `overlay_map[]` — so `reset_overlay_mapping()`'s identity default is LOAD-BEARING FOR
   WRITES**, not a display convenience. Zeroing it sent every image to slot 0: nearly

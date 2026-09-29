@@ -1,10 +1,10 @@
 {
   "abi_version": 2,
-  "layout_version": 1,
+  "layout_version": 2,
   "region_size": 2097152,
   "dir_offset": 0,
   "dir_size": 4096,
-  "bundle_count": 8,
+  "bundle_count": 9,
   "bundles": [
     {
       "id": "symbol",
@@ -890,7 +890,7 @@
       "id": "latinbig",
       "index": 7,
       "slot_offset": 1478656,
-      "slot_size": 618496,
+      "slot_size": 356352,
       "total_size": 162528,
       "font_count": 24,
       "fonts": [
@@ -1039,6 +1039,15 @@
           "last": 1003166
         }
       ]
+    }
+  ],
+  "reserved_slots": [
+    {
+      "id": "icons",
+      "index": 8,
+      "kind": "icons",
+      "slot_offset": 1835008,
+      "slot_size": 262144
     }
   ]
 }

@@ -205,3 +205,16 @@ polykybd_tutorial_plan_SRC := \
 polykybd_tutorial_plan_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# The PlyI overlay icon library (cmd 42): validation, blit and the pair list.
+# Dependency-free apart from crc32 and the header-only map codec.
+polykybd_icon_lib_SRC := \
+	$(POLY_BASE_PATH)/icon_lib.c \
+	$(POLY_CRC32_PATH)/polymod_crc32.c \
+	$(POLY_BASE_PATH)/tests/icon_lib_tests.cpp
+
+polykybd_icon_lib_INC := \
+	$(POLY_BASE_PATH) \
+	$(POLY_BASE_PATH)/tests \
+	$(POLY_CRC32_PATH) \
+	keyboards/polykybd

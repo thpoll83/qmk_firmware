@@ -446,6 +446,20 @@ static bool query_slave_versions(fw_up_versions_reply_t *reply) {
 }
 
 void fw_up_slave_versions_tick(void) {
+    // A link drop can hide a slave that was reflashed or swapped meanwhile, so
+    // any change of the link state forgets the cache: the master reports its own
+    // versions until a fresh read lands (review of #317).
+    static bool s_link_up = false;
+    const bool up = is_transport_connected();
+    if (up != s_link_up) {
+        s_link_up = up;
+        s_slave_ver_stale = true;
+        s_slave_ver_next  = timer_read32();
+        if (s_slave_ver_known) {
+            s_slave_ver_known = false;
+            poly_state_touch();   // the V block just changed back to the master's
+        }
+    }
     if (!s_slave_ver_stale || timer_expired32(timer_read32(), s_slave_ver_next) == false) {
         return;
     }

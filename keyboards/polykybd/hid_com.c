@@ -786,6 +786,8 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     } else {
                         bad = iconlib_fill_pairs(fill.mapping, OVERLAY_MAP_W_BYTES, width,
                                                  NUM_OVERLAY_SLOTS, get_overlay);
+                        // Same render-gate bit an upload sets (legacy, non-MRU mode).
+                        mark_filled_icon_slots(fill.mapping, OVERLAY_MAP_W_BYTES, width, bad);
                         if (bad != 0 && !sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&fill,
                                                                        sizeof(overlay_map_sync_t), 10))) {
                             bad = 0;

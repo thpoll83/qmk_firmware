@@ -550,6 +550,16 @@ void apply_overlay_action_flags(uint8_t flags) {
     if(test_flag(flags, MAPPING_ALLSET)) set_all_display_has_overlay();
 }
 
+void mark_filled_icon_slots(const uint8_t *pairs, uint8_t bytes, uint8_t width, uint8_t applied) {
+    if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
+        return;   // the fill refused it too; and a width of 0 would divide by zero below
+    }
+    const uint16_t n = (uint16_t)(((uint16_t)bytes * 8u / width) / 2u);
+    for (uint16_t p = 0; p < n && p < applied; ++p) {
+        mark_display_has_overlay_post_upload(map_codec_read(pairs, (uint16_t)(2u * p), width));
+    }
+}
+
 void mark_display_has_overlay_post_upload(uint16_t idx) {
     if (!test_flag(get_local_state()->overlay_flags, MIRROR_OVERLAYS)) {
         mark_display_has_overlay(idx);

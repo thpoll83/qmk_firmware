@@ -545,9 +545,10 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
         while (core1_is_busy()) {
         }
 #endif
-        uint8_t bad = iconlib_fill_pairs(data->mapping, data->bytes,
-                                         (uint8_t)(data->width & ~OVERLAY_MAP_ICON_FILL),
+        const uint8_t width = (uint8_t)(data->width & ~OVERLAY_MAP_ICON_FILL);
+        uint8_t bad = iconlib_fill_pairs(data->mapping, data->bytes, width,
                                          NUM_OVERLAY_SLOTS, get_overlay);
+        mark_filled_icon_slots(data->mapping, data->bytes, width, bad);
         ((poly_sync_reply_t*)out_data)->ack = (bad == ICONLIB_FILL_OK) ? SYNC_ACK : SYNC_NACK_REFUSED;
         return;
     }

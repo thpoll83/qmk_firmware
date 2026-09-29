@@ -338,7 +338,10 @@ uint8_t receive_prc_overlay_report(const uint8_t* data, uint8_t avail) {
         if (is_on_other_side(side)) {
             // Rides the compressed transaction, flagged in `len` (split_sync.h):
             // a new transaction id would cost the split42 transaction budget.
+            // Zeroed: a record fills only 4 + len of the 62 bytes, and the whole
+            // struct is CRC'd and sent, so the rest must not carry stack contents.
             compressed_overlay_sync_t transfer;
+            memset(&transfer, 0, sizeof(transfer));
             transfer.adj_idx       = idx;
             transfer.len           = PRC_BRIDGE_FLAG | (uint8_t)(4 + r.len);
             transfer.compressed[0] = r.top;

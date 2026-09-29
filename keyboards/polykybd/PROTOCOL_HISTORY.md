@@ -165,6 +165,13 @@ reading before you change either one.
     `PRC_BRIDGE_FLAG` (0x80) set in `len`; RLE fragments only ever use 60 and 62. The
     split42 transaction budget is why. A frame that passes its CRC but describes no
     valid image is answered `SYNC_NACK_REFUSED`.
+  - ⚠️ **Both halves must run v19.** The master cannot see the slave's version, and
+    a pre-v19 slave reads a flagged frame as an RLE fragment: it draws a wrong image
+    on its keycaps and desynchronises its RLE fragment state until the next image.
+    No out-of-bounds read, because `USE_CORE1` (always on) ignores `len`. The HID
+    updater stages the same image to both halves, so this needs one half flashed
+    by UF2 on its own, which already breaks other split syncs whenever
+    `poly_sync_t` changes.
   - **Decoded on core0 in the HID handler**, not on core1: the receive is already
     gated on core1 being idle, and an icon is estimated at ~0.7 ms (~150 cycles per
     ROI pixel at 200 MHz; not yet measured on the rig). The slave

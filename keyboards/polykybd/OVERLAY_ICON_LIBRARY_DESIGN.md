@@ -299,8 +299,8 @@ Alternatives measured and rejected:
 Seeding an adaptive model from the trained table came within 1% of the static
 table, so the static table is used: no per-image state, the simplest decoder.
 
-> **Implemented** on branch `claude/overlay-context-coding` (qmk `7db1b113`,
-> PolyKybdHost `c6aca3b6`) as cmd 41, protocol v19. It differs from the plan
+> **Implemented** as **PRC (Predictive Range Coding)**, cmd 41, protocol v19:
+> qmk_firmware#316 and PolyKybdHost#283 (branch `claude/overlay-context-coding`). It differs from the plan
 > below in three places: records are addressed by keycode + modifier like cmds
 > 16-19 rather than by pool slot, a record carries only context-coded images
 > (larger ones keep the old commands), and the decode runs on core0 because the

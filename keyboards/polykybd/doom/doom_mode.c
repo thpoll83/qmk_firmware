@@ -1672,6 +1672,11 @@ bool doom_hid_frozen(uint8_t cmd) {
             // All ACKless bulk writes into the borrowed pool / fragment
             // context — the dispatcher drops them without a reply.
             return true;
+        case 42: // icon library fill (0x2A)
+            // Also writes the borrowed pool. It is the one REPLIED command here:
+            // dropped, the host's read times out and it falls back to bitmap
+            // uploads, which are frozen too -- so nothing reaches the pool.
+            return true;
         default:
             return false;
     }

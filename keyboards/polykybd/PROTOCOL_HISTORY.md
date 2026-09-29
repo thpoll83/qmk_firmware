@@ -176,6 +176,31 @@ reading before you change either one.
     gated on core1 being idle, and an icon is estimated at ~0.7 ms (~150 cycles per
     ROI pixel at 200 MHz; not yet measured on the rig). The slave
     waits for core1 to go idle before decoding, like `core1_decompress_fragment`.
+  **v20** adds the **overlay icon library** (cmd `42` / `0x2A`,
+  `OVERLAY_ICON_LIBRARY_DESIGN.md`). Icons the host's templates share live in flash on
+  both halves as a PlyI bundle (font-pack layout v2, bundle id 8, the 256 KB tail slot,
+  `base/icon_lib.{c,h}`). The host fills a pool slot by sending a `(pool slot, icon id)`
+  pair instead of the bitmap: cmd 33's packing (`data[2]` = width 8..16, then 61 bytes
+  of pairs, padded by repeating the last pair). Each half blits the glyph from its own
+  flash. Measured through the host send path on top of PRC, it cuts cold-switch
+  reports over all templates from 1,882 to 776.
+  - **Replied, unlike the other bulk writes**: `.` when every pair applied on both
+    halves, `!` and `data[3]` = the first pair the host must upload as a bitmap itself.
+    A slave that missed or refused the report is pair 0, because a bitmap upload goes
+    to both halves and redoing the master's fills is harmless. That is the repair; the
+    design's 4-report retry queue was dropped as a second path to the same place.
+  - **No new split transaction.** The slave copy rides `USER_SYNC_OVERLAY_MAP_DATA` with
+    `OVERLAY_MAP_ICON_FILL` (0x80) set in `width`; a real mapping width never sets it.
+    The slave refuses (`SYNC_NACK_REFUSED`) when any pair fails, most likely because it
+    lacks the library.
+  - **PlyI, not PlyF, is the type check.** The font loader accepts only `PlyF` and the
+    icon loader only `PlyI`, so an icon id can never enter the legend lookup. Glyphs
+    are row-major MSB-first with their 72x40 placement baked into x/yOffset, and a
+    bundle may carry several records because `bitmapOffset` is 16 bits.
+  - **The GET_ID `V` block reports `min(master, slave)`** per bundle (new
+    `FLASH_STAGE_VERSIONS` op, read from housekeeping at boot and after each COMMIT).
+    A half that missed a flash reads as behind and the host's autocheck re-flashes it.
+    An older slave never answers the op, so the master's versions stand.
   ⚠️ QMK has **no `set_unicode_input_mode_noeeprom()`**; `unicode_config` is `extern`
   and `unicode_input_mode_set_kb()` is the notification the keycap legend rides on,
   so `apply_unicode_mode()` in `hid_com.c` is the persisting path minus one call —

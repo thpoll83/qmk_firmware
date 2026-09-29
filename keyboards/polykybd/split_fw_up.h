@@ -4,6 +4,7 @@
 
 #include "split_sync.h"
 #include "base/fw_staging.h"
+#include "base/fonts/generated/fontpack_layout.h"   // FONTPACK_BUNDLE_COUNT
 
 #include <stdint.h>
 
@@ -25,6 +26,7 @@ enum flash_stage_op {
     FLASH_STAGE_CHUNK  = 1,  // one FW_UP_CHUNK_SIZE-byte fragment
     FLASH_STAGE_COMMIT = 2,  // verify staged CRC + finalize (no reboot)
     FLASH_STAGE_STATUS = 3,  // diagnostic: return fw_staging internal counters
+    FLASH_STAGE_VERSIONS = 4, // read-only: the slave's per-bundle content_version (v20)
 };
 
 // Announce incoming firmware/font-pack size + expected CRC32 to slave.
@@ -98,6 +100,29 @@ typedef struct _fw_up_status_reply_t {
 // assert is here to keep it that way.)
 static_assert(sizeof(fw_up_status_reply_t) <= RPC_S2M_BUFFER_SIZE,
               "fw_up_status_reply_t exceeds RPC_S2M_BUFFER_SIZE — the STATUS probe would silently stop answering");
+
+// The slave's font-pack bundle versions (protocol v20). The GET_ID 'V' block
+// reports min(master, slave) per bundle, so a half that missed a flash reads as
+// behind and the host's normal autocheck flashes that bundle again (the transport
+// writes both halves). Same request shape as STATUS; the reply is CRC'd over
+// everything after crc32 and carries the count, so an older slave -- which leaves
+// the reply zeroed for an op it does not know -- can never pass for "all zero".
+typedef struct _fw_up_versions_reply_t {
+    uint32_t crc32;                          // CRC over count + ver[]
+    uint16_t count;                          // == FONTPACK_BUNDLE_COUNT
+    uint16_t ver[FONTPACK_BUNDLE_COUNT];     // content_version per bundle, 0 if absent
+} fw_up_versions_reply_t;
+
+static_assert(sizeof(fw_up_versions_reply_t) <= RPC_S2M_BUFFER_SIZE,
+              "fw_up_versions_reply_t exceeds RPC_S2M_BUFFER_SIZE -- the VERSIONS probe would silently stop answering");
+
+// Master side. The tick runs in housekeeping and re-reads the slave until it
+// answers (boot, and again after each font-pack COMMIT); a change calls
+// poly_state_touch() so the host re-reads GET_ID. Until the slave has answered,
+// the master reports its own versions.
+void     fw_up_slave_versions_tick(void);
+void     fw_up_note_slave_bundle(uint8_t bundle, uint16_t version);
+uint16_t fw_up_reported_bundle_version(uint8_t bundle);
 
 // Reset/apply coordination (master → slave).  ONE transaction (USER_SYNC_RESET)
 // carries every "make the other half restart" action; the `action` byte selects

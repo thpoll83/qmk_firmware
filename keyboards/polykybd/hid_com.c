@@ -27,6 +27,7 @@
 #include "base/hand_stamp.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "base/fontpack.h"
+#include "base/icon_lib.h"   // cmd 42 fills (protocol v20)
 #include "base/fonts/generated/fontpack_layout.h"  // FONTPACK_BUNDLE_COUNT, for the GET_ID size assert
 #include "base/update.h"
 #include "poly_util.h"
@@ -242,7 +243,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         //  - loop_profile_note_overlay_cmd() tags the iteration for the timing profiler
         //    (no-op unless POLYKYBD_LOOP_PROFILE).
         switch (data[1]) {
-            case 10: case 11: case 12: case 16: case 17: case 18: case 19: case 21: case 33: case 41:
+            case 10: case 11: case 12: case 16: case 17: case 18: case 19: case 21: case 33: case 41: case 42:
                 note_overlay_activity();
                 loop_profile_note_overlay_cmd();
                 break;
@@ -272,7 +273,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     data[off++] = 'V';
                     data[off++] = bcount;
                     for (uint8_t b = 0; b < bcount; ++b) {
-                        uint16_t v = fontpack_bundle_version(b);
+                        // min(master, slave) since v20: a half that missed a
+                        // flash reads as behind, so the host flashes it again.
+                        uint16_t v = fw_up_reported_bundle_version(b);
                         data[off++] = (uint8_t)(v & 0xFF);
                         data[off++] = (uint8_t)(v >> 8);
                     }
@@ -757,6 +760,42 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI) {
                         fill_roi_overlay_buffer(&data[HID_DATA_IDX], first);
                     }
+                }
+                break;
+            case 42: //fill pool slots from the icon library (protocol v20+)
+                {
+                    // (pool slot, icon id) pairs at the width in data[2], in cmd 33's
+                    // packing (base/map_codec.h, padded by repeating the last pair).
+                    // Both halves draw from their own flash (base/icon_lib.h).
+                    //
+                    // REPLIED, unlike the other bulk writes: 'P' 42 '.' when every
+                    // pair applied on both halves, else 'P' 42 '!' and data[3] = the
+                    // first pair the host must upload as a bitmap itself (it and every
+                    // pair after it). A slave that missed or refused the report is
+                    // pair 0 -- the master's own fills are harmless to redo, since a
+                    // bitmap upload goes to both halves.
+                    const uint8_t width = data[HID_DATA_IDX];
+                    overlay_map_sync_t fill;
+                    memset(&fill, 0, sizeof(fill));
+                    fill.width = (uint8_t)(width | OVERLAY_MAP_ICON_FILL);
+                    fill.bytes = OVERLAY_MAP_W_BYTES;
+                    memcpy(fill.mapping, &data[OVERLAY_MAP_W_HDR], OVERLAY_MAP_W_BYTES);
+                    uint8_t bad = ICONLIB_FILL_OK;
+                    if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
+                        bad = 0;
+                    } else {
+                        bad = iconlib_fill_pairs(fill.mapping, OVERLAY_MAP_W_BYTES, width,
+                                                 NUM_OVERLAY_SLOTS, get_overlay);
+                        if (bad != 0 && !sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&fill,
+                                                                       sizeof(overlay_map_sync_t), 10))) {
+                            bad = 0;
+                            uprint("Warning: icon fill did not reach the slave (or it refused); host uploads bitmaps.\n");
+                        }
+                    }
+                    memset(data, 0, length);
+                    hid_reply(data, 42, bad == ICONLIB_FILL_OK);
+                    data[3] = bad;
+                    raw_hid_send(data, length);
                 }
                 break;
             case 41: //PRC overlay images (protocol v19+)

@@ -1769,6 +1769,9 @@ void housekeeping_task_user(void) {
         // the multi-second main-loop stall an inline repair would be on a bad link.
         if (is_usb_host_side()) {
             overlay_map_repair_tick();
+            // Read the slave's bundle versions for the GET_ID 'V' block (v20).
+            // Self-gating: one RPC at boot and after a font-pack COMMIT.
+            fw_up_slave_versions_tick();
         }
 #ifdef POLY_SPLIT_HEARTBEAT_EXPERIMENT
         // ROOT-CAUSE EXPERIMENT (split42, 2026-07-14). Reproduce the every-cycle

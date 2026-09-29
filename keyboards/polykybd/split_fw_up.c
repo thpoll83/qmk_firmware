@@ -8,6 +8,8 @@
 #include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
 #include "base/fw_up_verdict.h"  // pure COMMIT-failure classification (unit-tested)
 #include "base/hand_stamp.h"     // handedness change: record here, write from the main loop
+#include "split_util.h"          // is_transport_connected
+#include "state.h"               // poly_state_touch: tell the host the V block moved
 
 #include <transactions.h>
 #include <print.h>
@@ -72,6 +74,21 @@ static void flash_stage_status(uint8_t in_len, const void* in_data, uint8_t out_
     fw_up_status_reply_t *reply = (fw_up_status_reply_t *)out_data;
     fw_staging_get_status(&reply->status);
     reply->crc32 = crc32_1byte((const uint8_t *)&reply->status, sizeof(reply->status), 0);
+    (void)in_len;
+    (void)in_data;
+}
+
+// Read-only: this half's per-bundle content_version (protocol v20). Guards the
+// exact reply size like BEGIN/CHUNK/COMMIT, so a probe sized for another op
+// never lands here.
+static void flash_stage_versions(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (out_len != sizeof(fw_up_versions_reply_t) || !out_data) return;
+    fw_up_versions_reply_t *reply = (fw_up_versions_reply_t *)out_data;
+    reply->count = FONTPACK_BUNDLE_COUNT;
+    for (uint8_t b = 0; b < FONTPACK_BUNDLE_COUNT; ++b) {
+        reply->ver[b] = fontpack_bundle_version(b);
+    }
+    reply->crc32 = crc32_1byte((const uint8_t *)reply + 4, sizeof(*reply) - 4, 0);
     (void)in_len;
     (void)in_data;
 }
@@ -355,6 +372,7 @@ void user_sync_flash_stage_handler(uint8_t in_len, const void* in_data, uint8_t 
         case FLASH_STAGE_CHUNK:  flash_stage_chunk (in_len, in_data, out_len, out_data); break;
         case FLASH_STAGE_COMMIT: flash_stage_commit(in_len, in_data, out_len, out_data); break;
         case FLASH_STAGE_STATUS: flash_stage_status(in_len, in_data, out_len, out_data); break;
+        case FLASH_STAGE_VERSIONS: flash_stage_versions(in_len, in_data, out_len, out_data); break;
         default: break;   // unknown op — leave out_data untouched → master retries
     }
 }
@@ -406,4 +424,67 @@ void user_sync_reset_handler(uint8_t in_len, const void* in_data, uint8_t out_le
         return;
     }
     ((poly_sync_reply_t *)out_data)->ack = SYNC_ACK;
+}
+
+// ── The slave's bundle versions (master side, protocol v20) ──────────────────
+// See fw_up_versions_reply_t. Unknown until the slave answers once; a failed or
+// CRC-bad read keeps the previous answer and retries on the next tick.
+#define SLAVE_VERSIONS_RETRY_MS 1000u
+static uint16_t s_slave_ver[FONTPACK_BUNDLE_COUNT];
+static bool     s_slave_ver_known = false;
+static bool     s_slave_ver_stale = true;     // read at boot
+static uint32_t s_slave_ver_next  = 0;
+
+static bool query_slave_versions(fw_up_versions_reply_t *reply) {
+    fw_up_status_request_t req = { .crc32 = 0, .op = FLASH_STAGE_VERSIONS, .dummy = 0 };
+    memset(reply, 0, sizeof(*reply));
+    if (!transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(req), &req, sizeof(*reply), reply)) {
+        return false;
+    }
+    return reply->count == FONTPACK_BUNDLE_COUNT &&
+           reply->crc32 == crc32_1byte((const uint8_t *)reply + 4, sizeof(*reply) - 4, 0);
+}
+
+void fw_up_slave_versions_tick(void) {
+    if (!s_slave_ver_stale || timer_expired32(timer_read32(), s_slave_ver_next) == false) {
+        return;
+    }
+    s_slave_ver_next = timer_read32() + SLAVE_VERSIONS_RETRY_MS;
+    if (!is_transport_connected()) {
+        return;
+    }
+    fw_up_versions_reply_t reply;
+    if (!query_slave_versions(&reply)) {
+        return;   // an older slave never answers this op: the master's versions stand
+    }
+    bool changed = !s_slave_ver_known || memcmp(s_slave_ver, reply.ver, sizeof(s_slave_ver)) != 0;
+    memcpy(s_slave_ver, reply.ver, sizeof(s_slave_ver));
+    s_slave_ver_known = true;
+    s_slave_ver_stale = false;
+    if (changed) {
+        uprint("Slave bundle versions:");
+        for (uint8_t b = 0; b < FONTPACK_BUNDLE_COUNT; ++b) uprintf(" %u", (unsigned)s_slave_ver[b]);
+        uprint("\n");
+        poly_state_touch();
+    }
+}
+
+// After a COMMIT BOTH halves acknowledged. The slave's font-table reload is
+// deferred to its housekeeping, so an immediate read could still return the old
+// version and make a perfect flash look like it missed a half. Record what the
+// slave committed now, and confirm it with a read a few seconds later.
+void fw_up_note_slave_bundle(uint8_t bundle, uint16_t version) {
+    if (bundle < FONTPACK_BUNDLE_COUNT && s_slave_ver_known) {
+        s_slave_ver[bundle] = version;
+    }
+    s_slave_ver_stale = true;
+    s_slave_ver_next  = timer_read32() + 3u * SLAVE_VERSIONS_RETRY_MS;
+}
+
+uint16_t fw_up_reported_bundle_version(uint8_t bundle) {
+    uint16_t v = fontpack_bundle_version(bundle);
+    if (s_slave_ver_known && bundle < FONTPACK_BUNDLE_COUNT && s_slave_ver[bundle] < v) {
+        v = s_slave_ver[bundle];
+    }
+    return v;
 }

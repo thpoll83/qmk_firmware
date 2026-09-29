@@ -58,6 +58,12 @@ typedef struct _dynamic_keymap_sync_t {
 // OVERLAY_MAP_W_BYTES. There is no count field (the sender fills every value by
 // repeating the last pair), so getting these two wrong decodes trailing junk as
 // real mappings.
+// Flag in overlay_map_sync_t.width: the payload is a cmd 42 icon FILL, not a
+// mapping chunk (protocol v20). It rides this transaction id for the same reason
+// PRC rides the compressed one: a new id would cost the split42 transaction
+// budget. The low bits are the value width; a real mapping width never sets it.
+#define OVERLAY_MAP_ICON_FILL 0x80u
+
 typedef struct _overlay_map_sync_t {
     uint32_t crc32;
     uint8_t  width;

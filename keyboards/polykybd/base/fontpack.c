@@ -18,6 +18,7 @@
 // serializer/validator is fonts/fontpack.py.
 
 #include "fontpack.h"
+#include "icon_lib.h"
 #include "polymod_crc32.h"
 #include <string.h>
 
@@ -280,6 +281,17 @@ bool fontpack_load(void) {
         const uint8_t *base = FONTPACK_XIP_BASE + s_slots[i].offset;
         uint16_t ver    = 0;
         uint8_t  before = s_pack_count;
+#    ifdef FONTPACK_ICONS_BUNDLE_ID
+        // The icon library is a PlyI, validated by its own loader and never
+        // appended to the font table: an icon id would otherwise sit in the
+        // legend lookup next to ASCII (base/icon_lib.h).
+        if (s_slots[i].id == FONTPACK_ICONS_BUNDLE_ID) {
+            bool ok = iconlib_load_at(base, s_slots[i].size, &ver);
+            s_slot_present[i] = ok;
+            s_slot_ver[i]     = ver;
+            continue;
+        }
+#    endif
         bool ok = validate_and_append(base, s_slots[i].size, &ver);
         s_slot_present[i] = ok;
         s_slot_ver[i]     = ver;

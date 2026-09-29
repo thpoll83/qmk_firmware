@@ -1668,6 +1668,7 @@ bool doom_hid_frozen(uint8_t cmd) {
         case 19: // ROI overlay data           (0x13)
         case 21: // overlay mapping            (0x15)
         case 33: // overlay mapping, sized      (0x21)
+        case 41: // PRC overlays     (0x29)
             // All ACKless bulk writes into the borrowed pool / fragment
             // context — the dispatcher drops them without a reply.
             return true;

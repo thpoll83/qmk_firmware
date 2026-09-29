@@ -1,60 +1,117 @@
-# Design: overlay icon library in flash (`icons.plyi`)
+# Design: fewer reports per app switch (icon library + context coding)
 
-**Status:** agreed design, not started (2026-09-28). This covers the firmware,
+**Status:** agreed design, not started (2026-09-29). This covers the firmware,
 the host and the generator. The code changes will come as separate PRs.
 
-**Summary.** Ship the Fluent and Material icons that our overlays use as one flash
-bundle, `icons.plyi`, on both halves. The host then fills an overlay pool slot by
-sending `(pool slot, icon id, x, y)` instead of the bitmap. The firmware draws the
-glyph from XIP flash into the 360 B pool slot. Mapping, enable and rendering are
-unchanged.
+**Summary.** A cold app switch uploads every overlay image. Two independent
+phases cut the number of HID reports this takes:
+
+1. **Icon library (`icons.plyi`).** The icons the templates share live in flash
+   on both halves. The host fills an overlay pool slot by sending a
+   `(pool slot, icon id)` pair instead of the bitmap. Mapping, enable and
+   rendering are unchanged.
+2. **Context-coded images.** An image that still has to be uploaded can use a
+   fifth encoding: a JBIG-style context model with a trained 1 KB probability
+   table. Almost every icon then fits one report, and two can share a report.
+
+Both phases are per-image choices on the host. Whatever is smallest for an image
+is sent; firmware without a feature keeps today's path.
 
 This is the per-icon counterpart of
 [`OVERLAY_FLASH_CACHE_DESIGN.md`](OVERLAY_FLASH_CACHE_DESIGN.md), which stores
-whole per-app sets. The two do not conflict. This one needs no per-app flash
-state and works for every app built from library icons, including the generic
-shortcut overlays.
+whole per-app sets. The two do not conflict.
 
 ## 1. Why
 
-Numbers measured on the host tree at `53294fb` (host 1.4.0):
+### 1.1 What a cold switch costs today
 
-- 41 overlay specs carry 1,582 binding cells. 1,403 cells (89%) are Fluent
-  icons and 13 are Material Symbols. The other 166 are custom drawings, Breeze,
-  reclaimed GIMP art and text labels.
-- Distinct source icons: 431 Fluent, 8 Material, 139 other.
-- The 41 specs render those icons at different sizes (`region` 40×36 in 33 specs,
-  36×32 in 8, plus one-offs). As a result the 578 source icons become 937
-  distinct bitmaps.
-- A cold app switch uploads a median of 61 reports and a maximum of 201
-  (JetBrains). The host pauses 0.3 s after every 15 reports
-  (`settings.py:166-167`). That is 1.2 s of sleep for the median app and 3.9 s
-  for JetBrains.
-- The pool is RAM. `reset_all_caches()` empties the host's MRU mirror on every
-  reconnect, so every reconnect pays the cold cost again. That feeds the
-  wipe-and-resend oscillation described in `OVERLAY_FLASH_CACHE_DESIGN.md` §1.
+Counts from PolyKybdHost's own `send_overlays_mru`, captured against a recording
+fake device (`polykybd-ctnd/perf/fixtures/capture_app_switch.py`, host
+`53294fb`):
 
-A fill entry is 6 bytes, so one report carries 10 entries. A 40-icon app goes
-from about 75 reports to 4, which stays under the 15-report pause.
+| App | Images | Image reports | Mapping | Prepare + enable | Total | Rate-limit pauses |
+|---|---|---|---|---|---|---|
+| Word | 39 | 67 | 2 | 2 | 71 | 4 (1.2 s) |
+| JetBrains (Windows set) | 99 | 201 | 5 | 2 | 208 | 12 (3.6 s) |
+| JetBrains before `dc2a69e` (full shortcut coverage) | 37 | 82 | 2 | 2 | 86 | 5 |
 
-This is a transport saving. The firmware side of an overlay burst is render-bound
-(`OVERLAY_FLASH_CACHE_DESIGN.md` §6: render 117 ms of a 190 ms 8-key burst), and
-this design does not change rendering. Phase 0 measures both paths.
+A warm switch (every image already in the pool) is 4 reports for Word and 7 for
+JetBrains. Cold happens on the first switch into an app after the keyboard
+(re)connects, because the pool is RAM, and after the pool evicts an app.
 
-## 2. The bundle
+### 1.2 What it costs on hardware
 
-### 2.1 Contents
+A user log of a cold JetBrains switch (2026-09-29, 89 images uploaded, 10 already
+in the pool from a cancelled switch):
 
-Every Fluent and Material icon that an overlay spec or the generic shortcut
-path (`FLUENT_ICONS` / `LEXICON` in `shortcut_icons.py`) uses today: about 440.
-The 139 "other" sources are app-specific and stay as bitmap uploads.
+- 180 image reports took **16.7 s**. The 12 rate-limit pauses explain 3.6 s. The
+  other ~13 s is **about 73 ms per image report**, against a 3 ms HID round trip.
+- Two of the five mapping reports each took ~1 s to write.
 
-Frequency is not the selection rule. A flash reference saves that icon's upload
-on every switch into its app and on every reconnect, whether or not another app
-shares it.
+A write only takes that long when the keyboard is not reading its endpoint, so
+the time is firmware work per report: the slave bridge (every image report is
+forwarded with CRC32 and up to 10 retries) or rendering. Which one is not known
+yet; the perf harness measures it (§8, step 0).
 
-Size estimate: about 36×36 px cropped (162 B) plus the glyph record, so roughly
-75 KB for 440 icons. The first build gives the real number.
+### 1.3 Where the images come from
+
+Numbers from the 41 overlay specs under `PolyKybdHost/polyhost/res/overlay_sources`:
+
+- 1,582 binding cells. 1,403 are Fluent icons, 13 Material Symbols, and 166
+  custom drawings, reclaimed art and text labels.
+- The generator already draws every binding whose label is a `LEXICON` concept
+  through one shared renderer (`concept_to_share()`), so those cells are
+  byte-identical across apps and with the generic shortcut path.
+- Custom drawings shared across apps are found by **rendered pixels**, not by
+  file name. Names mislead: VS Code's `run.png` was the run-and-debug icon, the
+  same drawing as JetBrains' `debug.png`.
+
+Host commit `38b3f96` made 16 concepts pixel-identical across the apps that have
+them: run, run-and-debug, stop, step over/into/out and toggle breakpoint
+(JetBrains, VS Code, Notepad++), find, settings, history, and Photoshop's brush
+-/+, fill FG/BG and clone stamp (Krita, paint.net). Blade, mark in/out and
+ripple delete were already shared (Premiere, Resolve).
+
+### 1.4 Expected effect
+
+Reports for a cold switch (all rows keep the per-image fallback to today's
+encodings):
+
+| | Word | JetBrains |
+|---|---|---|
+| Today | 71 | 208 |
+| Phase 1: icon library | 16 | 66 |
+| Phase 2 alone: context coding | 43 | 107 |
+| Phase 2 alone, with 2 images per report | ~24 | ~57 |
+| Phase 1 + 2 | 11 | 35 |
+| Phase 1 + 2, with 2 images per report | ~9 | ~23 |
+
+Phase 1 under the agreed selection rule (§2.1): Word 34 library icons (2 fill
+reports) and 5 uploads; JetBrains 74 library icons (3 fill reports) and 25
+uploads, which are its app-only drawings and the ESC mark.
+
+## 2. Phase 1: the icon library
+
+### 2.1 Selection rule
+
+An icon is in the bundle when it is:
+
+- a Fluent or Material Symbols icon used by any shipped template or the generic
+  shortcut path, or
+- drawn by the shared concept renderer, or
+- a custom drawing whose **rendered 72×40 bitmap** is used by two or more apps.
+  `sublime` and `sublime_mac` count as one app.
+
+App-only custom drawings stay bitmap uploads. When a second app uses the same
+concept, the drawing is unified (one wins, the other app's template changes) and
+the glyph joins the bundle.
+
+Concepts that must look the same in every app that has them (run, run-and-debug,
+stop, the step icons, breakpoint) are kept identical in the templates, not only
+in the bundle. The command palette is deliberately not unified: VS Code, Sublime,
+Obsidian, Windows Terminal and JetBrains' Find action keep their own icons.
+
+Estimated size: about 500 glyphs, ~85 KB.
 
 ### 2.2 Format: PlyF layout, `PlyI` magic
 
@@ -62,195 +119,250 @@ The file layout is identical to a PlyF bundle (`base/fontpack.h`): a 32-byte
 header, `fontpack_font_t` records and GFX glyph records, with the CRC32 over
 `[32..total_size)`. Only the magic differs: `PlyI` instead of `PlyF`.
 
-Why a different magic:
-
 - The font loader accepts only `PlyF` and the icon loader only `PlyI`, so the
-  type is in the data. Today `fontpack_load()` appends every font of every valid
-  slot to `g_all_fonts`. With a shared magic, icon ids starting at 0 would sit in
-  the legend lookup next to ASCII.
+  type is in the data. `fontpack_load()` appends every font of every valid slot
+  to `g_all_fonts`; with a shared magic, icon ids starting at 0 would sit in the
+  legend lookup next to ASCII.
 - A font bundle written into the icon slot, or the reverse, fails validation.
-  That slot reads as version 0, and the host flashes the right file on its next
-  check.
-- An old tool that reads PlyF rejects the file. It cannot misread it as fonts.
-- The icon format can change later (a default placement per icon, dropping
-  `xAdvance`/`yAdvance`/gidx) without touching the font ABI.
+  The slot reads as version 0 and the host flashes the right file next time.
+- An old tool that reads PlyF rejects the file instead of misreading it.
+- The unused header `flags` field was considered and rejected: a tool that
+  ignores it would treat the file as fonts.
 
-The unused header `flags` field (reserved 0) was considered instead. It was
-rejected because a tool that ignores it would treat the file as fonts.
-
-`validate_and_append()` takes the expected magic as a parameter, so the
-validation code stays shared.
+`validate_and_append()` takes the expected magic as a parameter, so validation
+stays shared.
 
 ### 2.3 Icon ids
 
-- Icon id = glyph index. The first font record starts at 0. There is no PUA
-  base, because the bundle never enters the legend lookup.
-- A bundle may carry several font records, one per source font (Fluent TTF,
-  Material Symbols TTF). Each covers a contiguous id range `first..last`, and the
-  ranges do not overlap. The loader finds the record whose range holds the id.
+- Icon id = glyph index, starting at 0. No PUA base, because the bundle never
+  enters the legend lookup.
 - **Ids are append-only and frozen**, like `lang/iso_lang_country.py`. The table
-  (`icon_ids.yaml`: id, source, name) is the one source of truth. It is mirrored
-  byte-identically to the host and added to the `check-mirrored-artifacts`
-  skill. A retired icon keeps its id and its glyph.
-- New icons append at the end and bump `content_version`.
+  (`icon_ids.yaml`: id, source, name) is mirrored byte-identically to the host
+  and added to the `check-mirrored-artifacts` skill. A retired icon keeps its id
+  and glyph.
+- New icons append and bump `content_version`.
+- Ids below 512 fit the 9-bit fill pairs (§2.6). About 500 icons today; beyond
+  511, those pairs travel at 10 bits and nothing else changes.
 
-### 2.4 Rendering
+### 2.4 Glyphs are cut from the generator's own cells
 
-- One pixel size for every icon, chosen at the preview sign-off (§6, step 2).
-  The 36×32 and one-off `region` sizes in the templates go away for library
-  icons. That is an accepted, visible change for those 8+ specs.
-- Generated with the pinned `fontconvert` from the Fluent TTF the host already
-  pins (`icon_catalog.py` `FLUENT_REF` `9cf8af0f…`) and the Material Symbols
-  TTF. The output is grid-fitted, so it differs from today's cairosvg renders.
-  The top 30 get a side-by-side preview (`oled_preview.py`) before the full set
-  is built.
-- The generator lives with the font generator (`fonts/generate_fonts.py`), so the
-  same pinned FreeType/HarfBuzz build makes it byte-reproducible.
+The bundle is built from the generator (`scripts/generate_app_overlays.py`), not
+by re-rendering source art:
 
-## 3. Flash layout (font-pack layout v2)
+- Each library cell is the 72×40 mask the generator draws today. The glyph is
+  that mask cropped to its ink bounding box; `xOffset`/`yOffset` are the box's
+  position in the 72×40 frame.
+- So **placement is baked into the glyph**. The firmware draws every icon at the
+  same origin, and no x/y travels on the wire.
+- The generator then draws the template cells from the bundle's glyphs. Host
+  templates and keyboard use the same bytes, so a mismatch is impossible.
+- No `fontconvert`, FreeType or cairosvg in the bundle build. Two rasterisers
+  never agree to the pixel (measured: 81 of 2,880 pixels differ between cairosvg
+  and FreeType on the same Fluent art), and custom drawings have no font anyway.
+- The same icon rendered at two sizes (templates use regions of 40×36 and
+  36×32) is two glyphs. Unifying region sizes across specs is optional cleanup.
 
-Take the icon slot from the tail of `latinbig`, which uses 162,528 B of its
-0x97000 (618,496 B) slot:
+### 2.5 Flash layout (font-pack layout v2)
+
+Take a **256 KB** icon slot from the tail of `latinbig`, which uses 162,528 B of
+its 0x97000 (618,496 B) slot:
 
 | Bundle | id | Offset (rel. 0x400000) | Size | Change |
 |---|---|---|---|---|
-| latinbig | 7 | 0x169000 | 0x77000 (487,424) | shrunk |
-| icons | 8 | 0x1E0000 | 0x20000 (128 KB) | new |
+| latinbig | 7 | 0x169000 | 0x57000 (356,352) | shrunk, still 2.2× its use |
+| icons | 8 | 0x1C0000 | 0x40000 (262,144) | new |
 
-- No other slot moves, and `latinbig` keeps its start offset and contents. An
-  existing board only has to flash the new bundle; the eight font bundles are
-  not reshipped.
-- 128 KB holds about 750 icons at the estimate above, which leaves room for new
-  apps.
-- `FONTPACK_LAYOUT_VERSION` 1 → 2 in the generator and `bundles.json`. Neither
-  the firmware nor the host checks the value today; it is informational.
-- `FONTPACK_BUNDLE_COUNT` 8 → 9. The GET_ID `V` block grows 2 B. The measured
-  budget has about 11 B spare, and the `_Static_assert` in `hid_com.c` guards it.
-- Transport: the existing BEGIN/CHUNK/COMMIT (0x50–0x52) with bundle id 8. The
-  slave receives every CHUNK first, as for fonts.
+- No other slot moves, and `latinbig` keeps its start and contents. An existing
+  board only has to flash the new bundle; the font bundles are not reshipped.
+- 256 KB holds about 1,500 glyphs at ~170 B, three times today's estimate.
+- `FONTPACK_LAYOUT_VERSION` 1 → 2 in the generator and `bundles.json`
+  (informational today; neither side checks it).
+- `FONTPACK_BUNDLE_COUNT` 8 → 9. The GET_ID `V` block grows 2 B (about 11 B
+  spare; `_Static_assert` in `hid_com.c`).
+- Transport: the existing BEGIN/CHUNK/COMMIT (0x50–0x52) with bundle id 8.
 
-## 4. Bundle versions from both halves
-
-Today the `V` block reports only the master's slots, so the host cannot tell
-whether the slave received a bundle (`slave-unconfirmed`). This design changes
-that for all nine bundles:
-
-- At boot, and after each COMMIT, the master reads the slave's per-bundle
-  `content_version`. The reply can join the `FLASH_STAGE_STATUS` probe
-  (`split_fw_up.c`) or a sibling transaction. Nine versions are 18 B, well under
-  `RPC_S2M_BUFFER_SIZE` = 72.
-- The `V` block reports `min(master, slave)` per bundle. A half that missed a
-  flash reads as behind, and the host's normal autocheck flashes that bundle
-  again. The write reaches both halves, so the mismatch repairs itself.
-- **Until the slave answers**, the master reports its own versions. When the
-  slave's versions arrive, it calls `poly_state_touch()`. The host already polls
-  GET_ID every second, sees the `G` counter move and re-reads `V`. The host
-  autocheck must therefore re-run on a generation change, not only on connect.
-  Reporting 0 while waiting would reflash all nine bundles on every slow boot.
-- **No slave attached** (a half on USB alone): report the master's versions.
-- The GET_ID layout does not change. An older host just gets more accurate
-  numbers.
-
-Once the host sees icon version ≥ N in `V`, both halves have it. The fill command
-therefore needs no version field.
-
-## 5. The fill command
-
-### 5.1 Wire format
+### 2.6 The fill command
 
 New core command **41 `FILL_POOL_FROM_ICON`**, `PROTOCOL_VERSION` 19, host gate
 `FEATURE_MIN_PROTOCOL["overlay_icons"] = 19`.
 
+It uses cmd 33's width-packed pair format:
+
 | Byte | Content |
 |---|---|
-| 0 | report id |
+| 0 | `P` |
 | 1 | 41 |
-| 2 | entry count, 1..10 |
-| 3 | reserved, 0 |
-| 4.. | entries of 6 B: `u16 pool_slot` (LE, 0..599), `u16 icon_id` (LE), `u8 x`, `u8 y` |
+| 2 | value width in bits, 8..11 |
+| 3..63 | 61 bytes of `(pool slot, icon id)` pairs, each value at that width (`map_codec`) |
 
-- `x`, `y` is where the glyph's bitmap top-left lands in the 72×40 frame. The
-  host computes it from the glyph record and the anchor it wants. The firmware
-  clips to the frame and needs no anchor logic.
-- The pool slot is addressed directly. The `N%90, N//90` keycode/modifier trick
-  (`OverlayMRUCache.pool_slot_to_firmware_address`) is not needed here.
-- Reply `P\x29.` when every entry applied. Otherwise `P\x29!` followed by a
-  byte with the index of the first failed entry. The host uploads that entry and
-  every later one as bitmaps. At about 4 reports per switch, the round trip
-  (p50 3 ms) is affordable, and a failure becomes visible.
+- 61 bytes = 488 bits: 27 pairs at 9 bits, 24 at 10. Like cmd 33 there is no
+  count; padding repeats the last pair.
+- The host allocates icon fills from pool slots 0–511, so a pair fits 9 bits
+  while icon ids are below 512. It plans reports with
+  `plan_mapping_reports()`, which already groups pairs by the width they need.
+- The pool slot is addressed directly, without the `N%90, N//90` keycode trick
+  the image uploads use.
+- Reply `P\x29.` when every pair applied. Otherwise `P\x29!` and the index of
+  the first failed pair. The host uploads that pair's image and the rest as
+  bitmaps.
 
-### 5.2 Firmware behaviour
+Firmware behaviour:
 
-1. Validate count, slot range and icon id against the loaded `PlyI` records.
-2. For each entry: clear the 360 B pool slot, then blit the glyph from
-   `XIP_BASE + FW_RESOURCE_OFFSET + 0x1E0000` into it. The format is row-major
-   MSB-first (`bit = y*72 + x`), the same as the uploads write.
-3. Bridge the report to the slave on a new transaction (`USER_SYNC_ICON_FILL`,
-   ~64 B plus CRC32, under `RPC_M2S_BUFFER_SIZE` = 96; add a `static_assert`).
-   The slave runs the same fill from its own flash. The bridge handler records
-   the request, and housekeeping executes it; the handler itself does not draw
-   (the split-thread rule in `SPLIT_SYNC.md`).
-4. Always fill on both halves. Unlike `resolve_upload_side()` for bitmaps, this
-   costs no bandwidth.
-5. Classify the bridge result with `sync_succeeded()`. A failed report goes into
-   a small retry queue (4 × 64 B) that housekeeping drains, as for the mapping
-   repair. An image bridge cannot be repaired this way; a fill can, because the
-   master still holds the request.
+1. Decode pairs with `map_codec_read()`; validate slot < 600 and the icon id
+   against the loaded `PlyI` records.
+2. For each pair: clear the 360 B pool slot, then blit the glyph from XIP flash
+   at its baked offsets (row-major, MSB-first, `bit = y*72 + x`).
+3. Bridge the report to the slave as a `{width, bytes, data}` block, like
+   `USER_SYNC_OVERLAY_MAP_DATA` (under `RPC_M2S_BUFFER_SIZE` = 96; add a
+   `static_assert`). The slave fills from its own flash. The handler records the
+   request and housekeeping executes it (the split-thread rule in
+   `SPLIT_SYNC.md`).
+4. Always fill on both halves: unlike image bridges, this costs no bandwidth.
+5. Classify the bridge result with `sync_succeeded()`. A failed report goes
+   into a small retry queue (4 × 64 B) drained by housekeeping, the same shape
+   as the mapping repair. Unlike an image, a fill can be repaired, because the
+   master still has the request.
+6. Add 41 to `doom_hid_frozen()` and to the `note_overlay_activity()` switch in
+   `hid_com.c`.
+7. Icon bundle absent: reply `!` with index 0, write nothing.
 
-Also:
+### 2.7 Bundle versions from both halves
 
-- Add 41 to `doom_hid_frozen()`, since it writes the pool.
-- Add 41 to the `note_overlay_activity()` switch in `hid_com.c:245`, so the burst
-  coalesces into one render.
-- If the icon bundle is absent, reply `!` with index 0. Do not write the slot.
+The `V` block reports **`min(master, slave)`** per bundle, for all nine bundles.
 
-## 6. Host
+- The master reads the slave's per-bundle `content_version` at boot and after
+  each COMMIT (in the `FLASH_STAGE_STATUS` reply or a sibling transaction;
+  18 B, under `RPC_S2M_BUFFER_SIZE` = 72).
+- A half that missed a flash reads as behind, and the host's normal autocheck
+  flashes that bundle again. The transport writes both halves, so the mismatch
+  repairs itself.
+- Until the slave answers, the master reports its own versions, then calls
+  `poly_state_touch()`. The host sees the `G` counter move and re-reads `V`, so
+  the autocheck must re-run on a generation change, not only on connect.
+- No slave attached: report the master's versions.
+- The GET_ID layout does not change. Once the host sees icon version ≥ N, both
+  halves have it, so the fill command needs no version field.
 
-1. **Bundle manifest.** `bundles.json` gets the `icons` entry (id 8, file
+### 2.8 Host
+
+1. **Bundle manifest.** `bundles.json` gets the `icons` entry (id 8,
    `icons.plyi`). `fontpack_bundle.py`, `polyctl fontpack status`, the font-pack
    inspect dialog and the `reship-fontpack-bundle` skill learn the `PlyI` magic.
-2. **Preview sign-off** of the top 30 icons: today's render against the
-   fontconvert render.
-3. **Generator.** `scripts/generate_app_overlays.py` draws every library cell
-   from the glyph bitmaps in `icons.plyi`, not from the SVG. Host and keyboard
-   then draw from the same bytes, so the two match 1:1 by construction. Every
-   template is regenerated once. Beside each PNG it writes a sidecar
-   `<stem>.icons.json`: `(variant, keycode) → (icon_id, x, y)`.
-4. **Send path.** In `send_overlays_mru`, a cell with a sidecar entry becomes a
-   fill entry when the device's protocol is ≥ 19 and its reported icon version is
-   ≥ the version the sidecar needs. Every other cell uploads as today. The MRU
-   content key for a fill is `("@icon", id, x, y)`, so apps that share an icon
-   share its pool slot.
-5. **Generic shortcut path.** `icon_catalog.render_overlay` draws library
-   concepts from `icons.plyi` as well, and emits fill entries under the same
-   rule.
-6. The template PNGs keep every cell's pixels, so older firmware and a board
-   without the bundle work unchanged.
-7. **Licensing.** Add a third-party NOTICE (Fluent System Icons, MIT; Material
-   Symbols, Apache-2.0) to the host repo, and to the firmware repo beside the
-   generated bundle.
+2. **Generator.** Builds `icons.plyi` and `icon_ids.yaml` from the templates'
+   cells (§2.4) and draws library cells from the bundle. Beside each template it
+   writes `<stem>.icons.json`: `(variant, keycode) → icon_id`.
+3. **Send path.** In `send_overlays_mru`, a cell with a sidecar entry becomes a
+   fill pair when the device's protocol is ≥ 19 and its reported icon version
+   covers the id. Everything else uploads as today. The MRU content key for a
+   fill is `("@icon", id)`, so apps sharing an icon share its pool slot.
+4. **Generic shortcut path.** `icon_catalog.render_overlay` concepts that are in
+   the bundle go out as fill pairs under the same rule.
+5. Template PNGs keep every cell's pixels, so older firmware and a board without
+   the bundle work unchanged.
+6. **Licensing.** A third-party NOTICE (Fluent System Icons, MIT; Material
+   Symbols, Apache-2.0) in the host repo and beside the bundle.
 
-## 7. Rollout
+## 3. Phase 2: context-coded images
 
-0. **Measure first** (`measure-firmware-perf`): a real full-app burst, today's
-   path against 40 fill entries, with host wall time. The existing baseline uses
-   8 blank keys and says nothing about this.
-1. **Firmware:** layout v2, `PlyI` loader, slave versions and `min()` in `V`,
-   cmd 41 with bridge and retry queue, unit tests for the blit and the entry
-   parser, and a HIL test (`add-hil-test`). The HIL test fills a slot, then reads
-   GET_ID `V` on both halves.
-2. **Bundle:** `icon_ids.yaml`, generator, `icons.plyi`, preview sign-off.
-3. **Host:** manifest, autocheck on generation change, sidecars, regenerated
-   templates, fill path, generic path, NOTICE.
-4. **Release order:** protocol 19 means both artifacts ship, host first, then
-   firmware (see CLAUDE.md → Releases).
+### 3.1 The encoding
+
+A fifth image encoding next to plain, RLE, ROI and RLE-ROI:
+
+- The ROI (as today) is coded pixel by pixel. Each pixel's probability comes
+  from a table indexed by its 10 already-decoded neighbours (the JBIG template:
+  two rows above, two pixels to the left), so 1,024 contexts.
+- The table is **static**: 1,024 trained 8-bit probabilities, 1 KB.
+- A binary range coder turns the probabilities into bits. Decoding a bit is a
+  multiply by the 8-bit probability, a compare and a renormalise: no division.
+
+Measured on the real icons, with the table trained on the other apps' icons only
+(the app being measured was never in the training set):
+
+| | Word | JetBrains | All 724 template images |
+|---|---|---|---|
+| Today (best of four) | 67 reports | 201 | 1,332 |
+| Context model, adaptive, empty start | 39 | 110 | 761 (57%) |
+| **Context model, static trained table** | **39** | **100** | – |
+| Average size (static table) | 25.7 B | 30.1 B | – |
+| Images that fit one report | 39/39 | 98/99 | – |
+
+Alternatives measured and rejected:
+
+| Encoding | All 724 images |
+|---|---|
+| ROI + Elias-gamma run lengths | 92% |
+| deflate (LZ77 + Huffman) | 92% |
+| 8×8 tile dictionary in flash (1,023 tiles) | 88% (icons share few tiles: 5,373 distinct of 10,551 uses) |
+| ROI, row XOR the row above, then run lengths | 83% |
+
+Seeding an adaptive model from the trained table came within 1% of the static
+table, so the static table is used: no per-image state, the simplest decoder.
+
+### 3.2 Per-image choice
+
+The host adds the context coder as a fifth candidate in
+`send_smallest_overlay()`'s `min()`, and only picks it when it saves a report.
+Older firmware never sees it (protocol gate).
+
+### 3.3 Multi-image reports
+
+At ~26–30 B per image, two images fit one 62-byte payload. A packed report
+carries records, each with its own encoding:
+
+| Field | Content |
+|---|---|
+| pool slot | 10 bits |
+| encoding | 3 bits (ROI, RLE-ROI, context) |
+| ROI box | as today's ROI header |
+| length | 1 byte |
+| payload | encoded ROI |
+
+Images that do not fit a shared report go out on their own, as today. Exact
+field packing is pinned in the implementation PR.
+
+### 3.4 Firmware
+
+- Decoder ~1 KB of code plus the 1 KB table.
+- Runs on core1 like RLE (`core1_decompress_fragment`). A 36×40 ROI is ~1,400
+  pixels at roughly 100 cycles each: ~0.7 ms per icon at 200 MHz.
+- The slave receives the same compressed record over the bridge and decodes it
+  itself. Smaller records also shorten the bridge transfer.
+- New command id and a protocol bump of its own (v20), independent of phase 1.
+
+### 3.5 The table
+
+- Trained by a host tool from the shipped templates, reproducibly (same input,
+  same bytes).
+- Versioned. Host and firmware must use the identical table, like the frozen ISO
+  index table. A retrained table is a new table id; the firmware keeps the ones
+  it supports, and the host only uses an id the device reports.
+
+## 4. Rollout
+
+0. **Measure first** (polykybd-ctnd #99): replays the recorded Word and JetBrains
+   switches on the rig, cold and warm, and splits firmware time into bridge,
+   render and rest. That says how much of the ~73 ms per image report fewer
+   reports actually save.
+1. **Phase 1 firmware:** layout v2, `PlyI` loader, slave versions and `min()` in
+   `V`, cmd 41 with bridge and retry queue, unit tests (pair parsing via
+   `map_codec`, the blit), a HIL test (`add-hil-test`).
+2. **Phase 1 bundle and host:** `icon_ids.yaml`, bundle build from the
+   generator, sidecars, regenerated templates, fill path, generic path, NOTICE.
+3. **Phase 2:** the table tool, the encoder and a golden-vector test shared by
+   host and firmware, the decoder, then multi-image reports.
+4. **Releases:** each protocol bump ships both artifacts, host first, then
+   firmware (CLAUDE.md → Releases).
 5. **Docs site** after the release that carries it.
 
-## 8. Open points
+Host work already done: per-switch report counting (`871aaee`) and the 16 shared
+concepts in the templates (`38b3f96`), both on PolyKybdHost branch
+`claude/overlay-icons-flash-wcohhi`.
 
-- **Pixel size:** decided at the step 2 sign-off.
-- **Retry queue depth:** 4 reports covers one app switch (~40 icons). A deeper
-  queue only matters if the split link drops more than one report per burst,
-  which the measured zero error rate does not suggest.
+## 5. Open points
+
+- **Retry queue depth:** 4 reports covers one app switch.
+- **Context table location:** compiled into the firmware (simplest; a new table
+  needs a firmware release) or carried in `icons.plyi` (updates with the bundle,
+  but then phase 2 depends on phase 1). Leaning towards compiled in.
 - **Legends from icons:** out of scope. A later change could let the legend path
   read `PlyI` explicitly. Icons must not join `g_all_fonts` implicitly.

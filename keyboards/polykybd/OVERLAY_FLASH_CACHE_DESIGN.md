@@ -6,8 +6,8 @@ architecture, the proposed design, the **flash-budget question (the real gate)**
 and a measure-first rollout plan. Nothing here is implemented yet.
 
 > **Per-icon counterpart (2026-09-28):** [`OVERLAY_ICON_LIBRARY_DESIGN.md`](OVERLAY_ICON_LIBRARY_DESIGN.md)
-> stores the shared Fluent/Material icons as one flash bundle (`icons.plyi`) and fills
-> pool slots by icon id. It needs no per-app flash state.
+> stores the shared icons as one flash bundle (`icons.plyi`) and fills pool slots by
+> icon id, and adds a context-coded image encoding. It needs no per-app flash state.
 
 > **One-line summary.** Store an application's per-keycap shortcut overlays in the
 > keyboard's **resource flash** and let the host **activate a set by id** instead of

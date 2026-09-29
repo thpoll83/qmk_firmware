@@ -1,8 +1,9 @@
 # Design: fewer reports per app switch (icon library + context coding)
 
-**Status:** phase 2 shipped as PRC (cmd 41, protocol v19). Phase 1 is agreed
-and not started; measured on top of PRC it still cuts cold-switch reports by
-more than half (§1.5). This covers the firmware, the host and the generator.
+**Status:** phase 2 shipped as PRC (cmd 41, protocol v19). Phase 1 is
+implemented as cmd 42 / protocol v20 (§2.9 lists where it differs from the plan
+below); measured on top of PRC it cuts cold-switch reports by more than half
+(§1.5). This covers the firmware, the host and the generator.
 The code changes will come as separate PRs.
 
 **Summary.** A cold app switch uploads every overlay image. Two independent
@@ -318,6 +319,31 @@ The `V` block reports **`min(master, slave)`** per bundle, for all nine bundles.
    the bundle work unchanged.
 6. **Licensing.** A third-party NOTICE (Fluent System Icons, MIT; Material
    Symbols, Apache-2.0) in the host repo and beside the bundle.
+
+### 2.9 As implemented (cmd 42, protocol v20)
+
+Firmware `base/icon_lib.{c,h}` + cmd 42 in `hid_com.c`; host
+`services/icon_library.py`, `scripts/build_icon_library.py` and the fill path in
+`send_overlays_mru`. Where it differs from the plan above:
+
+- **No sidecars.** The host fills a slot when an image's packed bytes EXACTLY match
+  a glyph of the shipped `icons.plyi` (a frame -> id map built from the bundle
+  itself), and only when the keyboard reports exactly that bundle version. An exact
+  match cannot disagree with the template, so nothing has to stay in step with it,
+  and the generic shortcut path benefits wherever its pixels coincide.
+- **No retry queue.** A slave that misses or refuses a fill report makes the master
+  answer `!` at pair 0, and the host uploads those images as bitmaps, which reach
+  both halves. That is the repair the queue would have done, through a path that
+  already exists.
+- **Width 8..16, any slot.** Pairs are planned by `plan_mapping_reports()` at the
+  width they need, so ids and slots above 511 simply travel at 10 bits.
+- **Several records.** `GFXglyph.bitmapOffset` is 16 bits, so a bundle carries one
+  record per 64 KB of bitmaps (up to 16), with contiguous id ranges.
+- **Size.** 599 icons, 56 KB of the 256 KB slot (content v1). Measured through the
+  real send path with that bundle: all 60 sets 1,868 -> 744 cold reports, JetBrains
+  84 -> 32.
+- **Not done yet:** cross-app pool sharing (the MRU key is still per file, not
+  `("@icon", id)`), and the generic shortcut icons as a deliberate library source.
 
 ## 3. Phase 2: context-coded images
 

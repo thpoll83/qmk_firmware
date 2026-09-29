@@ -28,17 +28,17 @@ typedef struct _overlay_sync_t {
 } overlay_sync_t;
 
 // `len` is COMPRESSED_START or COMPRESSED_MAX for an RLE fragment. With
-// CTX_BRIDGE_FLAG set it is instead a whole context-coded image (cmd 41):
+// PRC_BRIDGE_FLAG set it is instead a whole PRC-coded image (cmd 41):
 // compressed[] = top, left, height, width, then (len & 0x7F) - 4 payload bytes.
 // The flag keeps cmd 41 off a transaction id of its own.
-#define CTX_BRIDGE_FLAG 0x80
+#define PRC_BRIDGE_FLAG 0x80
 typedef struct _compressed_overlay_sync_t {
     uint32_t crc32;
     uint16_t adj_idx;
     uint8_t len;
     uint8_t compressed[COMPRESSED_MAX];
 } compressed_overlay_sync_t;
-_Static_assert(COMPRESSED_MAX < CTX_BRIDGE_FLAG, "an RLE fragment length would read as a context record");
+_Static_assert(COMPRESSED_MAX < PRC_BRIDGE_FLAG, "an RLE fragment length would read as a PRC record");
 
 typedef struct _roi_overlay_sync_t {
     uint32_t crc32;

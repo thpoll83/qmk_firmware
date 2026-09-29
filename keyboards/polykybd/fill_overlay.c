@@ -356,7 +356,7 @@ uint8_t receive_prc_overlay_report(const uint8_t* data, uint8_t avail) {
         images++;
     }
     if (pos < avail && data[pos] != 0) {
-        uprintf("Warning: malformed PRC overlay record at byte %u; rest of the report dropped.\n", pos);
+        uprintf("Warning: malformed PRC record at byte %u; rest of the report dropped.\n", pos);
     }
     return images;
 }

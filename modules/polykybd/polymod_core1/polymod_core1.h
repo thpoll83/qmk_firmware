@@ -24,6 +24,14 @@ void multicore_launch_core1_with_stack(void (*entry)(void), uint32_t *stack_bott
 
 void core1_entry(void);
 
+// core1's own stack (the RLE/ROI service and the Eden idle keycap job). 512, up from
+// 384, for the Eden job: its measured worst path is 300 B (IDLE_STYLES.md), and a fault
+// taken at that depth adds the 32 B exception frame and the ~64 B crash handler, which
+// 384 could not hold. The service itself peaks at ~164 B (readme "Diagnostics").
+#ifndef CORE1_STACK_SIZE
+#    define CORE1_STACK_SIZE 512
+#endif
+
 #ifdef CORE1_STACK_HWM
 uint32_t core1_stack_high_water_mark(void);
 #endif

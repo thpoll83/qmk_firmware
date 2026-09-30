@@ -173,13 +173,16 @@ every frame comes from the font's column bytes in flash and Eden's tables.
      the driver's global). Composing over a half-sent frame tore it.
   2. At most one frame per `SI_FRAME_MS` (150 ms). 150 divides the 150 ms cursor step
      and the 300 ms keystroke, so the typing stays even.
-  3. **The panel and the Eden idle loop take turns.** Each frame costs the main loop
-     ~23 ms of blocking I2C (~6 ms per pass at `OLED_UPDATE_PROCESS_LIMIT` 4), and Eden
-     renders the keycaps in 3 ms slices on that same loop. Interleaved, every slice
-     waited behind a pass of I2C. So no frame is composed while Eden is mid-frame
-     (`startup_anim_frame_busy()`), and `eden_idle_tick()` starts no keycap frame while
-     ours is still going out (`status_idle_holds_bus()`, capped at 100 ms so a stuck
-     bus cannot freeze the keycaps).
+  3. **On Eden's core0 fallback path, the panel and the Eden idle loop take turns.**
+     Each frame costs the main loop ~23 ms of blocking I2C (~6 ms per pass at
+     `OLED_UPDATE_PROCESS_LIMIT` 4), and Eden then renders the keycaps in 3 ms slices on
+     that same loop. Interleaved, every slice waited behind a pass of I2C. So no frame
+     is composed while Eden is mid-frame (`startup_anim_frame_busy()`), and
+     `eden_idle_tick()` starts no keycap frame while ours is still going out
+     (`status_idle_holds_bus()`, capped at 100 ms so a stuck bus cannot freeze the
+     keycaps). Normally core1 computes Eden's keycaps (`IDLE_STYLES.md`), core0's share
+     is small, and neither rule applies: `startup_anim_frame_busy()` is false and the
+     hold is skipped while `startup_anim_idle_on_core1()`.
 
   Because of rule 3 the frames are composed from `status_idle_task()`, called every
   main-loop pass from housekeeping just before `eden_idle_tick()`, not from

@@ -341,7 +341,7 @@ When enabled:
 
 Stack usage on core 1 is monotonic (once a low word is overwritten by a deep call frame, it stays overwritten even after return), so the HWM only ever climbs. Drive overlay uploads / ROI updates from `PolyKybdHost` until the reading stops growing — that plateau is the true peak for the build.
 
-Current `CORE1_STACK_SIZE` is 384 bytes. Observed peak with normal overlay + ROI traffic is ~164 bytes, leaving ~220 bytes of headroom. If you change call chains on core 1 (e.g. add new FIFO commands), re-run the probe and adjust `CORE1_STACK_SIZE` if the peak climbs.
+Current `CORE1_STACK_SIZE` is 512 bytes (`polymod_core1.h`). Observed peak with normal overlay + ROI traffic is ~164 bytes. The Eden idle keycap job (`CORE1_CMD_EDEN_KEY`) is the deepest path: 300 bytes measured statically with `-fstack-usage`, plus ~96 bytes if a fault is taken at that depth, which is why the size went up from 384. With `CORE1_STACK_HWM`, the Eden idle log prints the high-water mark every ~5 s. If you change call chains on core 1 (e.g. add new FIFO commands), re-run the probe and adjust `CORE1_STACK_SIZE` if the peak climbs.
 
 ### Timed console logs — TODO: shared timer
 

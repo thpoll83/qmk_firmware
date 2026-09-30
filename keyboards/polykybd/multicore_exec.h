@@ -17,6 +17,13 @@ bool core1_is_busy(void);
 // 1 once core1 has entered core1_entry() (IRQs masked); core0 clears it before launch.
 extern volatile uint32_t g_core1_entered;
 
+// True when core1 runs its command loop and can take an Eden idle keycap job: it has
+// entered core1_entry() and DOOM has not taken it over. False without USE_CORE1.
+bool core1_eden_available(void);
+// Queue one Eden idle keycap job (anim/startup_anim.c, startup_anim_core1_job): the
+// command, then `arg`. Completion is published by the job itself.
+void core1_eden_key(uint32_t arg);
+
 // Decompress the supplied buffer on core1, will block if previous decompression is still ongoing
 // All fragments have to be processed in order and until the end, no parallel processing possible
 // `visible` = this overlay's modifier variant is the one currently on screen; core1 only

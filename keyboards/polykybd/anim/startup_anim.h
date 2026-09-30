@@ -69,6 +69,13 @@ bool startup_anim_is_loop(void);
 // last slice). The status panel's idle screen holds its own frame back until it is not,
 // so the two do not interleave their bus work (status_idle.c).
 bool startup_anim_frame_busy(void);
+// True while the idle loop computes its keycaps on core1 (the normal case on split72).
+// Then core0's share of a frame is small, so the status panel and Eden need not take
+// turns (status_idle.c, eden_idle_tick()).
+bool startup_anim_idle_on_core1(void);
+// Runs ON CORE1 (core1_entry(), CORE1_CMD_EDEN_KEY): compute one idle keycap into
+// core1's buffer. `arg` = idx | left << 8 | seq << 16. Never call it from core0.
+void startup_anim_core1_job(uint32_t arg);
 // Render one frame; call every housekeeping pass while active (like doom_tick()).
 void startup_anim_tick(void);
 // True while the animation owns the keycaps — update_displays() must early-return.

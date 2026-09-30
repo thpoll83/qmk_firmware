@@ -297,13 +297,40 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
   reports `frame Nms, worst slice Nms` at frame END (first frame of a session
   immediately, then ~5 s) — **the worst slice is the responsiveness number**; tune
   `EDEN_IDLE_SLICE_MS` against it, not against the frame time.
-  - ⚠️ **On split72 the loop takes turns with the status panel's idle screen**, which
-    shares the main loop and blocks it ~23 ms per frame on I2C. `eden_idle_tick()`
-    starts no frame while a status frame is still being sent
+  - **The idle loop on core1.** A keycap's ~4.3 ms is ~93 % compute, and that part
+    (`sa_idle_key_compute()`: plasma, ripple, comets) runs on core1 through
+    `CORE1_CMD_EDEN_KEY` (`multicore_exec.c`) into a compact 360 B buffer. core0 keeps
+    what needs its peripherals and tables: it copies the result into the scratch window,
+    hands core1 the next keycap at once, cuts the legend out and pushes the SPI window
+    (the SPI driver needs IRQs, which core1 runs masked). So core0 spends the copy + the
+    legend + the push per keycap, and the frame is bound by core1's compute. One job is
+    in flight at a time; a sequence number in the argument word says which one finished.
+    - **Pixels are unchanged, proven on the host**: the old core0 render, the new core0
+      render and the core1 job were compared byte for byte over both halves, every key
+      and 34 frame times, and the boot intro (which shares the spark and star helpers)
+      over its whole timeline.
+    - ⚠️ **core1's stack budget, measured with `-fstack-usage -fcallgraph-info=su`**:
+      `core1_entry` 48 → `startup_anim_core1_job` 16 → `sa_idle_key_compute` 112 →
+      `sa_plot_sparks` 96 → divider 8 = 280 B, plus 20 B of launch frames = 300 B. A
+      fault at that depth adds the 32 B exception frame and ~64 B of crash handler, so
+      `CORE1_STACK_SIZE` went from 384 to 512. Keep the compute `noinline`, keep
+      `printf` and `is_left_side()` off core1 (the half travels in the argument), and
+      re-measure after touching this chain: `qmk clean`, then build with
+      `-e EXTRAFLAGS="-fstack-usage -fcallgraph-info=su"` and walk the `.ci` graph from
+      `core1_entry`. On hardware, `-e EXTRAFLAGS=-DCORE1_STACK_HWM` makes the Eden idle
+      log print the real high-water mark.
+    - **Nothing that stops idle can race it.** A firmware or font-pack write and an
+      overlay upload end the idle session first, and DOOM takes core1 only as its own
+      idle style (`core1_eden_available()` also checks `doom_mode_active()`). Anything
+      else that halts core1 hits `SA_C1_TIMEOUT_MS` (100 ms): the session renders on
+      core0 from that keycap on, and the log says `core0`.
+  - ⚠️ **The status panel's idle screen takes turns with the loop only on the core0
+    fallback path**, where every 3 ms slice waited behind ~6 ms of its I2C flush.
+    `eden_idle_tick()` then starts no frame while a status frame is being sent
     (`status_idle_holds_bus()`), and the panel composes only between Eden frames
-    (`startup_anim_frame_busy()`). Interleaved, every 3 ms slice waited behind ~6 ms
-    of I2C. The idle log's trailing `N frames` is the rate the keycaps actually got;
-    see `STATUS_OLED.md` → frame pacing.
+    (`startup_anim_frame_busy()`, which is false while core1 computes). The idle log's
+    `N frames` is the rate the keycaps actually got, and its last word says which core
+    computed them; see `STATUS_OLED.md` → frame pacing.
   - **`EDEN_IDLE_FRAME_MS` is NOT a latency dial** — it was 55 ms only because it
     was once the sole thing handing the main loop back between unsliced frames. With
     slicing it just cost frame rate (22% of a measured ~250 ms period), so it is now

@@ -6,8 +6,6 @@
 
 #include <stdbool.h>
 
-#define CORE1_STACK_SIZE 384
-
 static uint32_t core1_stack[CORE1_STACK_SIZE/4]
     __attribute__((aligned(8)));
 

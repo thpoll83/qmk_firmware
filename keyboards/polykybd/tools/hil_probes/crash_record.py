@@ -37,7 +37,7 @@ def _decode_boot_arg(arg):
                 f"sub={((lo >> 4) & 3) + 1} (mod 4), render call {(lo & 0x0F) + 1} (1-based)")
     marks = {0xE1: "status-panel paint", 0xE2: "logo draw", 0xE3: "final dwell + render"}
     if lo in marks:
-        return f"step {step}, {marks[lo]} (milestone)"
+        return f"step {step}, {marks[lo]} (milestone): core1_entered={core1}"
     return f"step {step}, sub-step/render key {lo}"
 
 

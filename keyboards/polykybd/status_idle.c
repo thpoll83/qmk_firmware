@@ -10,11 +10,12 @@
 // the left one after the physical gap, so the bands flow across the keyboard.
 //
 // Over it, "Poly" (left half) and "Kybd" (right half) in FreeSansBold24pt7b — the face
-// Eden writes its keycap letters in — dissolve in through Eden's noise tile, hold,
-// dissolve out, and stay away for a while. Each letter is solid, cut out of the bands
-// by a 2 px black ring (the word's shape grown by a radius-2 disc) and nothing
-// more: the bands keep flowing between the letters and through the counters. Every appearance lands at a new place in the panel, so the
-// letters never sit on the same pixels twice in a row.
+// Eden writes its keycap letters in — are TYPED letter by letter, held, deleted letter
+// by letter from the end, and stay away for a while. The word is centred on its panel
+// (the full word's ink box, so the letters are typed into their final places). Each
+// letter is solid, cut out of the bands by a 2 px black ring (the word's shape grown
+// by a radius-2 disc) and nothing more: the bands keep flowing between the letters and
+// through the counters.
 //
 // Nothing is stored: every frame is computed from the font's column bytes in flash and
 // Eden's tables; RAM is a handful of statics.
@@ -46,13 +47,11 @@
 #define SI_FIELD_CX ((2 * SI_W + SI_GAP_PX) / 2)
 #define SI_FIELD_CY (SI_H / 2)
 
-// The word's cycle: hidden, dissolving in, held, dissolving out.
+// The word's cycle: hidden, typed a letter every SI_KEY_MS, held, deleted a letter
+// every SI_KEY_MS from the end.
 #define SI_HIDE_MS  5000u
-#define SI_IN_MS    1500u
+#define SI_KEY_MS   300u
 #define SI_HOLD_MS  8000u
-#define SI_OUT_MS   1500u
-#define SI_CYCLE_MS (SI_HIDE_MS + SI_IN_MS + SI_HOLD_MS + SI_OUT_MS)
-#define SI_MARGIN   3          // px kept between the outline and the panel edge
 #define SI_RING     2          // the black ring's radius, px
 #define SI_WIN      (2 * SI_RING + 1)
 
@@ -79,12 +78,6 @@ static uint32_t s_last_call;
 static bool     s_started;
 static uint8_t  s_worst_ms;
 static uint32_t s_next_log;
-
-static inline uint32_t si_hash(uint32_t v) {   // Eden's sa_hash8 mixer, 32-bit output
-    v ^= v >> 15; v *= 0x2c1b3c6dU;
-    v ^= v >> 12; v *= 0x297a2d39U;
-    v ^= v >> 15; return v;
-}
 
 static inline int16_t si_s8(int32_t t) { return (int16_t)startup_anim_sin((uint8_t)t) - 128; }
 
@@ -118,11 +111,12 @@ static void si_layout(const uint32_t *text) {
     s_wh = (uint8_t)(bottom - top);
 }
 
-// The word's ink in word column `wx` as a 64-bit column, bit 0 = the word's top row.
-static uint64_t si_word_col(int16_t wx) {
+// The ink of the first `n` letters in word column `wx` as a 64-bit column, bit 0 =
+// the word's top row.
+static uint64_t si_word_col(int16_t wx, uint8_t n) {
     if (wx < 0 || wx >= s_ww) return 0;
     uint64_t col = 0;
-    for (uint8_t i = 0; i < s_ng; ++i) {
+    for (uint8_t i = 0; i < n; ++i) {
         const int16_t gx = (int16_t)(wx - s_g[i].x);
         if (gx < 0 || gx >= s_g[i].w) continue;
         const uint8_t  cb = glyph_col_bytes(s_g[i].h);
@@ -135,15 +129,16 @@ static uint64_t si_word_col(int16_t wx) {
     return col;
 }
 
-// How much of the word is showing, 0..255, `u` ms into its cycle.
-static uint8_t si_visibility(uint32_t u) {
+// How many letters are showing, `u` ms into the cycle of an `n`-letter word.
+static uint8_t si_letters(uint32_t u, uint8_t n) {
     if (u < SI_HIDE_MS) return 0;
     u -= SI_HIDE_MS;
-    if (u < SI_IN_MS) return (uint8_t)((u * 255u) / SI_IN_MS);
-    u -= SI_IN_MS;
-    if (u < SI_HOLD_MS) return 255;
+    if (u < n * SI_KEY_MS) return (uint8_t)(u / SI_KEY_MS + 1u);        // typing
+    u -= n * SI_KEY_MS;
+    if (u < SI_HOLD_MS) return n;
     u -= SI_HOLD_MS;
-    return (uint8_t)(255u - (u * 255u) / SI_OUT_MS);
+    if (u < n * SI_KEY_MS) return (uint8_t)(n - 1u - u / SI_KEY_MS);    // deleting
+    return 0;
 }
 
 void status_idle_screen(void) {
@@ -163,15 +158,11 @@ void status_idle_screen(void) {
     const bool     left    = is_left_side();
     const int16_t  fx0     = left ? 0 : (SI_W + SI_GAP_PX);   // this panel's field column 0
 
-    // The word: where it lands this cycle, and how much of it is dissolved in.
-    const uint32_t cyc = t / SI_CYCLE_MS;
-    const uint8_t  vis = si_visibility(t % SI_CYCLE_MS);
-    const uint32_t h   = si_hash(cyc * 0x9E3779B1u + (left ? 0x11u : 0x77u));
-    const int16_t  xr  = (int16_t)(SI_W - s_ww - 2 * SI_MARGIN);
-    const int16_t  yr  = (int16_t)(SI_H - s_wh - 2 * SI_MARGIN);
-    const int16_t  wx0 = (int16_t)(SI_MARGIN + (xr > 0 ? (int16_t)(h % (uint32_t)(xr + 1)) : 0));
-    const uint8_t  wy0 = (uint8_t)(SI_MARGIN + (yr > 0 ? (uint8_t)((h >> 12) % (uint32_t)(yr + 1)) : 0));
-    const int16_t  nx  = (int16_t)(cyc * 17u), ny = (int16_t)(cyc * 29u);   // a fresh dissolve per cycle
+    // The word: how many letters are typed, placed centred on the panel.
+    const uint32_t cycle = SI_HIDE_MS + 2u * s_ng * SI_KEY_MS + SI_HOLD_MS;
+    const uint8_t  n     = si_letters(t % cycle, s_ng);
+    const int16_t  wx0   = (int16_t)((SI_W - s_ww) / 2);
+    const uint8_t  wy0   = (uint8_t)((SI_H - s_wh) / 2);
 
     kdisp_set_buffer(0);
     uint8_t *buf = get_scratch_buffer();
@@ -184,7 +175,7 @@ void status_idle_screen(void) {
     // counters, as they should.
     uint64_t win[SI_WIN];
     for (int8_t k = 0; k < SI_WIN; ++k)
-        win[k] = vis ? (si_word_col((int16_t)(-SI_RING + k - wx0)) << wy0) : 0;
+        win[k] = n ? (si_word_col((int16_t)(-SI_RING + k - wx0), n) << wy0) : 0;
 
     for (int16_t x = 0; x < SI_W; ++x) {
         const uint64_t ink  = win[2];
@@ -196,10 +187,8 @@ void status_idle_screen(void) {
         uint64_t      lit = 0;
         for (uint8_t y = 0; y < SI_H; ++y) {
             const uint64_t bit  = (uint64_t)1 << y;
-            const bool     word = (vis == 255u) ||
-                                  ((ring | ink) & bit && startup_anim_noise((int16_t)(x + nx), (int16_t)(y + ny)) < vis);
-            if (word && (ink & bit)) { lit |= bit; continue; }   // the letter: solid
-            if (word && (ring & bit)) continue;                   // the 2 px black ring
+            if (ink & bit) { lit |= bit; continue; }   // the letter: solid
+            if (ring & bit) continue;                   // the 2 px black ring
             // Plasma bands: four sines, one of them of the distance from the field centre.
             const int16_t d = (int16_t)startup_anim_dist((int16_t)((fx - SI_FIELD_CX) * 2),
                                                          (int16_t)((y - SI_FIELD_CY) * 4));
@@ -211,7 +200,7 @@ void status_idle_screen(void) {
         }
         for (uint8_t p = 0; p < SI_H / 8; ++p) buf[(uint16_t)p * SI_W + (uint16_t)x] = (uint8_t)(lit >> (8u * p));
         for (uint8_t k = 0; k < SI_WIN - 1; ++k) win[k] = win[k + 1];
-        win[SI_WIN - 1] = vis ? (si_word_col((int16_t)(x + 1 + SI_RING - wx0)) << wy0) : 0;
+        win[SI_WIN - 1] = n ? (si_word_col((int16_t)(x + 1 + SI_RING - wx0), n) << wy0) : 0;
     }
 
     const uint32_t took = timer_elapsed32(t_start);

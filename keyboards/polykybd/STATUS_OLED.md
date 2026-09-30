@@ -138,8 +138,9 @@ Eden's table (one fed by `startup_anim_dist()` from the field centre) drawn as C
 BANDS: on a 1-bit panel a dithered plasma reads as grey noise, while its contours are
 native. Both panels are one field, the right continuing the left after the 40 px gap.
 "Poly" (left) and "Kybd" (right), in FreeSansBold24pt7b (`poly_heavy_font()`, Eden's
-keycap-letter face), dissolve in through Eden's noise tile, hold 8 s, dissolve out and
-stay away 5 s; each appearance lands somewhere new. Letters are solid inside a 2 px
+keycap-letter face), are typed letter by letter (300 ms apart), held 8 s, deleted letter
+by letter from the end and stay away 5 s; the word is centred on its panel (full ink
+box, so letters are typed into their final places). Letters are solid inside a 2 px
 black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
 every frame comes from the font's column bytes in flash and Eden's tables.
 
@@ -147,8 +148,9 @@ every frame comes from the font's column bytes in flash and Eden's tables.
   pixel with ink within N px on both sides) was tried to stop a band reading as a dash
   between K and y; it painted solid black wedges between the letters instead, which
   read as a shadow. The bands showing through gaps and counters is the intended look.
-- Simulated from this C over 20 min: every pixel lit, mean 31 %, no pixel on longer
-  than ~13 s (a held word), and the word moves every 16 s cycle.
+- ⚠️ **Centred means the letters light the SAME pixels every cycle** (~60 % of the
+  time for the held-letter pixels). The bands and the 5 s gap relieve it; a small
+  per-cycle offset is the lever if burn-in shows.
 - ⚠️ **It redraws every frame, and a redraw switches the SSD1306 back ON** — so the
   branch honours `STATUS_DISP_ON` itself, as the tutorial branch does, or the panel
   stays lit through the suspend.

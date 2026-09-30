@@ -327,11 +327,10 @@ Enable it for a build by adding the define to `rules.mk`:
 OPT_DEFS += -DCORE1_STACK_HWM
 ```
 
-Or pass it on the command line for a one-off build:
-
-```sh
-qmk compile -kb polykybd/split72 -km default -e EXTRAFLAGS=-DCORE1_STACK_HWM
-```
+⚠️ Do NOT pass it as `-e EXTRAFLAGS=-DCORE1_STACK_HWM`. A command-line `EXTRAFLAGS`
+REPLACES everything `rules.mk` adds to it: the `-Wcast-align` guard silently drops out
+of a default build, and a DOOM flavour fails outright (`PICO_HEAP_SIZE redefined`, the
+`doom_tiny_defs.h` include is gone).
 
 When enabled:
 

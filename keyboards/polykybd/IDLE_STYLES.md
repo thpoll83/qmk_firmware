@@ -317,8 +317,10 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
       `printf` and `is_left_side()` off core1 (the half travels in the argument), and
       re-measure after touching this chain: `qmk clean`, then build with
       `-e EXTRAFLAGS="-fstack-usage -fcallgraph-info=su"` and walk the `.ci` graph from
-      `core1_entry`. On hardware, `-e EXTRAFLAGS=-DCORE1_STACK_HWM` makes the Eden idle
-      log print the real high-water mark.
+      `core1_entry` (a command-line `EXTRAFLAGS` replaces the `rules.mk` ones, which
+      is harmless for this measurement but breaks a DOOM flavour). On hardware,
+      `OPT_DEFS += -DCORE1_STACK_HWM` in `rules.mk` makes the Eden idle log print the
+      real high-water mark (readme, "Diagnostics").
     - **Nothing that stops idle can race it.** A firmware or font-pack write and an
       overlay upload end the idle session first, and DOOM takes core1 only as its own
       idle style (`core1_eden_available()` also checks `doom_mode_active()`). Anything

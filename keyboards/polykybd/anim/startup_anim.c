@@ -801,6 +801,10 @@ uint8_t startup_anim_noise(int16_t x, int16_t y) { return sa_noise(x, y); }
 
 uint8_t startup_anim_plasma(int16_t gx, int16_t gy, uint8_t tp) { return sa_plasma(gx, gy, tp); }
 
+uint8_t startup_anim_sin(uint8_t t) { return sa_sin(t); }
+
+uint16_t startup_anim_dist(int16_t a, int16_t b) { return sa_dist(a, b); }
+
 // The idle loop's ring term of sa_bg() alone (ring = 255, the loop's thicker crest),
 // without the plasma haze: 0 between rings, up to ~27 on a crest.
 uint8_t startup_anim_ring_density(int16_t gx, int16_t gy, uint32_t el) {

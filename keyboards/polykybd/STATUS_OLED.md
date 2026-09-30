@@ -133,25 +133,30 @@ motion is the idle look this board is supposed to have.
 
 ### The idle screen (split72, `status_idle.c`)
 
-A procedural "Poly Kybd" marquee in FreeSansBold24pt7b (`poly_heavy_font()`, the face
-Eden writes its keycap letters in), flowing right to left across BOTH panels as one
-strip. Letters are a solid 1 px outline filled with Eden's plasma dithered against its
-noise tile (`startup_anim_plasma()` / `startup_anim_noise()`), over a faint plasma
-haze. Every frame is computed from the font's column bytes in flash; there is no image
-and no RAM strip buffer.
+Demoscene plasma bands with "Poly" / "Kybd". The background is a sum of four sines of
+Eden's table (one fed by `startup_anim_dist()` from the field centre) drawn as CONTOUR
+BANDS: on a 1-bit panel a dithered plasma reads as grey noise, while its contours are
+native. Both panels are one field, the right continuing the left after the 40 px gap.
+"Poly" (left) and "Kybd" (right), in FreeSansBold24pt7b (`poly_heavy_font()`, Eden's
+keycap-letter face), dissolve in through Eden's noise tile, hold 8 s, dissolve out and
+stay away 5 s; each appearance lands somewhere new. Letters are solid inside a 2 px
+black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
+every frame comes from the font's column bytes in flash and Eden's tables.
 
-- ⚠️ **A marquee, not a word drifting inside the panel — for burn-in.** Simulated over
-  20 min, a drifting 95..112 px word kept the centre lit 35..47 % and left 137..1148
-  pixels never lit. The marquee makes every column identical (15.9..16.3 %), and the
-  constant-speed bob that lets the letters leave the panel by 14 px spreads the rows
-  to 3.4..24 %. The hardware-scrolled logos it replaces: rows 4.7..77 %.
+- ⚠️ **The ring alone does not separate the letters — gaps are CLOSED too.** A pixel
+  with ink within `SI_CLOSE` (12) px on its left AND right is part of the word. At 4
+  and then 7 px a band still showed through the wedge between K's leg and the y and
+  read as "K-ybd"; the closing also blacks the counters, which reads better than bands
+  inside the P/o/b/d.
+- Simulated from this C over 20 min: every pixel lit, mean 31 %, no pixel on longer
+  than ~13 s (a held word), and the word moves every 16 s cycle.
 - ⚠️ **It redraws every frame, and a redraw switches the SSD1306 back ON** — so the
   branch honours `STATUS_DISP_ON` itself, as the tutorial branch does, or the panel
   stays lit through the suspend.
-- ⚠️ **Non-blocking flush**: `oled_write_raw()` plus QMK's per-pass `oled_render()`. A
-  marquee dirties nearly every block, so the 100 ms frame period leaves room for the
-  ~16 passes a full flush takes; `oled_render_dirty(true)` would block ~26 ms per
-  frame. The console prints `Status idle: worst frame Nms` every 5 s.
+- ⚠️ **Non-blocking flush**: `oled_write_raw()` plus QMK's per-pass `oled_render()`. The
+  bands dirty nearly every block, so the 100 ms frame period leaves room for the ~16
+  passes a full flush takes; `oled_render_dirty(true)` would block ~26 ms per frame.
+  The console prints `Status idle: worst frame Nms` every 5 s.
 
 **Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
 `oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced

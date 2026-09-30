@@ -1,27 +1,28 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// The status panel's idle screen (split72): a procedural "Poly Kybd" marquee.
+// The status panel's idle screen (split72): plasma bands with "Poly" / "Kybd".
 //
-// The wordmark is set in FreeSansBold24pt7b — the face Eden writes its keycap letters
-// in (poly_heavy_font()) — and flows right to left across BOTH panels: it enters on the
-// right half, crosses the gap and leaves on the left, as one strip. Each letter is drawn
-// as a solid 1 px outline filled with Eden's moving plasma, dithered against Eden's
-// noise tile, over a faint plasma haze. Nothing is a stored image: every frame is
-// computed from the font's column bytes in flash and the Eden tables.
+// The background is a classic demoscene plasma — a sum of four sines of Eden's sine
+// table, one of them fed by a distance from the centre — drawn as CONTOUR BANDS rather
+// than dithered, because on a 1-bit panel a dithered plasma reads as grey noise while
+// its contour lines are native. Both panels are one field: the right panel continues
+// the left one after the physical gap, so the bands flow across the keyboard.
 //
-// ⚠️ Why a marquee and not a word drifting inside the panel: the anti-burn-in point is
-// that every pixel is worked about equally. A 95..112 px word drifting on a 128 px
-// panel keeps the centre lit 35..47 % of the time while the edges never light
-// (simulated over 20 min: 137..1148 pixels never lit). The marquee makes every COLUMN
-// identical by construction (15.9..16.3 % duty), and a constant-speed vertical bob that
-// lets the letters leave the top and bottom by 14 px spreads the ROWS (3.4..24 %;
-// the scrolling logos this replaces: 4.7..77 %). No pixel stays lit longer than ~3 s.
+// Over it, "Poly" (left half) and "Kybd" (right half) in FreeSansBold24pt7b — the face
+// Eden writes its keycap letters in — dissolve in through Eden's noise tile, hold,
+// dissolve out, and stay away for a while. Each letter is solid, cut out of the bands
+// by a 2 px black ring (the word's shape grown by a radius-2 disc), so it stays
+// readable over any band. Every appearance lands at a new place in the panel, so the
+// letters never sit on the same pixels twice in a row.
+//
+// Nothing is stored: every frame is computed from the font's column bytes in flash and
+// Eden's tables; RAM is a handful of statics.
 //
 // ⚠️ Non-blocking: the frame goes through oled_write_raw() (diffed) and QMK's per-pass
-// oled_render(), one 64-byte block per main-loop pass. A marquee dirties nearly every
-// block every frame, so the frame period (100 ms) is chosen to leave the ~16 passes a
-// full flush takes; oled_render_dirty(true) would instead block ~26 ms per frame.
+// oled_render(), one 64-byte block per main-loop pass. The bands move everywhere, so
+// nearly every block is dirty every frame; the 100 ms period leaves room for the ~16
+// passes a full flush takes. oled_render_dirty(true) would block ~26 ms per frame.
 
 #include "status_idle.h"
 
@@ -32,7 +33,7 @@
 #include "base/disp_array.h"    // get_scratch_buffer, kdisp_set_buffer
 #include "base/font_lookup.h"   // kdisp_gfx_glyph_font, pgm_read_bitmap_ptr
 #include "base/glyph_meta.h"    // glyph_* accessors, column-native layout
-#include "anim/startup_anim.h"  // Eden's plasma and noise tile
+#include "anim/startup_anim.h"  // Eden's sine table, distance and noise tile
 #include "poly_util.h"          // poly_heavy_font(): the Eden splash face
 #include "side.h"               // is_left_side
 
@@ -40,73 +41,89 @@
 #define SI_H 64
 #define STATUS_IDLE_FRAME_MS 100
 
-// Marquee motion. SI_GAP_PX is the physical gap between the two panels expressed in
-// panel pixels, so the text leaving the right panel reappears on the left one after
-// the time it takes to cross that gap. The halves start their idle sessions a few ms apart (the idle
-// flag is synced), which is far below one pixel at this speed.
-#define SI_SPEED_PX_S 16
-#define SI_GAP_PX     40
-#define SI_BOB_MS     47000u   // one full up-and-down of the vertical bob
-#define SI_BOB_OVER   14       // px the letters may leave the panel at either extreme
+// The two panels as one field: the right one starts after the physical gap.
+#define SI_GAP_PX 40
+#define SI_FIELD_CX ((2 * SI_W + SI_GAP_PX) / 2)
+#define SI_FIELD_CY (SI_H / 2)
 
-static const uint32_t SI_TEXT[] = U"Poly Kybd  ";   // trailing spaces: the gap before it repeats
+// The word's cycle: hidden, dissolving in, held, dissolving out.
+#define SI_HIDE_MS  5000u
+#define SI_IN_MS    1500u
+#define SI_HOLD_MS  8000u
+#define SI_OUT_MS   1500u
+#define SI_CYCLE_MS (SI_HIDE_MS + SI_IN_MS + SI_HOLD_MS + SI_OUT_MS)
+#define SI_MARGIN   3          // px kept between the outline and the panel edge
+#define SI_CLOSE    12         // px either side that close letter gaps and counters
+#define SI_WIN      (2 * SI_CLOSE + 1)
 
-// Where each glyph of SI_TEXT sits in the strip, computed once per session from the
-// font metrics (column-native bitmaps, so a strip column is read straight from flash).
+static const uint32_t SI_WORD_LEFT[]  = U"Poly";
+static const uint32_t SI_WORD_RIGHT[] = U"Kybd";
+
+// Each glyph of this half's word, laid out once per session from the font metrics.
 typedef struct {
-    int16_t  x;      // first strip column of the ink
+    int16_t  x;      // first word column of the ink
     uint16_t bo;     // bitmap offset
     uint8_t  w, h;   // ink size
-    uint8_t  top;    // first strip row of the ink (0 = top of the tallest glyph)
+    uint8_t  top;    // first word row of the ink (0 = top of the tallest glyph)
 } si_gpos_t;
 
-#define SI_MAXG (sizeof(SI_TEXT) / sizeof(SI_TEXT[0]))
-static si_gpos_t     s_g[SI_MAXG];
-static uint8_t       s_ng;
-static int16_t       s_period;    // strip length in columns (the text's total advance)
-static uint8_t       s_th;        // strip height in rows (cap top .. descender bottom)
+static si_gpos_t      s_g[4];
+static uint8_t        s_ng;
+static int16_t        s_ww;          // word width (ink)
+static uint8_t        s_wh;          // word height (ink)
 static const uint8_t *s_bitmap;
 
-static uint32_t s_t0;             // session start
+static uint32_t s_t0;
 static uint32_t s_last_frame;
 static uint32_t s_last_call;
 static bool     s_started;
 static uint8_t  s_worst_ms;
 static uint32_t s_next_log;
 
-static void si_layout(void) {
+static inline uint32_t si_hash(uint32_t v) {   // Eden's sa_hash8 mixer, 32-bit output
+    v ^= v >> 15; v *= 0x2c1b3c6dU;
+    v ^= v >> 12; v *= 0x297a2d39U;
+    v ^= v >> 15; return v;
+}
+
+static inline int16_t si_s8(int32_t t) { return (int16_t)startup_anim_sin((uint8_t)t) - 128; }
+
+static void si_layout(const uint32_t *text) {
     const GFXfont *const face[] = {poly_heavy_font()};
-    int16_t pen = 0, top = 127, bottom = -127;
+    int16_t pen = 0, top = 127, bottom = -127, left = 32767, right = -32767;
     s_ng = 0;
-    for (const uint32_t *c = SI_TEXT; *c; ++c) {
+    for (const uint32_t *c = text; *c && s_ng < 4; ++c) {
         const GFXfont  *font = NULL;
         const GFXglyph *g    = kdisp_gfx_glyph_font(face, 1, *c, &font);
         if (g == NULL) continue;
         s_bitmap = pgm_read_bitmap_ptr(font);
         const uint8_t w = glyph_width(g), h = glyph_height(g);
         if (w && h) {
-            const int8_t yo = glyph_y_offset(g);
-            s_g[s_ng].x   = (int16_t)(pen + glyph_x_offset(g));
-            s_g[s_ng].bo  = glyph_bitmap_offset(g);
-            s_g[s_ng].w   = w;
-            s_g[s_ng].h   = h;
-            s_g[s_ng].top = (uint8_t)(int8_t)yo;   // rebased below
+            const int8_t  yo = glyph_y_offset(g);
+            const int16_t x  = (int16_t)(pen + glyph_x_offset(g));
+            s_g[s_ng] = (si_gpos_t){.x = x, .bo = glyph_bitmap_offset(g), .w = w, .h = h, .top = (uint8_t)yo};
             if (yo < top) top = yo;
             if (yo + h > bottom) bottom = (int16_t)(yo + h);
+            if (x < left) left = x;
+            if (x + w > right) right = (int16_t)(x + w);
             ++s_ng;
         }
         pen = (int16_t)(pen + glyph_x_advance(g));
     }
-    for (uint8_t i = 0; i < s_ng; ++i) s_g[i].top = (uint8_t)((int8_t)s_g[i].top - top);
-    s_period = pen;
-    s_th     = (uint8_t)(bottom - top);
+    for (uint8_t i = 0; i < s_ng; ++i) {       // rebase to the ink's top-left
+        s_g[i].top = (uint8_t)((int8_t)s_g[i].top - top);
+        s_g[i].x   = (int16_t)(s_g[i].x - left);
+    }
+    s_ww = (int16_t)(right - left);
+    s_wh = (uint8_t)(bottom - top);
 }
 
-// The text's ink in strip column `s` (0..s_period-1) as a 64-bit column, bit 0 on top.
-static uint64_t si_strip_col(int16_t s) {
+// The word's ink in word column `wx` as a 64-bit column, bit 0 = the word's top row.
+static uint64_t si_word_col(int16_t wx) {
+    if (wx < 0 || wx >= s_ww) return 0;
     uint64_t col = 0;
     for (uint8_t i = 0; i < s_ng; ++i) {
-        const int16_t gx = (int16_t)(s - s_g[i].x);
+        const int16_t gx = (int16_t)(wx - s_g[i].x);
         if (gx < 0 || gx >= s_g[i].w) continue;
         const uint8_t  cb = glyph_col_bytes(s_g[i].h);
         const uint8_t *p  = s_bitmap + s_g[i].bo + (uint16_t)gx * cb;
@@ -118,20 +135,15 @@ static uint64_t si_strip_col(int16_t s) {
     return col;
 }
 
-// Panel column x at marquee offset `off`, bob `y`: the strip column that lands there,
-// shifted to the bob. The right panel sees the strip SI_W + SI_GAP_PX further on.
-static uint64_t si_panel_col(int16_t x, int32_t base, int8_t y) {
-    int32_t s = (base + x) % s_period;
-    if (s < 0) s += s_period;
-    const uint64_t v = si_strip_col((int16_t)s);
-    return y >= 0 ? (v << y) : (v >> (uint8_t)(-y));
-}
-
-static uint8_t si_bob(uint32_t t) {   // triangle wave: constant speed between the extremes
-    const uint32_t u   = t % SI_BOB_MS;
-    const uint32_t tri = u < SI_BOB_MS / 2 ? u : SI_BOB_MS - u;   // 0 .. SI_BOB_MS/2
-    const int32_t  lo  = -SI_BOB_OVER, hi = SI_H - s_th + SI_BOB_OVER;
-    return (uint8_t)(int8_t)(lo + (int32_t)(((hi - lo) * (int32_t)tri) / (int32_t)(SI_BOB_MS / 2)));
+// How much of the word is showing, 0..255, `u` ms into its cycle.
+static uint8_t si_visibility(uint32_t u) {
+    if (u < SI_HIDE_MS) return 0;
+    u -= SI_HIDE_MS;
+    if (u < SI_IN_MS) return (uint8_t)((u * 255u) / SI_IN_MS);
+    u -= SI_IN_MS;
+    if (u < SI_HOLD_MS) return 255;
+    u -= SI_HOLD_MS;
+    return (uint8_t)(255u - (u * 255u) / SI_OUT_MS);
 }
 
 void status_idle_screen(void) {
@@ -140,52 +152,72 @@ void status_idle_screen(void) {
         s_started    = true;
         s_t0         = now;
         s_last_frame = now - STATUS_IDLE_FRAME_MS;
-        si_layout();
+        si_layout(is_left_side() ? SI_WORD_LEFT : SI_WORD_RIGHT);
     }
     s_last_call = now;
     if (timer_elapsed32(s_last_frame) < STATUS_IDLE_FRAME_MS) return;
     s_last_frame = now;
-    if (s_period <= 0) return;
 
     const uint32_t t_start = timer_read32();
     const uint32_t t       = timer_elapsed32(s_t0);
-    const uint8_t  tp      = (uint8_t)(t >> 4);
-    const int32_t  off     = (int32_t)((t * SI_SPEED_PX_S) / 1000u);
-    // One strip laid across both panels: the left panel holds strip columns 0..127 of
-    // the moment, the right panel continues after the physical gap.
-    const int32_t  base    = off + (is_left_side() ? 0 : (SI_W + SI_GAP_PX));
-    const int8_t   y       = (int8_t)si_bob(t);
+    const bool     left    = is_left_side();
+    const int16_t  fx0     = left ? 0 : (SI_W + SI_GAP_PX);   // this panel's field column 0
+
+    // The word: where it lands this cycle, and how much of it is dissolved in.
+    const uint32_t cyc = t / SI_CYCLE_MS;
+    const uint8_t  vis = si_visibility(t % SI_CYCLE_MS);
+    const uint32_t h   = si_hash(cyc * 0x9E3779B1u + (left ? 0x11u : 0x77u));
+    const int16_t  xr  = (int16_t)(SI_W - s_ww - 2 * SI_MARGIN);
+    const int16_t  yr  = (int16_t)(SI_H - s_wh - 2 * SI_MARGIN);
+    const int16_t  wx0 = (int16_t)(SI_MARGIN + (xr > 0 ? (int16_t)(h % (uint32_t)(xr + 1)) : 0));
+    const uint8_t  wy0 = (uint8_t)(SI_MARGIN + (yr > 0 ? (uint8_t)((h >> 12) % (uint32_t)(yr + 1)) : 0));
+    const int16_t  nx  = (int16_t)(cyc * 17u), ny = (int16_t)(cyc * 29u);   // a fresh dissolve per cycle
 
     kdisp_set_buffer(0);
     uint8_t *buf = get_scratch_buffer();
 
-    // Rolling window of three columns for the 4-neighbour erosion that finds the edge.
-    uint64_t prev = si_panel_col(-1, base, y), cur = si_panel_col(0, base, y);
-    uint8_t  haze_row[SI_H / 2];
+    // A window of the word's columns, x-SI_CLOSE .. x+SI_CLOSE. The centre five make the
+    // black ring, a radius-2 disc dilation (offsets with dx*dx + dy*dy <= 4). The rest
+    // close the GAPS between letters and the counters: a pixel with ink within SI_CLOSE
+    // px on its left AND on its right is inside the word. Without it a band showed
+    // through the wedge between K's leg and the y, over 14 px wide, and read as a dash
+    // ("K-ybd").
+    uint64_t win[SI_WIN];
+    for (int8_t k = 0; k < SI_WIN; ++k)
+        win[k] = vis ? (si_word_col((int16_t)(-SI_CLOSE + k - wx0)) << wy0) : 0;
+
     for (int16_t x = 0; x < SI_W; ++x) {
-        const uint64_t next    = si_panel_col((int16_t)(x + 1), base, y);
-        const uint64_t eroded  = cur & (cur << 1) & (cur >> 1) & prev & next;
-        uint64_t       lit     = cur & ~eroded;                  // the 1 px outline, solid
-        const uint64_t inside  = eroded;
-        if ((x & 1) == 0) {                                      // haze density, 2x2 blocks
-            for (uint8_t r = 0; r < SI_H / 2; ++r)
-                haze_row[r] = (uint8_t)(startup_anim_plasma((int16_t)(x + 300), (int16_t)(r * 2), tp) / 18u);
+        const uint64_t ink = win[SI_CLOSE];
+        uint64_t       lft = 0, rgt = 0;
+        for (uint8_t k = 0; k < SI_CLOSE; ++k) {
+            lft |= win[k];
+            rgt |= win[SI_CLOSE + 1 + k];
         }
-        for (uint8_t r = 0; r < SI_H; ++r) {
-            const uint64_t bit = (uint64_t)1 << r;
-            if (inside & bit) {
-                // Letter body: Eden's plasma, dithered, drifting through the letters.
-                const uint8_t d = (uint8_t)(startup_anim_plasma(x, r, tp) / 2u + 60u);
-                if (d > startup_anim_noise((int16_t)(x + (t >> 6)), (int16_t)(r + (t >> 7)))) lit |= bit;
-            } else if (!(cur & bit)) {
-                // Faint haze between the letters.
-                const uint8_t d = haze_row[r >> 1];
-                if (d && d > startup_anim_noise((int16_t)(x * 3 + (t >> 5)), (int16_t)(r * 5))) lit |= bit;
-            }
+        const uint64_t ring = (ink << 1) | (ink << 2) | (ink >> 1) | (ink >> 2) |
+                              win[SI_CLOSE - 1] | (win[SI_CLOSE - 1] << 1) | (win[SI_CLOSE - 1] >> 1) |
+                              win[SI_CLOSE + 1] | (win[SI_CLOSE + 1] << 1) | (win[SI_CLOSE + 1] >> 1) |
+                              win[SI_CLOSE - 2] | win[SI_CLOSE + 2] |   // the grown shape
+                              (lft & rgt);                              // gaps and counters
+        const int16_t fx = (int16_t)(fx0 + x);
+        uint64_t      lit = 0;
+        for (uint8_t y = 0; y < SI_H; ++y) {
+            const uint64_t bit  = (uint64_t)1 << y;
+            const bool     word = (vis == 255u) ||
+                                  ((ring | ink) & bit && startup_anim_noise((int16_t)(x + nx), (int16_t)(y + ny)) < vis);
+            if (word && (ink & bit)) { lit |= bit; continue; }   // the letter: solid
+            if (word && (ring & bit)) continue;                   // the 2 px black ring
+            // Plasma bands: four sines, one of them of the distance from the field centre.
+            const int16_t d = (int16_t)startup_anim_dist((int16_t)((fx - SI_FIELD_CX) * 2),
+                                                         (int16_t)((y - SI_FIELD_CY) * 4));
+            const int16_t v = (int16_t)(si_s8(fx * 2 + (int32_t)(t >> 4)) +
+                                        si_s8(y * 3 - (int32_t)(t / 22u)) +
+                                        si_s8(fx + y + (int32_t)(t / 13u)) +
+                                        si_s8(d / 2 + (int32_t)(t / 9u)));
+            if ((((v + 512) >> 4) & 3) == 0) lit |= bit;
         }
         for (uint8_t p = 0; p < SI_H / 8; ++p) buf[(uint16_t)p * SI_W + (uint16_t)x] = (uint8_t)(lit >> (8u * p));
-        prev = cur;
-        cur  = next;
+        for (uint8_t k = 0; k < SI_WIN - 1; ++k) win[k] = win[k + 1];
+        win[SI_WIN - 1] = vis ? (si_word_col((int16_t)(x + 1 + SI_CLOSE - wx0)) << wy0) : 0;
     }
 
     const uint32_t took = timer_elapsed32(t_start);

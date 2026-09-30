@@ -144,6 +144,13 @@ and relative links were adjusted to suit a standalone file.
   - **No check run answers this question.** A green `Sourcery review` /
     `Greptile Review` / CodeRabbit status has accompanied a PR that nothing read,
     measured, more than once.
+  - ⚠️ **CodeRabbit gives ONE included review per hour, and a push mid-review
+    ABORTS it.** Every summary says *"1 included review per hour; 0 remain after
+    this review"*, so several PRs in one hour queue behind each other. A push
+    while a review is running ends it with *"⚠️ Action not completed — Head commit
+    changed"*: no findings, no error, and nothing re-runs it. Push a fix after the
+    review lands, or send a fresh `@coderabbitai review` right after the push
+    (qmk#319, 2026-09-30).
   **The full field guide — which bot goes quiet in which disguise, the sticky
   walkthrough, the Merge Risk sha, the false `✅ Addressed in <sha>` attribution,
   the quota shapes and the rate-limit arithmetic — is the `triage-pr-review`

@@ -265,6 +265,13 @@ skill; the mechanics, the `release-notes` branch and `scripts/publish_release.py
   cannot set labels — use `issue_write` with `labels:` right after opening. A missing
   label made the live docs promise a version that would never exist, because a docs PR
   ships the moment it merges while a firmware PR only bumps a number and waits.
+  ⚠️ **Then READ THE LABELS BACK a few minutes later** — a successful `issue_write` is
+  not proof the label stayed. On qmk#319 (2026-09-30) `bump:minor` was set at 06:53 and
+  gone by 07:20, leaving only `keyboard`; the Pull Request Labeler had run on open at
+  06:52, most likely writing its list from a snapshot taken before ours (inferred, not
+  proven). The host PR, which has no labeler, kept its label. Unnoticed, 1.3.0 would
+  have shipped as 1.2.1. Re-set it as the FULL list (`["keyboard","bump:minor"]`) —
+  `issue_write` replaces, it does not add.
 - ⚠️ **From Claude Code on the web you can neither push tags nor create a release** —
   stage the notes on the branch and hand the user `python scripts/publish_release.py`.
 

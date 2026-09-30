@@ -138,6 +138,12 @@ grep -n "<feature>" ../PolyKybdHost/polyhost/device/poly_kybd.py   # constant + 
   "update the host app".
 - **A `RemoteCore` mirror is not optional.** Daemon-by-default means the tray is a
   client; an un-mirrored method is missing for every normal user and present for you.
+- ⚠️ **A new flag that TRIGGERS side effects must be validated with the whole report
+  BEFORE any of them run.** v21's cmd 33 masked the width byte, ran the reset and
+  enable flags, and only then let the decoder refuse a bad width — so a malformed
+  report switched overlays on over a stale mapping. The unit tests, the rig and the
+  hardware round all passed; Sourcery found it (qmk#319). Order the handler as:
+  parse, validate everything, then act.
 - **Don't bump the protocol for a new value in an open-ended set.** Check whether the
   firmware already accepts unknown values in that range before adding a version.
 - **Don't add a getter that returns a cached value** where the caller means "what is

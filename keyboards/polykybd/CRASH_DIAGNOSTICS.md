@@ -224,6 +224,15 @@ run on it (`test_no_crash_record`). What is worth knowing:
     reached `core1_entry()`. Firmware before 1.3.2 never sets it on them: a
     `0x05E2` from 1.0.0 (2026-09-30, a master hung in the logo draw right after
     the core1 launch) says nothing about core1 either way.
+    ✅ **First rig observation of the guard recovering a stall (2026-09-30):** release
+    firmware 1.3.1, `Build and HIL Test` run 36696216264 attempt 1 — the master's
+    record read `kind=watchdog phase=boot 6.0xE1 consecutive=1`: the 75% panel paint
+    stalled, the guard reset the chip once, and the next boot was clean (attempt 2
+    passed the full suite and a real HID apply). So the recovery path works on
+    hardware, and the stall is still OPEN on release firmware. Pre-1.3.2, so the stamp
+    carries no core1 flag. With the 1.0.0 `0x05E2` above that is two stalls in the
+    step-5/6 window on two firmwares; a `0x15E1`/`0x16E1` from 1.3.2+ would say
+    whether core1 was up.
 
 - **A crash loop halts instead of looping forever**: `consecutive` counts
   back-to-back records and past `CRASH_LOOP_LIMIT` (5) the handler parks in `wfi`

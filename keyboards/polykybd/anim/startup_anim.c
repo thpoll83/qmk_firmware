@@ -250,8 +250,7 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
 
 // Spark `s` at time `el`, or false when it is not lit (winked out, or thinned in idle).
 // A pure function of its arguments: the keycaps pass the frame's LATCHED values
-// (sa_spark_at), and the status panel (startup_anim_status_comets) passes its own, so
-// drawing the status panel between two keycap slices cannot disturb the latch.
+// (sa_spark_at).
 static inline bool sa_spark_eval(uint16_t s, uint32_t el, uint8_t cv, uint8_t fade, bool loop,
                                  sa_spark_pt_t *pt) {
     const int16_t  margin     = SA_BOARD_W / 8;
@@ -354,8 +353,7 @@ static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16
 //   3 turning     +      -> x (the small form rotates through the peak)
 //   4 spike       +      -> a thin plus with 3-px arms, the centre ring dark
 // The lit offsets of one star at `stage`, written to dx/dy (room for SA_STAR_MAX_PTS);
-// returns how many. One table for both renderers: the keycaps (sa_star_shape) and the
-// status panel's idle screen (startup_anim_star_pts).
+// returns how many (sa_star_shape reads it).
 #define SA_STAR_MAX_PTS 9
 static uint8_t sa_star_pts(uint8_t shape, uint8_t stage, int8_t *dx, int8_t *dy) {
     const uint8_t form = (stage == 2) ? 2 : (stage == 1 || stage == 3) ? 1 : 0;   // dot/small/full
@@ -789,69 +787,12 @@ void startup_anim_tick(void) {
 }
 
 // ---- the status panels' idle screen (status_idle.c) ------------------------
-// The status panel is a window onto the SAME board space as the keycaps, so the idle
-// screen reads the field through these rather than re-deriving it: one copy of the
-// ring maths, the sparks and the star shapes.
-
-uint32_t startup_anim_loop_ms(void) {
-    return (s_active && s_loop) ? timer_elapsed32(s_start) : 0u;
-}
-
-uint8_t startup_anim_noise(int16_t x, int16_t y) { return sa_noise(x, y); }
-
-uint8_t startup_anim_plasma(int16_t gx, int16_t gy, uint8_t tp) { return sa_plasma(gx, gy, tp); }
+// The idle screen's plasma uses Eden's sine table and distance, so the board keeps one
+// copy of each.
 
 uint8_t startup_anim_sin(uint8_t t) { return sa_sin(t); }
 
 uint16_t startup_anim_dist(int16_t a, int16_t b) { return sa_dist(a, b); }
-
-// The idle loop's ring term of sa_bg() alone (ring = 255, the loop's thicker crest),
-// without the plasma haze: 0 between rings, up to ~27 on a crest.
-uint8_t startup_anim_ring_density(int16_t gx, int16_t gy, uint32_t el) {
-    const int16_t  cxr  = SA_BOARD_W / 2;
-    const int16_t  cyr  = (int16_t)((int32_t)SA_BOARD_H * 42 / 100);
-    const uint8_t  tprg = (uint8_t)(el >> 5);
-    const int16_t  ax   = (int16_t)(((int32_t)(gx - cxr) * SA_RING_ASPECT) >> 8);
-    const int16_t  ay   = (int16_t)(gy - cyr);
-    uint16_t       rr   = sa_dist(ax, ay);
-    rr = (uint16_t)((int16_t)rr + ((sa_sin((uint8_t)(gx + 2 * gy)) - 128) >> 3));
-    const uint8_t  rv    = sa_sin((uint8_t)(((uint32_t)rr * SA_RING_FREQ >> 8) - tprg));
-    const uint8_t  crest = rv > 200 ? (uint8_t)(rv - 200) : 0;
-    return (uint8_t)(((uint16_t)crest * 255u) >> 9);
-}
-
-// The idle comets that cross a window whose top-left is board point (x0, y0), at
-// `upp_q8` board units per window pixel (q8). Same sparks, same trails as the keycaps
-// at time `el`; `plot` clips.
-void startup_anim_status_comets(void (*plot)(int16_t x, int16_t y), int16_t x0, int16_t y0,
-                                int16_t w, int16_t h, uint16_t upp_q8, uint32_t el) {
-    const int16_t bw = (int16_t)(((int32_t)w * upp_q8) >> 8);
-    const int16_t bh = (int16_t)(((int32_t)h * upp_q8) >> 8);
-    for (uint16_t i = 0; i < SA_NSPARK; ++i) {
-        sa_spark_pt_t sp;
-        if (!sa_spark_eval(i, el, 0, 0, true, &sp)) continue;
-        const int16_t ddx = (int16_t)(sp.sx - x0), ddy = (int16_t)(sp.sy - y0);
-        if (ddx < -4 || ddx >= bw + sp.tlen || ddy < -3 || ddy >= bh + 2) continue;
-        const int16_t hx   = (int16_t)(((int32_t)ddx << 8) / upp_q8);
-        const int16_t hy   = (int16_t)(((int32_t)ddy << 8) / upp_q8);
-        const uint8_t tlen = (uint8_t)(((uint16_t)sp.tlen << 8) / upp_q8);
-        const bool thick   = (sp.thick == 2u);
-        plot(hx, hy); plot(hx + 1, hy); plot(hx, hy + 1); plot(hx + 1, hy + 1);
-        if (thick) { plot(hx, hy - 1); plot(hx + 1, hy - 1); }
-        const uint16_t fade_step = 230u / tlen;
-        for (uint8_t k = 1; k < tlen; ++k) {
-            if (k <= 5 || sa_noise((int16_t)(hx - k + 30), (int16_t)(hy + 12)) <
-                          (uint8_t)(255u - (uint16_t)k * fade_step)) {
-                plot((int16_t)(hx - k), hy);
-                if (thick) plot((int16_t)(hx - k), hy + 1);
-            }
-        }
-    }
-}
-
-uint8_t startup_anim_star_pts(uint8_t shape, uint8_t stage, int8_t *dx, int8_t *dy) {
-    return sa_star_pts(shape, stage, dx, dy);
-}
 
 #else  // ---- non-split72: no-op stubs ----
 void startup_anim_start(void) {}

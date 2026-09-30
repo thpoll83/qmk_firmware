@@ -20,8 +20,8 @@
 #ifdef POLYKYBD_DOOM
 #include "doom/doom_mode.h"
 #include "doom/doom_logo_oled.h"
-#include "status_idle.h"
 #endif
+#include "status_idle.h"
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"

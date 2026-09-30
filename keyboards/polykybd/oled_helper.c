@@ -950,6 +950,11 @@ void oled_tutorial_screen(void) {
 }
 
 bool oled_task_user(void) {
+#if defined(KEYBOARD_polykybd_split72)
+    // The idle branch below re-claims the panel on every pass it is taken; any other
+    // screen leaves it released, so status_idle_task() cannot draw over that screen.
+    status_idle_release();
+#endif
     // Brightness ownership for the tutorial, on its edges only (an unconditional
     // oled_set_brightness every tick would be pointless I2C traffic).
     // Eden's welcome tail belongs to the lesson too (it says the lesson's first words).

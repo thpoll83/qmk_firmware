@@ -127,7 +127,7 @@ trap — derive it from synced state, not from a shadow updated on an edge.
 
 ⚠️ **Idle is a dim contrast register, NOT `oled_off()`** (`POLY_STATUS_IDLE_BRIGHT`,
 0). During `DISP_IDLE`, `oled_task_user()` hands split72's panel to
-`status_idle_screen()` (below) and blanks split42's; switching the panel off would stop
+the idle screen (`status_idle.c`, below) and blanks split42's; switching the panel off would stop
 the animation, which is the idle look this board is supposed to have.
 
 **The scrolling Poly/Kybd logos are GONE** (two 1 KB bitmaps on split72, all-zero
@@ -168,13 +168,30 @@ every frame comes from the font's column bytes in flash and Eden's tables.
 - ⚠️ **It redraws every frame, and a redraw switches the SSD1306 back ON** — so the
   branch honours `STATUS_DISP_ON` itself, as the tutorial branch does, or the panel
   stays lit through the suspend.
-- ⚠️ **Frames are paced by the I2C flush, not a timer**: a frame is composed only when
-  the previous one is fully sent (`oled_dirty == 0`, the driver's global). Composing over
-  a half-sent frame tore it, and a 100 ms gate on top of the driver's 66 ms task interval
-  rendered only every second call (~7.5 fps). Motion is a function of time, so a slow
-  flush lowers the frame rate, never the speed. `oled_render_dirty(true)` would block
-  the matrix ~26 ms per frame instead. The console prints
-  `Status idle: N frames/5s, worst compose Nms` — the real frame rate on hardware.
+- ⚠️ **Frame pacing has three rules, and the third protects the keycaps.**
+  1. A frame is composed only when the previous one is fully sent (`oled_dirty == 0`,
+     the driver's global). Composing over a half-sent frame tore it.
+  2. At most one frame per `SI_FRAME_MS` (150 ms). 150 divides the 150 ms cursor step
+     and the 300 ms keystroke, so the typing stays even.
+  3. **The panel and the Eden idle loop take turns.** Each frame costs the main loop
+     ~23 ms of blocking I2C (~6 ms per pass at `OLED_UPDATE_PROCESS_LIMIT` 4), and Eden
+     renders the keycaps in 3 ms slices on that same loop. Interleaved, every slice
+     waited behind a pass of I2C. So no frame is composed while Eden is mid-frame
+     (`startup_anim_frame_busy()`), and `eden_idle_tick()` starts no keycap frame while
+     ours is still going out (`status_idle_holds_bus()`, capped at 100 ms so a stuck
+     bus cannot freeze the keycaps).
+
+  Because of rule 3 the frames are composed from `status_idle_task()`, called every
+  main-loop pass from housekeeping just before `eden_idle_tick()`, not from
+  `oled_task_user()`, which runs only every 66 ms and would rarely land in Eden's gap
+  between frames. `oled_task_user()` only hands the panel over (`status_idle_screen()`
+  in the idle branch) and takes it back (`status_idle_release()` at the top of every
+  pass), so the task never draws over another screen. Motion is a function of time,
+  so pacing lowers the frame rate, never the speed. `oled_render_dirty(true)` would
+  block the matrix ~26 ms per frame instead. The console prints
+  `Status idle: N frames/5s, worst compose Nms`, and Eden's idle line now ends in
+  `N frames` since the last report — its `frame Nms` sums render time only, so it
+  cannot show time lost to other main-loop work.
 
 **Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
 `oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced

@@ -144,6 +144,7 @@ static bool     s_frame_busy;  // a frame is partially rendered (slices pending)
 static uint16_t s_frame_ms;
 static uint16_t s_slice_worst_ms;
 static bool     s_logged_frame;   // a completed frame has been reported this session
+static uint16_t s_frames_done;    // frames completed since the last report
 
 // Minimum GAP (ms) between idle-loop frames, measured from the END of the previous
 // frame — NOT a frame period, so the throttle can never collapse to "render every
@@ -637,6 +638,7 @@ static void sa_begin(bool loop, uint8_t contrast) {
     s_frame_ms       = 0;   // don't report the PREVIOUS idle session's timings in the
     s_slice_worst_ms = 0;   // first log line of this one
     s_logged_frame   = false;
+    s_frames_done    = 0;
     // Non-blocking progress trace (HID console; dropped when nothing is attached).
     // If a half wedges during the animation, the last line printed shows how far it
     // got. Only the USB (master) half's console is readable — to diagnose the left
@@ -707,6 +709,8 @@ void startup_anim_stop(void) {
 
 bool startup_anim_is_loop(void) { return s_active && s_loop; }
 
+bool startup_anim_frame_busy(void) { return s_active && s_loop && s_frame_busy; }
+
 bool startup_anim_active(void) { return s_active; }
 
 // The one-shot show opens on the stock rainbow, and it fades out while POLYKYBD is
@@ -755,16 +759,21 @@ void startup_anim_tick(void) {
         if (s_frame_idx >= SA_NUM_KEYS) {
             s_frame_busy = false;
             s_last_frame = timer_read32();   // gap timed from the END of the frame
+            ++s_frames_done;
             // Report at frame END (so the numbers describe the frame that just
             // finished) and report the FIRST completed frame immediately, then on a
             // quiet ~5 s cadence. A 5 s-only cadence yields NOTHING from a short idle
             // session — a 4.4 s glance at the screensaver printed no timing at all,
             // which makes the instrument useless exactly when you want a quick look.
             if (!s_logged_frame || el >= s_next_log) {
-                uprintf("Eden idle %lums (frame %ums, worst slice %ums)\n",
-                        (unsigned long)el, s_frame_ms, s_slice_worst_ms);
+                // `frames` is the rate the keycaps actually got since the last report:
+                // `frame` only sums render time, so it cannot show time lost between
+                // slices to other main-loop work (the status panel's I2C flush).
+                uprintf("Eden idle %lums (frame %ums, worst slice %ums, %u frames)\n",
+                        (unsigned long)el, s_frame_ms, s_slice_worst_ms, s_frames_done);
                 s_next_log       = el + 5000;
                 s_slice_worst_ms = 0;   // worst-since-the-last-report, not worst-ever
+                s_frames_done    = 0;
                 s_logged_frame   = true;
             }
         }
@@ -802,6 +811,7 @@ void startup_anim_set_tail(bool on) { (void)on; }
 bool startup_anim_welcome(void) { return false; }
 bool startup_anim_take_welcome_said(void) { return false; }
 bool startup_anim_is_loop(void) { return false; }
+bool startup_anim_frame_busy(void) { return false; }
 void startup_anim_tick(void) {}
 bool startup_anim_active(void) { return false; }
 sa_geom_t startup_anim_key_geom(bool right, uint8_t idx) { (void)right; (void)idx; sa_geom_t o = {0,0,0,0,false,false}; return o; }

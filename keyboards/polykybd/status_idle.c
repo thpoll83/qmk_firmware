@@ -21,11 +21,21 @@
 //
 // ⚠️ Frame pacing: the bands move everywhere, so nearly all 16 blocks are dirty every
 // frame, and QMK sends them over I2C a few per main-loop pass (OLED_UPDATE_PROCESS_LIMIT
-// in config.h). A new frame is composed only once the previous one has been sent
-// completely (oled_dirty == 0): writing over a half-sent frame showed the top of one
-// frame over the bottom of the other, and a fixed 100 ms gate on top of the driver's
-// own 66 ms task interval rendered only every second call (~7.5 fps). All motion is a
-// function of time, so a slow flush lowers the frame rate, never the speed.
+// in config.h), blocking the loop ~6 ms per pass and ~23 ms per frame. Three rules:
+//   - a new frame is composed only once the previous one has been sent completely
+//     (oled_dirty == 0): writing over a half-sent frame showed the top of one frame
+//     over the bottom of the other;
+//   - at most one frame per SI_FRAME_MS, because every frame costs the main loop its
+//     flush and the Eden idle loop on the keycaps runs in that same loop;
+//   - the panel and Eden TAKE TURNS: no frame is composed while Eden is part-way
+//     through a keycap frame, and Eden starts no frame while ours is still being sent
+//     (status_idle_holds_bus()). Interleaved, each 3 ms Eden slice waited behind ~6 ms
+//     of I2C, stretching its frames two- to threefold.
+// So the frames are composed from status_idle_task(), every main-loop pass, rather than
+// from oled_task_user(), which runs only every OLED_UPDATE_INTERVAL (66 ms) and would
+// rarely land in Eden's short gap between frames. oled_task_user() only says the panel
+// is ours (status_idle_screen()) or not (status_idle_release()).
+// All motion is a function of time, so pacing lowers the frame rate, never the speed.
 // oled_render_dirty(true) would instead block the matrix scan ~26 ms per frame.
 
 #include "status_idle.h"
@@ -40,6 +50,8 @@
 #include "anim/startup_anim.h"  // Eden's sine table, distance and noise tile
 #include "poly_util.h"          // poly_heavy_font(): the Eden splash face
 #include "side.h"               // is_left_side
+#include "state.h"              // get_local_state
+#include "base/com.h"           // DISP_IDLE
 
 #define SI_W 128
 #define SI_H 64
@@ -81,6 +93,11 @@ extern OLED_BLOCK_TYPE oled_dirty;   // drivers/oled/oled_driver.c: blocks not y
 #define SI_BLINK_MS   530u     // cursor half-period while it waits
 #define SI_RING       2        // the black ring's radius, px
 #define SI_WIN        (2 * SI_RING + 1)
+// The panel's frame period. 150 ms divides SI_STEP_MS and SI_KEY_MS, so every cursor
+// step and keystroke lasts a whole number of frames and the typing stays even.
+#define SI_FRAME_MS   150u
+// Eden waits for our flush at most this long, so a stuck bus cannot freeze the keycaps.
+#define SI_HOLD_MAX_MS 100u
 // The plasma bands run on a slowed clock (5/32 of real time).
 #define SI_PLASMA_NUM 5u
 #define SI_PLASMA_DEN 32u
@@ -111,7 +128,9 @@ static const uint8_t *s_bitmap;
 static uint32_t s_t0;
 static uint16_t s_frames;         // frames composed since the last console report
 static uint32_t s_last_call;
+static uint32_t s_last_frame;     // when the last frame was composed
 static bool     s_started;
+static bool     s_owned;          // oled_task_user() gave the panel to the idle screen
 static uint8_t  s_worst_ms;
 static uint32_t s_next_log;
 
@@ -232,12 +251,30 @@ static si_state_t si_state(uint32_t u) {
 void status_idle_screen(void) {
     const uint32_t now = timer_read32();
     if (!s_started || timer_elapsed32(s_last_call) > 500u) {   // a new idle session
-        s_started = true;
-        s_t0      = now;
+        s_started    = true;
+        s_t0         = now;
+        s_last_frame = now - SI_FRAME_MS;   // the first frame is due at once
         si_layout();
     }
     s_last_call = now;
+    s_owned     = true;
+}
+
+void status_idle_release(void) { s_owned = false; }
+
+bool status_idle_holds_bus(void) {
+    return s_owned && oled_dirty && timer_elapsed32(s_last_frame) < SI_HOLD_MAX_MS;
+}
+
+void status_idle_task(void) {
+    // Also re-check the idle flag: a wake between two oled_task_user() calls must not
+    // compose one more frame over the screen that is about to replace this one.
+    if (!s_owned || (get_local_state()->flags & DISP_IDLE) == 0) return;
     if (oled_dirty) return;   // the previous frame is still going out over I2C
+    if (timer_elapsed32(s_last_frame) < SI_FRAME_MS) return;
+    if (startup_anim_frame_busy()) return;   // Eden is mid-frame: let it finish first
+    const uint32_t now = timer_read32();
+    s_last_frame = now;
     ++s_frames;
 
     const uint32_t t_start = timer_read32();

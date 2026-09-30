@@ -303,8 +303,12 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
     what needs its peripherals and tables: it copies the result into the scratch window,
     hands core1 the next keycap at once, cuts the legend out and pushes the SPI window
     (the SPI driver needs IRQs, which core1 runs masked). So core0 spends the copy + the
-    legend + the push per keycap, and the frame is bound by core1's compute. One job is
-    in flight at a time; a sequence number in the argument word says which one finished.
+    legend + the push per keycap, and the frame is bound by core1's compute.
+    - ⚠️ **Two buffers, and core0 collects every finished keycap each pass.** With one
+      buffer, core1 waited from finishing a key until core0's next pass collected it,
+      and a pass costs ~7 ms while the status panel flushes over I2C: the rig's first
+      frame took 249 ms at one key per pass, against 197 ms on core0 alone. Jobs finish
+      in FIFO order; a sequence number in the argument word says which one did.
     - **Pixels are unchanged, proven on the host**: the old core0 render, the new core0
       render and the core1 job were compared byte for byte over both halves, every key
       and 34 frame times, and the boot intro (which shares the spark and star helpers)

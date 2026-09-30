@@ -658,54 +658,49 @@ static void sa_render_idle_key(uint8_t idx) {
 // The keycap COMPUTE (~93 % of a keycap's ~4.3 ms) runs on core1; core0 only copies
 // the result into the scratch buffer, cuts the legend out (it reads the keymap and the
 // fonts) and pushes it over SPI (the SPI driver needs IRQs, which core1 runs masked).
-// One job at a time through the FIFO (core1_eden_key()): core0 collects key n, hands
-// core1 key n+1 at once, then finishes key n while core1 computes. So core0 spends
-// ~0.3 ms plus the legend per keycap instead of ~4.3 ms, and the frame is bound by
-// core1's compute instead of by the main loop.
+// TWO buffers, so core1 always has the next keycap queued (core1_eden_key() through
+// the FIFO): core0 collects every finished keycap each pass, hands its buffer straight
+// back with the next key, and cuts the legend + pushes while core1 computes. With ONE
+// buffer, core1 sat idle from finishing a key until core0's next pass collected it, and
+// a pass costs ~7 ms while the status panel flushes over I2C: the rig's first frame
+// took 249 ms, one key per pass, against 197 ms on core0 alone. So core0 spends ~0.3 ms
+// plus the legend per keycap instead of ~4.3 ms, and the frame is bound by core1's
+// compute rather than by the main loop's pass time.
 // Nothing that stops idle can race it: a firmware or font-pack write and an overlay
 // upload all end the idle session first, and DOOM takes core1 only as its own idle
 // style. SA_C1_TIMEOUT_MS covers anything else that halts core1: the session falls
 // back to rendering on core0.
 #define SA_C1_BYTES      (SCREEN_WIDTH * (SCREEN_HEIGHT / 8))   // 360: the window, compact
+#define SA_C1_SLOTS      2u
 #define SA_C1_TIMEOUT_MS 100u
-static uint8_t           s_c1_buf[SA_C1_BYTES];   // written by core1, read by core0 between jobs
+static uint8_t           s_c1_buf[SA_C1_SLOTS][SA_C1_BYTES];  // core1 writes a slot, core0 reads it once done
 static uint8_t           s_c1_brow[SCREEN_WIDTH]; // core1's own 2x2-row cache
 static volatile uint16_t s_c1_done;               // sequence number of the last finished job
 static uint16_t          s_c1_seq;                // sequence number of the last dispatched job
-static uint8_t           s_c1_idx;                // keycap of the job in flight
-static uint32_t          s_c1_sent_at;
+// The jobs in flight, oldest first: slot s_c1_head, then the other one. Jobs finish in
+// FIFO order, so the oldest is the only one worth waiting for.
+static uint8_t           s_c1_head;
+static uint8_t           s_c1_count;
+static uint8_t           s_c1_idx[SA_C1_SLOTS];   // keycap in each slot's job
+static uint16_t          s_c1_slot_seq[SA_C1_SLOTS];
+static uint32_t          s_c1_sent_at[SA_C1_SLOTS];
+static uint8_t           s_c1_next;               // next keycap to hand core1 this frame
 static bool              s_c1_frame;              // the current frame renders on core1
 static bool              s_c1_off;                // core1 timed out: core0 renders this session
 
-// Runs ON CORE1, from core1_entry(). `arg` = idx | left << 8 | seq << 16. No console,
+// Runs ON CORE1, from core1_entry(). `arg` = idx | left << 8 | slot << 9 | seq << 16. No console,
 // no IRQs, and CORE1_STACK_SIZE of stack (IDLE_STYLES.md has the measured budget).
 void __attribute__((noinline)) startup_anim_core1_job(uint32_t arg) {
     const uint8_t idx  = (uint8_t)(arg & 0xFFu);
     const bool    left = ((arg >> 8) & 1u) != 0;
-    memset(s_c1_buf, 0, sizeof s_c1_buf);
+    uint8_t      *buf  = s_c1_buf[(arg >> 9) & 1u];
+    memset(buf, 0, SA_C1_BYTES);
     if (idx < SA_NUM_KEYS) {
         const sa_key_geom_t *g = &(left ? SA_GEOM_LEFT : SA_GEOM_RIGHT)[idx];
-        if (g->valid) sa_idle_key_compute(g, s_c1_buf, SCREEN_WIDTH, s_c1_brow);
+        if (g->valid) sa_idle_key_compute(g, buf, SCREEN_WIDTH, s_c1_brow);
     }
     dmb();   // the pixels land before the sequence number
     s_c1_done = (uint16_t)(arg >> 16);
-}
-
-static void sa_c1_dispatch(uint8_t idx) {
-    s_c1_idx     = idx;
-    s_c1_seq     = (uint16_t)(s_c1_seq + 1u);
-    s_c1_sent_at = timer_read32();
-    core1_eden_key((uint32_t)idx | ((uint32_t)(is_left_side() ? 1u : 0u) << 8) | ((uint32_t)s_c1_seq << 16));
-}
-
-// Finish a keycap core1 computed: copy it into the scratch window, then (after the
-// caller has handed core1 its next job) cut the legend and push it.
-static void sa_c1_collect(uint8_t idx) {
-    sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
-    kdisp_set_buffer(0x00);
-    uint8_t *scratch = get_scratch_buffer();
-    for (uint8_t page = 0; page < SCREEN_HEIGHT / 8; ++page)
-        memcpy(scratch + (size_t)page * SA_STRIDE + BUFFER_X, s_c1_buf + (size_t)page * SCREEN_WIDTH, SCREEN_WIDTH);
 }
 
 // The next keycap with a panel, from `from` on; SA_NUM_KEYS when there is none.
@@ -713,6 +708,37 @@ static uint8_t sa_next_key(uint8_t from) {
     const sa_key_geom_t *T = is_left_side() ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
     while (from < SA_NUM_KEYS && !T[from].valid) ++from;
     return from;
+}
+
+// Hand core1 the frame's next keycaps until both slots hold a job.
+static void sa_c1_fill(void) {
+    while (s_c1_count < SA_C1_SLOTS && s_c1_next < SA_NUM_KEYS) {
+        const uint8_t slot = (uint8_t)((s_c1_head + s_c1_count) % SA_C1_SLOTS);
+        const uint8_t idx  = s_c1_next;
+        s_c1_seq            = (uint16_t)(s_c1_seq + 1u);
+        s_c1_idx[slot]      = idx;
+        s_c1_slot_seq[slot] = s_c1_seq;
+        s_c1_sent_at[slot]  = timer_read32();
+        ++s_c1_count;
+        s_c1_next = sa_next_key((uint8_t)(idx + 1u));
+        core1_eden_key((uint32_t)idx | ((uint32_t)(is_left_side() ? 1u : 0u) << 8) |
+                       ((uint32_t)slot << 9) | ((uint32_t)s_c1_seq << 16));
+    }
+}
+
+// Has the job in `slot` finished? Sequence numbers are compared modulo 2^16.
+static bool sa_c1_slot_done(uint8_t slot) {
+    return (int16_t)(uint16_t)(s_c1_done - s_c1_slot_seq[slot]) >= 0;
+}
+
+// Finish a keycap core1 computed: copy it into the scratch window, so the slot is free
+// again the moment this returns. The caller then cuts the legend and pushes it.
+static void sa_c1_collect(uint8_t idx, const uint8_t *buf) {
+    sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
+    kdisp_set_buffer(0x00);
+    uint8_t *scratch = get_scratch_buffer();
+    for (uint8_t page = 0; page < SCREEN_HEIGHT / 8; ++page)
+        memcpy(scratch + (size_t)page * SA_STRIDE + BUFFER_X, buf + (size_t)page * SCREEN_WIDTH, SCREEN_WIDTH);
 }
 
 // Shared start path for the one-shot (boot/KC_EDEN) and the looping idle screensaver.
@@ -798,7 +824,8 @@ void startup_anim_stop(void) {
     // over freshly-woken legends.
     s_frame_busy = false;
     s_frame_idx  = 0;
-    s_c1_frame   = false;   // a job still in flight finishes into s_c1_buf and is ignored
+    s_c1_frame   = false;   // jobs still in flight finish into s_c1_buf and are ignored
+    s_c1_count   = 0;
 }
 
 bool startup_anim_is_loop(void) { return s_active && s_loop; }
@@ -848,31 +875,38 @@ void startup_anim_tick(void) {
             s_frame_busy = true;
             s_c1_frame   = startup_anim_idle_on_core1();
             if (s_c1_frame) {
-                const uint8_t first = sa_next_key(0);
-                if (first < SA_NUM_KEYS) sa_c1_dispatch(first);
-                else s_frame_idx = SA_NUM_KEYS;   // no panels: the frame is done
+                s_c1_head  = 0;
+                s_c1_count = 0;
+                s_c1_next  = sa_next_key(0);
+                sa_c1_fill();
+                if (s_c1_count == 0) s_frame_idx = SA_NUM_KEYS;   // no panels: the frame is done
             }
         }
         const uint32_t slice_start = timer_read32();
         if (s_c1_frame && s_frame_idx < SA_NUM_KEYS) {
-            // core1 computes; core0 finishes ONE keycap per pass once it is ready.
-            if (s_c1_done != s_c1_seq) {
-                if (timer_elapsed32(s_c1_sent_at) < SA_C1_TIMEOUT_MS) return;
+            // core1 computes; core0 finishes EVERY keycap that is ready this pass, and
+            // refills each slot the moment it has copied the slot out.
+            while (s_c1_count > 0 && sa_c1_slot_done(s_c1_head)) {
+                const uint8_t slot = s_c1_head;
+                const uint8_t cur  = s_c1_idx[slot];
+                sa_c1_collect(cur, s_c1_buf[slot]);
+                s_c1_head = (uint8_t)((s_c1_head + 1u) % SA_C1_SLOTS);
+                --s_c1_count;
+                sa_c1_fill();                         // core1 computes while we push this one
+                eden_idle_erase_legend(cur);
+                kdisp_send_window();
+            }
+            if (s_c1_count == 0) {
+                s_frame_idx = SA_NUM_KEYS;            // every keycap of the frame is out
+            } else if (timer_elapsed32(s_c1_sent_at[s_c1_head]) >= SA_C1_TIMEOUT_MS) {
                 // core1 never answered (halted, or taken by something else): render the
                 // rest of this frame, and the session, on core0.
-                uprintf("Eden idle: core1 job for key %u timed out - rendering on core0\n", s_c1_idx);
+                uprintf("Eden idle: core1 job for key %u timed out - rendering on core0\n", s_c1_idx[s_c1_head]);
                 s_c1_off    = true;
                 s_c1_frame  = false;
-                s_frame_idx = s_c1_idx;
-                return;
+                s_frame_idx = s_c1_idx[s_c1_head];
+                s_c1_count  = 0;
             }
-            const uint8_t cur = s_c1_idx;
-            sa_c1_collect(cur);                       // copy out BEFORE core1 reuses the buffer
-            const uint8_t nxt = sa_next_key((uint8_t)(cur + 1u));
-            if (nxt < SA_NUM_KEYS) sa_c1_dispatch(nxt);   // core1 computes it while we push this one
-            eden_idle_erase_legend(cur);
-            kdisp_send_window();
-            s_frame_idx = nxt;
         } else if (s_frame_idx < SA_NUM_KEYS) {
             // Render keycaps until the slice budget is spent. Checked AFTER each key, so
             // a slice always makes progress; skipped (invalid) slots cost nothing.

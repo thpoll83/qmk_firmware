@@ -10,10 +10,10 @@
 // the left one after the physical gap, so the bands flow across the keyboard.
 //
 // Over it, "Poly" (left half) and "Kybd" (right half) in FreeSansBold24pt7b — the face
-// Eden writes its keycap letters in — are TYPED letter by letter, held, deleted letter
-// by letter from the end, and stay away for a while. The word is centred on its panel
-// (the full word's ink box, so the letters are typed into their final places). Each
-// letter is solid, cut out of the bands by a 2 px black ring (the word's shape grown
+// Eden writes its keycap letters in — are TYPED as one line across both panels, left
+// first, with a blinking text cursor, held, and deleted from the end (see SI_HIDE_MS).
+// Each word is centred on its panel (the full word's ink box, so the letters are typed
+// into their final places). Each letter, and the cursor, is solid, cut out of the bands by a 2 px black ring (the word's shape grown
 // by a radius-2 disc) and nothing more: the bands keep flowing between the letters and
 // through the counters.
 //
@@ -47,16 +47,25 @@
 #define SI_FIELD_CX ((2 * SI_W + SI_GAP_PX) / 2)
 #define SI_FIELD_CY (SI_H / 2)
 
-// The word's cycle: hidden, typed a letter every SI_KEY_MS, held, deleted a letter
-// every SI_KEY_MS from the end.
-#define SI_HIDE_MS  5000u
-#define SI_KEY_MS   300u
-#define SI_HOLD_MS  8000u
-#define SI_RING     2          // the black ring's radius, px
-#define SI_WIN      (2 * SI_RING + 1)
+// The sentence "Poly Kybd" is typed across both panels like one line of text, with
+// a cursor: the cursor blinks at the start of the left panel, "Poly" is typed there,
+// the space moves the cursor to the right panel, "Kybd" is typed, the cursor blinks
+// through the hold, and then everything is deleted from the end, back across the gap.
+// Both halves run the same timeline from the same idle-session clock.
+#define SI_HIDE_MS   5000u     // cursor blinking alone at the start
+#define SI_KEY_MS    300u      // one keystroke (letter, space or backspace)
+#define SI_HOLD_MS   8000u     // the full sentence, cursor blinking at its end
+#define SI_BLINK_MS  530u      // cursor half-period while nothing is typed
+#define SI_CURSOR_W  2         // cursor bar width, px
+#define SI_CURSOR_GAP 2        // px between the last letter's pen position and the cursor
+#define SI_RING      2         // the black ring's radius, px
+#define SI_WIN       (2 * SI_RING + 1)
 
 static const uint32_t SI_WORD_LEFT[]  = U"Poly";
 static const uint32_t SI_WORD_RIGHT[] = U"Kybd";
+#define SI_NL ((uint8_t)(sizeof(SI_WORD_LEFT) / sizeof(SI_WORD_LEFT[0]) - 1u))
+#define SI_NR ((uint8_t)(sizeof(SI_WORD_RIGHT) / sizeof(SI_WORD_RIGHT[0]) - 1u))
+#define SI_CYCLE_MS (SI_HIDE_MS + 2u * (SI_NL + 1u + SI_NR) * SI_KEY_MS + SI_HOLD_MS)
 
 // Each glyph of this half's word, laid out once per session from the font metrics.
 typedef struct {
@@ -67,6 +76,7 @@ typedef struct {
 } si_gpos_t;
 
 static si_gpos_t      s_g[4];
+static int16_t        s_pen[4];      // pen position after each glyph (word columns): the cursor
 static uint8_t        s_ng;
 static int16_t        s_ww;          // word width (ink)
 static uint8_t        s_wh;          // word height (ink)
@@ -102,20 +112,29 @@ static void si_layout(const uint32_t *text) {
             ++s_ng;
         }
         pen = (int16_t)(pen + glyph_x_advance(g));
+        if (s_ng) s_pen[s_ng - 1] = pen;
     }
     for (uint8_t i = 0; i < s_ng; ++i) {       // rebase to the ink's top-left
         s_g[i].top = (uint8_t)((int8_t)s_g[i].top - top);
         s_g[i].x   = (int16_t)(s_g[i].x - left);
+        s_pen[i]   = (int16_t)(s_pen[i] - left);
     }
-    s_ww = (int16_t)(right - left);
-    s_wh = (uint8_t)(bottom - top);
+    s_ww   = (int16_t)(right - left);
+    s_wh   = (uint8_t)(bottom - top);
 }
 
-// The ink of the first `n` letters in word column `wx` as a 64-bit column, bit 0 =
-// the word's top row.
-static uint64_t si_word_col(int16_t wx, uint8_t n) {
-    if (wx < 0 || wx >= s_ww) return 0;
+// The ink of the first `n` letters, plus the cursor when `cursor`, in word column `wx`
+// as a 64-bit column, bit 0 = the word's top row. The cursor stands where the next
+// letter would start (the pen after letter n) and spans the FULL ink height, descender
+// included. ⚠️ A cap-height bar right after the last letter read as a letter: "Polyl",
+// "Kybdl". Going below the baseline, where no l does, is what makes it a cursor.
+static uint64_t si_word_col(int16_t wx, uint8_t n, bool cursor) {
     uint64_t col = 0;
+    if (cursor) {
+        const int16_t cx = n ? (int16_t)(s_pen[n - 1] + SI_CURSOR_GAP) : 0;
+        if (wx >= cx && wx < cx + SI_CURSOR_W) col = ((uint64_t)1 << s_wh) - 1u;
+    }
+    if (wx < 0 || wx >= s_ww) return col;
     for (uint8_t i = 0; i < n; ++i) {
         const int16_t gx = (int16_t)(wx - s_g[i].x);
         if (gx < 0 || gx >= s_g[i].w) continue;
@@ -129,16 +148,34 @@ static uint64_t si_word_col(int16_t wx, uint8_t n) {
     return col;
 }
 
-// How many letters are showing, `u` ms into the cycle of an `n`-letter word.
-static uint8_t si_letters(uint32_t u, uint8_t n) {
-    if (u < SI_HIDE_MS) return 0;
+// What this half shows `u` ms into the cycle: how many of its letters, and whether
+// the cursor is on it (and lit, when it blinks).
+typedef struct {
+    uint8_t n;
+    bool    cursor;
+} si_state_t;
+
+static bool si_blink(uint32_t u) { return ((u / SI_BLINK_MS) & 1u) == 0u; }
+
+static si_state_t si_state(uint32_t u, bool left) {
+    const uint32_t K = SI_KEY_MS;
+    // Keystrokes: NL letters, one space, NR letters — then the same, backwards.
+    if (u < SI_HIDE_MS) return left ? (si_state_t){0, si_blink(u)} : (si_state_t){0, false};
     u -= SI_HIDE_MS;
-    if (u < n * SI_KEY_MS) return (uint8_t)(u / SI_KEY_MS + 1u);        // typing
-    u -= n * SI_KEY_MS;
-    if (u < SI_HOLD_MS) return n;
+    if (u < SI_NL * K) return left ? (si_state_t){(uint8_t)(u / K + 1u), true} : (si_state_t){0, false};
+    u -= SI_NL * K;
+    if (u < K) return left ? (si_state_t){SI_NL, false} : (si_state_t){0, true};      // the space
+    u -= K;
+    if (u < SI_NR * K) return left ? (si_state_t){SI_NL, false} : (si_state_t){(uint8_t)(u / K + 1u), true};
+    u -= SI_NR * K;
+    if (u < SI_HOLD_MS) return left ? (si_state_t){SI_NL, false} : (si_state_t){SI_NR, si_blink(u)};
     u -= SI_HOLD_MS;
-    if (u < n * SI_KEY_MS) return (uint8_t)(n - 1u - u / SI_KEY_MS);    // deleting
-    return 0;
+    if (u < SI_NR * K) return left ? (si_state_t){SI_NL, false} : (si_state_t){(uint8_t)(SI_NR - 1u - u / K), true};
+    u -= SI_NR * K;
+    if (u < K) return left ? (si_state_t){SI_NL, true} : (si_state_t){0, false};       // back over the space
+    u -= K;
+    if (u < SI_NL * K) return left ? (si_state_t){(uint8_t)(SI_NL - 1u - u / K), true} : (si_state_t){0, false};
+    return left ? (si_state_t){0, true} : (si_state_t){0, false};
 }
 
 void status_idle_screen(void) {
@@ -158,9 +195,11 @@ void status_idle_screen(void) {
     const bool     left    = is_left_side();
     const int16_t  fx0     = left ? 0 : (SI_W + SI_GAP_PX);   // this panel's field column 0
 
-    // The word: how many letters are typed, placed centred on the panel.
-    const uint32_t cycle = SI_HIDE_MS + 2u * s_ng * SI_KEY_MS + SI_HOLD_MS;
-    const uint8_t  n     = si_letters(t % cycle, s_ng);
+    // The word: how many letters are typed and where the cursor is, centred on the panel.
+    const si_state_t st  = si_state(t % SI_CYCLE_MS, left);
+    const uint8_t    n   = st.n;
+    const bool       cur = st.cursor;
+    const bool       any = n || cur;
     const int16_t  wx0   = (int16_t)((SI_W - s_ww) / 2);
     const uint8_t  wy0   = (uint8_t)((SI_H - s_wh) / 2);
 
@@ -175,7 +214,7 @@ void status_idle_screen(void) {
     // counters, as they should.
     uint64_t win[SI_WIN];
     for (int8_t k = 0; k < SI_WIN; ++k)
-        win[k] = n ? (si_word_col((int16_t)(-SI_RING + k - wx0), n) << wy0) : 0;
+        win[k] = any ? (si_word_col((int16_t)(-SI_RING + k - wx0), n, cur) << wy0) : 0;
 
     for (int16_t x = 0; x < SI_W; ++x) {
         const uint64_t ink  = win[2];
@@ -200,7 +239,7 @@ void status_idle_screen(void) {
         }
         for (uint8_t p = 0; p < SI_H / 8; ++p) buf[(uint16_t)p * SI_W + (uint16_t)x] = (uint8_t)(lit >> (8u * p));
         for (uint8_t k = 0; k < SI_WIN - 1; ++k) win[k] = win[k + 1];
-        win[SI_WIN - 1] = n ? (si_word_col((int16_t)(x + 1 + SI_RING - wx0), n) << wy0) : 0;
+        win[SI_WIN - 1] = any ? (si_word_col((int16_t)(x + 1 + SI_RING - wx0), n, cur) << wy0) : 0;
     }
 
     const uint32_t took = timer_elapsed32(t_start);

@@ -468,6 +468,7 @@ static void pack_map_value(uint8_t *buf, uint16_t idx, uint16_t v, uint8_t width
 // the whole mapping within a few milliseconds of wall clock.
 #define MAP_REPAIR_REPORTS_PER_TICK 2
 static bool     s_repair_active = false;
+static bool     s_repair_reset_pending = false;
 static uint16_t s_repair_from   = 0;
 static uint16_t s_repair_pairs  = 0;
 static uint8_t  s_repair_reports = 0;
@@ -478,6 +479,7 @@ void arm_overlay_map_repair(void) {
     }
     s_map_sync_lost  = false;
     s_repair_active  = true;
+    s_repair_reset_pending = true;
     s_repair_from    = 0;
     s_repair_pairs   = 0;
     s_repair_reports = 0;
@@ -494,6 +496,27 @@ void overlay_map_repair_tick(void) {
     // the whole index space, unlike the host which partitions by required width.
     const uint8_t  width  = OVERLAY_MAP_REPAIR_WIDTH;
     const uint16_t values = OVERLAY_MAP_VALUES(sizeof(msg.mapping), width);
+
+    // Reset the slave's mapping before replaying ours. The replay below sends only
+    // the positions the master uses, so without this a slave that missed the app
+    // switch's reset keeps the PREVIOUS app's entries wherever the new app has
+    // none, and shows old icons there. The slave applies action bits from a state
+    // sync whose bits it has not seen set (split_sync.c, newly_set), on the same
+    // thread as the mapping handler, so this lands before the first replayed pair.
+    // A copy, because the master's own state must not carry the action bits.
+    if (s_repair_reset_pending) {
+        poly_sync_t reset = *access_local_state();
+        reset.overlay_flags |= USAGE_RESET | MAPPING_RESET;
+        if (!sync_succeeded(send_to_bridge(USER_SYNC_POLY_DATA, (void *)&reset,
+                                           sizeof(poly_sync_t), 10))) {
+            s_repair_active = false;
+            note_overlay_map_sync_lost();
+            uprint("Overlay mapping repair: slave reset did not land, aborting this pass.\n");
+            return;
+        }
+        s_repair_reset_pending = false;
+        ++sent_this_tick;
+    }
 
     while (sent_this_tick < MAP_REPAIR_REPORTS_PER_TICK) {
         uint16_t slot = 0;      // value slot in this report (from,to,from,to,...)

@@ -67,7 +67,10 @@ uint16_t adjust_overlay_idx_to_mod(uint16_t idx, uint8_t mods);
 // view from its own tables. note_..._lost() latches the failure;
 // arm_...() starts a repair at the end of the app switch (enable_overlays,
 // hid_com.c case 11); overlay_map_repair_tick() does the actual sending from
-// housekeeping, a bounded number of reports per tick.
+// housekeeping, a bounded number of reports per tick. The first thing a repair
+// sends is a USAGE_RESET | MAPPING_RESET state sync: the replay carries only the
+// positions the master uses, so a slave that also missed the app switch's reset
+// would otherwise keep the previous app's entries everywhere else.
 //
 // ⚠️ The send loop is deliberately NOT run inline in the HID handler: a full
 // mapping is up to 34 reports and each bridge can burn 10 retries x the bridge

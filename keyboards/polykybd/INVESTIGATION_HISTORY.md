@@ -435,6 +435,13 @@ on exactly the bad link that triggered the repair. The 10-bit packer is the inve
 `set_10bit_overlay_mapping()`'s decode — verify any change to it by round-tripping
 through that decoder, not by eye.
 
+**Follow-up (2026-09-30, CodeRabbit on #319)**: the replay sends only the positions
+the master uses, so it could not undo a lost *reset*. When the app switch's prepare
+(`MAPPING_RESET | USAGE_RESET`) failed to reach the slave, the slave kept the previous
+app's entries wherever the new app had none and showed old icons there, while the
+repair reported success. The repair now opens with a state sync carrying those two
+action bits, sent from a copy so the master's own state never holds them.
+
 The two **image** bridges are checked and logged but deliberately **not repaired** —
 per the table above the master cannot: it never had the bytes. Closing that would need
 a master-side shadow copy (RAM it does not have) or a host-visible failure signal (a

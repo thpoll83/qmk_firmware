@@ -36,7 +36,12 @@ that cost real debugging to learn (2026-07):
   by UF2 over GPIO BOOTSEL, which bypasses `fw_staging` entirely, and this
   workflow runs no HIL at all. With the fwapply tier now running on every merge
   to `PolyKybd`, the gate is normally a formality; it exists for a hand-made tag,
-  a re-publish, or a merge whose rig run went red and was forgotten.
+  a re-publish, or a merge whose rig run went red and was forgotten — and for a
+  release published while the last merge's run is STILL GOING. That run takes ~11
+  minutes and the gate accepts only a finished green one, so publishing right after a
+  merge loses the race (v1.3.1, 2026-09-30: gate at 08:29, apply job green at 08:32:37).
+  Check the merge commit's runs by `head_sha` before dispatching anything; a filtered
+  run listing can omit the newest runs and read as "none started".
   - ⚠️ **It CANNOT simply demand a run on `github.sha`** — release tags land on
     the auto-bump `[skip ci]` commit, which by construction no workflow ran on, so
     that gate would refuse every release. It walks back through ancestors and then

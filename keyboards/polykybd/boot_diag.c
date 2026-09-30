@@ -390,6 +390,18 @@ void emit_boot_timing_line(void) {
 
 static uint8_t s_boot_sub = 0;   // the sub-step whose panel paint is in flight
 
+// The high byte of a breadcrumb stamped inside a milestone: the step, plus bit 4
+// (bit 12 of the arg) set once core1 has reached core1_entry(). boot_step_of() masks
+// it off, so the late-boot guard reads the step the same either way.
+static uint8_t boot_mark_hi(uint8_t step) {
+    return (uint8_t)(step | (g_core1_entered ? 0x10u : 0u));
+}
+
+// A 0xE1..0xE3 in-milestone breadcrumb, with the core1 flag as it is right now.
+static uint16_t boot_in_step_mark(uint8_t step, uint8_t mark) {
+    return (uint16_t)(((uint16_t)boot_mark_hi(step) << 8) | mark);
+}
+
 // ⚠️ Per-BLOCK breadcrumbs for a sub-step's status-panel paint. A master wedged at
 // "63%, 4 / 4" with the "4" half drawn left `phase=1:0x0504`: the paint started and
 // never returned, and a status-panel write has a 100 ms I2C timeout, so something
@@ -407,7 +419,7 @@ static uint8_t s_boot_sub = 0;   // the sub-step whose panel paint is in flight
 // keep their 0xE1 stamp; render keys are 1..40 and sub-steps 1..N, so 0x80+ is free.
 void boot_paint_mark(uint8_t call) {
     if (s_boot_step == 0 || s_boot_sub == 0) return;
-    const uint8_t hi = (uint8_t)(s_boot_step | (g_core1_entered ? 0x10u : 0u));
+    const uint8_t hi = boot_mark_hi(s_boot_step);
     const uint8_t lo = (uint8_t)(0x80u | (((s_boot_sub - 1u) & 3u) << 4) | (call & 0x0Fu));
     (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(((uint16_t)hi << 8) | lo));
 }
@@ -625,8 +637,12 @@ void splash_progress(uint8_t step) {
     // sub-step (1..N) or a render key (1..40): the status-panel paint is I2C, the logo
     // is keycap SPI, and "hung in step 6" cannot tell the two apart. A record reading
     // phase=1:0x06E1 means the panel paint never returned; 0x06E2, the logo draw.
-    const uint16_t in_step = (uint16_t)((uint16_t)s_boot_step << 8);
-    (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(in_step | 0xE1u));
+    // ⚠️ They carry the core1 flag too (bit 12, boot_mark_hi()): a step-5 master hung
+    // at 0x05E2 (fw 1.0.0, 2026-09-30), the keycap SPI draw right after the launch,
+    // and without the flag the record could not say whether core1 was running yet.
+    // So 0x15E2 = core1 in core1_entry(), 0x05E2 = not (or firmware before this).
+    // Sampled at EACH stamp, since core1 can arrive during the panel paint.
+    (void)crash_phase_enter(CRASH_PHASE_BOOT, boot_in_step_mark(s_boot_step, 0xE1u));
 
     // ...and put the same milestone somewhere a human can read off a wedged board.
     // Skipped for step 1: that one runs in keyboard_pre_init_user(), and QMK does not
@@ -635,7 +651,7 @@ void splash_progress(uint8_t step) {
         oled_boot_progress(final ? POLY_SPLASH_STEPS : step, POLY_SPLASH_STEPS, 0, 0, NULL);
     }
 
-    (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(in_step | 0xE2u));
+    (void)crash_phase_enter(CRASH_PHASE_BOOT, boot_in_step_mark(s_boot_step, 0xE2u));
     clear_all_displays();
     display_message_progressive(1, 1, r1_word, poly_heavy_font(), 0, solid_count);
     display_message_progressive(r2_row, 1, r2_word, poly_heavy_font(), r1_vis, solid_count);
@@ -650,7 +666,7 @@ void splash_progress(uint8_t step) {
         // Boot complete: dwell on the finished splash, then hand the keycaps
         // over to the real legends — the same tail show_splash_screen() always
         // ran, now deferred to the end of boot so the reveal is meaningful.
-        (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(in_step | 0xE3u));
+        (void)crash_phase_enter(CRASH_PHASE_BOOT, boot_in_step_mark(s_boot_step, 0xE3u));
         wait_ms(400);
         boot_render_guard_begin();
         update_displays(ALL_AT_ONCE);

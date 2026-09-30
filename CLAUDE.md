@@ -254,6 +254,15 @@ skill; the mechanics, the `release-notes` branch and `scripts/publish_release.py
   closed if that filter cannot be read. `PolyKybd-fw-v0.27.1` published with zero
   assets before this existed. `bump:none` additionally skips the version bump for such
   a PR — a convenience, since the gate no longer depends on anyone remembering it.
+  ⚠️ **Publishing within ~11 minutes of a firmware merge RACES that merge's own apply
+  run, and the gate only accepts a FINISHED green one.** v1.3.1 was published at ~08:27;
+  the #320 merge run's apply job finished at 08:32:37; the gate checked at 08:29 and
+  refused (2026-09-30). **On a refusal, first look up the runs for the newest firmware
+  merge commit BY `head_sha`** — if its apply job is still running, wait and re-run the
+  release; a `tier: fwapply` dispatch is for a merge whose run went red or never started.
+  ⚠️ **Never read "no run exists" off a filtered run listing.** `list_workflow_runs`
+  filtered by branch + event omitted the three newest merge runs, which produced the
+  false claim that squash merges start no HIL run; the `head_sha` query found all three.
 - ⚠️ **A `PROTOCOL_VERSION` bump means BOTH artifacts get released, and the check is the
   PUBLISHED versions, not the in-tree ones.** The source-lockstep rule can be perfectly
   satisfied while the releases sit a protocol apart, and nothing downstream catches it —

@@ -130,16 +130,6 @@ void oled_status_screen(void) {
     oled_render_dirty(true);
 }
 
-void oled_render_logos(void) {
-    if (is_left_side()) {
-        oled_draw_poly();
-        oled_scroll_right();
-    } else {
-        oled_draw_kybd();
-        oled_scroll_left();
-    }
-}
-
 // Progress bar drawn into the kdisp scratch buffer (call from
 // oled_update_buffer_fw_update before the blit).
 void oled_fw_update_progress_bar(int8_t top_y, int8_t bottom_y, uint8_t pct) {
@@ -1062,7 +1052,7 @@ bool oled_task_user(void) {
 #endif
     } else if (get_local_state()->rec_state != POLY_REC_IDLE) {
         // ABOVE the idle branch on purpose: the idle timer would otherwise swap the
-        // panel to the logos mid-recording and take the only indicator with it. The
+        // panel to the idle screen mid-recording and take the only indicator with it. The
         // recorder also holds update_performed() while it is busy (poly_keymap.c), so
         // in practice idle never engages here -- this ordering is the belt to that
         // brace, and it also covers the SAVING / SAVED tail after the last keystroke.
@@ -1080,12 +1070,16 @@ bool oled_task_user(void) {
         oled_scroll_off();
         status_idle_screen();
 #else
-        oled_render_logos();
+        // split42 has no idle artwork (its "logos" were all-zero placeholders): a blank
+        // panel, written once — oled_write_raw() diffs, so it costs no bus traffic after.
+        oled_scroll_off();
+        kdisp_set_buffer(0);
+        oled_write_raw((char *)get_scratch_buffer(), OLED_MATRIX_SIZE);
 #endif
     } else if (get_local_state()->settings_more != 0) {
         // Settings -> "More" is open: show what the board IS. Below the idle branch
-        // on purpose — an idled board has nothing to report and the logos are the
-        // lower-power screen; settings_more clears itself on leaving the layer.
+        // on purpose — an idled board has nothing to report and the idle screen owns
+        // the panel; settings_more clears itself on leaving the layer.
         oled_scroll_off();
         oled_telemetry_screen();
     } else {

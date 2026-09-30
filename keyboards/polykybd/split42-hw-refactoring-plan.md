@@ -346,7 +346,7 @@ y ≤ 31 px  →  Row 3: WPM + language + display brightness bar
 
 The num/caps/scroll lock icons currently drawn at y=16, y=38, y=54 need to collapse to fit in 32 px.
 
-**4. New logo bitmaps**: `oled_draw_kybd()` and `oled_draw_poly()` contain 128×64 bitmaps (rendered by `oled_write_raw_P`). For 128×32 the raw buffer must be 512 bytes (128×32/8). Generate new bitmaps using the existing `images/png_to_code.py` tool or any image editor, then paste the byte arrays.
+**4. New logo bitmaps** *(superseded 2026-09: the scrolling logos were removed on both variants; split42 idles on a blank panel)*: `oled_draw_kybd()` and `oled_draw_poly()` contain 128×64 bitmaps (rendered by `oled_write_raw_P`). For 128×32 the raw buffer must be 512 bytes (128×32/8). Generate new bitmaps using the existing `images/png_to_code.py` tool or any image editor, then paste the byte arrays.
 
 `oled_task_user()`, `oled_status_screen()`, and `oled_render_logos()` are structurally identical to split72 — copy verbatim.
 

@@ -52,9 +52,9 @@ band-by-band:
 - The other `oled_clear()` (`poly_keymap.c` `oled_init_user`) is harmless: QMK calls
   `oled_init_user` at the **top** of `oled_init`, before `oled_initialized = true`, so
   the `oled_off/render/on` around it are early-return no-ops (it only touches RAM).
-- The logos + DOOM status paths use diff-based `oled_write_raw` (no `oled_clear`) and
-  hardware scroll; they can still dribble on a busy transition but are non-critical, so
-  they were left as-is.
+- The DOOM status path uses diff-based `oled_write_raw` (no `oled_clear`) and
+  hardware scroll; it can still dribble on a busy transition but is non-critical, so
+  it was left as-is.
 
 **Boot noise (deferred `DISPLAY_ON`)** — the SSD1306 powers up with random GDDRAM, and
 stock `oled_init()` sent `DISPLAY_ON` before any content was flushed, so boot flashed
@@ -127,9 +127,14 @@ trap — derive it from synced state, not from a shadow updated on an edge.
 
 ⚠️ **Idle is a dim contrast register, NOT `oled_off()`** (`POLY_STATUS_IDLE_BRIGHT`,
 0). During `DISP_IDLE`, `oled_task_user()` hands split72's panel to
-`status_idle_screen()` (below) and split42's to `oled_render_logos()`, whose
-**hardware scroll** keeps running; switching the panel off would stop either, and the
-motion is the idle look this board is supposed to have.
+`status_idle_screen()` (below) and blanks split42's; switching the panel off would stop
+the animation, which is the idle look this board is supposed to have.
+
+**The scrolling Poly/Kybd logos are GONE** (two 1 KB bitmaps on split72, all-zero
+512 B placeholders on split42, `oled_draw_poly/kybd()`, `oled_render_logos()`). Their
+one other caller, `oled_init_user()`, runs before the driver is initialised, so the
+boot "logo" only ever filled RAM — nobody saw it. The DOOM attract logo is separate
+(`DOOM_LOGO_OLED`) and keeps its hardware scroll.
 
 ### The idle screen (split72, `status_idle.c`)
 

@@ -165,7 +165,7 @@ static void si_layout(void) {
 
 // The line in field column `fx` as a 64-bit column, bit 0 = the tallest letter's top:
 // slots [from, to) drawn `shift` px to the left, plus the underscore under slot `cur`
-// (-1: none), 3 px thick just below the baseline.
+// (-1: none), 5 px thick just below the baseline.
 static uint64_t si_line_col(int16_t fx, uint8_t from, uint8_t to, int16_t shift, int8_t cur) {
     uint64_t col = 0;
     fx = (int16_t)(fx + shift);
@@ -176,7 +176,7 @@ static uint64_t si_line_col(int16_t fx, uint8_t from, uint8_t to, int16_t shift,
         const si_slot_t *c  = &s_slot[cur];
         const int16_t    x0 = (int16_t)(c->pen0 + (c->w ? 1 : 2));
         const int16_t    x1 = (int16_t)(c->pen1 - (c->w ? 1 : 2));
-        if (fx >= x0 && fx < x1) col = (uint64_t)0x7u << (s_base + 2u);
+        if (fx >= x0 && fx < x1) col = (uint64_t)0x1Fu << (s_base + 2u);   // 5 px thick
     }
     for (uint8_t i = from; i < to; ++i) {
         const si_slot_t *g  = &s_slot[i];

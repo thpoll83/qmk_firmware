@@ -268,18 +268,3 @@ void oled_update_buffer_fw_update(void) {
     }
     oled_fw_update_progress_bar(25, 31, pct);
 }
-
-/*
- * 128×32 logo bitmaps (512 bytes each = 128*32/8).
- * TODO: Replace these placeholder bitmaps with actual 128×32 artwork.
- * For now, a minimal placeholder pattern is used so the firmware compiles.
- */
-void oled_draw_kybd(void) {
-    static const char kybd_bitmap[512] = { 0 };
-    oled_write_raw_P(kybd_bitmap, sizeof(kybd_bitmap));
-}
-
-void oled_draw_poly(void) {
-    static const char poly_bitmap[512] = { 0 };
-    oled_write_raw_P(poly_bitmap, sizeof(poly_bitmap));
-}

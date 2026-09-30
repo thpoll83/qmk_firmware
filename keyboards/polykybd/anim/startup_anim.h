@@ -95,6 +95,8 @@ uint16_t startup_anim_board_h(void);
 uint32_t startup_anim_loop_ms(void);
 // The shared 64x64 dither tile (flash).
 uint8_t startup_anim_noise(int16_t x, int16_t y);
+// Eden's background plasma (0..255) at (gx, gy), phase `tp`.
+uint8_t startup_anim_plasma(int16_t gx, int16_t gy, uint8_t tp);
 // The idle ring ripple's density at board point (gx, gy) at loop time `el` (0..~27).
 uint8_t startup_anim_ring_density(int16_t gx, int16_t gy, uint32_t el);
 // Draw the idle comets crossing a w x h window at board point (x0, y0), `upp_q8` board

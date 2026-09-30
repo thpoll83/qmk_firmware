@@ -133,24 +133,25 @@ motion is the idle look this board is supposed to have.
 
 ### The idle screen (split72, `status_idle.c`)
 
-A glyph rain over a window onto the Eden idle field. The window's position is the
-plate's 23.75 x 13.00 mm display opening (`poly_kybd_split72_plate_{left,right}.kicad_pcb`,
-Eco2.User), registered to the key columns and then to Eden's board space: centre
-(742, 58) left, (931, 58) right, ONE board unit per pixel (board space is in keycap
-pixels; a mm-true 0.78 units/px clumped the dither into 2x2 blocks on hardware). So the ring ripple and
-the comets that cross the keycaps cross this panel too, read through
-`startup_anim_ring_density()` / `startup_anim_status_comets()` — one copy of the maths,
-not a second one here.
+A procedural "Poly Kybd" marquee in FreeSansBold24pt7b (`poly_heavy_font()`, the face
+Eden writes its keycap letters in), flowing right to left across BOTH panels as one
+strip. Letters are a solid 1 px outline filled with Eden's plasma dithered against its
+noise tile (`startup_anim_plasma()` / `startup_anim_noise()`), over a faint plasma
+haze. Every frame is computed from the font's column bytes in flash; there is no image
+and no RAM strip buffer.
 
-- **The rain draws from `g_all_fonts`**: resident Latin/Greek/Cyrillic/currency
-  always, every font-pack script (and the fantasy faces) when a pack is flashed. A
-  script whose probe glyph is missing is skipped, so the same table works either way.
+- ⚠️ **A marquee, not a word drifting inside the panel — for burn-in.** Simulated over
+  20 min, a drifting 95..112 px word kept the centre lit 35..47 % and left 137..1148
+  pixels never lit. The marquee makes every column identical (15.9..16.3 %), and the
+  constant-speed bob that lets the letters leave the panel by 14 px spreads the rows
+  to 3.4..24 %. The hardware-scrolled logos it replaces: rows 4.7..77 %.
 - ⚠️ **It redraws every frame, and a redraw switches the SSD1306 back ON** — so the
   branch honours `STATUS_DISP_ON` itself, as the tutorial branch does, or the panel
   stays lit through the suspend.
-- ⚠️ **Non-blocking flush**: the frame goes through `oled_write_raw()` and QMK's
-  per-pass `oled_render()`; `oled_render_dirty(true)` here would cost a ~26 ms I2C
-  burst every 80 ms frame. The console prints `Status idle: worst frame Nms` every 5 s.
+- ⚠️ **Non-blocking flush**: `oled_write_raw()` plus QMK's per-pass `oled_render()`. A
+  marquee dirties nearly every block, so the 100 ms frame period leaves room for the
+  ~16 passes a full flush takes; `oled_render_dirty(true)` would block ~26 ms per
+  frame. The console prints `Status idle: worst frame Nms` every 5 s.
 
 **Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
 `oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced

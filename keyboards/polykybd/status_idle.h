@@ -1,7 +1,7 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
-// The status panel's idle screen (split72): a glyph rain over a window onto the
-// Eden idle field. See status_idle.c.
+// The status panel's idle screen (split72): a procedural "Poly Kybd" marquee in
+// the Eden splash face, filled with Eden's plasma. See status_idle.c.
 #pragma once
 
 // Compose and hand one idle frame to the OLED driver, at most every

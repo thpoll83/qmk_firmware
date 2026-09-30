@@ -248,7 +248,14 @@
 //      ⚠️ The table is part of the format: a retrained table is a new table and a
 //      new protocol version, never an edit to v1. Bridged to the slave on the
 //      compressed transaction with PRC_BRIDGE_FLAG in `len` (split_sync.h).
-#define PROTOCOL_VERSION 20
+//  v21 cmd 33 (SEND_OVERLAY_MAPPING_W) carries two flag bits in its width byte:
+//      OVERLAY_MAP_W_RESET runs the prepare step (cmd 11 with MIRROR_OVERLAYS |
+//      MAPPING_RESET | USAGE_RESET) before the pairs are applied, and
+//      OVERLAY_MAP_W_SHOW runs the enable step (cmd 11 with DISPLAY_OVERLAYS)
+//      after. A warm app switch is then one mapping report instead of prepare +
+//      mapping + enable. Older firmware rejects the flagged width, so the host
+//      sets them only at v21+ (PROTOCOL_HISTORY.md).
+#define PROTOCOL_VERSION 21
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -384,6 +391,12 @@
 // by round-tripping the packer through the decoder across all of 8..16.
 #define OVERLAY_MAP_WIDTH_MIN 8
 #define OVERLAY_MAP_WIDTH_MAX 16
+// v21: cmd 33's width byte also carries two flags. 8..16 needs bits 0..4 only;
+// bit 7 is OVERLAY_MAP_ICON_FILL on the split transaction and must never come
+// from the host, so the handler forwards only the masked width.
+#define OVERLAY_MAP_W_WIDTH_MASK 0x1Fu
+#define OVERLAY_MAP_W_SHOW       0x20u  // enable overlays after applying (cmd 11, 0x01)
+#define OVERLAY_MAP_W_RESET      0x40u  // prepare before applying (cmd 11, 0x04|0x40|0x80)
 // Values a stream of `bytes` bytes holds at `width` bits — the ONE definition
 // host and firmware must agree on, since there is no count field: the host fills
 // every value (padding by repeating the last pair, which is idempotent) so a

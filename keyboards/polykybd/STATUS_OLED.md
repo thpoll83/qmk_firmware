@@ -136,7 +136,8 @@ motion is the idle look this board is supposed to have.
 A glyph rain over a window onto the Eden idle field. The window's position is the
 plate's 23.75 x 13.00 mm display opening (`poly_kybd_split72_plate_{left,right}.kicad_pcb`,
 Eco2.User), registered to the key columns and then to Eden's board space: centre
-(742, 58) left, (931, 58) right, 0.78 board units per pixel. So the ring ripple and
+(742, 58) left, (931, 58) right, ONE board unit per pixel (board space is in keycap
+pixels; a mm-true 0.78 units/px clumped the dither into 2x2 blocks on hardware). So the ring ripple and
 the comets that cross the keycaps cross this panel too, read through
 `startup_anim_ring_density()` / `startup_anim_status_comets()` — one copy of the maths,
 not a second one here.

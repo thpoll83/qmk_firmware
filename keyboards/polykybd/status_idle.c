@@ -46,9 +46,16 @@
 // (poly_kybd_split72_plate_{left,right}.kicad_pcb): the display window is the
 // 23.75 x 13.00 mm Eco2.User rectangle, registered to the PCB through the key-column
 // "cutout" labels (the plate is drawn mirrored) and then to the board space through
-// the key pitch (87 units per 19.05 mm). The 0.96" panel's 21.7 mm active width over
-// 128 px is 0.78 board units per pixel. The right half mirrors the left.
-#define SI_UPP_Q8    200                                   // board units per pixel, q8
+// the key pitch (87 units per 19.05 mm). The right half mirrors the left.
+//
+// ⚠️ ONE board unit per pixel, not the panel's physical scale. Board space is measured
+// in KEYCAP pixels (72 per keycap panel), not millimetres, so mapping by mm (0.78
+// units/px for a 0.170 mm status pixel) made neighbouring pixels read the same cell of
+// the dither tile: the sparkle clumped into 2x1 / 2x2 blocks and did not match the
+// keycaps' single-pixel grain (hardware). At 1:1 the grain, comet thickness and trail
+// lengths match the keycaps pixel for pixel; the status pixel is still 1.33x larger
+// (0.170 vs 0.128 mm), which no mapping can change.
+#define SI_UPP_Q8    256                                   // board units per pixel, q8
 #define SI_CX_LEFT   742
 #define SI_CX_RIGHT  931                                   // SA_BOARD_W - SI_CX_LEFT
 #define SI_CY        58

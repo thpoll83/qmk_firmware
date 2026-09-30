@@ -248,22 +248,24 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
     s_spk_fade = spark_fade;
 }
 
-// Spark `s` in this frame, or false when it is not lit (winked out, or thinned in idle).
-static bool sa_spark_at(uint16_t s, sa_spark_pt_t *pt) {
-    const uint32_t el         = s_spk_el;
-    const uint8_t  cv         = s_spk_cv;
+// Spark `s` at time `el`, or false when it is not lit (winked out, or thinned in idle).
+// A pure function of its arguments: the keycaps pass the frame's LATCHED values
+// (sa_spark_at), and the status panel (startup_anim_status_comets) passes its own, so
+// drawing the status panel between two keycap slices cannot disturb the latch.
+static inline bool sa_spark_eval(uint16_t s, uint32_t el, uint8_t cv, uint8_t fade, bool loop,
+                                 sa_spark_pt_t *pt) {
     const int16_t  margin     = SA_BOARD_W / 8;
     // Staggered death: each spark winks out once the rising `spark_fade` passes its
     // own hash threshold — so the sparks disappear a few at a time, not all at once.
-    if (sa_hash8(s * 3u + 7u) < s_spk_fade) return false;
+    if (sa_hash8(s * 3u + 7u) < fade) return false;
     // Idle screensaver thins the field out for a calmer look + lighter render
     // (fewer comet trails to plot → snappier). ~160/256 skipped ≈ 37% kept.
-    if (s_loop && sa_hash8(s * 19u + 11u) < 190u) return false;
+    if (loop && sa_hash8(s * 19u + 11u) < 190u) return false;
     uint8_t  p0   = sa_hash8(s * 2u + 1u);
     // Speed 1..8 in the boot intro; idle uses a WIDER 1..16 spread so the comets
     // clearly move at different speeds (some crawl, some drift), and the extra
     // el-shift below keeps even the fast ones slower than the boot streak.
-    uint8_t  spd  = s_loop ? (1u + (sa_hash8(s * 7u + 3u) & 15u))
+    uint8_t  spd  = loop ? (1u + (sa_hash8(s * 7u + 3u) & 15u))
                            : (1u + (sa_hash8(s * 7u + 3u) & 7u));
     int16_t  lane = (int16_t)(((uint32_t)sa_hash8(s * 5u + 9u) * SA_BOARD_H) >> 8);
     uint8_t  bw   = 1u + (sa_hash8(s * 11u + 2u) & 3u);
@@ -273,7 +275,7 @@ static bool sa_spark_at(uint16_t s, sa_spark_pt_t *pt) {
     // Idle screensaver drifts much slower than the boot intro: shift `el` two more
     // bits so the L→R comets and their vertical bob crawl (a calm sleeping-keyboard
     // drift). Boot intro keeps the faster streak.
-    uint8_t tsh = s_loop ? 7 : 4;
+    uint8_t tsh = loop ? 7 : 4;
     uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> tsh) * spd));  // head phase (streams L→R)
     int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
     int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> (uint8_t)(tsh + 1)) * bw + ph)) - 128) * bob) >> 7));
@@ -291,8 +293,13 @@ static bool sa_spark_at(uint16_t s, sa_spark_pt_t *pt) {
     // true keep-lit-pixels framebuffer won't fit in RAM). The fade formula below
     // (255 - k*230/tlen) stretches with tlen, so the longer tail fades gradually.
     uint8_t base_tlen = (uint8_t)(8u + (hv >> 4));
-    pt->tlen  = s_loop ? (uint8_t)(base_tlen + 28u) : base_tlen;
+    pt->tlen  = loop ? (uint8_t)(base_tlen + 28u) : base_tlen;
     return true;
+}
+
+// Spark `s` in the frame being rendered (the latched parameters).
+static bool sa_spark_at(uint16_t s, sa_spark_pt_t *pt) {
+    return sa_spark_eval(s, s_spk_el, s_spk_cv, s_spk_fade, s_loop, pt);
 }
 
 // Draw each comet that touches this keycap: a bright head + a horizontal trail extending
@@ -346,41 +353,49 @@ static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16
 //   2 diamond     +      -> the four points at distance 2, centre lit
 //   3 turning     +      -> x (the small form rotates through the peak)
 //   4 spike       +      -> a thin plus with 3-px arms, the centre ring dark
-static void sa_star_shape(uint8_t *buf, int16_t x, int16_t y, uint8_t shape, uint8_t stage) {
+// The lit offsets of one star at `stage`, written to dx/dy (room for SA_STAR_MAX_PTS);
+// returns how many. One table for both renderers: the keycaps (sa_star_shape) and the
+// status panel's idle screen (startup_anim_star_pts).
+#define SA_STAR_MAX_PTS 9
+static uint8_t sa_star_pts(uint8_t shape, uint8_t stage, int8_t *dx, int8_t *dy) {
     const uint8_t form = (stage == 2) ? 2 : (stage == 1 || stage == 3) ? 1 : 0;   // dot/small/full
-#define SA_P(dx, dy) sa_set(buf, (int16_t)(x + (dx)), (int16_t)(y + (dy)))
-    if (form == 0) { SA_P(0, 0); return; }
+    uint8_t n = 0;
+#define SA_P(px, py) do { dx[n] = (int8_t)(px); dy[n] = (int8_t)(py); ++n; } while (0)
+    SA_P(0, 0);
+    if (form == 0) return n;
     const bool x_small = (shape == 1);
     if (form == 1) {
-        SA_P(0, 0);
         if (x_small) { SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1); }
         else         { SA_P(-1, 0);  SA_P(1, 0);  SA_P(0, -1); SA_P(0, 1); }
-        return;
+        return n;
     }
     switch (shape) {
         case 0:
-            SA_P(0, 0);
             for (int8_t d = 1; d <= 2; ++d) { SA_P(-d, 0); SA_P(d, 0); SA_P(0, -d); SA_P(0, d); }
             break;
         case 1:
-            SA_P(0, 0);
             SA_P(-1, 0); SA_P(1, 0); SA_P(0, -1); SA_P(0, 1);
             SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
             break;
         case 2:
-            SA_P(0, 0);
             SA_P(-2, 0); SA_P(2, 0); SA_P(0, -2); SA_P(0, 2);
             SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
             break;
         case 3:
-            SA_P(0, 0); SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
+            SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
             break;
         default:
-            SA_P(0, 0);
             for (int8_t d = 2; d <= 3; ++d) { SA_P(-d, 0); SA_P(d, 0); SA_P(0, -d); SA_P(0, d); }
             break;
     }
 #undef SA_P
+    return n;
+}
+
+static void sa_star_shape(uint8_t *buf, int16_t x, int16_t y, uint8_t shape, uint8_t stage) {
+    int8_t dx[SA_STAR_MAX_PTS], dy[SA_STAR_MAX_PTS];
+    const uint8_t n = sa_star_pts(shape, stage, dx, dy);
+    for (uint8_t i = 0; i < n; ++i) sa_set(buf, (int16_t)(x + dx[i]), (int16_t)(y + dy[i]));
 }
 
 // The stars for one keycap, `fe` ms into the star window (letters solid .. end of fade).
@@ -771,6 +786,65 @@ void startup_anim_tick(void) {
         s_next_log = el + 1000;
     }
     sa_render_frame(el);
+}
+
+// ---- the status panels' idle screen (status_idle.c) ------------------------
+// The status panel is a window onto the SAME board space as the keycaps, so the idle
+// screen reads the field through these rather than re-deriving it: one copy of the
+// ring maths, the sparks and the star shapes.
+
+uint32_t startup_anim_loop_ms(void) {
+    return (s_active && s_loop) ? timer_elapsed32(s_start) : 0u;
+}
+
+uint8_t startup_anim_noise(int16_t x, int16_t y) { return sa_noise(x, y); }
+
+// The idle loop's ring term of sa_bg() alone (ring = 255, the loop's thicker crest),
+// without the plasma haze: 0 between rings, up to ~27 on a crest.
+uint8_t startup_anim_ring_density(int16_t gx, int16_t gy, uint32_t el) {
+    const int16_t  cxr  = SA_BOARD_W / 2;
+    const int16_t  cyr  = (int16_t)((int32_t)SA_BOARD_H * 42 / 100);
+    const uint8_t  tprg = (uint8_t)(el >> 5);
+    const int16_t  ax   = (int16_t)(((int32_t)(gx - cxr) * SA_RING_ASPECT) >> 8);
+    const int16_t  ay   = (int16_t)(gy - cyr);
+    uint16_t       rr   = sa_dist(ax, ay);
+    rr = (uint16_t)((int16_t)rr + ((sa_sin((uint8_t)(gx + 2 * gy)) - 128) >> 3));
+    const uint8_t  rv    = sa_sin((uint8_t)(((uint32_t)rr * SA_RING_FREQ >> 8) - tprg));
+    const uint8_t  crest = rv > 200 ? (uint8_t)(rv - 200) : 0;
+    return (uint8_t)(((uint16_t)crest * 255u) >> 9);
+}
+
+// The idle comets that cross a window whose top-left is board point (x0, y0), at
+// `upp_q8` board units per window pixel (q8). Same sparks, same trails as the keycaps
+// at time `el`; `plot` clips.
+void startup_anim_status_comets(void (*plot)(int16_t x, int16_t y), int16_t x0, int16_t y0,
+                                int16_t w, int16_t h, uint16_t upp_q8, uint32_t el) {
+    const int16_t bw = (int16_t)(((int32_t)w * upp_q8) >> 8);
+    const int16_t bh = (int16_t)(((int32_t)h * upp_q8) >> 8);
+    for (uint16_t i = 0; i < SA_NSPARK; ++i) {
+        sa_spark_pt_t sp;
+        if (!sa_spark_eval(i, el, 0, 0, true, &sp)) continue;
+        const int16_t ddx = (int16_t)(sp.sx - x0), ddy = (int16_t)(sp.sy - y0);
+        if (ddx < -4 || ddx >= bw + sp.tlen || ddy < -3 || ddy >= bh + 2) continue;
+        const int16_t hx   = (int16_t)(((int32_t)ddx << 8) / upp_q8);
+        const int16_t hy   = (int16_t)(((int32_t)ddy << 8) / upp_q8);
+        const uint8_t tlen = (uint8_t)(((uint16_t)sp.tlen << 8) / upp_q8);
+        const bool thick   = (sp.thick == 2u);
+        plot(hx, hy); plot(hx + 1, hy); plot(hx, hy + 1); plot(hx + 1, hy + 1);
+        if (thick) { plot(hx, hy - 1); plot(hx + 1, hy - 1); }
+        const uint16_t fade_step = 230u / tlen;
+        for (uint8_t k = 1; k < tlen; ++k) {
+            if (k <= 5 || sa_noise((int16_t)(hx - k + 30), (int16_t)(hy + 12)) <
+                          (uint8_t)(255u - (uint16_t)k * fade_step)) {
+                plot((int16_t)(hx - k), hy);
+                if (thick) plot((int16_t)(hx - k), hy + 1);
+            }
+        }
+    }
+}
+
+uint8_t startup_anim_star_pts(uint8_t shape, uint8_t stage, int8_t *dx, int8_t *dy) {
+    return sa_star_pts(shape, stage, dx, dy);
 }
 
 #else  // ---- non-split72: no-op stubs ----

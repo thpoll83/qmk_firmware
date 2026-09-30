@@ -518,8 +518,9 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 #endif
 
 // Status OLED contrast register for the current moment. Dark while idling (the
-// panel is handed to oled_render_logos() with its hardware scroll running, and
-// that faint scrolling logo is the idle look), otherwise the SAME contrast the
+// panel is handed to the idle screen — status_idle.c's glyph rain on split72, the
+// hardware-scrolled logos elsewhere — and that faint motion is the idle look),
+// otherwise the SAME contrast the
 // keycaps are on, mapped onto this panel's range by base/status_brightness.h.
 //
 // ⚠️ The input is the SYNCED local_state->contrast — the one value both halves
@@ -7489,13 +7490,17 @@ void eeconfig_init_user(void) {
 }
 
 
-// Initializes OLED display: turns off, clears buffer, sets scroll speed, shows logos, then enables.
+// Initializes OLED display: turns off, clears buffer, sets scroll speed, shows logos (not on split72), then enables.
 oled_rotation_t oled_init_user(oled_rotation_t rotation){
     oled_off();
     oled_clear();
     oled_render();
     oled_scroll_set_speed(0);
+#if !defined(KEYBOARD_polykybd_split72)
+    // split72's idle screen is status_idle.c, so nothing there references the two
+    // 1 KB logo bitmaps once this call is gone, and --gc-sections drops them.
     oled_render_logos();
+#endif
     oled_on();
     return rotation;
 }

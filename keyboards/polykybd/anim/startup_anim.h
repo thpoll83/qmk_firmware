@@ -89,3 +89,17 @@ sa_geom_t startup_anim_key_geom(bool right, uint8_t idx);
 uint16_t startup_anim_board_w(void);
 uint16_t startup_anim_board_h(void);
 
+// ---- the status panels' idle screen (status_idle.c, split72 only) -------------
+// ms into the running idle loop, or 0 when the loop is not running. The status panel
+// uses it so its window onto the field shows the same instant as this half's keycaps.
+uint32_t startup_anim_loop_ms(void);
+// The shared 64x64 dither tile (flash).
+uint8_t startup_anim_noise(int16_t x, int16_t y);
+// The idle ring ripple's density at board point (gx, gy) at loop time `el` (0..~27).
+uint8_t startup_anim_ring_density(int16_t gx, int16_t gy, uint32_t el);
+// Draw the idle comets crossing a w x h window at board point (x0, y0), `upp_q8` board
+// units per window pixel (q8). `plot` receives window pixels and must clip.
+void startup_anim_status_comets(void (*plot)(int16_t x, int16_t y), int16_t x0, int16_t y0,
+                                int16_t w, int16_t h, uint16_t upp_q8, uint32_t el);
+// One star's lit offsets at `stage` 0..4 (dx/dy need room for 9); returns the count.
+uint8_t startup_anim_star_pts(uint8_t shape, uint8_t stage, int8_t *dx, int8_t *dy);

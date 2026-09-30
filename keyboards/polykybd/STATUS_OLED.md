@@ -126,9 +126,30 @@ instead. Anything else the slave needs to track about brightness faces the same
 trap — derive it from synced state, not from a shadow updated on an edge.
 
 ⚠️ **Idle is a dim contrast register, NOT `oled_off()`** (`POLY_STATUS_IDLE_BRIGHT`,
-0). `oled_task_user()` hands the panel to `oled_render_logos()` during `DISP_IDLE` and
-its **hardware scroll** keeps running; switching the panel off would stop the scroll,
-which is the idle look this board is supposed to have.
+0). During `DISP_IDLE`, `oled_task_user()` hands split72's panel to
+`status_idle_screen()` (below) and split42's to `oled_render_logos()`, whose
+**hardware scroll** keeps running; switching the panel off would stop either, and the
+motion is the idle look this board is supposed to have.
+
+### The idle screen (split72, `status_idle.c`)
+
+A glyph rain over a window onto the Eden idle field. The window's position is the
+plate's 23.75 x 13.00 mm display opening (`poly_kybd_split72_plate_{left,right}.kicad_pcb`,
+Eco2.User), registered to the key columns and then to Eden's board space: centre
+(742, 58) left, (931, 58) right, 0.78 board units per pixel. So the ring ripple and
+the comets that cross the keycaps cross this panel too, read through
+`startup_anim_ring_density()` / `startup_anim_status_comets()` — one copy of the maths,
+not a second one here.
+
+- **The rain draws from `g_all_fonts`**: resident Latin/Greek/Cyrillic/currency
+  always, every font-pack script (and the fantasy faces) when a pack is flashed. A
+  script whose probe glyph is missing is skipped, so the same table works either way.
+- ⚠️ **It redraws every frame, and a redraw switches the SSD1306 back ON** — so the
+  branch honours `STATUS_DISP_ON` itself, as the tutorial branch does, or the panel
+  stays lit through the suspend.
+- ⚠️ **Non-blocking flush**: the frame goes through `oled_write_raw()` and QMK's
+  per-pass `oled_render()`; `oled_render_dirty(true)` here would cost a ~26 ms I2C
+  burst every 80 ms frame. The console prints `Status idle: worst frame Nms` every 5 s.
 
 **Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
 `oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced

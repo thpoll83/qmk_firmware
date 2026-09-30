@@ -20,6 +20,7 @@
 #ifdef POLYKYBD_DOOM
 #include "doom/doom_mode.h"
 #include "doom/doom_logo_oled.h"
+#include "status_idle.h"
 #endif
 
 #include QMK_KEYBOARD_H
@@ -1068,7 +1069,19 @@ bool oled_task_user(void) {
         oled_scroll_off();
         oled_macro_rec_screen();
     } else if ((get_local_state()->flags & DISP_IDLE) != 0) {
+#if defined(KEYBOARD_polykybd_split72)
+        // The animated idle screen redraws every frame, and a redraw switches the
+        // SSD1306 back on — so honour the suspend's panel-off here, as the tutorial
+        // branch above does, or the panel would stay lit through the suspend.
+        if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
+            oled_off();
+            return false;
+        }
+        oled_scroll_off();
+        status_idle_screen();
+#else
         oled_render_logos();
+#endif
     } else if (get_local_state()->settings_more != 0) {
         // Settings -> "More" is open: show what the board IS. Below the idle branch
         // on purpose — an idled board has nothing to report and the logos are the

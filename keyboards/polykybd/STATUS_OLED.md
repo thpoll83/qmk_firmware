@@ -143,11 +143,10 @@ stay away 5 s; each appearance lands somewhere new. Letters are solid inside a 2
 black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
 every frame comes from the font's column bytes in flash and Eden's tables.
 
-- ⚠️ **The ring alone does not separate the letters — gaps are CLOSED too.** A pixel
-  with ink within `SI_CLOSE` (12) px on its left AND right is part of the word. At 4
-  and then 7 px a band still showed through the wedge between K's leg and the y and
-  read as "K-ybd"; the closing also blacks the counters, which reads better than bands
-  inside the P/o/b/d.
+- ⚠️ **ONLY the 2 px ring is black — no gap closing.** Closing letter gaps too (any
+  pixel with ink within N px on both sides) was tried to stop a band reading as a dash
+  between K and y; it painted solid black wedges between the letters instead, which
+  read as a shadow. The bands showing through gaps and counters is the intended look.
 - Simulated from this C over 20 min: every pixel lit, mean 31 %, no pixel on longer
   than ~13 s (a held word), and the word moves every 16 s cycle.
 - ⚠️ **It redraws every frame, and a redraw switches the SSD1306 back ON** — so the

@@ -12,8 +12,8 @@
 // Over it, "Poly" (left half) and "Kybd" (right half) in FreeSansBold24pt7b — the face
 // Eden writes its keycap letters in — dissolve in through Eden's noise tile, hold,
 // dissolve out, and stay away for a while. Each letter is solid, cut out of the bands
-// by a 2 px black ring (the word's shape grown by a radius-2 disc), so it stays
-// readable over any band. Every appearance lands at a new place in the panel, so the
+// by a 2 px black ring (the word's shape grown by a radius-2 disc) and nothing
+// more: the bands keep flowing between the letters and through the counters. Every appearance lands at a new place in the panel, so the
 // letters never sit on the same pixels twice in a row.
 //
 // Nothing is stored: every frame is computed from the font's column bytes in flash and
@@ -53,8 +53,8 @@
 #define SI_OUT_MS   1500u
 #define SI_CYCLE_MS (SI_HIDE_MS + SI_IN_MS + SI_HOLD_MS + SI_OUT_MS)
 #define SI_MARGIN   3          // px kept between the outline and the panel edge
-#define SI_CLOSE    12         // px either side that close letter gaps and counters
-#define SI_WIN      (2 * SI_CLOSE + 1)
+#define SI_RING     2          // the black ring's radius, px
+#define SI_WIN      (2 * SI_RING + 1)
 
 static const uint32_t SI_WORD_LEFT[]  = U"Poly";
 static const uint32_t SI_WORD_RIGHT[] = U"Kybd";
@@ -176,28 +176,22 @@ void status_idle_screen(void) {
     kdisp_set_buffer(0);
     uint8_t *buf = get_scratch_buffer();
 
-    // A window of the word's columns, x-SI_CLOSE .. x+SI_CLOSE. The centre five make the
-    // black ring, a radius-2 disc dilation (offsets with dx*dx + dy*dy <= 4). The rest
-    // close the GAPS between letters and the counters: a pixel with ink within SI_CLOSE
-    // px on its left AND on its right is inside the word. Without it a band showed
-    // through the wedge between K's leg and the y, over 14 px wide, and read as a dash
-    // ("K-ybd").
+    // A five-column window of the word's columns (x-2 .. x+2) for the black ring: the
+    // word grown by a radius-2 disc (offsets with dx*dx + dy*dy <= 4), minus the ink.
+    // ⚠️ Deliberately ONLY the ring. Closing the gaps between letters as well (any pixel
+    // with ink within N px on both sides) painted solid black wedges between them — a
+    // shadow, most visibly between K and y — so the bands show through the gaps and the
+    // counters, as they should.
     uint64_t win[SI_WIN];
     for (int8_t k = 0; k < SI_WIN; ++k)
-        win[k] = vis ? (si_word_col((int16_t)(-SI_CLOSE + k - wx0)) << wy0) : 0;
+        win[k] = vis ? (si_word_col((int16_t)(-SI_RING + k - wx0)) << wy0) : 0;
 
     for (int16_t x = 0; x < SI_W; ++x) {
-        const uint64_t ink = win[SI_CLOSE];
-        uint64_t       lft = 0, rgt = 0;
-        for (uint8_t k = 0; k < SI_CLOSE; ++k) {
-            lft |= win[k];
-            rgt |= win[SI_CLOSE + 1 + k];
-        }
+        const uint64_t ink  = win[2];
         const uint64_t ring = (ink << 1) | (ink << 2) | (ink >> 1) | (ink >> 2) |
-                              win[SI_CLOSE - 1] | (win[SI_CLOSE - 1] << 1) | (win[SI_CLOSE - 1] >> 1) |
-                              win[SI_CLOSE + 1] | (win[SI_CLOSE + 1] << 1) | (win[SI_CLOSE + 1] >> 1) |
-                              win[SI_CLOSE - 2] | win[SI_CLOSE + 2] |   // the grown shape
-                              (lft & rgt);                              // gaps and counters
+                              win[1] | (win[1] << 1) | (win[1] >> 1) |
+                              win[3] | (win[3] << 1) | (win[3] >> 1) |
+                              win[0] | win[4];
         const int16_t fx = (int16_t)(fx0 + x);
         uint64_t      lit = 0;
         for (uint8_t y = 0; y < SI_H; ++y) {
@@ -217,7 +211,7 @@ void status_idle_screen(void) {
         }
         for (uint8_t p = 0; p < SI_H / 8; ++p) buf[(uint16_t)p * SI_W + (uint16_t)x] = (uint8_t)(lit >> (8u * p));
         for (uint8_t k = 0; k < SI_WIN - 1; ++k) win[k] = win[k + 1];
-        win[SI_WIN - 1] = vis ? (si_word_col((int16_t)(x + 1 + SI_CLOSE - wx0)) << wy0) : 0;
+        win[SI_WIN - 1] = vis ? (si_word_col((int16_t)(x + 1 + SI_RING - wx0)) << wy0) : 0;
     }
 
     const uint32_t took = timer_elapsed32(t_start);

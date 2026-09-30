@@ -62,10 +62,10 @@ RAM noise before the splash. Patched in QMK core (`drivers/oled/oled_driver.c`, 
 in `UPSTREAM_PATCHES.md`): the panel stays off through init, an all-black GDDRAM is
 flushed, **then** `DISPLAY_ON` — boot shows black → splash.
 
-**Speed levers not yet pulled** (were unnecessary once the diffing + one-shot flush
-landed; revisit only if a full swap still looks slow on hardware): raise
-`OLED_UPDATE_PROCESS_LIMIT`, or bump I2C to Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`,
-above SSD1306 spec — A/B on real hardware).
+**Speed levers:** `OLED_UPDATE_PROCESS_LIMIT` is now **4** (`config.h`, was QMK's 1) —
+split72's animated idle screen dirties all 16 blocks every frame and could not keep up
+at one block a pass. Still unpulled: I2C Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`, above
+SSD1306 spec, and the bus may be shared — A/B on real hardware).
 
 ## Brightness: ONE scale with the keycaps (`base/status_brightness.h`)
 
@@ -140,12 +140,13 @@ native. Both panels are one field, the right continuing the left after the 40 px
 "Poly" (left) and "Kybd" (right), in FreeSansBold24pt7b (`poly_heavy_font()`, Eden's
 keycap-letter face), are ONE LINE across both panels, typed and edited away with an
 underscore cursor: the cursor blinks under the P's place, "Poly Kybd" is typed (300 ms
-a key, the space carrying the cursor across the gap) and the last key takes the cursor
-away; the text stands 5 s; the cursor returns on the d, walks back to the P, and Del
+a key; the gap between the words is TWO cursor stops — after the y, then inside the
+physical gap — so it does not leap the gap in one key) and the last key takes the
+cursor away; the text stands 5 s; the cursor returns on the d, walks back to the P, and Del
 removes a character at a time while the REST OF THE LINE MOVES LEFT to close up, so
 "Kybd" slides across the physical gap into the left panel; a 3 s gap, and over. Each
 half lays out the whole line in field columns for that reason. The plasma runs on a
-5/16-speed clock. Words are centred horizontally on their panels and vertically on the
+5/32-speed clock. Words are centred horizontally on their panels and vertically on the
 letter BODY (tallest top to baseline) — centring the whole ink box, descender included,
 put them visibly high. The place AFTER the d is never used: "Kybd" centred leaves no
 room for an underscore there. Letters are solid inside a 2 px
@@ -162,10 +163,13 @@ every frame comes from the font's column bytes in flash and Eden's tables.
 - ⚠️ **It redraws every frame, and a redraw switches the SSD1306 back ON** — so the
   branch honours `STATUS_DISP_ON` itself, as the tutorial branch does, or the panel
   stays lit through the suspend.
-- ⚠️ **Non-blocking flush**: `oled_write_raw()` plus QMK's per-pass `oled_render()`. The
-  bands dirty nearly every block, so the 100 ms frame period leaves room for the ~16
-  passes a full flush takes; `oled_render_dirty(true)` would block ~26 ms per frame.
-  The console prints `Status idle: worst frame Nms` every 5 s.
+- ⚠️ **Frames are paced by the I2C flush, not a timer**: a frame is composed only when
+  the previous one is fully sent (`oled_dirty == 0`, the driver's global). Composing over
+  a half-sent frame tore it, and a 100 ms gate on top of the driver's 66 ms task interval
+  rendered only every second call (~7.5 fps). Motion is a function of time, so a slow
+  flush lowers the frame rate, never the speed. `oled_render_dirty(true)` would block
+  the matrix ~26 ms per frame instead. The console prints
+  `Status idle: N frames/5s, worst compose Nms` — the real frame rate on hardware.
 
 **Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
 `oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced

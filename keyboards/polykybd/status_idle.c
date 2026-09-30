@@ -19,10 +19,14 @@
 // Nothing is stored: every frame is computed from the font's column bytes in flash and
 // Eden's tables; RAM is a handful of statics.
 //
-// ⚠️ Non-blocking: the frame goes through oled_write_raw() (diffed) and QMK's per-pass
-// oled_render(), one 64-byte block per main-loop pass. The bands move everywhere, so
-// nearly every block is dirty every frame; the 100 ms period leaves room for the ~16
-// passes a full flush takes. oled_render_dirty(true) would block ~26 ms per frame.
+// ⚠️ Frame pacing: the bands move everywhere, so nearly all 16 blocks are dirty every
+// frame, and QMK sends them over I2C a few per main-loop pass (OLED_UPDATE_PROCESS_LIMIT
+// in config.h). A new frame is composed only once the previous one has been sent
+// completely (oled_dirty == 0): writing over a half-sent frame showed the top of one
+// frame over the bottom of the other, and a fixed 100 ms gate on top of the driver's
+// own 66 ms task interval rendered only every second call (~7.5 fps). All motion is a
+// function of time, so a slow flush lowers the frame rate, never the speed.
+// oled_render_dirty(true) would instead block the matrix scan ~26 ms per frame.
 
 #include "status_idle.h"
 
@@ -39,7 +43,7 @@
 
 #define SI_W 128
 #define SI_H 64
-#define STATUS_IDLE_FRAME_MS 100
+extern OLED_BLOCK_TYPE oled_dirty;   // drivers/oled/oled_driver.c: blocks not yet sent
 
 // The two panels as one field: the right one starts after the physical gap.
 #define SI_GAP_PX 40
@@ -49,9 +53,10 @@
 
 // The line is typed and edited away the way a person would:
 //   1. the cursor blinks under the P's place, nothing written yet;
-//   2. "Poly Kybd" is typed a key at a time, the cursor under the next character's place
-//      (the space carries it across the gap to the right panel); the key that completes
-//      the line takes the cursor away;
+//   2. "Poly Kybd" is typed a key at a time, the cursor under the next character's place;
+//      the gap between the words is TWO spaces for the cursor — one stop after the y,
+//      one at the start of the right panel — so it does not leap the whole gap in one
+//      keystroke; the key that completes the line takes the cursor away;
 //   3. the finished text stands on its own;
 //   4. the cursor comes back under the d, blinks, and walks back to the P while the
 //      text stays;
@@ -61,8 +66,8 @@
 //   6. the cursor goes, a pause, and it starts over.
 // Both halves run the same timeline from the same idle-session clock, and each lays
 // out the WHOLE line in field columns, since letters cross from one panel to the other.
-// Slots number the line: 0..NL-1 the left letters, NL the space, the right letters
-// after it.
+// Slots number the line: 0..NL-1 the left letters, NL..NL+SP-1 the spaces, the right
+// letters after them.
 // ⚠️ The place AFTER the d is never used, on purpose: "Kybd" is 112 px of ink, so
 // centred it leaves the underscore 4 px of panel. The cursor leaves as the line
 // completes and comes back ON the d, which keeps both words exactly centred.
@@ -74,18 +79,18 @@
 #define SI_PAUSE_MS   800u     // 4: cursor blinking under the P before the first Del
 #define SI_GAP_MS     3000u    // 6: nothing, before starting over
 #define SI_BLINK_MS   530u     // cursor half-period while it waits
-#define SI_CUR_EXTRA  14       // underscore width on the space, px
 #define SI_RING       2        // the black ring's radius, px
 #define SI_WIN        (2 * SI_RING + 1)
-// The plasma bands run on a slowed clock (5/16 of real time).
+// The plasma bands run on a slowed clock (5/32 of real time).
 #define SI_PLASMA_NUM 5u
-#define SI_PLASMA_DEN 16u
+#define SI_PLASMA_DEN 32u
 
 static const uint32_t SI_WORD_LEFT[]  = U"Poly";
 static const uint32_t SI_WORD_RIGHT[] = U"Kybd";
 #define SI_NL    ((uint8_t)(sizeof(SI_WORD_LEFT) / sizeof(SI_WORD_LEFT[0]) - 1u))
 #define SI_NR    ((uint8_t)(sizeof(SI_WORD_RIGHT) / sizeof(SI_WORD_RIGHT[0]) - 1u))
-#define SI_SLOTS ((uint8_t)(SI_NL + 1u + SI_NR))
+#define SI_SP    2u            // cursor stops between the words
+#define SI_SLOTS ((uint8_t)(SI_NL + SI_SP + SI_NR))
 #define SI_CYCLE_MS (SI_WAIT_MS + SI_SLOTS * SI_KEY_MS + SI_DONE_MS + SI_APPEAR_MS + \
                      (SI_SLOTS - 1u) * SI_STEP_MS + SI_PAUSE_MS + SI_SLOTS * SI_KEY_MS + SI_GAP_MS)
 
@@ -94,7 +99,7 @@ static const uint32_t SI_WORD_RIGHT[] = U"Kybd";
 typedef struct {
     int16_t  x;          // first field column of the ink
     int16_t  pen0, pen1; // pen before / after: the underscore spans this advance
-    uint16_t bo;         // bitmap offset (0 with w == 0: the space)
+    uint16_t bo;         // bitmap offset (0 with w == 0: a space)
     uint8_t  w, h;       // ink size
     uint8_t  top;        // first row of the ink below the tallest letter's top
 } si_slot_t;
@@ -104,7 +109,7 @@ static uint8_t        s_base;        // baseline row, below the tallest letter's
 static const uint8_t *s_bitmap;
 
 static uint32_t s_t0;
-static uint32_t s_last_frame;
+static uint16_t s_frames;         // frames composed since the last console report
 static uint32_t s_last_call;
 static bool     s_started;
 static uint8_t  s_worst_ms;
@@ -145,12 +150,16 @@ static int8_t si_layout_word(const uint32_t *text, uint8_t first, int16_t panel_
 
 static void si_layout(void) {
     const int8_t tl  = si_layout_word(SI_WORD_LEFT, 0, 0);
-    const int8_t tr  = si_layout_word(SI_WORD_RIGHT, (uint8_t)(SI_NL + 1u), SI_RIGHT_X0);
+    const int8_t tr  = si_layout_word(SI_WORD_RIGHT, (uint8_t)(SI_NL + SI_SP), SI_RIGHT_X0);
     const int8_t top = tl < tr ? tl : tr;
-    for (uint8_t k = 0; k < SI_SLOTS; ++k) s_slot[k].top = (uint8_t)((int8_t)s_slot[k].top - top);
-    // The space: from the pen after the y to the pen before the K, no ink.
-    s_slot[SI_NL] = (si_slot_t){.x = s_slot[SI_NL - 1].pen1, .pen0 = s_slot[SI_NL - 1].pen1,
-                                .pen1 = s_slot[SI_NL + 1].pen0, .bo = 0, .w = 0, .h = 0, .top = 0};
+    for (uint8_t k = 0; k < SI_SLOTS; ++k)
+        if (k < SI_NL || k >= SI_NL + SI_SP) s_slot[k].top = (uint8_t)((int8_t)s_slot[k].top - top);
+    // The spaces share the run from the pen after the y to the pen before the K equally.
+    const int16_t a = s_slot[SI_NL - 1].pen1, b = s_slot[SI_NL + SI_SP].pen0;
+    for (uint8_t k = 0; k < SI_SP; ++k) {
+        const int16_t p0 = (int16_t)(a + (b - a) * k / SI_SP), p1 = (int16_t)(a + (b - a) * (k + 1) / SI_SP);
+        s_slot[SI_NL + k] = (si_slot_t){.x = p0, .pen0 = p0, .pen1 = p1, .bo = 0, .w = 0, .h = 0, .top = 0};
+    }
     s_base = (uint8_t)(-top);                  // pen y 0 is the baseline
 }
 
@@ -161,9 +170,12 @@ static uint64_t si_line_col(int16_t fx, uint8_t from, uint8_t to, int16_t shift,
     uint64_t col = 0;
     fx = (int16_t)(fx + shift);
     if (cur >= 0) {
+        // Under a letter: its advance. Under a space: the space's run, which lies partly
+        // in the gap between the panels, so the second stop shows at the right panel's
+        // left edge.
         const si_slot_t *c  = &s_slot[cur];
-        const int16_t    x0 = c->w ? (int16_t)(c->pen0 + 1) : (int16_t)(c->pen0 + 2);
-        const int16_t    x1 = c->w ? (int16_t)(c->pen1 - 1) : (int16_t)(x0 + SI_CUR_EXTRA);
+        const int16_t    x0 = (int16_t)(c->pen0 + (c->w ? 1 : 2));
+        const int16_t    x1 = (int16_t)(c->pen1 - (c->w ? 1 : 2));
         if (fx >= x0 && fx < x1) col = (uint64_t)0x7u << (s_base + 2u);
     }
     for (uint8_t i = from; i < to; ++i) {
@@ -220,14 +232,13 @@ static si_state_t si_state(uint32_t u) {
 void status_idle_screen(void) {
     const uint32_t now = timer_read32();
     if (!s_started || timer_elapsed32(s_last_call) > 500u) {   // a new idle session
-        s_started    = true;
-        s_t0         = now;
-        s_last_frame = now - STATUS_IDLE_FRAME_MS;
+        s_started = true;
+        s_t0      = now;
         si_layout();
     }
     s_last_call = now;
-    if (timer_elapsed32(s_last_frame) < STATUS_IDLE_FRAME_MS) return;
-    s_last_frame = now;
+    if (oled_dirty) return;   // the previous frame is still going out over I2C
+    ++s_frames;
 
     const uint32_t t_start = timer_read32();
     const uint32_t t       = timer_elapsed32(s_t0);
@@ -283,7 +294,8 @@ void status_idle_screen(void) {
     const uint32_t took = timer_elapsed32(t_start);
     if (took > s_worst_ms) s_worst_ms = (uint8_t)(took > 255u ? 255u : took);
     if ((int32_t)(now - s_next_log) >= 0) {
-        uprintf("Status idle: worst frame %ums\n", s_worst_ms);
+        uprintf("Status idle: %u frames/5s, worst compose %ums\n", s_frames, s_worst_ms);
+        s_frames   = 0;
         s_worst_ms = 0;
         s_next_log = now + 5000u;
     }

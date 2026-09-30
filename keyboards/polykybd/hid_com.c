@@ -198,6 +198,40 @@ static void apply_unicode_mode(uint8_t mode, bool persist) {
     unicode_input_mode_set_kb(mode);
 }
 
+// cmd 11's action, shared with cmd 33's v21 flags so a flagged mapping report
+// does exactly what the separate prepare / enable report would have done.
+static void overlay_flags_on(poly_sync_t *local_state, uint8_t new_flags) {
+    local_state->overlay_flags = flag_on(local_state->overlay_flags, new_flags);
+    apply_overlay_action_flags(new_flags);
+    const bool needs_force_sync =
+        (new_flags & OVERLAY_ACTION_FLAGS) || (new_flags & OVERLAY_SYNCED_STATE_FLAGS);
+    if(needs_force_sync) {
+        if(!sync_succeeded(send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10))) {
+            // The ACTION bits (reset buffers/usage/mapping) are cleared
+            // right below and never re-sent, so a give-up here leaves the
+            // slave on the PREVIOUS program's mapping. DISPLAY_OVERLAYS /
+            // MIRROR_OVERLAYS are in OVERLAY_SYNCED_STATE_FLAGS and do get
+            // re-fired by the periodic diff, so only the action bits are
+            // genuinely lost. The enable-time repair below re-pushes the
+            // mapping, which is what actually corrects a stale slave.
+            note_overlay_map_sync_lost();
+            uprintf("Warning: overlay flags 0x%x did not reach the slave; repairing at enable.\n", new_flags);
+        }
+        if(new_flags & OVERLAY_ACTION_FLAGS) {
+            local_state->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
+        }
+        request_disp_refresh();
+    }
+    // End of the host's app-switch sequence (prepare -> images ->
+    // mapping -> enable): if any bridge above dropped, arm a repair
+    // that rebuilds the slave's mapping from our own tables. The
+    // sending itself runs in housekeeping (overlay_map_repair_tick),
+    // NOT here — see the warning in fill_overlay.h.
+    if(new_flags & DISPLAY_OVERLAYS) {
+        arm_overlay_map_repair();
+    }
+}
+
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     // Board name in the GET_ID reply — each variant header (QMK_KEYBOARD_H) may
     // define POLY_KB_NAME; default to "Split72" so split72 (which doesn't define
@@ -549,36 +583,8 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 break;
             case 11: //overlays flags on
                 {
-                    uint8_t new_flags = data[HID_DATA_IDX];
-                    local_state->overlay_flags = flag_on(local_state->overlay_flags, new_flags);
-                    apply_overlay_action_flags(new_flags);
-                    const bool needs_force_sync =
-                        (new_flags & OVERLAY_ACTION_FLAGS) || (new_flags & OVERLAY_SYNCED_STATE_FLAGS);
-                    if(needs_force_sync) {
-                        if(!sync_succeeded(send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10))) {
-                            // The ACTION bits (reset buffers/usage/mapping) are cleared
-                            // right below and never re-sent, so a give-up here leaves the
-                            // slave on the PREVIOUS program's mapping. DISPLAY_OVERLAYS /
-                            // MIRROR_OVERLAYS are in OVERLAY_SYNCED_STATE_FLAGS and do get
-                            // re-fired by the periodic diff, so only the action bits are
-                            // genuinely lost. The enable-time repair below re-pushes the
-                            // mapping, which is what actually corrects a stale slave.
-                            note_overlay_map_sync_lost();
-                            uprintf("Warning: overlay flags 0x%x did not reach the slave; repairing at enable.\n", new_flags);
-                        }
-                        if(new_flags & OVERLAY_ACTION_FLAGS) {
-                            local_state->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
-                        }
-                        request_disp_refresh();
-                    }
-                    // End of the host's app-switch sequence (prepare -> images ->
-                    // mapping -> enable): if any bridge above dropped, arm a repair
-                    // that rebuilds the slave's mapping from our own tables. The
-                    // sending itself runs in housekeeping (overlay_map_repair_tick),
-                    // NOT here — see the warning in fill_overlay.h.
-                    if(new_flags & DISPLAY_OVERLAYS) {
-                        arm_overlay_map_repair();
-                    }
+                    const uint8_t new_flags = data[HID_DATA_IDX];
+                    overlay_flags_on(local_state, new_flags);
                     memset(data, 0, length);
                     hid_reply(data, 0x0b, true);
                     if (debug_enable) {
@@ -904,7 +910,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // partitions them by required width rather than by index order —
                     // variants 0..10 keep riding the dense 10-bit form and only the
                     // high GUI combos pay for 11. Silent, like cmd 21.
-                    const uint8_t width = data[HID_DATA_IDX];
+                    // v21: bits 5/6 of the width byte are the prepare / enable
+                    // flags; only the masked width reaches the decoder and the slave.
+                    const uint8_t flags = data[HID_DATA_IDX];
+                    const uint8_t width = flags & OVERLAY_MAP_W_WIDTH_MASK;
+                    if (flags & OVERLAY_MAP_W_RESET) {
+                        overlay_flags_on(local_state, MIRROR_OVERLAYS | USAGE_RESET | MAPPING_RESET);
+                    }
                     overlay_map_sync_t map_sync;
                     map_sync.width = width;
                     map_sync.bytes = OVERLAY_MAP_W_BYTES;
@@ -920,6 +932,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     }
                     if (debug_enable) {
                         uprintf("Overlay mapping data received (%u-bit).\n", (unsigned)width);
+                    }
+                    if (flags & OVERLAY_MAP_W_SHOW) {
+                        overlay_flags_on(local_state, DISPLAY_OVERLAYS);
                     }
                 }
                 break;

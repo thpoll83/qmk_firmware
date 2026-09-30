@@ -424,6 +424,10 @@ contrast with their neighbour that the wire format does not show. The
   that bit. The icon bundle is a `PlyI` in font-pack slot 8 and is validated by
   `base/icon_lib.c`, never by the font loader; the `V` block now reports
   `min(master, slave)` per bundle.
+- **v21's cmd 33 width byte carries flags** — 0x40 runs the prepare step before the
+  pairs, 0x20 the enable step after, through the same `overlay_flags_on()` as cmd 11.
+  ⚠️ Only the masked width (0x1F) may reach the decoder or the slave: bit 7 is
+  `OVERLAY_MAP_ICON_FILL` on the split transaction.
 - ⚠️ **The flat overlay index is the only ADDRESS an upload has, resolved through
   `overlay_map[]` — so `reset_overlay_mapping()`'s identity default is LOAD-BEARING FOR
   WRITES**, not a display convenience. Zeroing it sent every image to slot 0: nearly

@@ -201,6 +201,21 @@ reading before you change either one.
     `FLASH_STAGE_VERSIONS` op, read from housekeeping at boot and after each COMMIT).
     A half that missed a flash reads as behind and the host's autocheck re-flashes it.
     An older slave never answers the op, so the master's versions stand.
+  **v21** lets cmd `33` carry the **prepare and enable steps** of an app switch as
+  flags in its width byte: `OVERLAY_MAP_W_RESET` (0x40) runs cmd `11`'s prepare
+  (`MIRROR_OVERLAYS | MAPPING_RESET | USAGE_RESET`) before the pairs are applied, and
+  `OVERLAY_MAP_W_SHOW` (0x20) runs cmd `11`'s enable (`DISPLAY_OVERLAYS`) after. Both
+  call the same `overlay_flags_on()` as cmd `11`, slave sync and repair arming included,
+  so only the USB side changes. A warm switch was prepare + mapping + enable, 3–4
+  reports; now it is its mapping reports alone. Measured over all 60 overlay sets
+  through the host send path: warm 249 → 129 reports, cold 744 → 684 (a cold switch
+  keeps its separate prepare, because the reset must come before the image uploads).
+  - **The width is masked** (`OVERLAY_MAP_W_WIDTH_MASK`, 0x1F) before it reaches the
+    decoder or the slave. Before v21 the raw byte was forwarded, so a host byte with
+    bit 7 set would have been refused on the master as a bad width but read by the
+    slave as `OVERLAY_MAP_ICON_FILL`.
+  - **Gated on the host side**: a v20 keyboard reads a flagged byte as a width above
+    16 and drops the report, so the host sets the flags only at v21+.
   ⚠️ QMK has **no `set_unicode_input_mode_noeeprom()`**; `unicode_config` is `extern`
   and `unicode_input_mode_set_kb()` is the notification the keycap legend rides on,
   so `apply_unicode_mode()` in `hid_com.c` is the persisting path minus one call —

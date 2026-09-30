@@ -214,6 +214,10 @@ reading before you change either one.
     decoder or the slave. Before v21 the raw byte was forwarded, so a host byte with
     bit 7 set would have been refused on the master as a bad width but read by the
     slave as `OVERLAY_MAP_ICON_FILL`.
+  - **A bad masked width is refused before either flag runs**, and the report is not
+    bridged. Checking it only in the decoder would run the reset and the enable
+    around pairs that are then dropped, leaving overlays on with a stale mapping
+    (Sourcery on #319).
   - **Gated on the host side**: a v20 keyboard reads a flagged byte as a width above
     16 and drops the report, so the host sets the flags only at v21+.
   ⚠️ QMK has **no `set_unicode_input_mode_noeeprom()`**; `unicode_config` is `extern`

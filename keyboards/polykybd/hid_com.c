@@ -914,6 +914,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // flags; only the masked width reaches the decoder and the slave.
                     const uint8_t flags = data[HID_DATA_IDX];
                     const uint8_t width = flags & OVERLAY_MAP_W_WIDTH_MASK;
+                    // Refuse a bad width BEFORE either flag runs: otherwise the
+                    // reset and the enable would apply around pairs the decoder
+                    // then drops, leaving overlays on with a stale mapping.
+                    if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
+                        uprintf("REJECTED overlay mapping report: bad width %u\n", (unsigned)width);
+                        break;
+                    }
                     if (flags & OVERLAY_MAP_W_RESET) {
                         overlay_flags_on(local_state, MIRROR_OVERLAYS | USAGE_RESET | MAPPING_RESET);
                     }

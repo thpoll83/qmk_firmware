@@ -219,7 +219,11 @@ run on it (`test_no_crash_record`). What is worth knowing:
     Inside each milestone, `splash_progress()` stamps two finer breadcrumbs:
     `0xSSE1` before the status-panel paint (I2C) and `0xSSE2` before the logo draw
     (keycap SPI), plus `0x08E3` before the final dwell. So `phase=1:0x06E1` reads
-    "the 75% panel paint never returned".
+    "the 75% panel paint never returned". These three carry the core1 flag in bit 12
+    as well (below), so from step 5 on they read `0x15E1` / `0x15E2` once core1 has
+    reached `core1_entry()`. Firmware before 1.3.2 never sets it on them: a
+    `0x05E2` from 1.0.0 (2026-09-30, a master hung in the logo draw right after
+    the core1 launch) says nothing about core1 either way.
 
 - **A crash loop halts instead of looping forever**: `consecutive` counts
   back-to-back records and past `CRASH_LOOP_LIMIT` (5) the handler parks in `wfi`
@@ -372,6 +376,8 @@ are masked and cleared by core0 before the launch. Reading a record:
 | `0x0504` | sub-step 4 stamped, paint not reached (or older firmware) |
 | `0x15B3` | step 5, core1 in its entry, sub-step 4, fourth render call in flight |
 | `0x05B3` | the same with core1 NOT yet in `core1_entry()` |
+| `0x15E2` | step 5 logo draw (keycap SPI) in flight, core1 in its entry |
+| `0x05E2` | the same with core1 NOT yet in `core1_entry()` (or firmware before 1.3.2) |
 
 After the paint returns the tag goes back to the plain sub-step (`0x0504`), so a
 record naming a call always means the paint was in flight.

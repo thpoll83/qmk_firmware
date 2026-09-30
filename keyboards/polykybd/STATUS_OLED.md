@@ -138,11 +138,14 @@ Eden's table (one fed by `startup_anim_dist()` from the field centre) drawn as C
 BANDS: on a 1-bit panel a dithered plasma reads as grey noise, while its contours are
 native. Both panels are one field, the right continuing the left after the 40 px gap.
 "Poly" (left) and "Kybd" (right), in FreeSansBold24pt7b (`poly_heavy_font()`, Eden's
-keycap-letter face), are TYPED as one line across both panels with a text cursor: the
-cursor blinks 5 s at the left start, "Poly" is typed (300 ms a key), the space moves
-the cursor to the right panel, "Kybd" is typed, the cursor blinks through an 8 s hold,
-and it is all deleted from the end back across the gap. Each word is centred on its
-panel (full ink box, so letters are typed into their final places). Letters are solid inside a 2 px
+keycap-letter face), are TYPED as one line across both panels with an underscore
+cursor, then edited away: the cursor blinks under the P's place, "Poly Kybd" is typed
+(300 ms a key, the space carrying the cursor across the gap) and the last key takes the
+cursor away; the text stands 5 s; the cursor returns under the d, walks back to the P
+and Del removes the letters in place from the P onward; a 3 s gap, and over. The
+plasma runs on a 5/8-speed clock. Each word is centred on its panel (full ink box, so
+letters are typed into their final places); the place AFTER the d is never used,
+because "Kybd" centred leaves no room for an underscore there. Letters are solid inside a 2 px
 black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
 every frame comes from the font's column bytes in flash and Eden's tables.
 

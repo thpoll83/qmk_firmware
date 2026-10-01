@@ -196,5 +196,14 @@ Worth checking against §2 and §4 whenever they are touched:
   because the alternative was a ~210 KB CRC walk plus a SHA-512 on every
   housekeeping pass — which, before the cheap blank-trailer test, cost the slave an
   8-second split-link outage.
+- ⚠️ **A "try again" latch is a cached verdict too, and its clear must test the
+  CONDITION, not the event that set it.** Eden's `s_c1_off` ("core1 is unusable") was
+  first cleared only when the previous session had timed out. A keypress inside the
+  100 ms timeout ended a session with the latch still clear, so a stuck core1 kept
+  receiving jobs until the 8-word FIFO filled and `multicore_fifo_push_blocking()`
+  stalled the main loop. The right clear is the invariant itself, re-evaluated on
+  every session: `s_c1_off = s_c1_done != s_c1_seq` (#325, `33b026de`; CodeRabbit
+  caught both rounds). For any latch, list every way the guarded episode can END,
+  not just the failure path that motivated it.
 - **The clear is not a display nicety.** `reset_overlay_mapping()`'s identity
   default is load-bearing for writes; the same is true of these.

@@ -74,8 +74,15 @@ collision presents as a bogus `undefined reference`.
 3. `polyhost/_version.py` — `__protocol__` = the same N.
 4. `polyhost/device/poly_kybd_mock.py` — mirror the signature, or every mock-backed
    test breaks on the new keyword.
+4b. `polyhost/device/mock_firmware.py` — the emulated keyboard's side:
+   - **`CMD_MIN_PROTOCOL[<cmd>] = N`**, the protocol that first knows it. The emulator
+     NACKs it on any older keyboard, exactly as `hid_com.c`'s default case does.
+     A flag on an existing command is gated in that command's handler instead.
+   - a `_HANDLERS` entry when the reply carries DATA. Without one the command gets a
+     bare ACK, which is enough for a setter and empty for a getter.
 5. `polyhost/core/poly_core.py` — the core method (`_device_call` for a read,
-   `worker.submit` for fire-and-forget).
+   `worker.submit` for fire-and-forget). Add it to **`CORE_CALLS`** in
+   `tests/core/core_protocol_sweep_test.py`.
 6. `polyhost/server/protocol.py` + `control_server.py` — the `M_*` method,
    `polyhost/client/remote_core.py` — the mirror. **A daemon-mode GUI is a client, so
    anything not mirrored is unreachable out of the box.**
@@ -93,7 +100,9 @@ no-I/O status snapshot — use the pure `protocol_supports(self.keeb.protocol_ve
 # host
 .venv/bin/python -m unittest tests.device.poly_kybd_cmd_test \
     tests.device.poly_kybd_capabilities_test tests.core.<your>_test
-xvfb-run -a .venv/bin/python scripts/run_tests.py --timeout 240   # full suite, 65-90 s
+.venv/bin/python -m unittest tests.device.protocol_gate_sweep_test \
+    tests.core.core_protocol_sweep_test     # every method x every protocol
+xvfb-run -a .venv/bin/python scripts/run_tests.py   # full suite; --timeout is per test
 # firmware, if the logic is pure enough to extract (see base/fw_up_verdict.c)
 make test:<name>
 ```
@@ -106,6 +115,13 @@ make test:<name>
   the **unflagged** form still works below the threshold — the gate is on the flag,
   not on the command, which is ancient. A brand-new command has no unflagged form:
   there, everything below the threshold refuses.
+- **The two protocol sweeps FAIL until the new pieces are classified**, on purpose:
+  a new `Cmd` without a `CMD_MIN_PROTOCOL` entry, a new public `PolyKybd` method
+  without a **`CALLS`** entry (in `tests/device/protocol_gate_sweep_test.py`, with the
+  arguments that produce each wire form), and a core method without a `CORE_CALLS`
+  entry. Then each method runs against an emulated keyboard of every protocol from
+  `MIN_SUPPORTED_PROTOCOL` up, and anything that keyboard would NACK fails the test.
+  That is the check that the gate exists; the first run found cmd 31 ungated.
 - **Mutation-test** what you added (`mutation-test-suite`). A gate that is never
   exercised is a gate that does not exist.
 

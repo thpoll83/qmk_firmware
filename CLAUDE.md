@@ -103,6 +103,10 @@ reachable, are in
     the branch you are standing on — are in
     [`keyboards/polykybd/BRANCHING.md`](keyboards/polykybd/BRANCHING.md). Treat a silent
     sweep as "nothing obvious on this branch", never a clean bill of health.
+- ⚠️ **A stacked PR is NOT retargeted when its base merges** — GitHub does that only
+  when the base branch is deleted, and merged branches are kept here. Retarget it
+  yourself before merging; after a squash-merged base, resolve the merge per file
+  against the base PR's last head. Both rules: `BRANCHING.md` → "Landing a stacked PR".
 
 ## Building & flashing
 
@@ -733,7 +737,8 @@ numbers, the auto-brightness policy and the slave→master backchannel are
 [`keyboards/polykybd/COMMUNITY_MODULES.md`](keyboards/polykybd/COMMUNITY_MODULES.md); the
 `extract-qmk-module` skill drives a conversion.
 
-- **Declared in `keyboard.json`, not `keymap.json`, and listing a module IS the enable** —
+- **Declared in each VARIANT's `keyboard.json` (`split72/`, `split42/`), not `keymap.json`,
+  and listing a module IS the enable** — there is no `keyboards/polykybd/keyboard.json`;
   the build defines `COMMUNITY_MODULE_<NAME>_ENABLE`. No `SRC +=` line, no bespoke `-D`;
   gate consumer code on the generated define.
 - ⚠️ **Module hooks run BEFORE `_kb`/`_user`.** That is what makes a self-driving module

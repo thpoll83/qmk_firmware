@@ -42,8 +42,14 @@ flavours (monolith + pack), which is also the only local check that the RAM-tigh
 monolith still links (PR CI never builds it):
 
 ```bash
-keyboards/polykybd/doom/pack/build_pack.sh          # ~5 min; 5 stages
+keyboards/polykybd/doom/pack/build_pack.sh          # 5 stages; 5-20 min
 ```
+
+⚠️ **Run it in the background, and touch nothing in that tree until it exits.**
+Stage 1 (the monolith) alone took ~15 minutes on 2026-10-01 and the whole script
+~18, against the ~5 this line used to promise. A `git merge` or `checkout` in the same
+checkout meanwhile changes sources under a running build, so a stacked-PR merge waited
+for it to finish.
 
 Otherwise a plain build is enough:
 

@@ -171,11 +171,13 @@ every frame comes from the font's column bytes in flash and Eden's tables.
 - ⚠️ **Frame pacing has three rules, and the third protects the keycaps.**
   1. A frame is composed only when the previous one is fully sent (`oled_dirty == 0`,
      the driver's global). Composing over a half-sent frame tore it.
-  2. At most one frame per `SI_FRAME_MS` (150 ms), or per `SI_FRAME_FAST_MS` (50 ms)
+  2. At most one frame per `SI_FRAME_MS` (150 ms), or per `SI_FRAME_FAST_MS` (75 ms)
      while Eden computes its keycaps on core1 (`startup_anim_idle_on_core1()`). Both
      divide the 150 ms cursor step and the 300 ms keystroke, so the typing stays even.
      The fast rate applies only there: on the core0 fallback the two take turns (rule
-     3), and the other idle styles were never measured at it.
+     3), and the other idle styles were never measured at it. 50 ms was tried first:
+     the panel was smooth, but Eden visibly slowed on hardware, because each status
+     frame still holds core0 ~31 ms and Eden's legend cut and SPI push wait behind it.
   3. **On Eden's core0 fallback path, the panel and the Eden idle loop take turns.**
      Each frame costs the main loop ~23 ms of blocking I2C (~6 ms per pass at
      `OLED_UPDATE_PROCESS_LIMIT` 4), and Eden then renders the keycaps in 3 ms slices on

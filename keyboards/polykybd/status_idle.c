@@ -102,7 +102,7 @@ extern OLED_BLOCK_TYPE oled_dirty;   // drivers/oled/oled_driver.c: blocks not y
 // SI_STEP_MS and SI_KEY_MS. 50 ms looked smooth here but visibly slowed Eden on
 // hardware: each frame still holds core0 ~31 ms (compose + I2C), and Eden's legend
 // cut and SPI push wait behind it. Every other idle style keeps SI_FRAME_MS.
-#define SI_FRAME_FAST_MS 100u
+#define SI_FRAME_FAST_MS 75u
 // Eden waits for our flush at most this long, so a stuck bus cannot freeze the keycaps.
 #define SI_HOLD_MAX_MS 100u
 // The plasma bands run on a slowed clock (5/32 of real time).

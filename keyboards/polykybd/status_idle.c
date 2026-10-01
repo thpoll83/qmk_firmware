@@ -12,16 +12,16 @@
 // Over it, "Poly Kybd" in FreeSansBold24pt7b — the face Eden writes its keycap letters
 // in — is ONE LINE of text across both panels ("Poly" centred on the left, "Kybd" on
 // the right), typed and then edited away with an underscore cursor (see SI_KEY_MS).
-// Every letter, and the cursor, is drawn as a solid 2 px outline (the ink minus the ink
-// shrunk by a radius-2 disc), dark inside, and cut out of the bands by a 2 px black ring
-// (the shape grown by the same disc) and nothing more: the bands keep flowing between
-// the letters and through the counters. The bands are scanlines (one row lit, one dark),
-// and the dark rows are never computed, which halves the plasma's cost per frame.
-// Hollow letters and scanline bands take the light down. Letters in scanlines were tried
-// first and looked too sparse at one row lit in three. The idle panel is already at
-// contrast register 0, the SSD1306 floor. Dimming it further through the panel's VCOMH
-// or pre-charge registers flickered on hardware, with brighter strips, so the light
-// comes off the content.
+// Every letter, and the cursor, is drawn as a 1 px outline (the ink minus the ink shrunk
+// by 1 px), dark inside, and cut out of the bands by a 2 px black ring (the shape grown
+// by a radius-2 disc) and nothing more: the bands keep flowing between the letters and
+// through the counters. The bands are scanlines (one row lit, one dark), and the dark
+// rows are never computed, which halves the plasma's cost per frame. Hollow letters and
+// scanline bands take the light down. Letters in scanlines were tried first and looked
+// too sparse at one row lit in three; a 2 px outline was brighter than it needed to be.
+// The idle panel is already at contrast register 0, the SSD1306 floor. Dimming it
+// further through the panel's VCOMH or pre-charge registers flickered on hardware, with
+// brighter strips, so the light comes off the content.
 //
 // Nothing is stored: every frame is computed from the font's column bytes in flash and
 // Eden's tables; RAM is a handful of statics.
@@ -315,18 +315,15 @@ void status_idle_task(void) {
                               win[1] | (win[1] << 1) | (win[1] >> 1) |
                               win[3] | (win[3] << 1) | (win[3] >> 1) |
                               win[0] | win[4];
-        // The same disc, shrunk: ink whose whole radius-2 neighbourhood is ink. What is
-        // left of the letter after taking that away is its 2 px outline, drawn solid.
-        const uint64_t core = ink & (ink << 1) & (ink << 2) & (ink >> 1) & (ink >> 2) &
-                              win[1] & (win[1] << 1) & (win[1] >> 1) &
-                              win[3] & (win[3] << 1) & (win[3] >> 1) &
-                              win[0] & win[4];
+        // The letter shrunk by 1 px: ink whose four neighbours are all ink. What is left
+        // of the letter after taking that away is its 1 px outline.
+        const uint64_t core = ink & (ink << 1) & (ink >> 1) & win[1] & win[3];
         const uint64_t edge = ink & ~core;
         const int16_t fx = (int16_t)(fx0 + x);
         uint64_t      lit = 0;
         for (uint8_t y = 0; y < SI_H; ++y) {
             const uint64_t bit  = (uint64_t)1 << y;
-            if (ink & bit) {   // the letter: a solid 2 px outline, dark inside
+            if (ink & bit) {   // the letter: a 1 px outline, dark inside
                 if (edge & bit) lit |= bit;
                 continue;
             }

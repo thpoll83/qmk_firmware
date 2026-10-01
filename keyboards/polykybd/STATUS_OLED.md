@@ -132,7 +132,7 @@ the animation, which is the idle look this board is supposed to have.
 Register 0 is the SSD1306's floor. Lowering the VCOMH deselect level (`0xDB`) or the
 pre-charge period (`0xD9`) on top of it dims the panel further but made it flicker on
 hardware, with occasional brighter strips, so the idle screen dims by content instead:
-its letters are drawn on one panel row in three and its bands on every other row,
+its letters are drawn as a solid 2 px outline, dark inside, and its bands on every other row,
 and the dark band rows are never computed.
 
 **The scrolling Poly/Kybd logos are GONE** (two 1 KB bitmaps on split72, all-zero
@@ -159,8 +159,8 @@ half lays out the whole line in field columns for that reason. The plasma runs o
 5/32-speed clock. Words are centred horizontally on their panels and vertically on the
 letter BODY (tallest top to baseline) — centring the whole ink box, descender included,
 put them visibly high. The place AFTER the d is never used: "Kybd" centred leaves no
-room for an underscore there. Letters (and the cursor) are drawn in scanlines, one
-panel row in three lit, the bands on every other row, inside a 2 px black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
+room for an underscore there. Letters (and the cursor) are drawn as a solid 2 px
+outline (the ink minus the ink shrunk by a radius-2 disc), dark inside, the bands on every other row, inside a 2 px black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
 every frame comes from the font's column bytes in flash and Eden's tables.
 
 - ⚠️ **ONLY the 2 px ring is black — no gap closing.** Closing letter gaps too (any

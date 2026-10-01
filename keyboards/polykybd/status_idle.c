@@ -26,7 +26,8 @@
 //     (oled_dirty == 0): writing over a half-sent frame showed the top of one frame
 //     over the bottom of the other;
 //   - at most one frame per SI_FRAME_MS, because every frame costs the main loop its
-//     flush and the Eden idle loop on the keycaps runs in that same loop;
+//     flush and the Eden idle loop on the keycaps runs in that same loop
+//     (SI_FRAME_FAST_MS while Eden computes on core1);
 //   - the panel and Eden TAKE TURNS: no frame is composed while Eden is part-way
 //     through a keycap frame, and Eden starts no frame while ours is still being sent
 //     (status_idle_holds_bus()). Interleaved, each 3 ms Eden slice waited behind ~6 ms
@@ -96,6 +97,10 @@ extern OLED_BLOCK_TYPE oled_dirty;   // drivers/oled/oled_driver.c: blocks not y
 // The panel's frame period. 150 ms divides SI_STEP_MS and SI_KEY_MS, so every cursor
 // step and keystroke lasts a whole number of frames and the typing stays even.
 #define SI_FRAME_MS   150u
+// With Eden's keycaps computed on core1 there is no turn-taking, and core0 spends
+// ~40 ms of each ~190 ms Eden frame, so the panel can go faster. 50 ms also divides
+// SI_STEP_MS and SI_KEY_MS. Every other idle style keeps SI_FRAME_MS.
+#define SI_FRAME_FAST_MS 50u
 // Eden waits for our flush at most this long, so a stuck bus cannot freeze the keycaps.
 #define SI_HOLD_MAX_MS 100u
 // The plasma bands run on a slowed clock (5/32 of real time).
@@ -248,6 +253,10 @@ static si_state_t si_state(uint32_t u) {
     return (si_state_t){0, 0, 0, -1};                                                       // 6
 }
 
+static uint32_t si_frame_ms(void) {
+    return startup_anim_idle_on_core1() ? SI_FRAME_FAST_MS : SI_FRAME_MS;
+}
+
 void status_idle_screen(void) {
     const uint32_t now = timer_read32();
     if (!s_started || timer_elapsed32(s_last_call) > 500u) {   // a new idle session
@@ -271,7 +280,7 @@ void status_idle_task(void) {
     // compose one more frame over the screen that is about to replace this one.
     if (!s_owned || (get_local_state()->flags & DISP_IDLE) == 0) return;
     if (oled_dirty) return;   // the previous frame is still going out over I2C
-    if (timer_elapsed32(s_last_frame) < SI_FRAME_MS) return;
+    if (timer_elapsed32(s_last_frame) < si_frame_ms()) return;
     if (startup_anim_frame_busy()) return;   // Eden is mid-frame: let it finish first
     const uint32_t now = timer_read32();
     s_last_frame = now;

@@ -13,6 +13,8 @@
 #include "base/disp_array.h"
 #include "polymod_core1.h"
 #include "fill_overlay.h"   // for mark_display_has_overlay_post_upload
+#include "anim/startup_anim.h"   // startup_anim_core1_job (the Eden idle keycap job)
+#include "doom/doom_mode.h"      // doom_mode_active: DOOM owns core1 while it runs
 
 #ifdef USE_CORE1
 static volatile uint16_t core1_bit_index = 0;
@@ -45,6 +47,7 @@ typedef enum {
     CORE1_CMD_DECOMPRESS     = 0xcafe0001,
     CORE1_CMD_ROI_UPDATE     = 0xcafe0002,
     CORE1_CMD_RESET_BIT_IDX  = 0xcafe0003,
+    CORE1_CMD_EDEN_KEY       = 0xcafe0004,   // followed by ONE argument word
 #ifdef POLYKYBD_CRASH_TEST
     CORE1_CMD_CRASH_TEST     = 0xcafe00ff,
 #endif
@@ -121,6 +124,12 @@ void core1_entry(void) {
                 core1_bit_index = 0;
                 dmb();
                 break;
+            case CORE1_CMD_EDEN_KEY:
+                // One Eden idle keycap (anim/startup_anim.c). The argument follows the
+                // command in the FIFO; the job publishes its own completion. Its stack
+                // path is measured: IDLE_STYLES.md, "The idle loop on core1".
+                startup_anim_core1_job(multicore_fifo_pop_blocking());
+                break;
 #ifdef POLYKYBD_CRASH_TEST
             case CORE1_CMD_CRASH_TEST: {
                     // An unaligned word store: ARMv6-M has no unaligned access, so
@@ -147,6 +156,16 @@ void core1_entry(void) {
             default: break;
         }
     }
+}
+
+bool core1_eden_available(void) {
+    dmb();
+    return g_core1_entered != 0u && !doom_mode_active();
+}
+
+void core1_eden_key(uint32_t arg) {
+    multicore_fifo_push_blocking(CORE1_CMD_EDEN_KEY);
+    multicore_fifo_push_blocking(arg);
 }
 
 bool core1_is_busy(void) {
@@ -256,4 +275,8 @@ void core1_crash_test(void) {
 }
 #endif
 
+
+#else  // !USE_CORE1: no core1 service, so the Eden idle loop renders on core0
+bool core1_eden_available(void) { return false; }
+void core1_eden_key(uint32_t arg) { (void)arg; }
 #endif

@@ -1258,10 +1258,11 @@ static void eden_idle_tick(void) {
             startup_anim_start_loop(EDEN_IDLE_BRIGHTNESS);   // dim glow, both halves
         }
 #if defined(KEYBOARD_polykybd_split72)
-        // Take turns with the status panel's idle screen: start no new keycap frame
-        // while its frame is still going out over I2C (see status_idle.c). A frame
-        // already under way keeps rendering its slices.
-        if (!startup_anim_frame_busy() && status_idle_holds_bus()) return;
+        // On the core0 fallback path, take turns with the status panel's idle screen:
+        // start no new keycap frame while its frame is still going out over I2C (see
+        // status_idle.c). A frame already under way keeps rendering its slices. When
+        // core1 computes the keycaps, core0's share is small and there is no turn to take.
+        if (!startup_anim_idle_on_core1() && !startup_anim_frame_busy() && status_idle_holds_bus()) return;
 #endif
         startup_anim_tick();
     } else if (startup_anim_is_loop()) {

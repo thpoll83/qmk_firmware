@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "quantum.h"                       // timer_read32/elapsed32, keymaps
 #include "base/disp_array.h"               // scratch buffer, BUFFER_X, kdisp_*
 #include "base/shift_reg.h"                // sr_shift_out_buffer_latch
@@ -16,6 +17,8 @@
 #include "poly_util.h"                      // poly_heavy_font(): the splash face, one copy
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
 #include "../poly_keymap.h"
+#include "../multicore_exec.h"          // core1_eden_key(), core1_eden_available()
+#include "polymod_core1.h"                 // dmb(); core1_stack_high_water_mark() (CORE1_STACK_HWM)
 
 // Cut a key's resting legend out of the idle comet field (dark silhouette). Defined
 // in poly_keymap.c (it needs the keycode/legend tables); no-op for image legends.
@@ -193,9 +196,12 @@ static inline uint8_t sa_plasma(int16_t gx, int16_t gy, uint8_t tp) {
     return (uint8_t)((((uint16_t)a + b + c) * 85u) >> 8);         // /3 as *85>>8 (no divide)
 }
 
-static inline void sa_set(uint8_t *buf, int16_t lx, int16_t ly) {
+// `win` points at the keycap WINDOW's first byte (page 0, column 0) and `stride` is the
+// bytes per page: SA_STRIDE into the scratch buffer (win = scratch + BUFFER_X), or
+// SCREEN_WIDTH into core1's compact buffer (see sa_idle_key_compute).
+static inline void sa_set(uint8_t *win, uint8_t stride, int16_t lx, int16_t ly) {
     if (lx >= 0 && lx < SCREEN_WIDTH && ly >= 0 && ly < SCREEN_HEIGHT)
-        buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
+        win[(size_t)(ly >> 3) * stride + (size_t)lx] |= (uint8_t)(1u << (ly & 7));
 }
 
 // Combined background DENSITY (0..255) at a board point: the faint plasma haze OR'd
@@ -307,7 +313,8 @@ static bool sa_spark_at(uint16_t s, sa_spark_pt_t *pt) {
 // Drawn in local px (correct for the un-rotated keys; the 4 thumbs get a horizontal streak
 // on their own panel, which still reads as a comet). sa_set clips, so an over-inclusive cull
 // is fine.
-static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16_t cosv, int16_t sinv) {
+static void sa_plot_sparks(uint8_t *win, uint8_t stride, const sa_key_geom_t *g, bool rot,
+                           int16_t cosv, int16_t sinv) {
     // Idle screensaver uses long ghost trails (see sa_spark_at); widen the cull
     // margin so a comet whose head has streamed off the right of this key still draws
     // its long tail here instead of being skipped.
@@ -330,17 +337,17 @@ static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16
             hx = (int16_t)(36 + ddx);
             hy = (int16_t)(20 + ddy);
         }
-        sa_set(buf, hx, hy);         // bold 2×2 head
-        sa_set(buf, hx + 1, hy);
-        sa_set(buf, hx, hy + 1);
-        sa_set(buf, hx + 1, hy + 1);
-        if (thick) { sa_set(buf, hx, hy - 1); sa_set(buf, hx + 1, hy - 1); }   // taller, brighter head
+        sa_set(win, stride, hx, hy);         // bold 2×2 head
+        sa_set(win, stride, hx + 1, hy);
+        sa_set(win, stride, hx, hy + 1);
+        sa_set(win, stride, hx + 1, hy + 1);
+        if (thick) { sa_set(win, stride, hx, hy - 1); sa_set(win, stride, hx + 1, hy - 1); }   // taller, brighter head
         const uint16_t fade_step = 230u / tlen;   // invariant across the trail; hoist out of the loop
         for (uint8_t k = 1; k < tlen; ++k) {   // solid neck, then a fading tail
             if (k <= 5 || sa_noise((int16_t)(hx - k + 30), (int16_t)(hy + 12)) <
                           (uint8_t)(255u - (uint16_t)k * fade_step)) {
-                sa_set(buf, (int16_t)(hx - k), hy);
-                if (thick) sa_set(buf, (int16_t)(hx - k), hy + 1);   // 2 px tall trail
+                sa_set(win, stride, (int16_t)(hx - k), hy);
+                if (thick) sa_set(win, stride, (int16_t)(hx - k), hy + 1);   // 2 px tall trail
             }
         }
     }
@@ -391,16 +398,16 @@ static uint8_t sa_star_pts(uint8_t shape, uint8_t stage, int8_t *dx, int8_t *dy)
     return n;
 }
 
-static void sa_star_shape(uint8_t *buf, int16_t x, int16_t y, uint8_t shape, uint8_t stage) {
+static void sa_star_shape(uint8_t *win, int16_t x, int16_t y, uint8_t shape, uint8_t stage) {
     int8_t dx[SA_STAR_MAX_PTS], dy[SA_STAR_MAX_PTS];
     const uint8_t n = sa_star_pts(shape, stage, dx, dy);
-    for (uint8_t i = 0; i < n; ++i) sa_set(buf, (int16_t)(x + dx[i]), (int16_t)(y + dy[i]));
+    for (uint8_t i = 0; i < n; ++i) sa_set(win, SA_STRIDE, (int16_t)(x + dx[i]), (int16_t)(y + dy[i]));
 }
 
 // The stars for one keycap, `fe` ms into the star window (letters solid .. end of fade).
 // Pure function of the key index and the time, so both halves (and every frame) agree
 // without any state.
-static void sa_plot_stars(uint8_t *buf, uint8_t idx, uint32_t fe) {
+static void sa_plot_stars(uint8_t *win, uint8_t idx, uint32_t fe) {
     for (uint8_t k = 0; k < SA_STAR_SLOTS; ++k) {
         const uint32_t seed = (uint32_t)idx * SA_STAR_SLOTS + k + 1u;
         if (sa_hash8(seed * 5u + 3u) >= SA_STAR_USE) continue;
@@ -410,7 +417,7 @@ static void sa_plot_stars(uint8_t *buf, uint8_t idx, uint32_t fe) {
         const int16_t  sx    = (int16_t)(4 + sa_hash8(seed * 11u + 5u) % (SCREEN_WIDTH - 8));
         const int16_t  sy    = (int16_t)(4 + sa_hash8(seed * 13u + 9u) % (SCREEN_HEIGHT - 8));
         const uint8_t  shape = (uint8_t)(sa_hash8(seed * 17u + 2u) % SA_STAR_SHAPES);
-        sa_star_shape(buf, sx, sy, shape, (uint8_t)((age * 5u) / SA_STAR_LIFE_MS));
+        sa_star_shape(win, sx, sy, shape, (uint8_t)((age * 5u) / SA_STAR_LIFE_MS));
     }
 }
 
@@ -471,7 +478,7 @@ static void sa_render_frame(uint32_t el) {
 
         // Black stage (and the welcome tail): nothing but the stars, still falling.
         if (black) {
-            sa_plot_stars(buf, idx, el - SA_STAR_START_MS);
+            sa_plot_stars(buf + BUFFER_X, idx, el - SA_STAR_START_MS);
             kdisp_send_window();
             continue;
         }
@@ -509,7 +516,7 @@ static void sa_render_frame(uint32_t el) {
             }
         }
 
-        if (sparks) sa_plot_sparks(buf, g, rot, cosv, sinv);
+        if (sparks) sa_plot_sparks(buf + BUFFER_X, SA_STRIDE, g, rot, cosv, sinv);
 
         if (letters && L[idx]) {
             const GFXfont *const lf[1] = { poly_heavy_font() };
@@ -545,7 +552,7 @@ static void sa_render_frame(uint32_t el) {
                         buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] &= (uint8_t)~(1u << (ly & 7));
         }
 
-        if (el >= SA_STAR_START_MS) sa_plot_stars(buf, idx, el - SA_STAR_START_MS);
+        if (el >= SA_STAR_START_MS) sa_plot_stars(buf + BUFFER_X, idx, el - SA_STAR_START_MS);
 
         kdisp_send_window();   // 360 B (visible cols/pages) not the full 1024 B — faster SPI
     }
@@ -563,11 +570,14 @@ static void sa_render_frame(uint32_t el) {
 // the main loop back mid-frame; every key of a frame reads the same latched
 // `s_frame_el` + the spark set built once at frame start, so the slices still
 // compose into one coherent frame.
-static void sa_render_idle_key(uint8_t idx) {
-    const sa_key_geom_t *T = is_left_side() ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
-    const sa_key_geom_t *g = &T[idx];
-    if (!g->valid) return;
-
+// The COMPUTE half of an idle keycap: the plasma + ripple background and the comets, into
+// `win` (see sa_set for the window/stride convention). No shift register, no legend, no
+// SPI and no console, so it runs on either core: core0 renders into the scratch buffer
+// (sa_render_idle_key), core1 into its compact buffer (startup_anim_core1_job). `brow`
+// is the caller's 2x2-row cache, so the two cores never share one.
+// noinline: this frame is part of core1's measured stack budget (see IDLE_STYLES.md).
+static __attribute__((noinline)) void sa_idle_key_compute(const sa_key_geom_t *g, uint8_t *win,
+                                                          uint8_t stride, uint8_t *brow) {
     const uint8_t  tp    = (uint8_t)(s_frame_el >> 4);
     const uint8_t  tprg  = (uint8_t)(s_frame_el >> 5);
     const uint8_t  ring  = 255;          // ripples always present (they expand via tprg)
@@ -579,10 +589,6 @@ static void sa_render_idle_key(uint8_t idx) {
     int16_t cosv = (int16_t)sa_sin((uint8_t)(g->ang + 64)) - 128;
     int16_t sinv = (int16_t)sa_sin(g->ang) - 128;
 
-    sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
-    kdisp_set_buffer(0x00);
-    uint8_t *buf = get_scratch_buffer();
-
     for (int16_t ly = 0; ly < SCREEN_HEIGHT; ++ly) {
         int16_t dy = (int16_t)(ly - 20);
         int16_t gy_flat = (int16_t)(g->cy + dy);
@@ -592,6 +598,8 @@ static void sa_render_idle_key(uint8_t idx) {
         // The boot intro deliberately keeps its thumbs full-res (it is unsliced and
         // owns the CPU, so there is nothing to buy there and its look is unchanged).
         const bool erow = ((ly & 1) == 0);
+        uint8_t *row = win + (size_t)(ly >> 3) * stride;
+        const uint8_t bit = (uint8_t)(1u << (ly & 7));
         for (int16_t lx = 0; lx < SCREEN_WIDTH; ++lx) {
             int16_t dx = (int16_t)(lx - 36);
             int16_t gx, gy;
@@ -604,24 +612,134 @@ static void sa_render_idle_key(uint8_t idx) {
             }
             uint8_t bgv;
             if (erow) {
-                bgv = (lx & 1) ? s_brow[lx - 1] : sa_bg(gx, gy, tp, tprg, ring, pgain, cxr, cyr);
-                s_brow[lx] = bgv;
+                bgv = (lx & 1) ? brow[lx - 1] : sa_bg(gx, gy, tp, tprg, ring, pgain, cxr, cyr);
+                brow[lx] = bgv;
             } else {
-                bgv = s_brow[lx];
+                bgv = brow[lx];
             }
             // bgv == 0 can never beat the (unsigned) noise threshold, and at this
             // faint density most pixels are 0 — skip the table lookup for them.
-            if (bgv && bgv > sa_noise(gx, gy))
-                buf[(size_t)(ly >> 3) * SA_STRIDE + (BUFFER_X + lx)] |= (uint8_t)(1u << (ly & 7));
+            if (bgv && bgv > sa_noise(gx, gy)) row[lx] |= bit;
         }
     }
 
-    sa_plot_sparks(buf, g, rot, cosv, sinv);
+    sa_plot_sparks(win, stride, g, rot, cosv, sinv);
+}
+
+// ONE keycap of an idle screensaver frame, rendered on core0: the intro's OPENING look —
+// streaming comets over the plasma+ripple haze — held open forever. It is the boot
+// animation with the letter/converge/fade machinery removed: cv is forced 0 (comets
+// stream straight across instead of gathering into the letter zones), letters are never
+// drawn, and there is no bg fade / letter fade / scanline / black tail. Time (`el`)
+// still advances, so the comets keep coming and going and the ripples keep expanding
+// — the lit pixels are always moving, which is the whole point (anti-burn-in).
+//
+// One keycap at a time (rather than a whole frame) is what lets the tick below hand
+// the main loop back mid-frame; every key of a frame reads the same latched
+// `s_frame_el` + the spark set built once at frame start, so the slices still
+// compose into one coherent frame. This is the FALLBACK path: normally core1 computes
+// the keycap and core0 only finishes it (sa_idle_key_finish).
+static void sa_render_idle_key(uint8_t idx) {
+    const sa_key_geom_t *T = is_left_side() ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
+    const sa_key_geom_t *g = &T[idx];
+    if (!g->valid) return;
+
+    sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
+    kdisp_set_buffer(0x00);
+    sa_idle_key_compute(g, get_scratch_buffer() + BUFFER_X, SA_STRIDE, s_brow);
     // Cut this key's resting legend out of the comet field (dark silhouette the
     // comets ghost around). Implemented in poly_keymap.c where the keycode/legend
     // live; idx here is the display index it maps from. No-op for image legends.
     eden_idle_erase_legend(idx);
     kdisp_send_window();
+}
+
+// ---- the idle loop on core1 --------------------------------------------------
+// The keycap COMPUTE (~93 % of a keycap's ~4.3 ms) runs on core1; core0 only copies
+// the result into the scratch buffer, cuts the legend out (it reads the keymap and the
+// fonts) and pushes it over SPI (the SPI driver needs IRQs, which core1 runs masked).
+// TWO buffers, so core1 always has the next keycap queued (core1_eden_key() through
+// the FIFO): core0 collects every finished keycap each pass, hands its buffer straight
+// back with the next key, and cuts the legend + pushes while core1 computes. With ONE
+// buffer, core1 sat idle from finishing a key until core0's next pass collected it, and
+// a pass costs ~7 ms while the status panel flushes over I2C: the rig's first frame
+// took 249 ms, one key per pass, against 197 ms on core0 alone. So core0 spends ~0.3 ms
+// plus the legend per keycap instead of ~4.3 ms, and the frame is bound by core1's
+// compute rather than by the main loop's pass time.
+// Nothing that stops idle can race it: a firmware or font-pack write and an overlay
+// upload all end the idle session first, and DOOM takes core1 only as its own idle
+// style. SA_C1_TIMEOUT_MS covers anything else that halts core1: the session falls
+// back to rendering on core0. A session starts on core1 only once core1 has finished
+// every job it was handed (sa_begin()).
+#define SA_C1_BYTES      (SCREEN_WIDTH * (SCREEN_HEIGHT / 8))   // 360: the window, compact
+#define SA_C1_SLOTS      2u
+#define SA_C1_TIMEOUT_MS 100u
+static uint8_t           s_c1_buf[SA_C1_SLOTS][SA_C1_BYTES];  // core1 writes a slot, core0 reads it once done
+static uint8_t           s_c1_brow[SCREEN_WIDTH]; // core1's own 2x2-row cache
+static volatile uint16_t s_c1_done;               // sequence number of the last finished job
+static uint16_t          s_c1_seq;                // sequence number of the last dispatched job
+// The jobs in flight, oldest first: slot s_c1_head, then the other one. Jobs finish in
+// FIFO order, so the oldest is the only one worth waiting for.
+static uint8_t           s_c1_head;
+static uint8_t           s_c1_count;
+static uint8_t           s_c1_idx[SA_C1_SLOTS];   // keycap in each slot's job
+static uint16_t          s_c1_slot_seq[SA_C1_SLOTS];
+static uint32_t          s_c1_sent_at[SA_C1_SLOTS];
+static uint8_t           s_c1_next;               // next keycap to hand core1 this frame
+static bool              s_c1_frame;              // the current frame renders on core1
+static bool              s_c1_off;                // core0 renders: core1 timed out or still owes jobs
+
+// Runs ON CORE1, from core1_entry(). `arg` = idx | left << 8 | slot << 9 | seq << 16. No console,
+// no IRQs, and CORE1_STACK_SIZE of stack (IDLE_STYLES.md has the measured budget).
+void __attribute__((noinline)) startup_anim_core1_job(uint32_t arg) {
+    const uint8_t idx  = (uint8_t)(arg & 0xFFu);
+    const bool    left = ((arg >> 8) & 1u) != 0;
+    uint8_t      *buf  = s_c1_buf[(arg >> 9) & 1u];
+    memset(buf, 0, SA_C1_BYTES);
+    if (idx < SA_NUM_KEYS) {
+        const sa_key_geom_t *g = &(left ? SA_GEOM_LEFT : SA_GEOM_RIGHT)[idx];
+        if (g->valid) sa_idle_key_compute(g, buf, SCREEN_WIDTH, s_c1_brow);
+    }
+    dmb();   // the pixels land before the sequence number
+    s_c1_done = (uint16_t)(arg >> 16);
+}
+
+// The next keycap with a panel, from `from` on; SA_NUM_KEYS when there is none.
+static uint8_t sa_next_key(uint8_t from) {
+    const sa_key_geom_t *T = is_left_side() ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
+    while (from < SA_NUM_KEYS && !T[from].valid) ++from;
+    return from;
+}
+
+// Hand core1 the frame's next keycaps until both slots hold a job.
+static void sa_c1_fill(void) {
+    while (s_c1_count < SA_C1_SLOTS && s_c1_next < SA_NUM_KEYS) {
+        const uint8_t slot = (uint8_t)((s_c1_head + s_c1_count) % SA_C1_SLOTS);
+        const uint8_t idx  = s_c1_next;
+        s_c1_seq            = (uint16_t)(s_c1_seq + 1u);
+        s_c1_idx[slot]      = idx;
+        s_c1_slot_seq[slot] = s_c1_seq;
+        s_c1_sent_at[slot]  = timer_read32();
+        ++s_c1_count;
+        s_c1_next = sa_next_key((uint8_t)(idx + 1u));
+        core1_eden_key((uint32_t)idx | ((uint32_t)(is_left_side() ? 1u : 0u) << 8) |
+                       ((uint32_t)slot << 9) | ((uint32_t)s_c1_seq << 16));
+    }
+}
+
+// Has the job in `slot` finished? Sequence numbers are compared modulo 2^16.
+static bool sa_c1_slot_done(uint8_t slot) {
+    return (int16_t)(uint16_t)(s_c1_done - s_c1_slot_seq[slot]) >= 0;
+}
+
+// Finish a keycap core1 computed: copy it into the scratch window, so the slot is free
+// again the moment this returns. The caller then cuts the legend and pushes it.
+static void sa_c1_collect(uint8_t idx, const uint8_t *buf) {
+    sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
+    kdisp_set_buffer(0x00);
+    uint8_t *scratch = get_scratch_buffer();
+    for (uint8_t page = 0; page < SCREEN_HEIGHT / 8; ++page)
+        memcpy(scratch + (size_t)page * SA_STRIDE + BUFFER_X, buf + (size_t)page * SCREEN_WIDTH, SCREEN_WIDTH);
 }
 
 // Shared start path for the one-shot (boot/KC_EDEN) and the looping idle screensaver.
@@ -639,6 +757,18 @@ static void sa_begin(bool loop, uint8_t contrast) {
     s_slice_worst_ms = 0;   // first log line of this one
     s_logged_frame   = false;
     s_frames_done    = 0;
+    s_c1_frame       = false;
+    // A session uses core1 only once core1 has finished every job it was handed,
+    // whether the last session timed out or was stopped by a keypress first. Each job
+    // is two FIFO words and the FIFO holds eight, so a core1 that stopped consuming
+    // would fill it within two more sessions, and the next
+    // multicore_fifo_push_blocking() would stall the main loop. Waiting for the last
+    // sequence number keeps at most one session's jobs (four words) unconsumed. A
+    // healthy core1 finishes a job in ~3 ms, long before the next idle timeout. A
+    // core1 relaunch loses jobs in flight, so after that Eden can stay on core0 until
+    // the next boot; it still renders.
+    dmb();
+    s_c1_off = s_c1_done != s_c1_seq;
     // Non-blocking progress trace (HID console; dropped when nothing is attached).
     // If a half wedges during the animation, the last line printed shows how far it
     // got. Only the USB (master) half's console is readable — to diagnose the left
@@ -705,11 +835,19 @@ void startup_anim_stop(void) {
     // over freshly-woken legends.
     s_frame_busy = false;
     s_frame_idx  = 0;
+    s_c1_frame   = false;   // jobs still in flight finish into s_c1_buf and are ignored
+    s_c1_count   = 0;
 }
 
 bool startup_anim_is_loop(void) { return s_active && s_loop; }
 
-bool startup_anim_frame_busy(void) { return s_active && s_loop && s_frame_busy; }
+// Only a CORE0-rendered frame counts: when core1 computes the keycaps, core0's share is
+// small enough that the status panel need not wait for it (status_idle.c).
+bool startup_anim_frame_busy(void) { return s_active && s_loop && s_frame_busy && !s_c1_frame; }
+
+bool startup_anim_idle_on_core1(void) {
+    return s_active && s_loop && !s_c1_off && core1_eden_available();
+}
 
 bool startup_anim_active(void) { return s_active; }
 
@@ -746,13 +884,47 @@ void startup_anim_tick(void) {
             s_frame_idx = 0;
             s_frame_ms  = 0;
             s_frame_busy = true;
+            s_c1_frame   = startup_anim_idle_on_core1();
+            if (s_c1_frame) {
+                s_c1_head  = 0;
+                s_c1_count = 0;
+                s_c1_next  = sa_next_key(0);
+                sa_c1_fill();
+                if (s_c1_count == 0) s_frame_idx = SA_NUM_KEYS;   // no panels: the frame is done
+            }
         }
-        // Render keycaps until the slice budget is spent. Checked AFTER each key, so
-        // a slice always makes progress; skipped (invalid) slots cost nothing.
         const uint32_t slice_start = timer_read32();
-        do {
-            sa_render_idle_key(s_frame_idx++);
-        } while (s_frame_idx < SA_NUM_KEYS && timer_elapsed32(slice_start) < EDEN_IDLE_SLICE_MS);
+        if (s_c1_frame && s_frame_idx < SA_NUM_KEYS) {
+            // core1 computes; core0 finishes EVERY keycap that is ready this pass, and
+            // refills each slot the moment it has copied the slot out.
+            while (s_c1_count > 0 && sa_c1_slot_done(s_c1_head)) {
+                const uint8_t slot = s_c1_head;
+                const uint8_t cur  = s_c1_idx[slot];
+                sa_c1_collect(cur, s_c1_buf[slot]);
+                s_c1_head = (uint8_t)((s_c1_head + 1u) % SA_C1_SLOTS);
+                --s_c1_count;
+                sa_c1_fill();                         // core1 computes while we push this one
+                eden_idle_erase_legend(cur);
+                kdisp_send_window();
+            }
+            if (s_c1_count == 0) {
+                s_frame_idx = SA_NUM_KEYS;            // every keycap of the frame is out
+            } else if (timer_elapsed32(s_c1_sent_at[s_c1_head]) >= SA_C1_TIMEOUT_MS) {
+                // core1 never answered (halted, or taken by something else): render the
+                // rest of this frame, and the session, on core0.
+                uprintf("Eden idle: core1 job for key %u timed out - rendering on core0\n", s_c1_idx[s_c1_head]);
+                s_c1_off    = true;
+                s_c1_frame  = false;
+                s_frame_idx = s_c1_idx[s_c1_head];
+                s_c1_count  = 0;
+            }
+        } else if (s_frame_idx < SA_NUM_KEYS) {
+            // Render keycaps until the slice budget is spent. Checked AFTER each key, so
+            // a slice always makes progress; skipped (invalid) slots cost nothing.
+            do {
+                sa_render_idle_key(s_frame_idx++);
+            } while (s_frame_idx < SA_NUM_KEYS && timer_elapsed32(slice_start) < EDEN_IDLE_SLICE_MS);
+        }
         const uint16_t slice_ms = (uint16_t)timer_elapsed32(slice_start);
         s_frame_ms += slice_ms;
         if (slice_ms > s_slice_worst_ms) s_slice_worst_ms = slice_ms;
@@ -766,11 +938,16 @@ void startup_anim_tick(void) {
             // session — a 4.4 s glance at the screensaver printed no timing at all,
             // which makes the instrument useless exactly when you want a quick look.
             if (!s_logged_frame || el >= s_next_log) {
-                // `frames` is the rate the keycaps actually got since the last report:
-                // `frame` only sums render time, so it cannot show time lost between
-                // slices to other main-loop work (the status panel's I2C flush).
-                uprintf("Eden idle %lums (frame %ums, worst slice %ums, %u frames)\n",
-                        (unsigned long)el, s_frame_ms, s_slice_worst_ms, s_frames_done);
+                // `frames` is the rate the keycaps actually got since the last report.
+                // `frame` sums CORE0's time only: render time on the core0 path, the
+                // copy + legend + SPI push per keycap on the core1 path.
+                uprintf("Eden idle %lums (frame %ums, worst slice %ums, %u frames, %s)\n",
+                        (unsigned long)el, s_frame_ms, s_slice_worst_ms, s_frames_done,
+                        s_c1_frame ? "core1" : "core0");
+#ifdef CORE1_STACK_HWM
+                uprintf("Eden idle: core1 stack HWM %lu of %u B\n",
+                        (unsigned long)core1_stack_high_water_mark(), (unsigned)CORE1_STACK_SIZE);
+#endif
                 s_next_log       = el + 5000;
                 s_slice_worst_ms = 0;   // worst-since-the-last-report, not worst-ever
                 s_frames_done    = 0;
@@ -811,6 +988,8 @@ void startup_anim_set_tail(bool on) { (void)on; }
 bool startup_anim_welcome(void) { return false; }
 bool startup_anim_take_welcome_said(void) { return false; }
 bool startup_anim_is_loop(void) { return false; }
+bool startup_anim_idle_on_core1(void) { return false; }
+void startup_anim_core1_job(uint32_t arg) { (void)arg; }
 bool startup_anim_frame_busy(void) { return false; }
 void startup_anim_tick(void) {}
 bool startup_anim_active(void) { return false; }

@@ -103,7 +103,23 @@ static bool overlay_from_index_visible(uint16_t from) {
            variant == overlay_mod_variant(get_local_layer()->mods);
 }
 
-// Computes the 0..89 overlay slot index for a (translate_a_to_z'd) overlay keycode.
+// The keycode an upload is stored under. Outside MRU mode the host addresses an
+// image by the LETTER it belongs to, and translate_a_to_z() moves it to the key
+// that types that letter in the active language. Under MIRROR_OVERLAYS (the host's
+// MRU mode) the keycode + modifier pair is a POOL SLOT address instead, and the
+// display reads the pool through the host's mapping by physical keycode
+// (copy_overlay_to_buffer() does not translate). Translating there swapped the
+// slots whose addresses are letters the layout moves: under de-DE the images in
+// the Y- and Z-address slots traded places, so whichever keys the mapping pointed
+// at them showed each other's image.
+static uint8_t upload_keycode(uint8_t keycode) {
+    if (test_flag(get_local_state()->overlay_flags, MIRROR_OVERLAYS)) {
+        return keycode;
+    }
+    return translate_a_to_z(keycode);
+}
+
+// Computes the 0..89 overlay slot index for an upload_keycode()'d overlay keycode.
 // Returns false and logs when the index is out of range.
 static bool overlay_slot_index(uint8_t keycode, uint16_t* out_idx) {
     uint16_t idx = (keycode > KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode > KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
@@ -123,7 +139,7 @@ void fill_overlay_buffer(uint8_t segment_index, uint8_t* buffer) {
         return;
     }
 
-    keycode = translate_a_to_z(keycode);
+    keycode = upload_keycode(keycode);
 
     uint16_t idx;
     if (!overlay_slot_index(keycode, &idx)) {
@@ -170,7 +186,7 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
         return;
     }
 
-    keycode = translate_a_to_z(keycode);
+    keycode = upload_keycode(keycode);
     uint16_t idx;
     if (!overlay_slot_index(keycode, &idx)) {
         return;
@@ -231,7 +247,7 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
         return;
     }
 
-    keycode = translate_a_to_z(keycode);
+    keycode = upload_keycode(keycode);
     uint16_t idx;
     if (!overlay_slot_index(keycode, &idx)) {
         return;
@@ -317,7 +333,7 @@ uint8_t receive_prc_overlay_report(const uint8_t* data, uint8_t avail) {
             uprintf("Warning: PRC overlay for unsupported keycode 0x%x dropped.\n", r.keycode);
             continue;
         }
-        uint8_t  keycode = translate_a_to_z(r.keycode);
+        uint8_t  keycode = upload_keycode(r.keycode);
         uint16_t idx;
         if (!overlay_slot_index(keycode, &idx)) {
             continue;

@@ -206,6 +206,17 @@ polykybd_tutorial_plan_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# demo_plan.c is the showroom demo's playlist and timeline (KC_DEMO). Pure for the same
+# reason as tutorial_plan.c: the caller passes "ms into the segment", so no timer, no
+# keymap and no display are linked. The firmware binding is anim/demo_mode.c.
+polykybd_demo_plan_SRC := \
+	$(POLY_BASE_PATH)/demo_plan.c \
+	$(POLY_BASE_PATH)/tests/demo_plan_tests.cpp
+
+polykybd_demo_plan_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
 # The PlyI overlay icon library (cmd 42): validation, blit and the pair list.
 # Dependency-free apart from crc32 and the header-only map codec.
 polykybd_icon_lib_SRC := \

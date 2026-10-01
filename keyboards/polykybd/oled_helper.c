@@ -17,6 +17,7 @@
 #include "poly_keymap.h"         // poly_fw_screen() / poly_fw_hold_active()
 #include "poly_macro.h"          // POLY_MACRO_COUNT
 #include "poly_macro_record.h"   // enum poly_rec_state + the recording read-outs
+#include "anim/demo_mode.h"      // demo_sync_active(): the "how do I stop this" hint
 #ifdef POLYKYBD_DOOM
 #include "doom/doom_mode.h"
 #include "doom/doom_logo_oled.h"
@@ -958,6 +959,36 @@ void oled_tutorial_screen(void) {
     oled_render_dirty(true);   // one synchronous pass — a line must not dribble in
 }
 
+// Draw `text` horizontally centred on the panel, baseline at `y`.
+static void oled_draw_text_centred(const GFXfont *const *font, int8_t y, const uint32_t *text) {
+    int8_t lo = 0, hi = 0;
+    kdisp_gfx_text_bounds(font, 1, text, &lo, &hi);
+    int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - (hi - lo + 1)) / 2 - lo);
+    if (x < 0) x = 0;
+    kdisp_write_gfx_text(font, 1, (int8_t)x, y, text);
+}
+
+// The demo's own screen, both halves alike: what the board is doing and the one way out.
+// A board that ignores every key looks broken to anyone who walks up to it, so the exit
+// gesture is written on the glass rather than only in the docs.
+static void oled_demo_screen(void) {
+    const bool     tall    = OLED_DISPLAY_HEIGHT >= 64;
+    const GFXfont *title[] = { tall ? &NotoSans_Regular_Mid_19px7b : &NotoSans_Regular_Small_15px7b };
+    const GFXfont *small[] = { &NotoSans_Regular_Small_15px7b };
+    kdisp_set_buffer(0);
+    oled_draw_text_centred(title, tall ? 26 : 14, U"Demo mode");
+    oled_draw_text_centred(small, tall ? 52 : 30, U"Hold Esc to exit");
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    oled_render_dirty(true);
+}
+
+// Show the demo hint for the first 4 s of every 12 s; the rest of the time the status
+// panel shows what it always does (layer, language, speed), which is part of the show.
+// Each half runs its own clock, so the two may swap a few ms apart; nobody can tell.
+static bool oled_demo_hint_phase(void) {
+    return (timer_read32() % 12000u) < 4000u;
+}
+
 bool oled_task_user(void) {
     // Brightness ownership for the tutorial, on its edges only (an unconditional
     // oled_set_brightness every tick would be pointless I2C traffic).
@@ -1069,6 +1100,10 @@ bool oled_task_user(void) {
         oled_macro_rec_screen();
     } else if ((get_local_state()->flags & DISP_IDLE) != 0) {
         oled_render_logos();
+    } else if (demo_sync_active() && oled_demo_hint_phase()) {
+        // Below the idle branch: during the demo's idle segment the logos are the show.
+        oled_scroll_off();
+        oled_demo_screen();
     } else if (get_local_state()->settings_more != 0) {
         // Settings -> "More" is open: show what the board IS. Below the idle branch
         // on purpose — an idled board has nothing to report and the logos are the

@@ -295,8 +295,10 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // KC_IDLE_TIMEOUT sits NEXT TO KC_IDLE_STYLE, not at the row's far end: the two
         // are one setting split in half ("which animation" / "after how long"), and the
         // row fills inward from the outer edge with its slack at the far end, so this
-        // is the next slot either rule would pick. Two blanks remain after it.
-        KC_SETTINGS_MORE, KC_IDLE_STYLE, KC_IDLE_TIMEOUT, KC_GLYPH_SCRIPT, KC_TOGMODS, KC_TOGTEXT, KC_NO, KC_NO,
+        // is the next slot either rule would pick. KC_DEMO takes the next free slot after
+        // the toggles: it swallows every key until Esc is held, so it belongs behind More
+        // with the other keys a stray tap should not reach. One blank remains.
+        KC_SETTINGS_MORE, KC_IDLE_STYLE, KC_IDLE_TIMEOUT, KC_GLYPH_SCRIPT, KC_TOGMODS, KC_TOGTEXT, KC_DEMO, KC_NO,
         KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
 

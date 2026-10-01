@@ -128,6 +128,10 @@ void poly_suspend(void);
 // Wakes the displays on real user activity. Returns true if this call performed the
 // wake (so the caller can swallow the keypress that caused it).
 bool display_wakeup(keyrecord_t* record);
+// Wake from idle without a keypress (HID cmd 15 "stop idle", the demo's idle segment).
+void poly_wake_from_idle(void);
+// Can the flashed fonts draw this language (script=false) or glyph script (true)?
+bool poly_preview_renderable(bool script, uint8_t value);
 
 // Called just before a font-pack / firmware flash begins (which blocks normal
 // interaction): drop to the base/default layer and render it once, so the user can

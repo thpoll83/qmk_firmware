@@ -235,6 +235,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         // and the key stayed visible while every other advanced key hid. Both are gone
         // — the branch is deleted and this is the real legend, drawn like any other.
         case KC_EDEN:                       return MID_TWO_LINE("RESET", "Eden");
+        case KC_DEMO:                       return MID_TWO_LINE("Demo", "Mode");
         // ⚠️ KC_GLYPH_SIZE_UP is handled in to_static_text() (poly_keymap.c), NOT here.
         // Its legend depends on the current tier AND on whether Shift is held, and the
         // SYNCED mods live in poly_layer_t — this function only receives led_t, so the

@@ -55,7 +55,7 @@ LoopProf: iters=278528 ovl=206 worst=105ms(ovl br=5ms rn=67ms)
 | Field | Meaning |
 |-------|---------|
 | `iters=N` | Total main-loop iterations measured since boot. |
-| `ovl=N` | Of those, how many handled a **bulk overlay/mapping HID command** (cmds 10/11/12/16/17/18/19/21). The rest are "norm". |
+| `ovl=N` | Of those, how many handled a **bulk overlay/mapping HID command** (cmds 10/11/12/16/17/18/19/21/33/41/42). The rest are "norm". |
 | `worst=Nms` | The **single longest** iteration seen all-time, in ms (the worst matrix-scan gap). |
 | `(ovl` / `norm)` | Whether that worst iteration was overlay-handling or normal. |
 | `br=Mms` | Of that worst iteration, milliseconds spent **blocking inside `send_to_bridge()`** (the master→slave UART relay). |
@@ -149,9 +149,11 @@ the boot window using the same settle gates as the HIL suite, drive the overlay 
 latency / idle workloads each inside its own window, and publish a JSON + markdown
 report with a comparison against a committed baseline. It runs as the **opt-in**
 `Performance measurement (split72)` CI job (`qmk-test.yml`): trigger it with the
-`perf` PR label, `[perf]` in a commit message, or a manual workflow run. Build the
-images with `-e POLYKYBD_LOOP_PROFILE=yes` or the run fails fast with a clear
-"not a POLYKYBD_LOOP_PROFILE build" message.
+**`hil-perf`** PR label, **`[hil-perf]`** in a pushed commit message (push events only;
+it does nothing on a pull_request event), or a manual workflow run with tier `perf` or
+`all`. The CI job builds its own profiling images (`build-perf`); when you run
+`perf_runner` by hand, build them with `-e POLYKYBD_LOOP_PROFILE=yes` or the run fails
+fast with a clear "not a POLYKYBD_LOOP_PROFILE build" message.
 
 ### Sanity check: `ovl_iters` must equal the overlay reports sent
 
@@ -192,7 +194,7 @@ All are no-ops unless `POLYKYBD_LOOP_PROFILE` is defined:
 | Hook | Call site | Purpose |
 |------|-----------|---------|
 | `loop_profile_tick()` | `poly_keymap.c` `housekeeping_task_user()`, at the very top | Closes the previous iteration's measurement, updates the histograms, emits the summary. At the top so it measures the FULL previous iteration (matrix scan, HID, bridge, render). |
-| `loop_profile_note_overlay_cmd()` | `hid_com.c` `raw_hid_receive()`, the classifier `switch` | Tags this iteration as overlay-handling (cmds 10/11/12/16/17/18/19/21). |
+| `loop_profile_note_overlay_cmd()` | `hid_com.c` `raw_hid_receive()`, the classifier `switch` | Tags this iteration as overlay-handling (cmds 10/11/12/16/17/18/19/21/33/41/42). |
 | `loop_profile_add_bridge_us(us)` | `bridge_helper.c` `send_to_bridge()`, around `transaction_rpc_exec()` | Accumulates blocking bridge microseconds for this iteration. |
 | `loop_profile_add_render_us(us)` | `poly_keymap.c` `sync_and_refresh_displays()`, around the `update_displays()` calls | Accumulates render microseconds for this iteration. |
 | `loop_profile_reset()` / `_snapshot()` / `_log_now()` | `hid_com.c` `raw_hid_receive()` case 32 | The on-demand control API above. ⚠️ Unlike the four hooks, these have **no `#else` stubs** — the call site itself is `#ifdef`-guarded so the command NACKs on a normal build. |

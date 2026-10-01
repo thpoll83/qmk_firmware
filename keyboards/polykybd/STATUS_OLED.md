@@ -62,9 +62,11 @@ RAM noise before the splash. Patched in QMK core (`drivers/oled/oled_driver.c`, 
 in `UPSTREAM_PATCHES.md`): the panel stays off through init, an all-black GDDRAM is
 flushed, **then** `DISPLAY_ON` — boot shows black → splash.
 
-**Speed levers:** `OLED_UPDATE_PROCESS_LIMIT` is now **4** (`config.h`, was QMK's 1) —
+**Speed levers:** `OLED_UPDATE_PROCESS_LIMIT` is now **2** (`config.h`, was QMK's 1) —
 split72's animated idle screen dirties all 16 blocks every frame and could not keep up
-at one block a pass. Still unpulled: I2C Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`, above
+at one block a pass. It was 4 for a while; with Eden on core1 and the panel at 75 ms,
+the ~6 ms chunks held Eden's core0 work back visibly on hardware, and ~3 ms chunks did
+not. Still unpulled: I2C Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`, above
 SSD1306 spec, and the bus may be shared — A/B on real hardware).
 
 ## Brightness: ONE scale with the keycaps (`base/status_brightness.h`)
@@ -179,8 +181,8 @@ every frame comes from the font's column bytes in flash and Eden's tables.
      the panel was smooth, but Eden visibly slowed on hardware, because each status
      frame still holds core0 ~31 ms and Eden's legend cut and SPI push wait behind it.
   3. **On Eden's core0 fallback path, the panel and the Eden idle loop take turns.**
-     Each frame costs the main loop ~23 ms of blocking I2C (~6 ms per pass at
-     `OLED_UPDATE_PROCESS_LIMIT` 4), and Eden then renders the keycaps in 3 ms slices on
+     Each frame costs the main loop ~23 ms of blocking I2C (~3 ms per pass at
+     `OLED_UPDATE_PROCESS_LIMIT` 2), and Eden then renders the keycaps in 3 ms slices on
      that same loop. Interleaved, every slice waited behind a pass of I2C. So no frame
      is composed while Eden is mid-frame (`startup_anim_frame_busy()`), and
      `eden_idle_tick()` starts no keycap frame while ours is still going out

@@ -21,7 +21,7 @@
 //
 // ⚠️ Frame pacing: the bands move everywhere, so nearly all 16 blocks are dirty every
 // frame, and QMK sends them over I2C a few per main-loop pass (OLED_UPDATE_PROCESS_LIMIT
-// in config.h), blocking the loop ~6 ms per pass and ~23 ms per frame. Three rules:
+// in config.h), blocking the loop ~3 ms per pass and ~23 ms per frame. Three rules:
 //   - a new frame is composed only once the previous one has been sent completely
 //     (oled_dirty == 0): writing over a half-sent frame showed the top of one frame
 //     over the bottom of the other;

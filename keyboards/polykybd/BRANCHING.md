@@ -82,3 +82,28 @@ and relative links were adjusted to suit a standalone file.
     bill of health. Treat a silent sweep as "nothing obvious on the branch I am
     standing on", nothing more.
 
+
+## Landing a stacked PR
+
+The host repo's `docs/branching.md` has the orphaned-merge post-mortem (#244/#245).
+Two more rules came out of landing #324 → #325 here (2026-10-01):
+
+- ⚠️ **GitHub does NOT retarget the stacked PR when its base merges** — only when the
+  base BRANCH is deleted, and merged branches are kept here (the web session's git
+  proxy cannot delete one). #325 still read `feature/status-idle-plasma-word` more
+  than 20 minutes after #324 merged. Retarget it yourself
+  (`update_pull_request base=PolyKybd`), and only merge once `base.ref` reads
+  `PolyKybd`.
+- **After a SQUASH merge, merging `PolyKybd` into the stacked branch conflicts in every
+  file the base PR touched**, because the squash commit is unrelated history. The
+  stacked branch already contains the base PR's last head, so the test per file is:
+
+  ```bash
+  git diff <base PR's last head> origin/PolyKybd -- <file>   # empty => keep ours
+  ```
+
+  Empty means nothing else landed in that file, so the branch's version is right
+  (`git checkout --ours`). A non-empty diff is the part to carry over by hand: here
+  only `config.h` differed, by the `FW_VERSION` auto-bump. Then confirm
+  `git diff --stat origin/PolyKybd` shows exactly the stacked PR's own
+  additions/deletions (+374/−104 for #325) before pushing.

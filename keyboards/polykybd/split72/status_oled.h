@@ -5,5 +5,3 @@
 #include "../oled_helper.h"
 
 void oled_update_buffer(void);
-void oled_draw_kybd(void);
-void oled_draw_poly(void);

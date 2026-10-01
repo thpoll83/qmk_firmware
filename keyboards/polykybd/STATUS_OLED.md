@@ -52,9 +52,9 @@ band-by-band:
 - The other `oled_clear()` (`poly_keymap.c` `oled_init_user`) is harmless: QMK calls
   `oled_init_user` at the **top** of `oled_init`, before `oled_initialized = true`, so
   the `oled_off/render/on` around it are early-return no-ops (it only touches RAM).
-- The logos + DOOM status paths use diff-based `oled_write_raw` (no `oled_clear`) and
-  hardware scroll; they can still dribble on a busy transition but are non-critical, so
-  they were left as-is.
+- The DOOM status path uses diff-based `oled_write_raw` (no `oled_clear`) and
+  hardware scroll; it can still dribble on a busy transition but is non-critical, so
+  it was left as-is.
 
 **Boot noise (deferred `DISPLAY_ON`)** — the SSD1306 powers up with random GDDRAM, and
 stock `oled_init()` sent `DISPLAY_ON` before any content was flushed, so boot flashed
@@ -62,10 +62,12 @@ RAM noise before the splash. Patched in QMK core (`drivers/oled/oled_driver.c`, 
 in `UPSTREAM_PATCHES.md`): the panel stays off through init, an all-black GDDRAM is
 flushed, **then** `DISPLAY_ON` — boot shows black → splash.
 
-**Speed levers not yet pulled** (were unnecessary once the diffing + one-shot flush
-landed; revisit only if a full swap still looks slow on hardware): raise
-`OLED_UPDATE_PROCESS_LIMIT`, or bump I2C to Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`,
-above SSD1306 spec — A/B on real hardware).
+**Speed levers:** `OLED_UPDATE_PROCESS_LIMIT` is now **2** (`config.h`, was QMK's 1) —
+split72's animated idle screen dirties all 16 blocks every frame and could not keep up
+at one block a pass. It was 4 for a while; with Eden on core1 and the panel at 75 ms,
+the ~6 ms chunks held Eden's core0 work back visibly on hardware, and ~3 ms chunks did
+not. Still unpulled: I2C Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`, above
+SSD1306 spec, and the bus may be shared — A/B on real hardware).
 
 ## Brightness: ONE scale with the keycaps (`base/status_brightness.h`)
 
@@ -126,9 +128,85 @@ instead. Anything else the slave needs to track about brightness faces the same
 trap — derive it from synced state, not from a shadow updated on an edge.
 
 ⚠️ **Idle is a dim contrast register, NOT `oled_off()`** (`POLY_STATUS_IDLE_BRIGHT`,
-0). `oled_task_user()` hands the panel to `oled_render_logos()` during `DISP_IDLE` and
-its **hardware scroll** keeps running; switching the panel off would stop the scroll,
-which is the idle look this board is supposed to have.
+0). During `DISP_IDLE`, `oled_task_user()` hands split72's panel to
+the idle screen (`status_idle.c`, below) and blanks split42's; switching the panel off would stop
+the animation, which is the idle look this board is supposed to have.
+Register 0 is the SSD1306's floor. Lowering the VCOMH deselect level (`0xDB`) or the
+pre-charge period (`0xD9`) on top of it dims the panel further but made it flicker on
+hardware, with occasional brighter strips, so the idle screen dims by content instead:
+its letters are drawn as a 1 px outline, dark inside, and its bands on every other row,
+and the dark band rows are never computed.
+
+**The scrolling Poly/Kybd logos are GONE** (two 1 KB bitmaps on split72, all-zero
+512 B placeholders on split42, `oled_draw_poly/kybd()`, `oled_render_logos()`). Their
+one other caller, `oled_init_user()`, runs before the driver is initialised, so the
+boot "logo" only ever filled RAM — nobody saw it. The DOOM attract logo is separate
+(`DOOM_LOGO_OLED`) and keeps its hardware scroll.
+
+### The idle screen (split72, `status_idle.c`)
+
+Demoscene plasma bands with "Poly" / "Kybd". The background is a sum of four sines of
+Eden's table (one fed by `startup_anim_dist()` from the field centre) drawn as CONTOUR
+BANDS: on a 1-bit panel a dithered plasma reads as grey noise, while its contours are
+native. Both panels are one field, the right continuing the left after the 40 px gap.
+"Poly" (left) and "Kybd" (right), in FreeSansBold24pt7b (`poly_heavy_font()`, Eden's
+keycap-letter face), are ONE LINE across both panels, typed and edited away with an
+underscore cursor: the cursor blinks under the P's place, "Poly Kybd" is typed (300 ms
+a key; the gap between the words is TWO cursor stops — after the y, then inside the
+physical gap — so it does not leap the gap in one key) and the last key takes the
+cursor away; the text stands 5 s; the cursor returns on the d, walks back to the P, and Del
+removes a character at a time while the REST OF THE LINE MOVES LEFT to close up, so
+"Kybd" slides across the physical gap into the left panel; a 3 s gap, and over. Each
+half lays out the whole line in field columns for that reason. The plasma runs on a
+5/32-speed clock. Words are centred horizontally on their panels and vertically on the
+letter BODY (tallest top to baseline) — centring the whole ink box, descender included,
+put them visibly high. The place AFTER the d is never used: "Kybd" centred leaves no
+room for an underscore there. Letters (and the cursor) are drawn as a 1 px
+outline (the ink minus the ink shrunk by 1 px), dark inside, the bands on every other row, inside a 2 px black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
+every frame comes from the font's column bytes in flash and Eden's tables.
+
+- ⚠️ **ONLY the 2 px ring is black — no gap closing.** Closing letter gaps too (any
+  pixel with ink within N px on both sides) was tried to stop a band reading as a dash
+  between K and y; it painted solid black wedges between the letters instead, which
+  read as a shadow. The bands showing through gaps and counters is the intended look.
+- ⚠️ **Centred means the letters light the SAME pixels every cycle** (~60 % of the
+  time for the held-letter pixels). The bands and the 5 s gap relieve it; a small
+  per-cycle offset is the lever if burn-in shows.
+- ⚠️ **It redraws every frame, and a redraw switches the SSD1306 back ON** — so the
+  branch honours `STATUS_DISP_ON` itself, as the tutorial branch does, or the panel
+  stays lit through the suspend.
+- ⚠️ **Frame pacing has three rules, and the third protects the keycaps.**
+  1. A frame is composed only when the previous one is fully sent (`oled_dirty == 0`,
+     the driver's global). Composing over a half-sent frame tore it.
+  2. At most one frame per `SI_FRAME_MS` (150 ms), or per `SI_FRAME_FAST_MS` (75 ms)
+     while Eden computes its keycaps on core1 (`startup_anim_idle_on_core1()`). Both
+     divide the 150 ms cursor step and the 300 ms keystroke, so the typing stays even.
+     The fast rate applies only there: on the core0 fallback the two take turns (rule
+     3), and the other idle styles were never measured at it. 50 ms was tried first:
+     the panel was smooth, but Eden visibly slowed on hardware, because each status
+     frame still holds core0 ~31 ms and Eden's legend cut and SPI push wait behind it.
+  3. **On Eden's core0 fallback path, the panel and the Eden idle loop take turns.**
+     Each frame costs the main loop ~23 ms of blocking I2C (~3 ms per pass at
+     `OLED_UPDATE_PROCESS_LIMIT` 2), and Eden then renders the keycaps in 3 ms slices on
+     that same loop. Interleaved, every slice waited behind a pass of I2C. So no frame
+     is composed while Eden is mid-frame (`startup_anim_frame_busy()`), and
+     `eden_idle_tick()` starts no keycap frame while ours is still going out
+     (`status_idle_holds_bus()`, capped at 100 ms so a stuck bus cannot freeze the
+     keycaps). Normally core1 computes Eden's keycaps (`IDLE_STYLES.md`), core0's share
+     is small, and neither rule applies: `startup_anim_frame_busy()` is false and the
+     hold is skipped while `startup_anim_idle_on_core1()`.
+
+  Because of rule 3 the frames are composed from `status_idle_task()`, called every
+  main-loop pass from housekeeping just before `eden_idle_tick()`, not from
+  `oled_task_user()`, which runs only every 66 ms and would rarely land in Eden's gap
+  between frames. `oled_task_user()` only hands the panel over (`status_idle_screen()`
+  in the idle branch) and takes it back (`status_idle_release()` at the top of every
+  pass), so the task never draws over another screen. Motion is a function of time,
+  so pacing lowers the frame rate, never the speed. `oled_render_dirty(true)` would
+  block the matrix ~26 ms per frame instead. The console prints
+  `Status idle: N frames/5s, worst compose Nms`, and Eden's idle line now ends in
+  `N frames` since the last report — its `frame Nms` sums render time only, so it
+  cannot show time lost to other main-loop work.
 
 **Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
 `oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced

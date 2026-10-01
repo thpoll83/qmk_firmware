@@ -151,7 +151,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "1.3.2"
+#define FW_VERSION "1.4.1"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -424,6 +424,14 @@
 #define OLED_BRIGHTNESS 60
 #define OLED_DISABLE_TIMEOUT
 #define OLED_UPDATE_INTERVAL 66 //15fps
+// Send up to 2 of the 16 dirty 64-byte blocks per main-loop pass (QMK default: 1). The
+// split72 idle screen dirties the whole panel every frame; at one block a pass a frame
+// took ~16 passes (~75 ms with Eden's 3 ms slices) and could not keep up with the 66 ms
+// interval. Two costs up to ~3 ms of I2C in a pass while blocks are pending. Four (~6 ms)
+// kept up too, but with Eden's keycaps on core1 the status panel sends a frame every
+// 75 ms, and Eden's legend cut and SPI push on core0 waited behind each 6 ms chunk;
+// on hardware 2 keeps Eden visibly smoother at the same status rate.
+#define OLED_UPDATE_PROCESS_LIMIT 2
 
 #define MOUSEKEY_MOVE_DELTA	2
 

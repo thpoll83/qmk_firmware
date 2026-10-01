@@ -36,7 +36,7 @@ that upstream left the files alone —
 `git diff --stat <old-base>..<tag> -- <the five files>` (empty in the 0.33.13
 merge, 2026-08-11) — and finish with a `grep` for one marker per patch
 (`raw_hid_pre_receive_kb`, `ifndef RAW_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`,
-`POLYKYBD_VREG_VSEL`, `oled_render_dirty(true)`).
+`POLYKYBD_VREG_VSEL`, `oled_render_dirty(true)`, `usb_suspend_allowed_kb`).
 
 ## tmk_core/protocol/usb_descriptor.h
 
@@ -82,6 +82,29 @@ The strong override of `raw_hid_pre_receive_kb` lives in
 
 If a future QMK upstream changes the signature or semantics of `raw_hid_task`,
 re-apply by hand: keep the weak hook, keep the `if`-not-`while`.
+
+## tmk_core/protocol/chibios/chibios.c
+
+A weak `bool usb_suspend_allowed_kb(void)` hook (default `true`) gates both the
+`if` and the `while` of the suspend loop in `protocol_pre_task()`:
+
+```diff
+-    if (USB_DRIVER.state == USB_SUSPENDED) {
++    if (USB_DRIVER.state == USB_SUSPENDED && usb_suspend_allowed_kb()) {
+         dprintln("suspending keyboard");
+-        while (USB_DRIVER.state == USB_SUSPENDED) {
++        while (USB_DRIVER.state == USB_SUSPENDED && usb_suspend_allowed_kb()) {
+```
+
+Why: on a charger or a power bank no host ever configures the board, and the
+RP2040 reports the idle bus as SUSPENDED, so the stock loop parked the main loop
+for good — displays off (`poly_suspend()`), matrix not scanned. The override in
+`keyboards/polykybd/usb_power.c` vetoes the loop until a host has configured the
+board once; after that a suspend is a real one again. This is what lets the
+showroom demo (KC_DEMO) run on power only.
+
+`NO_USB_STARTUP_CHECK` is NOT the fix: it removes the suspend loop outright, so
+the board would stay lit while the PC sleeps.
 
 ## drivers/oled/oled_driver.c
 

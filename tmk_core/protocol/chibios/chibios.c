@@ -171,13 +171,20 @@ void protocol_post_init(void) {
     host_set_driver(&chibios_driver);
 }
 
+// PolyKybd: lets a keyboard veto the suspend loop below. The bus reads SUSPENDED both
+// when a host has gone to sleep and when there was never a host at all (a charger or a
+// power bank), and only the keyboard can tell the two apart. Default: always suspend.
+__attribute__((weak)) bool usb_suspend_allowed_kb(void) {
+    return true;
+}
+
 void protocol_pre_task(void) {
     usb_event_queue_task();
 
 #if !defined(NO_USB_STARTUP_CHECK)
-    if (USB_DRIVER.state == USB_SUSPENDED) {
+    if (USB_DRIVER.state == USB_SUSPENDED && usb_suspend_allowed_kb()) {
         dprintln("suspending keyboard");
-        while (USB_DRIVER.state == USB_SUSPENDED) {
+        while (USB_DRIVER.state == USB_SUSPENDED && usb_suspend_allowed_kb()) {
             /* Do this in the suspended state */
             suspend_power_down(); // on AVR this deep sleeps for 15ms
             /* Remote wakeup */

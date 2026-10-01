@@ -205,6 +205,16 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   - Regenerating needs **all** source fonts (`fonts/dl-fonts.sh`, ~75 MB, 21 entries)
     plus the pinned fontconvert at `/tmp/fontconvert_pinned` (the path is echoed into
     each header's provenance comment).
+    ⚠️ **`dl-fonts.sh` stops at the first failed download** (`set -e`), and the
+    `NotoColorEmoji-Regular.ttf` URL returns 404 (2026-10-01). That entry is not the
+    last one, so every font after it is skipped too. Fetch the rest with a loop over
+    `noto-fonts.yaml` that ignores the one failure; the `latin` category does not use
+    the emoji source.
+    ⚠️ **The provenance comment also records the ABSOLUTE path of the source font**, so
+    a regeneration from any other checkout (a `git worktree`, say) rewrites every
+    header comment while the glyph data is byte-identical, and `--check` reports
+    DRIFT. Rewrite the path back to `/home/user/qmk_firmware/` before comparing or
+    committing.
 - **Adding codepoints to an existing `latin` font is the cheap case, and the cheapest
   sub-case is filling a GAP.** `latin` is `resident: true` and in no bundle, so the
   change is confined to the firmware image: **no `.plyf` reship, no `content_version`

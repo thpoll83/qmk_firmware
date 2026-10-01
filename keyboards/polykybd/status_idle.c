@@ -12,13 +12,14 @@
 // Over it, "Poly Kybd" in FreeSansBold24pt7b — the face Eden writes its keycap letters
 // in — is ONE LINE of text across both panels ("Poly" centred on the left, "Kybd" on
 // the right), typed and then edited away with an underscore cursor (see SI_KEY_MS).
-// Every letter, and the cursor, is drawn in scanlines (every other row lit) and cut out
-// of the bands by a 2 px black ring (the shape grown by a radius-2 disc) and nothing
-// more: the bands keep flowing between the letters and through the counters.
-// Scanlines halve the letters' light. The idle panel is already at contrast register 0,
-// the SSD1306 floor, and the letters were its largest lit area. Dimming it further
-// through the panel's VCOMH or pre-charge registers flickered on hardware, with
-// brighter strips, so the light comes off the content instead.
+// Every letter, and the cursor, is drawn in scanlines (one row lit, two dark) and cut
+// out of the bands by a 2 px black ring (the shape grown by a radius-2 disc) and nothing
+// more: the bands keep flowing between the letters and through the counters. The bands
+// are scanlines too (one row lit, one dark), and the dark rows are never computed, which
+// halves the plasma's cost per frame.
+// Scanlines take the light down. The idle panel is already at contrast register 0, the
+// SSD1306 floor. Dimming it further through the panel's VCOMH or pre-charge registers
+// flickered on hardware, with brighter strips, so the light comes off the content.
 //
 // Nothing is stored: every frame is computed from the font's column bytes in flash and
 // Eden's tables; RAM is a handful of statics.
@@ -327,11 +328,12 @@ void status_idle_task(void) {
         uint64_t      lit = 0;
         for (uint8_t y = 0; y < SI_H; ++y) {
             const uint64_t bit  = (uint64_t)1 << y;
-            if (ink & bit) {   // the letter: scanlines, even rows of the panel
-                if ((y & 1u) == 0) lit |= bit;
+            if (ink & bit) {   // the letter: one panel row in three
+                if (y % 3u == 0) lit |= bit;
                 continue;
             }
             if (ring & bit) continue;                   // the 2 px black ring
+            if (y & 1u) continue;                       // the bands: even panel rows only
             // Plasma bands: four sines, one of them of the distance from the field centre.
             const int16_t d = (int16_t)startup_anim_dist((int16_t)((fx - SI_FIELD_CX) * 2),
                                                          (int16_t)((y - SI_FIELD_CY) * 4));

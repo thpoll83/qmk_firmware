@@ -428,7 +428,7 @@
 // split72 idle screen dirties the whole panel every frame; at one block a pass a frame
 // took ~16 passes (~75 ms with Eden's 3 ms slices) and could not keep up with the 66 ms
 // interval. Four costs up to ~7 ms of I2C in a pass while blocks are pending.
-#define OLED_UPDATE_PROCESS_LIMIT 4
+#define OLED_UPDATE_PROCESS_LIMIT 2
 
 #define MOUSEKEY_MOVE_DELTA	2
 

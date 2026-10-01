@@ -669,7 +669,8 @@ static void sa_render_idle_key(uint8_t idx) {
 // Nothing that stops idle can race it: a firmware or font-pack write and an overlay
 // upload all end the idle session first, and DOOM takes core1 only as its own idle
 // style. SA_C1_TIMEOUT_MS covers anything else that halts core1: the session falls
-// back to rendering on core0.
+// back to rendering on core0, and later sessions stay there until core1 has finished
+// every job it was handed (sa_begin()).
 #define SA_C1_BYTES      (SCREEN_WIDTH * (SCREEN_HEIGHT / 8))   // 360: the window, compact
 #define SA_C1_SLOTS      2u
 #define SA_C1_TIMEOUT_MS 100u
@@ -686,7 +687,7 @@ static uint16_t          s_c1_slot_seq[SA_C1_SLOTS];
 static uint32_t          s_c1_sent_at[SA_C1_SLOTS];
 static uint8_t           s_c1_next;               // next keycap to hand core1 this frame
 static bool              s_c1_frame;              // the current frame renders on core1
-static bool              s_c1_off;                // core1 timed out: core0 renders this session
+static bool              s_c1_off;                // core1 timed out: core0 renders until core1 catches up
 
 // Runs ON CORE1, from core1_entry(). `arg` = idx | left << 8 | slot << 9 | seq << 16. No console,
 // no IRQs, and CORE1_STACK_SIZE of stack (IDLE_STYLES.md has the measured budget).
@@ -757,7 +758,15 @@ static void sa_begin(bool loop, uint8_t contrast) {
     s_logged_frame   = false;
     s_frames_done    = 0;
     s_c1_frame       = false;
-    s_c1_off         = false;   // a new session tries core1 again
+    // A new session tries core1 again only once core1 has finished every job it was
+    // handed. Each job is two FIFO words and the FIFO holds eight, so a core1 that
+    // stopped consuming would fill it within two retries, and the next
+    // multicore_fifo_push_blocking() would stall the main loop. Waiting for the last
+    // sequence number keeps at most one session's jobs (four words) unconsumed. A
+    // core1 relaunch loses jobs in flight, so after a timeout Eden can stay on core0
+    // until the next boot; it still renders.
+    dmb();
+    if (s_c1_off && s_c1_done == s_c1_seq) s_c1_off = false;
     // Non-blocking progress trace (HID console; dropped when nothing is attached).
     // If a half wedges during the animation, the last line printed shows how far it
     // got. Only the USB (master) half's console is readable — to diagnose the left

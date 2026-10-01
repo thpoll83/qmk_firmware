@@ -159,8 +159,14 @@ reading before you change either one.
     error. A retrained table is a new table and a new protocol version; v1 is frozen.
     The firmware test pins its byte sum and three spot values.
   - **Addressed like cmds 16-19** (keycode + modifier variant, through
-    `translate_a_to_z` and the pool mapping), so MRU and non-MRU uploads resolve the
+    `upload_keycode()` and the pool mapping), so MRU and non-MRU uploads resolve the
     same slot whichever encoding carried the image.
+  - ⚠️ **Under `MIRROR_OVERLAYS` (MRU mode) the keycode is a POOL SLOT address, not
+    a letter, so no upload path runs `translate_a_to_z` there** (`upload_keycode()`
+    in `fill_overlay.c`, 2026-10-01). It used to: under a layout that swaps letters
+    (de-DE Y/Z, fr-FR A/Q and Z/W) the images in those letter-address slots traded
+    places, while the display, which reads by physical keycode, never translated.
+    Found by the host's firmware emulator, not on hardware; nothing reported it.
   - **No new split transaction.** The slave copy rides `USER_SYNC_COMPRESSED_DATA` with
     `PRC_BRIDGE_FLAG` (0x80) set in `len`; RLE fragments only ever use 60 and 62. The
     split42 transaction budget is why. A frame that passes its CRC but describes no

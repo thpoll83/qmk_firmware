@@ -699,28 +699,16 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // attract screensaver (IDLE_STYLE_IDDQD) too — exactly as a
                     // keypress wake does via poly_force_wake()/poly_prepare_for_flash().
                     // The attract demo runs with STATUS_DISP_ON SET and DISP_IDLE
-                    // CLEARED, so the flag handling below never reaches it; without
+                    // CLEARED, so the flag handling alone never reaches it; without
                     // this the host cannot stop the screensaver over HID, and while
                     // doom holds the overlay pool a subsequent font/doom re-flash is
                     // refused (hid_fontpack.c FONTPACK_BEGIN gates on !doom_mode_active()).
                     // Self-guards: only an active attract demo is affected; a no-op
                     // inline stub on a non-doom build.
-                    doom_screensaver_stop();
-                    if((local_state->flags & (STATUS_DISP_ON|DISP_IDLE))==0) {
-                        suspend_wakeup_init_kb();
-                    } else {
-                        if (local_state->flags & DISP_IDLE) {
-                            // Contrast is cycling 0-49 during pulsing; restore the active
-                            // brightness (host-auto value or user brightness) so
-                            // display_wakeup() conditions don't leave the display dark.
-                            local_state->contrast = get_active_brightness();
-                        }
-                        local_state->flags &= ~((uint8_t)DISP_IDLE);
-                        local_state->flags |= STATUS_DISP_ON;
-                        reset_idle_jitter();   // fresh, centred idle session next time
-                        request_disp_refresh();
-                        update_performed();
-                    }
+                    // The wake itself is shared with the demo's end-of-idle segment:
+                    // poly_wake_from_idle() (poly_keymap.c) does exactly what this
+                    // branch used to do inline, the doom stop included.
+                    poly_wake_from_idle();
                     uprint("Stop idle.\n");
                 } else {
                     // Backdate the activity timestamp by a full idle interval so the

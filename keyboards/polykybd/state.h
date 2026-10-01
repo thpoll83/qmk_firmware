@@ -264,6 +264,13 @@ typedef struct _poly_sync_t {
     // one ripple, timed from RECEIPT, because the two MCUs share no time base.
     // See anim/tutorial.h (TUTORIAL_SYNC_BYTES) and anim/TUTORIAL.md.
     uint8_t  tut[6];
+    // Showroom demo mode: {flags (DEMO_SYNC_ACTIVE), playlist segment}. The master runs
+    // the playlist; the slave times each segment from its own receipt of the index and
+    // presses the keys on its own half (anim/demo_mode.h). A segment change is a state
+    // diff and repaints both halves, which is wanted: it is where the layer or the
+    // previewed language changes. A typed KEY is never synced, so typing costs no
+    // repaint. Master-authoritative and never persisted: a reboot ends the demo.
+    uint8_t  demo[2];
 } poly_sync_t;
 
 // Same reasoning as latin_sync_t's guard: transaction_rpc_exec() refuses a payload

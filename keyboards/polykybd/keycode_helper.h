@@ -291,6 +291,13 @@ enum my_keycodes {
     // shows the active value. Appended at the very end for the same no-renumbering
     // reason as KC_EDEN.
     KC_IDLE_TIMEOUT,
+    // Settings-layer key: start the showroom DEMO MODE (anim/demo_mode.h) — a ~15
+    // minute loop of typing, menus, language and script previews and the idle
+    // animation, until Esc is held for two seconds. Behind KC_SETTINGS_MORE because
+    // the demo swallows every key: a stray tap would leave a board that seems dead to
+    // anyone who does not know the Esc hold. Appended at the very end for the same
+    // no-renumbering reason as KC_EDEN.
+    KC_DEMO,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // ⚠️ Anchor the range guards on the LAST keyboard-range keycode, not on KC_DAUTO —
@@ -304,11 +311,11 @@ static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MA
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 // ⚠️ Same re-anchoring rule as the QK_KB guards above, and the same way it goes
 // stale: the two asserts directly above name KC_LANG_END / KC_OS_SET_END, but
-// KC_EDEN, KC_IDLE_STYLE, KC_GLYPH_SCRIPT, KC_SETTINGS_MORE, KC_MACRO_REC and
-// KC_IDLE_TIMEOUT are appended AFTER them, so neither
+// KC_EDEN, KC_IDLE_STYLE, KC_GLYPH_SCRIPT, KC_SETTINGS_MORE, KC_MACRO_REC,
+// KC_IDLE_TIMEOUT and KC_DEMO are appended AFTER them, so neither
 // covers the tail of the QK_USER_0 block any more. Anchor on the LAST member and
 // re-anchor whenever something is appended.
-static_assert((int)KC_IDLE_TIMEOUT <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
+static_assert((int)KC_DEMO <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))

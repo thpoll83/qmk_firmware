@@ -66,6 +66,7 @@
 #include "base/fonts/util_font.h"         // mid (10px) utility-label font
 #include "polymod_core1.h"
 #include "anim/tutorial.h"
+#include "anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
@@ -482,6 +483,7 @@ static void poly_board_unusable_cue(void) {
     // can arrive on an idling board with no preceding transfer, so none of this is
     // hypothetical: poly_prepare_for_flash() does the same teardown for the same
     // reason at the START of an update, and this is its counterpart at the end.
+    demo_stop();               // the showroom demo, too: the apply owns the board now
     doom_screensaver_stop();   // self-guards: only an active attract demo
     startup_anim_stop();       // looping Eden (and a one-shot mid-flight)
     poly_sync_t* local_state = access_local_state();
@@ -931,7 +933,9 @@ void sync_and_refresh_displays(void) {
         if (tutorial_active() && get_highest_layer(access_local_layer()->layer) == _NL) {
             access_local_layer()->led_state.num_lock = true;
         }
-        access_local_layer()->mods = get_mods();
+        // The demo's Shift is display-only: OR'd into the snapshot the renderer and the
+        // slave read, never registered, so nothing reaches the host.
+        access_local_layer()->mods = get_mods() | demo_display_mods();
         layer_diff = differ(get_local_layer(), get_global_layer(), sizeof(poly_layer_t));
         // Force one layer push to the slave after boot even with no diff: each half
         // loads its OWN default layer from EEPROM, and the master only pushes on a
@@ -1190,6 +1194,9 @@ void poly_prepare_for_flash(void) {
     // a partial fade (IDLE_TRANSITION, contrast somewhere in between) matches
     // neither of the old tests, and on an awake keyboard the assignments are a
     // no-op while the timestamp below must be stamped either way.
+    // The showroom demo goes first: a flash takes the board, and the demo would otherwise
+    // keep moving layers and previews under a screen that housekeeping has frozen.
+    demo_stop();               // no-op unless it runs (master only)
     doom_screensaver_stop();   // self-guards: only an active attract demo
     startup_anim_stop();       // looping Eden (and a one-shot mid-flight)
     poly_sync_t* local_state = access_local_state();
@@ -1652,6 +1659,16 @@ void housekeeping_task_user(void) {
         // Runs before the display sync: it keeps last_update fresh so the
         // idle/fade pipeline below never fights the game blitter.
         doom_tick();
+        // Showroom demo (KC_DEMO): the master advances the playlist, both halves move
+        // their press highlights. Before the display sync so a new segment's layer and
+        // preview go out this pass, and before the idle block so a non-idle segment's
+        // update_performed() lands first.
+        demo_tick();
+        // The segment just entered may preview another language or script: write it
+        // BEFORE the render below, or each board is first drawn in the previous
+        // segment's language and repainted a pass later (the tutorial's lesson, see
+        // poly_apply_draw_script()). Idempotent; the master block repeats it later.
+        if (is_usb_host_side() && demo_active()) poly_apply_draw_script();
         // Idle "Eden" screensaver frame tick (IDLE_STYLE_EDEN, both halves). Runs
         // before the boot-animation block below and owns the LOOPING variant; the
         // block below is for the ONE-SHOT boot/KC_EDEN animation only.
@@ -2051,6 +2068,7 @@ static bool settings_key_is_gated(uint16_t keycode) {
         case QK_DEBUG_TOGGLE:
         case KC_DEADKEY:
         case KC_EDEN:
+        case KC_DEMO:
             return true;
         default:
             return false;
@@ -4341,15 +4359,21 @@ static uint8_t s_tut_preview_n;
 // Can this board draw the entry? Asked of the fonts actually flashed, through the same
 // lookup the renderer uses: on a fresh board with no font pack every non-Latin entry
 // fails here and the chapter shows only the reveal, rather than a board of blanks.
-static bool tut_preview_renderable(const tut_preview_t *e) {
+// Shared with the demo's language and script tour (anim/demo_mode.c), which asks the same
+// question of the same fonts.
+bool poly_preview_renderable(bool script, uint8_t value) {
     uint32_t cp = 0;
-    if (e->script) {
-        cp = glyph_script_codepoint(e->value, KC_A);
+    if (script) {
+        cp = glyph_script_codepoint(value, KC_A);
     } else {
-        const uint32_t *t = translate_keycode(e->value, KC_A, false, false);
+        const uint32_t *t = translate_keycode(value, KC_A, false, false);
         cp = (t != NULL) ? t[0] : 0;
     }
     return cp != 0 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL;
+}
+
+static bool tut_preview_renderable(const tut_preview_t *e) {
+    return poly_preview_renderable(e->script, e->value);
 }
 
 uint8_t tutorial_preview_prepare(void) {
@@ -5038,24 +5062,32 @@ uint8_t poly_reported_lang(void) {
 // while the lesson runs the slave keeps the language it already stored, or a flush
 // then (a suspend, SAVE_EEPROM) would persist a board-only preview on that half.
 uint8_t poly_persisted_lang(void) {
-    if (!is_keyboard_master() && tutorial_active()) return load_user_eeconf().lang;
+    if (!is_keyboard_master() && (tutorial_active() || demo_sync_active())) return load_user_eeconf().lang;
     return poly_reported_lang();
 }
 
 // Master only, once per housekeeping pass: write or retire the preview. Returns the
 // glyph script the board should DRAW (the preview's, or the user's own).
+//
+// The demo's language tour writes its preview through here too (demo_preview()), so the
+// host-facing guarantees above hold for it unchanged: GET_LANG and the settings save keep
+// reading the user's real language.
 static uint8_t poly_tutorial_apply_preview(void) {
     poly_sync_t          *ls = access_local_state();
     const tut_preview_t *e  = tut_preview_live();
-    if (e != NULL && !e->script) {
+    bool    has    = e != NULL;
+    bool    script = has && e->script;
+    uint8_t value  = has ? e->value : 0;
+    if (!has) has = demo_preview(&script, &value);
+    if (has && !script) {
         if (s_tut_real_lang == 0xFF || ls->lang != s_tut_written_lang) {
             s_tut_real_lang = ls->lang;           // first item, or the host moved it
         }
-        if (ls->lang != e->value) {
-            ls->lang = e->value;
+        if (ls->lang != value) {
+            ls->lang = value;
             request_disp_refresh();
         }
-        s_tut_written_lang = e->value;
+        s_tut_written_lang = value;
     } else if (s_tut_real_lang != 0xFF) {
         if (ls->lang == s_tut_written_lang && ls->lang != s_tut_real_lang) {
             ls->lang = s_tut_real_lang;
@@ -5064,7 +5096,7 @@ static uint8_t poly_tutorial_apply_preview(void) {
         s_tut_real_lang    = 0xFF;
         s_tut_written_lang = 0xFF;
     }
-    return (e != NULL && e->script) ? e->value : get_glyph_script();
+    return (has && script) ? value : get_glyph_script();
 }
 
 bool eden_idle_erase_legend(uint8_t disp_idx) {
@@ -6046,6 +6078,12 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             startup_anim_start();
             local_state->anim_nonce++;
             break;
+        // Start the showroom demo. On the RELEASE, like every key here, so the
+        // demo's swallow never sees this key's own release and leave it half-handled.
+        case KC_DEMO:
+            if (!act) break;
+            demo_start();
+            break;
         // Cycle the two display settings that were previously reachable only over HID
         // (cmds 28 / 30) — a keyboard with no host app could not change them at all.
         // Both go through the SAME setter the HID command uses, so the persist +
@@ -6187,6 +6225,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 doom_pack_confirm_answer(false);
             }
         }
+        return false;
+    }
+
+    // The showroom demo IS the board while it runs: every event is swallowed — nothing
+    // reaches the host, not even a modifier, because the demo draws its own Shift and
+    // owns the layer stack (clear_keyboard() ran at its start, and it restores the
+    // layers on exit). Holding Esc for DEMO_EXIT_HOLD_MS ends it; the exit fires while
+    // Esc is still down, and this also swallows that release. Below the confirm prompt,
+    // which outranks it (the demo stops itself when a firmware screen comes up).
+    if (demo_process_record(keycode, record)) {
         return false;
     }
 
@@ -6903,6 +6951,31 @@ void set_displays(uint8_t contrast, bool idle) {
             kdisp_set_contrast(contrast - 1);
         }
     }
+}
+
+// Wake the board out of idle (or out of a suspend that left the status display off)
+// without a keypress: the host's "stop idle" (HID cmd 15) and the demo's end of an idle
+// segment. ONE copy, because a wake that forgets one of these leaves a dark half: the
+// DOOM attract screensaver runs with DISP_IDLE clear, so only the explicit stop reaches
+// it; the pulsing contrast must be put back or the woken legends stay dark.
+void poly_wake_from_idle(void) {
+    poly_sync_t* local_state = access_local_state();
+    doom_screensaver_stop();
+    if ((local_state->flags & (STATUS_DISP_ON | DISP_IDLE)) == 0) {
+        suspend_wakeup_init_kb();
+        return;
+    }
+    if (local_state->flags & DISP_IDLE) {
+        // Contrast is cycling 0-49 during pulsing; restore the active brightness
+        // (host-auto value or user brightness) so display_wakeup() conditions don't
+        // leave the display dark.
+        local_state->contrast = get_active_brightness();
+    }
+    local_state->flags &= ~((uint8_t)DISP_IDLE);
+    local_state->flags |= STATUS_DISP_ON;
+    reset_idle_jitter();   // fresh, centred idle session next time
+    request_disp_refresh();
+    update_performed();
 }
 
 // Disables keypress if displays are turned off/in idle mode; restores brightness on wakeup.

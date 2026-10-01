@@ -330,13 +330,17 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
       idle style (`core1_eden_available()` also checks `doom_mode_active()`). Anything
       else that halts core1 hits `SA_C1_TIMEOUT_MS` (100 ms): the session renders on
       core0 from that keycap on, and the log says `core0`.
-    - ⚠️ **After a timeout, core1 is retried only once it has finished every job it
-      was handed** (`s_c1_done == s_c1_seq` in `sa_begin()`). Each job is two FIFO
-      words, the FIFO holds eight, and `core1_eden_key()` pushes with
-      `multicore_fifo_push_blocking()`: retrying a core1 that stopped consuming on
-      every new session would fill the FIFO by the third one and stall the main loop
-      before the timeout could run (CodeRabbit on #325). A core1 relaunch loses the
-      jobs in flight, so after a timeout Eden can stay on core0 until the next boot.
+    - ⚠️ **A session starts on core1 only once core1 has finished every job it was
+      handed** (`s_c1_off = s_c1_done != s_c1_seq` in `sa_begin()`), whether the last
+      session timed out or a keypress stopped it first. Each job is two FIFO words,
+      the FIFO holds eight, and `core1_eden_key()` pushes with
+      `multicore_fifo_push_blocking()`: handing jobs to a core1 that stopped consuming
+      on every new session would fill the FIFO by the third one and stall the main
+      loop before the timeout could run (CodeRabbit on #325, twice: the first fix
+      gated only the timeout path, and a wake inside 100 ms skipped it). A healthy
+      core1 finishes a job in ~3 ms, long before the next idle timeout, so this never
+      costs a working board its core1. A core1 relaunch loses the jobs in flight, so
+      after one Eden can stay on core0 until the next boot.
   - ⚠️ **The status panel's idle screen takes turns with the loop only on the core0
     fallback path**, where every 3 ms slice waited behind ~6 ms of its I2C flush.
     `eden_idle_tick()` then starts no frame while a status frame is being sent

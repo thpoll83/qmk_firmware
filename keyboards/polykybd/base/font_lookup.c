@@ -248,15 +248,21 @@ static void bbox_walk(const GFXfont *const *fonts, uint8_t num_fonts,
                 const GFXfont  *f = NULL;
                 const GFXglyph *g = kdisp_gfx_glyph_font(pool, cnt, *text, &f);
                 if (g == NULL) {
-                    // Nothing covers it. The full-size writer substitutes '!' from
-                    // fonts[0] and advances, so the box must too — but
-                    // kdisp_write_gfx_char_half returns 0: it draws NOTHING and does not
-                    // advance. Substituting here in a SMALL run therefore invented both
-                    // ink and an advance the draw never spends, shifting every following
-                    // glyph. Skip the codepoint instead, exactly as the half writer does.
+                    // Nothing covers it. The full-size writer substitutes '!' and
+                    // advances, so the box must too — but kdisp_write_gfx_char_half
+                    // returns 0: it draws NOTHING and does not advance. Substituting here
+                    // in a SMALL run therefore invented both ink and an advance the draw
+                    // never spends, shifting every following glyph. Skip the codepoint
+                    // instead, exactly as the half writer does.
                     if (small) break;
-                    f = pool[0];
-                    g = pgm_read_glyph_ptr(f, U'!' - pgm_read_dword(&f->first));
+                    // ⚠️ '!' from the font that CARRIES it, never pool[0] blindly.
+                    // g_all_fonts[0] is IconsFont at U+100000, so '!' - first underflowed
+                    // into a wild glyph pointer and the next read HardFaulted: any legend
+                    // with a codepoint no font has (hy-AM's U+2014 Shift legend) crashed
+                    // the board. Same rule as kdisp_write_gfx_char; if nothing has '!'
+                    // either, the draw draws nothing and so is the box.
+                    g = kdisp_gfx_glyph_font(fonts, num_fonts, U'!', &f);
+                    if (g == NULL) break;
                 }
                 int8_t w  = pgm_read_byte(&g->width);
                 int8_t h  = pgm_read_byte(&g->height);

@@ -152,6 +152,11 @@ else wrapped `U"<cell>"`; empty → `NULL`.
   must still be in the index, or there's no later font to find.
 - **Byte-repro**: regenerate with `/tmp/fontconvert_pinned` and the canonical
   source font; the diff on an existing header should be **only** your new block.
+- ⚠️ **Run `python3 keyboards/polykybd/tools/check_glyph_coverage.py` after the
+  re-cog.** It checks every codepoint of every LUT column against the fonts and exits 1
+  on a gap. A gap draws `'!'` on the keycap (before #329 it HardFaulted the master), and
+  CI fails the PR on it. A `latin` gap is the cheap fix: add the codepoint to a resident
+  `latin` entry in `fonts.yaml`, which needs no `.plyf` reship.
   Many small glyph names → auto-generate them (`[[f"CHEROKEE_{cp:04X}",
   f"{cp:04X}"] for cp in …]`, like the Ethiopic set).
 

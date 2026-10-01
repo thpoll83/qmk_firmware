@@ -576,7 +576,14 @@ int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8
             }
         }
         if (found == 0xFF) {
-            currentFont = fonts[0];             // no match — fall back to '!'
+            // No match — fall back to '!' from the font that CARRIES it. ⚠️ Not
+            // fonts[0]: in g_all_fonts that is IconsFont at U+100000, so '!' - first
+            // underflowed into a wild glyph pointer and HardFaulted on the next read
+            // (hy-AM's U+2014 Shift legend, ro-RO's U+2019). bbox_walk() in
+            // font_lookup.c follows the same rule. Nothing has '!': draw nothing.
+            const GFXfont *bang = NULL;
+            if (kdisp_gfx_glyph_font(fonts, num_fonts, U'!', &bang) == NULL) return 0;
+            currentFont = bang;
             first = pgm_read_dword(&currentFont->first);
             last  = pgm_read_dword(&currentFont->last);
             ch = U'!';

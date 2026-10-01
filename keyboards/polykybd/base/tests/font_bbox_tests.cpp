@@ -461,6 +461,52 @@ TEST(FontLookupTest, UncoveredCodepointReturnsNullAndNullFont) {
     EXPECT_EQ(kdisp_gfx_glyph(fonts, 0, 0x104), nullptr);   // empty pool
 }
 
+// ---------------------------------------------------------------------------
+// The missing-glyph fallback with the REAL font order: g_all_fonts[0] is IconsFont,
+// which lives at U+100000 and has no '!'. The fallback used to take '!' from
+// fonts[0] regardless, '!' - 0x100000 underflowed into a wild glyph pointer, and the
+// board HardFaulted measuring hy-AM's U+2014 Shift legend (field, 2026-10-01).
+
+TestFont make_icons() {
+    TestFont f(0x100000, 0x100003, 40);
+    for (uint32_t cp = 0x100000; cp <= 0x100003; ++cp) f.set(cp, 30, 20, 32, 0, -20);
+    return f;
+}
+
+TEST(FontBboxIconsFirstTest, MissingGlyphTakesBangFromTheFontThatHasIt) {
+    TestFont icons = make_icons();
+    TestFont base  = make_base();
+    const GFXfont *pool[2] = {&icons.font, &base.font};
+    const uint32_t missing[] = {0x2014, 0};
+    const uint32_t bang[]    = {U'!', 0};
+    int8_t a[4] = {}, b[4] = {};
+    kdisp_gfx_text_bbox_in(pool, 2, nullptr, 0, missing, &a[0], &a[1], &a[2], &a[3]);
+    kdisp_gfx_text_bbox_in(pool, 2, nullptr, 0, bang, &b[0], &b[1], &b[2], &b[3]);
+    for (int i = 0; i < 4; ++i) EXPECT_EQ(a[i], b[i]) << i;
+    // ...and it really is base's '!' (2 x 12 at yOffset -12), not an icon's metrics.
+    EXPECT_EQ(b[0], 0);
+    EXPECT_EQ(b[1], 1);
+    EXPECT_EQ(b[2], -12);
+    EXPECT_EQ(b[3], -1);
+}
+
+TEST(FontBboxIconsFirstTest, NoBangAnywhereMeasuresNothingAndAdvancesNothing) {
+    TestFont icons = make_icons();
+    TestFont tall  = make_tall();
+    const GFXfont *pool[2] = {&icons.font, &tall.font};
+    const uint32_t missing[] = {0x2014, 0};
+    int8_t a[4] = {1, 1, 1, 1};
+    kdisp_gfx_text_bbox_in(pool, 2, nullptr, 0, missing, &a[0], &a[1], &a[2], &a[3]);
+    for (int i = 0; i < 4; ++i) EXPECT_EQ(a[i], 0) << i;
+    // No phantom advance: a glyph after it lands where it would alone.
+    const uint32_t after[] = {0x2014, 0xE000, 0};
+    const uint32_t alone[] = {0xE000, 0};
+    int8_t c[4] = {}, d[4] = {};
+    kdisp_gfx_text_bbox_in(pool, 2, nullptr, 0, after, &c[0], &c[1], &c[2], &c[3]);
+    kdisp_gfx_text_bbox_in(pool, 2, nullptr, 0, alone, &d[0], &d[1], &d[2], &d[3]);
+    for (int i = 0; i < 4; ++i) EXPECT_EQ(c[i], d[i]) << i;
+}
+
 TEST(FontLookupTest, HalfFloorFloorsNegativeValues) {
     EXPECT_EQ(glyph_half_floor(8), 4);
     EXPECT_EQ(glyph_half_floor(9), 4);

@@ -67,7 +67,6 @@
 #include "polymod_core1.h"
 #include "anim/tutorial.h"
 #include "anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
-#include "usb_power.h"                    // poly_usb_host_seen(): charger vs. host
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
@@ -1339,10 +1338,6 @@ void housekeeping_task_user(void) {
     // phase the previous pass left open (a HID handler tags on entry only).
     crash_watchdog_feed();
     (void)crash_phase_enter(CRASH_PHASE_LOOP, 0);
-    // Latch "a host configured this half" while it is configured, so a later bus reset
-    // that clears the driver's own record cannot make a slept PC look like a charger
-    // (usb_power.h). One volatile read per pass.
-    (void)poly_usb_host_seen();
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
     tutorial_rgb_tick(); // …and own it through the first-run show and the lesson

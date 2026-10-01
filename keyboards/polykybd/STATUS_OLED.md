@@ -131,10 +131,10 @@ trap — derive it from synced state, not from a shadow updated on an edge.
 0). During `DISP_IDLE`, `oled_task_user()` hands split72's panel to
 the idle screen (`status_idle.c`, below) and blanks split42's; switching the panel off would stop
 the animation, which is the idle look this board is supposed to have.
-Register 0 is the SSD1306's floor, and the plasma lights about half the panel, so
-`status_idle.c` also lowers the VCOMH deselect level (`0xDB`, `SI_VCOMH_IDLE`) while it
-owns the panel and restores QMK's value when it lets go (`si_set_drive()`). The
-pre-charge period (`0xD9`) is the stronger lever if it needs to go further.
+Register 0 is the SSD1306's floor. Lowering the VCOMH deselect level (`0xDB`) or the
+pre-charge period (`0xD9`) on top of it dims the panel further but made it flicker on
+hardware, with occasional brighter strips, so the idle screen dims by content instead:
+its letters are drawn in scanlines.
 
 **The scrolling Poly/Kybd logos are GONE** (two 1 KB bitmaps on split72, all-zero
 512 B placeholders on split42, `oled_draw_poly/kybd()`, `oled_render_logos()`). Their
@@ -160,8 +160,8 @@ half lays out the whole line in field columns for that reason. The plasma runs o
 5/32-speed clock. Words are centred horizontally on their panels and vertically on the
 letter BODY (tallest top to baseline) — centring the whole ink box, descender included,
 put them visibly high. The place AFTER the d is never used: "Kybd" centred leaves no
-room for an underscore there. Letters are solid inside a 2 px
-black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
+room for an underscore there. Letters (and the cursor) are drawn in scanlines, every
+other panel row lit, inside a 2 px black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
 every frame comes from the font's column bytes in flash and Eden's tables.
 
 - ⚠️ **ONLY the 2 px ring is black — no gap closing.** Closing letter gaps too (any

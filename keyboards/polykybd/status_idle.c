@@ -12,9 +12,13 @@
 // Over it, "Poly Kybd" in FreeSansBold24pt7b — the face Eden writes its keycap letters
 // in — is ONE LINE of text across both panels ("Poly" centred on the left, "Kybd" on
 // the right), typed and then edited away with an underscore cursor (see SI_KEY_MS).
-// Every letter, and the cursor, is solid, cut out of the bands by a 2 px black ring
-// (the shape grown by a radius-2 disc) and nothing more: the bands keep flowing between
-// the letters and through the counters.
+// Every letter, and the cursor, is drawn in scanlines (every other row lit) and cut out
+// of the bands by a 2 px black ring (the shape grown by a radius-2 disc) and nothing
+// more: the bands keep flowing between the letters and through the counters.
+// Scanlines halve the letters' light. The idle panel is already at contrast register 0,
+// the SSD1306 floor, and the letters were its largest lit area. Dimming it further
+// through the panel's VCOMH or pre-charge registers flickered on hardware, with
+// brighter strips, so the light comes off the content instead.
 //
 // Nothing is stored: every frame is computed from the font's column bytes in flash and
 // Eden's tables; RAM is a handful of statics.
@@ -138,7 +142,6 @@ static uint32_t s_last_call;
 static uint32_t s_last_frame;     // when the last frame was composed
 static bool     s_started;
 static bool     s_owned;          // oled_task_user() gave the panel to the idle screen
-static bool     s_dimmed;         // the panel's drive is lowered for the idle screen
 static uint8_t  s_worst_ms;
 static uint32_t s_next_log;
 
@@ -260,23 +263,6 @@ static uint32_t si_frame_ms(void) {
     return startup_anim_idle_on_core1() ? SI_FRAME_FAST_MS : SI_FRAME_MS;
 }
 
-// The idle level is already contrast register 0 (POLY_STATUS_IDLE_BRIGHT), the lowest
-// an SSD1306 goes, but the plasma lights about half the panel where the old logos lit a
-// few hundred pixels. Two more registers dim it further: the VCOMH deselect level (0xDB)
-// and the pre-charge period (0xD9). Both are set while the idle screen owns the panel
-// and restored to the driver's values when it lets go.
-#define SI_VCOMH_IDLE      0x00u   // ~0.65 Vcc (driver default 0x20, ~0.77 Vcc)
-#define SI_PRECHARGE_IDLE  0xF1u   // phase 2 = 15, phase 1 = 1 (= the driver default)
-#define SI_VCOMH_ACTIVE    0x20u   // QMK's OLED_VCOM_DETECT default
-#define SI_PRECHARGE_ACTIVE 0xF1u  // QMK's OLED_PRE_CHARGE_PERIOD default
-
-static void si_set_drive(bool dim) {
-    if (dim == s_dimmed) return;
-    const uint8_t cmd[] = {0x00 /* I2C command stream */, 0xD9, dim ? SI_PRECHARGE_IDLE : SI_PRECHARGE_ACTIVE,
-                           0xDB, dim ? SI_VCOMH_IDLE : SI_VCOMH_ACTIVE};
-    if (oled_send_cmd(cmd, sizeof(cmd))) s_dimmed = dim;
-}
-
 void status_idle_screen(void) {
     const uint32_t now = timer_read32();
     if (!s_started || timer_elapsed32(s_last_call) > 500u) {   // a new idle session
@@ -287,13 +273,9 @@ void status_idle_screen(void) {
     }
     s_last_call = now;
     s_owned     = true;
-    si_set_drive(true);
 }
 
-void status_idle_release(void) {
-    s_owned = false;
-    si_set_drive(false);
-}
+void status_idle_release(void) { s_owned = false; }
 
 bool status_idle_holds_bus(void) {
     return s_owned && oled_dirty && timer_elapsed32(s_last_frame) < SI_HOLD_MAX_MS;
@@ -345,7 +327,10 @@ void status_idle_task(void) {
         uint64_t      lit = 0;
         for (uint8_t y = 0; y < SI_H; ++y) {
             const uint64_t bit  = (uint64_t)1 << y;
-            if (ink & bit) { lit |= bit; continue; }   // the letter: solid
+            if (ink & bit) {   // the letter: scanlines, even rows of the panel
+                if ((y & 1u) == 0) lit |= bit;
+                continue;
+            }
             if (ring & bit) continue;                   // the 2 px black ring
             // Plasma bands: four sines, one of them of the distance from the field centre.
             const int16_t d = (int16_t)startup_anim_dist((int16_t)((fx - SI_FIELD_CX) * 2),

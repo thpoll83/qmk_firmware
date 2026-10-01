@@ -65,6 +65,10 @@ bool startup_anim_take_welcome_said(void);
 // True while the LOOPING screensaver owns the keycaps (idle Eden). Distinguishes it
 // from the one-shot boot/KC_EDEN animation, which callers gate differently.
 bool startup_anim_is_loop(void);
+// True while the idle loop is part-way through a keycap frame (between its first and
+// last slice). The status panel's idle screen holds its own frame back until it is not,
+// so the two do not interleave their bus work (status_idle.c).
+bool startup_anim_frame_busy(void);
 // Render one frame; call every housekeeping pass while active (like doom_tick()).
 void startup_anim_tick(void);
 // True while the animation owns the keycaps — update_displays() must early-return.
@@ -89,3 +93,7 @@ sa_geom_t startup_anim_key_geom(bool right, uint8_t idx);
 uint16_t startup_anim_board_w(void);
 uint16_t startup_anim_board_h(void);
 
+// ---- the status panels' idle screen (status_idle.c, split72 only) -------------
+// Eden's sine table (0..255, 128 = zero) and its cheap octagonal distance.
+uint8_t  startup_anim_sin(uint8_t t);
+uint16_t startup_anim_dist(int16_t a, int16_t b);

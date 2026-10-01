@@ -144,6 +144,7 @@ static bool     s_frame_busy;  // a frame is partially rendered (slices pending)
 static uint16_t s_frame_ms;
 static uint16_t s_slice_worst_ms;
 static bool     s_logged_frame;   // a completed frame has been reported this session
+static uint16_t s_frames_done;    // frames completed since the last report
 
 // Minimum GAP (ms) between idle-loop frames, measured from the END of the previous
 // frame — NOT a frame period, so the throttle can never collapse to "render every
@@ -248,22 +249,23 @@ static void sa_build_sparks(uint32_t el, uint8_t cv, uint8_t spark_fade) {
     s_spk_fade = spark_fade;
 }
 
-// Spark `s` in this frame, or false when it is not lit (winked out, or thinned in idle).
-static bool sa_spark_at(uint16_t s, sa_spark_pt_t *pt) {
-    const uint32_t el         = s_spk_el;
-    const uint8_t  cv         = s_spk_cv;
+// Spark `s` at time `el`, or false when it is not lit (winked out, or thinned in idle).
+// A pure function of its arguments: the keycaps pass the frame's LATCHED values
+// (sa_spark_at).
+static inline bool sa_spark_eval(uint16_t s, uint32_t el, uint8_t cv, uint8_t fade, bool loop,
+                                 sa_spark_pt_t *pt) {
     const int16_t  margin     = SA_BOARD_W / 8;
     // Staggered death: each spark winks out once the rising `spark_fade` passes its
     // own hash threshold — so the sparks disappear a few at a time, not all at once.
-    if (sa_hash8(s * 3u + 7u) < s_spk_fade) return false;
+    if (sa_hash8(s * 3u + 7u) < fade) return false;
     // Idle screensaver thins the field out for a calmer look + lighter render
     // (fewer comet trails to plot → snappier). ~160/256 skipped ≈ 37% kept.
-    if (s_loop && sa_hash8(s * 19u + 11u) < 190u) return false;
+    if (loop && sa_hash8(s * 19u + 11u) < 190u) return false;
     uint8_t  p0   = sa_hash8(s * 2u + 1u);
     // Speed 1..8 in the boot intro; idle uses a WIDER 1..16 spread so the comets
     // clearly move at different speeds (some crawl, some drift), and the extra
     // el-shift below keeps even the fast ones slower than the boot streak.
-    uint8_t  spd  = s_loop ? (1u + (sa_hash8(s * 7u + 3u) & 15u))
+    uint8_t  spd  = loop ? (1u + (sa_hash8(s * 7u + 3u) & 15u))
                            : (1u + (sa_hash8(s * 7u + 3u) & 7u));
     int16_t  lane = (int16_t)(((uint32_t)sa_hash8(s * 5u + 9u) * SA_BOARD_H) >> 8);
     uint8_t  bw   = 1u + (sa_hash8(s * 11u + 2u) & 3u);
@@ -273,7 +275,7 @@ static bool sa_spark_at(uint16_t s, sa_spark_pt_t *pt) {
     // Idle screensaver drifts much slower than the boot intro: shift `el` two more
     // bits so the L→R comets and their vertical bob crawl (a calm sleeping-keyboard
     // drift). Boot intro keeps the faster streak.
-    uint8_t tsh = s_loop ? 7 : 4;
+    uint8_t tsh = loop ? 7 : 4;
     uint8_t xn = (uint8_t)(p0 + (uint8_t)((el >> tsh) * spd));  // head phase (streams L→R)
     int16_t sx = (int16_t)(-margin + (int16_t)(((uint32_t)xn * (SA_BOARD_W + 2 * margin)) >> 8));
     int16_t sy = (int16_t)(lane + (((int16_t)(sa_sin((uint8_t)((el >> (uint8_t)(tsh + 1)) * bw + ph)) - 128) * bob) >> 7));
@@ -291,8 +293,13 @@ static bool sa_spark_at(uint16_t s, sa_spark_pt_t *pt) {
     // true keep-lit-pixels framebuffer won't fit in RAM). The fade formula below
     // (255 - k*230/tlen) stretches with tlen, so the longer tail fades gradually.
     uint8_t base_tlen = (uint8_t)(8u + (hv >> 4));
-    pt->tlen  = s_loop ? (uint8_t)(base_tlen + 28u) : base_tlen;
+    pt->tlen  = loop ? (uint8_t)(base_tlen + 28u) : base_tlen;
     return true;
+}
+
+// Spark `s` in the frame being rendered (the latched parameters).
+static bool sa_spark_at(uint16_t s, sa_spark_pt_t *pt) {
+    return sa_spark_eval(s, s_spk_el, s_spk_cv, s_spk_fade, s_loop, pt);
 }
 
 // Draw each comet that touches this keycap: a bright head + a horizontal trail extending
@@ -346,41 +353,48 @@ static void sa_plot_sparks(uint8_t *buf, const sa_key_geom_t *g, bool rot, int16
 //   2 diamond     +      -> the four points at distance 2, centre lit
 //   3 turning     +      -> x (the small form rotates through the peak)
 //   4 spike       +      -> a thin plus with 3-px arms, the centre ring dark
-static void sa_star_shape(uint8_t *buf, int16_t x, int16_t y, uint8_t shape, uint8_t stage) {
+// The lit offsets of one star at `stage`, written to dx/dy (room for SA_STAR_MAX_PTS);
+// returns how many (sa_star_shape reads it).
+#define SA_STAR_MAX_PTS 9
+static uint8_t sa_star_pts(uint8_t shape, uint8_t stage, int8_t *dx, int8_t *dy) {
     const uint8_t form = (stage == 2) ? 2 : (stage == 1 || stage == 3) ? 1 : 0;   // dot/small/full
-#define SA_P(dx, dy) sa_set(buf, (int16_t)(x + (dx)), (int16_t)(y + (dy)))
-    if (form == 0) { SA_P(0, 0); return; }
+    uint8_t n = 0;
+#define SA_P(px, py) do { dx[n] = (int8_t)(px); dy[n] = (int8_t)(py); ++n; } while (0)
+    SA_P(0, 0);
+    if (form == 0) return n;
     const bool x_small = (shape == 1);
     if (form == 1) {
-        SA_P(0, 0);
         if (x_small) { SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1); }
         else         { SA_P(-1, 0);  SA_P(1, 0);  SA_P(0, -1); SA_P(0, 1); }
-        return;
+        return n;
     }
     switch (shape) {
         case 0:
-            SA_P(0, 0);
             for (int8_t d = 1; d <= 2; ++d) { SA_P(-d, 0); SA_P(d, 0); SA_P(0, -d); SA_P(0, d); }
             break;
         case 1:
-            SA_P(0, 0);
             SA_P(-1, 0); SA_P(1, 0); SA_P(0, -1); SA_P(0, 1);
             SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
             break;
         case 2:
-            SA_P(0, 0);
             SA_P(-2, 0); SA_P(2, 0); SA_P(0, -2); SA_P(0, 2);
             SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
             break;
         case 3:
-            SA_P(0, 0); SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
+            SA_P(-1, -1); SA_P(1, -1); SA_P(-1, 1); SA_P(1, 1);
             break;
         default:
-            SA_P(0, 0);
             for (int8_t d = 2; d <= 3; ++d) { SA_P(-d, 0); SA_P(d, 0); SA_P(0, -d); SA_P(0, d); }
             break;
     }
 #undef SA_P
+    return n;
+}
+
+static void sa_star_shape(uint8_t *buf, int16_t x, int16_t y, uint8_t shape, uint8_t stage) {
+    int8_t dx[SA_STAR_MAX_PTS], dy[SA_STAR_MAX_PTS];
+    const uint8_t n = sa_star_pts(shape, stage, dx, dy);
+    for (uint8_t i = 0; i < n; ++i) sa_set(buf, (int16_t)(x + dx[i]), (int16_t)(y + dy[i]));
 }
 
 // The stars for one keycap, `fe` ms into the star window (letters solid .. end of fade).
@@ -624,6 +638,7 @@ static void sa_begin(bool loop, uint8_t contrast) {
     s_frame_ms       = 0;   // don't report the PREVIOUS idle session's timings in the
     s_slice_worst_ms = 0;   // first log line of this one
     s_logged_frame   = false;
+    s_frames_done    = 0;
     // Non-blocking progress trace (HID console; dropped when nothing is attached).
     // If a half wedges during the animation, the last line printed shows how far it
     // got. Only the USB (master) half's console is readable — to diagnose the left
@@ -694,6 +709,8 @@ void startup_anim_stop(void) {
 
 bool startup_anim_is_loop(void) { return s_active && s_loop; }
 
+bool startup_anim_frame_busy(void) { return s_active && s_loop && s_frame_busy; }
+
 bool startup_anim_active(void) { return s_active; }
 
 // The one-shot show opens on the stock rainbow, and it fades out while POLYKYBD is
@@ -742,16 +759,21 @@ void startup_anim_tick(void) {
         if (s_frame_idx >= SA_NUM_KEYS) {
             s_frame_busy = false;
             s_last_frame = timer_read32();   // gap timed from the END of the frame
+            ++s_frames_done;
             // Report at frame END (so the numbers describe the frame that just
             // finished) and report the FIRST completed frame immediately, then on a
             // quiet ~5 s cadence. A 5 s-only cadence yields NOTHING from a short idle
             // session — a 4.4 s glance at the screensaver printed no timing at all,
             // which makes the instrument useless exactly when you want a quick look.
             if (!s_logged_frame || el >= s_next_log) {
-                uprintf("Eden idle %lums (frame %ums, worst slice %ums)\n",
-                        (unsigned long)el, s_frame_ms, s_slice_worst_ms);
+                // `frames` is the rate the keycaps actually got since the last report:
+                // `frame` only sums render time, so it cannot show time lost between
+                // slices to other main-loop work (the status panel's I2C flush).
+                uprintf("Eden idle %lums (frame %ums, worst slice %ums, %u frames)\n",
+                        (unsigned long)el, s_frame_ms, s_slice_worst_ms, s_frames_done);
                 s_next_log       = el + 5000;
                 s_slice_worst_ms = 0;   // worst-since-the-last-report, not worst-ever
+                s_frames_done    = 0;
                 s_logged_frame   = true;
             }
         }
@@ -773,6 +795,14 @@ void startup_anim_tick(void) {
     sa_render_frame(el);
 }
 
+// ---- the status panels' idle screen (status_idle.c) ------------------------
+// The idle screen's plasma uses Eden's sine table and distance, so the board keeps one
+// copy of each.
+
+uint8_t startup_anim_sin(uint8_t t) { return sa_sin(t); }
+
+uint16_t startup_anim_dist(int16_t a, int16_t b) { return sa_dist(a, b); }
+
 #else  // ---- non-split72: no-op stubs ----
 void startup_anim_start(void) {}
 void startup_anim_start_loop(uint8_t contrast) { (void)contrast; }
@@ -781,6 +811,7 @@ void startup_anim_set_tail(bool on) { (void)on; }
 bool startup_anim_welcome(void) { return false; }
 bool startup_anim_take_welcome_said(void) { return false; }
 bool startup_anim_is_loop(void) { return false; }
+bool startup_anim_frame_busy(void) { return false; }
 void startup_anim_tick(void) {}
 bool startup_anim_active(void) { return false; }
 sa_geom_t startup_anim_key_geom(bool right, uint8_t idx) { (void)right; (void)idx; sa_geom_t o = {0,0,0,0,false,false}; return o; }

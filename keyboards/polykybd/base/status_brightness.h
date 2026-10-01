@@ -60,9 +60,8 @@ static inline uint8_t poly_status_brightness(uint8_t contrast) {
                      (((uint16_t)(contrast - 1) * span + steps / 2u) / steps));
 }
 
-// Status panel level while idling. oled_task_user() hands the panel to
-// oled_render_logos() during DISP_IDLE and its HARDWARE scroll keeps running;
-// register 0 is the faintest an SSD1306 goes while still displaying, and that
-// faint scrolling logo is the idle look the board has always had. It is NOT
-// oled_off(), which would stop the scroll.
+// Status panel level while idling. oled_task_user() hands the panel to the idle
+// screen during DISP_IDLE (status_idle.c's animation on split72, a blank panel on
+// split42); register 0 is the faintest an SSD1306 goes while still displaying. It is
+// NOT oled_off(), which would stop the animation.
 #define POLY_STATUS_IDLE_BRIGHT 0

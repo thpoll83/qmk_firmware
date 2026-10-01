@@ -23,8 +23,6 @@ void oled_draw_layout_name(const GFXfont* const* font, int8_t x, int8_t y, uint8
 /* Board-specific callbacks — implemented in split72/status_oled.c or split42/status_oled.c */
 void oled_update_buffer(void);
 void oled_update_buffer_fw_update(void);   /* "Updating fonts/firmware …" screen */
-void oled_draw_kybd(void);
-void oled_draw_poly(void);
 
 /* Shared OLED task functions — implemented in oled_helper.c */
 void oled_status_screen(void);
@@ -87,5 +85,4 @@ void oled_telemetry_screen(void);
    halves show it -- the panel is the only indicator the gesture has (see
    MACRO_RECORD_DESIGN.md section 2.4). */
 void oled_macro_rec_screen(void);
-void oled_render_logos(void);
 bool oled_task_user(void);

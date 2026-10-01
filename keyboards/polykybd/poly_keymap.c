@@ -105,6 +105,7 @@
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "anim/tutorial_names_gen.h"   // pre-rendered native language names
 #include "anim/startup_anim.h"   // one-time procedural boot animation (split72; no-op stubs on split42)
+#include "status_idle.h"          // the status panel's idle screen (split72 only)
 #include "polymod_os_actions.h"
 #include "uni.h"
 #include "emoji/emoji_layer.h"
@@ -518,8 +519,9 @@ static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
 #endif
 
 // Status OLED contrast register for the current moment. Dark while idling (the
-// panel is handed to oled_render_logos() with its hardware scroll running, and
-// that faint scrolling logo is the idle look), otherwise the SAME contrast the
+// panel is handed to the idle screen — status_idle.c's animation on split72, a blank
+// panel on split42),
+// otherwise the SAME contrast the
 // keycaps are on, mapped onto this panel's range by base/status_brightness.h.
 //
 // ⚠️ The input is the SYNCED local_state->contrast — the one value both halves
@@ -1255,6 +1257,12 @@ static void eden_idle_tick(void) {
         if (!startup_anim_is_loop()) {
             startup_anim_start_loop(EDEN_IDLE_BRIGHTNESS);   // dim glow, both halves
         }
+#if defined(KEYBOARD_polykybd_split72)
+        // Take turns with the status panel's idle screen: start no new keycap frame
+        // while its frame is still going out over I2C (see status_idle.c). A frame
+        // already under way keeps rendering its slices.
+        if (!startup_anim_frame_busy() && status_idle_holds_bus()) return;
+#endif
         startup_anim_tick();
     } else if (startup_anim_is_loop()) {
         // Loop just ended (woke / turned off). Request a refresh so THIS half repaints
@@ -1646,6 +1654,12 @@ void housekeeping_task_user(void) {
         // Idle "Eden" screensaver frame tick (IDLE_STYLE_EDEN, both halves). Runs
         // before the boot-animation block below and owns the LOOPING variant; the
         // block below is for the ONE-SHOT boot/KC_EDEN animation only.
+#if defined(KEYBOARD_polykybd_split72)
+        // The status panel's idle frame, when one is due. BEFORE eden_idle_tick(), so
+        // on the pass between two Eden frames the panel composes first and Eden then
+        // waits for the flush instead of the two interleaving.
+        status_idle_task();
+#endif
         eden_idle_tick();
         // An Eden replay the split handler recorded (it may not start one itself).
         split_sync_drain_anim_replay();
@@ -7489,13 +7503,15 @@ void eeconfig_init_user(void) {
 }
 
 
-// Initializes OLED display: turns off, clears buffer, sets scroll speed, shows logos, then enables.
+// Initializes OLED display: turns off, clears buffer, sets the scroll speed (the DOOM
+// attract logo's hardware scroll), then enables. The scrolling Poly/Kybd logos once
+// drawn here were removed: this runs before the driver is initialised, so they only
+// ever filled RAM and were never seen at boot.
 oled_rotation_t oled_init_user(oled_rotation_t rotation){
     oled_off();
     oled_clear();
     oled_render();
     oled_scroll_set_speed(0);
-    oled_render_logos();
     oled_on();
     return rotation;
 }

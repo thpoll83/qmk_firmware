@@ -297,6 +297,13 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
   reports `frame Nms, worst slice Nms` at frame END (first frame of a session
   immediately, then ~5 s) — **the worst slice is the responsiveness number**; tune
   `EDEN_IDLE_SLICE_MS` against it, not against the frame time.
+  - ⚠️ **On split72 the loop takes turns with the status panel's idle screen**, which
+    shares the main loop and blocks it ~23 ms per frame on I2C. `eden_idle_tick()`
+    starts no frame while a status frame is still being sent
+    (`status_idle_holds_bus()`), and the panel composes only between Eden frames
+    (`startup_anim_frame_busy()`). Interleaved, every 3 ms slice waited behind ~6 ms
+    of I2C. The idle log's trailing `N frames` is the rate the keycaps actually got;
+    see `STATUS_OLED.md` → frame pacing.
   - **`EDEN_IDLE_FRAME_MS` is NOT a latency dial** — it was 55 ms only because it
     was once the sole thing handing the main loop back between unsliced frames. With
     slicing it just cost frame rate (22% of a measured ~250 ms period), so it is now

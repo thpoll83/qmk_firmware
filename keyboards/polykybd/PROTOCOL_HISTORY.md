@@ -256,6 +256,16 @@ reading before you change either one.
   `FEATURE_MIN_PROTOCOL` (see `PolyKybdHost/CLAUDE.md`). So forgetting the bump no
   longer rejects the keyboard; it silently leaves the new feature disabled, which is
   quieter and worse.
+  **v22** adds cmd `43` (**REBOOT**): reboot both halves, nothing persisted. It
+  exists for the host's boot-loop diagnostic (reboot, wait for the GET_ID fresh-boot
+  marker, read cmd `39`, repeat), which needs a reboot it can issue 50 times.
+  - **Not cmd `25`.** Set-handedness also reboots both halves, but it rewrites the
+    EEPROM byte and the handedness flash stamp on every call.
+  - **ACK before the reset**, since the reset never returns; then the slave, with the
+    QK_REBOOT key's hardened handoff (20 retries, the whole round re-fired once).
+    `shutdown_user()` flushes only dirty state and disarms the watchdog, so a
+    deliberate reboot is never archived as a crash.
+  - Older firmware NACKs an unknown command; the host gates it on v22.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload

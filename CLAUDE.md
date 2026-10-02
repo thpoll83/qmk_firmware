@@ -449,6 +449,11 @@ contrast with their neighbour that the wire format does not show. The
   pairs, 0x20 the enable step after, through the same `overlay_flags_on()` as cmd 11.
   ⚠️ Only the masked width (0x1F) may reach the decoder or the slave: bit 7 is
   `OVERLAY_MAP_ICON_FILL` on the split transaction.
+- **v22's cmd 43 (REBOOT) reboots both halves and persists nothing** — it exists so
+  the host's boot-loop diagnostic can reboot 50 times. ⚠️ Do not substitute cmd 25:
+  set-handedness also reboots both halves, but rewrites the EEPROM byte and the
+  handedness flash stamp on every call. It ACKs BEFORE the reset (the reset never
+  returns) and hands off to the slave with the QK_REBOOT key's hardened 20-retry path.
 - ⚠️ **The flat overlay index is the only ADDRESS an upload has, resolved through
   `overlay_map[]` — so `reset_overlay_mapping()`'s identity default is LOAD-BEARING FOR
   WRITES**, not a display convenience. Zeroing it sent every image to slot 0: nearly

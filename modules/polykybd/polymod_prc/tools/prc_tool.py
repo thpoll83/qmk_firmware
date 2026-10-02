@@ -34,6 +34,10 @@ import hashlib
 import os
 import re
 import sys
+from typing import Iterable, List, Optional, Sequence, Tuple
+
+# A 1-bit image: rows of 0/1.
+Mask = List[List[int]]
 
 # Neighbours as (dy, dx) relative to the pixel, most significant context bit
 # first. Only already-decoded pixels: the two rows above and the two to the left.
@@ -47,7 +51,7 @@ _MASK32 = 0xFFFFFFFF
 # -- images as lists of rows of 0/1 ---------------------------------------------
 
 
-def crop_to_roi(mask):
+def crop_to_roi(mask: Sequence[Sequence[int]]) -> Optional[Tuple[int, int, Mask]]:
     """(top, left, roi) for the ink bounding box of `mask`, or None if it is empty."""
     rows = [y for y, row in enumerate(mask) if any(row)]
     if not rows:
@@ -57,7 +61,7 @@ def crop_to_roi(mask):
     return top, left, [list(row[left:right + 1]) for row in mask[top:bottom + 1]]
 
 
-def contexts(roi):
+def contexts(roi: Sequence[Sequence[int]]) -> List[int]:
     """Context index of every ROI pixel, row-major. Pixels outside the ROI count
     as 0, which is also what the decoder reads: it decodes into a cleared frame."""
     h, w = len(roi), len(roi[0])
@@ -78,7 +82,7 @@ def contexts(roi):
 # -- training -----------------------------------------------------------------
 
 
-def train(masks) -> bytes:
+def train(masks: Iterable[Sequence[Sequence[int]]]) -> bytes:
     """A table from 1-bit masks, each cropped to its ink box first.
 
     p0 = round(256 * (n0 + 0.5) / (n0 + n1 + 1)), clamped to 1..255, where n0/n1
@@ -153,7 +157,7 @@ class _Encoder:
         return out[1:].rstrip(b"\x00")
 
 
-def encode(roi, table: bytes) -> bytes:
+def encode(roi: Sequence[Sequence[int]], table: bytes) -> bytes:
     """Encode a ROI (rows of 0/1) with `table`. Pass the ink box, as crop_to_roi gives it."""
     _check_table(table)
     enc = _Encoder()
@@ -163,7 +167,7 @@ def encode(roi, table: bytes) -> bytes:
     return enc.finish()
 
 
-def decode(payload: bytes, height: int, width: int, table: bytes):
+def decode(payload: bytes, height: int, width: int, table: bytes) -> Mask:
     """Reference decoder, step for step what polymod_prc.c does. Returns rows of 0/1."""
     _check_table(table)
     pos = 0
@@ -205,7 +209,7 @@ def decode(payload: bytes, height: int, width: int, table: bytes):
 # -- tables on disk -----------------------------------------------------------
 
 
-def _check_table(table: bytes):
+def _check_table(table: bytes) -> None:
     if len(table) != CONTEXTS or min(table) < 1:
         raise ValueError(f"a PRC table is {CONTEXTS} bytes, each 1..255")
 
@@ -257,7 +261,7 @@ def load_table(path: str) -> bytes:
 # -- reading images -----------------------------------------------------------
 
 
-def load_masks(path: str, cell=None, threshold: int = 128, invert: bool = False):
+def load_masks(path: str, cell: Optional[Tuple[int, int]] = None, threshold: int = 128, invert: bool = False) -> List[Mask]:
     """1-bit masks from an image file: the whole image, or each cell of a sheet.
     A pixel at or above `threshold` (0-255 grey) is lit, unless `invert`."""
     try:
@@ -274,7 +278,7 @@ def load_masks(path: str, cell=None, threshold: int = 128, invert: bool = False)
     return [[row[cx:cx + cw] for row in full[cy:cy + ch]] for cy in range(0, h - ch + 1, ch) for cx in range(0, w - cw + 1, cw)]
 
 
-def _cell(text: str):
+def _cell(text: str) -> Tuple[int, int]:
     m = re.fullmatch(r"(\d+)x(\d+)", text)
     if not m:
         raise argparse.ArgumentTypeError("expected WxH, for example 72x40")

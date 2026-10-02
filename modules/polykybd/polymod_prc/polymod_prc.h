@@ -41,7 +41,9 @@
 #ifndef PRC_FRAME_H
 #    define PRC_FRAME_H 40
 #endif
-#define PRC_FRAME_BYTES (PRC_FRAME_W * PRC_FRAME_H / 8)
+// Rounded up, so a frame whose pixel count is not a multiple of 8 still fits the
+// (frame_w * frame_h + 7) / 8 bytes the decoder clears.
+#define PRC_FRAME_BYTES ((PRC_FRAME_W * PRC_FRAME_H + 7) / 8)
 
 // Number of neighbour contexts, i.e. the size of a probability table in bytes.
 #define PRC_CONTEXTS 1024

@@ -22,6 +22,10 @@ extern "C" {
 
 namespace {
 
+// The buffer a caller sizes with PRC_FRAME_BYTES must hold every pixel the decoder
+// clears, also for a frame whose pixel count is not a multiple of 8.
+static_assert(PRC_FRAME_BYTES * 8 >= PRC_FRAME_W * PRC_FRAME_H, "PRC_FRAME_BYTES must round up");
+
 TEST(PrcCodec, GoldenVectorsDecodeToTheHostsOverlay) {
     for (const prc_vector_t &v : prc_vectors) {
         uint8_t out[PRC_FRAME_BYTES];

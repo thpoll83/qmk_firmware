@@ -67,8 +67,8 @@ void splash_progress(uint8_t step);
 // Cheap: it repaints the status OLED's percent line only, and does not touch the
 // keycaps (the splash letters stay where the step left them).
 void boot_substep(uint8_t sub, uint8_t sub_total);
-// Breadcrumb render call `call` (0-based ordinal) of a sub-step paint (see
-// boot_diag.c). No-op outside a sub-step paint.
+// Breadcrumb render call `call` (0-based ordinal) of a sub-step or milestone panel
+// paint (see boot_diag.c). No-op outside those two paints.
 void boot_paint_mark(uint8_t call);
 
 // ── The FINAL boot render (the 100% step) ───────────────────────────────────

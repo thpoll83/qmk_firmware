@@ -389,6 +389,7 @@ void emit_boot_timing_line(void) {
 }
 
 static uint8_t s_boot_sub = 0;   // the sub-step whose panel paint is in flight
+static bool    s_boot_milestone_paint = false;   // a milestone's panel paint is in flight
 
 // The high byte of a breadcrumb stamped inside a milestone: the step, plus bit 4
 // (bit 12 of the arg) set once core1 has reached core1_entry(). boot_step_of() masks
@@ -415,12 +416,27 @@ static uint16_t boot_in_step_mark(uint8_t step, uint8_t mark) {
 // its dirty mask private, and each call renders the next dirty block in ascending
 // order, so a stall at call n means n blocks had already gone out. A call with nothing
 // left to render returns at once, so it cannot be where a paint stalls.
-// 0x1583 reads: step 5, core1 in its entry, sub-step 1, fourth render call. Milestone paints
-// keep their 0xE1 stamp; render keys are 1..40 and sub-steps 1..N, so 0x80+ is free.
+// 0x1583 reads: step 5, core1 in its entry, sub-step 1, fourth render call. Render keys
+// are 1..40 and sub-steps 1..N, so 0x80+ is free.
+//
+// ⚠️ A MILESTONE's panel paint gets the same per-call stamp, in 0xC0..0xCF:
+//     arg = (step | core1_entered << 4) << 8 | 0xC0 | call
+// It used to keep only the 0xE1 stamped before it, so a stall inside it could not say
+// how far the paint got. A user's master wedged at "63%, 4 / 4" and the guard archived
+// `phase=1:0x16e1` (fw 1.3.2, 2026-10-02): the 75% paint never returned, core1 was up,
+// and that is all the record could say. 0xC0..0xDF was unused, and 0xE1 still means
+// "stamped, first render call not reached yet".
 void boot_paint_mark(uint8_t call) {
-    if (s_boot_step == 0 || s_boot_sub == 0) return;
+    if (s_boot_step == 0) return;
+    uint8_t lo;
+    if (s_boot_sub != 0) {
+        lo = (uint8_t)(0x80u | (((s_boot_sub - 1u) & 3u) << 4) | (call & 0x0Fu));
+    } else if (s_boot_milestone_paint) {
+        lo = (uint8_t)(0xC0u | (call & 0x0Fu));
+    } else {
+        return;
+    }
     const uint8_t hi = boot_mark_hi(s_boot_step);
-    const uint8_t lo = (uint8_t)(0x80u | (((s_boot_sub - 1u) & 3u) << 4) | (call & 0x0Fu));
     (void)crash_phase_enter(CRASH_PHASE_BOOT, (uint16_t)(((uint16_t)hi << 8) | lo));
 }
 
@@ -648,7 +664,9 @@ void splash_progress(uint8_t step) {
     // Skipped for step 1: that one runs in keyboard_pre_init_user(), and QMK does not
     // call oled_init() until later in keyboard_init(), so there is no panel yet.
     if (step != 1) {
+        s_boot_milestone_paint = true;   // per-call 0xC0|call stamps, boot_paint_mark()
         oled_boot_progress(final ? POLY_SPLASH_STEPS : step, POLY_SPLASH_STEPS, 0, 0, NULL);
+        s_boot_milestone_paint = false;
     }
 
     (void)crash_phase_enter(CRASH_PHASE_BOOT, boot_in_step_mark(s_boot_step, 0xE2u));

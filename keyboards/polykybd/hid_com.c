@@ -947,6 +947,34 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 raw_hid_send(data, length);
                 reset_keyboard();
                 break;
+            case 43: //reboot both halves (protocol v22+)
+                {
+                    // A plain reboot for host-driven diagnostics: the host's boot-loop
+                    // test reboots, waits for the GET_ID fresh-boot marker, and reads
+                    // cmd 39 to see whether the late-boot guard fired. cmd 25 also
+                    // reboots both halves but rewrites the EEPROM byte and the
+                    // handedness flash stamp every time, which 50 rounds must not do.
+                    // Nothing here is persisted: shutdown_user() flushes only dirty
+                    // state, the same as QK_REBOOT.
+                    //
+                    // ACK first, because the reset never returns and the host must
+                    // see the command was taken. Then the slave, with the QK_REBOOT
+                    // key's hardened handoff (poly_keymap.c): a dropped frame there
+                    // reboots the master alone, and that hang is exactly the kind
+                    // of boot problem the caller is looking for, not one to cause.
+                    memset(data, 0, length);
+                    hid_reply(data, 0x2b, true);
+                    raw_hid_send(data, length);
+                    poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
+                                              .action = RESET_ACTION_REBOOT };
+                    uint8_t ack = send_to_bridge(USER_SYNC_RESET, &msg, sizeof(msg), 20);
+                    if (!sync_succeeded(ack)) {
+                        ack = send_to_bridge(USER_SYNC_RESET, &msg, sizeof(msg), 20);
+                    }
+                    uprintf("Host reboot: slave ack=0x%02x\n", ack);
+                    soft_reset_keyboard();
+                }
+                break;
             case 24: //display off
                 poly_suspend();
                 sync_and_refresh_displays();

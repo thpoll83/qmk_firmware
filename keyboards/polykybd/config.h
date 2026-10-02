@@ -255,7 +255,9 @@
 //      after. A warm app switch is then one mapping report instead of prepare +
 //      mapping + enable. Older firmware rejects the flagged width, so the host
 //      sets them only at v21+ (PROTOCOL_HISTORY.md).
-#define PROTOCOL_VERSION 21
+//  v22 cmd 43 (REBOOT) reboots both halves without writing anything persistent,
+//      for the host's boot-loop diagnostic. Older firmware NACKs it.
+#define PROTOCOL_VERSION 22
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

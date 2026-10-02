@@ -17,3 +17,4 @@ TEST_LIST += polykybd_doom_pack_gate
 TEST_LIST += polykybd_tutorial_plan
 TEST_LIST += polykybd_demo_plan
 TEST_LIST += polykybd_icon_lib
+TEST_LIST += polykybd_oled_i2c_diag

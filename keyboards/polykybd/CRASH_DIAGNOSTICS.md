@@ -233,6 +233,25 @@ run on it (`test_no_crash_record`). What is worth knowing:
     carries no core1 flag. With the 1.0.0 `0x05E2` above that is two stalls in the
     step-5/6 window on two firmwares; a `0x15E1`/`0x16E1` from 1.3.2+ would say
     whether core1 was up.
+    ✅ **It was up (field, 2026-10-02, fw 1.3.2).** A user's master froze at
+    "63%, 4 / 4", the guard reset it once and the next boot was clean. `polyctl crash
+    show` read `kind=watchdog phase=1:0x16e1 up=0ms n=1 reason=0x11`: the step-6 (75%)
+    panel paint never returned, with core1 already in `core1_entry()`. The panel still
+    showed the last frame that finished, which is why the user saw 63% while the
+    record names step 6. That is the third stall in the step-5/6 window and the first
+    with core1 known to be running. Each panel write has a 100 ms I2C timeout, so the
+    paint cannot hang on its own; something kept core0 from servicing that timeout
+    while core1 ran. Contention between the cores (XIP flash, a spinlock, the bus) is
+    the inference, not a measurement.
+    - **The milestone paint now has per-call breadcrumbs too, `0xC0 | call`**
+      (below). The record above could say no more than `0xE1` because only the
+      SUB-step paint was instrumented call by call.
+    - ⚠️ **The host never alerted on it.** The tray's crash dialog was raised only by
+      the console line, which the firmware prints with the banner and its re-emits in
+      the first ~30 s, and after a watchdog reset the host's probe is still
+      debouncing the re-enumeration. PolyKybdHost now also reads cmd 39 on the
+      GET_ID fresh-boot marker, and has a Help & About entry that reads both halves
+      and copies the report.
 
 - **A crash loop halts instead of looping forever**: `consecutive` counts
   back-to-back records and past `CRASH_LOOP_LIMIT` (5) the handler parks in `wfi`
@@ -373,6 +392,14 @@ call first (`boot_paint_mark()`):
 The core1 flag is bit 12, in the HIGH byte, so the low byte stays in `0x80..0xBF` and
 never collides with the in-milestone marks `0xE1` / `0xE2`.
 
+A MILESTONE's panel paint (`splash_progress()` → `oled_boot_progress()`, stamped
+`0xSSE1` before it) is stamped the same way in `0xC0..0xCF`:
+
+    arg = (step | core1_entered << 4) << 8 | 0xC0 | call
+
+`0x16E1` therefore means "stamped, first render call not reached"; `0x16C3`, the
+fourth call in flight. Firmware before this change only ever leaves `0xE1` there.
+
 `call` is the 0-based ORDINAL of the render call, not a physical block number: QMK's
 OLED driver keeps its dirty mask private, and each call renders the next dirty block in
 ascending order. So `call = n` means n blocks had already gone out.
@@ -387,6 +414,8 @@ are masked and cleared by core0 before the launch. Reading a record:
 | `0x05B3` | the same with core1 NOT yet in `core1_entry()` |
 | `0x15E2` | step 5 logo draw (keycap SPI) in flight, core1 in its entry |
 | `0x05E2` | the same with core1 NOT yet in `core1_entry()` (or firmware before 1.3.2) |
+| `0x16E1` | step 6 milestone panel paint stamped, first render call not reached (or older firmware) |
+| `0x16C3` | step 6 milestone panel paint, fourth render call in flight, core1 in its entry |
 
 After the paint returns the tag goes back to the plain sub-step (`0x0504`), so a
 record naming a call always means the paint was in flight.

@@ -438,3 +438,42 @@ are masked and cleared by core0 before the launch. Reading a record:
 
 After the paint returns the tag goes back to the plain sub-step (`0x0504`), so a
 record naming a call always means the paint was in flight.
+
+## Boot hang: an IRQ nested into USB (the `0x16C1` / `0x16E1` stall)
+
+**Symptom.** The master stops at "63%, 4 / 4" (or "75%"), the late-boot guard resets it
+8 s later, and the record names the step 6 milestone panel paint: `phase=1:0x16E1` on
+fw 1.3.2 in the field, `0x16C1` / `0x16C2` once the per-call stamps existed. Only the
+master (the USB half), and far more often after a host-issued reboot (cmd 43) than
+after a power-on, because the host re-enumerates and polls the keyboard while the boot
+paints the status panel over I2C.
+
+**Cause, as far as it was measured.** The I2C0 interrupt (priority 2) preempted a
+running USB interrupt (priority 3), and core0 then executed from a garbage address
+instead of the I2C handler. Nothing else ran: no timer interrupt (same priority as
+I2C, so blocked), so even the 100 ms I2C timeout never fired. The fix is the priority:
+I2C0 and SPI0/1 sit at the USB priority in both variants' `mcuconf.h`, so they can no
+longer nest into it. What inside that nesting corrupts the jump was NOT established.
+
+**Evidence, in the order it was gathered** (all on the host's boot-loop test,
+`polyctl bootloop`, which reboots with cmd 43 and reads cmd 39 after each boot):
+
+| Build | Result | What it ruled in or out |
+|---|---|---|
+| #337 (cmd 43), stock | hang in round 2-5, every run | baseline: ~1 boot in 3 |
+| core1 launched after boot | hang, record `0x06C1` (core1 not running) | not core1 |
+| + IRQ census (entries per vector since the last stamp, in NOLOAD RAM) | split-link PIO 0, timer 0, last IRQ never left | not the split link / slave, not a console print |
+| ChibiOS `CH_CFG_SMP_MODE FALSE` | hang | not SMP (the core0 FIFO IRQ, the kernel spinlock) |
+| + NMI on TIMER alarm 3, vector table in RAM | 1 hang in 43; NMI captured `pc=0x13AE165E lr=0xFFFFFFF1 IPSR=39 (I2C0)`, USB handler open, thread in WFI | core0 jumped to garbage on entering the I2C0 IRQ while USB was running |
+| I2C0 priority 2 -> 3, otherwise stock | 0 hangs in 150+ consecutive boots | the fix |
+
+Hangs were also seen before the 200 MHz clock, so clock margin was not pursued.
+
+**SPI is included without its own evidence.** The keycap SPI driver completes through a
+DMA interrupt at `RP_IRQ_SPIx_PRIORITY`, which was 2 as well, and an fw 1.0.0 master
+hung at `0x05E2`, the keycap SPI draw. The timer alarms (2) and the split-link PIO
+interrupt (`CORTEX_MAX_KERNEL_PRIORITY`) can still preempt USB; nothing has implicated
+them, and lowering either changes kernel or split-link timing.
+
+⚠️ **Do not raise I2C0 or SPI0/1 above the USB priority again** without re-running a
+long boot loop (hundreds of rounds) against it.

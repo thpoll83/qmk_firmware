@@ -18,3 +18,4 @@ TEST_LIST += polykybd_tutorial_plan
 TEST_LIST += polykybd_demo_plan
 TEST_LIST += polykybd_icon_lib
 TEST_LIST += polykybd_oled_i2c_diag
+TEST_LIST += polykybd_crash_ack

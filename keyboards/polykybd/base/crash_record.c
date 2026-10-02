@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // See crash_record.h for the design.
 #include "crash_record.h"
+#include "crash_ack.h"
 
 #include "quantum.h"          // FW_VERSION
 #include "print.h"
@@ -51,6 +52,10 @@ static poly_crash_record_t  s_archive;                 // last archived record (
 static bool                 s_have_slave   = false;
 static bool                 s_slave_fresh  = false;
 static poly_crash_record_t  s_slave;                   // last record pulled from the slave
+// The slave-record acknowledgement (crash_ack.h). Slave side: which of its own
+// records the host has seen. Master side: an ack the host's cmd 39 read queued.
+static crash_ack_t          s_ack;
+static crash_ack_pending_t  s_ack_pending;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -381,6 +386,7 @@ void crash_record_clear(void) {
     s_fresh        = false;
     s_have_slave   = false;
     s_slave_fresh  = false;
+    s_ack_pending.pending = false;
     memset(&s_archive, 0, sizeof(s_archive));
     memset(&s_slave, 0, sizeof(s_slave));
 }
@@ -460,7 +466,32 @@ uint8_t crash_record_hid_body(uint8_t which, uint8_t *out, uint8_t out_len) {
 // The split link
 // ---------------------------------------------------------------------------
 void crash_record_slave_reply(uint8_t *out, uint8_t out_len) {
-    (void)fill_body(out, out_len, s_have_archive, s_fresh, &s_archive);
+    // FRESH only until the host has seen it; see crash_ack.h. s_fresh itself is
+    // untouched, because the late-boot guard reads it as "the previous boot died".
+    (void)fill_body(out, out_len, s_have_archive,
+                    crash_ack_slave_fresh(s_fresh, &s_ack, s_archive.crc), &s_archive);
+}
+
+bool crash_record_slave_ack(uint32_t crc) {
+    return crash_ack_apply(&s_ack, s_have_archive, s_archive.crc, crc);
+}
+
+void crash_record_note_host_read(uint8_t which) {
+    if (which != 1) return;
+    if (crash_ack_note_host_read(&s_ack_pending, s_have_slave, s_slave_fresh, s_slave.crc)) {
+        // The host has it, so stop re-printing it too.
+        s_slave_fresh = false;
+    }
+}
+
+bool crash_record_ack_pending(uint32_t *crc) {
+    if (!s_ack_pending.pending) return false;
+    if (crc) *crc = s_ack_pending.crc;
+    return true;
+}
+
+void crash_record_ack_done(void) {
+    s_ack_pending.pending = false;
 }
 
 bool crash_record_note_slave(const uint8_t *body, uint8_t len) {

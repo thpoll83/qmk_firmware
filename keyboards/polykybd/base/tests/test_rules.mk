@@ -126,6 +126,15 @@ polykybd_doom_pack_gate_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# crash_ack.h is header-only and pure: when the slave's crash record stops reading
+# fresh. The flash archive and the split RPC around it are not linked here.
+polykybd_crash_ack_SRC := \
+	$(POLY_BASE_PATH)/tests/crash_ack_tests.cpp
+
+polykybd_crash_ack_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
 # legend_plan.c is pure by construction — the font lookup and the bbox
 # measurement arrive through callbacks — so the size planner links with no fonts,
 # no display and no keyboard config. The firmware binding lives in poly_keymap.c.

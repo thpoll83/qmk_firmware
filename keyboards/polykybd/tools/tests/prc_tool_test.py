@@ -34,11 +34,15 @@ def _vectors():
     with open(os.path.join(MODULE, "tests", "prc_vectors.h"), encoding="utf-8") as fh:
         text = fh.read()
     out = []
-    for name, top, left, h, w, payload, overlay in re.findall(
-            r'\{"([^"]+)", (\d+), (\d+), (\d+), (\d+), \d+, (\w+), (\w+),', text):
+    for name, top, left, h, w, payload, overlay in re.findall(r'\{"([^"]+)", (\d+), (\d+), (\d+), (\d+), \d+, (\w+), (\w+),', text):
         out.append({
-            "name": name, "top": int(top), "left": int(left), "h": int(h), "w": int(w),
-            "payload": _bytes(text, payload), "overlay": _bytes(text, overlay),
+            "name": name,
+            "top": int(top),
+            "left": int(left),
+            "h": int(h),
+            "w": int(w),
+            "payload": _bytes(text, payload),
+            "overlay": _bytes(text, overlay),
         })
     return out
 
@@ -56,7 +60,7 @@ class PrcToolTest(unittest.TestCase):
 
     def test_v1_table_loads_from_the_shipped_header(self):
         self.assertEqual(len(self.table), 1024)
-        self.assertEqual(sum(self.table), 135654)   # the same check the C suite makes
+        self.assertEqual(sum(self.table), 135654)  # the same check the C suite makes
         self.assertEqual((self.table[0], self.table[511], self.table[1023]), (252, 177, 13))
 
     def test_found_every_golden_vector(self):
@@ -117,7 +121,7 @@ class PrcToolTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             prc_tool.encode([[1]], bytes(1023))
         with self.assertRaises(ValueError):
-            prc_tool.encode([[1]], bytes(1024))   # a 0 probability
+            prc_tool.encode([[1]], bytes(1024))  # a 0 probability
 
 
 if __name__ == "__main__":

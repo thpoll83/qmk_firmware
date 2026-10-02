@@ -6,6 +6,8 @@
 
 #include <stdint.h>
 
+// clang-format off
+
 typedef struct {
     const char *name;
     uint8_t top, left, height, width;
@@ -52,3 +54,4 @@ static const prc_vector_t prc_vectors[] = {
     {"template cell 624", 8, 38, 28, 28, 25, prc_vec6_payload, prc_vec6_overlay, 10, 2, 31, prc_vec6_record},
     {"template cell 936 (largest payload)", 0, 0, 40, 72, 151, prc_vec7_payload, prc_vec7_overlay, 11, 5, 0, prc_vec7_record},
 };
+// clang-format on

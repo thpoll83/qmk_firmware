@@ -38,15 +38,14 @@ import sys
 # Neighbours as (dy, dx) relative to the pixel, most significant context bit
 # first. Only already-decoded pixels: the two rows above and the two to the left.
 # Must match TEMPLATE_DY / TEMPLATE_DX in polymod_prc.c.
-TEMPLATE = ((-1, -1), (-1, 0), (-1, 1), (0, -2), (0, -1),
-            (-2, -1), (-2, 0), (-2, 1), (-1, -2), (-1, 2))
-CONTEXTS = 1 << len(TEMPLATE)   # 1024
+TEMPLATE = ((-1, -1), (-1, 0), (-1, 1), (0, -2), (0, -1), (-2, -1), (-2, 0), (-2, 1), (-1, -2), (-1, 2))
+CONTEXTS = 1 << len(TEMPLATE)  # 1024
 
 _TOP = 1 << 24
 _MASK32 = 0xFFFFFFFF
 
-
 # -- images as lists of rows of 0/1 ---------------------------------------------
+
 
 def crop_to_roi(mask):
     """(top, left, roi) for the ink bounding box of `mask`, or None if it is empty."""
@@ -78,6 +77,7 @@ def contexts(roi):
 
 # -- training -----------------------------------------------------------------
 
+
 def train(masks) -> bytes:
     """A table from 1-bit masks, each cropped to its ink box first.
 
@@ -108,9 +108,9 @@ def train(masks) -> bytes:
 
 # -- the range coder ----------------------------------------------------------
 
+
 class _Encoder:
     """LZMA-style range encoder with 8-bit probabilities."""
-
     def __init__(self):
         self.low = 0
         self.range = _MASK32
@@ -204,6 +204,7 @@ def decode(payload: bytes, height: int, width: int, table: bytes):
 
 # -- tables on disk -----------------------------------------------------------
 
+
 def _check_table(table: bytes):
     if len(table) != CONTEXTS or min(table) < 1:
         raise ValueError(f"a PRC table is {CONTEXTS} bytes, each 1..255")
@@ -229,9 +230,11 @@ def header(table: bytes, table_id: int, source: str) -> str:
 
 #define PRC_TABLE_V{table_id}_SHA256 "{digest}"
 
+// clang-format off
 static const uint8_t prc_table_v{table_id}[1024] = {{
     {body}
 }};
+// clang-format on
 """
 
 
@@ -253,6 +256,7 @@ def load_table(path: str) -> bytes:
 
 # -- reading images -----------------------------------------------------------
 
+
 def load_masks(path: str, cell=None, threshold: int = 128, invert: bool = False):
     """1-bit masks from an image file: the whole image, or each cell of a sheet.
     A pixel at or above `threshold` (0-255 grey) is lit, unless `invert`."""
@@ -263,13 +267,11 @@ def load_masks(path: str, cell=None, threshold: int = 128, invert: bool = False)
     img = Image.open(path).convert("L")
     w, h = img.size
     px = img.load()
-    full = [[(1 if px[x, y] >= threshold else 0) ^ (1 if invert else 0) for x in range(w)]
-            for y in range(h)]
+    full = [[(1 if px[x, y] >= threshold else 0) ^ (1 if invert else 0) for x in range(w)] for y in range(h)]
     if not cell:
         return [full]
     cw, ch = cell
-    return [[row[cx:cx + cw] for row in full[cy:cy + ch]]
-            for cy in range(0, h - ch + 1, ch) for cx in range(0, w - cw + 1, cw)]
+    return [[row[cx:cx + cw] for row in full[cy:cy + ch]] for cy in range(0, h - ch + 1, ch) for cx in range(0, w - cw + 1, cw)]
 
 
 def _cell(text: str):
@@ -280,6 +282,7 @@ def _cell(text: str):
 
 
 # -- command line -------------------------------------------------------------
+
 
 def _cmd_train(args) -> int:
     masks = []
@@ -335,8 +338,7 @@ def main(argv=None) -> int:
             p.add_argument("--table-id", type=int, required=True)
             p.add_argument("--header", help="write the C header here")
             p.add_argument("--bin", help="write the raw 1024-byte table here")
-            p.add_argument("--force", action="store_true",
-                           help="overwrite a different existing table (only one that never shipped)")
+            p.add_argument("--force", action="store_true", help="overwrite a different existing table (only one that never shipped)")
             p.set_defaults(func=_cmd_train)
         else:
             p.add_argument("image")

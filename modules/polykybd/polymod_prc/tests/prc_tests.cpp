@@ -25,9 +25,8 @@ namespace {
 TEST(PrcCodec, GoldenVectorsDecodeToTheHostsOverlay) {
     for (const prc_vector_t &v : prc_vectors) {
         uint8_t out[PRC_FRAME_BYTES];
-        memset(out, 0xA5, sizeof out);   // the decoder must clear what it does not draw
-        ASSERT_TRUE(prc_decode_roi(out, v.top, v.left, v.height, v.width, v.payload, v.len, prc_table_v1))
-            << v.name;
+        memset(out, 0xA5, sizeof out); // the decoder must clear what it does not draw
+        ASSERT_TRUE(prc_decode_roi(out, v.top, v.left, v.height, v.width, v.payload, v.len, prc_table_v1)) << v.name;
         EXPECT_EQ(0, memcmp(out, v.overlay, PRC_FRAME_BYTES)) << v.name;
     }
 }
@@ -49,19 +48,20 @@ TEST(PrcCodec, TableIsTheFrozenV1) {
 }
 
 TEST(PrcCodec, BoxOutsideTheFrameIsRefusedAndLeavesTheOverlay) {
-    uint8_t out[PRC_FRAME_BYTES];
+    uint8_t       out[PRC_FRAME_BYTES];
     const uint8_t payload[4] = {0};
     memset(out, 0x5A, sizeof out);
-    EXPECT_FALSE(prc_decode_roi(out, 0, 0, 0, 5, payload, 4, prc_table_v1));    // empty
+    EXPECT_FALSE(prc_decode_roi(out, 0, 0, 0, 5, payload, 4, prc_table_v1)); // empty
     EXPECT_FALSE(prc_decode_roi(out, 0, 0, 5, 0, payload, 4, prc_table_v1));
-    EXPECT_FALSE(prc_decode_roi(out, 30, 0, 11, 5, payload, 4, prc_table_v1));  // 30+11 > 40
-    EXPECT_FALSE(prc_decode_roi(out, 0, 70, 1, 3, payload, 4, prc_table_v1));   // 70+3 > 72
+    EXPECT_FALSE(prc_decode_roi(out, 30, 0, 11, 5, payload, 4, prc_table_v1)); // 30+11 > 40
+    EXPECT_FALSE(prc_decode_roi(out, 0, 70, 1, 3, payload, 4, prc_table_v1));  // 70+3 > 72
     EXPECT_FALSE(prc_decode_roi(out, 255, 255, 255, 255, payload, 4, prc_table_v1));
-    for (uint8_t b : out) ASSERT_EQ(b, 0x5A);
+    for (uint8_t b : out)
+        ASSERT_EQ(b, 0x5A);
 }
 
 TEST(PrcCodec, FullFrameBoxIsAccepted) {
-    uint8_t out[PRC_FRAME_BYTES];
+    uint8_t       out[PRC_FRAME_BYTES];
     const uint8_t payload[1] = {0};
     EXPECT_TRUE(prc_decode_roi(out, 0, 0, 40, 72, payload, 1, prc_table_v1));
 }
@@ -69,7 +69,7 @@ TEST(PrcCodec, FullFrameBoxIsAccepted) {
 TEST(PrcCodec, ReadingPastThePayloadIsSafe) {
     // A truncated payload decodes to *something* but must not read past `len`:
     // the reader returns 0 bytes, which the host relies on when it trims zeros.
-    uint8_t out[PRC_FRAME_BYTES];
+    uint8_t             out[PRC_FRAME_BYTES];
     const prc_vector_t &v = prc_vectors[sizeof(prc_vectors) / sizeof(prc_vectors[0]) - 1];
     ASSERT_GT(v.len, 2);
     EXPECT_TRUE(prc_decode_roi(out, v.top, v.left, v.height, v.width, v.payload, 2, prc_table_v1));
@@ -81,20 +81,18 @@ TEST(PrcCodec, AnyFrameSizeDecodesTheSamePixels) {
     constexpr uint8_t W = 80, H = 48;
     for (const prc_vector_t &v : prc_vectors) {
         uint8_t same[PRC_FRAME_BYTES];
-        ASSERT_TRUE(prc_decode_roi_in(same, PRC_FRAME_W, PRC_FRAME_H, v.top, v.left, v.height, v.width,
-                                      v.payload, v.len, prc_table_v1)) << v.name;
+        ASSERT_TRUE(prc_decode_roi_in(same, PRC_FRAME_W, PRC_FRAME_H, v.top, v.left, v.height, v.width, v.payload, v.len, prc_table_v1)) << v.name;
         EXPECT_EQ(0, memcmp(same, v.overlay, PRC_FRAME_BYTES)) << v.name;
 
         uint8_t big[W * H / 8 + 1];
         memset(big, 0xA5, sizeof big);
-        ASSERT_TRUE(prc_decode_roi_in(big, W, H, v.top, v.left, v.height, v.width, v.payload, v.len,
-                                      prc_table_v1)) << v.name;
+        ASSERT_TRUE(prc_decode_roi_in(big, W, H, v.top, v.left, v.height, v.width, v.payload, v.len, prc_table_v1)) << v.name;
         for (int y = 0; y < H; y++) {
             for (int x = 0; x < W; x++) {
                 int want = 0;
                 if (y < PRC_FRAME_H && x < PRC_FRAME_W) {
                     int b = y * PRC_FRAME_W + x;
-                    want = (v.overlay[b >> 3] >> (7 - (b & 7))) & 1;
+                    want  = (v.overlay[b >> 3] >> (7 - (b & 7))) & 1;
                 }
                 int b = y * W + x;
                 ASSERT_EQ((big[b >> 3] >> (7 - (b & 7))) & 1, want) << v.name << " at " << y << "," << x;
@@ -105,12 +103,13 @@ TEST(PrcCodec, AnyFrameSizeDecodesTheSamePixels) {
 }
 
 TEST(PrcCodec, BoxOutsideACustomFrameIsRefused) {
-    uint8_t out[16 * 8 / 8];
+    uint8_t       out[16 * 8 / 8];
     const uint8_t payload[4] = {0};
     memset(out, 0x5A, sizeof out);
-    EXPECT_FALSE(prc_decode_roi_in(out, 16, 8, 0, 0, 9, 1, payload, 4, prc_table_v1));    // 9 > 8 rows
-    EXPECT_FALSE(prc_decode_roi_in(out, 16, 8, 0, 15, 1, 2, payload, 4, prc_table_v1));   // 15+2 > 16
-    for (uint8_t b : out) ASSERT_EQ(b, 0x5A);
+    EXPECT_FALSE(prc_decode_roi_in(out, 16, 8, 0, 0, 9, 1, payload, 4, prc_table_v1));  // 9 > 8 rows
+    EXPECT_FALSE(prc_decode_roi_in(out, 16, 8, 0, 15, 1, 2, payload, 4, prc_table_v1)); // 15+2 > 16
+    for (uint8_t b : out)
+        ASSERT_EQ(b, 0x5A);
     EXPECT_TRUE(prc_decode_roi_in(out, 16, 8, 0, 0, 8, 16, payload, 4, prc_table_v1));
 }
 

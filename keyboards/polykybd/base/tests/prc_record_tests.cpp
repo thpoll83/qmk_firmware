@@ -1,79 +1,22 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Tests for base/prc_codec.c — the decoder for PRC overlays (cmd 41).
-//
-// The decoder has to reproduce the host's encoder bit for bit, and nothing on the
-// rig can tell a wrong pixel from a right one. So the core test decodes golden
-// vectors the HOST generated (PolyKybdHost tools/gen_prc_vectors.py, which also
-// pins them host-side) and compares all 360 bytes. A mismatch here means host and
-// firmware no longer speak the same format.
+// Tests for base/prc_record.c — the cmd 41 record header that carries PRC-coded
+// keycap images. The golden vectors are the polymod_prc module's: the host packed
+// each one as a record as well (polyhost/util/prc_codec.py pack_record()).
 
 #include "gtest/gtest.h"
 
 extern "C" {
-#include "prc_codec.h"
-#include "prc_table.h"
+#include "prc_record.h"
+#include "prc_table_v1.h"
 }
 
-#include "prc_codec_vectors.h"
+#include "prc_vectors.h"
 
 #include <cstring>
 
 namespace {
-
-TEST(PrcCodec, GoldenVectorsDecodeToTheHostsOverlay) {
-    for (const prc_vector_t &v : prc_vectors) {
-        uint8_t out[PRC_FRAME_BYTES];
-        memset(out, 0xA5, sizeof out);   // the decoder must clear what it does not draw
-        ASSERT_TRUE(prc_decode_roi(out, v.top, v.left, v.height, v.width, v.payload, v.len, prc_table_v1))
-            << v.name;
-        EXPECT_EQ(0, memcmp(out, v.overlay, PRC_FRAME_BYTES)) << v.name;
-    }
-}
-
-TEST(PrcCodec, TableIsTheFrozenV1) {
-    // The table is part of the format: the host encodes with the same bytes.
-    // Byte sum and a few spot values catch an accidental regeneration; they are
-    // taken from PolyKybdHost polyhost/res/prc_table_v1.bin.
-    EXPECT_EQ(PRC_TABLE_ID, 1);
-    uint32_t sum = 0;
-    for (int i = 0; i < 1024; i++) {
-        ASSERT_GE(prc_table_v1[i], 1) << i;
-        sum += prc_table_v1[i];
-    }
-    EXPECT_EQ(sum, 135654u);
-    EXPECT_EQ(prc_table_v1[0], 252);
-    EXPECT_EQ(prc_table_v1[511], 177);
-    EXPECT_EQ(prc_table_v1[1023], 13);
-}
-
-TEST(PrcCodec, BoxOutsideTheFrameIsRefusedAndLeavesTheOverlay) {
-    uint8_t out[PRC_FRAME_BYTES];
-    const uint8_t payload[4] = {0};
-    memset(out, 0x5A, sizeof out);
-    EXPECT_FALSE(prc_decode_roi(out, 0, 0, 0, 5, payload, 4, prc_table_v1));    // empty
-    EXPECT_FALSE(prc_decode_roi(out, 0, 0, 5, 0, payload, 4, prc_table_v1));
-    EXPECT_FALSE(prc_decode_roi(out, 30, 0, 11, 5, payload, 4, prc_table_v1));  // 30+11 > 40
-    EXPECT_FALSE(prc_decode_roi(out, 0, 70, 1, 3, payload, 4, prc_table_v1));   // 70+3 > 72
-    EXPECT_FALSE(prc_decode_roi(out, 255, 255, 255, 255, payload, 4, prc_table_v1));
-    for (uint8_t b : out) ASSERT_EQ(b, 0x5A);
-}
-
-TEST(PrcCodec, FullFrameBoxIsAccepted) {
-    uint8_t out[PRC_FRAME_BYTES];
-    const uint8_t payload[1] = {0};
-    EXPECT_TRUE(prc_decode_roi(out, 0, 0, 40, 72, payload, 1, prc_table_v1));
-}
-
-TEST(PrcCodec, ReadingPastThePayloadIsSafe) {
-    // A truncated payload decodes to *something* but must not read past `len`:
-    // the reader returns 0 bytes, which the host relies on when it trims zeros.
-    uint8_t out[PRC_FRAME_BYTES];
-    const prc_vector_t &v = prc_vectors[sizeof(prc_vectors) / sizeof(prc_vectors[0]) - 1];
-    ASSERT_GT(v.len, 2);
-    EXPECT_TRUE(prc_decode_roi(out, v.top, v.left, v.height, v.width, v.payload, 2, prc_table_v1));
-}
 
 TEST(PrcRecord, GoldenRecordsParseToTheHostsFields) {
     // The host packed these (polyhost/util/prc_codec.py pack_record()).

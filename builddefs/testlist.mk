@@ -11,6 +11,7 @@ include $(PLATFORM_PATH)/test/testlist.mk
 include modules/polykybd/polymod_ltr559/tests/testlist.mk
 include modules/polykybd/polymod_monocypher/tests/testlist.mk
 include modules/polykybd/polymod_os_actions/tests/testlist.mk
+include modules/polykybd/polymod_prc/tests/testlist.mk
 include keyboards/polykybd/hints/tests/testlist.mk
 include keyboards/polykybd/base/tests/testlist.mk
 

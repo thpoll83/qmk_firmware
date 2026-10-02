@@ -81,9 +81,11 @@ who solders the part gets it and nobody else pays more than ~30 s of cheap probe
 ## Community modules (`modules/polykybd/`)
 
 Self-contained, keyboard-independent code lives in **QMK community modules** rather
-than `keyboards/polykybd/`: currently `polymod_crc32` and `polymod_rle` (both ~55 LOC
-pure-algorithm libraries), with `polymod_ltr559` (the LTR-559 driver) extracted the
-same way. The mechanics are not obvious from the QMK docs alone:
+than `keyboards/polykybd/`: currently `polymod_crc32`, `polymod_rle` and `polymod_prc`
+(pure-algorithm libraries; `polymod_prc` also ships its table and a Python trainer),
+`polymod_core1` (the core1 launcher), `polymod_monocypher` (vendored Ed25519),
+`polymod_os_actions` (the per-OS chord table) and `polymod_ltr559` (the LTR-559
+driver), each extracted the same way. The mechanics are not obvious from the QMK docs alone:
 
 - **Declared in `keyboard.json`, not `keymap.json`.** Both variants carry a
   `"modules": ["polykybd/polymod_crc32", …]` array. The docs describe the

@@ -146,11 +146,12 @@ reading before you change either one.
   whole images back to back as records: a 6-byte bit-field header (keycode, modifier,
   ROI box, payload length, 4 reserved bits) and the payload; a keycode byte of 0 or the
   end of the report ends the list. Each ROI pixel is range-coded against a probability
-  looked up in a fixed 1 KB table (`base/prc_table.h`, table v1) by its 10 already
+  looked up in a fixed 1 KB table (`prc_table_v1.h` in the `polymod_prc` module) by its 10 already
   decoded neighbours. On the shipped templates an icon averages ~28 bytes against ~87
   for the best of the four older encodings, so most images take one report and small
-  ones share it. The codec and the golden vectors are `base/prc_codec.{c,h}` and
-  `base/tests/prc_codec_tests.cpp` (`make test:polykybd_prc_codec`).
+  ones share it. The decoder, the table and the golden vectors are the
+  `modules/polykybd/polymod_prc` community module (`make test:polymod_prc`); the
+  cmd 41 record header is `base/prc_record.{c,h}` (`make test:polykybd_prc_record`).
   - **The host picks it per image, only where it saves a report**, so the older
     encodings stay in use and in the protocol. An image whose payload does not fit
     one record (15 of 937 template cells) goes out the old way.

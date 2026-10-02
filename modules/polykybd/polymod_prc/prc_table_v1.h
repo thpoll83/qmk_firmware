@@ -14,6 +14,7 @@
 #define PRC_TABLE_ID 1
 #define PRC_TABLE_SHA256 "c67ffa5a9e4af7e25f155cf9e3dcdeda24f37c2e7f4c550f987fea8db93cb2b7"
 
+// clang-format off
 static const uint8_t prc_table_v1[1024] = {
     252, 243, 254, 253, 252, 255, 239, 224, 243, 182, 230, 128, 245, 252, 238, 238,
     253, 234, 254, 241, 245, 242, 247, 251, 252, 239, 255, 237, 255, 255, 253, 247,
@@ -80,3 +81,4 @@ static const uint8_t prc_table_v1[1024] = {
      10,   7,   1,   1, 124,   9,  77,   4,   9,  26,  21,  14,   3,   5,  32,  17,
     128,  80,   3,   5,  18,  43,  38,   5,   8,  72,   2,   4,   2,   9,  28,  13
 };
+// clang-format on

@@ -796,7 +796,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 break;
             case 41: //PRC overlay images (protocol v19+)
                 // Whole images, one or more per report: no fragment context, no
-                // reply (a bulk write like 16-19). See base/prc_codec.h.
+                // reply (a bulk write like 16-19). See base/prc_record.h.
                 receive_prc_overlay_report(&data[HID_DATA_IDX], (uint8_t)(length - HID_DATA_IDX));
                 break;
             case 20: //set unicode input mode

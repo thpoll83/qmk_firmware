@@ -434,7 +434,8 @@ contrast with their neighbour that the wire format does not show. The
   the enum **biased by one**, so a zero byte means "never chosen" — the property
   `idle_style_fmt` needed a whole second byte to provide.
 - ⚠️ **v19's PRC overlays (cmd 41) decode against a FIXED table compiled
-  into both ends** (`base/prc_table.h` ↔ the host's `res/prc_table_v1.bin`). A table
+  into both ends** (`modules/polykybd/polymod_prc/prc_table_v1.h` ↔ the host's
+  `res/prc_table_v1.bin`). A table
   that differs draws garbage with no error anywhere, so v1 is frozen and a retrained
   table is a new protocol version. Its slave copy rides the compressed transaction
   flagged by `PRC_BRIDGE_FLAG` in `len`, so **an RLE fragment length must stay below
@@ -730,7 +731,9 @@ directions. Details:
 ### Community modules (`modules/polykybd/`) and the LTR-559 sensor
 
 Self-contained, keyboard-independent code lives in **QMK community modules** rather than
-`keyboards/polykybd/`: `polymod_crc32`, `polymod_rle`, and `polymod_ltr559` — the
+`keyboards/polykybd/`: `polymod_core1`, `polymod_crc32`, `polymod_monocypher`,
+`polymod_os_actions`, `polymod_prc` (the cmd 41 image decoder, its table and a table
+trainer), `polymod_rle`, and `polymod_ltr559` — the
 **entirely optional** ambient-light + proximity sensor that shares the Cirque I2C bus and
 cleanly no-ops when no sensor is fitted. The module mechanics, the sensor's tuning
 numbers, the auto-brightness policy and the slave→master backchannel are

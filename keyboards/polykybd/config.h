@@ -240,9 +240,9 @@
 //      always safe to accept.
 //  v19 SEND_PRC_OVERLAY (cmd 41 / 0x29): PRC (Predictive Range Coding) overlay
 //      images. One report carries one or more whole images as records
-//      (base/prc_codec.h); each pixel
+//      (base/prc_record.h); each pixel
 //      is range-coded against a probability from a FIXED 1 KB table compiled in
-//      (base/prc_table.h, table v1), indexed by 10 decoded neighbours. ~28 bytes
+//      (polymod_prc module, prc_table_v1.h), indexed by 10 decoded neighbours. ~28 bytes
 //      per icon against ~87 for the best older encoding. The host picks it per
 //      image, only where it saves a report, so the four older encodings stay.
 //      ⚠️ The table is part of the format: a retrained table is a new table and a

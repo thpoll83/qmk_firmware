@@ -17,8 +17,8 @@
 #include "base/map_codec.h"
 #include "base/overlay.h"
 #include "base/update.h"
-#include "base/prc_codec.h"
-#include "base/prc_table.h"
+#include "base/prc_record.h"
+#include "prc_table_v1.h"
 #include "lang/lang_lut.h"
 
 #include <print.h>
@@ -313,7 +313,7 @@ bool prc_overlay_apply(uint16_t slot, uint8_t top, uint8_t left, uint8_t height,
 }
 
 // PRC-coded images (cmd 41, protocol v19). One report carries one or more
-// records back to back (base/prc_codec.h); each is a whole image, so there is no
+// records back to back (base/prc_record.h); each is a whole image, so there is no
 // fragment context to keep between reports. Addressing, side resolution and the
 // visibility gate are the same as the RLE path above.
 //

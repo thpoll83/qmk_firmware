@@ -19,6 +19,7 @@ enum slave_data_kind {
 #ifdef POLYKYBD_CRASH_TEST
     SLAVE_DATA_CRASH_TEST = 2,  // TEST BUILDS ONLY: fault on the slave, never answers
 #endif
+    SLAVE_DATA_CRASH_ACK = 3,   // request [kind][u32 crc]: the host has seen that record
 };
 
 // Registers the split handler. Call once from keyboard_post_init_user(),
@@ -28,7 +29,8 @@ void slave_data_register(void);
 
 // Master side, every housekeeping pass: pull the slave's crash record once per
 // link-up (bounded retries, spaced out) and hand it to crash_record_note_slave().
-// No-op on the slave.
+// Also sends the slave-record acknowledgement the host's cmd 39 read queued
+// (base/crash_ack.h). No-op on the slave.
 void slave_data_crash_pull_tick(void);
 
 #ifdef POLYKYBD_CRASH_TEST

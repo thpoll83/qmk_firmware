@@ -1362,9 +1362,12 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // before this one ended in that crash. A clear answers an empty body;
                     // anything else NACKs. The record's wire layout is base/crash_record.h.
                     //
-                    // The console line printed with the boot banner is the primary
-                    // channel (the host alerts on it); this is how polyctl and the rig
-                    // fetch the archive later, and the only way to clear it.
+                    // The console line printed with the boot banner is one channel the
+                    // host alerts on; the host also reads this on the GET_ID fresh-boot
+                    // marker. polyctl and the rig fetch the archive here, and it is the
+                    // only way to clear it. ⚠️ Reading half 1 has a side effect: a fresh
+                    // slave record reads fresh ONCE, then the slave is told the host has
+                    // it (base/crash_ack.h).
                     const uint8_t which = data[HID_DATA_IDX];
                     if (which > 2) {
                         memset(data, 0, length);
@@ -1380,6 +1383,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     hid_reply(data, 0x27, true);
                     if (which <= 1) {
                         crash_record_hid_body(which, &data[3], (uint8_t)(length - 3));
+                        // AFTER the body: this read still reports FRESH, later ones
+                        // do not, and the slave is told (base/crash_ack.h).
+                        crash_record_note_host_read(which);
                     }
                     raw_hid_send(data, length);
                 }

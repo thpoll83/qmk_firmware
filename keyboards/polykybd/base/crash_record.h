@@ -176,6 +176,21 @@ bool crash_record_note_slave(const uint8_t *body, uint8_t len);
 // Re-print the slave's line (no-op unless a fresh slave record is held).
 void crash_record_emit_slave_line(void);
 
+// --- the slave-record acknowledgement (crash_ack.h) --------------------------
+// Without it, a master-only reboot re-reports an old slave crash as fresh: the
+// slave's FRESH bit is relative to the SLAVE's boot.
+
+// Master side, from the cmd 39 handler AFTER the reply body is built: the host
+// read half `which`. A present, fresh slave record queues an ack for the slave.
+void crash_record_note_host_read(uint8_t which);
+// Master side: the queued ack, if any (its record CRC in *crc).
+bool crash_record_ack_pending(uint32_t *crc);
+// Master side: the ack reached the slave, or no longer applies.
+void crash_record_ack_done(void);
+// Slave side: the master acknowledges the record with this CRC. Returns whether
+// it named this half's record (an ack for any other record changes nothing).
+bool crash_record_slave_ack(uint32_t crc);
+
 // --- the watchdog -----------------------------------------------------------
 
 // Arm the hardware watchdog. Call at the END of keyboard_post_init_user() -- the

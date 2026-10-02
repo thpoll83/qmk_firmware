@@ -271,6 +271,25 @@ run on it (`test_no_crash_record`). What is worth knowing:
   master pulls the crash body once per link-up, three tries 2 s apart. ⚠️ It is
   printed **once, at the pull**, not with the banner re-emits — the link can come
   up long after those stop.
+- ⚠️ **The slave's FRESH bit is relative to the SLAVE's boot, so the slave is told
+  once the host has seen its record** (`base/crash_ack.h`, `SLAVE_DATA_CRASH_ACK`).
+  Without that, a master-only reboot pulled an old slave crash as fresh again: the
+  master printed `crash: side=slave` once more, cmd 39 half 1 said fresh, and the
+  host alerted on a crash it had already shown. Now a cmd 39 read of a present,
+  fresh slave record answers fresh that once, clears the master's cached flag and
+  queues an ack. The pull tick sends it as `[kind][u32 crc]`, every 500 ms until the
+  RPC lands. The slave applies it only when the CRC names the record it holds, and
+  from then on answers that record as not fresh for the rest of its boot.
+  - **A host READ acknowledges, not a master pull.** A master that pulled the record
+    with no host running must not retire it, or a host started after a master-only
+    reboot would never hear of the crash.
+  - **`s_fresh` on the slave is untouched.** The late-boot guard reads it as "the
+    previous boot died under me"; only the reply's FRESH bit changes.
+  - **A link drop cancels a pending ack.** The CRC already refuses an ack for a
+    different record, but two identical watchdog records (same breadcrumb,
+    `up=0ms`) share a CRC; dropping the ack on the link drop that a slave reboot
+    usually causes covers that case. If the drop is missed, the identical second
+    crash reads as already seen. The host's per-process dedupe would hide it anyway.
 - **cmd 39**: `data[2]` 0 = this half's archived record, 1 = the slave's, 2 =
   clear, else NACK. Body `[flags][48-byte poly_crash_record_t]`, flags bit0
   present / bit1 **fresh** (recorded by the boot before this one). Only a fresh

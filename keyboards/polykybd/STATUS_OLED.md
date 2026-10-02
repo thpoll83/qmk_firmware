@@ -83,8 +83,8 @@ so no upstream file is patched. A failed write is retried once, and
 
 ```
 oled_i2c: cmd write failed #1 (nack, flags=0x00, sda=1 scl=1, len=7, 66 ms after the last good write) - retry ok
-oled_i2c: status display not responding: 3 writes in a row failed after a retry
-oled_i2c: status display responding again after 4 failed write(s)
+oled_i2c: status display not responding: 3 data writes in a row failed after a retry
+oled_i2c: status display responding again after 4 failed data write(s)
 oled_i2c: 7 more failed write(s) not printed in the last 10 s (10 since boot)
 ```
 
@@ -101,9 +101,13 @@ How to read a detail line:
 - **`retry ok`**: a transient. Only a write that fails both tries counts toward the
   stuck streak.
 
-Detail lines are capped at 3 per 10 s. After 3 writes in a row fail even after the
-retry, the panel counts as stuck and writes are no longer retried. A timeout costs
-100 ms of the loop that scans the matrix, and retrying a dead panel only doubles it.
+Detail lines are capped at 3 per 10 s. After 3 writes of one kind (cmd or data) in
+a row fail even after the retry, that kind counts as stuck and is no longer retried.
+A timeout costs 100 ms of the loop that scans the matrix, and retrying a dead panel
+only doubles it. ⚠️ The streak is per kind because `oled_render()` sends a command
+and then the data for every block: with one shared streak, a panel that ACKs
+commands and fails data had each good command reset the count, so the stuck state
+never engaged.
 A stock `oled_render … failed` line still follows each write that was lost.
 
 - ⚠️ **Only the half whose console reaches the host is visible.** A failure on the

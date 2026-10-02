@@ -16,11 +16,17 @@
 //     failure, the payload length, the time since the last good write, and
 //     whether the retry landed. At most OLED_I2C_DIAG_LINES_PER_WINDOW per
 //     OLED_I2C_DIAG_WINDOW_MS; the rest are counted and summarised.
-//   * one STUCK line once OLED_I2C_DIAG_STUCK_STREAK writes in a row failed even
-//     after their retry. From then on writes are NOT retried, because a timeout
-//     costs OLED_I2C_TIMEOUT (100 ms) per attempt on the loop that scans the
-//     matrix, and a retry against a dead panel only doubles that.
-//   * one RECOVERED line when a write lands after a stuck streak.
+//   * one STUCK line once OLED_I2C_DIAG_STUCK_STREAK writes OF ONE KIND in a row
+//     failed even after their retry. From then on writes of that kind are NOT
+//     retried, because a timeout costs OLED_I2C_TIMEOUT (100 ms) per attempt on
+//     the loop that scans the matrix, and a retry against a dead panel only
+//     doubles that.
+//   * one RECOVERED line when a write of that kind lands again.
+//
+// ⚠️ The streak is kept PER KIND. oled_render() sends a command and then the
+// data for every block, so with one shared streak a panel that ACKs commands and
+// fails data would have every successful command reset the count: the stuck state
+// would never engage, and each data write would keep its two 100 ms attempts.
 //
 // ⚠️ The host's problem scan (PolyKybdHost services/problem_scan.py) matches
 // these lines by their wording. Change a line here, change the pattern there.
@@ -39,6 +45,7 @@
 enum oled_i2c_kind {
     OLED_I2C_KIND_CMD = 0,   // a command write (the "offset command" stock QMK names)
     OLED_I2C_KIND_DATA,      // a pixel-data write
+    OLED_I2C_KIND_COUNT
 };
 
 enum oled_i2c_class {
@@ -63,8 +70,8 @@ typedef struct {
 typedef struct {
     uint32_t total;             // failed first attempts since boot
     uint32_t retry_failed;      // of those, failed again (or were not retried)
-    uint16_t streak;            // consecutive writes that did not land at all
-    bool     stuck;             // the STUCK line has been printed for this streak
+    uint16_t streak[OLED_I2C_KIND_COUNT];   // consecutive writes of that kind that did not land
+    bool     stuck[OLED_I2C_KIND_COUNT];    // the STUCK line has been printed for that streak
     bool     have_ok;
     uint32_t last_ok_ms;
     uint32_t window_start_ms;
@@ -74,12 +81,13 @@ typedef struct {
 
 void oled_i2c_diag_init(oled_i2c_diag_t *d);
 
-// Should the caller retry the write that just failed? False once stuck.
-bool oled_i2c_diag_should_retry(const oled_i2c_diag_t *d);
+// Should the caller retry the write of `kind` that just failed? False once that
+// kind is stuck.
+bool oled_i2c_diag_should_retry(const oled_i2c_diag_t *d, enum oled_i2c_kind kind);
 
-// A write landed (first try or retry). Writes any lines to print into `out`
+// A write of `kind` landed on its first try. Writes any lines to print into `out`
 // ('\n'-terminated, possibly several, possibly none) and returns the length.
-size_t oled_i2c_diag_ok(oled_i2c_diag_t *d, uint32_t now_ms, char *out, size_t n);
+size_t oled_i2c_diag_ok(oled_i2c_diag_t *d, enum oled_i2c_kind kind, uint32_t now_ms, char *out, size_t n);
 
 // A first attempt failed; `f` carries the retry outcome too. Same output contract.
 size_t oled_i2c_diag_fail(oled_i2c_diag_t *d, const oled_i2c_failure_t *f, uint32_t now_ms,

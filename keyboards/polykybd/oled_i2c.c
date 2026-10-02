@@ -18,7 +18,8 @@
 //   * sda/scl after the failure: both should read 1 on an idle bus. A 0 means
 //     something is holding that line low, which a retry cannot fix.
 //   * retry ok vs failed: a write that lands on the second try is a transient;
-//     three writes that fail both tries mark the panel stuck.
+//     three writes of one kind (cmd or data) that fail both tries mark that
+//     kind stuck.
 //
 // ⚠️ This prints only on the half whose console reaches the host. A failure on the
 // slave half's status OLED is counted there and never seen.
@@ -70,7 +71,7 @@ static void emit(const char *buf, size_t len) {
 static bool diag_write(enum oled_i2c_kind kind, const uint8_t *data, uint16_t size) {
     i2c_status_t st = write_once(kind, data, size);
     if (st == I2C_STATUS_SUCCESS) {
-        emit(s_line, oled_i2c_diag_ok(&s_diag, timer_read32(), s_line, sizeof(s_line)));
+        emit(s_line, oled_i2c_diag_ok(&s_diag, kind, timer_read32(), s_line, sizeof(s_line)));
         return true;
     }
 
@@ -83,7 +84,7 @@ static bool diag_write(enum oled_i2c_kind kind, const uint8_t *data, uint16_t si
         // The command buffer already starts with the control byte; the data write
         // prepends one through i2c_write_register().
         .len     = (uint16_t)(kind == OLED_I2C_KIND_CMD ? size : size + 1u),
-        .retried = oled_i2c_diag_should_retry(&s_diag),
+        .retried = oled_i2c_diag_should_retry(&s_diag, kind),
     };
     if (f.retried) {
         i2c_status_t st2 = write_once(kind, data, size);

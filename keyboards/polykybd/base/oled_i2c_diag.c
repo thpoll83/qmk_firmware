@@ -10,8 +10,12 @@ void oled_i2c_diag_init(oled_i2c_diag_t *d) {
     memset(d, 0, sizeof(*d));
 }
 
-bool oled_i2c_diag_should_retry(const oled_i2c_diag_t *d) {
-    return !d->stuck;
+static const char *kind_name(enum oled_i2c_kind kind) {
+    return kind == OLED_I2C_KIND_CMD ? "cmd" : "data";
+}
+
+bool oled_i2c_diag_should_retry(const oled_i2c_diag_t *d, enum oled_i2c_kind kind) {
+    return !d->stuck[kind];
 }
 
 const char *oled_i2c_class_name(enum oled_i2c_class cls) {
@@ -61,23 +65,24 @@ static void roll_window(oled_i2c_diag_t *d, uint32_t now, char *out, size_t n, s
     d->suppressed        = 0;
 }
 
-static void landed(oled_i2c_diag_t *d, uint32_t now, char *out, size_t n, size_t *len) {
-    if (d->stuck) {
-        append(out, n, len, "oled_i2c: status display responding again after %u failed write(s)\n", (unsigned)d->streak);
+static void landed(oled_i2c_diag_t *d, enum oled_i2c_kind kind, uint32_t now, char *out, size_t n, size_t *len) {
+    if (d->stuck[kind]) {
+        append(out, n, len, "oled_i2c: status display responding again after %u failed %s write(s)\n",
+               (unsigned)d->streak[kind], kind_name(kind));
     }
-    d->streak     = 0;
-    d->stuck      = false;
+    d->streak[kind] = 0;
+    d->stuck[kind]  = false;
     d->have_ok    = true;
     d->last_ok_ms = now;
 }
 
-size_t oled_i2c_diag_ok(oled_i2c_diag_t *d, uint32_t now_ms, char *out, size_t n) {
+size_t oled_i2c_diag_ok(oled_i2c_diag_t *d, enum oled_i2c_kind kind, uint32_t now_ms, char *out, size_t n) {
     size_t len = 0;
     if (n > 0) {
         out[0] = '\0';
     }
     roll_window(d, now_ms, out, n, &len);
-    landed(d, now_ms, out, n, &len);
+    landed(d, kind, now_ms, out, n, &len);
     return len;
 }
 
@@ -97,7 +102,7 @@ size_t oled_i2c_diag_fail(oled_i2c_diag_t *d, const oled_i2c_failure_t *f, uint3
     if (d->printed_in_window < OLED_I2C_DIAG_LINES_PER_WINDOW) {
         d->printed_in_window++;
         append(out, n, &len, "oled_i2c: %s write failed #%lu (%s, flags=0x%02lx, sda=%u scl=%u, len=%u, ",
-               f->kind == OLED_I2C_KIND_CMD ? "cmd" : "data", (unsigned long)d->total, oled_i2c_class_name(f->cls),
+               kind_name(f->kind), (unsigned long)d->total, oled_i2c_class_name(f->cls),
                (unsigned long)f->flags, (unsigned)f->sda, (unsigned)f->scl, (unsigned)f->len);
         if (d->have_ok) {
             append(out, n, &len, "%lu ms after the last good write)", (unsigned long)(now_ms - d->last_ok_ms));
@@ -116,17 +121,18 @@ size_t oled_i2c_diag_fail(oled_i2c_diag_t *d, const oled_i2c_failure_t *f, uint3
     }
 
     if (!lost) {
-        landed(d, now_ms, out, n, &len);
+        landed(d, f->kind, now_ms, out, n, &len);
         return len;
     }
 
-    if (d->streak < UINT16_MAX) {
-        d->streak++;
+    uint16_t *streak = &d->streak[f->kind];
+    if (*streak < UINT16_MAX) {
+        (*streak)++;
     }
-    if (!d->stuck && d->streak >= OLED_I2C_DIAG_STUCK_STREAK) {
-        d->stuck = true;
-        append(out, n, &len, "oled_i2c: status display not responding: %u writes in a row failed after a retry\n",
-               (unsigned)d->streak);
+    if (!d->stuck[f->kind] && *streak >= OLED_I2C_DIAG_STUCK_STREAK) {
+        d->stuck[f->kind] = true;
+        append(out, n, &len, "oled_i2c: status display not responding: %u %s writes in a row failed after a retry\n",
+               (unsigned)*streak, kind_name(f->kind));
     }
     return len;
 }

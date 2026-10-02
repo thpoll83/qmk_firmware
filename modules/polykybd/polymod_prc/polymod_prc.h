@@ -55,8 +55,8 @@
 // Returns false, and leaves the overlay untouched, if the box does not fit the
 // frame or is empty. Reading past the payload yields 0 bytes, which is what the
 // encoder relies on when it drops trailing zeros.
-bool prc_decode_roi(uint8_t *overlay, uint8_t top, uint8_t left, uint8_t height, uint8_t width, const uint8_t *payload, uint8_t len, const uint8_t *table);
+bool prc_decode_roi(uint8_t *overlay, uint8_t top, uint8_t left, uint8_t height, uint8_t width, const uint8_t *payload, uint16_t len, const uint8_t *table);
 
 // The same for a frame of frame_w x frame_h pixels; `frame` must hold
 // (frame_w * frame_h + 7) / 8 bytes, all of which are cleared first.
-bool prc_decode_roi_in(uint8_t *frame, uint8_t frame_w, uint8_t frame_h, uint8_t top, uint8_t left, uint8_t height, uint8_t width, const uint8_t *payload, uint8_t len, const uint8_t *table);
+bool prc_decode_roi_in(uint8_t *frame, uint8_t frame_w, uint8_t frame_h, uint8_t top, uint8_t left, uint8_t height, uint8_t width, const uint8_t *payload, uint16_t len, const uint8_t *table);

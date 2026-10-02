@@ -17,13 +17,13 @@ static const int8_t TEMPLATE_DX[10] = {-1, 0, 1, -2, -1, -1, 0, 1, -2, 2};
 
 typedef struct {
     const uint8_t *src;
-    uint8_t        len;
-    uint8_t        pos;
+    uint16_t       len;
+    uint16_t       pos;
 } prc_reader_t;
 
 static inline __attribute__((always_inline)) uint8_t next_byte(prc_reader_t *r) {
     uint8_t b = r->pos < r->len ? r->src[r->pos] : 0;
-    if (r->pos < 255) r->pos++;
+    if (r->pos < UINT16_MAX) r->pos++;
     return b;
 }
 
@@ -37,7 +37,7 @@ static inline uint8_t pixel(const uint8_t *overlay, uint8_t frame_w, uint8_t fra
 // The decoder body. always_inline so prc_decode_roi(), which passes the frame
 // size as constants, compiles to the same constant-folded loop it always had;
 // prc_decode_roi_in() gets a copy that reads the size at run time.
-static inline __attribute__((always_inline)) bool decode_roi(uint8_t *overlay, uint8_t frame_w, uint8_t frame_h, uint8_t top, uint8_t left, uint8_t height, uint8_t width, const uint8_t *payload, uint8_t len, const uint8_t *table) {
+static inline __attribute__((always_inline)) bool decode_roi(uint8_t *overlay, uint8_t frame_w, uint8_t frame_h, uint8_t top, uint8_t left, uint8_t height, uint8_t width, const uint8_t *payload, uint16_t len, const uint8_t *table) {
     if (height == 0 || width == 0) return false;
     if ((uint16_t)top + height > frame_h || (uint16_t)left + width > frame_w) return false;
 
@@ -80,10 +80,10 @@ static inline __attribute__((always_inline)) bool decode_roi(uint8_t *overlay, u
     return true;
 }
 
-bool prc_decode_roi(uint8_t *overlay, uint8_t top, uint8_t left, uint8_t height, uint8_t width, const uint8_t *payload, uint8_t len, const uint8_t *table) {
+bool prc_decode_roi(uint8_t *overlay, uint8_t top, uint8_t left, uint8_t height, uint8_t width, const uint8_t *payload, uint16_t len, const uint8_t *table) {
     return decode_roi(overlay, PRC_FRAME_W, PRC_FRAME_H, top, left, height, width, payload, len, table);
 }
 
-bool prc_decode_roi_in(uint8_t *frame, uint8_t frame_w, uint8_t frame_h, uint8_t top, uint8_t left, uint8_t height, uint8_t width, const uint8_t *payload, uint8_t len, const uint8_t *table) {
+bool prc_decode_roi_in(uint8_t *frame, uint8_t frame_w, uint8_t frame_h, uint8_t top, uint8_t left, uint8_t height, uint8_t width, const uint8_t *payload, uint16_t len, const uint8_t *table) {
     return decode_roi(frame, frame_w, frame_h, top, left, height, width, payload, len, table);
 }

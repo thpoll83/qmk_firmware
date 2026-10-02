@@ -17,6 +17,7 @@ extern "C" {
 }
 
 #include "prc_vectors.h"
+#include "prc_long_vector.h"
 
 #include <cstring>
 
@@ -115,6 +116,14 @@ TEST(PrcCodec, BoxOutsideACustomFrameIsRefused) {
     for (uint8_t b : out)
         ASSERT_EQ(b, 0x5A);
     EXPECT_TRUE(prc_decode_roi_in(out, 16, 8, 0, 0, 8, 16, payload, 4, prc_table_v1));
+}
+
+TEST(PrcCodec, PayloadLongerThan255BytesDecodes) {
+    // A random 72x40 frame codes to 571 bytes; the length must not be truncated.
+    static_assert(sizeof(prc_long_payload) > 255, "the vector must exceed a uint8_t length");
+    uint8_t out[PRC_FRAME_BYTES];
+    ASSERT_TRUE(prc_decode_roi(out, 0, 0, PRC_FRAME_H, PRC_FRAME_W, prc_long_payload, sizeof(prc_long_payload), prc_table_v1));
+    EXPECT_EQ(0, memcmp(out, prc_long_overlay, PRC_FRAME_BYTES));
 }
 
 } // namespace

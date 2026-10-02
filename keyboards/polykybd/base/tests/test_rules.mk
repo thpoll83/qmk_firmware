@@ -229,3 +229,13 @@ polykybd_icon_lib_INC := \
 	$(POLY_BASE_PATH)/tests \
 	$(POLY_CRC32_PATH) \
 	keyboards/polykybd
+
+# oled_i2c_diag.c decides what a failed status-OLED I2C write prints (detail line,
+# rate limit, stuck/recovered) and whether to retry. Pure: the caller passes the
+# clock and the classified failure. The firmware binding is keyboards/polykybd/oled_i2c.c.
+polykybd_oled_i2c_diag_SRC := \
+	$(POLY_BASE_PATH)/oled_i2c_diag.c \
+	$(POLY_BASE_PATH)/tests/oled_i2c_diag_tests.cpp
+
+polykybd_oled_i2c_diag_INC := \
+	$(POLY_BASE_PATH)

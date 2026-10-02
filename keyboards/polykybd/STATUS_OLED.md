@@ -69,6 +69,53 @@ the ~6 ms chunks held Eden's core0 work back visibly on hardware, and ~3 ms chun
 not. Still unpulled: I2C Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`, above
 SSD1306 spec, and the bus may be shared — A/B on real hardware).
 
+### A failed I2C write: what it prints (`oled_i2c.c`, `base/oled_i2c_diag.c`)
+
+Stock QMK prints `oled_render offset command failed` (or `… data failed`) when a
+write does not land, drops the rest of that frame, and repaints it on the next one.
+That line says neither why the write failed nor whether the panel came back. A field
+report (2026-10-02, firmware 1.5.0) showed one such line in ~7300 idle-screen frames
+and could not be taken further.
+
+`oled_i2c.c` overrides the driver's **weak** `oled_send_cmd()` / `oled_send_data()`,
+so no upstream file is patched. A failed write is retried once, and
+`base/oled_i2c_diag.c` (pure, `make test:polykybd_oled_i2c_diag`) prints:
+
+```
+oled_i2c: cmd write failed #1 (nack, flags=0x00, sda=1 scl=1, len=7, 66 ms after the last good write) - retry ok
+oled_i2c: status display not responding: 3 data writes in a row failed after a retry
+oled_i2c: status display responding again after 4 failed data write(s)
+oled_i2c: 7 more failed write(s) not printed in the last 10 s (10 since boot)
+```
+
+How to read a detail line:
+
+- **`nack`**: the panel did not acknowledge (reset, brown-out, contact). The RP2040
+  LLD raises no ChibiOS flag for a NACK; the transfer aborts with an empty mask.
+- **`timeout`**: the transfer did not finish within `OLED_I2C_TIMEOUT` (100 ms),
+  usually SCL held low.
+- **`arb_lost`**: the controller read a level on SDA it did not drive (noise, or
+  a second driver on the bus).
+- **`sda=0` or `scl=0`**: something holds that line low after the failure. A retry
+  cannot fix that.
+- **`retry ok`**: a transient. Only a write that fails both tries counts toward the
+  stuck streak.
+
+Detail lines are capped at 3 per 10 s. After 3 writes of one kind (cmd or data) in
+a row fail even after the retry, that kind counts as stuck and is no longer retried.
+A timeout costs 100 ms of the loop that scans the matrix, and retrying a dead panel
+only doubles it. ⚠️ The streak is per kind because `oled_render()` sends a command
+and then the data for every block: with one shared streak, a panel that ACKs
+commands and fails data had each good command reset the count, so the stuck state
+never engaged.
+A stock `oled_render … failed` line still follows each write that was lost.
+
+- ⚠️ **Only the half whose console reaches the host is visible.** A failure on the
+  slave half's status OLED is counted there and printed nowhere.
+- ⚠️ **The host's problem scan matches these lines by their wording**
+  (`PolyKybdHost/polyhost/services/problem_scan.py`, patterns `oled_i2c*`). Change
+  a line, change the pattern.
+
 ## Brightness: ONE scale with the keycaps (`base/status_brightness.h`)
 
 The status panel used to sit at a fixed `OLED_BRIGHTNESS` (60) while the per-keycap

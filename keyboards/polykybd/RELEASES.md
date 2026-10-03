@@ -126,6 +126,11 @@ that cost real debugging to learn (2026-07):
 - **Version bump is label-driven**: the merged PR's `bump:major`/`bump:minor`/
   `bump:protocol` label (else patch) drives `bump-version.yml`. Protocol PRs often bump
   `PROTOCOL_VERSION` in-source and *omit* `bump:protocol` (the label would double-bump).
+  - ⚠️ **Since 1.0, patch (no label) is the default.** `bump:minor` is for a feature an
+    owner would call new, the kind that names a release; a fix, a diagnostic, a developer
+    tool or a small addition stays a patch even when it bumps the protocol. After 1.0
+    nearly every PR took `bump:minor` (firmware 1.0.0 → 1.7.0 in six days, host 1.3.0 →
+    1.15.0 in nine), and the maintainer asked for the 0.9.x habit back (2026-10-03).
   - **`bump:none` skips the bump entirely**, for a PR that cannot change the firmware
     image — docs, skills, `scripts/`. It is tested FIRST and beats every other label:
     a PR carrying both is contradictory, and the safe reading of a contradiction is

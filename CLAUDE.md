@@ -272,6 +272,13 @@ skill; the mechanics, the `release-notes` branch and `scripts/publish_release.py
   satisfied while the releases sit a protocol apart, and nothing downstream catches it —
   the connect gate is not exact-match, so an old host pairs with new firmware and
   silently leaves the new features off. **Publish the host first**, then the firmware.
+- ⚠️ **Since 1.0, PATCH is the default and `bump:minor` is the exception** (maintainer's
+  rule, 2026-10-03). Before 1.0 a small change landed as a 0.9.x patch; after 1.0 almost
+  every PR carried `bump:minor`, so the firmware went 1.0.0 → 1.7.0 in six days and the
+  host 1.3.0 → 1.15.0 in nine. Leave the label off (patch) for fixes, diagnostics,
+  developer tools and small additions, **even when the PR bumps `PROTOCOL_VERSION`**:
+  the protocol is its own number. Use `bump:minor` only for a feature an owner would
+  call new, the kind that names a release. When unsure, ask.
 - ⚠️ **A MISSING bump label is silent, and "before the merge" means AT OPEN.** The label
   is read at merge time; a request in the PR body is documentation, not a label, and one
   applied as the merge happens lands too late (twice, 12 s late once). `create_pull_request`

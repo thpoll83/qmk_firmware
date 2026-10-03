@@ -130,8 +130,10 @@ make test:<name>
 - `CLAUDE.md` (firmware) — append a `**vN** adds …` paragraph to the HID protocol
   list, saying what the command does, which direction the compatibility runs, and
   anything a reader would otherwise re-derive.
-- ⚠️ **Label `bump:minor` (or whatever fits) at OPEN, and NOT `bump:protocol`** when
-  you bumped `PROTOCOL_VERSION` in-source — the label would double-bump it. A label
+- ⚠️ **Set the bump label at OPEN, and NOT `bump:protocol`** when you bumped
+  `PROTOCOL_VERSION` in-source — the label would double-bump it. Since 1.0 a new command
+  is usually a PATCH (no label): `bump:minor` only when it brings a feature an owner
+  would call new (see Releases in `CLAUDE.md`). A label
   applied later races the merge and loses; `create_pull_request` cannot set labels,
   so follow it immediately with `issue_write` + `labels:`.
 - **Ship the two repos together**, and say so in both PR bodies. Which order is safe

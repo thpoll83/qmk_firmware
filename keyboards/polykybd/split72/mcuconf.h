@@ -53,7 +53,7 @@
  * ⚠️ I2C0 and SPI0/1 sit at the USB priority (3) ON PURPOSE: neither may preempt the
  * USB interrupt. An I2C0 IRQ nested into a running USB IRQ sent core0 to a garbage
  * address (captured: pc=0x13AE165E, IPSR=I2C0, USB handler open) and the boot hung
- * until the watchdog, about 1 boot in 3 under a reboot loop. At 3: 0 hangs in 150+.
+ * until the watchdog, about 1 boot in 3 under a reboot loop. At 3: 0 hangs in 845.
  * SPI completes through a DMA IRQ at RP_IRQ_SPIx_PRIORITY, the same shape. Do not
  * raise them back. CRASH_DIAGNOSTICS.md, "Boot hang: an IRQ nested into USB".
  */

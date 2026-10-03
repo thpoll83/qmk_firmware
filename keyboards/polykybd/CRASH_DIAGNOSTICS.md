@@ -465,13 +465,15 @@ longer nest into it. What inside that nesting corrupts the jump was NOT establis
 | + IRQ census (entries per vector since the last stamp, in NOLOAD RAM) | split-link PIO 0, timer 0, last IRQ never left | not the split link / slave, not a console print |
 | ChibiOS `CH_CFG_SMP_MODE FALSE` | hang | not SMP (the core0 FIFO IRQ, the kernel spinlock) |
 | + NMI on TIMER alarm 3, vector table in RAM | 1 hang in 43; NMI captured `pc=0x13AE165E lr=0xFFFFFFF1 IPSR=39 (I2C0)`, USB handler open, thread in WFI | core0 jumped to garbage on entering the I2C0 IRQ while USB was running |
-| I2C0 priority 2 -> 3, otherwise stock | 0 hangs in 150+ consecutive boots | the fix |
+| I2C0 priority 2 -> 3, otherwise stock | 0 hangs in 217 consecutive boots | the fix |
+| I2C0 + SPI0/1 at 3 (as merged, #338) | 0 hangs in 845 consecutive boots | the shipped change; any remaining rate < 1 in 280 (95%) |
 
 Hangs were also seen before the 200 MHz clock, so clock margin was not pursued.
 
-**SPI is included without its own evidence.** The keycap SPI driver completes through a
+**SPI is included as a precaution, not on evidence that it ever hung.** The keycap SPI driver completes through a
 DMA interrupt at `RP_IRQ_SPIx_PRIORITY`, which was 2 as well, and an fw 1.0.0 master
-hung at `0x05E2`, the keycap SPI draw. The timer alarms (2) and the split-link PIO
+hung at `0x05E2`, the keycap SPI draw. The 845-boot run shows the SPI change regresses
+nothing; it cannot show SPI was ever a trigger. The timer alarms (2) and the split-link PIO
 interrupt (`CORTEX_MAX_KERNEL_PRIORITY`) can still preempt USB; nothing has implicated
 them, and lowering either changes kernel or split-link timing.
 

@@ -187,6 +187,7 @@ endif
 # TEMPORARY -- rig A/B run for the reset-order fix; REVERTED before merge.
 ifneq ($(filter yes left right,$(strip $(POLYKYBD_HIL))),)
     POLYKYBD_USB_STRESS ?= yes
+    POLYKYBD_USB_LEGACY_RESET_ORDER ?= yes   # TEMPORARY: A side
 endif
 ifeq ($(strip $(POLYKYBD_USB_STRESS)), yes)
     OPT_DEFS += -DPOLYKYBD_USB_STRESS -DPOLYKYBD_USB_RACE_DIAG

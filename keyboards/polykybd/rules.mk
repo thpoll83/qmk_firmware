@@ -496,3 +496,16 @@ ifeq ($(strip $(POLYKYBD_CRASH_TEST)), yes)
     SRC += crash_test.c
     $(eval $(call POLY_APPLY_WARN,crash_test.c))
 endif
+
+# ---------------------------------------------------------------------------
+# Vendored ChibiOS-Contrib RP2040 USB driver
+# ---------------------------------------------------------------------------
+# platforms/chibios/platform.mk takes PLATFORM_MK when the file exists and falls
+# back to Contrib's own platform.mk when it does NOT -- silently, so a typo here
+# would build the unpatched driver with a green build. Refuse instead.
+# Rationale and the drop-the-copy procedure: UPSTREAM_PATCHES.md ->
+# "ChibiOS-Contrib RP2040 USB driver".
+PLATFORM_MK := keyboards/polykybd/chibios_overrides/platform.mk
+ifeq ($(wildcard $(PLATFORM_MK)),)
+    $(error $(PLATFORM_MK) is missing -- the build would silently use Contrib's unpatched RP2040 USB driver)
+endif

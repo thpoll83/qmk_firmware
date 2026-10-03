@@ -141,6 +141,15 @@ rather than assuming a loop worked.
   missing-shim bug rather than two builds overwriting each other's objects in
   `.build/obj_polykybd_split72_default`. Serially, both link clean and nothing else
   changes. `build_pack.sh` is safe because it sequences the two flavours itself.
+- ⚠️ **After editing a keyboard-level `chconf.h`, delete
+  `.build/obj_polykybd_split72_default` before building.** The make dependencies do not
+  track it into the ChibiOS port's assembler file, so a stale `chcoreasm.o` keeps the old
+  setting: turning `CH_CFG_SMP_MODE` off linked as `undefined reference to
+  __port_spinlock_release` (2026-10-02) until the object directory was removed.
+- ⚠️ **`-e EXTRAFLAGS=-D<FLAG>` breaks a `POLYKYBD_DOOM_PACK=yes` build** with
+  `"PICO_HEAP_SIZE" redefined [-Werror]`: the doom block appends to `EXTRAFLAGS` and the
+  command-line value replaces it. For a throwaway experiment flag, put the `#define` at
+  the top of the file in the experiment commit instead.
 - The `firmware-size-diff` skill builds HEAD vs working tree and diffs sizes / `.text`.
 - ⚠️ **In the session container `qmk` is at `/root/.qmk_venv/bin/qmk` and is NOT on
   `PATH`.** `build_pack.sh` (and anything else shelling out to `qmk`) dies with

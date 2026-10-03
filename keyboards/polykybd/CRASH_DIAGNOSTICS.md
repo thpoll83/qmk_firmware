@@ -479,3 +479,66 @@ them, and lowering either changes kernel or split-link timing.
 
 ⚠️ **Do not raise I2C0 or SPI0/1 above the USB priority again** without re-running a
 long boot loop (hundreds of rounds) against it.
+
+## Instruments for a hang with no frame
+
+A watchdog record has no stacked frame: `pc`, `lr`, `sp`, `xpsr` and `icsr` are zero,
+and the breadcrumb is all there is. Two probes turned the `0x16C1` hang from "it stalled
+in this paint call" into a captured program counter. Neither ships; both lived on local
+experiment branches and are recorded here so the next hunt does not re-derive them.
+Both write into a struct in `.ram0` (NOLOAD, survives a watchdog reset, random after a
+power-on, so give it a magic) and `crash_record_init()` copies it into the frame words of
+the synthesised watchdog record, where `polyctl crash show` prints them.
+
+**1. IRQ census: which interrupts ran during the stall.** ChibiOS calls
+`CH_CFG_IRQ_PROLOGUE_HOOK()` / `CH_CFG_IRQ_EPILOGUE_HOOK()` in every `OSAL_IRQ_HANDLER`.
+A keyboard-level `split72/chconf.h` overrides them:
+
+```c
+#pragma once
+#include_next <chconf.h>
+#if !defined(_FROM_ASM_)
+void irq_census_enter(void);
+void irq_census_exit(void);
+#endif
+#undef  CH_CFG_IRQ_PROLOGUE_HOOK
+#define CH_CFG_IRQ_PROLOGUE_HOOK() { irq_census_enter(); }
+#undef  CH_CFG_IRQ_EPILOGUE_HOOK
+#define CH_CFG_IRQ_EPILOGUE_HOOK() { irq_census_exit(); }
+```
+
+`irq_census_enter()` reads IPSR (`mrs %0, ipsr`), counts per vector (TIMER 16..19, USB
+21, PIO1 25, I2C0 39), and keeps a nesting depth plus the vector last entered; the exit
+hook decrements the depth. Reset the counters from `crash_phase_enter()` whenever the
+phase is `CRASH_PHASE_BOOT`, so the record describes the window since the last
+breadcrumb. Check the disassembly: every `VectorXX` must call the exit hook before
+`__port_irq_epilogue` on every return path. ⚠️ After adding the `chconf.h`, clear
+`.build/obj_*` (BUILD_ENVIRONMENT.md).
+Read it like this: zero timer interrupts across an 8 s stall means core0 never left
+interrupt context (the alarm has the same priority as I2C). A non-zero depth names the
+handler that never returned.
+
+**2. Timer NMI: the exact stuck PC.** Arm TIMER alarm 3 (`ALARM3 = TIMERAWL + 6 s`,
+`INTE` bit 3) at each breadcrumb from step 5 on, and route its IRQ to core0's NMI with
+`SYSCFG PROC0_NMI_MASK |= 1 << 3` (0x40004000). Only arm it while the late-boot
+watchdog is running: earlier steps can legitimately take longer than 6 s. Disarm it in
+`crash_watchdog_start()`. The handler must run from RAM and must chain:
+- ⚠️ **ChibiOS uses the NMI for its own context switch** (`NMI_Handler`,
+  `chcore.c`), so the entry checks `TIMER_INTS & 8` and branches to `NMI_Handler`
+  untouched when it is clear.
+- ⚠️ **`-Wl,--wrap=NMI_Handler` does nothing**: `vectors.S` binds the symbol locally,
+  so the vector table keeps the original. Copy the 48-word table to a 256-aligned RAM
+  array, replace entry 2 with the probe entry, and point `SCB->VTOR` at it. With the
+  table and the handler (`.time_critical.*`) in RAM, the NMI still fires if a flash
+  fetch has stalled. If the record still shows no PC, that itself says the bus or the
+  core stopped.
+- The capture reads the frame from MSP or PSP by `EXC_RETURN` bit 2: stacked PC, LR
+  and xPSR, plus `psp[6]` for the interrupted thread. Then it lets the watchdog
+  reset. If the watchdog is not running yet, enable it with the pico-sdk
+  `WATCHDOG_NON_REBOOT_MAGIC` in scratch 4, so the next boot reads the reset as a
+  hang.
+
+⚠️ **The probe moves the vector table, and that changed the hang rate from 1 in 3 to
+1 in 43.** A probe that alters timing can hide the fault it is aimed at. Keep the run
+going until it does fire, and A/B the probe's side effects separately (the
+`ramvtor-only` build) before reading a clean probe run as a fix.

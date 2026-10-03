@@ -914,6 +914,13 @@ Three rules that bind code outside it:
   core0 to a garbage address: the `0x16C1`/`0x16E1` boot hang, ~1 boot in 3 under a
   reboot loop, 0 in 845 after the change (I2C0 + SPI at 3). The evidence is CRASH_DIAGNOSTICS.md →
   *Boot hang: an IRQ nested into USB*.
+- **A boot hang is reproduced with the host's boot loop, not by waiting for the field**
+  (`polyctl bootloop --rounds N`, cmd 43). It brought the `0x16C1` hang from "now and
+  then" to about 1 boot in 3, because the host re-enumerates and polls the keyboard
+  while the boot runs. ⚠️ **Size every A/B from the rate: ruling out a hang of 1 in N
+  at ~95% takes about 3·N clean rounds.** 17 clean rounds against a 1-in-3 baseline is
+  already conclusive; 845 clean rounds bound what is left at 1 in 280. The
+  `hunt-boot-hang` skill drives the loop.
 
 ### Rules that came out of closed investigations
 

@@ -909,6 +909,11 @@ Three rules that bind code outside it:
 - ⚠️ **A watchdog reset runs NO code**, so it never reaches the crash-loop halt in
   `record_and_reboot()`. Any watchdog armed inside boot must be one-shot, or a hang
   that recurs every boot becomes a reboot loop.
+- ⚠️ **No peripheral IRQ may preempt the USB IRQ** — I2C0 and SPI0/1 sit at the USB
+  priority (3) in both `mcuconf.h` files. I2C0 at 2 nesting into a running USB IRQ sent
+  core0 to a garbage address: the `0x16C1`/`0x16E1` boot hang, ~1 boot in 3 under a
+  reboot loop, 0 in 150+ after the change. The evidence is CRASH_DIAGNOSTICS.md →
+  *Boot hang: an IRQ nested into USB*.
 
 ### Rules that came out of closed investigations
 

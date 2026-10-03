@@ -282,8 +282,10 @@ def probe(raw, log):
     if totals["rounds_with_both"] == 0:
         log("INCONCLUSIVE: the stress never put a bus reset and a SETUP into one ISR pass")
         return False
+    # A crash record (e.g. the late-boot watchdog firing under the stress) fails
+    # the run too: the board did not survive the boot, whatever USB then did.
     failed = totals["kernel_bad"] or totals["reconnects"] or totals["extra_attach"] \
-        or totals["race_broken"]
+        or totals["race_broken"] or totals["crashes"]
     log("RESULT: " + ("enumeration FAILED under the race" if failed
                       else "enumeration survived every race"))
     return not failed

@@ -344,7 +344,7 @@ static void usb_serve_endpoint(USBDriver *usbp, usbep_t ep, bool is_in) {
 #include "poly_usb_diag.h"
 
 volatile poly_usb_diag_t poly_usb_diag;
-const uint8_t poly_usb_diag_reset_first = 0U;
+const uint8_t poly_usb_diag_reset_first = 1U;
 
 /* PolyKybd: count what one ISR pass saw. Runs before either flag is handled. */
 static void poly_usb_diag_count(uint32_t ints) {
@@ -388,6 +388,18 @@ OSAL_IRQ_HANDLER(RP_USBCTRL_IRQ_HANDLER) {
   poly_usb_diag_count(ints);
 #endif
 
+  /* PolyKybd: bus reset BEFORE setup (ChibiOS trunk r17878). When both are
+     pending in one pass -- the interrupt was masked across a host reset and the
+     SETUP that follows it, as a flash erase does -- handling the SETUP first
+     arms the reply and then _usb_reset() rewinds the EP0 state machine under
+     it, so the IN stage completes in USB_EP0_STP_WAITING and EP0 is STALLed.
+     The SETUP was sent after the reset, so it must be handled after it. */
+  if (ints & USB_INTS_BUS_RESET) {
+    USB->CLR.SIESTATUS = USB_SIE_STATUS_BUS_RESET;
+
+    _usb_reset(usbp);
+  }
+
   /* USB setup packet handling. */
   if (ints & USB_INTS_SETUP_REQ) {
     USB->CLR.SIESTATUS = USB_SIE_STATUS_SETUP_REC;
@@ -395,13 +407,6 @@ OSAL_IRQ_HANDLER(RP_USBCTRL_IRQ_HANDLER) {
     reset_ep0(usbp);
 
     _usb_isr_invoke_setup_cb(usbp, 0);
-  }
-
-  /* USB bus reset condition handling. */
-  if (ints & USB_INTS_BUS_RESET) {
-    USB->CLR.SIESTATUS = USB_SIE_STATUS_BUS_RESET;
-
-    _usb_reset(usbp);
   }
 
   /* USB bus SUSPEND condition handling.*/

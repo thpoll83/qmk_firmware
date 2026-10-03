@@ -210,9 +210,25 @@ post_init rewrites the keymap.
 masks interrupts in erase-sized windows during enumeration. The rig drives it
 with `tools/hil_probes/usb_reset_race.py`. A normal build contains none of it.
 
-**Verification:** with the copy in place and no edits, `split72:default` linked
-to a byte-identical image. The rig A/B results are in the PR that introduced the
-copy (RIG_RESULTS_PLACEHOLDER).
+**Verification (2026-10-03):**
+
+- With the copy in place and no edits, `split72:default` linked to a
+  byte-identical image. With the fix, the image is the same size and exactly one
+  function differs: `Vector54` (USBCTRL), whose BUS_RESET test now precedes the
+  SETUP test.
+- Rig A/B, 15 reboots each, same randomised stress, `usb_reset_race` probe:
+  Contrib's order (run 37124742288) put a reset and a SETUP in one pass in 9
+  rounds (10 passes) and **all 10** answered GET_DESCRIPTOR(device, 64) with an
+  EP0 STALL; one of them reached the host as `usb 1-1.4: device descriptor
+  read/all, error -32` plus a re-attach, and Linux retried the other nine
+  without a log line. The fixed order (run 37124759633) hit the same case in 8
+  rounds and answered **all 8** normally (`IN_TX -> OUT_WAITING_STS ->
+  STP_WAITING`), 0 kernel errors.
+- ⚠️ **The Linux kernel log hides most of it.** `usb_get_descriptor()` retries a
+  STALLed request silently, so 9 of 10 broken transfers left no trace in
+  `dmesg`. The device-side STALL count (6 per boot is normal here: three
+  refused DEVICE_QUALIFIER requests; 8 = one broken transfer) is the reliable
+  signal.
 
 **When Contrib or QMK picks the fix up** (check
 `grep -n "USB_INTS_BUS_RESET" -A3 lib/chibios-contrib/os/hal/ports/RP/LLD/USBDv1/hal_usb_lld.c`

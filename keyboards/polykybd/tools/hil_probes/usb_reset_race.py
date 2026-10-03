@@ -161,7 +161,11 @@ def _classify(evs):
             continue
         nxt = next((x for x in evs[i + 1:] if x["ints"] & (INTS_BUFF | INTS_SETUP | INTS_RESET)), None)
         verdict = "no-follow-up"
-        if nxt is not None:
+        if e["after"] == 6:
+            # The same pass ended in ERROR (rig run 37124742288, round 5: a
+            # RESET+SETUP+BUFF pass whose stale IN completion hit setup_error).
+            verdict = "broken"
+        elif nxt is not None:
             if nxt["after"] == 6 or nxt["stalls"] > e["stalls"] or \
                     (nxt["ints"] & INTS_BUFF and not nxt["ints"] & INTS_SETUP and nxt["before"] == 0):
                 verdict = "broken"

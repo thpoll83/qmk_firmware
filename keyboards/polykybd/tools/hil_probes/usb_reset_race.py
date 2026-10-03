@@ -46,6 +46,12 @@ ROUNDS = int(os.environ.get("USB_RACE_ROUNDS", "15"))
 RETURN_S = 90.0              # a host that gives up + the firmware's 15 s self-heal
 DIAG_WAIT_S = 30.0
 SLAVE_WAIT_S = 8.0
+# EP0 STALLs a healthy boot arms on this rig: the Pi's Linux asks for the
+# DEVICE_QUALIFIER three times and a full-speed device refuses each (2 STALLs per
+# refusal). A property of the HOST, so re-measure it on another rig. Anything
+# above it is a failed control transfer, which also catches a race that falls
+# outside the 48-entry ISR event log.
+EP0_STALL_BASELINE = 6
 
 DIAG_RE = re.compile(r"usbdiag: (up=\d+.*)$")
 EV_RE = re.compile(r"usbev: (i=\d+.*)$")
@@ -201,7 +207,8 @@ def probe(raw, log):
         log(f"kernel log NOT readable on this rig ({why}); judging on firmware counters only")
 
     totals = {"both": 0, "rounds_with_both": 0, "kernel_bad": 0, "reconnects": 0,
-              "ep0_stalls": 0, "resets": 0, "extra_attach": 0, "crashes": 0,
+              "ep0_stalls": 0, "ep0_stalls_over_baseline": 0, "resets": 0,
+              "extra_attach": 0, "crashes": 0,
               "race_clean": 0, "race_broken": 0, "race_unknown": 0}
     reset_first = None
     boot_times = []
@@ -228,7 +235,9 @@ def probe(raw, log):
         totals["both"] += both
         totals["rounds_with_both"] += 1 if both else 0
         totals["reconnects"] += d.get("reconnects", 0)
-        totals["ep0_stalls"] += d.get("ep0_stalls", 0)
+        ep0_stalls = d.get("ep0_stalls", 0)
+        totals["ep0_stalls"] += ep0_stalls
+        totals["ep0_stalls_over_baseline"] += max(0, ep0_stalls - EP0_STALL_BASELINE)
         totals["resets"] += d.get("resets", 0)
 
         master = _crash_record_body(raw, 0)
@@ -246,7 +255,10 @@ def probe(raw, log):
 
         kern_txt = ""
         if src:
-            klines, _ = _kernel_since(t_kernel)
+            klines, kwhy = _kernel_since(t_kernel)
+            if klines is None:
+                log(f"    round {n}: kernel log unreadable ({kwhy})")
+                klines = []
             bad = [k for k in klines if KERNEL_BAD.search(k)]
             attaches = sum(1 for k in klines if KERNEL_NEW.search(k))
             totals["kernel_bad"] += len(bad)
@@ -285,7 +297,7 @@ def probe(raw, log):
     # A crash record (e.g. the late-boot watchdog firing under the stress) fails
     # the run too: the board did not survive the boot, whatever USB then did.
     failed = totals["kernel_bad"] or totals["reconnects"] or totals["extra_attach"] \
-        or totals["race_broken"] or totals["crashes"]
+        or totals["race_broken"] or totals["crashes"] or totals["ep0_stalls_over_baseline"]
     log("RESULT: " + ("enumeration FAILED under the race" if failed
                       else "enumeration survived every race"))
     return not failed

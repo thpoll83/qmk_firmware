@@ -238,12 +238,15 @@ the copy against the new Contrib file** and carry any upstream change across —
 the copy does not follow the submodule on its own:
 
 ```sh
-diff -u lib/chibios-contrib/os/hal/ports/RP/LLD/USBDv1/hal_usb_lld.c \
-        keyboards/polykybd/chibios_overrides/USBDv1/hal_usb_lld.c
+diff -ru lib/chibios-contrib/os/hal/ports/RP/LLD/USBDv1 \
+         keyboards/polykybd/chibios_overrides/USBDv1
 diff lib/chibios-contrib/os/hal/ports/RP/RP2040/platform.mk \
      keyboards/polykybd/chibios_overrides/platform.mk
 ```
 
-The expected `hal_usb_lld.c` diff is the reordered reset/SETUP block plus the
-`POLYKYBD_USB_RACE_DIAG` hunks; `hal_usb_lld.h` and `rp2040_usb.h` should be
-identical.
+Expected differences, and nothing else: `hal_usb_lld.c` carries the reordered
+reset/SETUP block plus the `POLYKYBD_USB_RACE_DIAG` hunks; `driver.mk` differs
+only in the `$(POLY_CHIBIOS_OVERRIDES)` paths; `poly_usb_diag.h` exists only in
+the copy. `hal_usb_lld.h` and `rp2040_usb.h` **must** be identical -- the include
+path resolves to the copy, so a stale header would compile against new Contrib
+code without an error.

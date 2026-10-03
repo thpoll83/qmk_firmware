@@ -210,6 +210,13 @@ post_init rewrites the keymap.
 masks interrupts in erase-sized windows during enumeration. The rig drives it
 with `tools/hil_probes/usb_reset_race.py`. A normal build contains none of it.
 
+⚠️ **`tier: debug` builds the NORMAL HIL images**, and `qmk-test.yml` has no input
+for extra build flags, so the probe on its own finds no `usbdiag:` line and stops
+after round 1. The recorded runs used temporary `rules.mk` commits on the branch:
+31158ea sets `POLYKYBD_USB_STRESS ?= yes` for HIL builds (cherry-pick it to repeat
+the run), ff3dbd2 added `POLYKYBD_USB_LEGACY_RESET_ORDER ?= yes` for the A side and
+bf8fde8 removed it for the B side, and 527bab7 removed the rest.
+
 **Verification (2026-10-03):**
 
 - With the copy in place and no edits, `split72:default` linked to a

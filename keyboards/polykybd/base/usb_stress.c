@@ -6,6 +6,7 @@
 #include "quantum.h"
 #include "print.h"
 #include "usb_main.h"            // USB_DRIVER, restart_usb_driver()
+#include "usb_util.h"            // usb_vbus_state()
 #include "hardware/sync.h"       // save_and_disable_interrupts()
 #include "hardware/structs/timer.h" // timer_hw->timerawl, the raw 1 MHz counter
 #include "hardware/structs/rosc.h"  // rosc_hw->randombit
@@ -37,6 +38,7 @@ static const uint16_t k_window_ms[] = {35u, 70u, 150u, 300u};
 
 static volatile uint32_t s_windows, s_masked_ms, s_stress_end_ms, s_start_delay_ms;
 static uint32_t          s_reconnects, s_last_print_ms, s_ev_printed, s_last_ev_ms;
+static uint32_t          s_ev_first, s_ev_end;   // absolute pass range being printed
 
 // The ring oscillator's random bit: real entropy, unlike anything timed here.
 static uint32_t rand_bits(unsigned n) {
@@ -69,6 +71,13 @@ static THD_WORKING_AREA(s_wa_usb_stress, 512);
 static THD_FUNCTION(usb_stress_thread, arg) {
     (void)arg;
     chRegSetThreadName("usb_stress");
+    // Only the half that will enumerate. This runs before split_pre_init() has
+    // picked the master, so read the same VBUS pin QMK's detection reads. A
+    // slave sees no bus reset, so it would mask interrupts for the whole 12 s
+    // cap and starve the split link while it comes up.
+    if (!usb_vbus_state()) {
+        return;
+    }
     unsigned i = rand_bits(2);
     s_start_delay_ms = rand_bits(8) % USB_STRESS_START_JITTER_MS;
     chThdSleepMilliseconds(s_start_delay_ms);
@@ -107,12 +116,19 @@ void usb_stress_task(void) {
 
     // The ISR event log, one entry per pass, once the stress is over and the
     // enumeration has settled -- the printing must not perturb what it reports.
-    if (s_stress_end_ms != 0u && now >= s_stress_end_ms + 1000u && s_ev_printed < POLY_USB_EV_MAX &&
-        s_ev_printed < poly_usb_ev_count && now - s_last_ev_ms >= 30u) {
+    if (s_stress_end_ms != 0u && now >= s_stress_end_ms + 1000u && !poly_usb_ev_frozen) {
+        // Freeze the ring before reading it, so later control traffic cannot
+        // overwrite a slot between two printed lines.
+        poly_usb_ev_frozen = 1u;
+        s_ev_end           = poly_usb_ev_count;
+        s_ev_first         = s_ev_end > POLY_USB_EV_MAX ? s_ev_end - POLY_USB_EV_MAX : 0u;
+    }
+    if (poly_usb_ev_frozen && s_ev_first + s_ev_printed < s_ev_end && now - s_last_ev_ms >= 30u) {
         s_last_ev_ms = now;
-        const volatile poly_usb_ev_t *e = &poly_usb_ev[s_ev_printed];
+        const uint32_t                idx = s_ev_first + s_ev_printed;
+        const volatile poly_usb_ev_t *e   = &poly_usb_ev[idx % POLY_USB_EV_MAX];
         uprintf("usbev: i=%lu t=%lu ints=%lx buf=%lx st=%u>%u rq=%02x/%02x v=%04x l=%u stalls=%u addr=%u\n",
-                (unsigned long)s_ev_printed, (unsigned long)e->t_us, (unsigned long)e->ints,
+                (unsigned long)idx, (unsigned long)e->t_us, (unsigned long)e->ints,
                 (unsigned long)e->bufstatus, (unsigned)e->st_before, (unsigned)e->st_after, (unsigned)e->bmrt,
                 (unsigned)e->breq, (unsigned)e->wvalue, (unsigned)e->wlength, (unsigned)e->stalls,
                 (unsigned)e->addr);

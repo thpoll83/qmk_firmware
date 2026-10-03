@@ -351,6 +351,10 @@ const uint8_t poly_usb_diag_reset_first = 1U;
 #endif
 volatile poly_usb_ev_t poly_usb_ev[POLY_USB_EV_MAX];
 volatile uint32_t      poly_usb_ev_count;
+volatile uint8_t       poly_usb_ev_frozen;
+/* Logging stops this many passes after the first RESET+SETUP pass, so the race
+   and what followed it survive however late in the boot it happens. */
+static uint32_t        poly_usb_ev_stop_at = UINT32_MAX;
 
 /* PolyKybd: open an event-log entry for this pass, or return NULL. */
 static volatile poly_usb_ev_t *poly_usb_ev_open(USBDriver *usbp, uint32_t ints) {
@@ -359,15 +363,25 @@ static volatile poly_usb_ev_t *poly_usb_ev_open(USBDriver *usbp, uint32_t ints) 
       !((ints & USB_INTS_BUFF_STATUS) && (bufstatus & 3U))) {
     return NULL;
   }
-  const uint32_t n = poly_usb_ev_count++;
-  if (n >= POLY_USB_EV_MAX) {
+  /* A ring: entry n lives in slot n % MAX. It stops when the printer freezes it,
+     or POLY_USB_EV_AFTER_RACE passes after the first combined pass. */
+  const uint32_t n = poly_usb_ev_count;
+  if (poly_usb_ev_frozen || n >= poly_usb_ev_stop_at) {
     return NULL;
   }
-  volatile poly_usb_ev_t *e = &poly_usb_ev[n];
+  poly_usb_ev_count = n + 1U;
+  if ((ints & (USB_INTS_SETUP_REQ | USB_INTS_BUS_RESET)) ==
+          (USB_INTS_SETUP_REQ | USB_INTS_BUS_RESET) &&
+      poly_usb_ev_stop_at == UINT32_MAX) {
+    poly_usb_ev_stop_at = n + POLY_USB_EV_AFTER_RACE;
+  }
+  volatile poly_usb_ev_t *e = &poly_usb_ev[n % POLY_USB_EV_MAX];
   e->t_us      = (uint32_t)chVTGetSystemTimeX();
   e->ints      = ints;
   e->bufstatus = bufstatus;
   e->st_before = (uint8_t)usbp->ep0state;
+  e->bmrt = e->breq = 0U;
+  e->wvalue = e->wlength = 0U;
   if (ints & USB_INTS_SETUP_REQ) {
     e->bmrt    = USB_DPSRAM->SETUPPACKET[0];
     e->breq    = USB_DPSRAM->SETUPPACKET[1];

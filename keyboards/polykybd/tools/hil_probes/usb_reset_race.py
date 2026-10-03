@@ -24,6 +24,10 @@ not as a pass.
 Run it with::
 
     tier: debug   probe: usb_reset_race
+
+⚠️ ``tier: debug`` builds the NORMAL HIL images. Cherry-pick 31158ea (sets
+``POLYKYBD_USB_STRESS ?= yes`` for HIL builds) in a temporary commit first, see
+UPSTREAM_PATCHES.md; without it the probe stops after round 1.
 """
 import os
 import re
@@ -229,6 +233,12 @@ def probe(raw, log):
         boot_times.append(dt)
 
         d = _final_diag(mark, log) or {}
+        if not d and n == 1:
+            # Not a USB result: the image has no stress. Fourteen more reboots
+            # would only end in INCONCLUSIVE.
+            log("FAIL: round 1 printed no usbdiag line -- the flashed image is not a "
+                "POLYKYBD_USB_STRESS build (tier: debug builds the normal HIL images)")
+            return False
         if reset_first is None and "reset_first" in d:
             reset_first = d["reset_first"]
         both = d.get("both", 0)

@@ -23,7 +23,10 @@ typedef struct {
 extern volatile poly_usb_diag_t poly_usb_diag;
 
 /* One ISR pass that touched EP0 control traffic: a bus reset, a SETUP, or a
-   buffer completion on EP0. The first POLY_USB_EV_MAX of a boot are kept. */
+   buffer completion on EP0. Pass n is stored in slot n % POLY_USB_EV_MAX, so the
+   last MAX passes are kept. Logging stops POLY_USB_EV_AFTER_RACE passes after the
+   first pass that saw RESET and SETUP together (keeping MAX - AFTER_RACE passes
+   before it), or when the printer sets poly_usb_ev_frozen. */
 typedef struct {
     uint32_t t_us;      /* chVTGetSystemTimeX(), 1 MHz                          */
     uint32_t ints;      /* USB->INTS as the pass saw it                         */
@@ -38,9 +41,11 @@ typedef struct {
     uint8_t  addr;      /* USB->DEVADDRCTRL & 0x7F after the pass               */
 } poly_usb_ev_t;
 
-#define POLY_USB_EV_MAX 48u
+#define POLY_USB_EV_MAX        48u
+#define POLY_USB_EV_AFTER_RACE 16u
 extern volatile poly_usb_ev_t poly_usb_ev[POLY_USB_EV_MAX];
 extern volatile uint32_t      poly_usb_ev_count;   /* passes logged (may exceed MAX) */
+extern volatile uint8_t       poly_usb_ev_frozen;  /* set by the printer: stop logging */
 
 /* 1 when the ISR handles BUS_RESET before SETUP_REQ (the fix), 0 for Contrib's
    original order. Printed in every `usbdiag:` line, so a rig log says by itself

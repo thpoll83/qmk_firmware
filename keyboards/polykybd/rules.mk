@@ -191,6 +191,10 @@ endif
 ifeq ($(strip $(POLYKYBD_USB_STRESS)), yes)
     OPT_DEFS += -DPOLYKYBD_USB_STRESS -DPOLYKYBD_USB_RACE_DIAG
     SRC += base/usb_stress.c
+    # The A side of an A/B run: Contrib's original SETUP-before-reset order.
+    ifeq ($(strip $(POLYKYBD_USB_LEGACY_RESET_ORDER)), yes)
+        OPT_DEFS += -DPOLYKYBD_USB_LEGACY_RESET_ORDER
+    endif
 endif
 
 # FW-2: the Ed25519 image-signature verify used by fw_staging.c (firmware signing)

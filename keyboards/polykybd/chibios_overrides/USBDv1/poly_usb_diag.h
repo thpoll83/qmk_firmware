@@ -22,6 +22,26 @@ typedef struct {
 
 extern volatile poly_usb_diag_t poly_usb_diag;
 
+/* One ISR pass that touched EP0 control traffic: a bus reset, a SETUP, or a
+   buffer completion on EP0. The first POLY_USB_EV_MAX of a boot are kept. */
+typedef struct {
+    uint32_t t_us;      /* chVTGetSystemTimeX(), 1 MHz                          */
+    uint32_t ints;      /* USB->INTS as the pass saw it                         */
+    uint32_t bufstatus; /* USB->BUFSTATUS at entry (bit 0 = EP0 IN, 1 = EP0 OUT) */
+    uint8_t  st_before; /* usbp->ep0state on entry ...                          */
+    uint8_t  st_after;  /* ... and on exit                                      */
+    uint8_t  bmrt;      /* SETUPPACKET[0..1], when SETUP_REQ was pending        */
+    uint8_t  breq;
+    uint16_t wvalue;
+    uint16_t wlength;
+    uint8_t  stalls;    /* ep0_stalls after the pass (low byte)                 */
+    uint8_t  addr;      /* USB->DEVADDRCTRL & 0x7F after the pass               */
+} poly_usb_ev_t;
+
+#define POLY_USB_EV_MAX 48u
+extern volatile poly_usb_ev_t poly_usb_ev[POLY_USB_EV_MAX];
+extern volatile uint32_t      poly_usb_ev_count;   /* passes logged (may exceed MAX) */
+
 /* 1 when the ISR handles BUS_RESET before SETUP_REQ (the fix), 0 for Contrib's
    original order. Printed in every `usbdiag:` line, so a rig log says by itself
    which driver produced it. */

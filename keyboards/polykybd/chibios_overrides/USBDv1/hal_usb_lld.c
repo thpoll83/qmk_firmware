@@ -344,7 +344,46 @@ static void usb_serve_endpoint(USBDriver *usbp, usbep_t ep, bool is_in) {
 #include "poly_usb_diag.h"
 
 volatile poly_usb_diag_t poly_usb_diag;
+#if defined(POLYKYBD_USB_LEGACY_RESET_ORDER)
+const uint8_t poly_usb_diag_reset_first = 0U;
+#else
 const uint8_t poly_usb_diag_reset_first = 1U;
+#endif
+volatile poly_usb_ev_t poly_usb_ev[POLY_USB_EV_MAX];
+volatile uint32_t      poly_usb_ev_count;
+
+/* PolyKybd: open an event-log entry for this pass, or return NULL. */
+static volatile poly_usb_ev_t *poly_usb_ev_open(USBDriver *usbp, uint32_t ints) {
+  const uint32_t bufstatus = USB->BUFSTATUS;
+  if (!(ints & (USB_INTS_SETUP_REQ | USB_INTS_BUS_RESET)) &&
+      !((ints & USB_INTS_BUFF_STATUS) && (bufstatus & 3U))) {
+    return NULL;
+  }
+  const uint32_t n = poly_usb_ev_count++;
+  if (n >= POLY_USB_EV_MAX) {
+    return NULL;
+  }
+  volatile poly_usb_ev_t *e = &poly_usb_ev[n];
+  e->t_us      = (uint32_t)chVTGetSystemTimeX();
+  e->ints      = ints;
+  e->bufstatus = bufstatus;
+  e->st_before = (uint8_t)usbp->ep0state;
+  if (ints & USB_INTS_SETUP_REQ) {
+    e->bmrt    = USB_DPSRAM->SETUPPACKET[0];
+    e->breq    = USB_DPSRAM->SETUPPACKET[1];
+    e->wvalue  = (uint16_t)(USB_DPSRAM->SETUPPACKET[2] | (USB_DPSRAM->SETUPPACKET[3] << 8));
+    e->wlength = (uint16_t)(USB_DPSRAM->SETUPPACKET[6] | (USB_DPSRAM->SETUPPACKET[7] << 8));
+  }
+  return e;
+}
+
+static void poly_usb_ev_close(USBDriver *usbp, volatile poly_usb_ev_t *e) {
+  if (e != NULL) {
+    e->st_after = (uint8_t)usbp->ep0state;
+    e->stalls   = (uint8_t)poly_usb_diag.ep0_stalls;
+    e->addr     = (uint8_t)(USB->DEVADDRCTRL & 0x7FU);
+  }
+}
 
 /* PolyKybd: count what one ISR pass saw. Runs before either flag is handled. */
 static void poly_usb_diag_count(uint32_t ints) {
@@ -386,6 +425,19 @@ OSAL_IRQ_HANDLER(RP_USBCTRL_IRQ_HANDLER) {
 
 #if defined(POLYKYBD_USB_RACE_DIAG)
   poly_usb_diag_count(ints);
+  volatile poly_usb_ev_t *poly_ev = poly_usb_ev_open(usbp, ints);
+#endif
+
+#if defined(POLYKYBD_USB_RACE_DIAG) && defined(POLYKYBD_USB_LEGACY_RESET_ORDER)
+  /* TEST ONLY: Contrib's original order, for the rig A/B comparison. */
+  if (ints & USB_INTS_SETUP_REQ) {
+    USB->CLR.SIESTATUS = USB_SIE_STATUS_SETUP_REC;
+
+    reset_ep0(usbp);
+
+    _usb_isr_invoke_setup_cb(usbp, 0);
+    ints &= ~USB_INTS_SETUP_REQ;
+  }
 #endif
 
   /* PolyKybd: bus reset BEFORE setup (ChibiOS trunk r17878). When both are
@@ -462,6 +514,10 @@ OSAL_IRQ_HANDLER(RP_USBCTRL_IRQ_HANDLER) {
     USB->CLR.SIESTATUS = USB_SIE_STATUS_DATA_SEQ_ERROR;
   }
 #endif /* RP_USB_USE_ERROR_DATA_SEQ_INTR */
+
+#if defined(POLYKYBD_USB_RACE_DIAG)
+  poly_usb_ev_close(usbp, poly_ev);
+#endif
 
   OSAL_IRQ_EPILOGUE();
 }

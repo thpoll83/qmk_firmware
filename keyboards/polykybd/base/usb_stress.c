@@ -8,6 +8,7 @@
 #include "usb_main.h"            // USB_DRIVER, restart_usb_driver()
 #include "hardware/sync.h"       // save_and_disable_interrupts()
 #include "hardware/structs/timer.h" // timer_hw->timerawl, the raw 1 MHz counter
+#include "hardware/structs/rosc.h"  // rosc_hw->randombit
 #include "poly_usb_diag.h"       // chibios_overrides/USBDv1, the ISR's counters
 
 // Masked windows, cycled. 35 = one typical sector erase, 70 = the typical 8 KB
@@ -15,7 +16,13 @@
 // lets the ISR run between windows -- which is when a reset and a SETUP that
 // both arrived inside the previous window are handled together.
 static const uint16_t k_window_ms[] = {35u, 70u, 150u, 300u};
-#define USB_STRESS_GAP_MS 40u
+// The boot is deterministic to the millisecond, so fixed windows land on the
+// same point of the host's enumeration every round (the first rig run measured
+// 15 identical rounds). A random start delay, start window and gap make every
+// boot a different experiment.
+#define USB_STRESS_START_JITTER_MS 256u
+#define USB_STRESS_GAP_MIN_MS      10u
+#define USB_STRESS_GAP_SPAN_MS     64u
 // Keep stressing this long after the first bus reset the ISR saw. Linux
 // enumerates within ~0.3 s; 3 s covers its quick retries without stretching the
 // boot into the 8 s watchdog guard (which this file deliberately does NOT feed).
@@ -28,8 +35,18 @@ static const uint16_t k_window_ms[] = {35u, 70u, 150u, 300u};
 #define USB_DIAG_PRINT_EVERY_MS 2000u
 #define USB_DIAG_PRINT_UNTIL_MS 60000u
 
-static volatile uint32_t s_windows, s_masked_ms, s_stress_end_ms;
-static uint32_t          s_reconnects, s_last_print_ms;
+static volatile uint32_t s_windows, s_masked_ms, s_stress_end_ms, s_start_delay_ms;
+static uint32_t          s_reconnects, s_last_print_ms, s_ev_printed, s_last_ev_ms;
+
+// The ring oscillator's random bit: real entropy, unlike anything timed here.
+static uint32_t rand_bits(unsigned n) {
+    uint32_t v = 0;
+    for (unsigned i = 0; i < n; i++) {
+        v = (v << 1) | (rosc_hw->randombit & 1u);
+        for (volatile int d = 0; d < 32; d++) {}
+    }
+    return v;
+}
 
 // Interrupts are off, so neither the ChibiOS clock nor a sleep can be used: spin
 // on the free-running hardware counter, which keeps counting regardless.
@@ -52,7 +69,9 @@ static THD_WORKING_AREA(s_wa_usb_stress, 512);
 static THD_FUNCTION(usb_stress_thread, arg) {
     (void)arg;
     chRegSetThreadName("usb_stress");
-    unsigned i = 0;
+    unsigned i = rand_bits(2);
+    s_start_delay_ms = rand_bits(8) % USB_STRESS_START_JITTER_MS;
+    chThdSleepMilliseconds(s_start_delay_ms);
     while (!stress_done(uptime_ms())) {
         const uint32_t w   = k_window_ms[i++ % (sizeof k_window_ms / sizeof k_window_ms[0])];
         const uint32_t irq = save_and_disable_interrupts();
@@ -60,7 +79,7 @@ static THD_FUNCTION(usb_stress_thread, arg) {
         restore_interrupts(irq);
         s_windows++;
         s_masked_ms += w;
-        chThdSleepMilliseconds(USB_STRESS_GAP_MS);
+        chThdSleepMilliseconds(USB_STRESS_GAP_MIN_MS + rand_bits(6) % USB_STRESS_GAP_SPAN_MS);
     }
     s_stress_end_ms = uptime_ms();
 }
@@ -86,16 +105,32 @@ void usb_stress_task(void) {
         restart_usb_driver(&USB_DRIVER);
     }
 
+    // The ISR event log, one entry per pass, once the stress is over and the
+    // enumeration has settled -- the printing must not perturb what it reports.
+    if (s_stress_end_ms != 0u && now >= s_stress_end_ms + 1000u && s_ev_printed < POLY_USB_EV_MAX &&
+        s_ev_printed < poly_usb_ev_count && now - s_last_ev_ms >= 30u) {
+        s_last_ev_ms = now;
+        const volatile poly_usb_ev_t *e = &poly_usb_ev[s_ev_printed];
+        uprintf("usbev: i=%lu t=%lu ints=%lx buf=%lx st=%u>%u rq=%02x/%02x v=%04x l=%u stalls=%u addr=%u\n",
+                (unsigned long)s_ev_printed, (unsigned long)e->t_us, (unsigned long)e->ints,
+                (unsigned long)e->bufstatus, (unsigned)e->st_before, (unsigned)e->st_after, (unsigned)e->bmrt,
+                (unsigned)e->breq, (unsigned)e->wvalue, (unsigned)e->wlength, (unsigned)e->stalls,
+                (unsigned)e->addr);
+        s_ev_printed++;
+        return;
+    }
+
     if (now >= USB_DIAG_PRINT_UNTIL_MS || now - s_last_print_ms < USB_DIAG_PRINT_EVERY_MS) return;
     s_last_print_ms = now;
     // One line, key=value, parsed by tools/hil_probes/usb_reset_race.py.
     uprintf("usbdiag: up=%lu reset_first=%u windows=%lu masked_ms=%lu stress_end=%lu "
             "resets=%lu setups=%lu both=%lu ep0_stalls=%lu first_reset=%lu last_reset=%lu "
-            "state=%u reconnects=%lu\n",
+            "state=%u reconnects=%lu ev=%lu start_delay=%lu\n",
             (unsigned long)now, (unsigned)poly_usb_diag_reset_first, (unsigned long)s_windows,
             (unsigned long)s_masked_ms, (unsigned long)s_stress_end_ms,
             (unsigned long)poly_usb_diag.bus_resets, (unsigned long)poly_usb_diag.setups,
             (unsigned long)poly_usb_diag.reset_with_setup, (unsigned long)poly_usb_diag.ep0_stalls,
             (unsigned long)poly_usb_diag.first_reset_ms, (unsigned long)poly_usb_diag.last_reset_ms,
-            (unsigned)state, (unsigned long)s_reconnects);
+            (unsigned)state, (unsigned long)s_reconnects,
+            (unsigned long)poly_usb_ev_count, (unsigned long)s_start_delay_ms);
 }

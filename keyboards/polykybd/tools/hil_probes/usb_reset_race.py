@@ -48,6 +48,11 @@ DIAG_WAIT_S = 30.0
 SLAVE_WAIT_S = 8.0
 
 DIAG_RE = re.compile(r"usbdiag: (up=\d+.*)$")
+EV_RE = re.compile(r"usbev: (i=\d+.*)$")
+EV_KV = re.compile(r"(\w+)=([0-9a-fA-F>/]+)")
+INTS_SETUP, INTS_RESET, INTS_BUFF = 0x10000, 0x1000, 0x10
+EP0_STATE = {0: "STP_WAITING", 9: "IN_TX", 10: "IN_WAITING_TX0", 11: "IN_SENDING_STS",
+             20: "OUT_WAITING_STS", 21: "OUT_RX", 6: "ERROR"}
 KV_RE = re.compile(r"(\w+)=(\d+)")
 # Kernel lines that mean an enumeration step failed or was retried.
 KERNEL_BAD = re.compile(
@@ -110,6 +115,62 @@ def _diag_lines(mark):
     return out
 
 
+def _events(mark):
+    """The ISR event log lines of this boot, decoded, keyed by index (last copy wins)."""
+    evs = {}
+    for line in TAP.since(mark):
+        m = EV_RE.search(line)
+        if not m:
+            continue
+        kv = dict(EV_KV.findall(m.group(1)))
+        try:
+            b, a = kv["st"].split(">")
+            rq0, rq1 = kv["rq"].split("/")
+            evs[int(kv["i"])] = {
+                "t": int(kv["t"]), "ints": int(kv["ints"], 16), "buf": int(kv["buf"], 16),
+                "before": int(b), "after": int(a), "bmrt": int(rq0, 16), "breq": int(rq1, 16),
+                "v": int(kv["v"], 16), "l": int(kv["l"]), "stalls": int(kv["stalls"]),
+                "addr": int(kv["addr"]),
+            }
+        except (KeyError, ValueError):
+            continue
+    return [evs[k] for k in sorted(evs)]
+
+
+def _ev_text(e, t0):
+    flags = "+".join(n for bit, n in ((INTS_RESET, "RESET"), (INTS_SETUP, "SETUP"),
+                                      (INTS_BUFF, "BUFF")) if e["ints"] & bit)
+    rq = (f" req={e['bmrt']:02x}/{e['breq']:02x} v={e['v']:04x} l={e['l']}"
+          if e["ints"] & INTS_SETUP else "")
+    ep0 = f" ep0buf={e['buf'] & 3:#x}" if e["ints"] & INTS_BUFF else ""
+    return (f"+{(e['t'] - t0) / 1000:8.1f} ms {flags:<17}{rq}{ep0} "
+            f"ep0 {EP0_STATE.get(e['before'], e['before'])}->{EP0_STATE.get(e['after'], e['after'])} "
+            f"stalls={e['stalls']} addr={e['addr']}")
+
+
+def _classify(evs):
+    """For each pass that saw RESET and SETUP together: what happened to EP0 next.
+
+    'clean'   -- the next EP0 pass started from a state the SETUP put it in;
+    'broken'  -- the next EP0 completion found EP0 in STP_WAITING (the reply's
+                 state was rewound), or EP0 went to ERROR, or a stall followed.
+    """
+    out = []
+    for i, e in enumerate(evs):
+        if (e["ints"] & (INTS_RESET | INTS_SETUP)) != (INTS_RESET | INTS_SETUP):
+            continue
+        nxt = next((x for x in evs[i + 1:] if x["ints"] & (INTS_BUFF | INTS_SETUP | INTS_RESET)), None)
+        verdict = "no-follow-up"
+        if nxt is not None:
+            if nxt["after"] == 6 or nxt["stalls"] > e["stalls"] or \
+                    (nxt["ints"] & INTS_BUFF and not nxt["ints"] & INTS_SETUP and nxt["before"] == 0):
+                verdict = "broken"
+            else:
+                verdict = "clean"
+        out.append((e, nxt, verdict))
+    return out
+
+
 def _final_diag(mark, log):
     """The last usbdiag line of this boot, once the stress has ended (or the wait expired)."""
     deadline = time.monotonic() + DIAG_WAIT_S
@@ -118,7 +179,7 @@ def _final_diag(mark, log):
         lines = _diag_lines(mark)
         if lines:
             last = lines[-1]
-            if last.get("stress_end", 0) and last["up"] >= last["stress_end"] + 2000:
+            if last.get("stress_end", 0) and last["up"] >= last["stress_end"] + 4000:
                 return last
         time.sleep(1.0)
     if last is None:
@@ -136,7 +197,8 @@ def probe(raw, log):
         log(f"kernel log NOT readable on this rig ({why}); judging on firmware counters only")
 
     totals = {"both": 0, "rounds_with_both": 0, "kernel_bad": 0, "reconnects": 0,
-              "ep0_stalls": 0, "resets": 0, "extra_attach": 0, "crashes": 0}
+              "ep0_stalls": 0, "resets": 0, "extra_attach": 0, "crashes": 0,
+              "race_clean": 0, "race_broken": 0, "race_unknown": 0}
     reset_first = None
     boot_times = []
     for n in range(1, ROUNDS + 1):
@@ -188,7 +250,20 @@ def probe(raw, log):
             kern_txt = f" kernel: {attaches} attach, {len(bad)} error line(s)"
             for k in bad[:6]:
                 log(f"      kernel: {k}")
-        log(f"  round {n}: back in {dt:.1f} s ({state}); usbdiag "
+        evs = _events(mark)
+        races = _classify(evs)
+        for e, nxt, verdict in races:
+            totals["race_" + ("unknown" if verdict == "no-follow-up" else verdict)] += 1
+        if evs and (n <= 2 or races):
+            t0e = evs[0]["t"]
+            log(f"    ISR event log ({len(evs)} of {d.get('ev')} passes):")
+            for e in evs:
+                mark_txt = ""
+                for r, _nxt, verdict in races:
+                    if r is e:
+                        mark_txt = f"   <-- RESET+SETUP in one pass: {verdict}"
+                log(f"      {_ev_text(e, t0e)}{mark_txt}")
+        log(f"  round {n}: back in {dt:.1f} s ({state}); start_delay={d.get('start_delay')}ms usbdiag "
             f"resets={d.get('resets')} setups={d.get('setups')} both={both} "
             f"ep0_stalls={d.get('ep0_stalls')} first_reset={d.get('first_reset')}ms "
             f"last_reset={d.get('last_reset')}ms windows={d.get('windows')} "
@@ -203,7 +278,8 @@ def probe(raw, log):
     if totals["rounds_with_both"] == 0:
         log("INCONCLUSIVE: the stress never put a bus reset and a SETUP into one ISR pass")
         return False
-    failed = totals["kernel_bad"] or totals["reconnects"] or totals["extra_attach"]
+    failed = totals["kernel_bad"] or totals["reconnects"] or totals["extra_attach"] \
+        or totals["race_broken"]
     log("RESULT: " + ("enumeration FAILED under the race" if failed
                       else "enumeration survived every race"))
     return not failed

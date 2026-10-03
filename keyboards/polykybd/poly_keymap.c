@@ -7220,9 +7220,13 @@ void keyboard_post_init_user(void) {
     // otherwise slip through.
     // Timed and reported on the banner tick (note_keymap_storage) as well as printed
     // here: this discard rewrites the capped keymap, the encoder map and the whole
-    // macro region -- a few kB of wear-levelled EEPROM -- inside post_init, before USB
-    // is up. The one-shot uprintf below is usually emitted before a console can see
-    // it, so a board that spends a long time here (or never leaves) looks simply dead.
+    // macro region -- a few kB of wear-levelled EEPROM -- inside post_init. USB is
+    // already connected by then (protocol_pre_init() runs before keyboard_init()), so
+    // the host is enumerating while this writes; a wear-levelling erase here masks
+    // the USB interrupt for tens of ms (UPSTREAM_PATCHES.md -> "ChibiOS-Contrib RP2040
+    // USB driver"). No console is attached yet either: the one-shot uprintf below is
+    // usually lost, so a board that spends a long time here (or never leaves) looks
+    // simply dead.
     const uint8_t  stored_fmt = ee.keymap_layers_fmt;
     const bool     need_reset = (stored_fmt != KEYMAP_STORAGE_CURRENT);
     const uint32_t reset_t0   = timer_read32();

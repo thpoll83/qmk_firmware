@@ -179,6 +179,20 @@ ifeq ($(strip $(POLYKYBD_LOOP_PROFILE)), yes)
     SRC += profiling/loop_profile.c
 endif
 
+# USB bus-reset race stress (OFF by default, never in a release). Masks interrupts
+# in erase-sized windows while the host enumerates, and counts in the USB ISR how
+# often a bus reset and a SETUP are handled in one pass (base/usb_stress.h). The
+# rig drives it with tools/hil_probes/usb_reset_race.py. Needs CONSOLE_ENABLE for
+# the `usbdiag:` readout.
+ifeq ($(strip $(POLYKYBD_USB_STRESS)), yes)
+    OPT_DEFS += -DPOLYKYBD_USB_STRESS -DPOLYKYBD_USB_RACE_DIAG
+    SRC += base/usb_stress.c
+    # The A side of an A/B run: Contrib's original SETUP-before-reset order.
+    ifeq ($(strip $(POLYKYBD_USB_LEGACY_RESET_ORDER)), yes)
+        OPT_DEFS += -DPOLYKYBD_USB_LEGACY_RESET_ORDER
+    endif
+endif
+
 # FW-2: the Ed25519 image-signature verify used by fw_staging.c (firmware signing)
 # comes from the vendored Monocypher, now the polymod_monocypher community module
 # (listed in both variants' keyboard.json "modules" arrays, which is the enable).
@@ -495,4 +509,17 @@ ifeq ($(strip $(POLYKYBD_CRASH_TEST)), yes)
     OPT_DEFS += -DPOLYKYBD_CRASH_TEST
     SRC += crash_test.c
     $(eval $(call POLY_APPLY_WARN,crash_test.c))
+endif
+
+# ---------------------------------------------------------------------------
+# Vendored ChibiOS-Contrib RP2040 USB driver
+# ---------------------------------------------------------------------------
+# platforms/chibios/platform.mk takes PLATFORM_MK when the file exists and falls
+# back to Contrib's own platform.mk when it does NOT -- silently, so a typo here
+# would build the unpatched driver with a green build. Refuse instead.
+# Rationale and the drop-the-copy procedure: UPSTREAM_PATCHES.md ->
+# "ChibiOS-Contrib RP2040 USB driver".
+PLATFORM_MK := keyboards/polykybd/chibios_overrides/platform.mk
+ifeq ($(wildcard $(PLATFORM_MK)),)
+    $(error $(PLATFORM_MK) is missing -- the build would silently use Contrib's unpatched RP2040 USB driver)
 endif

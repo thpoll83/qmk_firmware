@@ -340,6 +340,33 @@ static void usb_serve_endpoint(USBDriver *usbp, usbep_t ep, bool is_in) {
   }
 }
 
+#if defined(POLYKYBD_USB_RACE_DIAG)
+#include "poly_usb_diag.h"
+
+volatile poly_usb_diag_t poly_usb_diag;
+const uint8_t poly_usb_diag_reset_first = 0U;
+
+/* PolyKybd: count what one ISR pass saw. Runs before either flag is handled. */
+static void poly_usb_diag_count(uint32_t ints) {
+  const uint32_t now_ms = (uint32_t)TIME_I2MS(chVTGetSystemTimeX());
+
+  if (ints & USB_INTS_SETUP_REQ) {
+    poly_usb_diag.setups++;
+  }
+  if (ints & USB_INTS_BUS_RESET) {
+    poly_usb_diag.bus_resets++;
+    if (poly_usb_diag.first_reset_ms == 0U) {
+      poly_usb_diag.first_reset_ms = now_ms;
+    }
+    poly_usb_diag.last_reset_ms = now_ms;
+  }
+  if ((ints & (USB_INTS_SETUP_REQ | USB_INTS_BUS_RESET)) ==
+      (USB_INTS_SETUP_REQ | USB_INTS_BUS_RESET)) {
+    poly_usb_diag.reset_with_setup++;
+  }
+}
+#endif /* POLYKYBD_USB_RACE_DIAG */
+
 /*===========================================================================*/
 /* Driver interrupt handlers and threads.                                    */
 /*===========================================================================*/
@@ -356,6 +383,10 @@ OSAL_IRQ_HANDLER(RP_USBCTRL_IRQ_HANDLER) {
 
   USBDriver *usbp = &USBD1;
   uint32_t ints = USB->INTS;
+
+#if defined(POLYKYBD_USB_RACE_DIAG)
+  poly_usb_diag_count(ints);
+#endif
 
   /* USB setup packet handling. */
   if (ints & USB_INTS_SETUP_REQ) {
@@ -772,6 +803,9 @@ void usb_lld_start_in(USBDriver *usbp, usbep_t ep) {
 void usb_lld_stall_out(USBDriver *usbp, usbep_t ep) {
     if (ep == 0) {
         USB->SET.EPSTALLARM = USB_EP_STALL_ARM_EP0_OUT;
+#if defined(POLYKYBD_USB_RACE_DIAG)
+        poly_usb_diag.ep0_stalls++;
+#endif
     }
     BUF_CTRL(ep).OUT |= USB_BUFFER_STALL;
 }
@@ -787,6 +821,9 @@ void usb_lld_stall_out(USBDriver *usbp, usbep_t ep) {
 void usb_lld_stall_in(USBDriver *usbp, usbep_t ep) {
     if (ep == 0) {
         USB->SET.EPSTALLARM = USB_EP_STALL_ARM_EP0_IN;
+#if defined(POLYKYBD_USB_RACE_DIAG)
+        poly_usb_diag.ep0_stalls++;
+#endif
     }
     BUF_CTRL(ep).IN |= USB_BUFFER_STALL;
 }

@@ -74,6 +74,7 @@
 #include "anim/tutorial_rgb.h"             // the key LEDs during the show and the lesson
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
+#include "base/usb_stress.h"              // no-op unless -e POLYKYBD_USB_STRESS=yes
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
 #include "base/status_brightness.h"      // one brightness scale for keycaps + status OLED
 #include "usb_util.h"                     // usb_vbus_state() — the suspend-time power check
@@ -1347,6 +1348,7 @@ void housekeeping_task_user(void) {
     // phase the previous pass left open (a HID handler tags on entry only).
     crash_watchdog_feed();
     (void)crash_phase_enter(CRASH_PHASE_LOOP, 0);
+    usb_stress_task();   // test builds only (POLYKYBD_USB_STRESS)
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
     tutorial_rgb_tick(); // …and own it through the first-run show and the lesson
@@ -7509,6 +7511,11 @@ void keyboard_pre_init_user(void) {
 #endif
 
     gpio_set_pin_input_high(I2C1_SDA_PIN);
+
+    // Test builds only (-e POLYKYBD_USB_STRESS=yes): last in pre_init, so its
+    // interrupt-masked windows start just before protocol_pre_init() connects USB
+    // and never overlap the flash writes above.
+    usb_stress_start();
 }
 
 // Runs immediately after QMK's own dynamic_keymap_reset() in eeconfig_init_quantum().

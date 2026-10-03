@@ -179,6 +179,16 @@ ifeq ($(strip $(POLYKYBD_LOOP_PROFILE)), yes)
     SRC += profiling/loop_profile.c
 endif
 
+# USB bus-reset race stress (OFF by default, never in a release). Masks interrupts
+# in erase-sized windows while the host enumerates, and counts in the USB ISR how
+# often a bus reset and a SETUP are handled in one pass (base/usb_stress.h). The
+# rig drives it with tools/hil_probes/usb_reset_race.py. Needs CONSOLE_ENABLE for
+# the `usbdiag:` readout.
+ifeq ($(strip $(POLYKYBD_USB_STRESS)), yes)
+    OPT_DEFS += -DPOLYKYBD_USB_STRESS -DPOLYKYBD_USB_RACE_DIAG
+    SRC += base/usb_stress.c
+endif
+
 # FW-2: the Ed25519 image-signature verify used by fw_staging.c (firmware signing)
 # comes from the vendored Monocypher, now the polymod_monocypher community module
 # (listed in both variants' keyboard.json "modules" arrays, which is the enable).

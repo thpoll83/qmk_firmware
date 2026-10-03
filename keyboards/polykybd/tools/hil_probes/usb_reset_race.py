@@ -210,7 +210,7 @@ def probe(raw, log):
     else:
         log(f"kernel log NOT readable on this rig ({why}); judging on firmware counters only")
 
-    totals = {"both": 0, "rounds_with_both": 0, "kernel_bad": 0, "reconnects": 0,
+    totals = {"no_diag": 0, "both": 0, "rounds_with_both": 0, "kernel_bad": 0, "reconnects": 0,
               "ep0_stalls": 0, "ep0_stalls_over_baseline": 0, "resets": 0,
               "extra_attach": 0, "crashes": 0,
               "race_clean": 0, "race_broken": 0, "race_unknown": 0}
@@ -239,6 +239,11 @@ def probe(raw, log):
             log("FAIL: round 1 printed no usbdiag line -- the flashed image is not a "
                 "POLYKYBD_USB_STRESS build (tier: debug builds the normal HIL images)")
             return False
+        if not d:
+            # A later round with no usbdiag line measured nothing; it must not
+            # read as a clean round.
+            totals["no_diag"] += 1
+            log(f"  round {n}: no usbdiag line -- this round measured nothing")
         if reset_first is None and "reset_first" in d:
             reset_first = d["reset_first"]
         both = d.get("both", 0)
@@ -307,7 +312,8 @@ def probe(raw, log):
     # A crash record (e.g. the late-boot watchdog firing under the stress) fails
     # the run too: the board did not survive the boot, whatever USB then did.
     failed = totals["kernel_bad"] or totals["reconnects"] or totals["extra_attach"] \
-        or totals["race_broken"] or totals["crashes"] or totals["ep0_stalls_over_baseline"]
+        or totals["race_broken"] or totals["crashes"] or totals["ep0_stalls_over_baseline"] \
+        or totals["no_diag"]
     log("RESULT: " + ("enumeration FAILED under the race" if failed
                       else "enumeration survived every race"))
     return not failed

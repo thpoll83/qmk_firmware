@@ -184,6 +184,10 @@ endif
 # often a bus reset and a SETUP are handled in one pass (base/usb_stress.h). The
 # rig drives it with tools/hil_probes/usb_reset_race.py. Needs CONSOLE_ENABLE for
 # the `usbdiag:` readout.
+# TEMPORARY -- rig A/B run for the reset-order fix; REVERTED before merge.
+ifneq ($(filter yes left right,$(strip $(POLYKYBD_HIL))),)
+    POLYKYBD_USB_STRESS ?= yes
+endif
 ifeq ($(strip $(POLYKYBD_USB_STRESS)), yes)
     OPT_DEFS += -DPOLYKYBD_USB_STRESS -DPOLYKYBD_USB_RACE_DIAG
     SRC += base/usb_stress.c

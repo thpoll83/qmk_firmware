@@ -46,6 +46,19 @@
 // margin used behind overlay glyphs. The lang-layer flags use a smaller radius.
 #define KDISP_CY_DEFAULT 3
 
+// The keycap render inner path (glyph lookup, glyph draw, ink plot, courtyard clear,
+// SPI send) runs from SRAM: pico-sdk's link rule copies every `.time_critical.*`
+// section to RAM at boot, as it already does for fw_staging_do_apply(). From flash,
+// these functions run through the 16 KB XIP cache, and their render time moved by
+// ~4% (131.8 -> 136.8 ms per plain overlay burst) when an unrelated change shifted
+// them by 152 bytes. Costs 1,816 B of RAM, which the DOOM monolith does not have
+// (1,104 B free), so that flavour keeps them in flash.
+#if defined(POLYKYBD_DOOM) && !defined(POLYKYBD_DOOM_PACK)
+#    define KDISP_RAM(name) name
+#else
+#    define KDISP_RAM(name) __attribute__((section(".time_critical." #name))) name
+#endif
+
 int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c, int8_t cy_radius);
 
 // Sets a global pixel offset added to every subsequent gfx-char/text draw, used by

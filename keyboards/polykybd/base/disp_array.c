@@ -128,7 +128,7 @@ static uint8_t s_gfx_scanline_phase = 0;
 
 // Returns true if absolute buffer row `abs_y` must stay dark in the active
 // scanline mode.
-static inline bool scanline_skip_row(int abs_y) {
+static inline bool KDISP_RAM(scanline_skip_row)(int abs_y) {
     const int y = abs_y + (int)s_gfx_scanline_phase;
     switch (s_gfx_scanline) {
         case 1:  return (y & 1);   // 1-on/1-off: phase 0 skips odd rows, 1 skips even
@@ -170,7 +170,7 @@ void kdisp_set_gfx_scanline2(bool scanline, uint8_t phase) {
 // bitmap blits (kdisp_fill_rect, kdisp_draw_bitmap, the tab/MRU chrome, clear_line)
 // must stay unconditional. The split is what the primitive IS — glyph and badge ink
 // follows the modes, a background does not — not a list of call sites to keep in sync.
-static inline void kdisp_plot_ink(int x, int y) {
+static inline void KDISP_RAM(kdisp_plot_ink)(int x, int y) {
     if (s_gfx_erase) {
         CLEAR_PIXEL_CLIPPED(x, y);
     } else if (!scanline_skip_row(y)) {
@@ -501,7 +501,7 @@ void kdisp_draw_badge_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
 
 // Draw a single character at bottom-left (x,y); ch is a 32-bit Unicode codepoint
 // (SMP codepoints > 0xFFFF allowed).
-int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, int8_t cy_radius) {
+int8_t KDISP_RAM(kdisp_write_gfx_char)(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, int8_t cy_radius) {
     const GFXfont * currentFont = 0;
     uint32_t first = 0;
     uint32_t last = 0;
@@ -1082,7 +1082,7 @@ static void courtyard_clear_run(int8_t x, int8_t y, int8_t bmp_y,
 // Column-native (OLED page-format) source: cb page-bytes per column, each byte holds
 // 8 vertical px, bit (bmp_y & 7) with the LSB at the top of the page. Run detection
 // still scans each row left to right — only the per-pixel source read is column-indexed.
-void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height, int8_t radius) {
+void KDISP_RAM(kdisp_clear_bitmap_courtyard)(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height, int8_t radius) {
     if (radius <= 0) return;
     const uint8_t cb = (bmp_height > 0) ? (uint8_t)((bmp_height + 7) >> 3) : 0;
     for (int8_t bmp_y = 0; bmp_y < bmp_height; ++bmp_y) {
@@ -1131,7 +1131,7 @@ void kdisp_set_buffer(uint8_t vertical_pixel_row_of_8_pixels) {
     memset(scratch_buffer, vertical_pixel_row_of_8_pixels, BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT);
 }
 
-void kdisp_send_buffer(void) {
+void KDISP_RAM(kdisp_send_buffer)(void) {
     //spi_start(SPI_SS_PIN, false, SPI_MODE, SPI_DIVISOR);
 
     spi_prepare_commands();
@@ -1225,7 +1225,7 @@ static void send_window_rect(uint8_t c0, uint8_t c1, uint8_t p0, uint8_t p1) {
 // Push the visible 72x40 window. When a panel is being tracked (awake render), only
 // union(prev, new) is streamed; otherwise the whole window. The caller must have
 // written the visible pixels into scratch_buffer at column BUFFER_X.
-void kdisp_send_window(void) {
+void KDISP_RAM(kdisp_send_window)(void) {
     const int16_t panel = s_track_panel;
     s_track_panel = -1;                       // one-shot: this send consumes the tracking
 

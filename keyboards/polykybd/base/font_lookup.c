@@ -8,6 +8,11 @@
 
 #include "font_lookup.h"
 
+// Runs from SRAM on the keyboard with the rest of the render inner path (see
+// KDISP_RAM in disp_array.h). Guarded because this file also builds on the host.
+#if defined(__arm__) && !(defined(POLYKYBD_DOOM) && !defined(POLYKYBD_DOOM_PACK))
+__attribute__((section(".time_critical.kdisp_gfx_glyph_font")))
+#endif
 const GFXglyph *kdisp_gfx_glyph_font(const GFXfont *const *fonts, uint8_t num_fonts, uint32_t ch,
                                      const GFXfont **out_font) {
     for (uint8_t idx = 0; idx < num_fonts; ++idx) {

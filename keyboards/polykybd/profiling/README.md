@@ -134,18 +134,8 @@ Request: `data[0]='P'`, `data[1]=32`, `data[2]=sub-command`, `data[3]=page`.
 
 * **page 0** — `[version][flags][2 reserved]` then `u32`: `iters`, `ovl_iters`,
   `max_us`, `max_bridge_us`, `max_render_us`, `ovl_wall_us`, `ovl_bridge_us`,
-  `ovl_render_us`, `window_us`. `flags` bit 0 = the worst iteration was
-  overlay-handling. `window_us` (v2) is the time since `RESET` by the keyboard's own
-  clock.
-* **page 1** — `u32 bkt_norm[7]` then `u32 bkt_ovl[7]`, latched when page 0 was read
-  (v2), so both pages describe the same instant.
-
-⚠️ **Never derive a rate from the time the HOST waited.** `RawHID.send()` re-sends a
-request whose reply is lost, 3 s per attempt. In run 37152259246 the idle READ took
-two retries per page, so the 3 s window actually lasted 9 s, and the report showed
-3013 loop iterations/s for a loop running at 1004/s. Page 1 arrived 6 s later still,
-and its histogram held 15119 iterations against page 0's 9039. `window_us` and the
-page-1 latch exist to make both mistakes impossible.
+  `ovl_render_us`. `flags` bit 0 = the worst iteration was overlay-handling.
+* **page 1** — `u32 bkt_norm[7]` then `u32 bkt_ovl[7]`.
 
 `version` is `LOOP_PROFILE_SNAPSHOT_VERSION` (`loop_profile.h`). **Bump it if the
 field layout ever changes** — the reader refuses an unknown version rather than

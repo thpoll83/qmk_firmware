@@ -36,7 +36,7 @@
 // loop_profile_snapshot). Bumped only if the field layout changes; the reader
 // (polykybd-ctnd station/perf.py) refuses a version it does not know rather than
 // mis-decoding a reordered struct.
-#define LOOP_PROFILE_SNAPSHOT_VERSION 2u
+#define LOOP_PROFILE_SNAPSHOT_VERSION 1u
 // Number of snapshot pages a full read returns (page 0 = scalars, page 1 = the
 // two histograms).
 #define LOOP_PROFILE_SNAPSHOT_PAGES   2u
@@ -81,12 +81,9 @@ void loop_profile_reset(void);
 // the 3-byte "P<cmd><status>" reply header already written and `out` pointing at
 // data[3]). Returns the number of bytes written, or 0 for an unknown page.
 // Page 0: [version][flags][2 reserved] then u32 LE: iters, ovl_iters, max_us,
-//         max_bridge_us, max_render_us, ovl_wall_us, ovl_bridge_us, ovl_render_us,
-//         window_us (v2: microseconds since the last reset, by the keyboard's
-//         clock; wraps after ~71 min).
+//         max_bridge_us, max_render_us, ovl_wall_us, ovl_bridge_us, ovl_render_us.
 //         flags bit0 = the worst iteration was an overlay-handling one.
-//         Reading page 0 also latches the histograms for page 1 (v2).
-// Page 1: u32 LE bkt_norm[7] then bkt_ovl[7], as of the last page-0 read.
+// Page 1: u32 LE bkt_norm[7] then bkt_ovl[7].
 uint8_t loop_profile_snapshot(uint8_t page, uint8_t *out, uint8_t cap);
 
 // Emit the periodic summary block to the HID console immediately, without waiting

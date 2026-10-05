@@ -9,6 +9,7 @@
 #include "base/fw_up_verdict.h"  // pure COMMIT-failure classification (unit-tested)
 #include "base/hand_stamp.h"     // handedness change: record here, write from the main loop
 #include "bridge_helper.h"       // send_to_bridge
+#include "poly_keymap.h"         // poly_prepare_for_flash
 #include "split_util.h"          // is_transport_connected
 #include "state.h"               // poly_state_touch: tell the host the V block moved
 
@@ -510,4 +511,74 @@ uint8_t fw_up_send_slave_reset(poly_reset_sync_t *msg) {
         ack = send_to_bridge(USER_SYNC_RESET, msg, sizeof(*msg), 20);
     }
     return ack;
+}
+
+char fw_up_xfer_begin(fw_up_begin_sync_t *msg, bool master_ok, fw_up_xfer_key_t *last,
+                      fw_up_xfer_begin_t *out) {
+    out->new_image = (msg->image_size != last->size || msg->image_crc != last->crc ||
+                      msg->bundle != last->bundle);
+    if (out->new_image && master_ok) {
+        last->size   = msg->image_size;
+        last->crc    = msg->image_crc;
+        last->bundle = msg->bundle;
+        // Drop to the base layer + refresh before the flash holds the main loop, so
+        // the user can still type plain characters meanwhile.
+        poly_prepare_for_flash();
+        // The master stages its OWN copy with the deferred erase -- the same path as
+        // the slave -- so its USB stays alive: housekeeping drives
+        // fw_staging_process_deferred() one sector per 70 ms. This also halts the
+        // master's core1 and sets fw_up_active.
+        fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
+        // Fire-and-forget: kicks the slave's deferred erase so both halves erase in
+        // parallel. Readiness is the poll below (and the host's re-polls).
+        send_to_bridge(USER_SYNC_FLASH_STAGE, msg, sizeof(*msg), 3);
+    }
+    // ONE readiness poll, no retry loop: if either half is not ready the host
+    // re-polls after a short delay, letting the main loop advance both erases.
+    out->slave_ack   = master_ok ? send_to_bridge(USER_SYNC_FLASH_STAGE, msg, sizeof(*msg), 1)
+                                 : SYNC_GIVEUP;   // never asked: the master rejected the image
+    out->slave_ok    = (out->slave_ack == SYNC_ACK);
+    out->master_done = !fw_staging_erase_pending();
+    if (!master_ok) return '!';
+    return (out->slave_ok && out->master_done) ? '.' : '~';
+}
+
+bool fw_up_xfer_chunk(uint8_t *data, uint8_t length, uint8_t cmd, const char *tag, bool *relay_ok) {
+    uint32_t offset;
+    memcpy(&offset, &data[2], 4);
+    const uint8_t *chunk_data = &data[6];
+    // The reply is identity-bound (fw_up_chunk_reply_t), not the bare 1-byte ack: a
+    // chunk only counts once the slave's write cursor moved PAST this offset. With
+    // the bare ACK a stale reply from the previous chunk desynchronised the cursors
+    // (2026-06-10, updates dying at 6% / 83%). A duplicate of an already-staged
+    // chunk has next_offset > offset and passes, so re-sends are idempotent.
+    const bool relayed = fw_up_relay_chunk_to_slave(offset, chunk_data, tag);
+    bool ok = relayed;
+    if (ok) {
+        ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
+        if (!ok) uprintf("%s: master staging write FAILED offset=%lu\n", tag, (unsigned long)offset);
+    }
+    if (relay_ok) *relay_ok = relayed;
+
+    memset(data, 0, length);
+    data[0] = 'P';
+    data[1] = cmd;
+    data[2] = ok ? '.' : '!';
+    if (!ok) {
+        // The lower of the two cursors. If the slave is unreachable its cursor is
+        // unknown, so report the master's (the host retries the current chunk).
+        uint32_t            resume = fw_staging_next_offset();
+        fw_staging_status_t st;
+        if (fw_up_query_slave_status(&st) && st.next_offset < resume) {
+            resume = st.next_offset;
+        }
+        memcpy(&data[3], &resume, 4);
+        uprintf("%s: NACK offset=%lu resume=%lu\n", tag, (unsigned long)offset, (unsigned long)resume);
+    }
+    return ok;
+}
+
+uint8_t fw_up_xfer_commit_slave(void) {
+    fw_up_commit_sync_t commit_msg = { .crc32 = 0, .op = FLASH_STAGE_COMMIT };
+    return send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10);
 }

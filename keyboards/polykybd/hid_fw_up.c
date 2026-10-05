@@ -47,45 +47,22 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             begin_msg.crc32      = 0;
 
             // Track the image so re-polls from the host don't redo the slave kick.
-            static uint32_t s_erased_size = 0;
-            static uint32_t s_erased_crc  = 0;
-            bool new_image = (image_size != s_erased_size || image_crc != s_erased_crc);
-
+            static fw_up_xfer_key_t s_erased = FW_UP_XFER_KEY_NONE;
+            fw_up_xfer_begin_t r;
+            const char status = fw_up_xfer_begin(&begin_msg, master_ok, &s_erased, &r);
+            const bool new_image   = r.new_image;
+            const uint8_t slave_ack = r.slave_ack;
+            const bool slave_ok    = r.slave_ok;
+            const bool master_done = r.master_done;
             if (new_image && master_ok) {
-                s_erased_size = image_size;
-                s_erased_crc  = image_crc;
-                // Drop to the base layer + refresh before the flash holds the main
-                // loop, so the user can still type plain characters meanwhile.
-                poly_prepare_for_flash();
-                // PHASE 1 (2026-05-30): the master now stages its OWN copy as well.
-                // Use the deferred erase — the same proven path as the slave — so
-                // the master's USB stays alive: housekeeping_task_user() drives the
-                // master's fw_staging_process_deferred() one sector per 70 ms.
-                // begin_deferred also halts the master's core1 and sets fw_up_active.
-                fw_staging_begin_deferred(image_size, image_crc);
-                // Kick the slave's deferred erase so both halves erase in parallel.
-                send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
                 uprintf("FW_UP_BEGIN: new image size=%lu crc=0x%08lx (master+slave staging)\n",
                         image_size, image_crc);
             }
 
-            // Single slave readiness poll (no retry loop).  If either half is not
-            // ready we return '~' and the host re-polls after a short delay, letting
-            // the QMK main loop advance both deferred erases between polls.
-            uint8_t slave_ack = master_ok
-                ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
-                : SYNC_GIVEUP;   // never asked — the master's own image is invalid
-            bool slave_ok    = (slave_ack == SYNC_ACK);
-            bool master_done = !fw_staging_erase_pending();   // master's own staging erased?
-
             memset(data, 0, length);
-            if (!master_ok) {
-                memcpy(data, "P\x40!", 3);   // hard error: invalid image
-            } else if (slave_ok && master_done) {
-                memcpy(data, "P\x40.", 3);   // both halves ready — host may start chunks
-            } else {
-                memcpy(data, "P\x40~", 3);   // still erasing — host should re-poll
-            }
+            data[0] = 'P';
+            data[1] = CMD_FW_UP_BEGIN;
+            data[2] = (uint8_t)status;   // '!' invalid image, '.' both ready, '~' re-poll
             uprintf("FW_UP_BEGIN: slave_ack=0x%02x slave_ok=%d new_image=%d\n",
                     slave_ack, slave_ok, new_image);
             // Log slave state once, on the first poll where the slave reports
@@ -127,10 +104,9 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
         }
 
         case CMD_FW_UP_CHUNK: { // data[2..5]=offset, data[6..61]=56 bytes of firmware
+#ifdef FW_UP_VERBOSE
             uint32_t offset;
             memcpy(&offset, &data[HID_DATA_IDX], 4);
-            const uint8_t *chunk_data = &data[HID_DATA_IDX + 4];
-#ifdef FW_UP_VERBOSE
             uprintf("FW_UP_CHUNK: offset=%lu\n", offset);
             // DIAGNOSTIC (2026-05-29, run 3): bracket the very first chunk to
             // localise the slave hang.  The core1-restart probe (run 3) did NOT
@@ -158,19 +134,10 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                         big_ok ? "OK" : "FAILED");
             }
 #endif
-            // Relay to slave FIRST so master's s_next_offset only advances after slave ACKs.
-            // This keeps both write cursors in sync: if the relay fails, the host can safely
-            // retry the same chunk and master will accept it (offset still matches).
-            //
-            // The reply is the identity-bound fw_up_chunk_reply_t, NOT the bare 1-byte
-            // poly_sync_reply_t: a chunk only counts as delivered when the slave's
-            // post-RPC write cursor moved PAST this chunk's offset.  With the bare ACK,
-            // a stale reply left over from the previous chunk was indistinguishable
-            // from the real one and silently desynchronised the cursors — the slave
-            // ended up one chunk behind and rejected the whole rest of the stream
-            // (2026-06-10, updates dying at 6% / 83%).  A duplicate re-send of an
-            // already-staged chunk has next_offset > offset and passes (idempotent).
-            uint8_t slave_ack = fw_up_relay_chunk_to_slave(offset, chunk_data, "FW_UP_CHUNK") ? SYNC_ACK : SYNC_GIVEUP;
+            // Relay first, then the master's own write, NACK with the resume point:
+            // fw_up_xfer_chunk(), shared with the font-pack transfer.
+            bool relay_ok = false;
+            const bool ok = fw_up_xfer_chunk(data, length, CMD_FW_UP_CHUNK, "FW_UP_CHUNK", &relay_ok);
             // First-failure diagnostic: when a chunk doesn't reach the slave,
             // immediately query the slave's internal state so we can tell from
             // the master serial log whether the slave is fully hung (status RPC
@@ -178,45 +145,17 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // shows the counters).  Gated to once per failure burst so we don't
             // spam if every chunk is failing.
             static bool s_logged_failure_status = false;
-            if (slave_ack != SYNC_ACK && !s_logged_failure_status) {
+            if (!relay_ok && !s_logged_failure_status) {
                 s_logged_failure_status = true;
                 fw_up_log_slave_status("chunk-fail");
-            } else if (slave_ack == SYNC_ACK) {
+            } else if (relay_ok) {
                 s_logged_failure_status = false;  // re-arm after recovery
             }
-            // PHASE 1: the master writes the same chunk to its OWN staging, but
-            // only after the slave accepted it.  Relaying first keeps both write
-            // cursors in lock-step — a failed relay leaves the master's s_next_offset
-            // untouched, so the host can safely retry the same offset on both halves.
-            bool ok = (slave_ack == SYNC_ACK);
-            if (ok) {
-                ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
-                if (!ok) uprintf("FW_UP_CHUNK: master staging write FAILED offset=%lu\n", offset);
-            }
 #ifdef FW_UP_VERBOSE
-            uprintf("FW_UP_CHUNK: slave_ack=0x%02x master_write_ok=%d\n", slave_ack, ok);
+            uprintf("FW_UP_CHUNK: slave_ack=0x%02x master_write_ok=%d\n", relay_ok ? SYNC_ACK : SYNC_GIVEUP, ok);
+#else
+            (void)ok;
 #endif
-            memset(data, 0, length);
-            memcpy(data, ok ? "P\x41." : "P\x41!", 3);
-            if (!ok) {
-                // Tell the host where the stream can be resumed: the lower of the
-                // two halves' write cursors.  Both halves ACK duplicate chunks
-                // idempotently, so the host can rewind to this offset and re-send
-                // from there instead of aborting the whole update.  If the slave
-                // is unreachable its cursor is unknown — report the master's own
-                // (the host will retry the current chunk with backoff).
-                uint32_t resume = fw_staging_next_offset();
-                fw_up_status_request_t sreq = { .crc32 = 0, .op = FLASH_STAGE_STATUS, .dummy = 0 };
-                fw_up_status_reply_t   srep;
-                memset(&srep, 0, sizeof(srep));
-                if (transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(sreq), &sreq, sizeof(srep), &srep) &&
-                    srep.crc32 == crc32_1byte((const uint8_t *)&srep.status, sizeof(srep.status), 0) &&
-                    srep.status.next_offset < resume) {
-                    resume = srep.status.next_offset;
-                }
-                memcpy(&data[3], &resume, 4);
-                uprintf("FW_UP_CHUNK: NACK offset=%lu resume=%lu\n", offset, resume);
-            }
             raw_hid_send(data, length);
             return true;
         }
@@ -257,7 +196,6 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             if (data[2] == 'x' && fw_staging_awaiting_confirm()) {
                 fw_staging_confirm_answer(false);
             }
-            fw_up_commit_sync_t commit_msg = { .crc32 = 0, .op = FLASH_STAGE_COMMIT };
             // FW-2: while the unsigned-image prompt is up the host re-polls COMMIT,
             // and each poll would otherwise re-run the SLAVE's finalize — which
             // re-erases and re-stamps its 4 KB staging header sector every time.
@@ -265,8 +203,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // anyway (that is the master's job), so it has nothing left to do.
             uint8_t slave_ack = fw_staging_confirm_in_progress()
                                     ? SYNC_ACK
-                                    : send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg,
-                                                     sizeof(commit_msg), 10);
+                                    : fw_up_xfer_commit_slave();
             bool master_ok = fw_staging_finalize();   // also clears fw_up_active + restarts master core1
             bool ok = (slave_ack == SYNC_ACK) && master_ok;
             // The firmware-update COMMIT keeps its four statuses (a fifth for "the

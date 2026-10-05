@@ -6,38 +6,38 @@
 
 #include <stddef.h>
 
-static const char POEM_0[] =
+const char idle_poem_0[] =
     "Every key knows its letter,\n"
     "every letter finds its key.\n"
     "Type a word, then type a better -\n"
     "the keyboard waits for me.";
-static const char POEM_1[] =
+const char idle_poem_1[] =
     "Seventy-two small screens,\n"
     "each one a tiny page.\n"
     "Press one, and watch it change -\n"
     "a stage upon a stage.";
-static const char POEM_2[] =
+const char idle_poem_2[] =
     "Soft clicks in the evening,\n"
     "letters falling into line.\n"
     "One key, then another,\n"
     "until the words are mine.";
-static const char POEM_3[] =
+const char idle_poem_3[] =
     "A thousand words a day,\n"
     "and not one of them mine.\n"
     "I only hold the letters\n"
     "until you make them shine.";
-static const char POEM_4[] =
+const char idle_poem_4[] =
     "When the room is quiet\n"
     "and the cursor stops to rest,\n"
     "I dream in little letters -\n"
     "the short words are the best.";
-_Static_assert(sizeof(POEM_0) - 1u <= 255u, "a poem is indexed by a uint8_t");
-_Static_assert(sizeof(POEM_1) - 1u <= 255u, "a poem is indexed by a uint8_t");
-_Static_assert(sizeof(POEM_2) - 1u <= 255u, "a poem is indexed by a uint8_t");
-_Static_assert(sizeof(POEM_3) - 1u <= 255u, "a poem is indexed by a uint8_t");
-_Static_assert(sizeof(POEM_4) - 1u <= 255u, "a poem is indexed by a uint8_t");
+_Static_assert(sizeof(idle_poem_0) - 1u <= 255u, "a poem is indexed by a uint8_t");
+_Static_assert(sizeof(idle_poem_1) - 1u <= 255u, "a poem is indexed by a uint8_t");
+_Static_assert(sizeof(idle_poem_2) - 1u <= 255u, "a poem is indexed by a uint8_t");
+_Static_assert(sizeof(idle_poem_3) - 1u <= 255u, "a poem is indexed by a uint8_t");
+_Static_assert(sizeof(idle_poem_4) - 1u <= 255u, "a poem is indexed by a uint8_t");
 
-const char *const idle_poems[] = {POEM_0, POEM_1, POEM_2, POEM_3, POEM_4};
+const char *const idle_poems[] = {idle_poem_0, idle_poem_1, idle_poem_2, idle_poem_3, idle_poem_4};
 #define POEM_N (sizeof(idle_poems) / sizeof(idle_poems[0]))
 _Static_assert(POEM_N >= 2u, "idle_poem_pick() needs two poems");
 const uint8_t idle_poem_count = (uint8_t)POEM_N;

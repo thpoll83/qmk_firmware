@@ -224,6 +224,7 @@ polykybd_tutorial_plan_INC := \
 # keymap and no display are linked. The firmware binding is anim/demo_mode.c.
 polykybd_demo_plan_SRC := \
 	$(POLY_BASE_PATH)/demo_plan.c \
+	$(POLY_BASE_PATH)/idle_poem_plan.c \
 	$(POLY_BASE_PATH)/tests/demo_plan_tests.cpp
 
 polykybd_demo_plan_INC := \

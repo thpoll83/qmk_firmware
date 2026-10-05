@@ -160,8 +160,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // KC_IDLE_TIMEOUT beside KC_IDLE_STYLE, as on split72. It is a GATED keycode
         // and every gated keycode must be mapped on this variant too, or it is blank
         // and unreachable here — split42 shares _SL's gated set but not its layout.
-        // KC_DEMO (gated too) takes the next slot on the same row.
-        KC_IDLE_STYLE, KC_IDLE_TIMEOUT, KC_GLYPH_SCRIPT, KC_DEMO, KC_NO, KC_NO,
+        // KC_DEMO and KC_DEMO_KEYS (gated too) take the next slots on the same row.
+        KC_IDLE_STYLE, KC_IDLE_TIMEOUT, KC_GLYPH_SCRIPT, KC_DEMO, KC_DEMO_KEYS, KC_NO,
         KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
         KC_NO,   KC_L0,   KC_L1,   KC_L2,   KC_L3,   KC_L4,
         KC_BASE, KC_TOGMODS, KC_NO,

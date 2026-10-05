@@ -2069,6 +2069,7 @@ static bool settings_key_is_gated(uint16_t keycode) {
         case KC_DEADKEY:
         case KC_EDEN:
         case KC_DEMO:
+        case KC_DEMO_KEYS:
             return true;
         default:
             return false;
@@ -6082,7 +6083,12 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         // demo's swallow never sees this key's own release and leave it half-handled.
         case KC_DEMO:
             if (!act) break;
-            demo_start();
+            demo_start(false);
+            break;
+        // The key demo: the same loop, and its typing reaches the host (no modifiers).
+        case KC_DEMO_KEYS:
+            if (!act) break;
+            demo_start(true);
             break;
         // Cycle the two display settings that were previously reachable only over HID
         // (cmds 28 / 30) — a keyboard with no host app could not change them at all.

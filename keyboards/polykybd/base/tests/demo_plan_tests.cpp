@@ -310,4 +310,62 @@ TEST(DemoExit, HoldIsDeliberateButShort) {
     EXPECT_LE(DEMO_EXIT_HOLD_MS, 5000u);   // not a wait the operator gives up on
 }
 
+// ---- key demo (KC_DEMO_KEYS) ----------------------------------------------------
+
+// The request: "without any modifier, so it writes into a notepad and never switches
+// away". Every stroke the playlist can send is a plain key — a letter, digit, space,
+// punctuation or Enter — and never Tab (focus), Esc, a modifier or a layer key.
+TEST(DemoKeys, EveryStrokeIsAPlainNonModifierKey) {
+    for (uint8_t i = 0; i < demo_playlist_len; ++i) {
+        if (Seg(i).kind != DEMO_TYPE) continue;
+        const char    *t = Seg(i).text;
+        const uint16_t n = demo_type_strokes(t);
+        ASSERT_EQ(n, std::strlen(t) + 1u);
+        for (uint16_t k = 0; k < n; ++k) {
+            SCOPED_TRACE(testing::Message() << "segment " << int(i) << " stroke " << k);
+            const uint8_t u = demo_stroke_usage(t, k);
+            EXPECT_GE(u, 0x04u);              // KC_A
+            EXPECT_LE(u, 0x38u);              // KC_SLASH: no Caps Lock, F-key or modifier
+            EXPECT_NE(u, 0x29u);              // Escape
+            EXPECT_NE(u, 0x2Bu);              // Tab
+            EXPECT_NE(u, 0x2Au);              // Backspace
+        }
+        EXPECT_EQ(demo_stroke_usage(t, (uint16_t)(n - 1u)), DEMO_USAGE_ENTER);
+        EXPECT_EQ(demo_stroke_usage(t, n), 0u);   // past the end: nothing
+    }
+}
+
+TEST(DemoKeys, ShiftIsDroppedNotSent) {
+    EXPECT_EQ(demo_host_usage('H'), demo_host_usage('h'));
+    EXPECT_EQ(demo_host_usage('('), demo_host_usage('9'));
+    EXPECT_EQ(demo_host_usage('"'), demo_host_usage('\''));
+    EXPECT_EQ(demo_host_usage('\t'), 0u);
+    EXPECT_EQ(demo_host_usage('\x01'), 0u);
+}
+
+// Each stroke goes down at the moment the board shows its key down, so the keycap and
+// the editor agree; the Enter goes down when typing ends, inside the segment.
+TEST(DemoKeys, StrokesLandWhenTheKeyIsShownDown) {
+    for (uint8_t i = 0; i < demo_playlist_len; ++i) {
+        const demo_seg_t &s = Seg(i);
+        if (s.kind != DEMO_TYPE) continue;
+        SCOPED_TRACE(int(i));
+        const uint16_t n    = demo_type_strokes(s.text);
+        uint32_t       prev = 0;
+        for (uint16_t k = 0; k + 1u < n; ++k) {
+            const uint32_t at = demo_stroke_press_ms(s.text, k);
+            EXPECT_GE(at, prev);
+            prev = at;
+            const demo_keys_t d = demo_type_keys(s.text, at);
+            EXPECT_EQ(d.ch, s.text[k]);
+            EXPECT_TRUE(d.key_down);
+            // Lifted before the next stroke goes down: a doubled letter arrives twice.
+            EXPECT_LT(at + DEMO_DOWN_MS, demo_stroke_press_ms(s.text, (uint16_t)(k + 1u)));
+        }
+        const uint32_t enter = demo_stroke_press_ms(s.text, (uint16_t)(n - 1u));
+        EXPECT_EQ(enter, demo_type_ms(s.text));
+        EXPECT_LE(enter + DEMO_DOWN_MS, demo_seg_ms(&s));
+    }
+}
+
 }  // namespace

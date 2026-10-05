@@ -967,7 +967,7 @@ static void oled_demo_screen(void) {
     const GFXfont *title[] = { tall ? &NotoSans_Regular_Mid_19px7b : &NotoSans_Regular_Small_15px7b };
     const GFXfont *small[] = { &NotoSans_Regular_Small_15px7b };
     kdisp_set_buffer(0);
-    oled_draw_text_centred(title, tall ? 26 : 14, U"Demo mode");
+    oled_draw_text_centred(title, tall ? 26 : 14, demo_sync_sends_keys() ? U"Key demo" : U"Demo mode");
     oled_draw_text_centred(small, tall ? 52 : 30, U"Hold Esc to exit");
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
     oled_render_dirty(true);

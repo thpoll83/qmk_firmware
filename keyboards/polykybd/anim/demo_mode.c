@@ -88,6 +88,12 @@ static bool     s_swallow_esc_release;
 // What the menus showed before the demo, handed back on exit.
 static uint8_t  s_saved_emj_cat, s_saved_emj_page, s_saved_lang_pack;
 
+// ---- key demo: what the host receives (master only) ----------------------------
+static bool     s_keys;          // KC_DEMO_KEYS: typed keys also reach the host
+static uint16_t s_stroke;        // next stroke of the current TYPE segment to send
+static uint8_t  s_held;          // usage held down at the host; 0 = none
+static uint32_t s_held_until;    // ms into the segment when s_held goes up
+
 // ---- per-half highlight state ---------------------------------------------------
 #define DEMO_NO_POS 0xFFu
 #define DEMO_HL_MAX 2u
@@ -102,6 +108,11 @@ bool demo_active(void) {
 
 bool demo_sync_active(void) {
     return (get_local_state()->demo[0] & DEMO_SYNC_ACTIVE) != 0;
+}
+
+bool demo_sync_sends_keys(void) {
+    const uint8_t f = get_local_state()->demo[0];
+    return (f & DEMO_SYNC_ACTIVE) != 0 && (f & DEMO_SYNC_KEYS) != 0;
 }
 
 uint8_t demo_display_mods(void) {
@@ -207,6 +218,55 @@ static void highlights_for(uint8_t seg, uint32_t into, uint8_t want[DEMO_HL_MAX]
     }
 }
 
+// ---- key demo: keystrokes to the host --------------------------------------------
+
+static void host_release(void) {
+    if (s_held == 0) return;
+    unregister_code(s_held);
+    s_held = 0;
+}
+
+static void host_press(uint8_t usage, uint32_t until) {
+    host_release();
+    if (usage == 0) return;
+    // Never a modifier. Nothing should have registered one (clear_keyboard() ran at
+    // the start and every real key is swallowed), but a Shift or GUI riding along on
+    // one keystroke is exactly what would switch a window or fire a shortcut.
+    // ⚠️ clear_keyboard() does NOT clear a pending one-shot modifier, and
+    // get_mods_for_report() ORs it into the next report — so a remapped OSM() tapped
+    // before the demo started would ride on its first keystroke. Clear all three.
+    if ((get_mods() | get_weak_mods()) != 0) {
+        clear_mods();
+        clear_weak_mods();
+    }
+#ifndef NO_ACTION_ONESHOT
+    if (get_oneshot_mods() != 0) clear_oneshot_mods();
+#endif
+    register_code(usage);   // a basic keycode: goes straight into the report, no layers
+    s_held       = usage;
+    s_held_until = until;
+}
+
+// Send every stroke of `s` that is due `into` ms in, then lift the held one when its
+// DEMO_DOWN_MS are over. Strokes are counted, not sampled from the highlight: a slow
+// housekeeping pass (a segment repaint is ~100 ms) can step right over an 85 ms press,
+// and a typing test must not lose that character. A late stroke is then sent at once,
+// and the next stroke's press lifts it.
+static void host_keys_tick(const demo_seg_t *s, uint32_t into) {
+    if (!s_keys || s->kind != DEMO_TYPE) {
+        host_release();
+        return;
+    }
+    const uint16_t n = demo_type_strokes(s->text);
+    while (s_stroke < n) {
+        const uint32_t at = demo_stroke_press_ms(s->text, s_stroke);
+        if (at > into) break;
+        host_press(demo_stroke_usage(s->text, s_stroke), at + DEMO_DOWN_MS);
+        ++s_stroke;
+    }
+    if (s_held != 0 && into >= s_held_until) host_release();
+}
+
 // ---- the master's segment machine -----------------------------------------------
 
 static void show_view(const demo_seg_t *s) {
@@ -233,6 +293,8 @@ static void enter_segment(uint8_t seg, uint32_t now) {
     s_seg    = seg;
     s_seg_t0 = now;
     s_mods   = 0;
+    host_release();
+    s_stroke = 0;
     if (was_idle && s->kind != DEMO_IDLE) {
         poly_wake_from_idle();   // the same wake the host's "stop idle" performs
     }
@@ -261,7 +323,7 @@ static bool demo_blocked(void) {
            poly_macro_rec_state() != POLY_REC_IDLE;
 }
 
-bool demo_start(void) {
+bool demo_start(bool send_keys) {
     if (!is_usb_host_side() || s_active) return false;
     if (demo_blocked()) {
         uprint("Demo: refused, another mode owns the board\n");
@@ -277,16 +339,21 @@ bool demo_start(void) {
     s_esc_since           = 0;
     s_swallow_esc_release = false;
     s_last_tick           = timer_read32();
-    access_local_state()->demo[0] = DEMO_SYNC_ACTIVE;
+    s_keys                = send_keys;
+    s_held                = 0;
+    access_local_state()->demo[0] = (uint8_t)(DEMO_SYNC_ACTIVE | (send_keys ? DEMO_SYNC_KEYS : 0u));
     s_seg = 0;
     enter_segment(0, s_last_tick);
-    uprintf("Demo: started, %lu s per loop\n", (unsigned long)(demo_cycle_ms() / 1000u));
+    uprintf("Demo: started%s, %lu s per loop\n", send_keys ? " (keys to host)" : "",
+            (unsigned long)(demo_cycle_ms() / 1000u));
     return true;
 }
 
 void demo_stop(void) {
     if (!s_active) return;
     const bool was_idle = demo_playlist[s_seg].kind == DEMO_IDLE;
+    host_release();   // a key left down at the host would auto-repeat until USB drops
+    s_keys    = false;
     s_active  = false;
     s_look_on = false;
     s_mods    = 0;
@@ -325,6 +392,9 @@ static void master_tick(uint32_t now) {
 
     const demo_seg_t *s    = &demo_playlist[s_seg];
     const uint32_t    into = now - s_seg_t0;
+    // Before the segment change, so a late pass still sends this segment's last
+    // characters and its Enter rather than dropping them.
+    host_keys_tick(s, into);
     if (into >= demo_seg_ms(s)) {
         enter_segment((uint8_t)((s_seg + 1u) % demo_playlist_len), now);
         return;
@@ -394,5 +464,7 @@ bool demo_process_record(uint16_t keycode, keyrecord_t *record) {
             s_esc_since = 0;   // let go early: the hold has to be continuous
         }
     }
-    return true;   // the demo IS the board: nothing reaches the host
+    // The demo IS the board: no visitor's key reaches the host. In the key demo the
+    // host still receives the demo's own strokes, which bypass this path entirely.
+    return true;
 }

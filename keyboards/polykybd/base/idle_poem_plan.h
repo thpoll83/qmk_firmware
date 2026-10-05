@@ -32,6 +32,10 @@
 // They are const, so they live in flash and cost no RAM.
 extern const char *const idle_poems[];
 extern const uint8_t     idle_poem_count;
+// The same texts by name, so another const table can point at one (an array element is
+// not a constant expression in C, an object's address is). The showroom demo types
+// these rather than storing prose of its own (base/demo_plan.c).
+extern const char idle_poem_0[], idle_poem_1[], idle_poem_2[], idle_poem_3[], idle_poem_4[];
 
 // The length of `poem`, and how long typing it takes (every keystroke and line wait).
 uint8_t  idle_poem_len(const char *poem);

@@ -175,7 +175,8 @@ void menu_cascade_tick(void) {
                              : into < CASC_ZOOM_HALF_MS ? (uint8_t)ZOOM_HALF
                                                         : (uint8_t)ZOOM_FULL;
         if (!bit(s_drawn, idx) || s_stage[idx] != want) {
-            // Same draw as the focus ring's repaint. s_in_draw because the legend
+            // Same draw as the focus ring's repaint: tracked, so the next full render
+            // diffs against what is really on the panel. s_in_draw because the legend
             // draw asks menu_cascade_hidden(), which must answer "no" to its own frame.
             set_bit(s_drawn, idx);
             kdisp_set_contrast(lvl);

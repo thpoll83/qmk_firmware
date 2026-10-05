@@ -26,7 +26,8 @@
 // further through the panel's VCOMH or pre-charge registers flickered on hardware, with
 // brighter strips, so the light comes off the content.
 //
-// After "Poly Kybd" is deleted, a short poem is typed in a smaller face
+// After "Poly Kybd" is deleted, a short poem (one of SI_POEMS, the next one each cycle)
+// is typed in a smaller face
 // (NotoSans_Regular_Base_14pt7b, the resident keycap face, ~10 letters a panel) as one
 // line across both panels. Once the line reaches the right edge, every keystroke pushes
 // the whole line left by that character's advance, so the text leaves on the left as a
@@ -167,14 +168,30 @@ static const uint32_t SI_WORD_RIGHT[] = U"Kybd";
 #define SI_NAME_MS (SI_WAIT_MS + SI_SLOTS * SI_KEY_MS + SI_DONE_MS + SI_APPEAR_MS + \
                     (SI_SLOTS - 1u) * SI_STEP_MS + SI_PAUSE_MS + SI_SLOTS * SI_KEY_MS)
 
-// The poem: printable ASCII (the face covers 0x20..0x7E) and '\n' for a line break.
-static const char SI_POEM[] =
+// The poems, one per cycle in turn: printable ASCII (the face covers 0x20..0x7E) and
+// '\n' for a line break. They are const, so they live in flash and cost no RAM; each
+// one adds only its entry in s_ptype_ms. Both halves count cycles on the same clock, so
+// they always type the same poem.
+static const char SI_POEM_0[] =
     "Every key knows its letter,\n"
     "every letter finds its key.\n"
     "Type a word, then type a better -\n"
     "the keyboard waits for me.";
-#define SI_POEM_LEN ((uint8_t)(sizeof(SI_POEM) - 1u))
-_Static_assert(sizeof(SI_POEM) - 1u <= 255u, "SI_POEM is indexed by a uint8_t");
+static const char SI_POEM_1[] =
+    "Seventy-two small screens,\n"
+    "each one a tiny page.\n"
+    "Press one, and watch it change -\n"
+    "a stage upon a stage.";
+static const char SI_POEM_2[] =
+    "Soft clicks in the evening,\n"
+    "letters falling into line.\n"
+    "One key, then another,\n"
+    "until the words are mine.";
+_Static_assert(sizeof(SI_POEM_0) - 1u <= 255u, "a poem is indexed by a uint8_t");
+_Static_assert(sizeof(SI_POEM_1) - 1u <= 255u, "a poem is indexed by a uint8_t");
+_Static_assert(sizeof(SI_POEM_2) - 1u <= 255u, "a poem is indexed by a uint8_t");
+static const char *const SI_POEMS[] = {SI_POEM_0, SI_POEM_1, SI_POEM_2};
+#define SI_POEM_N ((uint8_t)(sizeof(SI_POEMS) / sizeof(SI_POEMS[0])))
 // Defined in poly_keymap.c's translation unit (gfx_used_fonts.h, RESIDENT_FONTS);
 // extern here so its PROGMEM tables are not linked twice (see oled_helper.c).
 extern const GFXfont NotoSans_Regular_Base_14pt7b;
@@ -198,8 +215,12 @@ static const uint8_t *s_bitmap;
 static const uint8_t *s_pbitmap;
 static uint8_t        s_pbase;
 static uint8_t        s_pcur_w;
-static uint32_t       s_ptype_ms;
-static uint32_t       s_cycle_ms;
+static uint32_t       s_ptype_ms[SI_POEM_N];   // how long typing each poem takes
+static uint32_t       s_cycle_ms;              // fixed: set by the longest poem
+// The poem this cycle (si_poem_select()).
+static const char    *s_poem;
+static uint8_t        s_plen;
+static uint32_t       s_ptype;
 
 // One poem glyph in view this frame, in field columns before the scroll is applied.
 typedef struct {
@@ -359,21 +380,39 @@ static uint8_t si_poem_advance(char c) {
 // The time from one keystroke to the next, after typing `c`.
 static uint32_t si_poem_key_ms(char c) { return SI_POEM_KEY_MS + (c == '\n' ? SI_POEM_LINE_MS : 0u); }
 
+// Measure every poem once per session. They share one baseline (the tallest letter of
+// any poem) so the line sits at the same height whichever is typed, and one cycle
+// length (the longest poem's), so the cycle arithmetic stays a plain modulo; a shorter
+// poem just leaves a longer blank pause before "Poly Kybd" starts again.
 static void si_poem_layout(void) {
-    int8_t top = 0;
-    s_ptype_ms = 0;
-    for (uint8_t i = 0; i < SI_POEM_LEN; ++i) {
-        const char c = SI_POEM[i];
-        s_ptype_ms += si_poem_key_ms(c);
-        if (c == ' ' || c == '\n') continue;
-        const GFXglyph *g = si_poem_glyph(c);
-        if (g != NULL && glyph_y_offset(g) < top) top = glyph_y_offset(g);
+    int8_t   top     = 0;
+    uint32_t longest = 0;
+    for (uint8_t p = 0; p < SI_POEM_N; ++p) {
+        uint32_t type = 0;
+        uint8_t  len  = 0;
+        for (const char *c = SI_POEMS[p]; *c; ++c, ++len) {
+            type += si_poem_key_ms(*c);
+            if (*c == ' ' || *c == '\n') continue;
+            const GFXglyph *g = si_poem_glyph(*c);
+            if (g != NULL && glyph_y_offset(g) < top) top = glyph_y_offset(g);
+        }
+        s_ptype_ms[p] = type;
+        const uint32_t all = type + (uint32_t)len * SI_POEM_BS_MS;   // typed, then deleted
+        if (all > longest) longest = all;
     }
     s_pbase  = (uint8_t)(-top);
     const uint8_t n = si_poem_advance('n');
     s_pcur_w = (uint8_t)(n > 2u ? n - 2u : n);
-    s_cycle_ms = SI_NAME_MS + SI_POEM_LEAD_MS + s_ptype_ms + SI_POEM_HOLD_MS +
-                 SI_POEM_LEN * SI_POEM_BS_MS + SI_POEM_EMPTY_MS + SI_GAP_MS;
+    s_cycle_ms = SI_NAME_MS + SI_POEM_LEAD_MS + longest + SI_POEM_HOLD_MS + SI_POEM_EMPTY_MS + SI_GAP_MS;
+}
+
+// Pick the poem for the cycle `t` falls in.
+static void si_poem_select(uint32_t t) {
+    const uint8_t p = (uint8_t)((t / s_cycle_ms) % SI_POEM_N);
+    s_poem  = SI_POEMS[p];
+    s_ptype = s_ptype_ms[p];
+    s_plen  = 0;
+    while (s_poem[s_plen] != '\0') ++s_plen;
 }
 
 // Work out what of the poem shows `u` ms into phase 6, for the panel whose field column
@@ -387,26 +426,26 @@ static bool si_poem_visible(uint32_t u, int16_t fx0) {
     if (u < SI_POEM_LEAD_MS) {
         typed  = 0;
         cursor = si_blink(u);
-    } else if ((u -= SI_POEM_LEAD_MS) < s_ptype_ms) {
+    } else if ((u -= SI_POEM_LEAD_MS) < s_ptype) {
         // Character i appears at the sum of the keystroke times before it.
         uint32_t at = 0, last = 0;
         typed = 0;
-        while (typed < SI_POEM_LEN && at <= u) {
+        while (typed < s_plen && at <= u) {
             last = at;
-            at += si_poem_key_ms(SI_POEM[typed]);
+            at += si_poem_key_ms(s_poem[typed]);
             ++typed;
         }
         // Steady while keys are coming, blinking while the typist waits at a line break.
         const uint32_t since = u - last;
         cursor = since < SI_POEM_KEY_MS || si_blink(since - SI_POEM_KEY_MS);
-    } else if ((u -= s_ptype_ms) < SI_POEM_HOLD_MS) {
-        typed  = SI_POEM_LEN;
+    } else if ((u -= s_ptype) < SI_POEM_HOLD_MS) {
+        typed  = s_plen;
         cursor = si_blink(u);
-    } else if ((u -= SI_POEM_HOLD_MS) < SI_POEM_LEN * SI_POEM_BS_MS) {
+    } else if ((u -= SI_POEM_HOLD_MS) < (uint32_t)s_plen * SI_POEM_BS_MS) {
         // Backspace: the first press takes the last character at once.
-        typed  = (uint8_t)(SI_POEM_LEN - 1u - u / SI_POEM_BS_MS);
+        typed  = (uint8_t)(s_plen - 1u - u / SI_POEM_BS_MS);
         cursor = true;
-    } else if ((u -= SI_POEM_LEN * SI_POEM_BS_MS) < SI_POEM_EMPTY_MS) {
+    } else if ((u -= (uint32_t)s_plen * SI_POEM_BS_MS) < SI_POEM_EMPTY_MS) {
         typed  = 0;
         cursor = si_blink(u);
     } else {
@@ -414,7 +453,7 @@ static bool si_poem_visible(uint32_t u, int16_t fx0) {
     }
 
     int16_t pen = SI_POEM_X0;
-    for (uint8_t i = 0; i < typed; ++i) pen = (int16_t)(pen + si_poem_advance(SI_POEM[i]));
+    for (uint8_t i = 0; i < typed; ++i) pen = (int16_t)(pen + si_poem_advance(s_poem[i]));
     // Keep the cursor inside the right panel: once the line reaches it, the whole line
     // moves left by what each new key adds, and the start leaves on the left.
     const int16_t right = (int16_t)(SI_RIGHT_X0 + SI_W - SI_POEM_MARGIN - s_pcur_w - 1);
@@ -422,7 +461,7 @@ static bool si_poem_visible(uint32_t u, int16_t fx0) {
 
     pen = (int16_t)(SI_POEM_X0 - shift);
     for (uint8_t i = 0; i < typed; ++i) {
-        const char c = SI_POEM[i];
+        const char c = s_poem[i];
         if (c != ' ' && c != '\n') {
             const GFXglyph *g = si_poem_glyph(c);
             if (g != NULL) {
@@ -511,6 +550,7 @@ void status_idle_task(void) {
     const uint32_t   u      = t % s_cycle_ms;
     const bool       poem   = u >= SI_NAME_MS;   // phases 6..8
     const si_state_t st     = poem ? (si_state_t){0, 0, 0, -1} : si_state(u);
+    if (poem) si_poem_select(t);
     const bool       any    = poem ? si_poem_visible(u - SI_NAME_MS, fx0) : (st.to > st.from || st.cur >= 0);
     const uint8_t    parity = si_band_parity(t);
     const uint32_t   tp     = (t * SI_PLASMA_NUM) / SI_PLASMA_DEN;   // the bands' slowed clock

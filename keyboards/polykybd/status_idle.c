@@ -1,7 +1,8 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// The status panel's idle screen (split72): plasma bands with "Poly Kybd" being typed.
+// The status panel's idle screen (split72): plasma bands with "Poly Kybd" being typed,
+// then a short poem typed across both panels.
 //
 // The background is a classic demoscene plasma — a sum of four sines of Eden's sine
 // table, one of them fed by a distance from the centre — drawn as CONTOUR BANDS rather
@@ -16,14 +17,31 @@
 // by 1 px), dark inside, and cut out of the bands by a 2 px black ring (the shape grown
 // by a radius-2 disc) and nothing more: the bands keep flowing between the letters and
 // through the counters. The bands are scanlines (one row lit, one dark), and the dark
-// rows are never computed, which halves the plasma's cost per frame. Hollow letters and
+// rows are never computed, which halves the plasma's cost per frame. ⚠️ Which rows are
+// lit swaps every cycle (si_band_parity()): with the even rows always lit, they would
+// age faster than the odd ones and leave faint stripes on a panel that idles for hours. Hollow letters and
 // scanline bands take the light down. Letters in scanlines were tried first and looked
 // too sparse at one row lit in three; a 2 px outline was brighter than it needed to be.
 // The idle panel is already at contrast register 0, the SSD1306 floor. Dimming it
 // further through the panel's VCOMH or pre-charge registers flickered on hardware, with
 // brighter strips, so the light comes off the content.
 //
-// Nothing is stored: every frame is computed from the font's column bytes in flash and
+// After "Poly Kybd" is deleted, a short poem (one of idle_poems in base/idle_poem_plan.c, picked at random each cycle)
+// is typed in a smaller face
+// (NotoSans_Regular_Base_14pt7b, the resident keycap face, ~10 letters a panel) as one
+// line across both panels. Once the line reaches the right edge, every keystroke pushes
+// the whole line left by that character's advance, so the text leaves on the left as a
+// typewriter's would; letters crossing the physical gap between the panels are simply
+// not shown. It is then deleted again with Backspace, from the end, and the start of
+// the line slides back in from the left as the line shortens. Its letters are drawn
+// like the big ones: a 1 px outline, dark inside, in a 2 px black ring. At this size
+// many strokes are only 2 px wide, and their outline is the whole stroke, so only the
+// wider parts read as hollow. ⚠️ So the poem's outline is drawn 1 px OUTSIDE the glyph
+// instead (the glyph grown by one px in all eight directions, minus the glyph): the
+// whole glyph is the dark inside, which keeps even a 2 px stroke hollow, and the ring
+// goes around the outline. "Poly Kybd" keeps the outline inside its 24 pt strokes.
+//
+// Nothing is stored: every frame is computed from the fonts' column bytes in flash and
 // Eden's tables; RAM is a handful of statics.
 //
 // ⚠️ Frame pacing: the bands move everywhere, so nearly all 16 blocks are dirty every
@@ -60,6 +78,7 @@
 #include "side.h"               // is_left_side
 #include "state.h"              // get_local_state
 #include "base/com.h"           // DISP_IDLE
+#include "base/idle_poem_plan.h" // the poems, their timeline and the pick
 
 #define SI_W 128
 #define SI_H 64
@@ -83,7 +102,7 @@ extern OLED_BLOCK_TYPE oled_dirty;   // drivers/oled/oled_driver.c: blocks not y
 //   5. Del, a key at a time: the character under the cursor goes and the rest of the
 //      line moves LEFT to close the gap, as in an editor — so "Kybd" slides across the
 //      physical gap into the left panel as the line empties;
-//   6. the cursor goes, a pause, and it starts over.
+//   then the poem (phases 6..8, below), and it starts over.
 // Both halves run the same timeline from the same idle-session clock, and each lays
 // out the WHOLE line in field columns, since letters cross from one panel to the other.
 // Slots number the line: 0..NL-1 the left letters, NL..NL+SP-1 the spaces, the right
@@ -97,10 +116,13 @@ extern OLED_BLOCK_TYPE oled_dirty;   // drivers/oled/oled_driver.c: blocks not y
 #define SI_DONE_MS    5000u    // 3: finished text, no cursor
 #define SI_APPEAR_MS  1200u    // 4: cursor back on the d, blinking, before it walks
 #define SI_PAUSE_MS   800u     // 4: cursor blinking under the P before the first Del
-#define SI_GAP_MS     3000u    // 6: nothing, before starting over
+#define SI_GAP_MS     3000u    // 8: nothing, before starting over
 #define SI_BLINK_MS   530u     // cursor half-period while it waits
 #define SI_RING       2        // the black ring's radius, px
-#define SI_WIN        (2 * SI_RING + 1)
+// How far a pixel's look-up reaches sideways: the ring, plus the poem's outline, which
+// sits 1 px OUTSIDE its glyphs. The window holds the line's columns x-REACH .. x+REACH.
+#define SI_REACH      (SI_RING + 1)
+#define SI_WIN        (2 * SI_REACH + 1)
 // The panel's frame period. 150 ms divides SI_STEP_MS and SI_KEY_MS, so every cursor
 // step and keystroke lasts a whole number of frames and the typing stays even.
 #define SI_FRAME_MS   150u
@@ -112,6 +134,21 @@ extern OLED_BLOCK_TYPE oled_dirty;   // drivers/oled/oled_driver.c: blocks not y
 #define SI_FRAME_FAST_MS 75u
 // Eden waits for our flush at most this long, so a stuck bus cannot freeze the keycaps.
 #define SI_HOLD_MAX_MS 100u
+// The poem (phases 6 and 7), typed after "Poly Kybd" has been deleted:
+//   6. the cursor blinks at the start of the left panel, then the poem is typed a key at
+//      a time; after each line break it waits, blinking, as a typist would;
+//   7. the last line stands with the cursor blinking after it, then Backspace deletes
+//      it a character at a time from the end, at the pace of a held key, and the empty
+//      cursor blinks a moment;
+//   8. then the cursor goes, a pause, and it starts over.
+// The timing lives in base/idle_poem_plan.h (pure, unit-tested); these are the layout.
+#define SI_POEM_X0      4      // field column the poem starts at
+#define SI_POEM_MARGIN  4      // px kept free at the right panel's right edge
+#define SI_POEM_NL_SP   3u     // a line break takes the room of this many spaces
+// Glyphs one panel's columns (plus the ring's window) can show at once. The narrowest
+// glyph in the poem advances 4 px, so 132 columns hold at most 33; a longer run is
+// cut at the right edge rather than overflowing (see si_poem_visible()).
+#define SI_POEM_VIS_MAX 34u
 // The plasma bands run on a slowed clock (5/32 of real time).
 #define SI_PLASMA_NUM 5u
 #define SI_PLASMA_DEN 32u
@@ -122,8 +159,13 @@ static const uint32_t SI_WORD_RIGHT[] = U"Kybd";
 #define SI_NR    ((uint8_t)(sizeof(SI_WORD_RIGHT) / sizeof(SI_WORD_RIGHT[0]) - 1u))
 #define SI_SP    2u            // cursor stops between the words
 #define SI_SLOTS ((uint8_t)(SI_NL + SI_SP + SI_NR))
-#define SI_CYCLE_MS (SI_WAIT_MS + SI_SLOTS * SI_KEY_MS + SI_DONE_MS + SI_APPEAR_MS + \
-                     (SI_SLOTS - 1u) * SI_STEP_MS + SI_PAUSE_MS + SI_SLOTS * SI_KEY_MS + SI_GAP_MS)
+// Phases 1..5: "Poly Kybd" typed and deleted.
+#define SI_NAME_MS (SI_WAIT_MS + SI_SLOTS * SI_KEY_MS + SI_DONE_MS + SI_APPEAR_MS + \
+                    (SI_SLOTS - 1u) * SI_STEP_MS + SI_PAUSE_MS + SI_SLOTS * SI_KEY_MS)
+
+// Defined in poly_keymap.c's translation unit (gfx_used_fonts.h, RESIDENT_FONTS);
+// extern here so its PROGMEM tables are not linked twice (see oled_helper.c).
+extern const GFXfont NotoSans_Regular_Base_14pt7b;
 
 // One slot of the line, laid out once per session, in FIELD columns (x) and in rows
 // relative to the top of the tallest letter (top).
@@ -139,11 +181,30 @@ static si_slot_t      s_slot[SI_SLOTS];
 static uint8_t        s_base;        // baseline row, below the tallest letter's top
 static const uint8_t *s_bitmap;
 
+// The poem's layout, measured once per session: its baseline below the tallest
+// letter's top, the cursor's width, how long typing it takes, and the whole cycle.
+static const uint8_t *s_pbitmap;
+static uint8_t        s_pbase;
+static uint8_t        s_pcur_w;
+static uint32_t       s_cycle_ms;   // fixed: the poem phase fits the longest poem
+static const char    *s_poem;       // the poem this cycle (si_poem_select())
+
+// One poem glyph in view this frame, in field columns before the scroll is applied.
+typedef struct {
+    int16_t  x;
+    uint16_t bo;
+    uint8_t  w, h, top;
+} si_pglyph_t;
+static si_pglyph_t s_pvis[SI_POEM_VIS_MAX];
+static uint8_t     s_pnvis;
+static int16_t     s_pcur_x;       // the cursor's first column, -1 for none
+
 static uint32_t s_t0;
 static uint16_t s_frames;         // frames composed since the last console report
 static uint32_t s_last_call;
 static uint32_t s_last_frame;     // when the last frame was composed
 static bool     s_started;
+static uint16_t s_seed;           // the poem pick's seed, taken at the session's start
 static bool     s_owned;          // oled_task_user() gave the panel to the idle screen
 static uint8_t  s_worst_ms;
 static uint32_t s_next_log;
@@ -196,6 +257,16 @@ static void si_layout(void) {
     s_base = (uint8_t)(-top);                  // pen y 0 is the baseline
 }
 
+// Column `gx` of a glyph as a 64-bit column, bit 0 = the glyph's top row.
+static uint64_t si_glyph_col(const uint8_t *bitmap, uint16_t bo, uint8_t h, uint8_t gx) {
+    const uint8_t  cb = glyph_col_bytes(h);
+    const uint8_t *p  = bitmap + bo + (uint16_t)gx * cb;
+    uint64_t v = 0;
+    for (uint8_t b = 0; b < cb; ++b) v |= (uint64_t)pgm_read_byte(p + b) << (8u * b);
+    if (h < 64) v &= ((uint64_t)1 << h) - 1u;
+    return v;
+}
+
 // The line in field column `fx` as a 64-bit column, bit 0 = the tallest letter's top:
 // slots [from, to) drawn `shift` px to the left, plus the underscore under slot `cur`
 // (-1: none), 5 px thick just below the baseline.
@@ -215,12 +286,7 @@ static uint64_t si_line_col(int16_t fx, uint8_t from, uint8_t to, int16_t shift,
         const si_slot_t *g  = &s_slot[i];
         const int16_t    gx = (int16_t)(fx - g->x);
         if (gx < 0 || gx >= g->w) continue;
-        const uint8_t  cb = glyph_col_bytes(g->h);
-        const uint8_t *p  = s_bitmap + g->bo + (uint16_t)gx * cb;
-        uint64_t v = 0;
-        for (uint8_t b = 0; b < cb; ++b) v |= (uint64_t)pgm_read_byte(p + b) << (8u * b);
-        if (g->h < 64) v &= ((uint64_t)1 << g->h) - 1u;
-        col |= v << g->top;
+        col |= si_glyph_col(s_bitmap, g->bo, g->h, (uint8_t)gx) << g->top;
     }
     return col;
 }
@@ -259,7 +325,122 @@ static si_state_t si_state(uint32_t u) {
         if (gone >= S) return (si_state_t){0, 0, 0, -1};
         return (si_state_t){gone, S, (int16_t)(s_slot[gone].pen0 - s_slot[0].pen0), (int8_t)gone};
     }
-    return (si_state_t){0, 0, 0, -1};                                                       // 6
+    return (si_state_t){0, 0, 0, -1};                                                       // 5 done
+}
+
+// --- the poem --------------------------------------------------------------
+
+static const GFXglyph *si_poem_glyph(char c) {
+    const GFXfont *const face[] = {&NotoSans_Regular_Base_14pt7b};
+    const GFXfont        *font  = NULL;
+    const GFXglyph       *g     = kdisp_gfx_glyph_font(face, 1, (uint32_t)(uint8_t)c, &font);
+    if (g != NULL) s_pbitmap = pgm_read_bitmap_ptr(font);
+    return g;
+}
+
+// How far the pen moves for one character; a line break is SI_POEM_NL_SP spaces.
+static uint8_t si_poem_advance(char c) {
+    const GFXglyph *g = si_poem_glyph(c == '\n' ? ' ' : c);
+    const uint8_t   a = g ? glyph_x_advance(g) : 0u;
+    return c == '\n' ? (uint8_t)(a * SI_POEM_NL_SP) : a;
+}
+
+// Measure the poems once per session. They share one baseline (the tallest letter of
+// any poem) so the line sits at the same height whichever is typed, and one cycle
+// length (idle_poem_phase_ms() fits the longest poem), so the cycle arithmetic stays a
+// plain modulo; a shorter poem just leaves a longer blank pause before "Poly Kybd".
+static void si_poem_layout(void) {
+    int8_t top = 0;
+    for (uint8_t p = 0; p < idle_poem_count; ++p)
+        for (const char *c = idle_poems[p]; *c; ++c) {
+            if (*c == ' ' || *c == '\n') continue;
+            const GFXglyph *g = si_poem_glyph(*c);
+            if (g != NULL && glyph_y_offset(g) < top) top = glyph_y_offset(g);
+        }
+    s_pbase  = (uint8_t)(-top);
+    const uint8_t n = si_poem_advance('n');
+    s_pcur_w = (uint8_t)(n > 2u ? n - 2u : n);
+    s_cycle_ms = SI_NAME_MS + idle_poem_phase_ms() + SI_GAP_MS;
+}
+
+// Pick the poem for the cycle `t` falls in (at random, never the last one again).
+// ⚠️ idle_poem_pick() is a pure function of the seed and the cycle, and both must be the
+// same on both halves without a new sync field. The cycle is: both run the same cycle
+// clock. The seed is the last letter key typed (poly_last_t.latin_kc), which the
+// master already syncs to the slave (USER_SYNC_LASTKEY_DATA) and which has stopped
+// changing long before the board goes idle, so it varies from session to session and
+// both halves hold the same value when a session starts. A per-half counter of idle
+// sessions was tried first and drifts for good once one half reboots on its own. The
+// one gap left: a slave rebooted alone reads 0 until the next letter is typed, because
+// the master only resends a value that changed.
+static void si_poem_select(uint32_t t) { s_poem = idle_poems[idle_poem_pick(s_seed, t / s_cycle_ms)]; }
+
+// Work out what of the poem shows `u` ms into phase 6, for the panel whose field column
+// 0 is `fx0`: the glyphs in view go to s_pvis, the cursor's first column to s_pcur_x.
+// Returns false when nothing of it shows anywhere (phase 8).
+static bool si_poem_visible(uint32_t u, int16_t fx0) {
+    s_pnvis  = 0;
+    s_pcur_x = -1;
+    idle_poem_frame_t f;
+    if (!idle_poem_frame(s_poem, u, &f)) return false;
+    const uint8_t typed  = f.typed;
+    const bool    cursor = f.cursor;
+
+    int16_t pen = SI_POEM_X0;
+    for (uint8_t i = 0; i < typed; ++i) pen = (int16_t)(pen + si_poem_advance(s_poem[i]));
+    // Keep the cursor inside the right panel: once the line reaches it, the whole line
+    // moves left by what each new key adds, and the start leaves on the left.
+    const int16_t right = (int16_t)(SI_RIGHT_X0 + SI_W - SI_POEM_MARGIN - s_pcur_w - 1);
+    const int16_t shift = pen > right ? (int16_t)(pen - right) : 0;
+
+    pen = (int16_t)(SI_POEM_X0 - shift);
+    for (uint8_t i = 0; i < typed; ++i) {
+        const char c = s_poem[i];
+        if (c != ' ' && c != '\n') {
+            const GFXglyph *g = si_poem_glyph(c);
+            if (g != NULL) {
+                const int16_t x = (int16_t)(pen + glyph_x_offset(g));
+                const uint8_t w = glyph_width(g);
+                if (x + w > fx0 - SI_REACH && x < fx0 + SI_W + SI_REACH && s_pnvis < SI_POEM_VIS_MAX)
+                    s_pvis[s_pnvis++] = (si_pglyph_t){.x = x, .bo = glyph_bitmap_offset(g), .w = w,
+                                                      .h = glyph_height(g),
+                                                      .top = (uint8_t)(glyph_y_offset(g) + s_pbase)};
+            }
+        }
+        pen = (int16_t)(pen + si_poem_advance(c));
+    }
+    if (cursor) s_pcur_x = (int16_t)(pen + 1);
+    return true;
+}
+
+// The poem in field column `fx`, bit 0 = the tallest letter's top, with the cursor
+// 3 px thick just below the baseline.
+static uint64_t si_poem_col(int16_t fx) {
+    uint64_t col = 0;
+    if (s_pcur_x >= 0 && fx >= s_pcur_x && fx < s_pcur_x + s_pcur_w) col = (uint64_t)0x7u << (s_pbase + 2u);
+    for (uint8_t k = 0; k < s_pnvis; ++k) {
+        const si_pglyph_t *g  = &s_pvis[k];
+        const int16_t      gx = (int16_t)(fx - g->x);
+        if (gx < 0 || gx >= g->w) continue;
+        col |= si_glyph_col(s_pbitmap, g->bo, g->h, (uint8_t)gx) << g->top;
+    }
+    return col;
+}
+
+// Which scanlines the bands use this cycle: even rows on one cycle, odd on the next, so
+// both age alike. The swap lands at the cycle's start, where only the bands show.
+static uint8_t si_band_parity(uint32_t t) { return (uint8_t)((t / s_cycle_ms) & 1u); }
+
+// A column grown by `k` px up and down.
+static uint64_t si_spread(uint64_t v, uint8_t k) {
+    uint64_t r = v;
+    for (uint8_t i = 1; i <= k; ++i) r |= (v << i) | (v >> i);
+    return r;
+}
+
+// Column `fx` of whichever line the cycle is on.
+static uint64_t si_col(int16_t fx, const si_state_t *st, bool poem) {
+    return poem ? si_poem_col(fx) : si_line_col(fx, st->from, st->to, st->shift, st->cur);
 }
 
 static uint32_t si_frame_ms(void) {
@@ -270,9 +451,11 @@ void status_idle_screen(void) {
     const uint32_t now = timer_read32();
     if (!s_started || timer_elapsed32(s_last_call) > 500u) {   // a new idle session
         s_started    = true;
+        s_seed       = get_local_last_latin_keycode();
         s_t0         = now;
         s_last_frame = now - SI_FRAME_MS;   // the first frame is due at once
         si_layout();
+        si_poem_layout();
     }
     s_last_call = now;
     s_owned     = true;
@@ -299,47 +482,64 @@ void status_idle_task(void) {
     const uint32_t t       = timer_elapsed32(s_t0);
     const int16_t  fx0     = is_left_side() ? 0 : SI_RIGHT_X0;   // this panel's field column 0
 
-    const si_state_t st  = si_state(t % SI_CYCLE_MS);
-    const bool       any = st.to > st.from || st.cur >= 0;
-    const uint32_t   tp  = (t * SI_PLASMA_NUM) / SI_PLASMA_DEN;   // the bands' slowed clock
+    const uint32_t   u      = t % s_cycle_ms;
+    const bool       poem   = u >= SI_NAME_MS;   // phases 6..8
+    const si_state_t st     = poem ? (si_state_t){0, 0, 0, -1} : si_state(u);
+    if (poem) si_poem_select(t);
+    const bool       any    = poem ? si_poem_visible(u - SI_NAME_MS, fx0) : (st.to > st.from || st.cur >= 0);
+    const uint8_t    parity = si_band_parity(t);
+    const uint32_t   tp     = (t * SI_PLASMA_NUM) / SI_PLASMA_DEN;   // the bands' slowed clock
     // Vertically centred on the letter BODY — the tallest letter's top to the baseline —
     // not the ink box: the y's descender (and the underscore) hang below, as text does.
     // Centring the whole ink box put the letters visibly high.
-    const uint8_t    wy0 = (uint8_t)((SI_H - s_base) / 2);
+    const uint8_t    wy0 = (uint8_t)((SI_H - (poem ? s_pbase : s_base)) / 2);
 
     kdisp_set_buffer(0);
     uint8_t *buf = get_scratch_buffer();
 
-    // A five-column window of the line's columns (x-2 .. x+2) for the black ring: the
-    // shape grown by a radius-2 disc (offsets with dx*dx + dy*dy <= 4), minus the ink.
+    // A seven-column window of the line's columns (x-3 .. x+3, centre win[3]) for the
+    // outline and the black ring. The ring is the shape grown by a radius-2 disc
+    // (offsets with dx*dx + dy*dy <= 4), minus the shape.
     // ⚠️ Deliberately ONLY the ring. Closing the gaps between letters as well (any pixel
     // with ink within N px on both sides) painted solid black wedges between them — a
     // shadow, most visibly between K and y — so the bands show through the gaps and the
     // counters, as they should.
     uint64_t win[SI_WIN];
     for (int8_t k = 0; k < SI_WIN; ++k)
-        win[k] = any ? (si_line_col((int16_t)(fx0 - SI_RING + k), st.from, st.to, st.shift, st.cur) << wy0) : 0;
+        win[k] = any ? (si_col((int16_t)(fx0 - SI_REACH + k), &st, poem) << wy0) : 0;
 
     for (int16_t x = 0; x < SI_W; ++x) {
-        const uint64_t ink  = win[2];
-        const uint64_t ring = (ink << 1) | (ink << 2) | (ink >> 1) | (ink >> 2) |
-                              win[1] | (win[1] << 1) | (win[1] >> 1) |
-                              win[3] | (win[3] << 1) | (win[3] >> 1) |
-                              win[0] | win[4];
-        // The letter shrunk by 1 px: ink whose four neighbours are all ink. What is left
-        // of the letter after taking that away is its 1 px outline.
-        const uint64_t core = ink & (ink << 1) & (ink >> 1) & win[1] & win[3];
-        const uint64_t edge = ink & ~core;
+        const uint64_t ink = win[3];
+        // `shape` is what the letter covers (outline and dark inside), `edge` the lit
+        // outline in it, `ring` the black ring around it.
+        uint64_t shape, edge, ring;
+        if (poem) {
+            // The glyph grown by 1 px in all eight directions; the outline is the growth.
+            shape = si_spread(win[2], 1) | si_spread(ink, 1) | si_spread(win[4], 1);
+            edge  = shape & ~ink;
+            // A radius-2 disc around that square growth: 3 px up and down within one
+            // column of x, 2 px at two columns, 1 px at three.
+            ring = (si_spread(win[2], 3) | si_spread(ink, 3) | si_spread(win[4], 3) |
+                    si_spread(win[1], 2) | si_spread(win[5], 2) |
+                    si_spread(win[0], 1) | si_spread(win[6], 1)) & ~shape;
+        } else {
+            // The letter shrunk by 1 px: ink whose four neighbours are all ink. What is
+            // left of the letter after taking that away is its 1 px outline.
+            const uint64_t core = ink & (ink << 1) & (ink >> 1) & win[2] & win[4];
+            shape = ink;
+            edge  = ink & ~core;
+            ring  = si_spread(ink, 2) | si_spread(win[2], 1) | si_spread(win[4], 1) | win[1] | win[5];
+        }
         const int16_t fx = (int16_t)(fx0 + x);
         uint64_t      lit = 0;
         for (uint8_t y = 0; y < SI_H; ++y) {
             const uint64_t bit  = (uint64_t)1 << y;
-            if (ink & bit) {   // the letter: a 1 px outline, dark inside
+            if (shape & bit) {   // the letter: a 1 px outline, dark inside
                 if (edge & bit) lit |= bit;
                 continue;
             }
             if (ring & bit) continue;                   // the 2 px black ring
-            if (y & 1u) continue;                       // the bands: even panel rows only
+            if ((y & 1u) != parity) continue;           // the bands: one row in two
             // Plasma bands: four sines, one of them of the distance from the field centre.
             const int16_t d = (int16_t)startup_anim_dist((int16_t)((fx - SI_FIELD_CX) * 2),
                                                          (int16_t)((y - SI_FIELD_CY) * 4));
@@ -351,7 +551,7 @@ void status_idle_task(void) {
         }
         for (uint8_t p = 0; p < SI_H / 8; ++p) buf[(uint16_t)p * SI_W + (uint16_t)x] = (uint8_t)(lit >> (8u * p));
         for (uint8_t k = 0; k < SI_WIN - 1; ++k) win[k] = win[k + 1];
-        win[SI_WIN - 1] = any ? (si_line_col((int16_t)(fx + 1 + SI_RING), st.from, st.to, st.shift, st.cur) << wy0) : 0;
+        win[SI_WIN - 1] = any ? (si_col((int16_t)(fx + 1 + SI_REACH), &st, poem) << wy0) : 0;
     }
 
     const uint32_t took = timer_elapsed32(t_start);

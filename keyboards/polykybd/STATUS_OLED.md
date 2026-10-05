@@ -203,13 +203,35 @@ a key; the gap between the words is TWO cursor stops — after the y, then insid
 physical gap — so it does not leap the gap in one key) and the last key takes the
 cursor away; the text stands 5 s; the cursor returns on the d, walks back to the P, and Del
 removes a character at a time while the REST OF THE LINE MOVES LEFT to close up, so
-"Kybd" slides across the physical gap into the left panel; a 3 s gap, and over. Each
-half lays out the whole line in field columns for that reason. The plasma runs on a
+"Kybd" slides across the physical gap into the left panel. Then a POEM: one of five
+short original poems (`base/idle_poem_plan.c`, the texts, timeline and pick, pure and
+tested by `make test:polykybd_idle_poem_plan`) is typed in NotoSans_Regular_Base_14pt7b
+(~10 letters a panel) as one line across both panels, 150 ms a key and a blinking 1.2 s
+wait after each line break. Once the line reaches the right panel's edge each key pushes
+the whole line left, so text leaves on the left like a typewriter's. The poem stands 4 s,
+Backspace deletes it from the end at 75 ms a character (the start slides back in from
+the left), the empty cursor blinks 1.2 s, then a 3 s gap and over. The cycle has one
+fixed length, set by the longest poem. Each half lays out the whole line in field
+columns for that reason.
+- **The poem is picked at random each cycle, never the one just typed, and both halves
+  must pick the same one with no sync field of its own.** `idle_poem_pick(seed, cycle)`
+  is a pure function; the cycle comes from the shared cycle clock and the seed is the
+  last letter key typed (`poly_last_t.latin_kc`), which the master already syncs. ⚠️ A
+  per-half count of idle sessions was tried first and drifts for good once one half
+  reboots alone. The remaining gap: a slave rebooted alone reads 0 until the next letter.
+- **The poem's outline is 1 px OUTSIDE its glyphs** (the glyph grown by 1 px in all
+  eight directions, minus the glyph), so the whole glyph is the dark inside: at 14 pt
+  most strokes are 2 px, and an inside outline of a 2 px stroke is the stroke. The ring
+  goes around the outline, so the column window is 7 wide (`SI_REACH`).
+- **The bands' scanline parity swaps every cycle** (`si_band_parity()`): even rows on
+  one cycle, odd on the next, so both age alike on a panel that idles for hours.
+ The plasma runs on a
 5/32-speed clock. Words are centred horizontally on their panels and vertically on the
 letter BODY (tallest top to baseline) — centring the whole ink box, descender included,
 put them visibly high. The place AFTER the d is never used: "Kybd" centred leaves no
 room for an underscore there. Letters (and the cursor) are drawn as a 1 px
-outline (the ink minus the ink shrunk by 1 px), dark inside, the bands on every other row, inside a 2 px black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
+outline (the ink minus the ink shrunk by 1 px), dark inside, the bands on every other row
+(the poem's letters: see above), inside a 2 px black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
 every frame comes from the font's column bytes in flash and Eden's tables.
 
 - ⚠️ **ONLY the 2 px ring is black — no gap closing.** Closing letter gaps too (any

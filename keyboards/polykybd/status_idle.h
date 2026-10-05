@@ -1,7 +1,8 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 // The status panel's idle screen (split72): demoscene plasma bands with "Poly Kybd"
-// typed and edited away across both panels with an underscore cursor. See status_idle.c.
+// typed and edited away across both panels with an underscore cursor, then a short poem
+// typed across both. See status_idle.c.
 #pragma once
 
 #include <stdbool.h>

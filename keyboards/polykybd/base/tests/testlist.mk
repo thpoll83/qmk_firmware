@@ -16,6 +16,7 @@ TEST_LIST += polykybd_status_brightness
 TEST_LIST += polykybd_doom_pack_gate
 TEST_LIST += polykybd_tutorial_plan
 TEST_LIST += polykybd_demo_plan
+TEST_LIST += polykybd_idle_poem_plan
 TEST_LIST += polykybd_icon_lib
 TEST_LIST += polykybd_oled_i2c_diag
 TEST_LIST += polykybd_crash_ack

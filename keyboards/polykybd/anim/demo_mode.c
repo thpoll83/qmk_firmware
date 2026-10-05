@@ -232,10 +232,16 @@ static void host_press(uint8_t usage, uint32_t until) {
     // Never a modifier. Nothing should have registered one (clear_keyboard() ran at
     // the start and every real key is swallowed), but a Shift or GUI riding along on
     // one keystroke is exactly what would switch a window or fire a shortcut.
+    // ⚠️ clear_keyboard() does NOT clear a pending one-shot modifier, and
+    // get_mods_for_report() ORs it into the next report — so a remapped OSM() tapped
+    // before the demo started would ride on its first keystroke. Clear all three.
     if ((get_mods() | get_weak_mods()) != 0) {
         clear_mods();
         clear_weak_mods();
     }
+#ifndef NO_ACTION_ONESHOT
+    if (get_oneshot_mods() != 0) clear_oneshot_mods();
+#endif
     register_code(usage);   // a basic keycode: goes straight into the report, no layers
     s_held       = usage;
     s_held_until = until;

@@ -230,6 +230,17 @@ polykybd_demo_plan_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# idle_poem_plan.c is the status idle screen's poems: the texts, the typing and
+# Backspace timeline and the random pick. Pure for the same reason as demo_plan.c: the
+# caller passes "ms into the poem phase". The firmware binding is status_idle.c.
+polykybd_idle_poem_plan_SRC := \
+	$(POLY_BASE_PATH)/idle_poem_plan.c \
+	$(POLY_BASE_PATH)/tests/idle_poem_plan_tests.cpp
+
+polykybd_idle_poem_plan_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
 # The PlyI overlay icon library (cmd 42): validation, blit and the pair list.
 # Dependency-free apart from crc32 and the header-only map codec.
 polykybd_icon_lib_SRC := \

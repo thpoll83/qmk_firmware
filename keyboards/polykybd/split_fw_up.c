@@ -8,6 +8,7 @@
 #include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
 #include "base/fw_up_verdict.h"  // pure COMMIT-failure classification (unit-tested)
 #include "base/hand_stamp.h"     // handedness change: record here, write from the main loop
+#include "bridge_helper.h"       // send_to_bridge
 #include "split_util.h"          // is_transport_connected
 #include "state.h"               // poly_state_touch: tell the host the V block moved
 
@@ -501,4 +502,12 @@ uint16_t fw_up_reported_bundle_version(uint8_t bundle) {
         v = s_slave_ver[bundle];
     }
     return v;
+}
+
+uint8_t fw_up_send_slave_reset(poly_reset_sync_t *msg) {
+    uint8_t ack = send_to_bridge(USER_SYNC_RESET, msg, sizeof(*msg), 20);
+    if (!sync_succeeded(ack)) {
+        ack = send_to_bridge(USER_SYNC_RESET, msg, sizeof(*msg), 20);
+    }
+    return ack;
 }

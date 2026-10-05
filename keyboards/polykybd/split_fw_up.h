@@ -172,3 +172,13 @@ bool fw_up_slave_refused_commit(uint8_t slave_ack, const char *tag);
 // One transaction (USER_SYNC_RESET) for apply-and-reboot, plain reboot, and the
 // handedness-change reboot; the poly_reset_sync_t `action` byte selects which.
 void user_sync_reset_handler        (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+
+// Master-side: hand the slave a USER_SYNC_RESET with the hardened retry policy
+// (20 retries, then the whole round once more), and return the final ack. A
+// dropped reset frame lets the master reboot alone and hang on the boot splash
+// waiting for a slave that never restarted (field 2026-06-22 apply, 2026-07 plain
+// reset key), so every reboot handoff goes through this one function. Safe to
+// re-fire: the slave handler only arms a deferred action, and send_to_bridge()
+// is synchronous, so a returned ack means the slave has handled it. Fills
+// msg->crc32. Worst case ~1 s, which is free on a path that reboots anyway.
+uint8_t fw_up_send_slave_reset(poly_reset_sync_t *msg);

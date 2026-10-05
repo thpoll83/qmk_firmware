@@ -6647,18 +6647,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 // the identical flaw: a single dropped reboot frame at only 5 retries
                 // left the slave alive on stale state, the master rebooted alone and
                 // hung on the boot splash until the slave was replugged (field 2026-07
-                // — plain reset key, no firmware apply).  Use 20 retries and re-fire the
-                // whole round once if the slave still hasn't acked.  Safe: the slave
-                // reset handler is idempotent (it only arms a deferred mcu_reset),
-                // send_to_bridge is synchronous (returns only after the slave has
-                // handled it), and we're about to reset anyway — the extra worst-case
-                // ~1 s is free insurance on this critical step.
+                // — plain reset key, no firmware apply).  fw_up_send_slave_reset()
+                // carries the hardened retry policy for every reboot handoff.
                 poly_reset_sync_t reboot_msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
                                                  .action = RESET_ACTION_REBOOT };
-                uint8_t ack = send_to_bridge(USER_SYNC_RESET, &reboot_msg, sizeof(reboot_msg), 20);
-                if (!sync_succeeded(ack)) {
-                    ack = send_to_bridge(USER_SYNC_RESET, &reboot_msg, sizeof(reboot_msg), 20);
-                }
+                uint8_t ack = fw_up_send_slave_reset(&reboot_msg);
                 uprintf("Master: slave reboot ack=0x%02x\n", ack);
                 return true;   // let QMK's QK_REBOOT handler reset the master
             }

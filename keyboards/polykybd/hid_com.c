@@ -967,10 +967,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     raw_hid_send(data, length);
                     poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
                                               .action = RESET_ACTION_REBOOT };
-                    uint8_t ack = send_to_bridge(USER_SYNC_RESET, &msg, sizeof(msg), 20);
-                    if (!sync_succeeded(ack)) {
-                        ack = send_to_bridge(USER_SYNC_RESET, &msg, sizeof(msg), 20);
-                    }
+                    uint8_t ack = fw_up_send_slave_reset(&msg);
                     uprintf("Host reboot: slave ack=0x%02x\n", ack);
                     soft_reset_keyboard();
                 }

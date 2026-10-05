@@ -100,7 +100,7 @@ _Static_assert(SA_LINE_CLEAR_AT_MS + SA_LINE_CLEAR_SPREAD_MS < SA_INTRO_MS + SA_
                                 // round). A shift, NOT a divide — no per-pixel software divide.
 
 // Number of keycap slots per half in the generated geometry tables.
-#define SA_NUM_KEYS 40
+#define SA_NUM_KEYS DISP_SLOTS_PER_HALF
 // Both halves are walked by the same `idx < SA_NUM_KEYS` loop, so assert BOTH —
 // a regenerated geom header that changed only one table would otherwise read past
 // the shorter one with no compiler complaint.

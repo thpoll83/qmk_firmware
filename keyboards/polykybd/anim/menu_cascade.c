@@ -10,6 +10,7 @@
 #include "base/shift_reg.h"
 #include "base/tutorial_plan.h"     // TUT_SLOT_*, tut_fade_contrast()
 #include "side.h"
+#include "base/bitset.h"
 #include QMK_KEYBOARD_H             // get_key_disp_bitmask
 #include "startup_anim.h"           // startup_anim_key_geom / startup_anim_board_w
 #include "menu_cascade_rows.h"      // CASC_ROW_* (tools/gen_cascade_rows.py)
@@ -32,20 +33,17 @@
 #define CASC_ZOOM_DOT_MS  (CASC_FADE_MS / 3u)        // 0..50 ms: the dot
 #define CASC_ZOOM_HALF_MS ((CASC_FADE_MS * 2u) / 3u) // ..101 ms: half size, then full
 enum { ZOOM_NONE = 0, ZOOM_DOT, ZOOM_HALF, ZOOM_FULL };
-#define CASC_KEYS      40u   // display slots per half (8 x 5, some phantom)
+#define CASC_KEYS      DISP_SLOTS_PER_HALF
 
 static uint32_t s_sig;                 // the menu signature the cascade belongs to
 static bool     s_live;
 static uint8_t  s_rows;                // physical rows 1..s_rows cascade (see poll())
 static uint32_t s_start;
 static uint32_t s_at;
-static uint8_t  s_drawn[5];            // this half's display slots the cascade has started
-static uint8_t  s_full[5];             // …and faded all the way up
+static uint8_t  s_drawn[BITSET_BYTES(CASC_KEYS)]; // this half's display slots the cascade has started
+static uint8_t  s_full[BITSET_BYTES(CASC_KEYS)];  // …and faded all the way up
 static uint8_t  s_stage[CASC_KEYS];    // the zoom frame on each panel now (ZOOM_*)
 static bool     s_in_draw;             // the tick is drawing: the legend draw must not be hidden
-
-static bool bit(const uint8_t *m, uint8_t i) { return (m[i >> 3] & (1u << (i & 7))) != 0; }
-static void set_bit(uint8_t *m, uint8_t i)  { m[i >> 3] |= (uint8_t)(1u << (i & 7)); }
 
 // When this half's display slot `idx` appears, in ms from the change, or 0 for a key
 // that does not cascade (the tab row, the bottom row, a slot with no panel).
@@ -100,7 +98,7 @@ bool menu_cascade_hidden(uint8_t row, uint8_t col) {
     const bool    right = TUT_SLOT_RIGHT(slot);
     if (right == is_left_side()) return false;    // only this half's own keys
     const uint8_t idx = TUT_SLOT_IDX(slot);
-    if (bit(s_drawn, idx)) {
+    if (bitset_get(s_drawn, idx)) {
         if (s_stage[idx] >= ZOOM_FULL) return false;
         // Mid-zoom: a full render would paint the full legend over a preview frame.
         // Keep it dark and let the tick repaint the frame it is on.
@@ -112,8 +110,8 @@ bool menu_cascade_hidden(uint8_t row, uint8_t col) {
     if (timer_elapsed32(s_start) < due) return true;
     // Due, and a full render is about to draw it before the tick has: it lands at the
     // normal level, so the tick must not draw it again dim and fade it up a second time.
-    set_bit(s_drawn, idx);
-    set_bit(s_full, idx);
+    bitset_put(s_drawn, idx, true);
+    bitset_put(s_full, idx, true);
     s_stage[idx] = ZOOM_FULL;
     return false;
 }
@@ -150,7 +148,7 @@ void menu_cascade_tick(void) {
     const uint8_t  full  = poly_panel_full_contrast();
     bool           done  = true;
     for (uint8_t idx = 0; idx < CASC_KEYS; ++idx) {
-        if (bit(s_full, idx)) continue;
+        if (bitset_get(s_full, idx)) continue;
         const uint32_t due = due_ms(right, idx);
         if (due == 0u) continue;
         if (el < due) {
@@ -160,8 +158,8 @@ void menu_cascade_tick(void) {
         // A key the tutorial keeps dark (the reveal covers every key in its rows, the
         // lit set is a few of them) is left alone: no latch, no send.
         if (!poly_slot_visible(TUT_SLOT(right ? 1 : 0, idx))) {
-            set_bit(s_drawn, idx);
-            set_bit(s_full, idx);
+            bitset_put(s_drawn, idx, true);
+            bitset_put(s_full, idx, true);
             continue;
         }
         sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
@@ -174,11 +172,11 @@ void menu_cascade_tick(void) {
         const uint8_t want = into < CASC_ZOOM_DOT_MS    ? (uint8_t)ZOOM_DOT
                              : into < CASC_ZOOM_HALF_MS ? (uint8_t)ZOOM_HALF
                                                         : (uint8_t)ZOOM_FULL;
-        if (!bit(s_drawn, idx) || s_stage[idx] != want) {
+        if (!bitset_get(s_drawn, idx) || s_stage[idx] != want) {
             // Same draw as the focus ring's repaint: tracked, so the next full render
             // diffs against what is really on the panel. s_in_draw because the legend
             // draw asks menu_cascade_hidden(), which must answer "no" to its own frame.
-            set_bit(s_drawn, idx);
+            bitset_put(s_drawn, idx, true);
             kdisp_set_contrast(lvl);
             kdisp_track_panel(idx);
             kdisp_set_buffer(0x00);
@@ -194,7 +192,7 @@ void menu_cascade_tick(void) {
                 s_stage[idx] = ZOOM_FULL;
                 kdisp_set_contrast(full);
                 kdisp_send_window();
-                set_bit(s_full, idx);
+                bitset_put(s_full, idx, true);
                 continue;
             }
             if (want == ZOOM_DOT) {
@@ -209,7 +207,7 @@ void menu_cascade_tick(void) {
             kdisp_set_contrast(lvl);
         }
         if (lvl == full && s_stage[idx] == ZOOM_FULL) {
-            set_bit(s_full, idx);
+            bitset_put(s_full, idx, true);
         } else {
             done = false;
         }

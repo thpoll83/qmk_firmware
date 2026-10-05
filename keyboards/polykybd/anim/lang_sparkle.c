@@ -20,7 +20,7 @@
 #define SPK_SPAWN_MS  150u   // a new one this often
 #define SPK_LIFE_MS   480u   // dot, cross, star, star, cross, dot
 #define SPK_TICK_MS   30u
-#define SPK_KEYS      40u    // display slots per half (8 x 5, some phantom)
+#define SPK_KEYS      DISP_SLOTS_PER_HALF
 
 typedef struct {
     bool     on;

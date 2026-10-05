@@ -35,7 +35,10 @@
 // the line slides back in from the left as the line shortens. Its letters are drawn
 // like the big ones: a 1 px outline, dark inside, in a 2 px black ring. At this size
 // many strokes are only 2 px wide, and their outline is the whole stroke, so only the
-// wider parts read as hollow.
+// wider parts read as hollow. ⚠️ So the poem's outline is drawn 1 px OUTSIDE the glyph
+// instead (the glyph grown by one px in all eight directions, minus the glyph): the
+// whole glyph is the dark inside, which keeps even a 2 px stroke hollow, and the ring
+// goes around the outline. "Poly Kybd" keeps the outline inside its 24 pt strokes.
 //
 // Nothing is stored: every frame is computed from the fonts' column bytes in flash and
 // Eden's tables; RAM is a handful of statics.
@@ -114,7 +117,10 @@ extern OLED_BLOCK_TYPE oled_dirty;   // drivers/oled/oled_driver.c: blocks not y
 #define SI_GAP_MS     3000u    // 8: nothing, before starting over
 #define SI_BLINK_MS   530u     // cursor half-period while it waits
 #define SI_RING       2        // the black ring's radius, px
-#define SI_WIN        (2 * SI_RING + 1)
+// How far a pixel's look-up reaches sideways: the ring, plus the poem's outline, which
+// sits 1 px OUTSIDE its glyphs. The window holds the line's columns x-REACH .. x+REACH.
+#define SI_REACH      (SI_RING + 1)
+#define SI_WIN        (2 * SI_REACH + 1)
 // The panel's frame period. 150 ms divides SI_STEP_MS and SI_KEY_MS, so every cursor
 // step and keystroke lasts a whole number of frames and the typing stays even.
 #define SI_FRAME_MS   150u
@@ -422,7 +428,7 @@ static bool si_poem_visible(uint32_t u, int16_t fx0) {
             if (g != NULL) {
                 const int16_t x = (int16_t)(pen + glyph_x_offset(g));
                 const uint8_t w = glyph_width(g);
-                if (x + w > fx0 - SI_RING && x < fx0 + SI_W + SI_RING && s_pnvis < SI_POEM_VIS_MAX)
+                if (x + w > fx0 - SI_REACH && x < fx0 + SI_W + SI_REACH && s_pnvis < SI_POEM_VIS_MAX)
                     s_pvis[s_pnvis++] = (si_pglyph_t){.x = x, .bo = glyph_bitmap_offset(g), .w = w,
                                                       .h = glyph_height(g),
                                                       .top = (uint8_t)(glyph_y_offset(g) + s_pbase)};
@@ -451,6 +457,13 @@ static uint64_t si_poem_col(int16_t fx) {
 // Which scanlines the bands use this cycle: even rows on one cycle, odd on the next, so
 // both age alike. The swap lands at the cycle's start, where only the bands show.
 static uint8_t si_band_parity(uint32_t t) { return (uint8_t)((t / s_cycle_ms) & 1u); }
+
+// A column grown by `k` px up and down.
+static uint64_t si_spread(uint64_t v, uint8_t k) {
+    uint64_t r = v;
+    for (uint8_t i = 1; i <= k; ++i) r |= (v << i) | (v >> i);
+    return r;
+}
 
 // Column `fx` of whichever line the cycle is on.
 static uint64_t si_col(int16_t fx, const si_state_t *st, bool poem) {
@@ -509,31 +522,44 @@ void status_idle_task(void) {
     kdisp_set_buffer(0);
     uint8_t *buf = get_scratch_buffer();
 
-    // A five-column window of the line's columns (x-2 .. x+2) for the black ring: the
-    // shape grown by a radius-2 disc (offsets with dx*dx + dy*dy <= 4), minus the ink.
+    // A seven-column window of the line's columns (x-3 .. x+3, centre win[3]) for the
+    // outline and the black ring. The ring is the shape grown by a radius-2 disc
+    // (offsets with dx*dx + dy*dy <= 4), minus the shape.
     // ⚠️ Deliberately ONLY the ring. Closing the gaps between letters as well (any pixel
     // with ink within N px on both sides) painted solid black wedges between them — a
     // shadow, most visibly between K and y — so the bands show through the gaps and the
     // counters, as they should.
     uint64_t win[SI_WIN];
     for (int8_t k = 0; k < SI_WIN; ++k)
-        win[k] = any ? (si_col((int16_t)(fx0 - SI_RING + k), &st, poem) << wy0) : 0;
+        win[k] = any ? (si_col((int16_t)(fx0 - SI_REACH + k), &st, poem) << wy0) : 0;
 
     for (int16_t x = 0; x < SI_W; ++x) {
-        const uint64_t ink  = win[2];
-        const uint64_t ring = (ink << 1) | (ink << 2) | (ink >> 1) | (ink >> 2) |
-                              win[1] | (win[1] << 1) | (win[1] >> 1) |
-                              win[3] | (win[3] << 1) | (win[3] >> 1) |
-                              win[0] | win[4];
-        // The letter shrunk by 1 px: ink whose four neighbours are all ink. What is left
-        // of the letter after taking that away is its 1 px outline.
-        const uint64_t core = ink & (ink << 1) & (ink >> 1) & win[1] & win[3];
-        const uint64_t edge = ink & ~core;
+        const uint64_t ink = win[3];
+        // `shape` is what the letter covers (outline and dark inside), `edge` the lit
+        // outline in it, `ring` the black ring around it.
+        uint64_t shape, edge, ring;
+        if (poem) {
+            // The glyph grown by 1 px in all eight directions; the outline is the growth.
+            shape = si_spread(win[2], 1) | si_spread(ink, 1) | si_spread(win[4], 1);
+            edge  = shape & ~ink;
+            // A radius-2 disc around that square growth: 3 px up and down within one
+            // column of x, 2 px at two columns, 1 px at three.
+            ring = (si_spread(win[2], 3) | si_spread(ink, 3) | si_spread(win[4], 3) |
+                    si_spread(win[1], 2) | si_spread(win[5], 2) |
+                    si_spread(win[0], 1) | si_spread(win[6], 1)) & ~shape;
+        } else {
+            // The letter shrunk by 1 px: ink whose four neighbours are all ink. What is
+            // left of the letter after taking that away is its 1 px outline.
+            const uint64_t core = ink & (ink << 1) & (ink >> 1) & win[2] & win[4];
+            shape = ink;
+            edge  = ink & ~core;
+            ring  = si_spread(ink, 2) | si_spread(win[2], 1) | si_spread(win[4], 1) | win[1] | win[5];
+        }
         const int16_t fx = (int16_t)(fx0 + x);
         uint64_t      lit = 0;
         for (uint8_t y = 0; y < SI_H; ++y) {
             const uint64_t bit  = (uint64_t)1 << y;
-            if (ink & bit) {   // the letter: a 1 px outline, dark inside
+            if (shape & bit) {   // the letter: a 1 px outline, dark inside
                 if (edge & bit) lit |= bit;
                 continue;
             }
@@ -550,7 +576,7 @@ void status_idle_task(void) {
         }
         for (uint8_t p = 0; p < SI_H / 8; ++p) buf[(uint16_t)p * SI_W + (uint16_t)x] = (uint8_t)(lit >> (8u * p));
         for (uint8_t k = 0; k < SI_WIN - 1; ++k) win[k] = win[k + 1];
-        win[SI_WIN - 1] = any ? (si_col((int16_t)(fx + 1 + SI_RING), &st, poem) << wy0) : 0;
+        win[SI_WIN - 1] = any ? (si_col((int16_t)(fx + 1 + SI_REACH), &st, poem) << wy0) : 0;
     }
 
     const uint32_t took = timer_elapsed32(t_start);

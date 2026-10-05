@@ -31,9 +31,11 @@
 // line across both panels. Once the line reaches the right edge, every keystroke pushes
 // the whole line left by that character's advance, so the text leaves on the left as a
 // typewriter's would; letters crossing the physical gap between the panels are simply
-// not shown. Its letters are SOLID, not outlined: at this size most strokes are 2 px,
-// and the outline of a 2 px stroke is the stroke anyway, so solid reads the same and
-// stays even. They keep the 2 px black ring.
+// not shown. It is then deleted again with Backspace, from the end, and the start of
+// the line slides back in from the left as the line shortens. Its letters are drawn
+// like the big ones: a 1 px outline, dark inside, in a 2 px black ring. At this size
+// many strokes are only 2 px wide, and their outline is the whole stroke, so only the
+// wider parts read as hollow.
 //
 // Nothing is stored: every frame is computed from the fonts' column bytes in flash and
 // Eden's tables; RAM is a handful of statics.
@@ -127,13 +129,17 @@ extern OLED_BLOCK_TYPE oled_dirty;   // drivers/oled/oled_driver.c: blocks not y
 // The poem (phases 6 and 7), typed after "Poly Kybd" has been deleted:
 //   6. the cursor blinks at the start of the left panel, then the poem is typed a key at
 //      a time; after each line break it waits, blinking, as a typist would;
-//   7. the last line stands with the cursor blinking after it;
-//   8. then the screen is cleared, a pause, and it starts over.
+//   7. the last line stands with the cursor blinking after it, then Backspace deletes
+//      it a character at a time from the end, at the pace of a held key, and the empty
+//      cursor blinks a moment;
+//   8. then the cursor goes, a pause, and it starts over.
 // 150 ms per key is ~7 keys/s; it and SI_POEM_LINE_MS divide both frame periods.
 #define SI_POEM_LEAD_MS 1200u  // 6: cursor blinking before the first key
 #define SI_POEM_KEY_MS  150u   // 6: one keystroke
 #define SI_POEM_LINE_MS 1200u  // 6: extra wait after a line break
 #define SI_POEM_HOLD_MS 4000u  // 7: the end of the poem standing
+#define SI_POEM_BS_MS   75u    // 7: one Backspace (a held key's repeat); divides both frame periods
+#define SI_POEM_EMPTY_MS 1200u // 7: the cursor blinking on the emptied line
 #define SI_POEM_X0      4      // field column the poem starts at
 #define SI_POEM_MARGIN  4      // px kept free at the right panel's right edge
 #define SI_POEM_NL_SP   3u     // a line break takes the room of this many spaces
@@ -360,7 +366,8 @@ static void si_poem_layout(void) {
     s_pbase  = (uint8_t)(-top);
     const uint8_t n = si_poem_advance('n');
     s_pcur_w = (uint8_t)(n > 2u ? n - 2u : n);
-    s_cycle_ms = SI_NAME_MS + SI_POEM_LEAD_MS + s_ptype_ms + SI_POEM_HOLD_MS + SI_GAP_MS;
+    s_cycle_ms = SI_NAME_MS + SI_POEM_LEAD_MS + s_ptype_ms + SI_POEM_HOLD_MS +
+                 SI_POEM_LEN * SI_POEM_BS_MS + SI_POEM_EMPTY_MS + SI_GAP_MS;
 }
 
 // Work out what of the poem shows `u` ms into phase 6, for the panel whose field column
@@ -388,6 +395,13 @@ static bool si_poem_visible(uint32_t u, int16_t fx0) {
         cursor = since < SI_POEM_KEY_MS || si_blink(since - SI_POEM_KEY_MS);
     } else if ((u -= s_ptype_ms) < SI_POEM_HOLD_MS) {
         typed  = SI_POEM_LEN;
+        cursor = si_blink(u);
+    } else if ((u -= SI_POEM_HOLD_MS) < SI_POEM_LEN * SI_POEM_BS_MS) {
+        // Backspace: the first press takes the last character at once.
+        typed  = (uint8_t)(SI_POEM_LEN - 1u - u / SI_POEM_BS_MS);
+        cursor = true;
+    } else if ((u -= SI_POEM_LEN * SI_POEM_BS_MS) < SI_POEM_EMPTY_MS) {
+        typed  = 0;
         cursor = si_blink(u);
     } else {
         return false;
@@ -513,14 +527,13 @@ void status_idle_task(void) {
                               win[0] | win[4];
         // The letter shrunk by 1 px: ink whose four neighbours are all ink. What is left
         // of the letter after taking that away is its 1 px outline.
-        // The poem's smaller letters are drawn solid (see the top of this file).
-        const uint64_t core = poem ? 0 : ink & (ink << 1) & (ink >> 1) & win[1] & win[3];
+        const uint64_t core = ink & (ink << 1) & (ink >> 1) & win[1] & win[3];
         const uint64_t edge = ink & ~core;
         const int16_t fx = (int16_t)(fx0 + x);
         uint64_t      lit = 0;
         for (uint8_t y = 0; y < SI_H; ++y) {
             const uint64_t bit  = (uint64_t)1 << y;
-            if (ink & bit) {   // the letter: a 1 px outline, dark inside (the poem: solid)
+            if (ink & bit) {   // the letter: a 1 px outline, dark inside
                 if (edge & bit) lit |= bit;
                 continue;
             }

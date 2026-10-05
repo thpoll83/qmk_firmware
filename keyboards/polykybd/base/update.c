@@ -22,15 +22,6 @@ uint32_t get_last_update(void) {
     return last_update;
 }
 
-void set_last_update(int32_t update) {
-    if (update < 0) {
-        idle_tracking = false;
-    } else {
-        last_update   = (uint32_t)update;
-        idle_tracking = true;
-    }
-}
-
 void disable_idle_tracking(void) {
     idle_tracking = false;
 }

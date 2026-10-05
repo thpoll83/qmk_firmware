@@ -47,14 +47,6 @@ TEST_F(IdleUpdateTest, DisableIdleTrackingTurnsTheGateOff) {
     EXPECT_TRUE(is_idle_tracking());
 }
 
-TEST_F(IdleUpdateTest, LegacyNegativeSetDisablesAndNonNegativeReenables) {
-    set_last_update(-1);
-    EXPECT_FALSE(is_idle_tracking());
-    set_last_update(1000);
-    EXPECT_TRUE(is_idle_tracking());
-    EXPECT_EQ(get_last_update(), 1000u);
-}
-
 TEST_F(IdleUpdateTest, TrackingSurvivesTheSignBitOfTheTimer) {
     // The 24.86-day regression: uptime past 2^31 ms must not disable idle or
     // corrupt the elapsed arithmetic.

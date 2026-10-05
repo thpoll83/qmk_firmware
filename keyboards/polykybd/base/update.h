@@ -25,11 +25,6 @@ void update_performed(void);
 
 uint32_t get_last_update(void);
 
-// Legacy sentinel API: a negative value disables idle-timeout tracking (the old
-// `set_last_update(-1)` = "idle off"); a non-negative value sets the activity
-// timestamp and (re)enables tracking. Prefer the explicit helpers below.
-void set_last_update(int32_t update);
-
 // Disables idle-timeout tracking (suspend / host display-off / turn-off reached).
 void disable_idle_tracking(void);
 

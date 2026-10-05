@@ -7712,7 +7712,6 @@ void suspend_wakeup_init_kb(void) {
     local_state->flags &= ~((uint8_t)DISP_IDLE);
     local_state->contrast = get_active_brightness();
     reset_idle_jitter();
-    set_last_update(0);
 
     //rgb_matrix_reload_from_eeprom();
 #ifdef RGB_MATRIX_ENABLE

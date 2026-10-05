@@ -74,6 +74,11 @@ uint8_t fw_update_percent(void);   /* 0..100 progress of the in-flight flash */
 /* Typing-speed dial (11x6), defined in oled_helper.c and drawn by both variants'
    status OLEDs via kdisp_draw_bitmap. */
 extern const uint8_t wpm_gauge_bitmap[];
+/* Status-row role icons (16x16, row-major MSB-first): the half that talks to the PC
+   over USB (a USB trident) and the half bridged to it over the split UART (a ⇄
+   data-exchange mark). The role follows is_usb_host_side(). Shared by both variants. */
+extern const uint8_t usb_status_bitmap[];
+extern const uint8_t link_status_bitmap[];
 #define WPM_ICON_W 11
 #define WPM_ICON_H 6
 /* Settings -> "More": firmware / protocol / hardware version, this half's uptime and

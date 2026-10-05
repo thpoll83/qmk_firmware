@@ -99,10 +99,7 @@ static void poly_force_wake(void) {
         suspend_wakeup_init_kb();   // fully suspended -> full wake
     } else if (local_state->flags & DISP_IDLE) {
         uprint("Wake by proximity (from idle)\n");
-        local_state->contrast = get_active_brightness();
-        local_state->flags &= ~((uint8_t)DISP_IDLE);
-        local_state->flags |= STATUS_DISP_ON;
-        reset_idle_jitter();
+        poly_set_awake_state(local_state);
         request_disp_refresh();
         update_performed();
     }

@@ -13,6 +13,13 @@
 #include "led.h"
 #include "layers.h"
 
+// A mod-tap's TAP keycode, or `kc` unchanged. ⚠️ Every legend producer must unwrap
+// the same way: render_key() and to_static_text() are a pair, and a mod-tap that one
+// unwrapped and the other did not drew no letter at all (field, 2026-08-18).
+static inline uint16_t poly_mt_tap(uint16_t kc) {
+    return IS_QK_MOD_TAP(kc) ? QK_MOD_TAP_GET_TAP_KEYCODE(kc) : kc;
+}
+
 // Legends for the two Intl-layer keys that do something other than what their
 // base-layer symbol says. Both are plain RESIDENT latin, so they render with no
 // font pack flashed and cost no glyph: this layer is *about* latin letters, so

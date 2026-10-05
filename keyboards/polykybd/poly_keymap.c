@@ -163,6 +163,15 @@ void rgb_matrix_update_pwm_buffers(void);
 // USER_SYNC_POLY_DATA send site).
 #define PERIODIC_SYNC_RETRIES 3
 
+// The base-layer switch: drop every layer, then turn `layer` on. layer_clear() +
+// layer_on(index) is deliberate, NOT default_layer_set(), which takes a BITMASK and
+// so set the wrong base when handed an index (see KC_L0 ... KC_L4).
+static inline void layer_reset_to(uint8_t layer) {
+    layer_clear();
+    layer_on(layer);
+}
+_Static_assert(KC_L4 - KC_L0 == 4 && _L4 - _L0 == 4, "KC_L0 ... KC_L4 maps onto _L0.._L4 by offset");
+
 /*[[[cog
 import cog
 import os
@@ -622,8 +631,7 @@ void tutorial_enter_base_layout(void) {
     poly_layer_t *ll = access_local_layer();
     if (s_tut_saved_def_layer == 0xFF) s_tut_saved_def_layer = ll->def_layer;
     ll->def_layer = _L0;
-    layer_clear();
-    layer_on(_L0);
+    layer_reset_to(_L0);
     ll->layer = layer_state;
 }
 
@@ -636,8 +644,7 @@ void tutorial_restore_layout(void) {
         ll->def_layer         = s_tut_saved_def_layer;
         s_tut_saved_def_layer = 0xFF;
     }
-    layer_clear();
-    layer_on(ll->def_layer);
+    layer_reset_to(ll->def_layer);
     ll->layer = layer_state;
 }
 
@@ -735,8 +742,7 @@ static void poly_tutorial_hold_lesson_layer(void) {
     uprintf("Tutorial: layer drifted (state 0x%08lX, def %u), back to _L0\n",
             (unsigned long)layer_state, (unsigned)ll->def_layer);
     ll->def_layer = _L0;
-    layer_clear();
-    layer_on(_L0);
+    layer_reset_to(_L0);
     if (extra != 0xFFu) layer_on(extra);
     ll->layer = layer_state;
     request_disp_refresh();
@@ -1124,6 +1130,15 @@ void sync_and_refresh_displays(void) {
 // dropping it on layer exit can never release a Ctrl the user is really holding.
 static bool s_picker_latched = false;
 
+// Drop the picker's Ctrl latch, if WE hold it. Gated on ownership, never on the key:
+// releasing a Ctrl the user is really holding would leave it stuck (INTL_LAYER.md).
+static void picker_latch_release(void) {
+    if (s_picker_latched) {
+        unregister_mods(MOD_MASK_CTRL);
+        s_picker_latched = false;
+    }
+}
+
 // Sets layer state variable tracking the active keyboard layer.
 static void latin_picker_reset_page(void);   // defined with the picker helpers below
 static void latin_remap_cancel(void);        // ditto
@@ -1140,10 +1155,7 @@ layer_state_t layer_state_set_user(layer_state_t state) {
         // Leaving Intl closes the picker. Without this the latched Ctrl would stay
         // registered with the layer gone, so every following keystroke reaches the
         // host as Ctrl+key.
-        if(s_picker_latched) {
-            unregister_mods(MOD_MASK_CTRL);
-            s_picker_latched = false;
-        }
+        picker_latch_release();
         // Reset the page unconditionally, NOT only when we owned the latch: the
         // user can hold Ctrl themselves and page, in which case s_picker_latched is
         // false and the page would survive to the next visit to the layer.
@@ -1217,8 +1229,7 @@ void poly_prepare_for_flash(void) {
     // boot path — so a Colemak/Neo base dropped to QWERTY here, and that
     // cleared layer state was bridged to the slave, leaving the slave on the
     // QMK default layer after the flash.
-    layer_clear();
-    layer_on(access_local_layer()->def_layer);
+    layer_reset_to(access_local_layer()->def_layer);
     request_disp_refresh();
     // Push the base layer + refresh to the SLAVE and render the master, before
     // fw_up freezes display sync — so BOTH halves show legible base legends and
@@ -2103,9 +2114,7 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         return emoji;
     }
 
-    if(IS_QK_MOD_TAP(keycode)) {
-        keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
-    }
+    keycode = poly_mt_tap(keycode);
 
     const poly_sync_t* local_state = get_local_state();
 #ifndef ENABLE_NUMLOCK_FOR_OSX
@@ -2749,9 +2758,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     // and translate_keycode() has no row for it) and the keycap drew NO letter at
     // all: only the mod-tap hint badge, floating in an empty cell (field, 2026-08-18).
     // The two legend producers have to agree; keep the unwrap in both.
-    if(IS_QK_MOD_TAP(keycode)) {
-        keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
-    }
+    keycode = poly_mt_tap(keycode);
 
     const poly_layer_t* local_layer = get_local_layer();
 
@@ -4047,7 +4054,7 @@ void tutorial_shift_slots(uint8_t out[TUT_SHIFT_STAGES]) {
     for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             uint16_t kc = keymaps[_BL][r][c];
-            if (IS_QK_MOD_TAP(kc)) kc = QK_MOD_TAP_GET_TAP_KEYCODE(kc);
+            kc = poly_mt_tap(kc);
             if (kc != KC_LEFT_SHIFT && kc != KC_RIGHT_SHIFT) continue;
             const uint8_t slot = tutorial_slot_of(r, c);
             if (slot == TUT_SLOT_NONE) continue;
@@ -4104,7 +4111,7 @@ bool tutorial_key_in_chapter_set(uint8_t row, uint8_t col, bool layer_chapter) {
     uint16_t kc = keymaps[_BL][row][col];
     // A mod-tap's legend is its TAP keycode's legend, so unwrap before asking what this
     // key is — the same unwrap render_key() opens with, and for the same reason.
-    if (IS_QK_MOD_TAP(kc)) kc = QK_MOD_TAP_GET_TAP_KEYCODE(kc);
+    kc = poly_mt_tap(kc);
     if (kc >= KC_A && kc <= KC_Z) return true;
     return layer_chapter ? tutorial_is_layer_key(kc)
                          : (kc == KC_LEFT_SHIFT || kc == KC_RIGHT_SHIFT);
@@ -5794,6 +5801,15 @@ static uint8_t s_apple_swap_latch = 0;
 // so the extra dispatches cost nothing there either.
 //
 // Returns true when the keycode was ours.
+// Pick language `li` from the language layer and close it. `push_mru` puts it on the
+// recents row; the cycle key and the direct per-language selectors do not.
+static void poly_select_lang(poly_sync_t* local_state, uint8_t li, bool push_mru) {
+    local_state->lang = li;
+    if (push_mru) mru_lang_push(li);
+    mark_settings_dirty();
+    layer_off(_LL);
+}
+
 static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
     poly_sync_t*  local_state = access_local_state();
     poly_layer_t* local_layer = access_local_layer();
@@ -5816,9 +5832,7 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         switch (keycode) {
         case KC_LANG:
             if (IS_LAYER_ON(_LL)) {
-                local_state->lang = (local_state->lang + 1) % NUM_LANG;
-                mark_settings_dirty();
-                layer_off(_LL);
+                poly_select_lang(local_state, (uint8_t)((local_state->lang + 1) % NUM_LANG), false);
             }
             else {
                 layer_on(_LL);
@@ -5862,50 +5876,16 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         // (e.g. _L2=2 -> 0b10 = layer 1), making the keys type a different layer than
         // the keycaps showed. Persistence still round-trips the index via eeconfig
         // (defer_default_layer_save -> persistent_default_layer_get at boot).
-        case KC_L0:
+        case KC_L0 ... KC_L4:   // KC_L0..KC_L4 and _L0.._L4 are both contiguous
             if (!act) break;
-            local_layer->def_layer = _L0;
+            local_layer->def_layer = (uint8_t)(_L0 + (keycode - KC_L0));
             defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L1:
-            if (!act) break;
-            local_layer->def_layer = _L1;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L2:
-            if (!act) break;
-            local_layer->def_layer = _L2;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L3:
-            if (!act) break;
-            local_layer->def_layer = _L3;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L4:
-            if (!act) break;
-            local_layer->def_layer = _L4;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
+            layer_reset_to(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_BASE:
             if (!act) break;
-            layer_clear();
-            layer_on(local_layer->def_layer);
+            layer_reset_to(local_layer->def_layer);
             break;
         case KC_D1Q:
             if (!act) break;
@@ -6123,10 +6103,7 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             if (!act) break;
             int16_t li = lang_index_for_keycode(keycode);
             if (li >= 0) {
-                local_state->lang = (uint8_t)li;
-                mru_lang_push((uint8_t)li);
-                mark_settings_dirty();
-                layer_off(_LL);
+                poly_select_lang(local_state, (uint8_t)li, true);
             }
             break;
         }
@@ -6136,9 +6113,7 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         // above guard that — and the whole per-language block is one range case.
         case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1:
             if (!act) break;
-            local_state->lang = (uint8_t)(keycode - KCL_ENUS);
-            mark_settings_dirty();
-            layer_off(_LL);
+            poly_select_lang(local_state, (uint8_t)(keycode - KCL_ENUS), false);
             break;
         default:
             handled = false;
@@ -6223,7 +6198,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         // mid-lesson" survives; this is also the standing rule that modifiers and layer
         // keys must fall through a swallow, which the Intl layer learned twice.
         uint16_t kc = poly_keycode_at(_BL, row, col);
-        if (IS_QK_MOD_TAP(kc)) kc = QK_MOD_TAP_GET_TAP_KEYCODE(kc);
+        kc = poly_mt_tap(kc);
         // ⚠️ SHIFT AND THE LAYER KEYS ARE THE EXCEPTIONS, and they have to be real
         // ones. Chapters 2 and 3 ask the user to hold a key and watch every legend
         // change — and the legends follow local_layer->mods and ->layer, which only
@@ -6589,10 +6564,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             clear_keyboard();
             // Drop the variation picker if it was open: the two prompts would
             // otherwise both claim the keycaps.
-            if(s_picker_latched) {
-                unregister_mods(MOD_MASK_CTRL);
-                s_picker_latched = false;
-            }
+            picker_latch_release();
             latin_picker_reset_page();
             request_disp_refresh();
         }
@@ -6757,10 +6729,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                         send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)global_latin_table, sizeof(*global_latin_table), 10);
 
                         // "or an alternative character has been selected"
-                        if(s_picker_latched) {
-                            unregister_mods(MOD_MASK_CTRL);
-                            s_picker_latched = false;
-                        }
+                        picker_latch_release();
                         latin_picker_reset_page();
                         mark_latin_dirty();
                         request_disp_refresh();
@@ -6917,6 +6886,13 @@ void set_displays(uint8_t contrast, bool idle) {
     }
 }
 
+void poly_set_awake_state(poly_sync_t* local_state) {
+    local_state->contrast = get_active_brightness();
+    local_state->flags &= ~((uint8_t)DISP_IDLE);
+    local_state->flags |= STATUS_DISP_ON;
+    reset_idle_jitter();   // fresh, centred idle session next time
+}
+
 // Wake the board out of idle (or out of a suspend that left the status display off)
 // without a keypress: the host's "stop idle" (HID cmd 15) and the demo's end of an idle
 // segment. ONE copy, because a wake that forgets one of these leaves a dark half: the
@@ -6954,10 +6930,7 @@ bool display_wakeup(keyrecord_t* record) {
         // longer blocked by startup_anim_active()) can repaint the woken legends.
         startup_anim_stop();
         uprint("Wake by keypress\n");
-        local_state->contrast = get_active_brightness();
-        local_state->flags &= ~((uint8_t)DISP_IDLE);
-        local_state->flags |= STATUS_DISP_ON;
-        reset_idle_jitter();   // fresh, centred idle session next time
+        poly_set_awake_state(local_state);
         update_performed();
         // Wake-from-idle is the single worst render stall (measured ~107 ms in one
         // pass — the user is pressing a key to wake it, so it is also the most likely
@@ -7065,8 +7038,7 @@ void keyboard_post_init_user(void) {
     layer_state_t default_layer = persistent_default_layer_get();
     access_local_layer()->def_layer = default_layer;
     access_local_state()->unicode_mode = get_unicode_input_mode();
-    layer_clear();
-    layer_on(default_layer);
+    layer_reset_to(default_layer);
     g_force_layer_resync = true;   // push this boot's default layer to the slave
     g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;  // (re-arm the bounded budget)
 
@@ -7672,10 +7644,7 @@ bool shutdown_user(bool jump_to_bootloader) {
 // Resumes keyboard on wakeup: restores display state, brightness, RGB settings, calls housekeeping.
 void suspend_wakeup_init_kb(void) {
     poly_sync_t* local_state = access_local_state();
-    local_state->flags |= STATUS_DISP_ON;
-    local_state->flags &= ~((uint8_t)DISP_IDLE);
-    local_state->contrast = get_active_brightness();
-    reset_idle_jitter();
+    poly_set_awake_state(local_state);
     set_last_update(0);
 
     //rgb_matrix_reload_from_eeprom();

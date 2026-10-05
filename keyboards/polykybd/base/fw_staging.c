@@ -808,6 +808,17 @@ static bool fw_pubkey_provisioned(void) {
     return acc != 0;
 }
 
+bool fw_sig_verify(const uint8_t sig[FW_SIG_LEN], const void *msg, size_t len) {
+    if (!fw_pubkey_provisioned()) {
+        // Report INVALID, not UNSIGNED: a signature WAS supplied, we just have no
+        // trustworthy key to judge it with. Under enforcement both are refused.
+        uprintf("SIG: no signing key provisioned (placeholder pubkey) — cannot verify\n");
+        return false;
+    }
+    // monocypher crypto_ed25519_check() returns 0 on success, -1 on any failure.
+    return crypto_ed25519_check(sig, FW_SIGNING_PUBKEY, (const uint8_t *)msg, len) == 0;
+}
+
 // FW-2: verify the staged FIRMWARE image's Ed25519 signature against the embedded
 // public key. The image is read straight from XIP flash (memory-mapped), so no RAM
 // copy of the (up to ~2 MB) image is needed. Returns:
@@ -816,15 +827,8 @@ static bool fw_pubkey_provisioned(void) {
 // transaction window.
 static int fw_staging_check_signature(void) {
     if (!s_signature_present) return 0;
-    if (!fw_pubkey_provisioned()) {
-        // Report INVALID, not UNSIGNED: a signature WAS supplied, we just have no
-        // trustworthy key to judge it with. Under enforcement both are refused.
-        uprintf("FW_UP: no signing key provisioned (placeholder pubkey) — cannot verify\n");
-        return -1;
-    }
     const uint8_t *img = (const uint8_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET);
-    // monocypher crypto_ed25519_check() returns 0 on success, -1 on any failure.
-    return (crypto_ed25519_check(s_signature, FW_SIGNING_PUBKEY, img, s_image_size) == 0) ? 1 : -1;
+    return fw_sig_verify(s_signature, img, s_image_size) ? 1 : -1;
 }
 
 bool fw_staging_finalize(void) {

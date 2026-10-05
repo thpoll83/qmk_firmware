@@ -26,7 +26,7 @@
 // further through the panel's VCOMH or pre-charge registers flickered on hardware, with
 // brighter strips, so the light comes off the content.
 //
-// After "Poly Kybd" is deleted, a short poem (one of SI_POEMS, the next one each cycle)
+// After "Poly Kybd" is deleted, a short poem (one of SI_POEMS, picked at random each cycle)
 // is typed in a smaller face
 // (NotoSans_Regular_Base_14pt7b, the resident keycap face, ~10 letters a panel) as one
 // line across both panels. Once the line reaches the right edge, every keystroke pushes
@@ -168,10 +168,9 @@ static const uint32_t SI_WORD_RIGHT[] = U"Kybd";
 #define SI_NAME_MS (SI_WAIT_MS + SI_SLOTS * SI_KEY_MS + SI_DONE_MS + SI_APPEAR_MS + \
                     (SI_SLOTS - 1u) * SI_STEP_MS + SI_PAUSE_MS + SI_SLOTS * SI_KEY_MS)
 
-// The poems, one per cycle in turn: printable ASCII (the face covers 0x20..0x7E) and
-// '\n' for a line break. They are const, so they live in flash and cost no RAM; each
-// one adds only its entry in s_ptype_ms. Both halves count cycles on the same clock, so
-// they always type the same poem.
+// The poems, one picked at random each cycle (si_poem_select()): printable ASCII (the
+// face covers 0x20..0x7E) and '\n' for a line break. They are const, so they live in
+// flash and cost no RAM; each one adds only its entry in s_ptype_ms.
 static const char SI_POEM_0[] =
     "Every key knows its letter,\n"
     "every letter finds its key.\n"
@@ -190,7 +189,20 @@ static const char SI_POEM_2[] =
 _Static_assert(sizeof(SI_POEM_0) - 1u <= 255u, "a poem is indexed by a uint8_t");
 _Static_assert(sizeof(SI_POEM_1) - 1u <= 255u, "a poem is indexed by a uint8_t");
 _Static_assert(sizeof(SI_POEM_2) - 1u <= 255u, "a poem is indexed by a uint8_t");
-static const char *const SI_POEMS[] = {SI_POEM_0, SI_POEM_1, SI_POEM_2};
+static const char SI_POEM_3[] =
+    "A thousand words a day,\n"
+    "and not one of them mine.\n"
+    "I only hold the letters\n"
+    "until you make them shine.";
+static const char SI_POEM_4[] =
+    "When the room is quiet\n"
+    "and the cursor stops to rest,\n"
+    "I dream in little letters -\n"
+    "the short words are the best.";
+_Static_assert(sizeof(SI_POEM_3) - 1u <= 255u, "a poem is indexed by a uint8_t");
+_Static_assert(sizeof(SI_POEM_4) - 1u <= 255u, "a poem is indexed by a uint8_t");
+static const char *const SI_POEMS[] = {SI_POEM_0, SI_POEM_1, SI_POEM_2, SI_POEM_3, SI_POEM_4};
+_Static_assert(sizeof(SI_POEMS) / sizeof(SI_POEMS[0]) >= 2u, "si_poem_select() needs two poems");
 #define SI_POEM_N ((uint8_t)(sizeof(SI_POEMS) / sizeof(SI_POEMS[0])))
 // Defined in poly_keymap.c's translation unit (gfx_used_fonts.h, RESIDENT_FONTS);
 // extern here so its PROGMEM tables are not linked twice (see oled_helper.c).
@@ -237,6 +249,7 @@ static uint16_t s_frames;         // frames composed since the last console repo
 static uint32_t s_last_call;
 static uint32_t s_last_frame;     // when the last frame was composed
 static bool     s_started;
+static uint16_t s_session;        // idle sessions since boot: seeds the poem pick
 static bool     s_owned;          // oled_task_user() gave the panel to the idle screen
 static uint8_t  s_worst_ms;
 static uint32_t s_next_log;
@@ -406,9 +419,29 @@ static void si_poem_layout(void) {
     s_cycle_ms = SI_NAME_MS + SI_POEM_LEAD_MS + longest + SI_POEM_HOLD_MS + SI_POEM_EMPTY_MS + SI_GAP_MS;
 }
 
-// Pick the poem for the cycle `t` falls in.
+// A 32-bit mix of two numbers (a multiply-xorshift hash), for the poem pick.
+static uint32_t si_hash(uint32_t a, uint32_t b) {
+    uint32_t x = a * 0x9E3779B1u ^ b * 0x85EBCA6Bu;
+    x ^= x >> 15;
+    x *= 0x2C1B3C6Du;
+    x ^= x >> 12;
+    return x;
+}
+
+// Pick the poem for the cycle `t` falls in: at random, and never the one just typed.
+// Each cycle steps 1..N-1 poems on from the last, the step drawn from a hash of the
+// session and the cycle, so the sequence is a pure function of those two numbers.
+// ⚠️ That is what keeps the halves in step without a sync field: both run the same
+// cycle clock, and both count idle sessions, because both enter idle together through
+// the synced DISP_IDLE flag. A half rebooted on its own would count differently and
+// type a different poem than its partner until the next boot; nothing worse.
+// The walk from the session's first cycle is a few dozen steps at most, since the
+// panels turn off long before then.
 static void si_poem_select(uint32_t t) {
-    const uint8_t p = (uint8_t)((t / s_cycle_ms) % SI_POEM_N);
+    const uint32_t cycle = t / s_cycle_ms;
+    uint8_t        p     = (uint8_t)(si_hash(s_session, 0xFFFFFFFFu) % SI_POEM_N);
+    for (uint32_t c = 0; c <= cycle; ++c)
+        p = (uint8_t)((p + 1u + si_hash(s_session, c) % (SI_POEM_N - 1u)) % SI_POEM_N);
     s_poem  = SI_POEMS[p];
     s_ptype = s_ptype_ms[p];
     s_plen  = 0;
@@ -517,6 +550,7 @@ void status_idle_screen(void) {
     const uint32_t now = timer_read32();
     if (!s_started || timer_elapsed32(s_last_call) > 500u) {   // a new idle session
         s_started    = true;
+        ++s_session;
         s_t0         = now;
         s_last_frame = now - SI_FRAME_MS;   // the first frame is due at once
         si_layout();

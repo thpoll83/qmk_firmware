@@ -116,6 +116,21 @@ void poly_macro_label_get(uint8_t id, char *out);
 // so a keyboard that does not know a style a newer host offers still shows the macro.
 void poly_macro_look_set(uint8_t id, const poly_macro_look_t *look);
 
+// The ONE byte layout of a look, shared by EEPROM and the split link:
+//   [0] style  [1..4] icon, little-endian  [5..16] caption, NUL-padded
+// pack() stops the caption at its NUL and zero-fills the rest; unpack() always
+// NUL-terminates. Neither validates the style -- that is look_store()'s job.
+void poly_macro_look_pack(const poly_macro_look_t *look, uint8_t out[POLY_MACRO_LOOK_LEN]);
+void poly_macro_look_unpack(const uint8_t in[POLY_MACRO_LOOK_LEN], poly_macro_look_t *look);
+
+// Little-endian icon codepoint, as it appears in a look record and in cmd 38's reply.
+static inline void poly_macro_icon_put(uint8_t *out, uint32_t icon) {
+    for (uint8_t n = 0; n < POLY_MACRO_ICON_LEN; n++) out[n] = (uint8_t)((icon >> (8 * n)) & 0xFFu);
+}
+static inline uint32_t poly_macro_icon_get(const uint8_t *in) {
+    return (uint32_t)in[0] | ((uint32_t)in[1] << 8) | ((uint32_t)in[2] << 16) | ((uint32_t)in[3] << 24);
+}
+
 // Fill the RAM cache from EEPROM. Master only -- called once at boot.
 void poly_macro_labels_load(void);
 

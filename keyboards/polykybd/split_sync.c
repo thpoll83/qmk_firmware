@@ -465,14 +465,7 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     if (in_len < sizeof(uint32_t) + 2 + POLY_MACRO_LOOK_LEN) break;
                     {
                         poly_macro_look_t look;
-                        look.style = command_data[1];
-                        look.icon  = (uint32_t)command_data[2]
-                                   | ((uint32_t)command_data[3] << 8)
-                                   | ((uint32_t)command_data[4] << 16)
-                                   | ((uint32_t)command_data[5] << 24);
-                        memcpy(look.text, &command_data[2 + POLY_MACRO_ICON_LEN],
-                               POLY_MACRO_LABEL_LEN);
-                        look.text[POLY_MACRO_LABEL_LEN] = '\0';
+                        poly_macro_look_unpack(&command_data[1], &look);
                         poly_macro_look_adopt(command_data[0], &look);
                         request_disp_refresh();
                     }

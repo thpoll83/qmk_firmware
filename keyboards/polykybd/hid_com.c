@@ -1356,8 +1356,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         if (n > POLY_MACRO_LABEL_LEN) n = POLY_MACRO_LABEL_LEN;
                         poly_macro_look_t look;
                         look.style = data[4];
-                        look.icon  = (uint32_t)data[5] | ((uint32_t)data[6] << 8)
-                                   | ((uint32_t)data[7] << 16) | ((uint32_t)data[8] << 24);
+                        look.icon  = poly_macro_icon_get(&data[5]);
                         memcpy(look.text, &data[header], n);
                         look.text[n] = '\0';
                         poly_macro_look_set(id, &look);
@@ -1370,9 +1369,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     hid_reply(data, 0x26, true);
                     data[3] = len;
                     data[4] = look.style;
-                    for (uint8_t b = 0; b < POLY_MACRO_ICON_LEN; b++) {
-                        data[5 + b] = (uint8_t)((look.icon >> (8 * b)) & 0xFFu);
-                    }
+                    poly_macro_icon_put(&data[5], look.icon);
                     memcpy(&data[header], look.text, len);
                     raw_hid_send(data, length);
                 }

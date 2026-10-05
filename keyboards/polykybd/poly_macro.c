@@ -93,18 +93,32 @@ void poly_macro_write(uint16_t offset, uint16_t size, const uint8_t *data) {
 // byte the slave SAID, and every possible return is non-zero, so `if(!send_to_bridge())`
 // is dead code (the 2026-06-18 stuck-slave bug). Returning the verdict lets the caller
 // keep the look queued and re-send, which is what makes the dirty mask a retry queue.
+void poly_macro_look_pack(const poly_macro_look_t *look, uint8_t out[POLY_MACRO_LOOK_LEN]) {
+    out[0] = look->style;
+    poly_macro_icon_put(&out[1], look->icon);
+    uint8_t n = 0;
+    for (; n < POLY_MACRO_LABEL_LEN && look->text[n] != '\0'; n++) {
+        out[1 + POLY_MACRO_ICON_LEN + n] = (uint8_t)look->text[n];
+    }
+    for (; n < POLY_MACRO_LABEL_LEN; n++) {
+        out[1 + POLY_MACRO_ICON_LEN + n] = 0;
+    }
+}
+
+void poly_macro_look_unpack(const uint8_t in[POLY_MACRO_LOOK_LEN], poly_macro_look_t *look) {
+    look->style = in[0];
+    look->icon  = poly_macro_icon_get(&in[1]);
+    for (uint8_t n = 0; n < POLY_MACRO_LABEL_LEN; n++) {
+        look->text[n] = (char)in[1 + POLY_MACRO_ICON_LEN + n];
+    }
+    look->text[POLY_MACRO_LABEL_LEN] = '\0';
+}
+
 bool poly_macro_look_bridge(uint8_t id, const poly_macro_look_t *look) {
     dynamic_keymap_sync_t msg = {0};
     msg.commands[0] = POLY_KEYMAP_OP_MACRO_LABEL;
     msg.commands[1] = id;
-    msg.commands[2] = look->style;
-    for (uint8_t n = 0; n < POLY_MACRO_ICON_LEN; n++) {
-        msg.commands[3 + n] = (uint8_t)((look->icon >> (8 * n)) & 0xFFu);
-    }
-    uint8_t n = 0;
-    for (; n < POLY_MACRO_LABEL_LEN && look->text[n] != '\0'; n++) {
-        msg.commands[2 + POLY_MACRO_LOOK_LEN - POLY_MACRO_LABEL_LEN + n] = (uint8_t)look->text[n];
-    }
+    poly_macro_look_pack(look, &msg.commands[2]);
     // 2 header bytes + the full stride, so the payload size is constant and a shorter
     // caption cannot leave stale bytes from a previous send in the tail.
     const uint8_t payload = (uint8_t)(sizeof(uint32_t) + 2 + POLY_MACRO_LOOK_LEN);
@@ -143,17 +157,12 @@ void poly_macro_labels_load(void) {
         for (uint8_t n = 0; n < POLY_MACRO_LOOK_LEN; n++) {
             raw[n] = eeprom_read_byte((const uint8_t *)(uintptr_t)(base + n));
         }
-        s_looks[id].style = style_or_default(raw[0]);
-        // Little-endian, matching the wire. An unwritten record reads as all-zero
-        // (QMK's wear levelling normalises a cleared byte to 0, NOT 0xFF -- the fact
-        // that made latin_assign read as "every key hosts 'a'"), which is exactly the
+        // Same layout as the wire. An unwritten record reads as all-zero (QMK's
+        // wear levelling normalises a cleared byte to 0, NOT 0xFF -- the fact that
+        // made latin_assign read as "every key hosts 'a'"), which is exactly the
         // default look, so no migration sentinel is needed here.
-        s_looks[id].icon = (uint32_t)raw[1] | ((uint32_t)raw[2] << 8)
-                         | ((uint32_t)raw[3] << 16) | ((uint32_t)raw[4] << 24);
-        for (uint8_t n = 0; n < POLY_MACRO_LABEL_LEN; n++) {
-            s_looks[id].text[n] = (char)raw[1 + POLY_MACRO_ICON_LEN + n];
-        }
-        s_looks[id].text[POLY_MACRO_LABEL_LEN] = '\0';
+        poly_macro_look_unpack(raw, &s_looks[id]);
+        s_looks[id].style = style_or_default(s_looks[id].style);
     }
 }
 
@@ -325,15 +334,10 @@ void poly_macro_look_set(uint8_t id, const poly_macro_look_t *look) {
     if (id >= POLY_MACRO_COUNT) return;
     look_store(id, look);
     const uint16_t base = label_addr(id);
-    const uint32_t icon = s_looks[id].icon;
-    eeprom_update_byte((uint8_t *)(uintptr_t)(base + 0), s_looks[id].style);
-    for (uint8_t n = 0; n < POLY_MACRO_ICON_LEN; n++) {
-        eeprom_update_byte((uint8_t *)(uintptr_t)(base + 1 + n),
-                           (uint8_t)((icon >> (8 * n)) & 0xFFu));
-    }
-    for (uint8_t n = 0; n < POLY_MACRO_LABEL_LEN; n++) {
-        eeprom_update_byte((uint8_t *)(uintptr_t)(base + 1 + POLY_MACRO_ICON_LEN + n),
-                           (uint8_t)s_looks[id].text[n]);
+    uint8_t rec[POLY_MACRO_LOOK_LEN];
+    poly_macro_look_pack(&s_looks[id], rec);
+    for (uint8_t n = 0; n < POLY_MACRO_LOOK_LEN; n++) {
+        eeprom_update_byte((uint8_t *)(uintptr_t)(base + n), rec[n]);
     }
     s_label_dirty |= (uint16_t)1u << id;
 }

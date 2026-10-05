@@ -468,7 +468,7 @@ uint8_t tut_ripple_density(uint8_t p);
 // ripple has already run, and the slave starts there instead of at zero.
 //
 // One byte at 16 ms a unit spans 4.08 s, comfortably past TUT_RIPPLE_MS; the quantum
-// is well under one rendered frame (TUT_FRAME_MS), so rounding is invisible.
+// is well under one rendered frame (~16 ms), so rounding is invisible.
 #define TUT_SYNC_TICK_MS 16u
 
 // ---- ring geometry --------------------------------------------------------

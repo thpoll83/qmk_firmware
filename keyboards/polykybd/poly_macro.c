@@ -13,7 +13,6 @@
 #include "split_sync.h"      // POLY_KEYMAP_OP_MACRO_LABEL, sync_succeeded()
 #include "bridge_helper.h"   // send_to_bridge()
 #include <transactions.h>    // USER_SYNC_DYNAMIC_KEYMAP_DATA
-#include "polymod_crc32.h"
 
 // The label array must not overlap the bodies, and both must stay inside the region
 // QMK sized. If a later edit to POLY_MACRO_LABEL_LEN or the count breaks either, the
@@ -108,7 +107,6 @@ bool poly_macro_look_bridge(uint8_t id, const poly_macro_look_t *look) {
     // 2 header bytes + the full stride, so the payload size is constant and a shorter
     // caption cannot leave stale bytes from a previous send in the tail.
     const uint8_t payload = (uint8_t)(sizeof(uint32_t) + 2 + POLY_MACRO_LOOK_LEN);
-    msg.crc32 = crc32_1byte(msg.commands, (uint8_t)(payload - sizeof(uint32_t)), 0);
     return sync_succeeded(send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, &msg, payload, 3));
 }
 

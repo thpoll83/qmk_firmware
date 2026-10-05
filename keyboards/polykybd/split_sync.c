@@ -47,6 +47,12 @@ bool key_has_display(uint8_t r, uint8_t c);
 #include <stddef.h>
 #include <string.h>
 
+// The slave's overlay decode runs on core1. The old core0 fallback was removed: it
+// referenced a hid_bit_index that no longer exists, so it could not have compiled.
+#ifndef USE_CORE1
+#    error "split_sync.c requires USE_CORE1"
+#endif
+
 
 // Validates an incoming split-sync transaction: checks the payload/reply sizes and
 // the per-transaction CRC32, NACKing with SYNC_CRC32_ERR on a CRC mismatch. On a
@@ -247,8 +253,7 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
 }
 
-// Handles compressed overlay data on bridge with CRC32 validation, decompresses using core1 or local decompression.
-// Global variables: hid_bit_index
+// Handles compressed overlay data on bridge with CRC32 validation; core1 decompresses.
 void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     SYNC_VALIDATE_OR_RETURN(compressed_overlay_sync_t);
     note_overlay_activity();   // coalesce the slave's per-chunk renders (see update.h)
@@ -280,25 +285,12 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
         ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
         return;
     }
-#ifdef USE_CORE1
     //keycode info is lost, so KC_NO used (only used for diagnostics)
     // Bridged overlays carry only the pre-resolved pool slot (variant already folded
     // into adj_idx), so the slave can't tell an off-screen variant from a visible one —
     // pass visible=true (always refresh, still coalesced by note_overlay_activity above).
     // The visibility gate is a master-side optimization (see fill_overlay.c).
     core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed, true);
-#else
-    if(ov->len == COMPRESSED_START) {
-        hid_bit_index = 0;
-    }
-    int16_t maxlen = 360 - hid_bit_index/8;
-    hid_bit_index += rle_decompress(get_overlay(ov->adj_idx)+hid_bit_index/8, PK_MAX(0,maxlen), ov->compressed, ov->len, hid_bit_index);
-    if (hid_bit_index >= 360*8) {
-        mark_display_has_overlay_post_upload(ov->adj_idx);
-        request_disp_refresh();
-        hid_bit_index = 0;
-    }
-#endif
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
 }
 
@@ -319,24 +311,11 @@ void user_sync_roi_data_handler(uint8_t in_len, const void* in_data, uint8_t out
     }
     const overlay_fragment_context_t* ctx = get_fragment_context();
 
-    #ifdef USE_CORE1
-        if(first) {
-            core1_roi_start();
-        }
-        core1_update_roi(ctx->keycode, ctx->modifier, roi_ov->adj_idx, start, &ctx->roi, true);   // slave always refreshes (see compressed handler above)
-        ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK; // we cannot send SIG, we do not know if we are finished
-    #else
-        uint16_t new_index = copy_rectangle_to_overlay(ctx->bit_index, get_overlay(roi_ov->adj_idx), start, &ctx->roi, first?ROI_START:ROI_MAX);
-        if(new_index >= 2880) {
-            //finished roi update
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK_SIG;
-            mark_display_has_overlay_post_upload(roi_ov->adj_idx);
-            request_disp_refresh();
-        } else {
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
-        }
-        set_fragment_context_bit_index(new_index);
-    #endif
+    if(first) {
+        core1_roi_start();
+    }
+    core1_update_roi(ctx->keycode, ctx->modifier, roi_ov->adj_idx, start, &ctx->roi, true);   // slave always refreshes (see compressed handler above)
+    ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK; // we cannot send SIG, we do not know if we are finished
 }
 
 _Static_assert(DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT <= DYNAMIC_KEYMAP_LAYER_COUNT, "Maximum cannot exceed DYNAMIC_KEYMAP_LAYER_COUNT");

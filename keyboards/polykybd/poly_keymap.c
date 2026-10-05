@@ -4062,17 +4062,8 @@ void tutorial_shift_slots(uint8_t out[TUT_SHIFT_STAGES]) {
 
 uint32_t tutorial_slot_letter(uint8_t slot) {
     if (slot == TUT_SLOT_NONE) return 0;
-    const uint8_t idx = TUT_SLOT_IDX(slot);
-    const uint8_t dr = (uint8_t)(idx / MATRIX_COLS), dc = (uint8_t)(idx % MATRIX_COLS);
-    uint8_t       mr, mc;
-    if (TUT_SLOT_RIGHT(slot)) {
-        mr = (uint8_t)(dr + MATRIX_ROWS_PER_SIDE);
-        mc = (dr < 4) ? (uint8_t)(dc + 1) : dc;
-    } else {
-        mr = dr;
-        mc = dc;
-    }
-    if (mr >= MATRIX_ROWS || mc >= MATRIX_COLS) return 0;
+    uint8_t mr, mc;
+    if (!display_index_to_matrix(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot), &mr, &mc)) return 0;
     const uint16_t kc = keymaps[_BL][mr][mc];
     if (kc < KC_A || kc > KC_Z) return 0;
     // Upper case: at 2x the 19px face this fills the keycap, and a lone capital reads
@@ -4123,16 +4114,7 @@ bool tutorial_key_in_chapter_set(uint8_t row, uint8_t col, bool layer_chapter) {
 // Matrix (row,col) for a slot on THIS half, or false when it does not map back.
 static bool tutorial_matrix_of(uint8_t slot, uint8_t *row, uint8_t *col) {
     if (slot == TUT_SLOT_NONE) return false;
-    const uint8_t idx = TUT_SLOT_IDX(slot);
-    const uint8_t dr = (uint8_t)(idx / MATRIX_COLS), dc = (uint8_t)(idx % MATRIX_COLS);
-    if (TUT_SLOT_RIGHT(slot)) {
-        *row = (uint8_t)(dr + MATRIX_ROWS_PER_SIDE);
-        *col = (dr < 4) ? (uint8_t)(dc + 1) : dc;
-    } else {
-        *row = dr;
-        *col = dc;
-    }
-    return (*row < MATRIX_ROWS) && (*col < MATRIX_COLS);
+    return display_index_to_matrix(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot), row, col);
 }
 
 // Defined further down, beside update_displays()' own use of them.
@@ -5102,20 +5084,9 @@ static uint8_t poly_tutorial_apply_preview(void) {
 bool eden_idle_erase_legend(uint8_t disp_idx) {
     if (disp_idx >= MATRIX_ROWS_PER_SIDE * MATRIX_COLS) return false;
     // disp_idx == the anim geom index == display row*8 + col. Invert to the matrix
-    // (row,col), undoing the right-half `c--` display fold that invert_display()
-    // applies to the upper display rows (mirrors the host sim's disp_mp): LEFT is a
-    // straight (dr, dc); RIGHT is (dr+MATRIX_ROWS_PER_SIDE, dc+1) on rows 0..3 and
-    // (dr+MATRIX_ROWS_PER_SIDE, dc) on the bottom row 4.
-    uint8_t dr = disp_idx / MATRIX_COLS, dc = disp_idx % MATRIX_COLS;
+    // (row,col), undoing the right-half display fold (mirrors the host sim's disp_mp).
     uint8_t mr, mc;
-    if (is_left_side()) {
-        mr = dr;
-        mc = dc;
-    } else {
-        mr = dr + MATRIX_ROWS_PER_SIDE;
-        mc = (dr < 4) ? (uint8_t)(dc + 1) : dc;
-    }
-    if (mc >= MATRIX_COLS) return false;   // phantom col — no OLED behind it
+    if (!display_index_to_matrix(!is_left_side(), disp_idx, &mr, &mc)) return false;   // phantom col — no OLED behind it
     const poly_layer_t* local_layer = get_local_layer();
     uint16_t keycode = display_keycode_at(local_layer, mr, mc);
     if (keycode == KC_NO || keycode == KC_TRNS) return false;

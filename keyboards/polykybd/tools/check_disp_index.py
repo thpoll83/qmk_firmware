@@ -88,6 +88,20 @@ def fold(board):
     return lo, hi
 
 
+def inverse_fold(board):
+    """display_index_to_matrix()'s fold row bound, read from <board>/<board>.c.
+
+    Returns the N in `dr < N` (display rows 0..N-1 of the right half are folded),
+    or None when the inverse carries no fold.
+    """
+    with open(os.path.join(KB, board, board + ".c")) as f:
+        src = f.read()
+    body = src[src.index("bool display_index_to_matrix("):]
+    body = body[:body.index("\n}")]
+    m = re.search(r"dr\s*<\s*(\d+)", body)
+    return int(m.group(1)) if m else None
+
+
 def table_select(board):
     """True when the variant selects each panel from key_display[] directly."""
     with open(os.path.join(KB, board, board + ".h")) as f:
@@ -147,7 +161,32 @@ def check(board, rows_per_side, cols, panels, verbose):
                 pos += 1
             pos += skip
             skip = 0
-    for half, r, c, pos, got in bad:
+    # The inverse fold (display_index_to_matrix) must undo key_display_index() for
+    # every key that has a panel, or the tutorial and Eden address the wrong key.
+    inv_rows = inverse_fold(board)
+
+    def display_index_to_matrix(right, idx):
+        dr, dc = idx // cols, idx % cols
+        if right:
+            return dr + rows_per_side, (dc + 1 if inv_rows is not None and dr < inv_rows else dc)
+        return dr, dc
+
+    inv_bad = 0
+    for (r, c), code in sorted(kc.items()):
+        if code == "KC_NO":
+            continue
+        idx = key_display_index(r, c)
+        if idx == 255:
+            continue
+        back = display_index_to_matrix(r >= rows_per_side, idx)
+        if back != (r, c):
+            print("%s: display_index_to_matrix(panel %d) gives %s, expected %s"
+                  % (board, idx, back, (r, c)))
+            inv_bad += 1
+    print("%s: inverse fold round trip, %d mismatch(es)" % (board, inv_bad))
+    bad += [None] * inv_bad
+
+    for half, r, c, pos, got in [b for b in bad if b is not None]:
         print("%s: %s half matrix (%d,%d) renders to panel %d but key_display_index() says %s"
               % (board, half, r, c, pos, got))
     print("%s: %d key(s) checked, %d mismatch(es)" % (board, len(kc), len(bad)))

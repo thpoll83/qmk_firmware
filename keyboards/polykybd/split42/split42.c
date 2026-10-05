@@ -76,6 +76,12 @@ uint8_t key_display_index(uint8_t r, uint8_t c) {
     return (disp_idx < table_size) ? disp_idx : 255;
 }
 
+bool display_index_to_matrix(bool right, uint8_t idx, uint8_t *row, uint8_t *col) {
+    *row = (uint8_t)(idx / MATRIX_COLS + (right ? MATRIX_ROWS_PER_SIDE : 0));
+    *col = (uint8_t)(idx % MATRIX_COLS);
+    return (*row < MATRIX_ROWS) && (*col < MATRIX_COLS);
+}
+
 void invert_display(uint8_t r, uint8_t c, bool state) {
     /*
      * split42 is a symmetric CRKBD: the right-half matrix rows (4-7) carry all 6

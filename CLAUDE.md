@@ -807,7 +807,10 @@ code outside it:
 is held for 2 s. The playlist and its timing are pure (`make test:polykybd_demo_plan`).
 `KC_DEMO_KEYS`, beside it, is the **key demo**: the same loop, and each TYPE segment
 also reaches the host as plain keystrokes plus an Enter per line, as a notepad typing
-test. Two decisions that will be questioned again:
+test. ⚠️ **The demo's longer typing IS the idle screen's poems** (`idle_poem_0..4`,
+pointed at, not copied — ~900 B of the demo's own prose was removed for it), so editing a
+poem changes both the split72 idle screen and the demo, and `idle_poem_plan.c` is now in
+the shared `POLY_SRC` rather than split72's `SRC`. Two decisions that will be questioned again:
 
 - ⚠️ **The key demo sends NO modifier, ever** — a shifted character goes out as its
   unshifted key (`H` → h, `(` → 9), and Tab is refused (`demo_host_usage()`), so an

@@ -90,6 +90,7 @@ typedef struct {
 #define DEMO_SPACE_EXTRA_MS  60u   // after a space
 #define DEMO_COMMA_EXTRA_MS 220u   // after , ; :
 #define DEMO_STOP_EXTRA_MS  450u   // after . ! ?
+#define DEMO_LINE_EXTRA_MS  450u   // after a poem's line break (typed as Enter)
 #define DEMO_DOWN_MS         85u   // how long a key is shown pressed
 #define DEMO_SHIFT_LEAD_MS   45u   // Shift goes down this long before a shifted key
 #define DEMO_TAP_MS         140u   // a tapped menu key (Lang, Emoji) shown pressed

@@ -1,6 +1,7 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "demo_plan.h"
+#include "idle_poem_plan.h"   // the poems the typing segments point at
 
 #include <stddef.h>
 
@@ -9,26 +10,30 @@
 // each followed by about a minute of the idle animation (+ the 10 s fade into it), so a
 // passer-by sees the board at work, then resting, then at work again.
 //
-// The TYPE texts are keystrokes on a US layout, not prose in the previewed language:
-// with Greek previewed, "kalimera" presses the keys that carry k, a, l, ... and those
-// keycaps show κ, α, λ. The point is the legends, and a Latin string keeps the plan
-// free of any language table.
+// ⚠️ The longer typing is the idle screen's POEMS (base/idle_poem_plan.c), pointed at
+// rather than copied: the demo used to carry ~900 bytes of its own sentences and code
+// lines, and the poems already sit in flash. A poem's '\n' is typed as Enter, so the key
+// demo (KC_DEMO_KEYS) writes each poem into the editor line by line.
+//
+// The short words of the language and script tour stay here: each is spelled for the
+// alphabet previewed at that moment, and all of them together are ~150 bytes. They are
+// keystrokes on a US layout, not prose in the previewed language: with Greek previewed,
+// "kalimera" presses the keys that carry k, a, l, ... and those keycaps show κ, α, λ.
 #define SEC(s) ((uint32_t)(s) * 1000u)
 // A paged menu: one DEMO_PAGE_MS dwell per tab, plus two seconds on the last one.
 #define PAGED(n) ((uint32_t)((n) + 1u) * DEMO_PAGE_MS + 2000u)
 // The idle block: the 10 s fade (FADE_TRANSITION_TIME) plus a bit over a minute of the
 // idle style itself.
 #define IDLE_MINUTE {DEMO_IDLE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(74), NULL}
+// A poem typed on the base layout in the board's own language.
+#define POEM(t) {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(2), (t)}
 
 const demo_seg_t demo_playlist[] = {
     // 1. Typing — every keycap is a display, and Shift changes all of them.
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(2), "Hello, I am PolyKybd."},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(2), "Every key has its own little display."},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(2), "Hold SHIFT and watch the legends change!"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(2), "The legends follow your layout and language."},
+    POEM(idle_poem_0),
     {DEMO_SHOW, DEMO_VIEW_FN,   DEMO_LOOK_OWN, 0, SEC(5), NULL},
     {DEMO_SHOW, DEMO_VIEW_NUM,  DEMO_LOOK_OWN, 0, SEC(5), NULL},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(3), "The quick brown fox jumps over the lazy dog."},
+    POEM(idle_poem_1),
     IDLE_MINUTE,
 
     // 2. A language tour — the same keys, other alphabets.
@@ -42,7 +47,7 @@ const demo_seg_t demo_playlist[] = {
     {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_KOREAN,   0, SEC(2), "annyeong"},
     {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_GEORGIAN, 0, SEC(2), "gamarjoba"},
     {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_ARMENIAN, 0, SEC(2), "barev"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN,      0, SEC(3), "160 languages, one keyboard."},
+    POEM(idle_poem_2),
     IDLE_MINUTE,
 
     // 3. The menus — picked on the keyboard itself, no host app needed.
@@ -51,7 +56,7 @@ const demo_seg_t demo_playlist[] = {
     {DEMO_SHOW, DEMO_VIEW_INTL,      DEMO_LOOK_OWN, 0,  SEC(6), NULL},
     {DEMO_SHOW, DEMO_VIEW_UTIL,      DEMO_LOOK_OWN, 0,  SEC(6), NULL},
     {DEMO_SHOW, DEMO_VIEW_SETTINGS,  DEMO_LOOK_OWN, 0,  SEC(6), NULL},
-    {DEMO_TYPE, DEMO_VIEW_BASE,      DEMO_LOOK_OWN, 0,  SEC(3), "Emoji, languages, macros: all on the keys."},
+    POEM(idle_poem_3),
     IDLE_MINUTE,
 
     // 4. Glyph scripts — fantasy and retro faces over the same layout.
@@ -64,18 +69,14 @@ const demo_seg_t demo_playlist[] = {
     {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_C64,      0, SEC(2), "LOAD \"*\",8,1"},
     {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_AMIGA,    0, SEC(2), "Workbench 1.3"},
     {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_BRAILLE,  0, SEC(2), "touch"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN,      0, SEC(3), "Same keys, new faces: pick a script on the board."},
+    POEM(idle_poem_4),
     IDLE_MINUTE,
 
-    // 5. Code — symbols, brackets and Shift on almost every other key.
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(1), "int main(void) {"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(1), "    printf(\"Hello, world!\\n\");"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(1), "    return 0;"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(1), "    for (int i = 0; i < 72; i++) draw(key[i]);"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(2), "}"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(2), "$ make polykybd/split72:default"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(3), "git commit -m \"Ship it!\" && git push"},
+    // 5. The layers once more, between two poems.
+    POEM(idle_poem_0),
     {DEMO_SHOW, DEMO_VIEW_FN,   DEMO_LOOK_OWN, 0, SEC(5), NULL},
+    {DEMO_SHOW, DEMO_VIEW_NUM,  DEMO_LOOK_OWN, 0, SEC(5), NULL},
+    POEM(idle_poem_3),
     IDLE_MINUTE,
 
     // 6. European languages and the Intl layer — accents without dead keys.
@@ -85,19 +86,14 @@ const demo_seg_t demo_playlist[] = {
     {DEMO_SHOW, DEMO_VIEW_INTL, DEMO_LOOK_FRENCH,    0, SEC(5), NULL},
     {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_UKRAINIAN, 0, SEC(2), "dobryi den"},
     {DEMO_SHOW, DEMO_VIEW_EMOJI, DEMO_LOOK_OWN,      3, PAGED(3), NULL},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN,       0, SEC(3), "Switch language: the keycaps follow."},
+    POEM(idle_poem_1),
     IDLE_MINUTE,
 
-    // 7. A longer stretch of plain typing, then round again.
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(1), "PolyKybd is open source:"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(1), "the firmware is QMK, the host app is Python,"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(1), "and every keycap is a 72x40 OLED."},
+    // 7. One more poem and the settings, then round again.
+    POEM(idle_poem_2),
     {DEMO_SHOW, DEMO_VIEW_NUM,  DEMO_LOOK_OWN, 0, SEC(5), NULL},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(1), "Brightness, idle style and glyph script"},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(1), "are set right here, on the settings layer."},
-    {DEMO_SHOW, DEMO_VIEW_SETTINGS, DEMO_LOOK_OWN, 0, SEC(6), NULL},
+    {DEMO_SHOW, DEMO_VIEW_SETTINGS, DEMO_LOOK_OWN, 0, SEC(8), NULL},
     {DEMO_SHOW, DEMO_VIEW_LANG_MENU, DEMO_LOOK_OWN, 2, PAGED(2), NULL},
-    {DEMO_TYPE, DEMO_VIEW_BASE, DEMO_LOOK_OWN, 0, SEC(3), "Hold Esc to stop the demo. Have fun!"},
     IDLE_MINUTE,
 };
 const uint8_t demo_playlist_len = (uint8_t)(sizeof(demo_playlist) / sizeof(demo_playlist[0]));
@@ -176,6 +172,7 @@ uint32_t demo_char_slot_ms(const char *text, uint16_t i) {
         case ' ':                     ms += DEMO_SPACE_EXTRA_MS; break;
         case ',': case ';': case ':': ms += DEMO_COMMA_EXTRA_MS; break;
         case '.': case '!': case '?': ms += DEMO_STOP_EXTRA_MS;  break;
+        case '\n':                    ms += DEMO_LINE_EXTRA_MS;  break;
         default: break;
     }
     return ms;

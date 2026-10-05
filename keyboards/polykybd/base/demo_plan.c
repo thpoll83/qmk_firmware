@@ -254,3 +254,36 @@ bool demo_show_trigger_down(const demo_seg_t *s, uint32_t into) {
     if (demo_view_is_held(s->view)) return true;
     return into < DEMO_TAP_MS;
 }
+
+// ---- key demo -----------------------------------------------------------------
+
+uint8_t demo_host_usage(char c) {
+    if (c == '\t') return 0;   // Tab moves focus: the run would leave the editor
+    return demo_ascii_usage(c, NULL);
+}
+
+uint16_t demo_type_strokes(const char *text) {
+    if (text == NULL) return 0;
+    uint16_t n = 0;
+    while (text[n] != '\0') ++n;
+    return (uint16_t)(n + 1u);   // + the closing Enter
+}
+
+uint32_t demo_stroke_press_ms(const char *text, uint16_t i) {
+    uint32_t start = 0;
+    uint16_t k     = 0;
+    if (text == NULL) return 0;
+    for (; k < i && text[k] != '\0'; ++k) start += demo_char_slot_ms(text, k);
+    if (text[k] == '\0') return start;   // the Enter, as soon as typing ends
+    // The same moment demo_type_keys() shows the key down: after the Shift lead for
+    // a shifted character, although the host never receives that Shift.
+    bool shift = false;
+    demo_ascii_usage(text[k], &shift);
+    return start + (shift ? DEMO_SHIFT_LEAD_MS : 0u);
+}
+
+uint8_t demo_stroke_usage(const char *text, uint16_t i) {
+    const uint16_t n = demo_type_strokes(text);
+    if (i + 1u >= n) return i + 1u == n ? (uint8_t)DEMO_USAGE_ENTER : 0u;
+    return demo_host_usage(text[i]);
+}

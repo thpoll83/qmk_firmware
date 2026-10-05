@@ -5,8 +5,9 @@
 //
 // The demo plays a ~15 minute playlist on a loop until someone holds Esc: typing that
 // shows legends change under Shift, a language tour, the menus, the glyph scripts, and
-// a minute of the configured idle animation between activities. Nothing it does reaches
-// the host — it is a show on the keycaps, not typing.
+// a minute of the configured idle animation between activities. In the plain demo nothing
+// reaches the host: it is a show on the keycaps, not typing. The key demo (KC_DEMO_KEYS,
+// below) plays the same show and also types the TYPE segments into the host.
 //
 // Deliberately free of quantum.h, the display stack and the keymap: the arithmetic here
 // (where the cycle is, which character is down, when Shift is held) is the part a unit
@@ -127,6 +128,29 @@ typedef struct {
     bool shift_down;   // Shift is held right now (for the whole slot of a shifted char)
 } demo_keys_t;
 demo_keys_t demo_type_keys(const char *text, uint32_t into);
+
+// ---- key demo (KC_DEMO_KEYS): the keystrokes the HOST receives -------------------
+// The key demo plays the same playlist and also types each TYPE segment into whatever
+// has focus, as a typing test for a text editor. It sends the key the board shows
+// pressed and never a modifier: no Shift, no Ctrl/Alt/GUI, no layer key. So a shifted
+// character arrives as its unshifted key ('H' -> h, '(' -> 9), and a long run cannot
+// switch windows, close a tab or trigger a shortcut.
+//
+// A segment's strokes are its characters plus one Enter after the last, so each line
+// lands on its own line in the editor. Stroke `i` (0..demo_type_strokes()-1) goes down
+// at demo_stroke_press_ms() — the moment the board inverts that key — and the binding
+// lifts it DEMO_DOWN_MS later.
+#define DEMO_USAGE_ENTER 0x28u
+
+// The usage the host receives for `c`, Shift dropped. 0 = send nothing: an untypable
+// character, and Tab, which moves focus out of the editor.
+uint8_t  demo_host_usage(char c);
+// Characters + the closing Enter; 0 for NULL.
+uint16_t demo_type_strokes(const char *text);
+// ms into the segment when stroke `i` goes down (the Enter: when typing ends).
+uint32_t demo_stroke_press_ms(const char *text, uint16_t i);
+// The usage stroke `i` sends (DEMO_USAGE_ENTER for the last one).
+uint8_t  demo_stroke_usage(const char *text, uint16_t i);
 
 // SHOW: which tab of a paged menu is up (0..pages), and whether the key that opened the
 // view is shown pressed (held views: the whole segment; tapped menus: DEMO_TAP_MS).

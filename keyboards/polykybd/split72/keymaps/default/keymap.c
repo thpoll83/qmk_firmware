@@ -297,8 +297,9 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // row fills inward from the outer edge with its slack at the far end, so this
         // is the next slot either rule would pick. KC_DEMO takes the next free slot after
         // the toggles: it swallows every key until Esc is held, so it belongs behind More
-        // with the other keys a stray tap should not reach. One blank remains.
-        KC_SETTINGS_MORE, KC_IDLE_STYLE, KC_IDLE_TIMEOUT, KC_GLYPH_SCRIPT, KC_TOGMODS, KC_TOGTEXT, KC_DEMO, KC_NO,
+        // with the other keys a stray tap should not reach. KC_DEMO_KEYS (the same loop,
+        // typing into the host) takes the last slot beside it.
+        KC_SETTINGS_MORE, KC_IDLE_STYLE, KC_IDLE_TIMEOUT, KC_GLYPH_SCRIPT, KC_TOGMODS, KC_TOGTEXT, KC_DEMO, KC_DEMO_KEYS,
         KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
 

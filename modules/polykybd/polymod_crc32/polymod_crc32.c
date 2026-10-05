@@ -52,3 +52,17 @@ uint32_t crc32_1byte(const void* data, uint16_t length, uint32_t previousCrc32)
 
   return ~crc; // same as crc ^ 0xFFFFFFFF
 }
+
+uint32_t crc32_large(const void* data, uint32_t length, uint32_t previousCrc32)
+{
+  const uint8_t* p = (const uint8_t*) data;
+  uint32_t crc = previousCrc32;
+  while (length)
+  {
+    const uint16_t chunk = (length > 0x8000u) ? 0x8000u : (uint16_t)length;
+    crc = crc32_1byte(p, chunk, crc);
+    p += chunk;
+    length -= chunk;
+  }
+  return crc;
+}

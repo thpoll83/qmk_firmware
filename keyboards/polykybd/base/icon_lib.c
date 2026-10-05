@@ -22,17 +22,6 @@ static uint16_t       s_count;
 static bool           s_present;
 static fontpack_font_t s_rec[ICONLIB_MAX_RECORDS];
 
-static uint32_t crc_region(const uint8_t *p, uint32_t len) {
-    uint32_t crc = 0;
-    while (len) {
-        uint16_t chunk = (len > 0x8000u) ? 0x8000u : (uint16_t)len;
-        crc = crc32_1byte(p, chunk, crc);
-        p   += chunk;
-        len -= chunk;
-    }
-    return crc;
-}
-
 void iconlib_unload(void) {
     s_base      = NULL;
     s_total     = 0;
@@ -65,7 +54,7 @@ bool iconlib_load_at(const uint8_t *base, uint32_t cap, uint16_t *out_ver) {
     if (h.font_count > ICONLIB_MAX_RECORDS) return false;
     if (h.total_size <= sizeof(fontpack_header_t)) return false;
     if (h.font_table_off + h.font_count * sizeof(fontpack_font_t) > h.total_size) return false;
-    if (crc_region(base + sizeof(fontpack_header_t), h.total_size - sizeof(fontpack_header_t)) != h.crc32) {
+    if (crc32_large(base + sizeof(fontpack_header_t), h.total_size - sizeof(fontpack_header_t), 0) != h.crc32) {
         return false;
     }
 

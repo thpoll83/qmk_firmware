@@ -286,21 +286,6 @@ static uint8_t  s_last_chunk_ack;
 static uint8_t  s_last_commit_ack;   // ack the slave's COMMIT handler last returned
 
 // ---------------------------------------------------------------------------
-// Helper: chain CRC32 over a large buffer in 60 000-byte chunks
-// (crc32_1byte length parameter is uint16_t, max 65535)
-// ---------------------------------------------------------------------------
-static uint32_t crc32_large(const uint8_t *data, uint32_t size) {
-    uint32_t crc = 0;
-    while (size > 0) {
-        uint16_t chunk = (size > 60000u) ? 60000u : (uint16_t)size;
-        crc  = crc32_1byte(data, chunk, crc);
-        data += chunk;
-        size -= chunk;
-    }
-    return crc;
-}
-
-// ---------------------------------------------------------------------------
 // flash_range_program wrapped in the IRQ-disable + (conditional) core1-halt guard
 // the bootrom flash ops require.  s_core1_halted lets a caller that has already
 // halted core1 (e.g. inside a wider erase) reuse it without a redundant restart.
@@ -1055,7 +1040,7 @@ uint32_t fw_staging_get_own_fw_size(void) {
 }
 
 uint32_t fw_staging_get_own_fw_crc(void) {
-    return crc32_large(&__flash_binary_start, fw_staging_get_own_fw_size());
+    return crc32_large(&__flash_binary_start, fw_staging_get_own_fw_size(), 0);
 }
 
 const uint8_t *fw_staging_get_fw_base(void) {
@@ -1344,9 +1329,9 @@ fw_apply_verdict_t fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expe
     // the first few percent of the file. It then never matches, so the verify below
     // refuses EVERY image over 64 KB -- which is exactly what it did on its first
     // outing (reported c48f3db3, the CRC of the leading 34164 bytes of a 492916-byte
-    // image). The helper exists for this and says so in its own comment.
+    // image). polymod_crc32.h says so beside the helper.
     const uint32_t crc = crc32_large((const uint8_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET),
-                                     hdr[1]);
+                                     hdr[1], 0);
     if (size)       *size       = hdr[1];
     if (expect_crc) *expect_crc = hdr[2];
     if (actual_crc) *actual_crc = crc;

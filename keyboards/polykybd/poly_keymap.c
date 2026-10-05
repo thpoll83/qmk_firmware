@@ -7644,7 +7644,10 @@ bool shutdown_user(bool jump_to_bootloader) {
 // Resumes keyboard on wakeup: restores display state, brightness, RGB settings, calls housekeeping.
 void suspend_wakeup_init_kb(void) {
     poly_sync_t* local_state = access_local_state();
-    poly_set_awake_state(local_state);
+    local_state->flags |= STATUS_DISP_ON;
+    local_state->flags &= ~((uint8_t)DISP_IDLE);
+    local_state->contrast = get_active_brightness();
+    reset_idle_jitter();
     set_last_update(0);
 
     //rgb_matrix_reload_from_eeprom();

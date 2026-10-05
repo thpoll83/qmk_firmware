@@ -614,7 +614,6 @@ void copy_local_last_latin(const poly_last_t* value);
 
 const poly_last_t* get_global_last_latin(void);
 poly_last_t* access_global_last_latin(void);
-uint16_t get_global_last_latin_keycode(void);
 void copy_global_last_latin(const poly_last_t* value);
 
 const latin_sync_t* get_global_latin_table(void);

@@ -149,6 +149,15 @@ _Static_assert((int)POLY_OS_LINUX   == (int)OSA_OS_LINUX,   "enum poly_os must m
 _Static_assert((int)POLY_OS_ANDROID == (int)OSA_OS_ANDROID, "enum poly_os must match enum polymod_os_action_os");
 _Static_assert((int)POLY_OS_IOS     == (int)OSA_OS_IOS,     "enum poly_os must match enum polymod_os_action_os");
 
+// The base-layer switch: drop every layer, then turn `layer` on. layer_clear() +
+// layer_on(index) is deliberate, NOT default_layer_set(), which takes a BITMASK and
+// so set the wrong base when handed an index (see KC_L0 ... KC_L4).
+static inline void layer_reset_to(uint8_t layer) {
+    layer_clear();
+    layer_on(layer);
+}
+_Static_assert(KC_L4 - KC_L0 == 4 && _L4 - _L0 == 4, "KC_L0 ... KC_L4 maps onto _L0.._L4 by offset");
+
 #ifdef RGB_MATRIX_ENABLE
 // Forward-declare this helper function
 void rgb_matrix_update_pwm_buffers(void);
@@ -162,15 +171,6 @@ void rgb_matrix_update_pwm_buffers(void);
 // diff re-fire alone does NOT cover for transient state (see the comment at the
 // USER_SYNC_POLY_DATA send site).
 #define PERIODIC_SYNC_RETRIES 3
-
-// The base-layer switch: drop every layer, then turn `layer` on. layer_clear() +
-// layer_on(index) is deliberate, NOT default_layer_set(), which takes a BITMASK and
-// so set the wrong base when handed an index (see KC_L0 ... KC_L4).
-static inline void layer_reset_to(uint8_t layer) {
-    layer_clear();
-    layer_on(layer);
-}
-_Static_assert(KC_L4 - KC_L0 == 4 && _L4 - _L0 == 4, "KC_L0 ... KC_L4 maps onto _L0.._L4 by offset");
 
 /*[[[cog
 import cog

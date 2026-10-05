@@ -992,14 +992,20 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // one torn EEPROM write away from silently reverting.
                     poly_hand_set_pending(master_is_left);
                     poly_hand_flush_pending();   // main loop, so the sector write is safe inline here
-                    poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
-                                              .action = RESET_ACTION_REBOOT,
-                                              .set_handedness = 1, .is_left = master_is_left ? 0 : 1 };
-                    uint8_t ack = send_to_bridge(USER_SYNC_RESET, &msg, sizeof(msg), 5);
-                    uprintf("Set handedness: master=%s, slave ack=%d.\n", master_is_left ? "LEFT" : "RIGHT", ack);
+                    // ACK first, like cmd 43: the reset never returns, and the hardened
+                    // handoff below can take a couple of seconds on a bad link.
                     memset(data, 0, length);
                     hid_reply(data, 0x19, true);
                     raw_hid_send(data, length);
+                    // Hardened handoff, same as cmd 43 and the reset key. A dropped
+                    // frame here does double damage: the master reboots alone and
+                    // hangs on the boot splash, AND the slave never records its new
+                    // side, so after a replug both halves claim the same one.
+                    poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
+                                              .action = RESET_ACTION_REBOOT,
+                                              .set_handedness = 1, .is_left = master_is_left ? 0 : 1 };
+                    uint8_t ack = fw_up_send_slave_reset(&msg);
+                    uprintf("Set handedness: master=%s, slave ack=0x%02x\n", master_is_left ? "LEFT" : "RIGHT", ack);
                     soft_reset_keyboard();
                 }
                 break;

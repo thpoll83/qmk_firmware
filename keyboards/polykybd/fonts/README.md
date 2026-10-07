@@ -205,11 +205,14 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   - Regenerating needs **all** source fonts (`fonts/dl-fonts.sh`, ~75 MB, 21 entries)
     plus the pinned fontconvert at `/tmp/fontconvert_pinned` (the path is echoed into
     each header's provenance comment).
-    ⚠️ **`dl-fonts.sh` stops at the first failed download** (`set -e`), and the
-    `NotoColorEmoji-Regular.ttf` URL returns 404 (2026-10-01). That entry is not the
-    last one, so every font after it is skipped too. Fetch the rest with a loop over
-    `noto-fonts.yaml` that ignores the one failure; the `latin` category does not use
-    the emoji source.
+    ⚠️ **`dl-fonts.sh` stops at the first failed download** (`set -e`), so one dead
+    URL skips every font after it. NotoColorEmoji did exactly that from 2026-09-24,
+    when noto-emoji moved `fonts/` to `2D/fonts/`. The URL is now pinned to the
+    release tag. ⚠️ Do not swap in the `google/fonts` copy of NotoColorEmoji: it is
+    COLRv1 + SVG with no bitmap tables, and a regen from it rewrote ~1,100 lines of
+    `emoji_fig_fonts.h`. The CBDT build from the tag leaves `emoji_fonts.h`
+    byte-identical and changes 45 lines of `emoji_fig_fonts.h` (redrawn emoji), so a
+    full regen still drifts the emoji headers: revert them unless you mean to reship.
     ⚠️ **The provenance comment also records the ABSOLUTE path of the source font**, so
     a regeneration from any other checkout (a `git worktree`, say) rewrites every
     header comment while the glyph data is byte-identical, and `--check` reports

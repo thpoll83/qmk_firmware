@@ -809,6 +809,11 @@ uint8_t poly_reported_lang(void);
 // runs, where it is the language already stored (the slave cannot tell a synced
 // preview from the real one). Defined in poly_keymap.c.
 uint8_t poly_persisted_lang(void);
+// The HOST chose a language (SET_LANG). Writes it and, while a board-only preview is
+// on the keycaps, records it as the real language too: a host choice that EQUALS the
+// preview (en-US during the tutorial) is otherwise indistinguishable from the preview
+// and would be dropped when the lesson ends. Defined in poly_keymap.c.
+void poly_set_host_lang(uint8_t lang);
 // Persist BOOT_INTRO_DONE (one-time tail-byte write) so the intro won't replay.
 void mark_boot_intro_done(void);
 // Clear the marker (straight-through write) so the intro + tutorial replay next boot.

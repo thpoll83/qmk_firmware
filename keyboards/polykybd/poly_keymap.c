@@ -5025,6 +5025,11 @@ uint8_t poly_reported_lang(void) {
     return cur;
 }
 
+void poly_set_host_lang(uint8_t lang) {
+    access_local_state()->lang = lang;
+    if (s_tut_real_lang != 0xFF) s_tut_real_lang = lang;
+}
+
 // The language to STORE. Only the master keeps s_tut_real_lang; the slave receives the
 // preview through the ordinary sync and cannot tell it from the user's language. So
 // while the lesson runs the slave keeps the language it already stored, or a flush

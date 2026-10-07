@@ -131,7 +131,9 @@ git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -5
    ⚠️ **The diff above cannot see the vendored USB driver**, because it lives under
    `keyboards/polykybd/chibios_overrides/` and no merge touches it. Its risk is the
    opposite one: the copy goes STALE when the merge moves `lib/chibios-contrib`.
-   If `git submodule status` shows that pointer moved, run the `diff -ru` in
+   Step 6's `git submodule update` has already cleared the `+` marker, so ask the
+   merge commit instead: `git diff HEAD^1 HEAD -- lib/chibios-contrib` prints a
+   `Subproject commit` pair when the pin moved. If it did, run the `diff -ru` in
    `UPSTREAM_PATCHES.md` → "ChibiOS-Contrib RP2040 USB driver" and carry every
    upstream change into the copy. Also run its `grep -n "USB_INTS_BUS_RESET" -A3 …`
    first: if the new Contrib handles the reset before SETUP, delete

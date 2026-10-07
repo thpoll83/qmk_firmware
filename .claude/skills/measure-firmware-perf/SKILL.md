@@ -163,7 +163,7 @@ Run was clean (gates passed, ovl_iters == reports).
 - ⚠️ **The perf artifact holds only the `.uf2` images, no `.elf`, and CI's toolchain
   differs from the container's**, so a local rebuild is not byte-identical to what
   the rig flashed. For a symbol comparison, build every side locally with the same
-  toolchain and the CI flags (`-e POLYKYBD_LOOP_PROFILE=yes`, the HIL side), and use
+  toolchain and the full CI flag set (`-e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_LOOP_PROFILE=yes -e POLYKYBD_HIL=left`; `DOOM_PACK` selects a different linker script), and use
   the CI `.uf2`s only to confirm the layout shift has the same size.
 - **GitHub MCP quirks**: `actions_get`/`actions_list` take `resource_id` (not
   `run_id`), and `list_workflow_runs`' `branch` filter is **not applied** — filter by

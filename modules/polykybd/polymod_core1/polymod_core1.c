@@ -124,8 +124,7 @@ bool multicore_launch_core1_bounded(uint32_t total_timeout_us) {
     return multicore_launch_core1_with_stack_bounded(core1_entry, core1_stack, CORE1_STACK_SIZE, total_timeout_us);
 }
 
-bool multicore_launch_core1_with_stack_bounded(void (*entry)(void), uint32_t *stack_bottom, size_t stack_size_bytes,
-                                               uint32_t total_timeout_us) {
+bool multicore_launch_core1_with_stack_bounded(void (*entry)(void), uint32_t *stack_bottom, size_t stack_size_bytes, uint32_t total_timeout_us) {
     uint32_t *stack_ptr = stack_bottom + stack_size_bytes / sizeof(uint32_t);
     stack_ptr -= 3;
     stack_ptr[0] = (uintptr_t)entry;

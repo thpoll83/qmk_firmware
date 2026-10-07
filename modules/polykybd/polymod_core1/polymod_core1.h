@@ -25,8 +25,7 @@ void multicore_launch_core1_with_stack(void (*entry)(void), uint32_t *stack_bott
 // Bounded form of the above, as multicore_launch_core1_bounded() is of
 // multicore_launch_core1(). For a runtime launch that something else may hold
 // core1 in reset during (the Doom engine start racing a flash erase).
-bool multicore_launch_core1_with_stack_bounded(void (*entry)(void), uint32_t *stack_bottom, size_t stack_size_bytes,
-                                               uint32_t total_timeout_us);
+bool multicore_launch_core1_with_stack_bounded(void (*entry)(void), uint32_t *stack_bottom, size_t stack_size_bytes, uint32_t total_timeout_us);
 
 void core1_entry(void);
 

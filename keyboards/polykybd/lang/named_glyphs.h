@@ -2347,6 +2347,8 @@
 // reasons as ICON_HAN_YEONG: one font, one baseline, and no pack needed (the jp bundle
 // carries kana only, so 英数 had no glyph anywhere).
 #define ICON_EISU_KANA              	U"\x100027"
+// KC_IME's ja-JP legend while Shift is held: カナ, the katakana a Shift+tap selects.
+#define ICON_KATAKANA               	U"\x100028"
 // Press and hold, two frames the tutorial alternates beside every "hold" line: the key
 // up with the arrow pushing, then pressed flat onto the line (round 43).
 #define ICON_HOLD_UP                	U"\x100002"

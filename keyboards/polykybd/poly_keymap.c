@@ -2140,6 +2140,19 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         // (doom_mode.c; always blank in non-doom builds via the stub).
         case KC_IDDQD:                      return doom_egg_armed() ? U"IDDQD" : U"";
 
+        // The input-method key, in the wording a Korean / Japanese keyboard prints.
+        // Only reached on ko-KR / ja-JP: elsewhere display_keycode_at() hands the
+        // renderer KC_NUBS. On ja-JP it follows Shift, because Shift+tap selects
+        // katakana (base/ime_key_plan.c) and the key should say so while it is held.
+        // HERE rather than in keycode_to_static_text() for the KC_GLYPH_SIZE_UP
+        // reason below: Shift must come from the SYNCED poly_layer_t.mods, or the
+        // slave half would never show カナ.
+        case KC_IME:
+            if (poly_ime_family(local_state->lang) == IME_FAMILY_JAPANESE) {
+                return (local_layer->mods & MOD_MASK_SHIFT) != 0 ? ICON_KATAKANA : ICON_EISU_KANA;
+            }
+            return ICON_HAN_YEONG;
+
         // The legend-size key states BOTH what it will do and where you are: the
         // increase/decrease icon plus the current tier as a digit in the top-right.
         // Shift swaps the icon and reverses the step (poly_custom_key_action reads

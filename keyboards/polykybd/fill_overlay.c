@@ -25,6 +25,12 @@
 #include <transactions.h>
 #include "poly_keymap.h"
 
+// The overlay decode runs on core1. The old core0 fallback was removed: it had not
+// been built since USE_CORE1 became unconditional in config.h.
+#ifndef USE_CORE1
+#    error "fill_overlay.c requires USE_CORE1"
+#endif
+
 
 // Resolve which half(s) should receive an upload. With MIRROR_OVERLAYS set we
 // force POS_ON_BOTH so MRU mappings that cross the split find the bitmap on
@@ -198,28 +204,10 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
     idx = get_display_pool_slot(idx);
 
     enum key_split_pos pos = resolve_upload_side(keycode);
-    uint16_t bit_index = get_fragment_context()->bit_index;
     uint8_t compressed_len = first?COMPRESSED_START:COMPRESSED_MAX;
 
     if (is_on_current_side(pos)) {
-#ifdef USE_CORE1
         core1_decompress_fragment(keycode, ctx_mod, idx, compressed, visible);
-#else
-        int16_t maxlen = 360 - bit_index/8;
-        bit_index += rle_decompress(get_overlay(idx)+bit_index/8, PK_MAX(0,maxlen), compressed, compressed_len, bit_index);
-
-        if (bit_index >= 360*8 -1) {
-            mark_display_has_overlay_post_upload(idx);
-            uprintf("--> Finished keycode 0x%x (mod 0x%x): side %s, total bytes %d.\n",
-                keycode, ctx_mod, pos_to_str(pos), bit_index/8);
-            // No update_performed() — a host overlay push is not user activity and
-            // must not restart the idle countdown (see base/update.h).
-            // Only refresh if this overlay is on screen (see overlay_visible).
-            if (visible) {
-                request_disp_refresh();
-            }
-        }
-#endif
     }
 
     if (is_on_other_side(pos)) {
@@ -235,8 +223,6 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
                     keycode, idx);
         }
     }
-
-    set_fragment_context_bit_index(bit_index);
 }
 
 // Fills region-of-interest of overlay buffer with data and syncs to bridge when needed.
@@ -262,28 +248,10 @@ void fill_roi_overlay_buffer(uint8_t* data, bool first) {
 
     if (is_on_current_side(pos)) {
         roi_update_data_t ctx_roi = get_fragment_context()->roi;
-        #ifdef USE_CORE1
-            if(first) {
-                core1_roi_start();
-            }
-            core1_update_roi(keycode, ctx_mod, idx, first?(&(data[5])):data, &ctx_roi, visible);
-        #else
-            uint16_t data_len = first?ROI_START:ROI_MAX;
-            uint16_t bit_index = get_fragment_context()->bit_index;
-            if(first) {
-                bit_index = ctx_roi.y * SCREEN_WIDTH + ctx_roi.x;
-            }
-            bit_index = copy_rectangle_to_overlay(bit_index, get_overlay(idx), first?(&(data[5])):data, &ctx_roi, data_len);
-            if(bit_index >= 2880) {
-                mark_display_has_overlay_post_upload(idx);
-                // No update_performed() — see base/update.h.
-                // Only refresh if this overlay is on screen (see overlay_visible).
-                if (visible) {
-                    request_disp_refresh();
-                }
-            }
-            set_fragment_context_bit_index(bit_index);
-        #endif
+        if(first) {
+            core1_roi_start();
+        }
+        core1_update_roi(keycode, ctx_mod, idx, first?(&(data[5])):data, &ctx_roi, visible);
     }
 
     if (is_on_other_side(pos)) {

@@ -33,12 +33,6 @@
 #define TUT_NUM_KEYS 40                 // display slots per half (8 x 5, some phantom)
 #define TUT_STRIDE   128                // scratch bytes per page row
 // TUT_RING_W now lives in base/tutorial_plan.h with the rest of the ripple's feel.
-#define TUT_KEY_REACH 41                // half-diagonal of a 72x40 keycap, board units
-
-// Slicing. Same lever as the idle screensaver: the slice budget is the responsiveness
-// number, the frame gap is only a backstop that hands the loop back once per frame.
-#define TUT_SLICE_MS 3
-#define TUT_FRAME_MS 16
 
 // ---- state ----------------------------------------------------------------
 static bool        s_active;

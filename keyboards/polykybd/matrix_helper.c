@@ -66,16 +66,4 @@ enum key_split_pos get_split_matrix_side(uint16_t keycode, uint8_t layer) {
     return pos;
 }
 
-//tells if the given keycode is on the current side (still there could be the same key on the other side)
-bool is_on_current_split_matrix_side(uint16_t keycode, uint8_t layer) {
-    const uint8_t first = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
-    for (uint8_t r = first; r < first + MATRIX_ROWS_PER_SIDE; r++) {
-        for (uint8_t c = 0; c < MATRIX_COLS; c++) {
-            if (keycode_at_keymap_location(layer, r, c) == keycode) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
 

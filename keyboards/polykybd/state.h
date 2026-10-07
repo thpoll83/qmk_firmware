@@ -603,7 +603,6 @@ const poly_sync_t* get_local_state(void);
 poly_sync_t* access_local_state(void);
 void copy_local_state(const poly_sync_t* value);
 const poly_sync_t* get_global_state(void);
-poly_sync_t* access_global_state(void);
 void copy_global_state(const poly_sync_t* value);
 
 const poly_last_t* get_local_last_latin(void);

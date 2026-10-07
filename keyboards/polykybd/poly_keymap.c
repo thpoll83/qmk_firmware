@@ -97,7 +97,6 @@
 #include "poly_macro_record.h"
 #include "multicore_exec.h"
 #include "split_sync.h"
-#include "poly_util.h"
 
 #include "lang/lang_lut.h"
 #include "lang/lang_lut_ext.h"
@@ -109,7 +108,6 @@
 #include "anim/startup_anim.h"   // one-time procedural boot animation (split72; no-op stubs on split42)
 #include "status_idle.h"          // the status panel's idle screen (split72 only)
 #include "polymod_os_actions.h"
-#include "uni.h"
 #include "emoji/emoji_layer.h"
 #include "lang_layer.h"
 #include "mru.h"
@@ -222,31 +220,6 @@ void poly_suspend(void);
 void early_hardware_init_post(void) {
     spi_hw_setup();
 }
-
-#define BYTE_TO_BINARY_PATTERN "|%s%s%s%s%s%s%s%s"
-#define BYTE_TO_FLAGS(byte)  \
-  ((byte) & 0x80 ? " RGB |" : " --- |"), \
-  ((byte) & 0x40 ? "Txt2 |" : " --- |"), \
-  ((byte) & 0x20 ? "Txt1 |" : " --- |"), \
-  ((byte) & 0x10 ? " Dbg |" : " --- |"), \
-  ((byte) & 0x08 ? "DeadK|" : " --- |"), \
-  ((byte) & 0x04 ? "Idle |" : " --- |"), \
-  ((byte) & 0x02 ? "Trans|" : " --- |"), \
-  ((byte) & 0x01 ? "StatD|" : " --- |")
-
-  #define BYTE_TO_OVERLAY_FLAGS(byte)  \
-  ((byte) & 0x80 ? "MpRst|" : " --- |"), \
-  ((byte) & 0x40 ? "UsRst|" : " --- |"), \
-  ((byte) & 0x20 ? "Reset|" : " --- |"), \
-  ((byte) & 0x10 ? "ClrRB|" : " --- |"), \
-  ((byte) & 0x08 ? "ClrRT|" : " --- |"), \
-  ((byte) & 0x04 ? "ClrLB|" : " --- |"), \
-  ((byte) & 0x02 ? "ClrLT|" : " --- |"), \
-  ((byte) & 0x01 ? "Disp |" : " --- |")
-
-//helpers
-static uint8_t flags = 0;
-static uint8_t overlay_flags = 0;
 
 // Tracks whether the previous update_displays() pass reached the keycap render (vs
 // early-returning for idle / Eden / DOOM). On the mode->render edge we invalidate
@@ -846,7 +819,6 @@ void sync_and_refresh_displays(void) {
     bool state_diff = false;
 
     uint8_t local_flags;
-    uint8_t local_overlay_flags = get_local_state()->overlay_flags;
     uint8_t global_flags = get_global_state()->flags;
 
     if (is_usb_host_side()) {
@@ -857,15 +829,6 @@ void sync_and_refresh_displays(void) {
         const bool back_from_idle_transition = flag_turned_on(local_flags, global_flags, IDLE_TRANSITION);
         if (back_from_idle_transition) {
             access_local_state()->contrast = get_active_brightness();
-        }
-
-        if(flags!=local_flags) {
-            //uprintf("Poly State Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", local_flags, BYTE_TO_FLAGS(local_flags));
-            flags=local_flags;
-        }
-        if(overlay_flags!=local_overlay_flags) {
-            //uprintf("Poly Ovrly Flags: 0x%02x " BYTE_TO_BINARY_PATTERN "\n", local_overlay_flags, BYTE_TO_OVERLAY_FLAGS(local_overlay_flags));
-            overlay_flags=local_overlay_flags;
         }
 
         access_local_state()->emj_category = emj_active_category();

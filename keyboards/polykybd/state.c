@@ -134,10 +134,6 @@ const poly_sync_t* get_global_state(void) {
     return &g_state;
 }
 
-poly_sync_t* access_global_state(void) {
-    return &g_state;
-}
-
 void copy_global_state(const poly_sync_t* value) {
     memcpy(&g_state, value, sizeof(poly_sync_t));
 }

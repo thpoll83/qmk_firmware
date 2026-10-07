@@ -194,3 +194,14 @@ and relative links were adjusted to suit a standalone file.
     and to the sibling repos' `CLAUDE.md` files when the symbol is one they mirror
     (`iso_lang_country.py`, `noto-fonts.yaml`, the font-pack render manifests).
 
+
+- **Sourcery's `dangerous-subprocess-use-audit` is a BLOCKING check here too, and it
+  wants a marker plus a written audit, not contorted code.** It fires on any
+  `subprocess.run(cmd, …)` whose argv is a variable, even a literal list chosen three
+  lines above. The firmware repo's Python (`tools/`, `tools/hil_probes/`) hits it the
+  same way the host does. Put `# nosemgrep:
+  python.lang.security.audit.dangerous-subprocess-use-audit` on the line
+  **immediately before** the call, with the audit (where `cmd` comes from, no shell)
+  above the marker. A marker placed atop the comment block does nothing. On #341
+  (2026-10-07, `usb_reset_race.py:92`) this cleared the failed check in one push:
+  Sourcery marked the thread addressed and approved the PR.

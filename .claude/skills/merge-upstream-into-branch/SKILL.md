@@ -128,6 +128,15 @@ git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -5
    `ifndef RAW_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`, `POLYKYBD_VREG_VSEL`,
    `oled_render_dirty(true)`). Full procedure in `keyboards/polykybd/UPSTREAM_PATCHES.md`.
 
+   ⚠️ **The diff above cannot see the vendored USB driver**, because it lives under
+   `keyboards/polykybd/chibios_overrides/` and no merge touches it. Its risk is the
+   opposite one: the copy goes STALE when the merge moves `lib/chibios-contrib`.
+   If `git submodule status` shows that pointer moved, run the `diff -ru` in
+   `UPSTREAM_PATCHES.md` → "ChibiOS-Contrib RP2040 USB driver" and carry every
+   upstream change into the copy. Also run its `grep -n "USB_INTS_BUS_RESET" -A3 …`
+   first: if the new Contrib handles the reset before SETUP, delete
+   `chibios_overrides/` and the `PLATFORM_MK` block in `rules.mk` instead.
+
 6c. **Refresh the host's keycode table if upstream moved keycodes.** The host's layout
    editor reads keycode names and values from its own COPY,
    `PolyKybdHost/polyhost/res/keycodes.h`, not from this repo. Nothing builds or tests

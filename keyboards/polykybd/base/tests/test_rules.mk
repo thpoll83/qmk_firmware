@@ -70,6 +70,13 @@ polykybd_map_codec_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# bitset.h is header-only (static inline), so the suite is just the tests.
+polykybd_bitset_SRC := \
+	$(POLY_BASE_PATH)/tests/bitset_tests.cpp
+
+polykybd_bitset_INC := \
+	$(POLY_BASE_PATH)
+
 # mode_byte.h is header-only too — the shared EEPROM byte layout behind
 # pack/load_auto_brightness and pack/load_os_state.
 polykybd_mode_byte_SRC := \

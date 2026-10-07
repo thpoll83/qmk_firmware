@@ -113,6 +113,12 @@ bool fw_staging_refused_unsigned(void);
 void fw_staging_core1_lockout_begin(void);
 void fw_staging_core1_lockout_end(void);
 
+// True while fw_staging holds core1 in PSM reset (a deferred erase, a page write, the
+// lockout above). Anything that would release or relaunch core1 in that window must
+// leave it alone: the erase turns XIP off, and a core1 fetching from flash then
+// HardFaults. fw_staging relaunches the RLE service itself when it lets core1 go.
+bool fw_staging_core1_held(void);
+
 // Why an apply was refused. The two failures are genuinely different events and the
 // user can act on the difference: NO_IMAGE means nothing ever reached the staging
 // area (the transfer did not run, or was cancelled), while BAD_CRC means bytes DID

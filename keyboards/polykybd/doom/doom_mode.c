@@ -175,7 +175,17 @@ static void doom_engine_stop(void) {
         // decompression degrades until reboot) but the keyboard stays alive.
         const uint32_t t0 = timer_read32();
         bool ok = false;
-        for (uint8_t attempt = 0; attempt < 3 && !ok; ++attempt) {
+        // ⚠️ NOT while fw_staging holds core1 for a flash erase. The slave stops
+        // its engine a housekeeping pass after the master clears doom_ctl, and the
+        // master sends the next doom-slot BEGIN in the same second: the slave's
+        // erase has already halted core1 and turned XIP off when this runs.
+        // doom_core1_reset() CLEARS the PSM force-off as its last step, so the
+        // relaunch below handed core1 back mid-erase and it HardFaulted on its
+        // first flash fetch (rig, 2026-10-07: slave core1 pc=0x107d4456, inside
+        // the DOOMPACK slot being erased). fw_staging relaunches the RLE service
+        // itself when the erase lets core1 go.
+        const bool held = fw_staging_core1_held();
+        for (uint8_t attempt = 0; attempt < 3 && !ok && !held; ++attempt) {
             doom_core1_reset();
             ok = multicore_launch_core1_bounded(100u * 1000u);
         }
@@ -194,7 +204,8 @@ static void doom_engine_stop(void) {
         doom_pack_unload();
 #endif
         printf("doom: engine stopped, RLE core relaunch %s (%lu ms)\n",
-               ok ? "ok" : "FAILED", (unsigned long)timer_elapsed32(t0));
+               held ? "deferred to fw_staging" : ok ? "ok" : "FAILED",
+               (unsigned long)timer_elapsed32(t0));
     }
 }
 

@@ -5825,34 +5825,70 @@ uint8_t poly_ime_family(uint8_t lang) {
     }
 }
 
-// The usage a HELD stroke registered on the press. The release unregisters exactly
-// this, even if the language or OS changed while the key was down — the same latch
-// reasoning as s_apple_swap_latch. 0 = nothing held.
-static uint8_t s_ime_held_usage = 0;
+// The usage each HELD stroke registered on its press, per KEY POSITION. The release
+// unregisters exactly what that key's press registered, even if the language or OS
+// changed while it was down — the same latch reasoning as s_apple_swap_latch. One
+// latch shared by every KC_IME key was not enough: a second KC_IME key pressed
+// after a language switch overwrote the first key's usage, and the Right Alt it
+// had registered was never released (Greptile on #355). usage 0 = slot free.
+#define IME_HELD_SLOTS 4
+static struct {
+    uint8_t row, col, usage;
+} s_ime_held[IME_HELD_SLOTS];
 // The Japanese mode the key last selected (enum ime_ja_mode). RAM only: after a
 // reboot the first press assumes "off" and goes to hiragana, which is right for a
 // fresh login and costs one extra press otherwise.
 static uint8_t s_ime_ja_mode = IME_JA_OFF;
 
-static void ime_key_record(keyrecord_t* record) {
-    if (!record->event.pressed) {
-        if (s_ime_held_usage) {
-            unregister_code(s_ime_held_usage);
-            s_ime_held_usage = 0;
+static void ime_key_release(const keyrecord_t* record) {
+    for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
+        if (s_ime_held[i].usage == 0 || s_ime_held[i].row != record->event.key.row ||
+            s_ime_held[i].col != record->event.key.col) {
+            continue;
         }
+        const uint8_t usage = s_ime_held[i].usage;
+        s_ime_held[i].usage = 0;
+        // Two KC_IME keys holding the SAME usage: the report carries it once, so
+        // releasing it now would drop it under the finger still holding the other.
+        for (uint8_t j = 0; j < IME_HELD_SLOTS; ++j) {
+            if (s_ime_held[j].usage == usage) return;
+        }
+        unregister_code(usage);
         return;
     }
+}
+
+static void ime_key_record(keyrecord_t* record) {
+    if (!record->event.pressed) {
+        ime_key_release(record);
+        return;
+    }
+    // One-shot Shift counts as Shift: QMK's send_keyboard_report() adds pending
+    // one-shot mods to the very report this stroke sends (and clears them there),
+    // so ignoring it sent Shift+カタカナひらがな — katakana — while recording
+    // hiragana, and Shift+LANG1 instead of Ctrl+Shift+K on macOS (Greptile, #355).
+    const uint8_t shift_mods = (uint8_t)((get_mods() | get_oneshot_mods()) & MOD_MASK_SHIFT);
     const poly_sync_t* st = get_local_state();
     const ime_stroke_t s = ime_key_stroke(poly_ime_family(st->lang),
                                           st->active_os & POLY_OS_VALUE_MASK,
-                                          (get_mods() & MOD_MASK_SHIFT) != 0,
+                                          shift_mods != 0,
                                           &s_ime_ja_mode);
     if (s.usage == 0) {
         return;
     }
     if (s.hold) {
-        register_code(s.usage);
-        s_ime_held_usage = s.usage;
+        for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
+            if (s_ime_held[i].usage == 0) {
+                s_ime_held[i].row   = record->event.key.row;
+                s_ime_held[i].col   = record->event.key.col;
+                s_ime_held[i].usage = s.usage;
+                register_code(s.usage);
+                return;
+            }
+        }
+        // More KC_IME keys down at once than there are slots: a held key nobody
+        // could release would be stuck, so this press gets a tap instead.
+        tap_code(s.usage);
         return;
     }
     // A tap with a chord. Add only the modifiers that are not already down, and

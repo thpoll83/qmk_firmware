@@ -11,7 +11,7 @@
 #include "base/crash_record.h"
 #include "print.h"           // uprintf (the crash-test pull diagnostic)
 #ifdef POLYKYBD_CRASH_TEST
-#    include "crash_test.h"
+#    include "diag/crash_test.h"
 #endif
 #ifdef POLYKYBD_LTR559_DRIVE
 #    include "ltr559_policy.h"

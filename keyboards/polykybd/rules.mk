@@ -471,7 +471,7 @@ OPT_DEFS += -DFW_REQUIRE_SIGNATURE
 # ---------------------------------------------------------------------------
 # Deliberate crashes, for exercising base/crash_record.* on real hardware
 # ---------------------------------------------------------------------------
-# `qmk compile ... -e POLYKYBD_CRASH_TEST=yes` compiles crash_test.c and makes a
+# `qmk compile ... -e POLYKYBD_CRASH_TEST=yes` compiles diag/crash_test.c and makes a
 # key chord (LCtrl+LShift+LAlt + a digit) fault the board on purpose. Every other
 # part of the crash record has been driven end to end already; the FAULT HANDLERS
 # themselves never have, so the naked HardFault_Handler, the stacked-frame read,
@@ -479,7 +479,7 @@ OPT_DEFS += -DFW_REQUIRE_SIGNATURE
 # core1/slave paths are all unproven. This is how they get proven.
 #
 # ⚠️ TEST BUILDS ONLY -- never ship this in a release image. A normal build
-# compiles the inline no-ops in crash_test.h and pays nothing.
+# compiles the inline no-ops in diag/crash_test.h and pays nothing.
 # First-run boot intro (Eden + the tutorial): ON by default since 1.0.0; opt out with
 # `-e POLYKYBD_BOOT_INTRO=no`. It plays once per board (the EEPROM marker), and again
 # only after RESET Eden. See the note at the guard in poly_keymap.c for why the old
@@ -507,8 +507,8 @@ endif
 
 ifeq ($(strip $(POLYKYBD_CRASH_TEST)), yes)
     OPT_DEFS += -DPOLYKYBD_CRASH_TEST
-    SRC += crash_test.c
-    $(eval $(call POLY_APPLY_WARN,crash_test.c))
+    SRC += diag/crash_test.c
+    $(eval $(call POLY_APPLY_WARN,diag/crash_test.c))
 endif
 
 # ---------------------------------------------------------------------------

@@ -89,6 +89,9 @@ def _kernel_lines():
     why = []
     for name, cmd in attempts:
         try:
+            # Audit: cmd is one of the two literal argv lists above, run with
+            # no shell; nothing outside this function reaches it.
+            # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
             out = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
         except Exception as e:  # noqa: BLE001 — missing binary, timeout
             why.append(f"{name}: {e}")

@@ -615,7 +615,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     }
                     memset(data, 0, length);
                     hid_reply(data, 0x0c, true);
-                    uprintf("Overlay flags 0x%x cleared.\n", data[HID_DATA_IDX]);
+                    uprintf("Overlay flags 0x%x cleared.\n", flags_to_clear);
                     raw_hid_send(data, length);
                 }
                 break;

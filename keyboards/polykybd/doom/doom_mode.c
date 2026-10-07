@@ -184,9 +184,20 @@ static void doom_engine_stop(void) {
         // first flash fetch (rig, 2026-10-07: slave core1 pc=0x107d4456, inside
         // the DOOMPACK slot being erased). fw_staging relaunches the RLE service
         // itself when the erase lets core1 go.
-        const bool held = fw_staging_core1_held();
-        for (uint8_t attempt = 0; attempt < 3 && !ok && !held; ++attempt) {
-            doom_core1_reset();
+        // ⚠️ The check and the reset are ONE critical section, re-taken per
+        // attempt. The halt lands on the slave's split thread (HIGHPRIO), so a
+        // BEGIN can arrive between a bare check and the reset, or during a
+        // launch handshake (up to 100 ms each): the next attempt's reset would
+        // then clear the force-off the erase set. With the lock, a halt can only
+        // land before the check (seen, no release) or after the reset (it
+        // forces core1 off again, and the next check stops the loop).
+        bool held = false;
+        for (uint8_t attempt = 0; attempt < 3 && !ok; ++attempt) {
+            chSysLock();
+            held = fw_staging_core1_held();
+            if (!held) doom_core1_reset();
+            chSysUnlock();
+            if (held) break;
             ok = multicore_launch_core1_bounded(100u * 1000u);
         }
         // The engine is GONE: every standalone vpatch decoder (ESC/label

@@ -7,7 +7,7 @@ the RP2040 USB driver still enumerate? ChibiOS-Contrib's ISR handles SETUP
 before BUS_RESET; the reset then rewinds EP0's state machine under the reply it
 just armed, and the status stage is STALLed. The fix handles the reset first.
 
-Needs a firmware built with ``-e POLYKYBD_USB_STRESS=yes`` (base/usb_stress.h),
+Needs a firmware built with ``-e POLYKYBD_USB_STRESS=yes`` (diag/usb_stress.h),
 which masks interrupts in 35/70/150/300 ms windows while the host enumerates and
 prints a ``usbdiag:`` line with the ISR's counters. Each round:
 

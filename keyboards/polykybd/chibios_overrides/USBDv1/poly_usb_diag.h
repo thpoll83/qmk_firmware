@@ -5,7 +5,7 @@
     Counters for the bus-reset / SETUP ordering race in the USB interrupt.
     Compiled only with -DPOLYKYBD_USB_RACE_DIAG (rules.mk: POLYKYBD_USB_STRESS=yes);
     a normal build contains none of it. Written only by the USB ISR, read by
-    keyboards/polykybd/base/usb_stress.c.
+    keyboards/polykybd/diag/usb_stress.c.
 */
 #pragma once
 

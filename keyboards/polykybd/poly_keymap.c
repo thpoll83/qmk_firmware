@@ -74,7 +74,7 @@
 #include "anim/tutorial_rgb.h"             // the key LEDs during the show and the lesson
 #include "boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
-#include "base/usb_stress.h"              // no-op unless -e POLYKYBD_USB_STRESS=yes
+#include "diag/usb_stress.h"              // no-op unless -e POLYKYBD_USB_STRESS=yes
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
 #include "base/status_brightness.h"      // one brightness scale for keycaps + status OLED
 #include "usb_util.h"                     // usb_vbus_state() — the suspend-time power check

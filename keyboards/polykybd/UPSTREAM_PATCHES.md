@@ -206,7 +206,7 @@ a `KEYMAP_LAYERS_FL_MERGED` bump — QMK connects the pull-up in
 post_init rewrites the keymap.
 
 **Diagnostics (`-DPOLYKYBD_USB_RACE_DIAG`, set by `-e POLYKYBD_USB_STRESS=yes`):**
-`poly_usb_diag.h` counters in the ISR, read by `base/usb_stress.c`, which also
+`poly_usb_diag.h` counters in the ISR, read by `diag/usb_stress.c`, which also
 masks interrupts in erase-sized windows during enumeration. The rig drives it
 with `tools/hil_probes/usb_reset_race.py`. A normal build contains none of it.
 

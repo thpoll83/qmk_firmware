@@ -23,14 +23,15 @@ uint32_t ref_crc32(const uint8_t *p, size_t n) {
     uint32_t crc = 0xFFFFFFFFu;
     for (size_t i = 0; i < n; ++i) {
         crc ^= p[i];
-        for (int b = 0; b < 8; ++b) crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
+        for (int b = 0; b < 8; ++b)
+            crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
     }
     return ~crc;
 }
 
 std::vector<uint8_t> pattern(size_t n) {
     std::vector<uint8_t> v(n);
-    uint32_t x = 0x12345678u;
+    uint32_t             x = 0x12345678u;
     for (auto &b : v) {
         x = x * 1103515245u + 12345u;
         b = (uint8_t)(x >> 16);
@@ -38,7 +39,7 @@ std::vector<uint8_t> pattern(size_t n) {
     return v;
 }
 
-}  // namespace
+} // namespace
 
 TEST(Crc32Large, CheckValue) {
     const char *s = "123456789";
@@ -53,8 +54,7 @@ TEST(Crc32Large, EmptyIsSeed) {
 
 TEST(Crc32Large, MatchesReferenceAcrossChunkBoundaries) {
     const auto buf = pattern(300000);
-    for (size_t n : {1u, 0x7FFFu, 0x8000u, 0x8001u, 0xFFFFu, 0x10000u, 0x10001u,
-                     0x18000u, 230000u, 300000u}) {
+    for (size_t n : {1u, 0x7FFFu, 0x8000u, 0x8001u, 0xFFFFu, 0x10000u, 0x10001u, 0x18000u, 230000u, 300000u}) {
         EXPECT_EQ(crc32_large(buf.data(), (uint32_t)n, 0), ref_crc32(buf.data(), n)) << "n=" << n;
     }
 }
@@ -62,7 +62,7 @@ TEST(Crc32Large, MatchesReferenceAcrossChunkBoundaries) {
 TEST(Crc32Large, ChainsLikeOneShot) {
     // Feeding the result back as the seed continues the same CRC, which is what
     // makes the chunked form exact.
-    const auto buf = pattern(200000);
+    const auto     buf  = pattern(200000);
     const uint32_t head = crc32_large(buf.data(), 70000, 0);
     EXPECT_EQ(crc32_large(buf.data() + 70000, 130000, head), ref_crc32(buf.data(), 200000));
 }

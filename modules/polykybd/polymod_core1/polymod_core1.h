@@ -22,6 +22,12 @@ bool multicore_launch_core1_bounded(uint32_t total_timeout_us);
 // game with a pool-backed stack).
 void multicore_launch_core1_with_stack(void (*entry)(void), uint32_t *stack_bottom, size_t stack_size_bytes);
 
+// Bounded form of the above, as multicore_launch_core1_bounded() is of
+// multicore_launch_core1(). For a runtime launch that something else may hold
+// core1 in reset during (the Doom engine start racing a flash erase).
+bool multicore_launch_core1_with_stack_bounded(void (*entry)(void), uint32_t *stack_bottom, size_t stack_size_bytes,
+                                               uint32_t total_timeout_us);
+
 void core1_entry(void);
 
 // core1's own stack (the RLE/ROI service and the Eden idle keycap job). 512, up from

@@ -177,7 +177,16 @@ static bool doom_engine_start(void) {
                           & ~(uintptr_t)7u;
     uint32_t *stack_bottom = (uint32_t *)stack_top;
 #endif
-    multicore_launch_core1_with_stack(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES);
+    // BOUNDED: a BEGIN can still land between the unlock above and the end of
+    // the handshake, and a core1 held in reset never answers it. The unbounded
+    // launcher would then spin on this, the loop that must run the erase.
+    if (!multicore_launch_core1_with_stack_bounded(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES,
+                                                   100u * 1000u)) {
+        printf("doom: engine start: core1 launch timed out (%s)\n",
+               fw_staging_core1_held() ? "fw_staging took core1" : "core1 wedged");
+        s_engine_running = false;
+        return false;
+    }
     s_engine_running = true;
     return true;
 }

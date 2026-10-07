@@ -109,11 +109,13 @@ static void doom_core1_entry(void) {
     while (true) {}
 }
 
-static void doom_engine_start(void) {
+// False only when fw_staging holds core1 (a flash began during the session's
+// load), so the caller backs out instead of running without core1.
+static bool doom_engine_start(void) {
     if (!doom_whx_present()) {
         printf("doom: no WHX at %p — running the fire demo instead\n", (void *)TINY_WAD_ADDR);
         s_engine_running = false;
-        return;
+        return true;
     }
 #ifdef POLYKYBD_DOOM_PACK
     if (!doom_pack_loaded()) {
@@ -121,13 +123,30 @@ static void doom_engine_start(void) {
         // same degradation as a missing WHX.
         printf("doom: no usable engine pack — running the fire demo instead\n");
         s_engine_running = false;
-        return;
+        return true;
     }
 #endif
     // Take core1 from the overlay-RLE service (idle in game mode — the
     // pool-writing HID commands are frozen) and give it to the game, with its
     // stack at the tail of the pool.
-    doom_core1_reset();
+    // ⚠️ NOT if fw_staging took core1 while the session was loading. The gate in
+    // doom_session_start() runs BEFORE the pack load, and the load's signature
+    // check takes long enough that the master's next doom-slot BEGIN lands
+    // inside it on the slave's split thread: the erase halts core1, and this
+    // reset then CLEARED the force-off and launched the engine from the very
+    // slot being erased. core1 faulted on its first fetch from an erased
+    // sector, at the same shallow-stack pc every time (rig, 2026-10-07:
+    // pc=0x107d4456 sp=0x20034b38, 0x88 below the pool top). Checked and reset
+    // in one critical section for the same reason as doom_engine_stop().
+    chSysLock();
+    const bool held = fw_staging_core1_held() || fw_staging_fw_up_active();
+    if (!held) doom_core1_reset();
+    chSysUnlock();
+    if (held) {
+        printf("doom: engine start refused — fw_staging holds core1\n");
+        s_engine_running = false;
+        return false;
+    }
 #ifdef POLYKYBD_DOOM_PACK
     // ⚠️ This widens the alignment requirement (uint8_t* -> uint32_t*) on a
     // CORE1 STACK POINTER, where an unaligned result is worse than the HardFault
@@ -160,6 +179,7 @@ static void doom_engine_start(void) {
 #endif
     multicore_launch_core1_with_stack(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES);
     s_engine_running = true;
+    return true;
 }
 
 static void doom_engine_stop(void) {
@@ -515,7 +535,15 @@ static bool doom_session_start(enum doom_pack_entry entry) {
     doom_session_reset();        // fresh HUD + frame/stats counters per entry
     doom_mirror_session_reset(); // fresh mirror-pump handshakes per entry
     doom_shim_set_role(is_usb_host_side());
-    doom_engine_start();
+    if (!doom_engine_start()) {
+        // A flash started during the load: hand the pool back untouched by the
+        // engine and report "blocked", so the caller retries after the flash.
+#ifdef POLYKYBD_DOOM_PACK
+        doom_pack_unload();
+#endif
+        s_fb = NULL;
+        return false;
+    }
     return true;
 }
 

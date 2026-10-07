@@ -66,7 +66,17 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`, then
   screen font. Its `fonts.yaml` entry sits at the very END of the `fonts:` list, not
   beside `_C64_`, so it takes the highest ALL_FONTS index and only the `fantasy`
   bundle changes (v7); in the middle it shifted `latinbig`'s gidx and would have
-  forced a second reship. Sources fetched by `fonts/dl-fonts.sh` (google/fonts
+  forced a second reship.
+  Script 11's LETTER keys use layout A (`render_c64_keycap()` in `poly_keymap.c`):
+  a 22 px letter (`_C64KeyLtr_`, size 16, `0xEAC0`) with the key's two PETSCII
+  graphics below it as 14x14 framed cells (`_C64Petscii_`, size 10, `0xEB00`:
+  Commodore+key a..z, then Shift+key a..z), as printed on the front of a real C64
+  key. Drawn only, never typed. The cells use courtyard 0, because the default 3 px
+  courtyard would erase the letter's bottom row 2 px above them. If any of the three
+  glyphs is missing (an older fantasy bundle), the key falls back to the plain 28 px
+  letter from `0xEA80`. Digit keys always use `0xEA80`: the C64's number keys
+  printed colour names, not graphics. The host's `tools/glyph_script_demo.py`
+  mirrors the placement (`c64_keycap_image()`). Sources fetched by `fonts/dl-fonts.sh` (google/fonts
   + CC0 raw URLs; the Debian-packaged ones via `apt-get download` + `dpkg-deb -x`, no
   root). Host: HID cmd 30 in `PolyKybd.get/set_glyph_script`, tray "Glyph Script"
   submenu (`GLYPH_SCRIPT_LABELS`) + a "Reset glyph script to Standard" button in the

@@ -2415,6 +2415,50 @@ static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
     return 0;
 }
 
+// C64 keycap script, LETTER keys only: the letter at 22 px on top and the key's two
+// PETSCII graphics (14x14 framed cells) side by side below it, the way a real C64 key
+// prints them on its front: Commodore+key on the left, Shift+key on the right. They
+// are drawn, never typed. Each glyph comes from its own block in the fantasy bundle
+// (fonts.yaml _C64KeyLtr_ / _C64Petscii_): letters a..z at LETTER_BASE, then the
+// Commodore graphics a..z and the Shift graphics a..z at PETSCII_BASE.
+#define C64KEYS_LETTER_BASE  0xEAC0u
+#define C64KEYS_PETSCII_BASE 0xEB00u
+#define C64KEYS_LETTER_TOP   1    // 22 px capitals: y 1..22
+#define C64KEYS_CELL_TOP     25   // 14 px cells: y 25..38, 2 px under the letter
+#define C64KEYS_CELL_LEFT_CX  (SCREEN_WIDTH / 2 - 12)
+#define C64KEYS_CELL_RIGHT_CX (SCREEN_WIDTH / 2 + 12)
+
+// Draws one glyph with its ink centred on column `cx` and its top on row `top`.
+static void c64keys_glyph_at(uint32_t cp, int8_t cx, int8_t top, int8_t cy_radius) {
+    const uint32_t s[2] = { cp, 0 };
+    int8_t xmin, xmax, ymin, ymax;
+    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, s, &xmin, &xmax, &ymin, &ymax);
+    const int8_t gx = (int8_t)(BUFFER_X + cx - (xmax - xmin + 1) / 2 - xmin);
+    const int8_t gy = (int8_t)(top - ymin);
+    kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, gx, gy, s, cy_radius);
+}
+
+// Returns false, drawing nothing, when any of the three glyphs is missing (a fantasy
+// bundle from before these fonts): the caller then draws the plain large letter.
+static bool render_c64_keycap(uint16_t keycode) {
+    if (keycode < KC_A || keycode > KC_Z) return false;
+    const uint32_t i      = (uint32_t)(keycode - KC_A);
+    const uint32_t letter = C64KEYS_LETTER_BASE + i;
+    const uint32_t cbm    = C64KEYS_PETSCII_BASE + i;
+    const uint32_t shift  = C64KEYS_PETSCII_BASE + 26u + i;
+    if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, letter) == NULL ||
+        kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cbm) == NULL ||
+        kdisp_gfx_glyph(g_all_fonts, g_all_font_count, shift) == NULL) {
+        return false;
+    }
+    c64keys_glyph_at(letter, SCREEN_WIDTH / 2, C64KEYS_LETTER_TOP, KDISP_CY_DEFAULT);
+    // Courtyard 0 for the cells: they sit 2 px under the letter, and the default 3 px
+    // courtyard would erase the letter's bottom row.
+    c64keys_glyph_at(cbm,   C64KEYS_CELL_LEFT_CX,  C64KEYS_CELL_TOP, 0);
+    c64keys_glyph_at(shift, C64KEYS_CELL_RIGHT_CX, C64KEYS_CELL_TOP, 0);
+    return true;
+}
+
 // ── Keycap legend SIZE (enum poly_glyph_size, HID cmd 34) ────────────────────
 //
 // The relocation + placement arithmetic is the PURE planner in base/legend_plan.c
@@ -2854,6 +2898,9 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     // the override is only for the resting/base letter legend, and the AltGr output
     // is a genuinely different character, not a cased form of the same letter.
     if (local_state->glyph_script != GLYPH_STD && !add_lang && !(mods & MOD_RALT)) {
+        if (local_state->glyph_script == GLYPH_C64KEYS && render_c64_keycap(keycode)) {
+            return true;
+        }
         uint32_t cp = glyph_script_codepoint(local_state->glyph_script, keycode);
         if (cp != 0 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL) {
             const uint32_t s[2] = { cp, 0 };

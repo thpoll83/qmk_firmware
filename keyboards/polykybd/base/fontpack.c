@@ -63,20 +63,6 @@ static uint16_t s_slot_ver[FONTPACK_N_SLOTS];   // per-bundle content_version (0
 static bool     s_slot_present[FONTPACK_N_SLOTS];
 #endif
 
-// CRC32 over a region, chunked because crc32_1byte() takes a uint16_t length.
-// Chaining the running value reproduces a one-shot CRC (zlib.crc32), which is
-// what fonts/fontpack.py stamps into the header.
-static uint32_t pack_crc32(const uint8_t *p, uint32_t len) {
-    uint32_t crc = 0;
-    while (len) {
-        uint16_t chunk = (len > 0x8000u) ? 0x8000u : (uint16_t)len;
-        crc = crc32_1byte(p, chunk, crc);
-        p   += chunk;
-        len -= chunk;
-    }
-    return crc;
-}
-
 // Validate the PlyF at `base` and APPEND its fonts to s_pack[] (from s_pack_count),
 // recording each font's global ALL_FONTS index. `cap` (0 = no cap) bounds the pack
 // to its slot so a corrupt total_size can't read past the slot into the next.
@@ -111,8 +97,8 @@ static bool validate_and_append(const uint8_t *base, uint32_t cap, uint16_t *out
     }
 
     // Integrity: CRC32 over everything after the 32-byte header.
-    if (pack_crc32(base + sizeof(fontpack_header_t),
-                   h->total_size - sizeof(fontpack_header_t)) != h->crc32) {
+    if (crc32_large(base + sizeof(fontpack_header_t),
+                    h->total_size - sizeof(fontpack_header_t), 0) != h->crc32) {
         return false;
     }
 

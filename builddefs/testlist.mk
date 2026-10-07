@@ -8,6 +8,7 @@ include $(QUANTUM_PATH)/os_detection/tests/testlist.mk
 include $(QUANTUM_PATH)/sequencer/tests/testlist.mk
 include $(QUANTUM_PATH)/wear_leveling/tests/testlist.mk
 include $(PLATFORM_PATH)/test/testlist.mk
+include modules/polykybd/polymod_crc32/tests/testlist.mk
 include modules/polykybd/polymod_ltr559/tests/testlist.mk
 include modules/polykybd/polymod_monocypher/tests/testlist.mk
 include modules/polykybd/polymod_os_actions/tests/testlist.mk

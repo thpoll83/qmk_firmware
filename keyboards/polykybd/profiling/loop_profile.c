@@ -52,6 +52,20 @@ static uint32_t s_iters     = 0;  // total iterations measured
 static uint32_t s_ovl_iters = 0;  // of those, iterations that handled an overlay cmd
 static uint32_t s_last_log  = 0;  // s_iters at the last emitted summary
 
+// The window's length as the KEYBOARD measured it (snapshot v2). The rig used to
+// divide by the seconds it slept, so a READ whose reply was lost and re-sent
+// counted a 9 s window as 3 s and reported the idle loop 3x faster than it ran
+// (perf run 37152259246). Starts at boot, restarts at every loop_profile_reset().
+static uint32_t s_window_start_us = 0;
+static bool     s_window_started  = false;
+
+// Page 1 (the histograms) is served from a copy taken when page 0 is read, so
+// both pages describe the same instant. Read live, a page 1 that needed retries
+// arrived seconds after page 0 and its histogram held 6000 more iterations than
+// page 0's `iters`.
+static uint32_t s_latched_norm[NBUCKET];
+static uint32_t s_latched_ovl[NBUCKET];
+
 // Defined below, next to the on-demand control API it shares.
 static void emit_summary(void);
 
@@ -79,6 +93,11 @@ void loop_profile_add_render_us(uint32_t us) {
 
 void loop_profile_tick(void) {
     uint32_t now = timer_hw->timerawl;
+
+    if (!s_window_started) {
+        s_window_start_us = now;
+        s_window_started  = true;
+    }
 
     if (s_have_start) {
         uint32_t dt = now - s_iter_start_us;   // modular u32 — correct across wrap
@@ -174,6 +193,10 @@ void loop_profile_reset(void) {
     s_iters         = 0;
     s_ovl_iters     = 0;
     s_last_log      = 0;
+    memset(s_latched_norm, 0, sizeof(s_latched_norm));
+    memset(s_latched_ovl,  0, sizeof(s_latched_ovl));
+    s_window_start_us = timer_hw->timerawl;
+    s_window_started  = true;
     // Drop the in-flight iteration instead of counting it into the fresh window:
     // it is the one dispatching this very HID command, so its cost is host
     // plumbing rather than the workload about to be measured. Clearing
@@ -198,8 +221,8 @@ static uint8_t put_u32(uint8_t *out, uint32_t v) {
 uint8_t loop_profile_snapshot(uint8_t page, uint8_t *out, uint8_t cap) {
     uint8_t n = 0;
     if (page == 0) {
-        // 4 header bytes + 8 u32 = 36
-        if (cap < 36) return 0;
+        // 4 header bytes + 9 u32 = 40
+        if (cap < 40) return 0;
         out[n++] = (uint8_t)LOOP_PROFILE_SNAPSHOT_VERSION;
         out[n++] = (uint8_t)(s_max_overlay ? 0x01u : 0x00u);
         out[n++] = 0;  // reserved
@@ -212,13 +235,16 @@ uint8_t loop_profile_snapshot(uint8_t page, uint8_t *out, uint8_t cap) {
         n += put_u32(&out[n], s_ovl_wall_us);
         n += put_u32(&out[n], s_ovl_bridge_us);
         n += put_u32(&out[n], s_ovl_render_us);
+        n += put_u32(&out[n], s_window_started ? timer_hw->timerawl - s_window_start_us : 0u);
+        memcpy(s_latched_norm, s_bkt_norm, sizeof(s_latched_norm));
+        memcpy(s_latched_ovl,  s_bkt_ovl,  sizeof(s_latched_ovl));
         return n;
     }
     if (page == 1) {
         // 2 histograms x 7 u32 = 56
         if (cap < (uint8_t)(NBUCKET * 8)) return 0;
-        for (uint8_t i = 0; i < NBUCKET; ++i) n += put_u32(&out[n], s_bkt_norm[i]);
-        for (uint8_t i = 0; i < NBUCKET; ++i) n += put_u32(&out[n], s_bkt_ovl[i]);
+        for (uint8_t i = 0; i < NBUCKET; ++i) n += put_u32(&out[n], s_latched_norm[i]);
+        for (uint8_t i = 0; i < NBUCKET; ++i) n += put_u32(&out[n], s_latched_ovl[i]);
         return n;
     }
     return 0;

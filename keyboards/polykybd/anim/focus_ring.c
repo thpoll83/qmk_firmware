@@ -287,4 +287,6 @@ void poly_focus_cancel(void) {}
 bool poly_focus_active(void) { return false; }
 void poly_focus_tick(void) {}
 void poly_focus_overlay(uint8_t disp_idx, const sa_geom_t *g) { (void)disp_idx; (void)g; }
+void poly_key_select(uint8_t idx) { (void)idx; }
+bool poly_key_repaint_begin(uint8_t idx, uint8_t slot) { (void)idx; (void)slot; return false; }
 #endif

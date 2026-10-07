@@ -222,8 +222,15 @@ def _get_json(owner, repo, path, token):
 
 
 def tag_commit(owner, repo, tag, token):
-    """The commit an EXISTING tag points at; None if there is no such tag or the
-    lookup failed.
+    """Where an existing tag points: a sha, "" for a confirmed 404 (no such
+    tag), or None when it cannot be determined.
+
+    ⚠️ The three are NOT interchangeable, and collapsing them is how this check
+    goes quiet: the caller SKIPS its guard when there is no tag, so a 5xx or a
+    timeout reading as "no tag" lets a publish through at whatever commit the
+    tag really points at. That is the same shape as the failed-lookup bug
+    already fixed once in release_exists() -- only a 404 is an answer.
+    (Found by Greptile on PolyKybdHost#318 and qmk_firmware#356.)
 
     ⚠️ Needed because `target_commitish` is documented as "Unused if the Git tag
     already exists" -- creating a release does not move a tag. So when the tag is
@@ -235,15 +242,19 @@ def tag_commit(owner, repo, tag, token):
     dereferenced one step.
     """
     st, ref = _get_json(owner, repo, f"/git/ref/tags/{tag}", token)
+    if st == 404:
+        return ""
     if st != 200 or not ref:
         return None
     obj = ref.get("object") or {}
     if obj.get("type") == "commit":
-        return obj.get("sha")
+        return obj.get("sha") or None
     if obj.get("type") == "tag":
         st, tg = _get_json(owner, repo, f"/git/tags/{obj.get('sha')}", token)
         if st == 200 and tg:
-            return (tg.get("object") or {}).get("sha")
+            return (tg.get("object") or {}).get("sha") or None
+        return None
+    # A ref shape this does not understand is not an answer either.
     return None
 
 
@@ -486,7 +497,12 @@ def main():
     # guard sees nothing wrong. (Found by Greptile on wincompose#27.)
     if creating:
         at = tag_commit(owner, repo, tag, token)
-        if at and target != default_branch and not at.startswith(target[:10]):
+        if at is None:
+            die(f"cannot tell whether the tag {tag} already exists or where it points, so\n"
+                f"  whether the build would come from {target[:10]} is unknown -- and an\n"
+                f"  existing tag is never moved by publishing. Refusing rather than guessing.\n"
+                f"  Retry when the GitHub API is reachable." + unknown_note)
+        if at and target != default_branch and at != target:
             die(f"the tag {tag} already exists, at {at[:10]}, and creating a release does\n"
                 f"  not move it -- so the build would come from {at[:10]}, not from the\n"
                 f"  {target[:10]} this would report. Either dispatch the release workflow on a\n"

@@ -46,9 +46,6 @@ extern const GFXfont NotoSans_Regular_Small_15px7b;
 // the same way.
 extern const GFXfont IconsFont;   // the tutorial line's trailing glyph (ICON_SHIFT)
 
-// Render `value` as a char32 (U"...") display string into `buffer`. The display
-// pipeline is 32-bit (kdisp_write_gfx_text takes const uint32_t*), so each digit
-// glyph is one uint32_t codepoint. `buffer_len` is the byte size of the buffer.
 // Push the scratch buffer to the status OLED and flush it in ONE synchronous pass.
 // oled_write_raw() diffs byte-for-byte and dirties only the blocks that changed, and
 // oled_render_dirty(true) is a no-op when nothing did, so a static screen costs
@@ -74,6 +71,9 @@ static void oled_draw_band_line(const GFXfont *const *font, uint8_t i, uint8_t c
     kdisp_write_gfx_text(font, 1, (int8_t)x, (int8_t)(band * i + band / 2 - (y0 + y1) / 2), txt);
 }
 
+// Render `value` as a char32 (U"...") display string into `buffer`. The display
+// pipeline is 32-bit (kdisp_write_gfx_text takes const uint32_t*), so each digit
+// glyph is one uint32_t codepoint. `buffer_len` is the byte size of the buffer.
 static inline void digits_to_u32_string(uint32_t* buffer, uint8_t buffer_len, uint8_t value, uint8_t base) {
     uint32_t* out = buffer;
     uint8_t   cap = buffer_len / (uint8_t)sizeof(uint32_t);

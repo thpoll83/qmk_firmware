@@ -153,6 +153,18 @@ Run was clean (gates passed, ovl_iters == reports).
 - **The rig runs the *installed* `/opt/polykybd-ctnd`.** CI force-syncs it to
   `origin/main` first, so a harness fix must be merged to ctnd `main` before it
   affects a run.
+- ⚠️ **A ~4% render delta between two branches can be pure FLASH LAYOUT.** Code
+  runs through the RP2040's 16 KB XIP cache, so a change that only shifts the render
+  path by a few hundred bytes moves render time. qmk#342 touched nothing but the
+  profiler and cost +5 ms of render. Before attributing a render change, compare
+  symbol addresses (`arm-none-eabi-nm -S`) of the render path between the two
+  builds. The measurement and the rejected SRAM fix are in ctnd
+  `docs/PERF_HARNESS.md`.
+- ⚠️ **The perf artifact holds only the `.uf2` images, no `.elf`, and CI's toolchain
+  differs from the container's**, so a local rebuild is not byte-identical to what
+  the rig flashed. For a symbol comparison, build every side locally with the same
+  toolchain and the full CI flag set (`-e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_LOOP_PROFILE=yes -e POLYKYBD_HIL=left`; `DOOM_PACK` selects a different linker script), and use
+  the CI `.uf2`s only to confirm the layout shift has the same size.
 - **GitHub MCP quirks**: `actions_get`/`actions_list` take `resource_id` (not
   `run_id`), and `list_workflow_runs`' `branch` filter is **not applied** — filter by
   `head_sha` yourself or you will read another branch's run.

@@ -179,6 +179,20 @@ ifeq ($(strip $(POLYKYBD_LOOP_PROFILE)), yes)
     SRC += profiling/loop_profile.c
 endif
 
+# USB bus-reset race stress (OFF by default, never in a release). Masks interrupts
+# in erase-sized windows while the host enumerates, and counts in the USB ISR how
+# often a bus reset and a SETUP are handled in one pass (diag/usb_stress.h). The
+# rig drives it with tools/hil_probes/usb_reset_race.py. Needs CONSOLE_ENABLE for
+# the `usbdiag:` readout.
+ifeq ($(strip $(POLYKYBD_USB_STRESS)), yes)
+    OPT_DEFS += -DPOLYKYBD_USB_STRESS -DPOLYKYBD_USB_RACE_DIAG
+    SRC += diag/usb_stress.c
+    # The A side of an A/B run: Contrib's original SETUP-before-reset order.
+    ifeq ($(strip $(POLYKYBD_USB_LEGACY_RESET_ORDER)), yes)
+        OPT_DEFS += -DPOLYKYBD_USB_LEGACY_RESET_ORDER
+    endif
+endif
+
 # FW-2: the Ed25519 image-signature verify used by fw_staging.c (firmware signing)
 # comes from the vendored Monocypher, now the polymod_monocypher community module
 # (listed in both variants' keyboard.json "modules" arrays, which is the enable).
@@ -457,7 +471,7 @@ OPT_DEFS += -DFW_REQUIRE_SIGNATURE
 # ---------------------------------------------------------------------------
 # Deliberate crashes, for exercising base/crash_record.* on real hardware
 # ---------------------------------------------------------------------------
-# `qmk compile ... -e POLYKYBD_CRASH_TEST=yes` compiles crash_test.c and makes a
+# `qmk compile ... -e POLYKYBD_CRASH_TEST=yes` compiles diag/crash_test.c and makes a
 # key chord (LCtrl+LShift+LAlt + a digit) fault the board on purpose. Every other
 # part of the crash record has been driven end to end already; the FAULT HANDLERS
 # themselves never have, so the naked HardFault_Handler, the stacked-frame read,
@@ -465,7 +479,7 @@ OPT_DEFS += -DFW_REQUIRE_SIGNATURE
 # core1/slave paths are all unproven. This is how they get proven.
 #
 # ⚠️ TEST BUILDS ONLY -- never ship this in a release image. A normal build
-# compiles the inline no-ops in crash_test.h and pays nothing.
+# compiles the inline no-ops in diag/crash_test.h and pays nothing.
 # First-run boot intro (Eden + the tutorial): ON by default since 1.0.0; opt out with
 # `-e POLYKYBD_BOOT_INTRO=no`. It plays once per board (the EEPROM marker), and again
 # only after RESET Eden. See the note at the guard in poly_keymap.c for why the old
@@ -493,6 +507,19 @@ endif
 
 ifeq ($(strip $(POLYKYBD_CRASH_TEST)), yes)
     OPT_DEFS += -DPOLYKYBD_CRASH_TEST
-    SRC += crash_test.c
-    $(eval $(call POLY_APPLY_WARN,crash_test.c))
+    SRC += diag/crash_test.c
+    $(eval $(call POLY_APPLY_WARN,diag/crash_test.c))
+endif
+
+# ---------------------------------------------------------------------------
+# Vendored ChibiOS-Contrib RP2040 USB driver
+# ---------------------------------------------------------------------------
+# platforms/chibios/platform.mk takes PLATFORM_MK when the file exists and falls
+# back to Contrib's own platform.mk when it does NOT -- silently, so a typo here
+# would build the unpatched driver with a green build. Refuse instead.
+# Rationale and the drop-the-copy procedure: UPSTREAM_PATCHES.md ->
+# "ChibiOS-Contrib RP2040 USB driver".
+PLATFORM_MK := keyboards/polykybd/chibios_overrides/platform.mk
+ifeq ($(wildcard $(PLATFORM_MK)),)
+    $(error $(PLATFORM_MK) is missing -- the build would silently use Contrib's unpatched RP2040 USB driver)
 endif

@@ -304,7 +304,7 @@ run on it (`test_no_crash_record`). What is worth knowing:
   unverified is the **fault path itself**: the naked handler, the stacked frame
   and the `watchdog_reboot()` out of it. The `debug-firmware-on-rig` skill with a
   probe that dereferences a bad pointer over HID is the way to close that.
-  - **`-e POLYKYBD_CRASH_TEST=yes` is the by-hand route** (`crash_test.c`, a
+  - **`-e POLYKYBD_CRASH_TEST=yes` is the by-hand route** (`diag/crash_test.c`, a
     TEST-ONLY flag — a normal build compiles inline no-ops and pays nothing).
     Hold Ctrl+Shift+Alt and press a digit: **1** unaligned word store (the
     qmk#258 brick, reproduced), **2** a branch to an address with bit 0 clear,

@@ -1003,4 +1003,13 @@ somebody is about to reverse.** What must stay in context is the rules themselve
   Empirically the only fix for the overlay/ROI hang; the mechanism was never
   established, and it is safe because core1 polls the FIFO rather than waiting on an
   IRQ. Do not remove it on the strength of a theory.
+- ⚠️ **The RP2040 USB driver is a VENDORED copy** (`keyboards/polykybd/chibios_overrides/`,
+  selected by `PLATFORM_MK`), carrying ChibiOS trunk's bus-reset-before-SETUP fix that
+  Contrib lacks. A `lib/chibios-contrib` bump does **not** update it: diff the copy
+  against the new submodule after every bump (`UPSTREAM_PATCHES.md` → "ChibiOS-Contrib
+  RP2040 USB driver"). Any code that masks interrupts for tens of ms (a flash erase)
+  while the host can reset the bus is exactly what that fix exists for.
+- ⚠️ **A clean `dmesg` does NOT mean enumeration was clean.** Linux retries a STALLed
+  GET_DESCRIPTOR silently; on the rig 9 of 10 broken transfers left no log line. Count
+  EP0 STALLs on the device (`-e POLYKYBD_USB_STRESS=yes`, the `usb_reset_race` probe).
 

@@ -34,7 +34,7 @@ void slave_data_register(void);
 void slave_data_crash_pull_tick(void);
 
 #ifdef POLYKYBD_CRASH_TEST
-// TEST BUILDS ONLY (crash_test.h). Master side: ask the slave to fault. The pull
+// TEST BUILDS ONLY (diag/crash_test.h). Master side: ask the slave to fault. The pull
 // necessarily FAILS -- the slave reboots instead of answering -- which is the
 // point: the link then drops and re-establishes, and slave_data_crash_pull_tick()
 // pulls the resulting record and prints it as `side=slave`.

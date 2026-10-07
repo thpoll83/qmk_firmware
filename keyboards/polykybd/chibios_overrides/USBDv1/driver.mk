@@ -1,0 +1,9 @@
+ifeq ($(USE_SMART_BUILD),yes)
+ifneq ($(findstring HAL_USE_USB TRUE,$(HALCONF)),)
+PLATFORMSRC += $(POLY_CHIBIOS_OVERRIDES)/USBDv1/hal_usb_lld.c
+endif
+else
+PLATFORMSRC += $(POLY_CHIBIOS_OVERRIDES)/USBDv1/hal_usb_lld.c
+endif
+
+PLATFORMINC += $(POLY_CHIBIOS_OVERRIDES)/USBDv1

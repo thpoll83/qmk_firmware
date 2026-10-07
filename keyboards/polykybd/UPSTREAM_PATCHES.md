@@ -176,3 +176,84 @@ own automatic VREG raise for `SYS_CLK_MHZ=200` and does not compile
 +#endif
      clocks_init();
 ```
+
+## ChibiOS-Contrib RP2040 USB driver (vendored, `chibios_overrides/`)
+
+**Not a patch to a tracked file — a COPY.** `lib/chibios-contrib` is a pinned
+submodule of `qmk/ChibiOS-Contrib`, so it cannot carry a local change. Instead
+`keyboards/polykybd/chibios_overrides/` holds:
+
+- `platform.mk` — Contrib's `os/hal/ports/RP/RP2040/platform.mk` with ONE line
+  changed: the USBDv1 `driver.mk` include points at the copy below.
+  `keyboards/polykybd/rules.mk` selects it with `PLATFORM_MK`, and **fails the
+  build if the file is missing**, because `platforms/chibios/platform.mk` would
+  otherwise fall back to Contrib's own file with no message.
+- `USBDv1/` — Contrib's `os/hal/ports/RP/LLD/USBDv1` at `5a9ad82b` (the submodule
+  pin when copied), plus the one fix and the opt-in diagnostics below.
+
+**The fix:** the USB ISR handles `USB_INTS_BUS_RESET` **before**
+`USB_INTS_SETUP_REQ` — ChibiOS trunk r17878 (`29391bf57`, "Fix RP USB reset
+sequencing"), which Contrib's copy never received. With both flags pending in one
+pass, the old order armed the SETUP reply and then `_usb_reset()` rewound the EP0
+state machine to `USB_EP0_STP_WAITING` under it; the IN stage then completed in
+the wrong state and `_usb_ep0in()` STALLed EP0, so the host saw a failed
+enumeration step. Both flags are pending together only when the interrupt is
+blocked across a reset AND the SETUP after it (≥ ~10–20 ms): a flash erase does
+exactly that (BY25Q64ES tSE 35 ms typ / 300 ms max per 4 KB sector; the 8 KB
+wear-levelling erase is one masked call). The realistic trigger is the boot after
+a `KEYMAP_LAYERS_FL_MERGED` bump — QMK connects the pull-up in
+`protocol_pre_init()`, before `keyboard_init()`, so the host enumerates while
+post_init rewrites the keymap.
+
+**Diagnostics (`-DPOLYKYBD_USB_RACE_DIAG`, set by `-e POLYKYBD_USB_STRESS=yes`):**
+`poly_usb_diag.h` counters in the ISR, read by `diag/usb_stress.c`, which also
+masks interrupts in erase-sized windows during enumeration. The rig drives it
+with `tools/hil_probes/usb_reset_race.py`. A normal build contains none of it.
+
+⚠️ **`tier: debug` builds the NORMAL HIL images**, and `qmk-test.yml` has no input
+for extra build flags, so the probe on its own finds no `usbdiag:` line and stops
+after round 1. The recorded runs used temporary `rules.mk` commits on the branch:
+31158ea sets `POLYKYBD_USB_STRESS ?= yes` for HIL builds (cherry-pick it to repeat
+the run), ff3dbd2 added `POLYKYBD_USB_LEGACY_RESET_ORDER ?= yes` for the A side and
+bf8fde8 removed it for the B side, and 527bab7 removed the rest.
+
+**Verification (2026-10-03):**
+
+- With the copy in place and no edits, `split72:default` linked to a
+  byte-identical image. With the fix, the image is the same size and exactly one
+  function differs: `Vector54` (USBCTRL), whose BUS_RESET test now precedes the
+  SETUP test.
+- Rig A/B, 15 reboots each, same randomised stress, `usb_reset_race` probe:
+  Contrib's order (run 37124742288) put a reset and a SETUP in one pass in 9
+  rounds (10 passes) and **all 10** answered GET_DESCRIPTOR(device, 64) with an
+  EP0 STALL; one of them reached the host as `usb 1-1.4: device descriptor
+  read/all, error -32` plus a re-attach, and Linux retried the other nine
+  without a log line. The fixed order (run 37124759633) hit the same case in 8
+  rounds and answered **all 8** normally (`IN_TX -> OUT_WAITING_STS ->
+  STP_WAITING`), 0 kernel errors.
+- ⚠️ **The Linux kernel log hides most of it.** `usb_get_descriptor()` retries a
+  STALLed request silently, so 9 of 10 broken transfers left no trace in
+  `dmesg`. The device-side STALL count (6 per boot is normal here: three
+  refused DEVICE_QUALIFIER requests; 8 = one broken transfer) is the reliable
+  signal.
+
+**When Contrib or QMK picks the fix up** (check
+`grep -n "USB_INTS_BUS_RESET" -A3 lib/chibios-contrib/os/hal/ports/RP/LLD/USBDv1/hal_usb_lld.c`
+— the reset branch must come first): delete `chibios_overrides/` and the
+`PLATFORM_MK` block in `rules.mk`. Until then, **after every submodule bump, diff
+the copy against the new Contrib file** and carry any upstream change across —
+the copy does not follow the submodule on its own:
+
+```sh
+diff -ru lib/chibios-contrib/os/hal/ports/RP/LLD/USBDv1 \
+         keyboards/polykybd/chibios_overrides/USBDv1
+diff lib/chibios-contrib/os/hal/ports/RP/RP2040/platform.mk \
+     keyboards/polykybd/chibios_overrides/platform.mk
+```
+
+Expected differences, and nothing else: `hal_usb_lld.c` carries the reordered
+reset/SETUP block plus the `POLYKYBD_USB_RACE_DIAG` hunks; `driver.mk` differs
+only in the `$(POLY_CHIBIOS_OVERRIDES)` paths; `poly_usb_diag.h` exists only in
+the copy. `hal_usb_lld.h` and `rp2040_usb.h` **must** be identical -- the include
+path resolves to the copy, so a stale header would compile against new Contrib
+code without an error.

@@ -17,6 +17,10 @@ What it does (no bash-isms, no extra pip installs — Python 3.7+ stdlib only):
      tagging the commit that DECLARES the prepared version rather than the
      branch head — so a merge landing between preparing the notes and
      publishing them cannot ship a binary whose version differs from its label.
+     When NO commit declares it — the bump has not merged yet — there is
+     nothing to pin to, and creating the release is refused rather than
+     shipping assets labelled with the old version (`--allow-version-mismatch`
+     overrides, for notes-only).
      Firmware and wincompose: publishing fires the `release: published`
      workflow, which builds and attaches the assets (.bin/.uf2 / the installer
      + portable zip + SHA256SUMS) — you do NOT attach anything by hand.
@@ -46,7 +50,7 @@ def run(cmd):
     try:
         return subprocess.run(cmd, capture_output=True, text=True,
                               encoding="utf-8", errors="replace")
-    except (FileNotFoundError, NotADirectoryError, PermissionError) as e:
+    except OSError as e:
         # The executable isn't installed / isn't runnable. Report it as an
         # ordinary non-zero result so callers can fall back, instead of letting
         # it escape as a traceback. get_token() probes `gh`, which plenty of
@@ -107,6 +111,12 @@ def parse_version(kind, text):
     return f"{maj.group(1)}.{mnr.group(1)}.{pat.group(1)}"
 
 
+def version_tuple(v):
+    """'0.9.20' -> (0, 9, 20), so 0.10.0 sorts after 0.9.20 where a string
+    compare would not."""
+    return tuple(int(x) for x in v.split("."))
+
+
 def owner_repo(root):
     r = run(["git", "remote", "get-url", "origin"])
     m = re.search(r"[:/]([^/]+)/([^/]+?)(?:\.git)?/?$", r.stdout.strip())
@@ -143,6 +153,40 @@ def api(token, method, path, payload=None):
             return e.code, json.load(e)
         except Exception:
             return e.code, {"message": e.read().decode(errors="replace")}
+
+
+def release_exists(owner, repo, tag, token):
+    """True, False, or None when it cannot be determined.
+
+    A GET on a public repo's release needs no token, so this answers under
+    --dry-run too. None means "do not know" (network trouble, a rate limit, a
+    private repo with no token), and the caller must then assume the stricter
+    case.
+
+    ⚠️ Whether a TAG exists is a different question and not a usable
+    substitute: a deleted release, a hand-pushed tag, or a release build that
+    died before `gh release create` all leave a tag with no release behind it.
+    """
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "polykybd-publish-release",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(
+        f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}",
+        method="GET", headers=headers)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return resp.status == 200
+    except urllib.error.HTTPError as e:
+        # ⚠️ Only a 404 is "no release". Folding 401/403/5xx in with it is what
+        # lets an auth or network failure read as success. (Found by Revix and
+        # Greptile on wincompose#25.)
+        return False if e.code == 404 else None
+    except Exception:
+        return None
 
 
 def commit_for_version(kind, vpath, default_branch, version):
@@ -234,6 +278,12 @@ def main():
     ap = argparse.ArgumentParser(description="Publish the prepared PolyKybd release.")
     ap.add_argument("--dry-run", action="store_true", help="show what would happen, change nothing")
     ap.add_argument("--tag", help="publish a specific prepared tag instead of the newest one")
+    ap.add_argument("--allow-version-mismatch", action="store_true",
+                    help="publish a NEW release even though no commit declares its version and "
+                         "the branch head's differs. The build labels its assets from the tree, "
+                         "so the release workflow will refuse to attach them; use this only to "
+                         "get the notes up, and attach the assets later with a workflow_dispatch "
+                         "once the bump has merged")
     args = ap.parse_args()
 
     # Print UTF-8 (emoji in the notes) even on a cp1252 Windows console.
@@ -289,7 +339,9 @@ def main():
     # behaviour and must not pass unnoticed.
     version = tag[len(tag_prefix):]
     target = commit_for_version(kind, vpath, default_branch, version)
-    if target is None:
+    pinned = target is not None
+    shallow = False
+    if not pinned:
         shallow = (run(["git", "rev-parse", "--is-shallow-repository"])
                    .stdout.strip() == "true")
         print(f"WARNING: no commit on {default_branch} declares version {version}; "
@@ -305,25 +357,77 @@ def main():
     else:
         target_desc = f"{target[:10]} (declares {version})"
 
-    # Informational: the tree drifting past the prepared tag is normal and, now
-    # that the tag is pinned above, harmless -- later merges ship in the NEXT
-    # release rather than silently joining this one.
+    owner, repo = owner_repo(root)
+    token = get_token()
+
+    # What the default branch declares right now. Read only to describe the
+    # drift or to refuse; the tag's own commit is what gets published.
     vtext = show(f"origin/{default_branch}:{vpath}")
+    tree_ver = None
     if vtext:
         try:
-            tree_tag = tag_prefix + parse_version(kind, vtext)
-            if tree_tag != tag:
-                print(f"note: default branch has moved on to {tree_tag}; publishing "
-                      f"prepared {tag} at its own commit, so the drift is harmless.")
+            tree_ver = parse_version(kind, vtext)
         except SystemExit:
             pass
+
+    if pinned:
+        # Drift is normal and harmless here: every merge auto-bumps, so the tree
+        # is usually ahead of the prepared tag by the time you publish, and the
+        # later merges ship in the NEXT release rather than silently joining
+        # this one. The pin is what makes it harmless -- do NOT turn this into a
+        # refusal, or almost every legitimate firmware publish stops.
+        if tree_ver and tree_ver != version:
+            print(f"note: default branch has moved on to {tag_prefix}{tree_ver}; publishing "
+                  f"prepared {tag} at its own commit, so the drift is harmless.")
+    elif tree_ver and tree_ver != version:
+        # ⚠️ Here the pin found NOTHING and the head declares something else, so
+        # the branch head is what gets built and its version is what labels the
+        # assets. That is how PK-0.9.19 shipped WinCompose-Setup-0.9.18.exe
+        # (wincompose issue #21): published 50 minutes before its own bump
+        # merged, so no commit declared the new version and the pin had nothing
+        # to find. The release workflow asserts the built version against the
+        # tag now, which turns the same mistake into a published release with NO
+        # downloads at all -- this is the check that stops it before anything is
+        # published.
+        #
+        # Enforced only when publishing would CREATE the release, because that
+        # is what triggers a build. Re-applying notes to an already-published
+        # release re-runs nothing, so the tree's version is then irrelevant.
+        exists = release_exists(owner, repo, tag, token)
+        # Unknown counts as creating: the stricter case, since guessing the
+        # other way is what publishes a release whose assets get refused.
+        creating = exists is not True
+        where = "behind" if version_tuple(tree_ver) < version_tuple(version) else "ahead of"
+        msg = (f"{default_branch} is at {tree_ver}, {where} the prepared {tag}, and no commit\n"
+               f"  on it declares {version}. The build reads its version from {vpath}, not\n"
+               f"  from the tag, so the assets would be labelled {tree_ver} and the release\n"
+               f"  workflow will refuse them. Merge the bump that sets {vpath} to {version}\n"
+               f"  on {default_branch}, then publish.")
+        if shallow:
+            # ⚠️ The search may simply not have SEEN the commit. Say so first:
+            # told to "merge the bump" for a version that was bumped months ago,
+            # the obvious next move is --allow-version-mismatch, which publishes
+            # the very release this is trying to prevent.
+            msg += ("\n  This clone is SHALLOW, so the search saw truncated history and the\n"
+                    "  commit may well exist. Run `git fetch origin --unshallow` and retry\n"
+                    "  BEFORE reaching for --allow-version-mismatch.")
+        if exists is None:
+            msg += (f"\n  (could not reach the API to check whether {tag} already exists, so\n"
+                    f"  this assumes it does not -- the stricter reading.)")
+        if creating and not args.allow_version_mismatch:
+            die(msg + "\n  (--allow-version-mismatch publishes the notes anyway, with no assets.)")
+        if creating:
+            print("warning: " + msg)
+            print("         --allow-version-mismatch given: expect a release with no assets,")
+            print("         and attach them with a workflow_dispatch once the bump has merged.")
+        else:
+            print(f"note: {default_branch} is at {tag_prefix}{tree_ver}; re-applying notes to the "
+                  f"existing {tag} (no build runs, so the difference does not matter).")
     lines = notes.splitlines()
     title = re.sub(r"^#\s*", "", lines[0]).strip()
     body = "\n".join(lines[1:]).strip("\n")
     if not title:
         die(f"{tag}.md has an empty title line (first line must be '# <title>').")
-
-    owner, repo = owner_repo(root)
 
     print(f"repo    : {owner}/{repo}  ({kind})")
     print(f"tag     : {tag}   target: {target_desc}")
@@ -339,7 +443,6 @@ def main():
         print("dry-run: nothing published.")
         return
 
-    token = get_token()
     if not token:
         die("no GitHub token. Set GH_TOKEN / GITHUB_TOKEN, or install gh and run `gh auth login`.")
 

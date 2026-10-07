@@ -12,7 +12,8 @@ tail byte like `os_state`; `EECONFIG_USER_DATA_SIZE` grew 64→65, still ≤ the
 `housekeeping_task_user()` sets it and `request_disp_refresh()`s on change). `enum
 poly_glyph_script` in `state.h` — append-only: `GLYPH_STD=0`, `GLYPH_TENGWAR=1`, then
 the v10 expansion `GLYPH_RUNES=2, GLYPH_AUREBESH=3, GLYPH_SGA=4, GLYPH_CIRTH=5,
-GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
+GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`, then
+`GLYPH_C64KEYS=11` (2026-10, no protocol bump).
 - **Open-ended index (v10+): cmd 30 accepts ANY value `0..0xFE`; unknown → normal.**
   `set_glyph_script()`/`note_glyph_script()`/`load_user_eeconf()` store the byte
   verbatim (only the erased-EEPROM `0xFF` maps to `GLYPH_STD`); `hid_com.c` case 30 no
@@ -41,7 +42,7 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
   own **dense private PUA block** matching `glyph_script_blocks[]` (a table indexed by
   `poly_glyph_script`) in `poly_keymap.c`: Tengwar `0xE800`, Runes `0xE840`, Aurebesh
   `0xE880`, SGA `0xE8C0`, Cirth `0xE900`, IBM VGA `0xE940`, C64 `0xE980`, Amiga `0xE9C0`,
-  APL `0xEA00`, Braille `0xEA40` (0x40 apart). Letters `a..z` → `base+0..25`; scripts
+  APL `0xEA00`, Braille `0xEA40`, C64 keycap `0xEA80` (0x40 apart). Letters `a..z` → `base+0..25`; scripts
   with their own numerals (`digits:true`) put `1..0` at `base+26..35`, others leave the
   digit keys as the normal numeral (runes/Aurebesh/Cirth have no native numbers). The
   per-key glyph choice lives only in the font's generation sequence, so the firmware
@@ -55,11 +56,17 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`.
   Sans (Bitstream Vera + Arev, permissive — smooth outline, replacing Unifont's 16 px
   bitmap; the APL quad U+2395, absent from DejaVu, maps to U+25A1 □); SGA = the CC0
   `standardgalactic/alphabet` font; IBM VGA/CP437 = VileR PxPlus (CC-BY-SA-4.0, Debian
-  `fonts-pc`); C64 = KreativeKorp **PetMe64** (KSRFL, solid ROM font — the OFL
+  `fonts-pc`); C64 (screen) = KreativeKorp **PetMe64** (KSRFL, solid ROM font — the OFL
   Homecomputer "Sixtyfour" was rejected for its baked-in CRT scanlines); Amiga = OFL
   Homecomputer "Workbench" (Debian `fonts-amiga`; scanline look kept for a clean
   license — solid Topaz conversions were license-uncertain). ZX Spectrum was dropped
-  (no license-clean font found). Sources fetched by `fonts/dl-fonts.sh` (google/fonts
+  (no license-clean font found). C64 (keycap, script 11) = szabadkai
+  **C64 Keyboard** v1.111 (CC0 1.0, `fsType` 0; pinned to commit `9dab47a` in
+  `dl-fonts.sh`), the narrow capitals printed on the physical C64 keys rather than the
+  screen font. Its `fonts.yaml` entry sits at the very END of the `fonts:` list, not
+  beside `_C64_`, so it takes the highest ALL_FONTS index and only the `fantasy`
+  bundle changes (v7); in the middle it shifted `latinbig`'s gidx and would have
+  forced a second reship. Sources fetched by `fonts/dl-fonts.sh` (google/fonts
   + CC0 raw URLs; the Debian-packaged ones via `apt-get download` + `dpkg-deb -x`, no
   root). Host: HID cmd 30 in `PolyKybd.get/set_glyph_script`, tray "Glyph Script"
   submenu (`GLYPH_SCRIPT_LABELS`) + a "Reset glyph script to Standard" button in the

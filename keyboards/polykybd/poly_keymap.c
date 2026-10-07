@@ -2395,6 +2395,7 @@ static const glyph_script_block_t glyph_script_blocks[GLYPH_SCRIPT_COUNT] = {
     [GLYPH_AMIGA]    = { 0xE9C0u, true  },
     [GLYPH_APL]      = { 0xEA00u, true  },
     [GLYPH_BRAILLE]  = { 0xEA40u, true  },
+    [GLYPH_C64KEYS]  = { 0xEA80u, true  },
 };
 
 // The dense mapping relies on the USB-HID keycodes being contiguous

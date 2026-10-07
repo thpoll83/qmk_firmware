@@ -19,8 +19,10 @@ What it does (no bash-isms, no extra pip installs — Python 3.7+ stdlib only):
      publishing them cannot ship a binary whose version differs from its label.
      When NO commit declares it — the bump has not merged yet — there is
      nothing to pin to, and creating the release is refused rather than
-     shipping assets labelled with the old version (`--allow-version-mismatch`
-     overrides, for notes-only).
+     shipping a build that is not the version on the label
+     (`--allow-version-mismatch` overrides; read its --help, since what that
+     costs differs per repo). Creating is also refused when the tag ALREADY
+     exists somewhere other than the pin, because a release never moves a tag.
      Firmware and wincompose: publishing fires the `release: published`
      workflow, which builds and attaches the assets (.bin/.uf2 / the installer
      + portable zip + SHA256SUMS) — you do NOT attach anything by hand.
@@ -199,6 +201,79 @@ def release_exists(owner, repo, tag, token):
         return None
 
 
+def _get_json(owner, repo, path, token):
+    """GET a public endpoint; (status, payload) or (None, None) if unreachable."""
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "polykybd-publish-release",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(
+        f"https://api.github.com/repos/{owner}/{repo}{path}", method="GET", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=API_TIMEOUT) as resp:
+            return resp.status, json.load(resp)
+    except urllib.error.HTTPError as e:
+        return e.code, None
+    except Exception:
+        return None, None
+
+
+def tag_commit(owner, repo, tag, token):
+    """The commit an EXISTING tag points at; None if there is no such tag or the
+    lookup failed.
+
+    ⚠️ Needed because `target_commitish` is documented as "Unused if the Git tag
+    already exists" -- creating a release does not move a tag. So when the tag is
+    already there, the pin computed by commit_for_version() is not what gets
+    built, and reporting it would be a lie. Live example: wincompose PK-0.9.20's
+    tag sits on the pre-bump commit while the pin resolves the bump commit.
+
+    ⚠️ An ANNOTATED tag's ref points at the tag OBJECT, not the commit, so it is
+    dereferenced one step.
+    """
+    st, ref = _get_json(owner, repo, f"/git/ref/tags/{tag}", token)
+    if st != 200 or not ref:
+        return None
+    obj = ref.get("object") or {}
+    if obj.get("type") == "commit":
+        return obj.get("sha")
+    if obj.get("type") == "tag":
+        st, tg = _get_json(owner, repo, f"/git/tags/{obj.get('sha')}", token)
+        if st == 200 and tg:
+            return (tg.get("object") or {}).get("sha")
+    return None
+
+
+def published_latest_version(owner, repo, tag_prefix, token):
+    """Version of the release GitHub currently calls "latest", or None.
+
+    ⚠️ This is the question that decides the Latest badge, and it is NOT the same
+    as "the newest prepared notes file". Notes can be staged for a version that
+    has not shipped, and comparing against them withholds the badge from the
+    release being published -- leaving `releases/latest`, which the download
+    links resolve, on an OLDER release while the update file names the new one.
+    Every install is then offered the new version and handed the old one, which
+    is the 0.9.18 failure over again. (Found by Greptile on wincompose#27.)
+
+    404 means there is no published release yet, so whatever is being published
+    is the newest; that is reported as the empty string rather than None, which
+    means "could not tell".
+    """
+    st, rel = _get_json(owner, repo, "/releases/latest", token)
+    if st == 404:
+        return ""
+    if st != 200 or not rel:
+        return None
+    name = rel.get("tag_name") or ""
+    if not name.startswith(tag_prefix):
+        return None
+    rest = name[len(tag_prefix):]
+    return rest if re.fullmatch(r"\d+\.\d+\.\d+", rest) else None
+
+
 def commit_for_version(kind, vpath, default_branch, version):
     """OLDEST commit on the default branch whose <vpath> declares `version`.
 
@@ -290,10 +365,13 @@ def main():
     ap.add_argument("--tag", help="publish a specific prepared tag instead of the newest one")
     ap.add_argument("--allow-version-mismatch", action="store_true",
                     help="publish a NEW release even though no commit declares its version and "
-                         "the branch head's differs. The build labels its assets from the tree, "
-                         "so the release workflow will refuse to attach them; use this only to "
-                         "get the notes up, and attach the assets later with a workflow_dispatch "
-                         "once the bump has merged")
+                         "the branch head's differs. What this costs depends on the repo: "
+                         "wincompose's workflow asserts the built version against the tag and "
+                         "refuses the assets, leaving a release with no downloads; the firmware "
+                         "workflow names its assets FROM THE TAG without checking, so it ships a "
+                         "binary whose filename and reported version disagree. Prefer merging "
+                         "the bump; use this only to get notes up, and attach assets later with "
+                         "a workflow_dispatch")
     args = ap.parse_args()
 
     # Print UTF-8 (emoji in the notes) even on a cp1252 Windows console.
@@ -336,18 +414,35 @@ def main():
         die(f"no prepared notes for {tag} on the release-notes branch "
             f"(expected release-notes:{tag}.md, non-empty).")
 
-    # Only the newest prepared tag becomes "Latest release". The notes branch is
-    # an append-only archive and --tag exists to publish an older one, so an
-    # unconditional make_latest would re-point /releases/latest -- and the tray
-    # updater that reads it -- at older firmware.
-    newest_tag = prepared[-1][1] if prepared else tag
-    is_latest = (tag == newest_tag)
+    owner, repo = owner_repo(root)
+    token = get_token()
+    version = tag[len(tag_prefix):]
+
+    # Does this release take the "Latest" badge? /releases/latest is what the
+    # download links resolve, so it must not be re-pointed at an OLDER release
+    # (--tag exists to publish one). The comparison is against what is
+    # PUBLISHED, not against the newest prepared notes: notes can be staged for
+    # a version that has not shipped, and comparing against them withholds the
+    # badge from the release being published -- see published_latest_version().
+    published = published_latest_version(owner, repo, tag_prefix, token)
+    if published is None:
+        # Could not tell. Fall back to the notes comparison, which is the older
+        # behaviour: it can withhold the badge but never steals it for an older
+        # release, and says so either way.
+        newest_tag = prepared[-1][1] if prepared else tag
+        is_latest = (tag == newest_tag)
+        latest_why = "could not read the published latest release; judged from the prepared notes"
+    elif published == "":
+        is_latest = True
+        latest_why = "no published release yet"
+    else:
+        is_latest = version_tuple(version) >= version_tuple(published)
+        latest_why = f"published latest is {tag_prefix}{published}"
 
     # Tag the commit that DECLARES this version, not the branch head -- see
     # commit_for_version(). Falls back to the head so a publish never becomes
     # impossible, but says so loudly, because the fallback is the old broken
     # behaviour and must not pass unnoticed.
-    version = tag[len(tag_prefix):]
     target = commit_for_version(kind, vpath, default_branch, version)
     pinned = target is not None
     shallow = False
@@ -367,8 +462,39 @@ def main():
     else:
         target_desc = f"{target[:10]} (declares {version})"
 
-    owner, repo = owner_repo(root)
-    token = get_token()
+    # Does publishing CREATE the release? That is what triggers a build, and so
+    # what both guards below are conditioned on: re-applying notes to an
+    # already-published release re-runs nothing.
+    exists = release_exists(owner, repo, tag, token)
+    # Unknown counts as creating: the stricter case, since guessing the other
+    # way is what publishes a release whose assets are wrong.
+    creating = exists is not True
+    unknown_note = ""
+    if exists is None:
+        unknown_note = (f"\n  (could not reach the API to check whether {tag} already exists, so\n"
+                        f"  this assumes it does not -- the stricter reading.)")
+
+    # ⚠️ An EXISTING tag beats the pin, and nothing about the pin says so.
+    # `target_commitish` is documented as "Unused if the Git tag already
+    # exists" -- creating a release does not move a tag. So when the tag is
+    # already there, the build comes from wherever it points and the pin is
+    # only a claim. Live case: wincompose PK-0.9.20's tag sits on the pre-bump
+    # commit, its release was deleted, and the pin resolves the bump commit --
+    # so the script would have printed the right commit and published the wrong
+    # one. This fires even when the version check below passes, which is the
+    # whole point: there the pin found the correct commit and the mismatch
+    # guard sees nothing wrong. (Found by Greptile on wincompose#27.)
+    if creating:
+        at = tag_commit(owner, repo, tag, token)
+        if at and target != default_branch and not at.startswith(target[:10]):
+            die(f"the tag {tag} already exists, at {at[:10]}, and creating a release does\n"
+                f"  not move it -- so the build would come from {at[:10]}, not from the\n"
+                f"  {target[:10]} this would report. Either dispatch the release workflow on a\n"
+                f"  ref that declares {version} to attach assets to the existing tag, or move\n"
+                f"  the tag to {target[:10]} and publish." + unknown_note)
+        if at and target == default_branch:
+            print(f"note: the tag {tag} already exists, at {at[:10]}; creating a release does "
+                  f"not move it,\n      so that commit is what gets built.")
 
     # What the default branch declares right now. Read only to describe the
     # drift or to refuse; the tag's own commit is what gets published.
@@ -400,19 +526,13 @@ def main():
         # downloads at all -- this is the check that stops it before anything is
         # published.
         #
-        # Enforced only when publishing would CREATE the release, because that
-        # is what triggers a build. Re-applying notes to an already-published
-        # release re-runs nothing, so the tree's version is then irrelevant.
-        exists = release_exists(owner, repo, tag, token)
-        # Unknown counts as creating: the stricter case, since guessing the
-        # other way is what publishes a release whose assets get refused.
-        creating = exists is not True
+        # Enforced only when publishing would CREATE the release (see above).
         where = "behind" if version_tuple(tree_ver) < version_tuple(version) else "ahead of"
         msg = (f"{default_branch} is at {tree_ver}, {where} the prepared {tag}, and no commit\n"
-               f"  on it declares {version}. The build reads its version from {vpath}, not\n"
-               f"  from the tag, so the assets would be labelled {tree_ver} and the release\n"
-               f"  workflow will refuse them. Merge the bump that sets {vpath} to {version}\n"
-               f"  on {default_branch}, then publish.")
+               f"  on it declares {version}. The build takes its version from {vpath}, not\n"
+               f"  from the tag, so what ships would be built from {tree_ver} while the\n"
+               f"  release says {version}. Merge the bump that sets {vpath} to {version} on\n"
+               f"  {default_branch}, then publish.")
         if shallow:
             # ⚠️ The search may simply not have SEEN the commit. Say so first:
             # told to "merge the bump" for a version that was bumped months ago,
@@ -421,15 +541,24 @@ def main():
             msg += ("\n  This clone is SHALLOW, so the search saw truncated history and the\n"
                     "  commit may well exist. Run `git fetch origin --unshallow` and retry\n"
                     "  BEFORE reaching for --allow-version-mismatch.")
-        if exists is None:
-            msg += (f"\n  (could not reach the API to check whether {tag} already exists, so\n"
-                    f"  this assumes it does not -- the stricter reading.)")
+        msg += unknown_note
+        # ⚠️ What the override actually costs is NOT the same in every repo, so
+        # do not promise one outcome. wincompose's release workflow asserts the
+        # built exe's version against the tag and refuses the assets, leaving a
+        # release with no downloads. The firmware workflow does neither: it
+        # NAMES its assets from the tag (`VER="${TAG#PolyKybd-fw-v}"`), so the
+        # override there publishes a .bin whose filename and internal
+        # FW_VERSION disagree -- which is the mis-flash that sent a firmware
+        # bisect to a wrong conclusion for several rounds (#258).
+        # (Found by Greptile on qmk_firmware#356.)
         if creating and not args.allow_version_mismatch:
-            die(msg + "\n  (--allow-version-mismatch publishes the notes anyway, with no assets.)")
+            die(msg + "\n  (--allow-version-mismatch publishes anyway; read its --help first.)")
         if creating:
             print("warning: " + msg)
-            print("         --allow-version-mismatch given: expect a release with no assets,")
-            print("         and attach them with a workflow_dispatch once the bump has merged.")
+            print("         --allow-version-mismatch given. Check what this repo's release")
+            print("         workflow does with assets whose version is not the tag's: it")
+            print("         either refuses them, leaving no downloads, or names them from")
+            print("         the tag and ships a binary that reports something else.")
         else:
             print(f"note: {default_branch} is at {tag_prefix}{tree_ver}; re-applying notes to the "
                   f"existing {tag} (no build runs, so the difference does not matter).")

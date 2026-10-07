@@ -89,17 +89,32 @@ def fold(board):
 
 
 def inverse_fold(board):
-    """display_index_to_matrix()'s fold row bound, read from <board>/<board>.c.
+    """display_index_to_matrix(), transcribed from <board>/<board>.c and checked against it.
 
-    Returns the N in `dr < N` (display rows 0..N-1 of the right half are folded),
-    or None when the inverse carries no fold.
+    Returns (fold_rows, col_shift): display rows 0..fold_rows-1 of the right half map
+    to matrix column dc + col_shift. Every other term of the arithmetic must match the
+    expected shape exactly, or this exits: a model that reads only part of the C
+    function would let a wrong mapping pass (review on #349).
     """
     with open(os.path.join(KB, board, board + ".c")) as f:
         src = f.read()
     body = src[src.index("bool display_index_to_matrix("):]
-    body = body[:body.index("\n}")]
-    m = re.search(r"dr\s*<\s*(\d+)", body)
-    return int(m.group(1)) if m else None
+    body = strip_comments(body[:body.index("\n}")])
+    flat = re.sub(r"\s+", " ", body)
+    need = [
+        r"const uint8_t dr = \(uint8_t\)\(idx / MATRIX_COLS\), dc = \(uint8_t\)\(idx % MATRIX_COLS\);",
+        r"if \(right\) \{ \*row = \(uint8_t\)\(dr \+ MATRIX_ROWS_PER_SIDE\);",
+        r"\} else \{ \*row = dr; \*col = dc; \}",
+    ]
+    for pat in need:
+        if not re.search(pat, flat):
+            raise SystemExit("%s: could not read the inverse fold out of display_index_to_matrix() "
+                             "(no match for %s)" % (board, pat))
+    m = re.search(r"\*col = \(dr < (\d+)\) \? \(uint8_t\)\(dc \+ (\d+)\) : dc;", flat)
+    if not m:
+        raise SystemExit("%s: could not read the inverse column fold out of "
+                         "display_index_to_matrix()" % board)
+    return int(m.group(1)), int(m.group(2))
 
 
 def table_select(board):
@@ -163,12 +178,12 @@ def check(board, rows_per_side, cols, panels, verbose):
             skip = 0
     # The inverse fold (display_index_to_matrix) must undo key_display_index() for
     # every key that has a panel, or the tutorial and Eden address the wrong key.
-    inv_rows = inverse_fold(board)
+    inv_rows, inv_shift = inverse_fold(board)
 
     def display_index_to_matrix(right, idx):
         dr, dc = idx // cols, idx % cols
         if right:
-            return dr + rows_per_side, (dc + 1 if inv_rows is not None and dr < inv_rows else dc)
+            return dr + rows_per_side, (dc + inv_shift if dr < inv_rows else dc)
         return dr, dc
 
     inv_bad = 0

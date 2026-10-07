@@ -719,6 +719,15 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // Modular uint32 arithmetic makes this correct even in the first
                     // interval after boot — the old signed subtraction underflowed
                     // there, was clamped to 0, and idle never started.
+                    //
+                    // ⚠️ An ALREADY-idle board is woken first. The style is chosen only
+                    // on the way INTO idle (the `(flags & DISP_IDLE) == 0` test in
+                    // housekeeping), so a board that went idle in one style and was
+                    // then given another (cmd 28) kept the old one: "start idle"
+                    // backdated a timer nothing read. The rig's signed-DOOM-pack test
+                    // hit exactly that after the flash-only soak left the board idle
+                    // in jitter, and read it as a pack that never loaded.
+                    if (access_local_state()->flags & DISP_IDLE) poly_wake_from_idle();
                     backdate_last_update(get_idle_timeout_ms());
                     uprint("Start idle.\n");
                 }

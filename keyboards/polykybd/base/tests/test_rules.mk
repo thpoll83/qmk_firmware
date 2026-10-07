@@ -70,6 +70,13 @@ polykybd_map_codec_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# fw_sig_policy.h is header-only: the placeholder-key refusal behind fw_sig_verify().
+polykybd_fw_sig_policy_SRC := \
+	$(POLY_BASE_PATH)/tests/fw_sig_policy_tests.cpp
+
+polykybd_fw_sig_policy_INC := \
+	$(POLY_BASE_PATH)
+
 # mode_byte.h is header-only too — the shared EEPROM byte layout behind
 # pack/load_auto_brightness and pack/load_os_state.
 polykybd_mode_byte_SRC := \

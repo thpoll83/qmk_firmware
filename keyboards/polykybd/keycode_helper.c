@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "keycode_helper.h"
 #include "state.h"
+#include "base/ime_key_plan.h"
 
 // The active OS (synced into poly_sync_t.active_os), used to pick OS-aware legends.
 static inline uint8_t kc_active_os(void) {
@@ -237,6 +238,12 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_EDEN:                       return MID_TWO_LINE("RESET", "Eden");
         case KC_DEMO:                       return MID_TWO_LINE("Demo", "Mode");
         case KC_DEMO_KEYS:                  return MID_TWO_LINE("Key", "Demo");
+        // Only reached on ko-KR / ja-JP: elsewhere display_keycode_at() hands the
+        // renderer KC_NUBS, so the key wears the language's own NUBS legend.
+        case KC_IME:
+            return poly_ime_family(get_local_state()->lang) == IME_FAMILY_JAPANESE
+                       ? MID_TWO_LINE("IME", "Kana")
+                       : MID_TWO_LINE("IME", "Han/A");
         // ⚠️ KC_GLYPH_SIZE_UP is handled in to_static_text() (poly_keymap.c), NOT here.
         // Its legend depends on the current tier AND on whether Shift is held, and the
         // SYNCED mods live in poly_layer_t — this function only receives led_t, so the

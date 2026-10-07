@@ -264,3 +264,13 @@ polykybd_oled_i2c_diag_SRC := \
 
 polykybd_oled_i2c_diag_INC := \
 	$(POLY_BASE_PATH)
+
+# ime_key_plan.c decides what KC_IME sends: NUBS without an IME, the Korean toggle, or
+# the Japanese absolute target, per OS. Pure: the binding (poly_keymap.c) passes the
+# language family, the OS and the Shift state, so nothing from QMK is linked.
+polykybd_ime_key_plan_SRC := \
+	$(POLY_BASE_PATH)/ime_key_plan.c \
+	$(POLY_BASE_PATH)/tests/ime_key_plan_tests.cpp
+
+polykybd_ime_key_plan_INC := \
+	$(POLY_BASE_PATH)

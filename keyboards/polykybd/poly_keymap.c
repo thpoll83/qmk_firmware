@@ -4347,7 +4347,9 @@ uint8_t tutorial_preview_prepare(void) {
     const uint8_t own = poly_reported_lang();
     for (uint8_t i = 0; i < TUT_PREVIEW_ALL; ++i) {
         const tut_preview_t *e = &s_tut_preview_all[i];
-        // A Greek user's board already speaks Greek: showing it would change nothing.
+        // Skip the user's own language: the chapter shows what ELSE the board speaks.
+        // (The lesson runs on TUT_PARKED_LANG, so showing it would change the board, but
+        // a Greek user does not need Greek introduced.)
         if (!e->script && e->value == own) continue;
         if (tut_preview_renderable(e)) s_tut_preview[s_tut_preview_n++] = i;
     }
@@ -5023,6 +5025,11 @@ uint8_t poly_reported_lang(void) {
     return cur;
 }
 
+void poly_set_host_lang(uint8_t lang) {
+    access_local_state()->lang = lang;
+    if (s_tut_real_lang != 0xFF) s_tut_real_lang = lang;
+}
+
 // The language to STORE. Only the master keeps s_tut_real_lang; the slave receives the
 // preview through the ordinary sync and cannot tell it from the user's language. So
 // while the lesson runs the slave keeps the language it already stored, or a flush
@@ -5038,6 +5045,13 @@ uint8_t poly_persisted_lang(void) {
 // The demo's language tour writes its preview through here too (demo_preview()), so the
 // host-facing guarantees above hold for it unchanged: GET_LANG and the settings save keep
 // reading the user's real language.
+//
+// ⚠️ The whole tutorial runs on TUT_PARKED_LANG, the way tutorial_enter_base_layout()
+// parks the layout on _L0. The lesson names letters from keymaps[_BL]
+// (tutorial_slot_letter()) while the keycap draws them in the board's language, so on
+// Korean the status panel asked for "A" over a key showing a Hangul letter. A script
+// item keeps the parked language underneath; only a language item replaces it.
+#define TUT_PARKED_LANG LANG_ENUS
 static uint8_t poly_tutorial_apply_preview(void) {
     poly_sync_t          *ls = access_local_state();
     const tut_preview_t *e  = tut_preview_live();
@@ -5045,15 +5059,21 @@ static uint8_t poly_tutorial_apply_preview(void) {
     bool    script = has && e->script;
     uint8_t value  = has ? e->value : 0;
     if (!has) has = demo_preview(&script, &value);
-    if (has && !script) {
+    bool    lang_has   = has && !script;
+    uint8_t lang_value = value;
+    if (!lang_has && tutorial_active()) {
+        lang_has   = true;
+        lang_value = TUT_PARKED_LANG;
+    }
+    if (lang_has) {
         if (s_tut_real_lang == 0xFF || ls->lang != s_tut_written_lang) {
-            s_tut_real_lang = ls->lang;           // first item, or the host moved it
+            s_tut_real_lang = ls->lang;           // first write, or the host moved it
         }
-        if (ls->lang != value) {
-            ls->lang = value;
+        if (ls->lang != lang_value) {
+            ls->lang = lang_value;
             request_disp_refresh();
         }
-        s_tut_written_lang = value;
+        s_tut_written_lang = lang_value;
     } else if (s_tut_real_lang != 0xFF) {
         if (ls->lang == s_tut_written_lang && ls->lang != s_tut_real_lang) {
             ls->lang = s_tut_real_lang;

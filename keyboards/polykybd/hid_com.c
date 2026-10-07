@@ -542,7 +542,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 
                     memset(data, 0, length);
                     if(new_lang<NUM_LANG) {
-                        local_state->lang = new_lang;
+                        poly_set_host_lang(new_lang);
                         uprintf("Setting lang to %u.\n", new_lang);
                         request_disp_refresh();
                         update_performed();

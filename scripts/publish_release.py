@@ -43,6 +43,16 @@ import urllib.error
 import urllib.request
 
 
+# ⚠️ Every urlopen() here passes this. Without it urllib uses the socket
+# default, which is None -- block forever -- so a connection GitHub accepts and
+# then stops answering hangs the script instead of failing. That defeats
+# release_exists()'s whole design, which is to return None on any trouble and
+# let the caller take the stricter path, and it hangs --dry-run, the one command
+# that must stay quick and safe. (Found by Greptile on PolyKybdHost#318, for
+# release_exists; api() had it too and is fixed in the same pass.)
+API_TIMEOUT = 30
+
+
 def run(cmd):
     # Force UTF-8: git output (release notes) is UTF-8, but on Windows the
     # default is the locale codec (cp1252), which raises UnicodeDecodeError on
@@ -146,7 +156,7 @@ def api(token, method, path, payload=None):
         "User-Agent": "polykybd-publish-release",
     })
     try:
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=API_TIMEOUT) as resp:
             return resp.status, json.load(resp)
     except urllib.error.HTTPError as e:
         try:
@@ -178,7 +188,7 @@ def release_exists(owner, repo, tag, token):
         f"https://api.github.com/repos/{owner}/{repo}/releases/tags/{tag}",
         method="GET", headers=headers)
     try:
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, timeout=API_TIMEOUT) as resp:
             return resp.status == 200
     except urllib.error.HTTPError as e:
         # ⚠️ Only a 404 is "no release". Folding 401/403/5xx in with it is what

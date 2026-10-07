@@ -46,6 +46,31 @@ extern const GFXfont NotoSans_Regular_Small_15px7b;
 // the same way.
 extern const GFXfont IconsFont;   // the tutorial line's trailing glyph (ICON_SHIFT)
 
+// Push the scratch buffer to the status OLED and flush it in ONE synchronous pass.
+// oled_write_raw() diffs byte-for-byte and dirties only the blocks that changed, and
+// oled_render_dirty(true) is a no-op when nothing did, so a static screen costs
+// nothing on the bus. NOT for oled_boot_progress(), which flushes one block per call
+// on purpose (its boot_paint_mark() breadcrumbs), nor for the idle screen, which
+// writes and lets the normal render tick flush.
+static void oled_present_now(void) {
+    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
+    oled_render_dirty(true);
+}
+
+// Line `i` of `count` in an even vertical layout: line i owns the band
+// [i*H/count, (i+1)*H/count) and is centred in it from its OWN bbox, so a line with
+// a descender sits level instead of being pushed by the tallest line in the set.
+// Centred horizontally on the ink, clamped at the left edge.
+static void oled_draw_band_line(const GFXfont *const *font, uint8_t i, uint8_t count,
+                                const uint32_t *txt) {
+    const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / count);
+    int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+    kdisp_gfx_text_bbox(font, 1, txt, &x0, &x1, &y0, &y1);
+    int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - (x1 - x0 + 1)) / 2 - x0);
+    if (x < 0) x = 0;
+    kdisp_write_gfx_text(font, 1, (int8_t)x, (int8_t)(band * i + band / 2 - (y0 + y1) / 2), txt);
+}
+
 // Render `value` as a char32 (U"...") display string into `buffer`. The display
 // pipeline is 32-bit (kdisp_write_gfx_text takes const uint32_t*), so each digit
 // glyph is one uint32_t codepoint. `buffer_len` is the byte size of the buffer.
@@ -122,13 +147,12 @@ void oled_status_screen(void) {
     // over I2C band-by-band even when only the WPM digit / brightness bar moved —
     // that is the "updates in multiple passes" flicker. Diffing keeps a static screen
     // silent and shrinks an incremental change to the one or two blocks it touches.
-    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
     // Push the changed blocks in ONE pass (see oled_fw_update_screen for the full
     // rationale): the stock per-iteration oled_render() flushes only one block per
     // main-loop pass, so a status change landing during a busy window (e.g. an
     // overlay burst on an app switch) could tear top-first. This is a no-op when
     // nothing changed, so a static screen still costs nothing on the bus.
-    oled_render_dirty(true);
+    oled_present_now();
 }
 
 // Progress bar drawn into the kdisp scratch buffer (call from
@@ -187,7 +211,6 @@ void oled_fw_update_screen(void) {
     oled_update_buffer_fw_update();
     // Same diff-only compose as the status screen (no oled_clear() — the scratch
     // is a full 1024-byte frame with a black background from kdisp_set_buffer(0)).
-    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
     // Then push the changed blocks synchronously in ONE pass. During a flash the
     // main loop is saturated feeding HID chunks / driving the deferred sector
     // erase, so the normal per-iteration oled_render() (1 block per call) can't
@@ -196,7 +219,7 @@ void oled_fw_update_screen(void) {
     // flush here lands the whole frame on the first tick it is drawn; afterwards
     // the master's screen is static (slave's progress bar is the only churn), so
     // diffing keeps this to just the bar's blocks.
-    oled_render_dirty(true);
+    oled_present_now();
 }
 
 // FW-2: the question behind the A/R keycaps. The keycaps alone say WHICH key does
@@ -234,27 +257,16 @@ void oled_fw_confirm_screen(void) {
 
     const uint32_t* lines[3] = { l0, l1, l2 };
     const uint8_t   count    = l1 ? 3 : 2;
-    // Even vertical distribution: line i owns the band [i*H/count, (i+1)*H/count),
-    // and each line is centred in its own band from its own bbox — so a line with a
-    // descender ("firmware!" has none, but the key lines end in caps) sits level
-    // rather than being pushed by the tallest line in the set.
-    const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / count);
+    // Even vertical distribution (oled_draw_band_line): each line centred in its own
+    // band, so the key lines, which end in caps, sit level.
     for (uint8_t i = 0; i < count; ++i) {
-        const uint32_t* txt = lines[i];
-        int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
-        kdisp_gfx_text_bbox(fonts, 1, txt, &x0, &x1, &y0, &y1);
-        const int8_t w    = (int8_t)(x1 - x0 + 1);
-        int16_t      x    = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2 - x0);
-        if (x < 0) x = 0;
-        const int8_t base = (int8_t)(band * i + band / 2 - (y0 + y1) / 2);
-        kdisp_write_gfx_text(fonts, 1, (int8_t)x, base, txt);
+        oled_draw_band_line(fonts, i, count, lines[i]);
     }
-
-    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
     // One synchronous pass, same reason as the flash screen: this is a full-screen
     // transition and the user must be able to read it immediately, not watch it
     // dribble in a block at a time.
-    oled_render_dirty(true);
+
+    oled_present_now();
 }
 
 // The shared two-word firmware notice. Reads across the PAIR of status OLEDs —
@@ -316,8 +328,7 @@ static void oled_fw_notice(const uint32_t* word, bool icon) {
         kdisp_write_gfx_text(arrow, 1, (int8_t)(gx + tw + gap - ix0), iBase, icon_txt);
     }
 
-    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
-    oled_render_dirty(true);   // one synchronous full flush before the reboot
+    oled_present_now();   // one synchronous full flush before the reboot
 }
 
 // Boot progress, drawn straight onto the status OLED at every splash milestone.
@@ -422,14 +433,8 @@ void oled_boot_progress(uint8_t step, uint8_t total, uint8_t sub, uint8_t sub_to
     // Each line centred in its own half of the panel, from its own bbox — the same
     // band shape oled_fw_confirm_screen() uses, so a descender does not push the other
     // line. Works unchanged on the 32 px panel: two bands of 16.
-    const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / n_lines);
     for (uint8_t i = 0; i < n_lines; ++i) {
-        int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
-        kdisp_gfx_text_bbox(line_face[i], 1, lines[i], &x0, &x1, &y0, &y1);
-        int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - (x1 - x0 + 1)) / 2 - x0);
-        if (x < 0) x = 0;
-        kdisp_write_gfx_text(line_face[i], 1, (int8_t)x,
-                             (int8_t)(band * i + band / 2 - (y0 + y1) / 2), lines[i]);
+        oled_draw_band_line(line_face[i], i, n_lines, lines[i]);
     }
 
     oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
@@ -557,17 +562,10 @@ void oled_fw_failed_screen(void) {
 
     oled_on();
     kdisp_set_buffer(0);
-    const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / count);
     for (uint8_t i = 0; i < count; ++i) {
-        int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
-        kdisp_gfx_text_bbox(fonts, 1, show[i], &x0, &x1, &y0, &y1);
-        int16_t x = (int16_t)((OLED_DISPLAY_WIDTH - (x1 - x0 + 1)) / 2 - x0);
-        if (x < 0) x = 0;
-        kdisp_write_gfx_text(fonts, 1, (int8_t)x,
-                             (int8_t)(band * i + band / 2 - (y0 + y1) / 2), show[i]);
+        oled_draw_band_line(fonts, i, count, show[i]);
     }
-    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
-    oled_render_dirty(true);
+    oled_present_now();
 }
 
 // ---------------------------------------------------------------------------
@@ -657,28 +655,18 @@ void oled_telemetry_screen(void) {
     oled_on();
     kdisp_set_buffer(0);   // clear the scratch to black
 
-    // Even vertical distribution, each line centred in its own band from its OWN
-    // bbox — the same layout the FW-2 confirm screen uses, so a line with a
-    // descender sits level instead of being pushed by the tallest line in the set.
-    const int8_t band = (int8_t)(OLED_DISPLAY_HEIGHT / count);
+    // Even vertical distribution, the same layout the FW-2 confirm screen uses.
     for (uint8_t i = 0; i < count; ++i) {
         uint32_t txt[24];
         ascii_to_u32_string(txt, sizeof(txt), lines[i]);
-        int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
-        kdisp_gfx_text_bbox(fonts, 1, txt, &x0, &x1, &y0, &y1);
-        const int8_t w = (int8_t)(x1 - x0 + 1);
-        int16_t      x = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2 - x0);
-        if (x < 0) x = 0;
-        const int8_t base = (int8_t)(band * i + band / 2 - (y0 + y1) / 2);
-        kdisp_write_gfx_text(fonts, 1, (int8_t)x, base, txt);
+        oled_draw_band_line(fonts, i, count, txt);
     }
-
-    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
     // One synchronous pass: this is a full-screen swap the user asked for by pressing
     // a key, so it must land complete rather than dribble in a block per main loop.
     // A no-op once the screen is static (oled_render_dirty early-returns when clean),
     // which matters because the uptime line changes only once a second.
-    oled_render_dirty(true);
+
+    oled_present_now();
 }
 
 // On-keyboard macro recording (MACRO_RECORD_DESIGN.md section 4). The status OLED is
@@ -750,27 +738,30 @@ void oled_macro_rec_screen(void) {
     // is and what it costs; the elapsed time and the stop hint are split72-only.
     const char*   lines[4] = { l0, l1, l2, l3 };
     const uint8_t count    = tall ? 4u : 2u;
-    const int8_t  band     = (int8_t)(OLED_DISPLAY_HEIGHT / count);
     for (uint8_t i = 0; i < count; ++i) {
         if (lines[i][0] == '\0') continue;   // the blink's dark phase, or an unused line
         uint32_t txt[24];
         ascii_to_u32_string(txt, sizeof(txt), lines[i]);
-        int8_t x0 = 0, x1 = 0, y0 = 0, y1 = 0;
-        kdisp_gfx_text_bbox(fonts, 1, txt, &x0, &x1, &y0, &y1);
-        const int8_t w = (int8_t)(x1 - x0 + 1);
-        int16_t      x = (int16_t)((OLED_DISPLAY_WIDTH - w) / 2 - x0);
-        if (x < 0) x = 0;
-        const int8_t base = (int8_t)(band * i + band / 2 - (y0 + y1) / 2);
-        kdisp_write_gfx_text(fonts, 1, (int8_t)x, base, txt);
+        oled_draw_band_line(fonts, i, count, txt);
     }
-
-    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
     // ⚠️ No oled_clear() anywhere in here, and none per frame: oled_write_raw diffs the
     // scratch against the framebuffer and dirties only the blocks that moved, so the
     // 1 Hz blink costs one block per second. An oled_clear() would defeat that and
     // re-push the whole frame every tick -- the "updates in multiple passes" flicker.
-    oled_render_dirty(true);
+
+    oled_present_now();
 }
+
+// Status-row role icons, shared by both variants for the same reason as the dial
+// below: they were byte-identical copies in each status_oled.c.
+const uint8_t usb_status_bitmap[] PROGMEM = {
+    0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x80, 0x00, 0xb8, 0x04, 0xb8,
+    0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0,
+};
+const uint8_t link_status_bitmap[] PROGMEM = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x1c, 0x7f, 0xfe, 0x7f, 0xfe, 0x00, 0x00,
+    0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
 
 // Typing-speed dial (11x6 speedometer). Shared by BOTH variants' status OLEDs, so it
 // is defined once here (oled_helper.c is in the shared POLY_SRC) and referenced via
@@ -829,8 +820,7 @@ void oled_tutorial_screen(void) {
     // that is actually flashed — see the tier note there for why this is not a 2x
     // upscale of the 19 px UI face.
     if (tutorial_draw_big_letter(0, OLED_DISPLAY_WIDTH, OLED_DISPLAY_HEIGHT)) {
-        oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
-        oled_render_dirty(true);
+        oled_present_now();
         return;
     }
 
@@ -946,8 +936,7 @@ void oled_tutorial_screen(void) {
             slot++;
         }
     }
-    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
-    oled_render_dirty(true);   // one synchronous pass — a line must not dribble in
+    oled_present_now();   // one synchronous pass — a line must not dribble in
 }
 
 // Draw `text` horizontally centred on the panel, baseline at `y`.
@@ -969,8 +958,7 @@ static void oled_demo_screen(void) {
     kdisp_set_buffer(0);
     oled_draw_text_centred(title, tall ? 26 : 14, demo_sync_sends_keys() ? U"Key demo" : U"Demo mode");
     oled_draw_text_centred(small, tall ? 52 : 30, U"Hold Esc to exit");
-    oled_write_raw((char*)get_scratch_buffer(), get_scratch_buffer_size());
-    oled_render_dirty(true);
+    oled_present_now();
 }
 
 // Show the demo hint for the first 4 s of every 12 s; the rest of the time the status

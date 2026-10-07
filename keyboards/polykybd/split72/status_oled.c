@@ -34,18 +34,8 @@ extern const GFXfont NotoSans_Regular_Nano_10px7b;
 #include "base/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
 #include "../poly_keymap.h"
 
-// Top-row role icons (16x16, row-major MSB-first, drawn via kdisp_draw_bitmap):
-// which half currently talks to the PC over USB ("USB") vs. the half bridged to it
-// over the split UART ("Link"). The role follows is_usb_host_side(), so it swaps
-// with whichever half holds the USB cable.
-static const uint8_t usb_status_bitmap[] PROGMEM = {
-    0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x80, 0x00, 0xb8, 0x04, 0xb8,
-    0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0,
-};
-static const uint8_t link_status_bitmap[] PROGMEM = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x1c, 0x7f, 0xfe, 0x7f, 0xfe, 0x00, 0x00,
-    0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-};
+// Top-row role icons (usb_status_bitmap / link_status_bitmap) are shared with
+// split42 and live in oled_helper.c.
 
 // Keycap-brightness gauge (row 3 of the left/USB panel): an 11x11 sun (disc + 8
 // detached rays) followed by a staircase bar meter. This replaces the old

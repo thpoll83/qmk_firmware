@@ -2214,3 +2214,22 @@ U+100025 inside the one `IconsFont`. FONT_PACK.md has the current layout.
   Of twelve smiling faces rendered in both modes, the decimating half broke every
   outline into dots, and 😄's curved eyes survived neither mode. ⚽ is now the only
   glyph on the decimating half.
+
+## Round 50 — the lesson runs on en-US
+
+*"I started Eden on a Korean layout and it continued with Korean, so pressing the 3
+letters at the beginning did not match."*
+
+The fifteenth round parked the LAYOUT on `_L0` and left the LANGUAGE alone. Chapter 1
+names its letters from `keymaps[_BL]` (`tutorial_slot_letter()`, an ASCII capital), while
+the lit keycap draws through the board's language. On Korean the status panel asked for
+"A" over a key showing a Hangul letter. A Latin layout that moves letters (German Y/Z,
+French A/Q) can disagree the same way.
+
+`poly_tutorial_apply_preview()` now writes `TUT_PARKED_LANG` (`LANG_ENUS`) for the whole
+lesson, through the same board-only path as the chapter-3 preview. So GET_LANG and the
+settings save keep reporting the user's real language, and the host does not switch the
+OS. A language item replaces the parked language for its moment; a script item keeps it
+underneath. When `tutorial_active()` drops, the next pass writes the real language back.
+The key tour never selects a language (Lang key, the category tabs, `KC_BASE`), so the
+park cannot overwrite a choice the lesson asked for.

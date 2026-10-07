@@ -571,8 +571,10 @@ def main():
     print(f"repo    : {owner}/{repo}  ({kind})")
     print(f"tag     : {tag}   target: {target_desc}")
     print(f"title   : {title}")
-    if not is_latest:
-        print(f"latest  : NO — {newest_tag} is newer and keeps the Latest badge")
+    # Always printed, in both directions: which release keeps the Latest badge
+    # decides where the download links point, and the REASON is what tells you
+    # the decision came from the published releases rather than from a fallback.
+    print(f"latest  : {'YES' if is_latest else 'NO'} — {latest_why}")
     print(f"body    : {len(body)} chars, {body.count(chr(10)) + 1} lines")
     print("-" * 60)
     print(body)

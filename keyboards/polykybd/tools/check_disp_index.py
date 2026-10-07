@@ -100,20 +100,21 @@ def inverse_fold(board):
         src = f.read()
     body = src[src.index("bool display_index_to_matrix("):]
     body = strip_comments(body[:body.index("\n}")])
-    flat = re.sub(r"\s+", " ", body)
-    need = [
-        r"const uint8_t dr = \(uint8_t\)\(idx / MATRIX_COLS\), dc = \(uint8_t\)\(idx % MATRIX_COLS\);",
-        r"if \(right\) \{ \*row = \(uint8_t\)\(dr \+ MATRIX_ROWS_PER_SIDE\);",
-        r"\} else \{ \*row = dr; \*col = dc; \}",
-    ]
-    for pat in need:
-        if not re.search(pat, flat):
-            raise SystemExit("%s: could not read the inverse fold out of display_index_to_matrix() "
-                             "(no match for %s)" % (board, pat))
-    m = re.search(r"\*col = \(dr < (\d+)\) \? \(uint8_t\)\(dc \+ (\d+)\) : dc;", flat)
+    flat = re.sub(r"\s+", " ", body).strip()
+    # The WHOLE body, as one pattern. Searching for the expected pieces would still
+    # pass with an extra statement or a later reassignment of *row / *col between
+    # them (review on #349), so anything this does not recognise fails closed.
+    shape = (r"bool display_index_to_matrix\(bool right, uint8_t idx, uint8_t \*row, uint8_t \*col\) \{ "
+             r"const uint8_t dr = \(uint8_t\)\(idx / MATRIX_COLS\), dc = \(uint8_t\)\(idx % MATRIX_COLS\); "
+             r"if \(right\) \{ "
+             r"\*row = \(uint8_t\)\(dr \+ MATRIX_ROWS_PER_SIDE\); "
+             r"\*col = \(dr < (\d+)\) \? \(uint8_t\)\(dc \+ (\d+)\) : dc; "
+             r"\} else \{ \*row = dr; \*col = dc; \} "
+             r"return \(\*row < MATRIX_ROWS\) && \(\*col < MATRIX_COLS\);")
+    m = re.fullmatch(shape, flat)
     if not m:
-        raise SystemExit("%s: could not read the inverse column fold out of "
-                         "display_index_to_matrix()" % board)
+        raise SystemExit("%s: display_index_to_matrix() does not have the shape this check "
+                         "models; update inverse_fold() together with it" % board)
     return int(m.group(1)), int(m.group(2))
 
 

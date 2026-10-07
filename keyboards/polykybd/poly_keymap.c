@@ -5887,7 +5887,12 @@ static void ime_key_record(keyrecord_t* record) {
             }
         }
         // More KC_IME keys down at once than there are slots: a held key nobody
-        // could release would be stuck, so this press gets a tap instead.
+        // could release would be stuck, so this press gets a tap instead -- unless
+        // a slot already holds the same usage, whose release the tap would steal
+        // from the keys still down (Greptile, #355).
+        for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
+            if (s_ime_held[i].usage == s.usage) return;
+        }
         tap_code(s.usage);
         return;
     }

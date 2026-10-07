@@ -2,16 +2,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-// KC_IME: one key that switches the input method of the active language, and
-// is a plain Non-US Backslash everywhere else. This file is the DECISION only —
+// KC_IME: one key that switches the input method of the active language, is a
+// second Right Alt on the ANSI English layouts, and a plain Non-US Backslash
+// everywhere else. This file is the DECISION only —
 // which HID usage, with which modifiers, held or tapped — so it links without
 // QMK and is unit-tested (make test:polykybd_ime_key_plan). The firmware binding
 // is in poly_keymap.c (process_record_user + the display normalisation).
 //
 // Why the language decides "is there an IME": the firmware cannot see the host's
 // input methods, but the host selects ko-KR / ja-JP on the board only when it has
-// switched the OS to Korean / Japanese. Every other language gets the NUBS key
-// the base layout carried before.
+// switched the OS to Korean / Japanese. The ANSI English layouts get Right Alt,
+// because their NUBS only repeats Backslash; every other language gets the NUBS
+// key the base layout carried before.
 //
 // Korean has no absolute "Hangul on" key on any OS, so its stroke is a TOGGLE.
 // Japanese has absolute keys (Mac 英数/かな, MS-IME katakana/hiragana), so the
@@ -31,6 +33,8 @@
 #define IME_HID_INT5   0x8Bu   // KC_INTERNATIONAL_5  無変換
 #define IME_HID_LANG1  0x90u   // KC_LANGUAGE_1       한/영 (Windows, Linux), かな (macOS)
 #define IME_HID_LANG2  0x91u   // KC_LANGUAGE_2       英数 (macOS)
+#define IME_HID_RALT   0xE6u   // KC_RIGHT_ALT
+#define IME_HID_RGUI   0xE7u   // KC_RIGHT_GUI        what KC_RALT becomes under the macOS swap
 
 // Modifier bits in QMK's 8-bit mod layout (MOD_BIT(KC_LCTL) etc.).
 #define IME_MOD_LCTL   0x01u
@@ -41,6 +45,12 @@ enum ime_family {
     IME_FAMILY_NONE = 0,     // no IME: the key is NUBS
     IME_FAMILY_KOREAN,
     IME_FAMILY_JAPANESE,
+    // An ANSI layout whose NUBS only repeats the Backslash key (en-US and friends):
+    // the key is a second, right-hand Alt on every OS (the split72 base layouts carry
+    // Alt on the left only). It behaves exactly like KC_RALT, macOS swap included,
+    // so it is the WinCompose compose key on Windows, a Compose/AltGr candidate on
+    // Linux, and the same modifier as the board's Alt key on macOS.
+    IME_FAMILY_RALT,
 };
 
 // The Japanese mode the firmware last SENT (its belief, not the host's truth).
@@ -70,6 +80,11 @@ typedef struct {
                      // auto-repeat and the user's own press length, which macOS
                      // needs for Caps-style keys); false: tap once on the press
 } ime_stroke_t;
+
+// The basic keycode KC_IME stands in for, or 0 when it is an input-method key of
+// its own (Korean, Japanese). The display draws that keycode's legend, and
+// ime_key_stroke() sends exactly it, so the two cannot disagree.
+uint8_t ime_key_stand_in(uint8_t family);
 
 // The stroke for one press of KC_IME. `shift` is whether a Shift is held at the
 // press. For Japanese, `*ja_mode` is read (the current belief) and updated to the

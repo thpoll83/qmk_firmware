@@ -46,6 +46,15 @@ static ime_stroke_t japanese_stroke(uint8_t os, uint8_t mode) {
     }
 }
 
+uint8_t ime_key_stand_in(uint8_t family) {
+    switch (family) {
+        case IME_FAMILY_KOREAN:
+        case IME_FAMILY_JAPANESE: return 0;
+        case IME_FAMILY_RALT:     return IME_HID_RALT;
+        default:                  return IME_HID_NUBS;
+    }
+}
+
 ime_stroke_t ime_key_stroke(uint8_t family, uint8_t os, bool shift, uint8_t* ja_mode) {
     switch (family) {
         case IME_FAMILY_KOREAN:
@@ -57,6 +66,11 @@ ime_stroke_t ime_key_stroke(uint8_t family, uint8_t os, bool shift, uint8_t* ja_
             }
             return japanese_stroke(os, next);
         }
+        case IME_FAMILY_RALT:
+            // KC_RALT, macOS swap included (poly_keymap.c turns the board's Alt keys
+            // into GUI there), so this key never disagrees with the Alt key's legend.
+            // HELD: a modifier must stay down while the finger does.
+            return stroke(os == IME_OS_MACOS ? IME_HID_RGUI : IME_HID_RALT, 0, true);
         default:
             return stroke(IME_HID_NUBS, 0, true);
     }

@@ -3860,12 +3860,15 @@ static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t
     if (kc == KC_TRNS) {
         kc = poly_keycode_at(get_highest_layer(eff & ~((layer_state_t)1 << layer)), row, col);
     }
-    // KC_IME without an input method IS a NUBS key, so it draws as one: the
-    // language's own NUBS legend, overlay slot and all. DISPLAY ONLY — the key
-    // event keeps KC_IME, and process_record_user() decides from the same
-    // poly_ime_family() what the press sends, so the two cannot disagree.
-    if (kc == KC_IME && poly_ime_family(get_local_state()->lang) == IME_FAMILY_NONE) {
-        kc = KC_NUBS;
+    // KC_IME that stands in for a plain key (NUBS, or Right Alt on the ANSI English
+    // layouts) draws as that key: its legend, overlay slot and macOS swap and all.
+    // DISPLAY ONLY — the key event keeps KC_IME, and ime_key_stroke() sends exactly
+    // ime_key_stand_in()'s key, so the legend and the action cannot disagree.
+    if (kc == KC_IME) {
+        const uint8_t stand_in = ime_key_stand_in(poly_ime_family(get_local_state()->lang));
+        if (stand_in) {
+            kc = stand_in;
+        }
     }
     return kc;
 }
@@ -5793,6 +5796,8 @@ _Static_assert(IME_HID_INT2  == KC_INTERNATIONAL_2, "IME_HID_INT2");
 _Static_assert(IME_HID_INT5  == KC_INTERNATIONAL_5, "IME_HID_INT5");
 _Static_assert(IME_HID_LANG1 == KC_LANGUAGE_1,      "IME_HID_LANG1");
 _Static_assert(IME_HID_LANG2 == KC_LANGUAGE_2,      "IME_HID_LANG2");
+_Static_assert(IME_HID_RALT  == KC_RIGHT_ALT,       "IME_HID_RALT");
+_Static_assert(IME_HID_RGUI  == KC_RIGHT_GUI,       "IME_HID_RGUI");
 _Static_assert(IME_MOD_LCTL  == MOD_BIT(KC_LCTL),   "IME_MOD_LCTL");
 _Static_assert(IME_MOD_LSFT  == MOD_BIT(KC_LSFT),   "IME_MOD_LSFT");
 _Static_assert((int)IME_OS_WINDOWS == (int)POLY_OS_WINDOWS && (int)IME_OS_MACOS == (int)POLY_OS_MACOS &&
@@ -5805,6 +5810,17 @@ uint8_t poly_ime_family(uint8_t lang) {
     switch (lang) {
         case LANG_KOKR: return IME_FAMILY_KOREAN;
         case LANG_JAJP: return IME_FAMILY_JAPANESE;
+        // ANSI English layouts: the OS layout is plain US, where NUBS only repeats
+        // the Backslash key, so the key earns more as a right-hand Alt. An explicit
+        // list on purpose: a NULL NUBS cell in lang_lut is NOT the signal, because
+        // ISO layouts with a real <> key (es-ES, it-IT, pl-PL, ...) are NULL too.
+        case LANG_ENUS:
+        case LANG_ENCA:
+        case LANG_ENAU:
+        case LANG_ENNZ:
+        case LANG_ENIN:
+        case LANG_ENPH:
+        case LANG_ENSG: return IME_FAMILY_RALT;
         default:        return IME_FAMILY_NONE;
     }
 }

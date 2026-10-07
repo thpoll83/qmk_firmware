@@ -305,9 +305,10 @@ enum my_keycodes {
     // at the very end for the same no-renumbering reason as KC_EDEN.
     KC_DEMO_KEYS,
     // The INPUT-METHOD key (base/ime_key_plan.h): on ko-KR it is the 한/영 toggle,
-    // on ja-JP it walks off/hiragana (Shift: katakana) with absolute keys, and on
-    // every other language it is a plain KC_NUBS — legend included — which is why
-    // it replaces KC_NUBS on the base layouts. The OS picks the actual stroke.
+    // on ja-JP it walks off/hiragana (Shift: katakana) with absolute keys, on the
+    // ANSI English layouts (en-US and a short list) it is a second Right Alt, and
+    // on every other language it is a plain KC_NUBS — legend included — which is
+    // why it replaces KC_NUBS on the base layouts. The OS picks the actual stroke.
     // Handled and SWALLOWED in process_record_user(), like every key here that
     // sends something. Appended at the very end for the same no-renumbering
     // reason as KC_EDEN.
@@ -343,6 +344,7 @@ static_assert((int)KC_IME <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
 const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags);
 
 // The input-method family (enum ime_family, base/ime_key_plan.h) of a language
-// index: Korean for ko-KR, Japanese for ja-JP, none otherwise. One function, so the
+// index: Korean for ko-KR, Japanese for ja-JP, Right Alt for the ANSI English
+// layouts, none otherwise. One function, so the
 // legend, the display normalisation and the key action cannot disagree on it.
 uint8_t poly_ime_family(uint8_t lang);

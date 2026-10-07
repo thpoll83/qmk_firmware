@@ -126,4 +126,50 @@ TEST(ImeKeyJapanese, NullBeliefStartsFromOff) {
     EXPECT_EQ(s.usage, IME_HID_INT2);   // off -> hiragana
 }
 
+// ---- Right Alt: the ANSI layouts, every OS -----------------------------------------
+
+TEST(ImeKeyRalt, HeldRightAltOffMac) {
+    for (uint8_t os : kAllOs) {
+        if (os == IME_OS_MACOS) continue;
+        SCOPED_TRACE(int(os));
+        for (bool shift : {false, true}) {
+            uint8_t mode = IME_JA_HIRAGANA;
+            const ime_stroke_t s = Press(IME_FAMILY_RALT, os, shift, &mode);
+            EXPECT_EQ(s.usage, IME_HID_RALT);
+            EXPECT_EQ(s.mods, 0u);
+            EXPECT_TRUE(s.hold);               // a modifier stays down with the finger
+            EXPECT_EQ(mode, IME_JA_HIRAGANA);  // the Japanese belief is not touched
+        }
+    }
+}
+
+TEST(ImeKeyRalt, FollowsTheMacSwapLikeTheBoardsAltKey) {
+    const ime_stroke_t s = Press(IME_FAMILY_RALT, IME_OS_MACOS, false, nullptr);
+    EXPECT_EQ(s.usage, IME_HID_RGUI);
+    EXPECT_TRUE(s.hold);
+}
+
+// ---- the display stand-in agrees with the stroke -----------------------------------
+
+TEST(ImeKeyStandIn, NamesWhatTheKeySendsOffMac) {
+    for (uint8_t fam : {IME_FAMILY_NONE, IME_FAMILY_KOREAN, IME_FAMILY_JAPANESE, IME_FAMILY_RALT}) {
+        for (uint8_t os : kAllOs) {
+            if (os == IME_OS_MACOS) continue;   // the swap is the renderer's job there
+            for (bool shift : {false, true}) {
+                SCOPED_TRACE(::testing::Message() << int(fam) << "/" << int(os) << "/" << shift);
+                uint8_t mode = IME_JA_OFF;
+                const ime_stroke_t s = Press(fam, os, shift, &mode);
+                const uint8_t in = ime_key_stand_in(fam);
+                if (in) {
+                    EXPECT_EQ(s.usage, in);
+                    EXPECT_TRUE(s.hold);
+                } else {
+                    EXPECT_NE(s.usage, IME_HID_NUBS);
+                    EXPECT_NE(s.usage, IME_HID_RALT);
+                }
+            }
+        }
+    }
+}
+
 } // namespace

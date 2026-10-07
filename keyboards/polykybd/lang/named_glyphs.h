@@ -2339,6 +2339,14 @@
 // The Intl picker legend (INTL_PICKER_LEGEND, Á»Æ) at 18 px, for the tutorial's status
 // panel: the keycap's own 14 pt face made the framed key too big there (round 43).
 #define ICON_INTL_PICKER_SMALL      	U"\x100001"
+// The Korean 한/영 legend for KC_IME on ko-KR, one glyph so the two syllables and the
+// slash share one font and one baseline. Rendered from NotoSerifKR, the ko-KR face, and
+// resident so it draws without the asia font-pack bundle.
+#define ICON_HAN_YEONG              	U"\x100026"
+// The Japanese 英数 / かな legend for KC_IME on ja-JP, stacked, from NotoSansJP. Same
+// reasons as ICON_HAN_YEONG: one font, one baseline, and no pack needed (the jp bundle
+// carries kana only, so 英数 had no glyph anywhere).
+#define ICON_EISU_KANA              	U"\x100027"
 // Press and hold, two frames the tutorial alternates beside every "hold" line: the key
 // up with the arrow pushing, then pressed flat onto the line (round 43).
 #define ICON_HOLD_UP                	U"\x100002"

@@ -168,10 +168,16 @@ void rgb_matrix_update_pwm_buffers(void);
 // drawing stale variations until the next pick. Like the MRU push, it carries
 // its own pending flag: latin_publish() tries at once, and
 // sync_and_refresh_displays() re-sends until the slave acks.
-static bool s_latin_sync_pending = false;
+static bool     s_latin_sync_pending = false;
+static uint32_t s_latin_sync_last_try;
+
+// A re-send costs up to `retries` blocking UART attempts on the main loop, so a link
+// that answers but keeps failing must not be retried on every housekeeping pass.
+#define LATIN_SYNC_RETRY_MS 500
 
 static void latin_sync_send(uint8_t retries) {
     const latin_sync_t* table = get_global_latin_table();
+    s_latin_sync_last_try = timer_read32();
     uint8_t ack = send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), retries);
     if (sync_succeeded(ack)) {
         s_latin_sync_pending = false;
@@ -937,7 +943,7 @@ void sync_and_refresh_displays(void) {
             }
         }
 
-        if (s_latin_sync_pending) {
+        if (s_latin_sync_pending && timer_elapsed32(s_latin_sync_last_try) >= LATIN_SYNC_RETRY_MS) {
             latin_sync_send(PERIODIC_SYNC_RETRIES);
         }
 

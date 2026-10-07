@@ -13,7 +13,7 @@
 #include QMK_KEYBOARD_H             // get_key_disp_bitmask
 #include "startup_anim.h"           // startup_anim_key_geom
 #include "tutorial.h"               // tutorial_sparkle_live()
-#include "focus_ring.h"             // poly_focus_draw_legend()
+#include "focus_ring.h"             // poly_key_select / poly_key_repaint_begin
 #include "menu_cascade.h"           // poly_render_live(), poly_slot_visible()
 
 #define SPK_MAX       3u     // twinkling at once, per half
@@ -78,14 +78,8 @@ static void draw_star(int8_t x, int8_t y, uint8_t frame) {
 
 // Repaint the key: its own legend, then the star on top (frame 0 = legend only).
 static void repaint(const spk_t *k, uint8_t frame) {
-    const uint8_t slot = TUT_SLOT(is_left_side() ? 0 : 1, k->idx);
-    sr_shift_out_buffer_latch(get_key_disp_bitmask(k->idx), get_disp_bitmask_size());
-    // Tracked, like every draw outside update_displays(), so the next full render
-    // diffs against what is really on the panel.
-    kdisp_track_panel(k->idx);
-    kdisp_set_buffer(0x00);
-    (void)poly_focus_draw_legend(slot);
-    kdisp_set_gfx_erase(false);   // the plotter flags are static: never leave erase on
+    poly_key_select(k->idx);
+    (void)poly_key_repaint_begin(k->idx, TUT_SLOT(is_left_side() ? 0 : 1, k->idx));
     if (frame != 0u) draw_star(k->x, k->y, frame);
     kdisp_send_window();
 }

@@ -66,3 +66,20 @@ bool poly_focus_sweep_band(poly_focus_band_t *out);
 // cross the whole board or it is not a ring. (Gating the arc on this too is what left
 // "only ring artifacts on the actual key"; the return value is informational.)
 bool poly_focus_draw_legend(uint8_t slot);
+
+// Select panel `idx` on this half (the shift-register chip-select latch).
+void poly_key_select(uint8_t idx);
+
+// Start an out-of-band repaint of the SELECTED panel `idx` (display slot `slot`):
+// track the panel, clear the window, draw the key's ordinary legend
+// (poly_focus_draw_legend) and leave the gfx erase flag OFF. The caller then draws
+// its own art on top and calls kdisp_send_window(). Returns what
+// poly_focus_draw_legend() returned.
+//
+// The two invariants every draw outside update_displays() needs live here:
+//   ⚠️ TRACK the panel. An untracked write leaves that panel's dirty-window box
+//      describing what was there before, and the next full render pushes a delta
+//      against it: black and half-erased keycaps.
+//   ⚠️ The gfx plotter flags are STATIC. A legend that set erase (an inverted
+//      keycap) would otherwise blank every keycap drawn after this one.
+bool poly_key_repaint_begin(uint8_t idx, uint8_t slot);

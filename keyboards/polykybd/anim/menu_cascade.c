@@ -14,7 +14,7 @@
 #include "startup_anim.h"           // startup_anim_key_geom / startup_anim_board_w
 #include "menu_cascade_rows.h"      // CASC_ROW_* (tools/gen_cascade_rows.py)
 #include "tutorial.h"               // tutorial_slot_at()
-#include "focus_ring.h"             // poly_focus_draw_legend()
+#include "focus_ring.h"             // poly_key_select / poly_key_repaint_begin
 #include "base/update.h"            // request_disp_refresh()
 
 // Round 34: 20% faster than round 33's 1800/360 ("the fade in of the tab item maybe
@@ -164,7 +164,7 @@ void menu_cascade_tick(void) {
             set_bit(s_full, idx);
             continue;
         }
-        sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
+        poly_key_select(idx);
         const uint32_t into = el - due;
         const uint8_t  lvl  = into >= CASC_FADE_MS
                                   ? full
@@ -180,12 +180,9 @@ void menu_cascade_tick(void) {
             // draw asks menu_cascade_hidden(), which must answer "no" to its own frame.
             set_bit(s_drawn, idx);
             kdisp_set_contrast(lvl);
-            kdisp_track_panel(idx);
-            kdisp_set_buffer(0x00);
             s_in_draw = true;
-            (void)poly_focus_draw_legend(TUT_SLOT(right ? 1 : 0, idx));
+            (void)poly_key_repaint_begin(idx, TUT_SLOT(right ? 1 : 0, idx));
             s_in_draw = false;
-            kdisp_set_gfx_erase(false);
             // Round 39: a key with nothing on it gets no dot either ("we should not show
             // the 2x2 dot if there is nothing displayed", hardware). It is finished as
             // it stands, blank.

@@ -20,8 +20,8 @@ string is the bare glyph with no leading spaces.
     python3 tools/hint_icons.py --style d  # switch IconsFont to another style
 
 Four styles draw the same 65 actions on the same grid: a (this file, outline),
-b (hint_icons_solid.py), c (hint_icons_bold.py) and d (hint_icons_stage.py,
-"stage and actor"). Slots and ICON_HINT_* names always follow this file's
+b (hint_icons_solid.py), c (hint_icons_bold.py), d (hint_icons_stage.py,
+"stage and actor") and e (hint_icons_retro.py, 80s home computer). Slots and ICON_HINT_* names always follow this file's
 ICONS order, so a style switch changes pixels only. The header records which
 style it carries, and a plain run or --check keeps that style.
 
@@ -651,7 +651,8 @@ def glyph_bytes(im):
     return out
 
 
-STYLES = {"a": None, "b": "hint_icons_solid", "c": "hint_icons_bold", "d": "hint_icons_stage"}
+STYLES = {"a": None, "b": "hint_icons_solid", "c": "hint_icons_bold", "d": "hint_icons_stage",
+          "e": "hint_icons_retro"}
 
 
 def style_render(style):

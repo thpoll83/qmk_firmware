@@ -8,6 +8,7 @@ extern "C" {
 #include "quantum/quantum_keycodes.h"
 #include "quantum/modifiers.h"
 #include "poly_os.h"
+#include "lang/named_glyphs.h"
 
 // The pre-extraction table, compiled into this binary alongside the live one.
 const uint32_t* os_hint_reference(uint16_t keycode, uint8_t mods_raw, uint8_t active_os_packed);
@@ -85,13 +86,16 @@ std::string describe(uint16_t kc, uint8_t mods, uint8_t os) {
 // The equivalence proof for the extraction.
 // ---------------------------------------------------------------------------
 
-// Exhaustive over (keycode x mods x os): the extracted pure table must return
-// exactly what the pre-extraction table in poly_keymap.c returned. This is the
-// evidence that moving 310 lines into their own translation unit and replacing
-// two global reads with parameters changed no behaviour. Binary comparison cannot
-// answer this one — extracting a function into another TU legitimately changes
-// codegen (inlining, stack slots, switch-table numbering).
-TEST(OsHintsExtraction, MatchesPreExtractionTableExhaustively) {
+// Exhaustive over (keycode x mods x os): the live table must show a hint for
+// EXACTLY the chords the pre-extraction table in poly_keymap.c did. This was first
+// the evidence that the extraction changed no behaviour, and compared content.
+// The icon restyle (tools/hint_icons.py) then replaced every hint's CONTENT on
+// purpose, so the comparison is now on presence only: the restyle may change what
+// a hint looks like, never which chord has one. The content is pinned by
+// EveryShortcutHintIsOneIconGlyph below. Binary comparison cannot answer this one —
+// extracting a function into another TU legitimately changes codegen (inlining,
+// stack slots, switch-table numbering).
+TEST(OsHintsExtraction, ShowsAHintForExactlyThePreExtractionChords) {
     size_t compared = 0, hits = 0;
     for (uint16_t kc : interesting_keycodes()) {
         // ⚠️ Mod-taps are DELIBERATELY excluded: their block was rewritten to fix the
@@ -105,7 +109,7 @@ TEST(OsHintsExtraction, MatchesPreExtractionTableExhaustively) {
             for (uint8_t os : os_values()) {
                 const uint32_t* got  = os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os);
                 const uint32_t* want = os_hint_reference(kc, static_cast<uint8_t>(mods), os);
-                ASSERT_TRUE(same_hint(got, want)) << describe(kc, mods, os);
+                ASSERT_EQ(got != nullptr, want != nullptr) << describe(kc, mods, os);
                 if (want != nullptr) ++hits;
                 ++compared;
             }
@@ -116,6 +120,30 @@ TEST(OsHintsExtraction, MatchesPreExtractionTableExhaustively) {
     // NULL == NULL and this test would still be green.
     EXPECT_GT(hits, 1000u) << "suspiciously few non-NULL hints — is the table reachable?";
     EXPECT_GT(compared, 100000u);
+}
+
+// Every non-mod-tap hint is ONE glyph from the hint-icon block and nothing else: no
+// leading spaces (the glyph metrics place it) and no display-list ops. The first and
+// last macros are the generator's first and last slot. A hint that slipped back to a
+// spaces-plus-emoji string, or a slot outside the block, fails here.
+TEST(OsHints, EveryShortcutHintIsOneIconGlyph) {
+    const uint32_t first = static_cast<uint32_t>(ICON_HINT_COPY[0]);
+    const uint32_t last  = static_cast<uint32_t>(ICON_HINT_QUICK_ASSIST[0]);
+    ASSERT_LT(first, last);
+    size_t hits = 0;
+    for (uint16_t kc : interesting_keycodes()) {
+        if (IS_QK_MOD_TAP(kc)) continue;
+        for (unsigned mods = 0; mods < 256; ++mods) {
+            for (uint8_t os : os_values()) {
+                const uint32_t* got = os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os);
+                if (got == nullptr) continue;
+                ++hits;
+                ASSERT_TRUE(got[0] >= first && got[0] <= last) << describe(kc, mods, os);
+                ASSERT_EQ(got[1], 0u) << describe(kc, mods, os);
+            }
+        }
+    }
+    EXPECT_GT(hits, 1000u);
 }
 
 // ---------------------------------------------------------------------------

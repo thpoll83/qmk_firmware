@@ -9,9 +9,11 @@
 // now parameters, so the whole table can be exercised from a unit test with no
 // keyboard, no split state and no display — see tests/os_hints_tests.cpp.
 //
-// The returned string is a mini DISPLAY LIST, not just text: kdisp_write_gfx_text_cy()
-// interprets the HINT_* control-code ops in it (cursor moves, half-size glyphs,
-// drawn frames) on top of the plain glyphs. See lang/named_glyphs.h.
+// The returned string is a mini DISPLAY LIST drawn by kdisp_write_gfx_text_cy(). The
+// shortcut hints are each ONE resident IconsFont glyph (ICON_HINT_*, drawn by
+// tools/hint_icons.py): a 34x34 icon whose metrics already place it at panel x 36..69,
+// y 3..36, so the string carries no leading spaces. The mod-tap badges below still use
+// the HINT_* ops (MOVE etc.); see lang/named_glyphs.h.
 
 #include "os_hints.h"
 
@@ -29,8 +31,8 @@
 const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t active_os_packed) {
     switch (keycode)
     {
-        case KC_F2: return U"      " PRIVATE_NOTE;
-        case KC_F5: return U"     " ARROWS_CIRCLE;
+        case KC_F2: return ICON_HINT_RENAME;
+        case KC_F5: return ICON_HINT_REFRESH;
         default: break;
     }
 
@@ -55,44 +57,43 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
         // macOS: editing lives on Cmd (GUI). Each block is an exact modifier set.
         if (mods_now == (MOD_LGUI | MOD_LCTL)) {
             switch(keycode) {
-                case KC_Q: return U"    " PRIVATE_LOCK;       // Ctrl+Cmd+Q = lock screen
-                case KC_F: return U"     " PRIVATE_MAXIMIZE;  // Ctrl+Cmd+F = fullscreen
+                case KC_Q: return ICON_HINT_LOCK;       // Ctrl+Cmd+Q = lock screen
+                case KC_F: return ICON_HINT_FULLSCREEN;  // Ctrl+Cmd+F = fullscreen
                 default: break;
             }
         } else if (mods_now == MOD_LALT) {
             // Word nav on macOS is Option(Alt)+arrows (line nav is Cmd+arrows, below).
             switch(keycode) {
-                case KC_LEFT:  return U"    " ICON_WORD_LEFT;
-                case KC_RIGHT: return U"    " ICON_WORD_RIGHT;
+                case KC_LEFT:  return ICON_HINT_WORD_LEFT;
+                case KC_RIGHT: return ICON_HINT_WORD_RIGHT;
                 default: break;
             }
         } else if (mods_now == (MOD_LGUI | MOD_LSFT)) {
             // Cmd+Shift+Z = redo (mac has no Cmd+Y redo).
             switch(keycode) {
-                case KC_Z: return U"      " ARROWS_REDO;
+                case KC_Z: return ICON_HINT_REDO;
                 default: break;
             }
         } else if (mods_now == MOD_LGUI) {
             switch(keycode) {
-                case KC_A: return U"      " BOX_WITH_CHECK_MARK;
-                case KC_C: return U"     " CLIPBOARD_COPY;
-                case KC_F: return U"    " PRIVATE_FIND;
-                case KC_X: return U"\t\b\b" CLIPBOARD_CUT;
-                case KC_V: return U"     " CLIPBOARD_PASTE;
-                case KC_S: return U"\t" PRIVATE_FLOPPY;
-                case KC_O: return U"\t" FILE_OPEN;
-                case KC_P: return U"\t" PRIVATE_PRINTER;
-                case KC_M: return U"     " PRIVATE_WINDOW;    // Cmd+M = minimize
-                case KC_Z: return U"      " ARROWS_UNDO;      // Cmd+Z = undo (Cmd+Shift+Z redo above)
-                // OS-aware shortcut hints (wave B). Tab uses the narrow ARROWS_TAB
-                // base legend, so 4 spaces clear it; Space gets 3.
-                case KC_TAB:   return U"    " ICON_APP_SWITCH;    // Cmd+Tab app switcher
-                case KC_SPACE: return U"   "  ICON_LAUNCHER;      // Cmd+Space (Spotlight)
-                case KC_W:     return U"    " ICON_CLOSE;         // Cmd+W close
-                case KC_Q:     return U"    " ICON_CLOSE;         // Cmd+Q quit
-                case KC_GRV:   return U"    " ICON_WINDOW_SWITCH; // Cmd+` window switcher
-                case KC_LEFT:  return U"    " ARROWS_LEFTSTOP;    // Cmd+Left  line start
-                case KC_RIGHT: return U"    " ARROWS_RIGHTSTOP;   // Cmd+Right line end
+                case KC_A: return ICON_HINT_SELECT_ALL;
+                case KC_C: return ICON_HINT_COPY;
+                case KC_F: return ICON_HINT_FIND;
+                case KC_X: return ICON_HINT_CUT;
+                case KC_V: return ICON_HINT_PASTE;
+                case KC_S: return ICON_HINT_SAVE;
+                case KC_O: return ICON_HINT_OPEN;
+                case KC_P: return ICON_HINT_PRINT;
+                case KC_M: return ICON_HINT_MINIMIZE;    // Cmd+M = minimize
+                case KC_Z: return ICON_HINT_UNDO;      // Cmd+Z = undo (Cmd+Shift+Z redo above)
+                // OS-aware shortcut hints (wave B).
+                case KC_TAB:   return ICON_HINT_APP_SWITCH;    // Cmd+Tab app switcher
+                case KC_SPACE: return ICON_HINT_SEARCH;      // Cmd+Space (Spotlight)
+                case KC_W:     return ICON_HINT_CLOSE;         // Cmd+W close
+                case KC_Q:     return ICON_HINT_QUIT;         // Cmd+Q quit
+                case KC_GRV:   return ICON_HINT_WINDOW_SWITCH; // Cmd+` window switcher
+                case KC_LEFT:  return ICON_HINT_LINE_START;    // Cmd+Left  line start
+                case KC_RIGHT: return ICON_HINT_LINE_END;   // Cmd+Right line end
                 default: break;
             }
         }
@@ -111,65 +112,63 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
     // Win+Ctrl+C is a different chord from Ctrl+C, so it no longer previews "copy".
     if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LCTL | MOD_LSFT)) {
         switch(keycode) {
-            // Win+Ctrl+Shift+B restart graphics: monitor 🖵, then MOVE to the screen
-            // cavity and HALF-draw the reload 🗘 into it.
-            case KC_B: return U"    " ICON_GFX_RESTART HINT_MOVE(HINT_POS_SCREEN) HINT_HALF ICON_GFX_RELOAD;
+            // Win+Ctrl+Shift+B restart graphics: screen + refresh badge.
+            case KC_B: return ICON_HINT_GFX_RESTART;
             default: break;
         }
     } else if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LCTL)) {
         switch(keycode) {
-            // Virtual-desktop chords: a compact monitor glyph (ICON_DESKTOP_SMALL)
-            // composed with +/←/→/x so the action reads next to the screen.
-            case KC_D:     return U"  " PRIVATE_SCREEN U"+";             // Win+Ctrl+D new virtual desktop
-            case KC_LEFT:  return U"  " ICON_LEFT PRIVATE_SCREEN;        // Win+Ctrl+Left  previous desktop
-            case KC_RIGHT: return U"  " PRIVATE_SCREEN ICON_RIGHT;       // Win+Ctrl+Right next desktop
-            case KC_F4:    return U"  " PRIVATE_SCREEN U"x";             // Win+Ctrl+F4 close desktop
-            case KC_F:     return U"    " ICON_NET;                       // Win+Ctrl+F search network computers (🖧 pack glyph)
-            case KC_V:     return U"   "  ICON_VOLUME_MIXER;              // Win+Ctrl+V volume mixer (🔊 pack glyph; mixer flyout on Win 11 24H2+)
-            case KC_N:     return U"    "  ICON_NARRATOR;                 // Win+Ctrl+N Narrator settings (👂 pack glyph)
-            case KC_Q:     return U"   "   ICON_QUICK_ASSIST;             // Win+Ctrl+Q Quick Assist (🤝 pack glyph)
-            case KC_S:     return U"   "   ICON_SPEECH_REC;               // Win+Ctrl+S Speech Recognition (🎤 pack glyph)
+            // Virtual-desktop chords: one screen with a +/←/→/x badge.
+            case KC_D:     return ICON_HINT_DESKTOP_NEW;             // Win+Ctrl+D new virtual desktop
+            case KC_LEFT:  return ICON_HINT_DESKTOP_PREV;        // Win+Ctrl+Left  previous desktop
+            case KC_RIGHT: return ICON_HINT_DESKTOP_NEXT;       // Win+Ctrl+Right next desktop
+            case KC_F4:    return ICON_HINT_DESKTOP_CLOSE;             // Win+Ctrl+F4 close desktop
+            case KC_F:     return ICON_HINT_NETWORK;                       // Win+Ctrl+F search network computers
+            case KC_V:     return ICON_HINT_VOLUME_MIXER;              // Win+Ctrl+V volume mixer
+            case KC_N:     return ICON_HINT_NARRATOR;                 // Win+Ctrl+N Narrator settings
+            case KC_Q:     return ICON_HINT_QUICK_ASSIST;             // Win+Ctrl+Q Quick Assist
+            case KC_S:     return ICON_HINT_SPEECH_REC;               // Win+Ctrl+S Speech Recognition
             default: break;
         }
     } else if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LALT)) {
         switch(keycode) {
-            case KC_R: return U"   " ICON_SCREEN_RECORD;       // Win+Alt+R start/stop screen recording
+            case KC_R: return ICON_HINT_SCREEN_RECORD;       // Win+Alt+R start/stop screen recording
             default: break;
         }
     }
     if (mods_now == (MOD_LCTL | MOD_LSFT)) {
         switch(keycode) {
-            case KC_Z: return U"      " ARROWS_REDO;        // Ctrl+Shift+Z redo (Linux/cross-app)
+            case KC_Z: return ICON_HINT_REDO;        // Ctrl+Shift+Z redo (Linux/cross-app)
             default: break;
         }
     } else if (mods_now == MOD_LCTL) {
         switch(keycode) {
-            case KC_A: return U"      " BOX_WITH_CHECK_MARK;
-            case KC_C: return U"     " CLIPBOARD_COPY;
-            case KC_D: return U"\t " PRIVATE_DELETE;
-            case KC_F: return U"    " PRIVATE_FIND;
-            case KC_X: return U"\t\b\b" CLIPBOARD_CUT;
-            case KC_V: return U"     " CLIPBOARD_PASTE;
-            case KC_S: return U"\t" PRIVATE_FLOPPY;
-            case KC_O: return U"\t" FILE_OPEN;
-            case KC_P: return U"\t" PRIVATE_PRINTER;
-            case KC_Y: return U"      " ARROWS_REDO;         // Ctrl+Y redo (Windows)
-            case KC_Z: return U"      " ARROWS_UNDO;         // Ctrl+Z undo (Ctrl+Shift+Z redo above)
+            case KC_A: return ICON_HINT_SELECT_ALL;
+            case KC_C: return ICON_HINT_COPY;
+            case KC_D: return ICON_HINT_DELETE;
+            case KC_F: return ICON_HINT_FIND;
+            case KC_X: return ICON_HINT_CUT;
+            case KC_V: return ICON_HINT_PASTE;
+            case KC_S: return ICON_HINT_SAVE;
+            case KC_O: return ICON_HINT_OPEN;
+            case KC_P: return ICON_HINT_PRINT;
+            case KC_Y: return ICON_HINT_REDO;         // Ctrl+Y redo (Windows)
+            case KC_Z: return ICON_HINT_UNDO;         // Ctrl+Z undo (Ctrl+Shift+Z redo above)
             // OS-aware shortcut hints (wave B): word nav + close on Ctrl.
-            case KC_LEFT:  return U"    " ICON_WORD_LEFT;   // Ctrl+Left  word left
-            case KC_RIGHT: return U"    " ICON_WORD_RIGHT;  // Ctrl+Right word right
-            case KC_W:     return U"    " ICON_CLOSE;       // Ctrl+W close
+            case KC_LEFT:  return ICON_HINT_WORD_LEFT;   // Ctrl+Left  word left
+            case KC_RIGHT: return ICON_HINT_WORD_RIGHT;  // Ctrl+Right word right
+            case KC_W:     return ICON_HINT_CLOSE;       // Ctrl+W close
             default: break;
         }
     } else if (mods_now == MOD_LALT) {
         switch(keycode) {
-            case KC_TAB: return U"    " ICON_APP_SWITCH;    // Alt+Tab app switcher
-            case KC_F4:  return U"    " ICON_CLOSE;         // Alt+F4 close
+            case KC_TAB: return ICON_HINT_APP_SWITCH;    // Alt+Tab app switcher
+            case KC_F4:  return ICON_HINT_CLOSE;         // Alt+F4 close
             default: break;
         }
     } else if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LSFT)) {
         switch(keycode) {
-            case KC_S: return U"   " ICON_SNIP;             // Win+Shift+S Snipping Tool (region capture)
+            case KC_S: return ICON_HINT_SNIP;             // Win+Shift+S Snipping Tool (region capture)
             default: break;
         }
     } else if (wm && mods_now == MOD_LGUI) {
@@ -177,123 +176,114 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
             case KC_D:
                 // Show desktop: Win+D and KDE Super+D. GNOME has no default
                 // show-desktop chord, so don't show it there.
-                if (!gnome) return U"    " PRIVATE_PC;
+                if (!gnome) return ICON_HINT_SHOW_DESKTOP;
                 break;
-            case KC_L:      return U"    " PRIVATE_LOCK;       // Win/Super+L lock
-            case KC_P:      return U"    " PRIVATE_SCREEN;     // Win/Super+P display
-            case KC_UP:     return U"     " PRIVATE_MAXIMIZE;  // Super+Up maximize
-            case KC_DOWN:   return U"     " PRIVATE_WINDOW;    // Super+Down minimize
+            case KC_L:      return ICON_HINT_LOCK;       // Win/Super+L lock
+            case KC_P:      return ICON_HINT_DISPLAY;     // Win/Super+P display
+            case KC_UP:     return ICON_HINT_MAXIMIZE;  // Super+Up maximize
+            case KC_DOWN:   return ICON_HINT_MINIMIZE;    // Super+Down minimize
             // Super+Tab switches: Windows (Task View) and GNOME (switch apps). On
             // KDE / generic Linux the switcher is Alt+Tab (shown via the Alt branch),
             // and Super+Tab is unbound — so don't show it there.
             case KC_TAB:
-                if (win_or_unknown || gnome) return U"    " ICON_WINDOW_SWITCH;
+                if (win_or_unknown || gnome) return ICON_HINT_WINDOW_SWITCH;
                 break;
             // Launcher/search on a Super chord is Windows-only (Win+S). GNOME uses the
             // Super overview and KDE a Super-tap / Alt+Space — neither binds Super+S — so
             // show it only on Windows (and the unknown default). Win+Shift+S (Snipping
             // Tool) is handled in its own block above.
             case KC_S:
-                if (win_or_unknown) return U"   " ICON_LAUNCHER;
+                if (win_or_unknown) return ICON_HINT_SEARCH;
                 break;
             // Windows-only Super-chords (wave C). These have no standard GNOME/KDE
             // equivalent, so they are gated on win_or_unknown only. Dictation (Win+H)
             // is Windows-specific: macOS triggers it with a double-tap Fn/Ctrl (not a
             // GUI+letter chord the hint engine can preview), and Linux/Android bind no
             // standard dictation chord.
-            // Leading-space counts tuned per glyph (oled_preview) so each wide emoji
-            // glyph sits as far right as it fits without clipping the 72 px window —
-            // matching the existing hints' placement. M reuses the 5-space minimize
-            // legend (= Super+Down); X's narrower glyph takes 4.
             case KC_H:
-                if (win_or_unknown) return U"   "   ICON_DICTATION;     // Win+H dictation
+                if (win_or_unknown) return ICON_HINT_DICTATION;     // Win+H dictation
                 break;
             case KC_I:
-                if (win_or_unknown) return U"   "   ICON_SETTINGS;      // Win+I settings (⚙ pack glyph)
+                if (win_or_unknown) return ICON_HINT_SETTINGS;      // Win+I settings
                 break;
             case KC_M:
-                if (win_or_unknown) return U"      " PRIVATE_MINIMIZE;  // Win+M minimize all (🗕)
+                if (win_or_unknown) return ICON_HINT_MINIMIZE_ALL;  // Win+M minimize all (🗕)
                 break;
             case KC_R:
-                // Win+R run dialog: draw the run-dialog FRAME at its top-left, reset the
-                // cursor to the origin, then draw the base-font ">_" (4 spaces,
-                // right-of-centre) inside it.
-                if (win_or_unknown) return HINT_MOVE(HINT_POS_RUNBOX) HINT_FRAME(HINT_SZ_RUNBOX) HINT_RESET U"    >_";
+                // Win+R run dialog: a window with a ">_" prompt.
+                if (win_or_unknown) return ICON_HINT_RUN;
                 break;
             case KC_T:
-                if (win_or_unknown) return U"   "   ICON_TASK_CYCLE;    // Win+T cycle taskbar
+                if (win_or_unknown) return ICON_HINT_TASK_CYCLE;    // Win+T cycle taskbar
                 break;
             case KC_K:
-                if (win_or_unknown) return U"   "   ICON_CAST;          // Win+K cast (📶 pack glyph)
+                if (win_or_unknown) return ICON_HINT_CAST;          // Win+K cast
                 break;
             case KC_V:
-                if (win_or_unknown) return U"   "   ICON_CLIP_HISTORY;  // Win+V clipboard history
+                if (win_or_unknown) return ICON_HINT_CLIP_HISTORY;  // Win+V clipboard history
                 break;
             case KC_X:
-                if (win_or_unknown) return U"    "  ICON_QUICK_MENU;    // Win+X quick-link menu
+                if (win_or_unknown) return ICON_HINT_QUICK_MENU;    // Win+X quick-link menu
                 break;
             case KC_COMMA:
-                if (win_or_unknown) return U"   "   ICON_PEEK;          // Win+, peek desktop
+                if (win_or_unknown) return ICON_HINT_PEEK_DESKTOP;          // Win+, peek desktop
                 break;
             case KC_DOT:
-                if (win_or_unknown) return U"   "   PRIVATE_EMOJI_1F600; // Win+. emoji panel
+                if (win_or_unknown) return ICON_HINT_EMOJI; // Win+. emoji panel
                 break;
-            // More Windows-only Super-chords (wave D). Leading-space counts tuned per
-            // glyph (hint_preview) so each sits as far right as it fits without
-            // clipping the 72 px window, matching the existing hints' placement.
+            // More Windows-only Super-chords (wave D).
             case KC_A:
-                if (win_or_unknown) return U"      " ICON_LIGHTNING;    // Win+A Action Center/Quick Settings
+                if (win_or_unknown) return ICON_HINT_QUICK_SETTINGS;    // Win+A Action Center/Quick Settings
                 break;
             case KC_E:
-                if (win_or_unknown) return U"    "  ICON_EXPLORER;      // Win+E File Explorer (folder pixmap)
+                if (win_or_unknown) return ICON_HINT_EXPLORER;      // Win+E File Explorer
                 break;
             case KC_U:
-                if (win_or_unknown) return U"      " ICON_ACCESSIBILITY;// Win+U Accessibility settings
+                if (win_or_unknown) return ICON_HINT_ACCESSIBILITY;// Win+U Accessibility settings
                 break;
             case KC_B:
-                if (win_or_unknown) return U"   "   ICON_MAC_CONTROL;   // Win+B focus system tray (⌃ mac-control caret / show-hidden-icons chevron)
+                if (win_or_unknown) return ICON_HINT_TRAY;   // Win+B focus system tray
                 break;
             case KC_HOME:
-                if (win_or_unknown) return U"     " ICON_FOCUS_WINDOW;  // Win+Home minimize all but active
+                if (win_or_unknown) return ICON_HINT_MINIMIZE_OTHERS;  // Win+Home minimize all but active
                 break;
             case KC_LEFT:
-                if (win_or_unknown) return U"     " ICON_SNAP_LEFT;     // Win+Left snap window left (⍇ pack glyph)
+                if (win_or_unknown) return ICON_HINT_SNAP_LEFT;     // Win+Left snap window left
                 break;
             case KC_RIGHT:
-                if (win_or_unknown) return U"     " ICON_SNAP_RIGHT;    // Win+Right snap window right (⍈ pack glyph)
+                if (win_or_unknown) return ICON_HINT_SNAP_RIGHT;    // Win+Right snap window right
                 break;
             case KC_SCLN:
-                if (win_or_unknown) return U"   "   ICON_GIF;           // Win+; GIF / emoji panel
+                if (win_or_unknown) return ICON_HINT_EMOJI;           // Win+; emoji panel (same panel as Win+.)
                 break;
             case KC_PAUSE:
-                if (win_or_unknown) return U"    " ICON_SLIDERS;        // Win+Pause System Properties (🎛 knobs, pack)
+                if (win_or_unknown) return ICON_HINT_SYSTEM_PROPS;        // Win+Pause System Properties
                 break;
             case KC_PSCR:
-                if (win_or_unknown) return U"   "   ICON_SCREENSHOT;    // Win+PrtScn full-screen screenshot
+                if (win_or_unknown) return ICON_HINT_SCREENSHOT;    // Win+PrtScn full-screen screenshot
                 break;
-            // Magnifier zoom: '+' keys (= and numpad +) zoom in, '-' keys zoom out. Both
-            // draw the pack magnifier 🔍, then MOVE the cursor so a plain base-font '+'/'-'
-            // lands centred in the lens.
+            // Magnifier zoom: '+' keys (= and numpad +) zoom in, '-' keys zoom out: a lens
+            // with + or - inside.
             case KC_EQL:
             case KC_KP_PLUS:
-                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMIN) U"+";  // Win + '+' zoom in
+                if (win_or_unknown) return ICON_HINT_ZOOM_IN;  // Win + '+' zoom in
                 break;
             case KC_MINS:
             case KC_KP_MINUS:
-                if (win_or_unknown) return U"   " ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMOUT) U"-"; // Win + '-' zoom out
+                if (win_or_unknown) return ICON_HINT_ZOOM_OUT; // Win + '-' zoom out
                 break;
             // Wave E — more Windows-only Super chords.
             case KC_Q:
-                if (win_or_unknown) return U"   "   ICON_TEXT_RECOG;   // Win+Q Click to Do — text recognition (🔤 pack glyph)
+                if (win_or_unknown) return ICON_HINT_TEXT_RECOG;   // Win+Q Click to Do — text recognition
                 break;
             case KC_G:
-                if (win_or_unknown) return U"   "   ICON_GAME_BAR;     // Win+G Xbox Game Bar (🎮 pack glyph)
+                if (win_or_unknown) return ICON_HINT_GAME_BAR;     // Win+G Xbox Game Bar
                 break;
             case KC_F:
-                if (win_or_unknown) return U"   "   ICON_FEEDBACK;     // Win+F Feedback Hub (📣 pack glyph)
+                if (win_or_unknown) return ICON_HINT_FEEDBACK;     // Win+F Feedback Hub
                 break;
             case KC_C:
-                if (win_or_unknown) return U"   "   ICON_COPILOT;      // Win+C Copilot (🤖 pack glyph)
+                if (win_or_unknown) return ICON_HINT_COPILOT;      // Win+C Copilot
                 break;
             default: break;
         }

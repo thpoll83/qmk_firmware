@@ -29,6 +29,10 @@ struct FakeCore1 {
     // Handshakes in progress, and the most ever in progress at once.
     int depth     = 0;
     int max_depth = 0;
+    // during_launch fires on this many launches instead of only the next one.
+    int interrupt_launches = 0;
+    // Running a launched program: set by a launch that answers, cleared by a reset.
+    bool running = false;
 };
 FakeCore1 g;
 
@@ -39,31 +43,46 @@ uint32_t  stack_stub[16];
 extern "C" {
 void core1_hw_lock(void) { g.locks++; }
 void core1_hw_unlock(void) { g.locks--; }
-void core1_hw_force_off(void) { g.forced_off = true; }
+void core1_hw_force_off(void) {
+    g.forced_off = true;
+    g.running    = false;
+}
 void core1_hw_release(void) { g.forced_off = false; }
 bool core1_hw_launch_service(void) {
     if (++g.depth > g.max_depth) g.max_depth = g.depth;
     if (g.during_launch) {
         auto f = g.during_launch;
-        g.during_launch = nullptr;
+        if (g.interrupt_launches > 0) {
+            g.interrupt_launches--;
+        }
+        if (g.interrupt_launches == 0) {
+            g.during_launch = nullptr;
+        }
         f();
     }
     g.depth--;
     // A core1 in reset never answers the handshake.
     if (g.forced_off || !g.launch_ok) return false;
     g.service_runs++;
+    g.running = true;
     return true;
 }
 bool core1_hw_launch(void (*)(void), uint32_t *, size_t) {
     if (++g.depth > g.max_depth) g.max_depth = g.depth;
     if (g.during_launch) {
         auto f = g.during_launch;
-        g.during_launch = nullptr;
+        if (g.interrupt_launches > 0) {
+            g.interrupt_launches--;
+        }
+        if (g.interrupt_launches == 0) {
+            g.during_launch = nullptr;
+        }
         f();
     }
     g.depth--;
     if (g.forced_off || !g.launch_ok) return false;
     g.custom_runs++;
+    g.running = true;
     return true;
 }
 void core1_hw_report(const char *what) { g.reports.emplace_back(what); }
@@ -219,5 +238,21 @@ TEST_F(Core1OwnerTest, AHoldAndReleaseDuringRestoreIsRetried) {
     EXPECT_EQ(g.max_depth, 1);
     EXPECT_EQ(g.service_runs, 2);
     EXPECT_EQ(core1_tenant(), CORE1_TENANT_SERVICE);
+}
+
+// greptile, #361: after the third disturbed attempt the loop claimed once more,
+// which reset the service the last handshake had started and launched nothing.
+TEST_F(Core1OwnerTest, EveryLaunchDisturbedStillLeavesTheLastOneRunning) {
+    core1_hold();
+    g.interrupt_launches = 100;
+    g.during_launch      = [] {
+        core1_hold();
+        core1_release();
+    };
+    core1_release();
+    EXPECT_EQ(g.max_depth, 1);
+    EXPECT_EQ(g.service_runs, 3);
+    EXPECT_TRUE(g.running) << "the last launch was reset and never relaunched";
+    EXPECT_EQ(g.reports.size(), 1u);
 }
 

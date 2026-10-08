@@ -271,3 +271,10 @@ polykybd_oled_i2c_diag_SRC := \
 
 polykybd_oled_i2c_diag_INC := \
 	$(POLY_BASE_PATH)
+
+# fw_sig_policy.h is header-only: the placeholder-key refusal behind fw_sig_verify().
+polykybd_fw_sig_policy_SRC := \
+	$(POLY_BASE_PATH)/tests/fw_sig_policy_tests.cpp
+
+polykybd_fw_sig_policy_INC := \
+	$(POLY_BASE_PATH)

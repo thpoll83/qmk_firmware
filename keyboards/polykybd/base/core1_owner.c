@@ -8,6 +8,12 @@
 
 static uint8_t        s_holds;
 static core1_tenant_t s_tenant = CORE1_TENANT_SERVICE;
+// One launch handshake at a time. A launch runs outside the lock (it can take
+// 100 ms), so the slave's split thread can preempt it and do a whole hold and
+// release. That release must not start a second handshake against the first:
+// it marks the running launch as disturbed instead, and the launcher relaunches.
+static bool s_launching;
+static bool s_relaunch;
 
 void core1_hold(void) {
     core1_hw_lock();
@@ -20,8 +26,61 @@ void core1_hold(void) {
     core1_hw_unlock();
 }
 
+// Reset core1 and claim the launch, unless a hold is outstanding or another
+// launch is running. The check and the reset share one critical section: a
+// hold taken on another thread can then land only before the check (seen,
+// nothing released) or after the reset (core1 is forced off again, and the
+// launch that follows times out).
+static bool claim_launch(void) {
+    core1_hw_lock();
+    const bool ok = s_holds == 0 && !s_launching;
+    if (ok) {
+        core1_hw_force_off();
+        core1_hw_release();
+        s_launching = true;
+    }
+    core1_hw_unlock();
+    return ok;
+}
+
+// End a claimed launch. Returns true when a hold and its release landed during
+// it: core1 was reset under the handshake, so whatever it started is not what
+// runs now. Sets the tenant only for an undisturbed launch that answered.
+static bool end_launch(bool ok, core1_tenant_t tenant) {
+    core1_hw_lock();
+    const bool disturbed = s_relaunch;
+    s_launching          = false;
+    s_relaunch           = false;
+    if (ok && !disturbed) {
+        s_tenant = tenant;
+    }
+    core1_hw_unlock();
+    return disturbed;
+}
+
+// Launch the service on a launch already claimed. A disturbed launch is redone
+// (bounded); a timeout is not, because it means a hold landed and that hold's
+// release relaunches.
+static bool launch_service_claimed(const char *what) {
+    for (uint8_t attempt = 0; attempt < 3; ++attempt) {
+        const bool ok = core1_hw_launch_service();
+        if (!end_launch(ok, CORE1_TENANT_SERVICE)) {
+            if (!ok) {
+                core1_hw_report(what);
+            }
+            return ok;
+        }
+        if (!claim_launch()) {
+            return false; // held again, or another launch runs: theirs
+        }
+    }
+    (void)end_launch(false, CORE1_TENANT_SERVICE);
+    core1_hw_report(what);
+    return false;
+}
+
 void core1_release(void) {
-    bool relaunch = false;
+    bool launch = false;
     core1_hw_lock();
     if (s_holds > 0 && --s_holds == 0) {
         // Whatever ran before the hold was killed by it; the service is what
@@ -29,14 +88,16 @@ void core1_release(void) {
         // its owner, through core1_run().
         s_tenant = CORE1_TENANT_SERVICE;
         core1_hw_release();
-        relaunch = true;
+        if (s_launching) {
+            s_relaunch = true; // the running launcher redoes it
+        } else {
+            s_launching = true;
+            launch      = true;
+        }
     }
     core1_hw_unlock();
-    // The handshake runs outside the lock (it can take 100 ms). A hold that
-    // lands during it forces core1 off again; the launch then times out and
-    // the next release relaunches the service.
-    if (relaunch && !core1_hw_launch_service()) {
-        core1_hw_report("release: RLE service relaunch timed out");
+    if (launch) {
+        (void)launch_service_claimed("release: RLE service relaunch timed out");
     }
 }
 
@@ -52,42 +113,34 @@ core1_tenant_t core1_tenant(void) {
     return s_tenant;
 }
 
-// Reset core1 unless a hold is outstanding. The check and the reset share one
-// critical section: a hold taken on another thread can then land only before
-// the check (seen, nothing released) or after the reset (core1 is forced off
-// again, and the launch that follows times out).
-static bool reset_unless_held(void) {
-    core1_hw_lock();
-    const bool held = s_holds > 0;
-    if (!held) {
-        core1_hw_force_off();
-        core1_hw_release();
-    }
-    core1_hw_unlock();
-    return !held;
-}
-
 bool core1_run(void (*entry)(void), uint32_t *stack_bottom, size_t stack_bytes) {
-    if (!reset_unless_held()) {
+    if (!claim_launch()) {
         return false;
     }
-    if (!core1_hw_launch(entry, stack_bottom, stack_bytes)) {
+    const bool ok = core1_hw_launch(entry, stack_bottom, stack_bytes);
+    if (end_launch(ok, CORE1_TENANT_CUSTOM)) {
+        // The hold killed the entry and its release left the relaunch to us.
+        core1_hw_report("run: a hold and release landed during the launch");
+        (void)core1_restore_service();
+        return false;
+    }
+    if (!ok) {
         core1_hw_report(s_holds > 0 ? "run: a hold landed during the launch" : "run: launch timed out");
         return false;
     }
-    s_tenant = CORE1_TENANT_CUSTOM;
     return true;
 }
 
 bool core1_restore_service(void) {
     for (uint8_t attempt = 0; attempt < 3; ++attempt) {
-        if (!reset_unless_held()) {
-            // The last release relaunches the service.
+        if (!claim_launch()) {
+            // Held: the last release relaunches the service. Launching: the
+            // other launcher does.
             s_tenant = CORE1_TENANT_SERVICE;
             return false;
         }
-        if (core1_hw_launch_service()) {
-            s_tenant = CORE1_TENANT_SERVICE;
+        const bool ok = core1_hw_launch_service();
+        if (!end_launch(ok, CORE1_TENANT_SERVICE) && ok) {
             return true;
         }
     }

@@ -357,6 +357,12 @@ outstanding. The check and the reset share one critical section.
 
 - fw_staging's long hold (BEGIN until the erase completes or the stream is finalized)
   is a flag over one `core1_hold()`, because BEGIN can arrive twice for the same image.
+  The flag is tested and changed under core1_owner's lock, and the drop is skipped
+  while an erase is pending: on the slave a re-sent BEGIN (split thread) can preempt
+  the erase-complete drop (main thread), which used to leave the new erase unheld.
+- One launch handshake at a time. A launch runs outside the lock, so the split thread
+  can do a whole hold and release during one; that release marks the running launch
+  disturbed instead of starting a second handshake, and the launcher redoes it.
 - The EEPROM flush, the crash record and the hand stamp take their own nested holds.
   Before this module their "lockout" restarted core1 whenever it was halted, so one of
   them finishing during a flash erase would have released core1 mid-erase.

@@ -1248,10 +1248,7 @@ static void user_sync_dummy_handler(uint8_t in_len, const void* in_data, uint8_t
 }
 #endif
 
-// Eden idle screensaver runs DIM (anti-burn-in + it's a sleeping-keyboard ambience,
-// not a legend you need to read). This is the OLED contrast register value, not a
-// brightness level — a small number is a faint glow.
-#define EDEN_IDLE_BRIGHTNESS 4
+// EDEN_IDLE_BRIGHTNESS lives in base/idle_style.h with the rest of the style table.
 
 // Idle "Eden" screensaver driver (IDLE_STYLE_EDEN), run every housekeeping pass on
 // BOTH halves (like doom_tick). It renders the looping boot animation while the
@@ -1898,39 +1895,38 @@ void housekeeping_task_user(void) {
                     // styles land in the pulse branch below (pulse, jitter, and an
                     // iddqd that could not start its demo), so an unnamed
                     // "Transition to pulsing" cannot tell you which one is active.
-                    const uint8_t style = get_idle_style();
-                    if (style == IDLE_STYLE_IDDQD && doom_screensaver_start()) {
+                    const uint8_t            style = get_idle_style();
+                    const idle_style_desc_t *desc  = idle_style_desc(style);
+                    if (desc->enter == IDLE_ENTER_DOOM && doom_screensaver_start()) {
                         // Doom attract screensaver instead of the pulse: the demo
                         // owns the keycaps at the user brightness — no DISP_IDLE,
                         // and IDLE_TRANSITION stays dropped (cleared above), which
                         // fires the back_from_idle_transition brightness restore.
                         // doom_tick() holds last_update while the demo runs and
                         // hands over to the normal TURN_OFF suspend at its own
-                        // deadline. Falls through to the pulse whenever the demo
-                        // can't start (non-doom build, fw staging active).
+                        // deadline.
                         contrast = get_active_brightness();
-                        uprint("Transition to idle [style=iddqd] - doom screensaver\n");
-                    } else if (style == IDLE_STYLE_EDEN) {
-                        // Eden screensaver: enter DISP_IDLE like the pulse (so the
-                        // wake-on-key and TURN_OFF suspend paths work unchanged and
-                        // the flag+idle_style tell the slave to loop too), but hold
-                        // contrast DIM and steady — eden_idle_tick() owns the pixels
-                        // every pass and the loop migrates them itself, so there is no
-                        // burn-in and no per-pass pulse contrast to fight.
-                        contrast = EDEN_IDLE_BRIGHTNESS;
+                        uprintf("Transition to idle [style=%s] - doom screensaver\n", desc->name);
+                    } else if (desc->enter == IDLE_ENTER_STEADY) {
+                        // A style that draws the keycaps itself (Eden): enter DISP_IDLE
+                        // like the pulse, so wake-on-key, the TURN_OFF suspend and the
+                        // slave's copy of the flag work unchanged, but hold contrast DIM
+                        // and steady. Its renderer owns the pixels every pass and
+                        // migrates them itself, so there is no burn-in and no per-pass
+                        // pulse contrast to fight.
+                        contrast = desc->steady_contrast;
                         flags |= DISP_IDLE;
-                        uprint("Transition to idle [style=eden] - eden screensaver\n");
+                        uprintf("Transition to idle [style=%s] - %s screensaver\n", desc->name, desc->name);
                     } else {
                         contrast = DISP_OFF;
                         flags |= DISP_IDLE;
                         flags |= IDLE_TRANSITION;
-                        // An IDDQD here means doom_screensaver_start() refused (no
-                        // doom build / fw staging active) and we silently degraded
-                        // to the legacy pulse — say so rather than reporting a plain
+                        // A DOOM style here means doom_screensaver_start() refused (no
+                        // doom build / fw staging active) and we silently degraded to
+                        // the legacy pulse — say so rather than reporting a plain
                         // "pulsing" the user never selected.
-                        uprintf("Transition to idle [style=%s] - pulsing%s\n",
-                                idle_style_name(style),
-                                style == IDLE_STYLE_IDDQD ? " (doom unavailable)" : "");
+                        uprintf("Transition to idle [style=%s] - pulsing%s\n", desc->name,
+                                desc->enter == IDLE_ENTER_DOOM ? " (doom unavailable)" : "");
                     }
                 } else if(brightness>FULL_BRIGHT) {
                     contrast = FULL_BRIGHT;
@@ -1947,11 +1943,12 @@ void housekeeping_task_user(void) {
                 contrast = local_state->contrast;
                 flags = local_state->flags;
             } else if((flags & DISP_IDLE)!=0) {
-                if (get_idle_style() == IDLE_STYLE_EDEN) {
-                    // Eden owns the visuals via eden_idle_tick(); keep the panel DIM and
-                    // steady and DON'T compute a pulse contrast (a per-pass contrast diff
-                    // would call kdisp_idle() and fight the animation).
-                    contrast = EDEN_IDLE_BRIGHTNESS;
+                const idle_style_desc_t *desc = idle_style_desc(get_idle_style());
+                if (desc->enter == IDLE_ENTER_STEADY) {
+                    // The style's renderer owns the visuals (Eden: eden_idle_tick());
+                    // keep the panel DIM and steady and DON'T compute a pulse contrast
+                    // (a per-pass contrast diff would call kdisp_idle() and fight it).
+                    contrast = desc->steady_contrast;
                 } else {
                     int32_t time_after = PK_MAX(elapsed_time_since_update - idle_after_ms - FADE_TRANSITION_TIME, 0)/300;
                     contrast = time_after%50;
@@ -5762,14 +5759,15 @@ void kdisp_idle(uint8_t contrast) {
     // do NOT pulse/blank them here. Returning also leaves the panels enabled at the
     // brightness Eden's own start set, so the transition-pass set_displays(idle=true)
     // can't flash a black/pulse frame over the animation.
-    if (get_local_state()->idle_style == IDLE_STYLE_EDEN) {
+    const idle_style_desc_t *style = idle_style_desc(get_local_state()->idle_style);
+    if (style->owns_keycaps) {
         return;
     }
     uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
 #if !defined(POLY_DISP_SELECT_BY_TABLE)
     uint8_t skip = 0;
 #endif
-    const bool jitter = get_local_state()->idle_style == IDLE_STYLE_JITTER;
+    const bool jitter = style->jitter;
     const poly_layer_t* local_layer = get_local_layer();
     const led_t led_state = local_layer->led_state;
     POLY_DISP_SEED(disp_row_0.bitmask);
@@ -6112,15 +6110,11 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         // master-authoritative sync behaviour is identical however the change arrives.
         case KC_IDLE_STYLE: {
             if (!act) break;
-            // Skip IDLE_STYLE_IDDQD: that one is the doom easter egg and has its own
+            // IDDQD is not in the cycle: it is the doom easter egg and has its own
             // way in (typing IDDQD arms the utilities-layer key, doom_mode.c). A
-            // settings key that cycled into it would hand it to anyone who pressed
-            // this key twice. A board already ON that style still cycles out of it.
-            uint8_t style = get_idle_style();
-            do {
-                style = (uint8_t)((style + 1u) % IDLE_STYLE_COUNT);
-            } while (style == IDLE_STYLE_IDDQD);
-            set_idle_style(style);
+            // board already ON that style still cycles out of it. idle_style.c's
+            // in_key_cycle column decides; the unit test pins it.
+            set_idle_style(idle_style_next_in_cycle(get_idle_style()));
             request_disp_refresh();
             break;
         }

@@ -17,6 +17,13 @@ string is the bare glyph with no leading spaces.
     python3 tools/hint_icons.py            # rewrite the block in gfx_icons.h
     python3 tools/hint_icons.py --check    # exit 1 if the header is stale
     python3 tools/hint_icons.py --sheet out.png   # contact sheet, 4x
+    python3 tools/hint_icons.py --style d  # switch IconsFont to another style
+
+Four styles draw the same 65 actions on the same grid: a (this file, outline),
+b (hint_icons_solid.py), c (hint_icons_bold.py) and d (hint_icons_stage.py,
+"stage and actor"). Slots and ICON_HINT_* names always follow this file's
+ICONS order, so a style switch changes pixels only. The header records which
+style it carries, and a plain run or --check keeps that style.
 
 Needs Pillow. Run from anywhere; paths are derived from this file.
 """
@@ -644,6 +651,25 @@ def glyph_bytes(im):
     return out
 
 
+STYLES = {"a": None, "b": "hint_icons_solid", "c": "hint_icons_bold", "d": "hint_icons_stage"}
+
+
+def style_render(style):
+    if STYLES[style] is None:
+        return render
+    import importlib
+    sys.path.insert(0, HERE)
+    mod = importlib.import_module(STYLES[style])
+    assert set(mod.ICONS) == set(ICONS), f"style {style} does not cover the same icons"
+    assert mod.S == S, f"style {style} is not drawn on the {S} grid"
+    return mod.render
+
+
+def header_style(src):
+    m = re.search(re.escape(BEGIN) + r"\s*/\* style: ([a-z]) \*/", src)
+    return m.group(1) if m else "a"
+
+
 def strip_block(text):
     """Remove a previously generated block (both markers inclusive) from `text`."""
     return re.sub(r"\n[ \t]*" + re.escape(BEGIN) + r".*?" + re.escape(END), "", text, flags=re.S)
@@ -655,7 +681,8 @@ def bitmap_len(array_body):
     return len(re.findall(r"0x[0-9A-Fa-f]{2}\b", body))
 
 
-def build(src):
+def build(src, style="a"):
+    draw = style_render(style)
     src = strip_block(src)
     bm = re.search(r"(const uint8_t IconsBitmaps\[\] PROGMEM = \{)(.*?)(\n\};)", src, re.S)
     base = bitmap_len(bm.group(2))
@@ -664,14 +691,15 @@ def build(src):
     off = base
     for i, n in enumerate(names):
         cp = FIRST_CP + i
-        data = glyph_bytes(render(n))
+        data = glyph_bytes(draw(n))
         hexs = ", ".join(f"0x{b:02X}" for b in data)
         bmp_lines.append(f"  /* 0x{cp:06X} {macro(n)} {S}x{S} */ {hexs},")
         glyph_lines.append(f"  {{ {off:5d}, {S:3d}, {S:3d}, {X_ADVANCE:3d}, {X_OFFSET:4d}, {TOP_ROW - BASELINE:4d} }},"
                            f"   // 0x{cp:06X} {macro(n)}")
         off += len(data)
     last = FIRST_CP + len(names) - 1
-    bmp_block = "\n  " + BEGIN + "\n" + "\n".join(bmp_lines) + "\n  " + END
+    bmp_block = ("\n  " + BEGIN + "\n  /* style: " + style + " */\n" + "\n".join(bmp_lines)
+                 + "\n  " + END)
     src = src[:bm.end(2)] + bmp_block + src[bm.end(2):]
     gl = re.search(r"(const GFXglyph IconsGlyphs\[\] PROGMEM = \{)(.*?)(\n\};)", src, re.S)
     gl_block = "\n  " + BEGIN + "\n" + "\n".join(glyph_lines) + "\n  " + END
@@ -682,8 +710,9 @@ def build(src):
     return src, names
 
 
-def sheet(path, scale=4):
+def sheet(path, scale=4, style="a"):
     from PIL import Image
+    render = style_render(style)
     names = list(ICONS)
     cols = 10
     rows = (len(names) + cols - 1) // cols
@@ -699,22 +728,25 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--check", action="store_true", help="exit 1 if gfx_icons.h is stale")
     ap.add_argument("--sheet", metavar="PNG", help="write a contact sheet instead")
+    ap.add_argument("--style", choices=sorted(STYLES),
+                    help="icon style to write (default: the one the header carries)")
     a = ap.parse_args()
-    if a.sheet:
-        sheet(a.sheet)
-        return 0
     src = open(HEADER, encoding="utf-8").read()
-    new, names = build(src)
+    style = a.style or header_style(src)
+    if a.sheet:
+        sheet(a.sheet, style=style)
+        return 0
+    new, names = build(src, style)
     if a.check:
         if new != src:
             print("gfx_icons.h is stale: run python3 tools/hint_icons.py", file=sys.stderr)
             return 1
-        print(f"gfx_icons.h up to date ({len(names)} hint icons)")
+        print(f"gfx_icons.h up to date ({len(names)} hint icons, style {style})")
         return 0
     if new != src:
         with open(HEADER, "w", encoding="utf-8", newline="\n") as fh:
             fh.write(new)
-    print(f"{len(names)} hint icons at U+{FIRST_CP:06X}..U+{FIRST_CP + len(names) - 1:06X}")
+    print(f"{len(names)} hint icons (style {style}) at U+{FIRST_CP:06X}..U+{FIRST_CP + len(names) - 1:06X}")
     return 0
 
 

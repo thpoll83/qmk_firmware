@@ -5,8 +5,8 @@ A hint appears only while a modifier is held: it previews what is about to
 happen. So every icon is a short sentence.
 
   1. STAGE + ACTOR. The stage is what is affected (a window, a screen, a page,
-     a line of text) and is drawn LIGHT: a 2 px line
-     (3 px for a screen or a speech bubble, whose large empty frame reads faint). The actor is what happens
+     a line of text) and is drawn LIGHT: a 3 px line
+     (2 px read faint on the panel next to a solid actor). The actor is what happens
      and is drawn HEAVY: solid, or 4 px. One actor per icon. Where the object
      itself is the point (settings, lock, folder) it is the actor and there is
      no stage.
@@ -54,10 +54,10 @@ class Icon:
         self.solid(x0 + w, y0 + w, x1 - w, y1 - w, max(ch - w // 2, 0), 1 - c)
 
     def thin(self, x0, y0, x1, y1, ch=2):
-        self.ring(x0, y0, x1, y1, ch, w=2)
+        self.ring(x0, y0, x1, y1, ch, w=3)
 
     def frame(self, x0, y0, x1, y1, ch=2):
-        """The stage of a screen or speech bubble: 3 px."""
+        """The stage of a screen or speech bubble: 3 px, the same as thin()."""
         self.ring(x0, y0, x1, y1, ch, w=3)
 
     def heavy(self, x0, y0, x1, y1, ch=3):
@@ -80,17 +80,17 @@ class Icon:
              "d": [(x, y), (x - s, y - s), (x + s, y - s)]}[dirn]
         self.d.polygon(p, fill=c)
 
-    def dash_h(self, x0, x1, y, w=2, on=3, off=2):
+    def dash_h(self, x0, x1, y, w=3, on=3, off=2):
         x = x0
         while x <= x1:
             self.F(x, y, min(x + on - 1, x1), y + w - 1)
             x += on + off
 
     def dash_box(self, x0, y0, x1, y1, on=3, off=2):
-        self.dash_h(x0, x1, y0, on=on, off=off); self.dash_h(x0, x1, y1 - 1, on=on, off=off)
+        self.dash_h(x0, x1, y0, on=on, off=off); self.dash_h(x0, x1, y1 - 2, on=on, off=off)
         y = y0
         while y <= y1:
-            self.F(x0, y, x0 + 1, min(y + on - 1, y1)); self.F(x1 - 1, y, x1, min(y + on - 1, y1))
+            self.F(x0, y, x0 + 2, min(y + on - 1, y1)); self.F(x1 - 2, y, x1, min(y + on - 1, y1))
             y += on + off
 
     # ---- stages ----
@@ -341,7 +341,7 @@ def _(I):
 
 @icon("cast")
 def _(I):
-    I.d.line([(1, 10), (1, 2), (32, 2), (32, 24), (20, 24)], fill=1, width=2)
+    I.d.line([(1, 10), (1, 2), (32, 2), (32, 24), (20, 24)], fill=1, width=3)
     I.solid(0, 28, 5, 33, ch=1)
     for r in (11, 18):
         I.d.polygon([(0, 33 - r), (round(r * 0.45), 33 - r), (r, 33 - round(r * 0.45)), (r, 33),
@@ -431,7 +431,7 @@ def _(I):
 @icon("dictation")
 def _(I):
     I.solid(11, 0, 22, 20, ch=4)
-    I.d.line([(5, 12), (5, 17), (10, 23), (23, 23), (28, 17), (28, 12)], fill=1, width=2)
+    I.d.line([(5, 12), (5, 17), (10, 23), (23, 23), (28, 17), (28, 12)], fill=1, width=3)
     I.F(16, 24, 17, 29); I.F(10, 30, 23, 32)
 
 @icon("speech_rec")
@@ -447,9 +447,9 @@ def _(I):
     # a bare speaker read as volume; the bubble says the PC is speaking
     I.frame(0, 1, 33, 24)                         # stage: speech
     I.d.polygon([(5, 23), (5, 31), (12, 24)], fill=1)
-    I.F(7, 9, 11, 16); I.d.polygon([(11, 9), (17, 5), (17, 20), (11, 16)], fill=1)   # actor
-    I.d.line([(20, 9), (22, 11), (22, 14), (20, 16)], fill=1, width=2)
-    I.d.line([(24, 6), (27, 9), (27, 16), (24, 19)], fill=1, width=2)
+    I.F(6, 9, 10, 16); I.d.polygon([(10, 9), (16, 5), (16, 20), (10, 16)], fill=1)   # actor
+    I.d.line([(20, 9), (22, 11), (22, 14), (20, 16)], fill=1, width=3)
+    I.d.line([(24, 6), (27, 9), (27, 16), (24, 19)], fill=1, width=3)
 
 @icon("volume_mixer")
 def _(I):
@@ -459,7 +459,7 @@ def _(I):
 
 @icon("emoji")
 def _(I):
-    I.oct(16.5, 16.5, 16, w=2)
+    I.oct(16.5, 16.5, 16, w=3)
     I.F(10, 9, 13, 14); I.F(20, 9, 23, 14)
     I.d.polygon([(7, 19), (26, 19), (21, 26), (12, 26)], fill=1)
 

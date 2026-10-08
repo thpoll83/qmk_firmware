@@ -81,6 +81,32 @@ class Icon:
     def __init__(self):
         self.im = Image.new("1", (S, S), 0)
         self.d = ScaledDraw(ImageDraw.Draw(self.im))
+        self.n = ImageDraw.Draw(self.im)   # NATIVE 34-grid drawing, no scaling
+
+    # ---- native 34-grid helpers -------------------------------------------------
+    # Corner brackets, dashed frames and the badge are drawn on the real grid: scaled
+    # from 28, their 2 px pieces land on uneven pixels and the corners come out
+    # lopsided (fullscreen, snip) and the badge symbols lose their shape.
+    def NF(self, x0, y0, x1, y1, c=1):
+        self.n.rectangle([x0, y0, x1, y1], fill=c)
+
+    def brackets(self, arm):
+        """Four 2 px corner brackets on rows/cols 1..32, `arm` px long, mirror-exact."""
+        lo, hi = 1, S - 2
+        for x in (lo, hi - arm + 1):
+            for y in (lo, hi - 1):
+                self.NF(x, y, x + arm - 1, y + 1)
+        for x in (lo, hi - 1):
+            for y in (lo, hi - arm + 1):
+                self.NF(x, y, x + 1, y + arm - 1)
+
+    def dashed_frame(self):
+        """2 px dashed frame on 1..32: 4 px corners and dashes, 3 px gaps, symmetric."""
+        lo, hi = 1, S - 2
+        runs = [(1, 4), (8, 11), (15, 18), (22, 25), (29, 32)]
+        for a, b in runs:
+            self.NF(a, lo, b, lo + 1); self.NF(a, hi - 1, b, hi)
+            self.NF(lo, a, lo + 1, b); self.NF(hi - 1, a, hi, b)
 
     # ---- primitives (all strokes 2 px) ----
     def R(self, x0, y0, x1, y1, fill=False):
@@ -171,30 +197,43 @@ class Icon:
             self.F(x0, y0 + 7, x1, y0 + 8)
 
     def badge(self, sym):
-        """Solid disc in the bottom-right corner with the symbol knocked out."""
-        cx, cy, r = 21, 21, 6
-        self.C(cx, cy, r + 2, fill=True, c=0)  # 1-2 px clearance moat
-        self.C(cx, cy, r, fill=True)
-        k = 0
-        if sym == "+": self.F(cx - 3, cy, cx + 3, cy + 1, k); self.F(cx, cy - 3, cx + 1, cy + 3, k)
-        if sym == "-": self.F(cx - 3, cy, cx + 3, cy + 1, k)
-        if sym == "x": self.L((cx - 3, cy - 3), (cx + 3, cy + 3), c=k); self.L((cx - 3, cy + 3), (cx + 3, cy - 3), c=k)
-        if sym == "r": self.F(cx - 3, cy, cx + 1, cy + 1, k); self.head(cx + 4, cy + 0.5, "r", k, 3)
-        if sym == "l": self.F(cx - 1, cy, cx + 3, cy + 1, k); self.head(cx - 4, cy + 0.5, "l", k, 3)
-        if sym == "d": self.F(cx, cy - 3, cx + 1, cy + 1, k); self.head(cx + 0.5, cy + 4, "d", k, 3)
-        if sym == "u": self.F(cx, cy - 1, cx + 1, cy + 3, k); self.head(cx + 0.5, cy - 4, "u", k, 3)
-        if sym == "i": self.F(cx, cy - 3, cx + 1, cy - 2, k); self.F(cx, cy, cx + 1, cy + 3, k)
-        if sym == "o": self.C(cx, cy, 3, c=k)
-        if sym == "clock": self.F(cx, cy - 4, cx + 1, cy + 1, k); self.F(cx, cy, cx + 3, cy + 1, k)
-        if sym == "lens":
-            self.d.ellipse([cx - 4, cy - 4, cx + 1, cy + 1], outline=k, width=1)
-            self.d.line([cx + 1, cy + 1, cx + 3, cy + 3], fill=k, width=2)
-        if sym == "gear": self.C(cx, cy, 3, c=k); self.F(cx, cy - 5, cx + 1, cy + 5, k); self.F(cx - 5, cy, cx + 5, cy + 1, k); self.C(cx, cy, 1, fill=True, c=1)
-        if sym == "rec": pass
-        if sym == "ref":
-            self.d.arc([cx - 4, cy - 4, cx + 4, cy + 4], 300, 600 - 20, fill=k, width=2)
-            self.P([(cx + 1, cy - 6), (cx + 5, cy - 4), (cx + 1, cy - 1)], c=k)
+        """Solid 14 px disc in the bottom-right corner with the symbol knocked out.
 
+        Drawn natively: the disc is box 20..33, a 2 px moat clears the base shape
+        around it, and each symbol is pixel art on the disc's own 14x14 grid.
+        """
+        self.n.ellipse([18, 18, 35, 35], fill=0)
+        if sym == "ref":
+            # The one badge without a disc: a ring knocked out of a solid disc reads
+            # as concentric rings at 14 px, so the circular arrow is drawn in ink in
+            # the same corner, open in the top-right quarter, head pointing clockwise.
+            self.n.arc([21, 21, 32, 32], 0, 270, fill=1, width=2)
+            self.n.polygon([(25, 18), (29, 21), (29, 22), (25, 25)], fill=1)
+            return
+        self.n.ellipse([20, 20, 33, 33], fill=1)
+        m = Image.new("1", (14, 14), 0)
+        d = ImageDraw.Draw(m)
+        f = lambda x0, y0, x1, y1: d.rectangle([x0, y0, x1, y1], fill=1)
+        if sym in ("d", "u", "l", "r"):
+            f(6, 3, 7, 6)                                   # stem, pointing down
+            for i, (x0, x1) in enumerate(((3, 10), (4, 9), (5, 8), (6, 7))):
+                f(x0, 7 + i, x1, 7 + i)                     # head, tip on row 10
+            m = m.transpose({"d": None, "u": Image.FLIP_TOP_BOTTOM,
+                             "r": Image.ROTATE_90, "l": Image.ROTATE_270}[sym]) if sym != "d" else m
+        if sym == "+": f(3, 6, 10, 7); f(6, 3, 7, 10)
+        if sym == "-": f(3, 6, 10, 7)
+        if sym == "x":
+            for t in range(7):
+                f(3 + t, 3 + t, 4 + t, 3 + t); f(9 - t, 3 + t, 10 - t, 3 + t)
+        if sym == "i": f(6, 2, 7, 3); f(6, 5, 7, 11)
+        if sym == "clock": f(6, 2, 7, 7); f(6, 6, 10, 7)
+        if sym == "rec":
+            pass                                         # the solid disc IS the record dot
+        mp = m.load(); ip = self.im.load()
+        for y in range(14):
+            for x in range(14):
+                if mp[x, y]:
+                    ip[20 + x, 20 + y] = 0
 
 def mic(I, cx=14, top=3, waves=False):
     I.R(cx - 4, top, cx + 4, top + 13)
@@ -262,11 +301,8 @@ def _(I):
 
 @icon("select_all")
 def _(I):
-    for x in range(1, 27, 6):
-        I.F(x, 1, x + 3, 2); I.F(x, 25, x + 3, 26)
-    for y in range(1, 27, 6):
-        I.F(1, y, 2, y + 3); I.F(25, y, 26, y + 3)
-    I.F(7, 7, 20, 20)
+    I.dashed_frame()
+    I.NF(9, 9, 24, 24)
 
 @icon("find")
 def _(I):
@@ -356,10 +392,8 @@ def _(I):
 
 @icon("fullscreen")
 def _(I):
-    for (x0, y0, x1, y1) in [(1, 1, 8, 2), (1, 1, 2, 8), (19, 1, 26, 2), (25, 1, 26, 8),
-                             (1, 25, 8, 26), (1, 19, 2, 26), (19, 25, 26, 26), (25, 19, 26, 26)]:
-        I.F(x0, y0, x1, y1)
-    I.R(8, 8, 19, 19)
+    I.brackets(9)
+    I.n.rectangle([10, 10, 23, 23], outline=1, width=2)
 
 @icon("minimize_all")
 def _(I):
@@ -449,11 +483,8 @@ def _(I):
 
 @icon("snip")
 def _(I):
-    for x in range(1, 27, 6):
-        I.F(x, 2, x + 3, 3); I.F(x, 24, x + 3, 25)
-    for y in range(2, 25, 6):
-        I.F(1, y, 2, y + 3); I.F(25, y, 26, y + 3)
-    I.F(13, 7, 14, 20); I.F(7, 13, 20, 14)
+    I.dashed_frame()
+    I.NF(16, 9, 17, 24); I.NF(9, 16, 24, 17)
 
 @icon("screen_record")
 def _(I):
@@ -461,11 +492,9 @@ def _(I):
 
 @icon("text_recog")
 def _(I):
-    for (x, y, sx, sy) in [(1, 1, 1, 1), (26, 1, -1, 1), (1, 26, 1, -1), (26, 26, -1, -1)]:
-        I.L((x, y), (x + sx * 6, y)); I.L((x, y), (x, y + sy * 6))
-    I.F(7, 7, 20, 9); I.F(13, 7, 14, 21)
+    I.brackets(7)
+    I.NF(9, 9, 24, 10); I.NF(16, 9, 17, 25)
 
-# ===================== system =====================
 @icon("lock")
 def _(I):
     I.A(14, 11, 7, 180, 360); I.F(7, 10, 8, 13); I.F(20, 10, 21, 13)

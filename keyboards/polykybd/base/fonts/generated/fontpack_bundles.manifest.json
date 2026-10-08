@@ -821,8 +821,8 @@
       "index": 6,
       "slot_offset": 1347584,
       "slot_size": 131072,
-      "total_size": 26956,
-      "font_count": 10,
+      "total_size": 32564,
+      "font_count": 13,
       "fonts": [
         {
           "all_fonts_index": 147,
@@ -883,6 +883,24 @@
           "symbol": "DejaVuSans_Braille_20pt7b",
           "first": 59968,
           "last": 60003
+        },
+        {
+          "all_fonts_index": 182,
+          "symbol": "C64Keyboard_Regular_C64Keycap_20pt7b",
+          "first": 60032,
+          "last": 60067
+        },
+        {
+          "all_fonts_index": 183,
+          "symbol": "C64Keyboard_Regular_C64KeyLtr_16pt7b",
+          "first": 60096,
+          "last": 60121
+        },
+        {
+          "all_fonts_index": 184,
+          "symbol": "C64Keyboard_Regular_C64Petscii_10pt7b",
+          "first": 60160,
+          "last": 60211
         }
       ]
     },

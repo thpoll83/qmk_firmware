@@ -157,7 +157,9 @@ static const uint32_t* glyph_script_legend(void) {
                                              SETTING_LBL("SCRIPT:", "C64"),
                                              SETTING_LBL("SCRIPT:", "Amiga"),
                                              SETTING_LBL("SCRIPT:", "APL"),
-                                             SETTING_LBL("SCRIPT:", "Brail") };
+                                             SETTING_LBL("SCRIPT:", "Brail"),
+                                             SETTING_LBL("SCRIPT:", "C64K") };   // C64 keycap lettering
+    _Static_assert(ARRAY_SIZE(names) == GLYPH_SCRIPT_COUNT, "a glyph script has no settings-key label");
     const uint8_t v = get_glyph_script();
     return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("SCRIPT:", "?");
 }

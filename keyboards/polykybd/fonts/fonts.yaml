@@ -51,6 +51,7 @@ sources:
   sga:                 fonts/fantasy/Sga-Regular.ttf
   px-ibm-vga:          fonts/fantasy/Px_IBM_VGA8.ttf
   c64:                 fonts/fantasy/PetMe64.ttf
+  c64-keycap:          fonts/fantasy/C64Keyboard-Regular.ttf   # szabadkai/c64-keyboard-font v1.111, CC0 — printed keycap lettering
   amiga-topaz:         fonts/fantasy/Amiga-Regular.ttf
 
 # The composed index header that the firmware includes (base/fonts/<output>).
@@ -568,3 +569,20 @@ fonts:
   # list decides its global index, and the two are independent.
   # Bumps the symbol bundle content_version.
   - {category: symbols, variant: _Mayan_, source: noto-sans-mayan, bits: 32, ranges: [[0x1d2e0, 0x1d2f3]]}
+
+  # C64 KEYCAP lettering (glyph script 11, GLYPH_C64KEYS): the narrow capitals printed
+  # on the physical C64 keys, as opposed to _C64_ above, which is the screen ROM font.
+  # szabadkai/c64-keyboard-font v1.111, CC0. Placed at the very END of this list (see
+  # the _Mayan_ note) so it takes the highest ALL_FONTS index and no other bundle's
+  # gidx moves; its 0xEA80 block overlaps no other font, so last place loses no tie.
+  # Bumps the fantasy bundle content_version.
+  - {category: gscript, variant: _C64Keycap_, source: c64-keycap, extra_args: ['-F0xEA80'], sequence: '0041, 0042, 0043, 0044, 0045, 0046, 0047, 0048, 0049, 004A, 004B, 004C, 004D, 004E, 004F, 0050, 0051, 0052, 0053, 0054, 0055, 0056, 0057, 0058, 0059, 005A, 0031, 0032, 0033, 0034, 0035, 0036, 0037, 0038, 0039, 0030'}
+
+  # Layout A for the C64 keycap script's LETTER keys (render_c64_keycap() in
+  # poly_keymap.c): the letter smaller, with the key's two PETSCII graphics below it,
+  # as printed on the front of a real C64 key. Size 16 = 22 px capitals; size 10 =
+  # 14x14 framed cells. Letters a..z at 0xEAC0; PETSCII at 0xEB00, Commodore+key
+  # for a..z then Shift+key for a..z (the font's U+E140..E17F, picked per key from
+  # its petscii-map.json). Last in the list for the same reason as _C64Keycap_.
+  - {category: gscript, variant: _C64KeyLtr_, source: c64-keycap, size: 16, extra_args: ['-F0xEAC0'], sequence: '0041, 0042, 0043, 0044, 0045, 0046, 0047, 0048, 0049, 004A, 004B, 004C, 004D, 004E, 004F, 0050, 0051, 0052, 0053, 0054, 0055, 0056, 0057, 0058, 0059, 005A'}
+  - {category: gscript, variant: _C64Petscii_, source: c64-keycap, size: 10, extra_args: ['-F0xEB00'], sequence: 'E170, E17F, E17C, E16C, E171, E17B, E165, E174, E162, E175, E161, E176, E167, E16A, E179, E16F, E16B, E172, E16E, E163, E178, E17E, E173, E17D, E177, E16D, E141, E142, E143, E144, E145, E146, E147, E148, E149, E14A, E14B, E14C, E14D, E14E, E14F, E150, E151, E152, E153, E154, E155, E156, E157, E158, E159, E15A'}

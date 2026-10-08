@@ -70,10 +70,11 @@ enum poly_glyph_script {
     GLYPH_SGA      = 4,   // Standard Galactic Alphabet (CC0) — cipher, has digits
     GLYPH_CIRTH    = 5,   // Cirth / Angerthas (Unifont CSUR) — letters only
     GLYPH_IBMVGA   = 6,   // IBM VGA / CP437 (VileR PxPlus) — Latin restyle
-    GLYPH_C64      = 7,   // Commodore 64 (Homecomputer Fonts) — Latin restyle
+    GLYPH_C64      = 7,   // Commodore 64 screen ROM font (PetMe64) — Latin restyle
     GLYPH_AMIGA    = 8,   // Amiga Topaz (Homecomputer Fonts) — Latin restyle
     GLYPH_APL      = 9,   // APL (Unifont) — Dyalog/IBM keyboard symbol per key
     GLYPH_BRAILLE  = 10,  // Braille (Unifont) — Grade-1 letters + digits
+    GLYPH_C64KEYS  = 11,  // C64 keycap lettering (szabadkai, CC0) — Latin restyle
     GLYPH_SCRIPT_COUNT
 };
 

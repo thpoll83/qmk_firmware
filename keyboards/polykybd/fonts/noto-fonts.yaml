@@ -86,6 +86,9 @@ fonts:
     dest: Noto_Sans_Mayan_Numerals/NotoSansMayanNumerals-Regular.ttf
   # NotoColorEmoji lives in a separate repo; upstream filename differs from the
   # path create_fonts.sh references (NotoColorEmoji-Regular.ttf)
+  # Pinned to a release TAG: the 2026-09-24 release moved fonts/ to 2D/fonts/ and the
+  # `main` URL went 404. It must be the CBDT bitmap build. The google/fonts copy of
+  # NotoColorEmoji is COLRv1 + SVG with no bitmaps and renders different emoji.
   - name: Noto Color Emoji
-    url: https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf
+    url: https://raw.githubusercontent.com/googlefonts/noto-emoji/v2026-09-24-unicode18_0/2D/fonts/NotoColorEmoji.ttf
     dest: Noto_CEmoji/NotoColorEmoji-Regular.ttf

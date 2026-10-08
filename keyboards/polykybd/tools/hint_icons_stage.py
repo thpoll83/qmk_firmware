@@ -349,8 +349,10 @@ def _(I):
 
 @icon("network")
 def _(I):
-    I.F(15, 9, 17, 14); I.F(4, 14, 29, 16); I.F(4, 14, 6, 22); I.F(27, 14, 29, 22)
-    I.solid(10, 0, 23, 9); I.solid(0, 22, 11, 33); I.solid(22, 22, 33, 33)
+    # three machines joined in a triangle: the simplest shape that reads as a network
+    I.d.line([(16, 6), (5, 27)], fill=1, width=3); I.d.line([(17, 6), (28, 27)], fill=1, width=3)
+    I.F(5, 26, 28, 28)
+    I.oct(16.5, 6, 6); I.oct(5.5, 27, 5.5); I.oct(27.5, 27, 5.5)
 
 # ===================== capture =====================
 @icon("screenshot")

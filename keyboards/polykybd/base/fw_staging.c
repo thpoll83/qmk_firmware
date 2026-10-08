@@ -4,6 +4,7 @@
 #include "quantum.h"
 
 #include "fw_staging.h"
+#include "fw_stage.h"         // IDLE / ERASING / RECEIVING transitions (pure)
 #include "fontpack.h"        // FONTPACK target: fontpack_reload()/present + max size
 #include "polymod_crc32.h"
 #include "monocypher-ed25519.h"   // FW-2: Ed25519 image signature verify (polymod_monocypher)
@@ -191,7 +192,8 @@ extern uint8_t __flash_binary_start;
 extern uint8_t __flash_binary_end;
 
 static bool     s_initialized = false;
-static bool     s_fw_up_active = false;
+// IDLE / ERASING / RECEIVING; transitions only through fw_stage_next().
+static fw_stage_t s_stage = FW_STAGE_IDLE;
 
 // Target of the current begin/chunk/finalize sequence (set at begin).
 static uint8_t  s_target = FW_TARGET_FIRMWARE;
@@ -262,7 +264,6 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload);
 // ---------------------------------------------------------------------------
 // Deferred-erase state (used by slave handler to avoid blocking the split link)
 // ---------------------------------------------------------------------------
-static bool     s_erase_pending;
 static uint32_t s_erase_sector_count;  // total sectors to erase (header + data)
 static uint32_t s_erase_sector_next;   // next sector index not yet erased
 
@@ -431,8 +432,7 @@ void fw_staging_init(void) {
     s_initialized          = true;
     s_commit_pending       = false;
     s_reboot_pending       = false;
-    s_erase_pending        = false;
-    s_fw_up_active         = false;
+    s_stage                = FW_STAGE_IDLE;
     // Diagnostic counters: leave the cumulative call counts in place across
     // init so a re-arm during the same power cycle is visible, but clear the
     // last-chunk fields so they only ever describe the most recent attempt.
@@ -459,17 +459,17 @@ void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t ta
     s_signature_present = false;  // FW-2: each new image must re-supply its signature
     s_confirm           = CONFIRM_IDLE;   // ...and re-confirm, if it turns out unsigned
     s_commit_pending = false;
-    s_erase_pending  = false;
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
 
     if (image_size == 0 || image_size > target_max_size()) {
         s_image_size = 0;
         s_image_crc  = 0;
+        s_stage      = fw_stage_next(s_stage, FW_EV_BEGIN_REFUSED);
         return;
     }
     s_image_size = image_size;
     s_image_crc  = image_crc;
-    s_fw_up_active = true;
+    s_stage      = fw_stage_next(s_stage, FW_EV_BEGIN_SYNC);
     // Per ATTEMPT, not per boot: fw_staging_init() runs once at keyboard_post_init,
     // so clearing the verdict only there let a second flash in the same power cycle
     // inherit the first one's. That matters because the master now READS this to
@@ -523,14 +523,13 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
     memset(s_page_buf, 0xFF, FLASH_PAGE_SIZE);
 
     if (image_size == 0 || image_size > target_max_size()) {
-        s_image_size    = 0;
-        s_image_crc     = 0;
-        s_erase_pending = false;
+        s_image_size = 0;
+        s_image_crc  = 0;
+        s_stage      = fw_stage_next(s_stage, FW_EV_BEGIN_REFUSED);
         return;
     }
     s_image_size = image_size;
     s_image_crc  = image_crc;
-    s_fw_up_active = true;
     // Per ATTEMPT, not per boot: fw_staging_init() runs once at keyboard_post_init,
     // so clearing the verdict only there let a second flash in the same power cycle
     // inherit the first one's. That matters because the master now READS this to
@@ -543,7 +542,7 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
     // FIRMWARE: index 0 = header sector, 1..N = data. FONTPACK: 0..N-1 = data (no header).
     s_erase_sector_count    = (target_has_header() ? 1u : 0u) + data_sectors;
     s_erase_sector_next     = 0;
-    s_erase_pending         = true;
+    s_stage                 = fw_stage_next(s_stage, FW_EV_BEGIN_DEFERRED);
 #ifdef USE_CORE1
     // Halt core1 now and keep it halted for the entire update sequence
     // (all sector erases + all page writes + finalize).  Restarting core1
@@ -563,10 +562,10 @@ void fw_staging_process_deferred(void) {
     // which is what the symptom would look like from the master side).
     if (s_process_deferred_calls != UINT16_MAX) s_process_deferred_calls++;
 
-    if (!s_erase_pending) return;
+    if (s_stage != FW_STAGE_ERASING) return;
 
     if (s_erase_sector_next >= s_erase_sector_count) {
-        s_erase_pending = false;
+        s_stage = fw_stage_next(s_stage, FW_EV_ERASE_DONE);
         return;
     }
 
@@ -600,7 +599,7 @@ void fw_staging_process_deferred(void) {
 
     s_erase_sector_next++;
     if (s_erase_sector_next >= s_erase_sector_count) {
-        s_erase_pending = false;
+        s_stage = fw_stage_next(s_stage, FW_EV_ERASE_DONE);
 #ifdef USE_CORE1
         // DIAGNOSTIC PROBE (2026-05-29): restart core1 the instant erase
         // completes, before the first chunk arrives.  Hypothesis: holding
@@ -627,7 +626,7 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
         uprintf("fw_staging_write_chunk: not initialized\n");
         return false;
     }
-    if (s_erase_pending) {
+    if (s_stage == FW_STAGE_ERASING) {
         uprintf("fw_staging_write_chunk: erase still pending (sector %lu/%lu)\n", s_erase_sector_next, s_erase_sector_count);
         return false;
     }
@@ -928,7 +927,7 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
     // auto-apply/reboot.  s_commit_pending stays clear — the apply is armed only by
     // the explicit FW_UP_APPLY command (fw_staging_arm_apply), phase 2 master-only.
     s_commit_pending = false;
-    s_fw_up_active   = false;
+    s_stage          = fw_stage_next(s_stage, FW_EV_FINALIZED);
 #ifdef USE_CORE1
     // We are NOT rebooting here, so core1 — halted in fw_staging_begin_deferred and
     // kept halted through every chunk flush — must be restarted, or the half resumes
@@ -939,21 +938,21 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
 }
 
 bool fw_staging_erase_pending(void) {
-    return s_erase_pending;
+    return s_stage == FW_STAGE_ERASING;
 }
 
 bool fw_staging_fw_up_active(void) {
-    return s_fw_up_active;
+    return s_stage != FW_STAGE_IDLE;
 }
 
 // 0xFF when idle, else the FW_TARGET_* of the in-progress flash (for a UI label).
 uint8_t fw_staging_active_target(void) {
-    return s_fw_up_active ? s_target : 0xFFu;
+    return s_stage != FW_STAGE_IDLE ? s_target : 0xFFu;
 }
 
 // Total bytes of the image currently being staged (for a progress bar). 0 if idle.
 uint32_t fw_staging_image_size(void) {
-    return s_fw_up_active ? s_image_size : 0u;
+    return s_stage != FW_STAGE_IDLE ? s_image_size : 0u;
 }
 
 uint32_t fw_staging_next_offset(void) {
@@ -1000,8 +999,8 @@ const uint8_t *fw_staging_get_fw_base(void) {
 void fw_staging_get_status(fw_staging_status_t *out) {
     if (!out) return;
     out->initialized          = s_initialized ? 1 : 0;
-    out->fw_up_active         = s_fw_up_active ? 1 : 0;
-    out->erase_pending        = s_erase_pending ? 1 : 0;
+    out->fw_up_active         = s_stage != FW_STAGE_IDLE ? 1 : 0;
+    out->erase_pending        = s_stage == FW_STAGE_ERASING ? 1 : 0;
     out->last_chunk_ack       = s_last_chunk_ack;
     out->last_commit_ack      = s_last_commit_ack;
     out->erase_sector_next    = (uint16_t)s_erase_sector_next;
@@ -1033,11 +1032,6 @@ void fw_staging_note_chunk_call(uint32_t offset, uint8_t ack) {
 
 void fw_staging_note_commit_ack(uint8_t ack) {
     s_last_commit_ack = ack;
-}
-
-void fw_staging_set_fw_up_active(bool active) {
-    if (!s_initialized) fw_staging_init();
-    s_fw_up_active = active;
 }
 
 // ---------------------------------------------------------------------------

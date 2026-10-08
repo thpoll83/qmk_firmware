@@ -351,7 +351,7 @@ flashes all stale bundles, `flash <id>` force-flashes one).
         ELF only for status bytes that genuinely ARE emitted as literals.
     - **Re-running COMMIT is free, which is what makes `L` actionable.**
       `fw_staging_finalize_impl` leaves `s_staged_crc`/`s_image_crc`/`s_next_offset`
-      untouched and only clears `s_commit_pending`/`s_fw_up_active`, and the slave's
+      untouched and only clears `s_commit_pending` and returns the stream stage to IDLE, and the slave's
       `flash_stage_commit` is likewise idempotent — so a second COMMIT re-runs the bridge
       with fresh retries and re-reloads, and the host retries instead of re-streaming the
       pack. Unlike the FIRMWARE target there is no header sector to re-erase (FONTPACK

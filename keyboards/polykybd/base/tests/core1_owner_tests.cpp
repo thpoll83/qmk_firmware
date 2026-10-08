@@ -26,6 +26,9 @@ struct FakeCore1 {
     std::vector<std::string> reports;
     // Runs inside a launch handshake, to model a hold landing on another thread.
     void (*during_launch)(void) = nullptr;
+    // Handshakes in progress, and the most ever in progress at once.
+    int depth     = 0;
+    int max_depth = 0;
 };
 FakeCore1 g;
 
@@ -39,22 +42,26 @@ void core1_hw_unlock(void) { g.locks--; }
 void core1_hw_force_off(void) { g.forced_off = true; }
 void core1_hw_release(void) { g.forced_off = false; }
 bool core1_hw_launch_service(void) {
+    if (++g.depth > g.max_depth) g.max_depth = g.depth;
     if (g.during_launch) {
         auto f = g.during_launch;
         g.during_launch = nullptr;
         f();
     }
+    g.depth--;
     // A core1 in reset never answers the handshake.
     if (g.forced_off || !g.launch_ok) return false;
     g.service_runs++;
     return true;
 }
 bool core1_hw_launch(void (*)(void), uint32_t *, size_t) {
+    if (++g.depth > g.max_depth) g.max_depth = g.depth;
     if (g.during_launch) {
         auto f = g.during_launch;
         g.during_launch = nullptr;
         f();
     }
+    g.depth--;
     if (g.forced_off || !g.launch_ok) return false;
     g.custom_runs++;
     return true;
@@ -173,3 +180,44 @@ TEST_F(Core1OwnerTest, RestoreGivesUpAfterThreeTimeouts) {
     ASSERT_EQ(g.reports.size(), 1u);
     EXPECT_FALSE(core1_held());
 }
+
+// --- a hold AND its release during a launch (the slave's split thread) --------
+
+// greptile, #361: the split thread's page write released core1 and launched the
+// service while the main thread's own release handshake was still running.
+TEST_F(Core1OwnerTest, AReleaseDuringALaunchDoesNotStartASecondHandshake) {
+    core1_hold();
+    g.during_launch = [] {
+        core1_hold();
+        core1_release();
+    };
+    core1_release();
+    EXPECT_EQ(g.max_depth, 1) << "two launch handshakes overlapped";
+    EXPECT_EQ(g.service_runs, 2) << "the disturbed launch was not redone";
+    EXPECT_FALSE(g.forced_off);
+    EXPECT_EQ(core1_tenant(), CORE1_TENANT_SERVICE);
+}
+
+TEST_F(Core1OwnerTest, AHoldAndReleaseDuringRunFailsTheRunAndRestoresTheService) {
+    g.during_launch = [] {
+        core1_hold();
+        core1_release();
+    };
+    EXPECT_FALSE(core1_run(entry_stub, stack_stub, sizeof stack_stub));
+    EXPECT_EQ(g.max_depth, 1);
+    EXPECT_EQ(g.service_runs, 1);
+    EXPECT_EQ(core1_tenant(), CORE1_TENANT_SERVICE);
+    EXPECT_FALSE(g.forced_off);
+}
+
+TEST_F(Core1OwnerTest, AHoldAndReleaseDuringRestoreIsRetried) {
+    g.during_launch = [] {
+        core1_hold();
+        core1_release();
+    };
+    EXPECT_TRUE(core1_restore_service());
+    EXPECT_EQ(g.max_depth, 1);
+    EXPECT_EQ(g.service_runs, 2);
+    EXPECT_EQ(core1_tenant(), CORE1_TENANT_SERVICE);
+}
+

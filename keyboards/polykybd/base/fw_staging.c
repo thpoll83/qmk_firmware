@@ -87,6 +87,10 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 // so core1 never needs to be restarted.  On the failure path (CRC mismatch),
 // fw_staging_finalize() restarts core1 explicitly.
 // ---------------------------------------------------------------------------
+// Deferred erase in progress (set by a deferred BEGIN, cleared when the last
+// sector is erased). Declared here because the core1 stage hold reads it.
+static bool s_erase_pending;
+
 #ifdef USE_CORE1
 #include "polymod_core1.h"
 #include "core1_owner.h"
@@ -167,18 +171,38 @@ static inline uint32_t __attribute__((always_inline)) psm_wait_proc1_off(void) {
 // second hold without a second release would keep core1 down for good. Other
 // holders (the EEPROM flush, the crash record, the hand stamp) nest on top
 // through core1_owner's count, so none of them can release this one.
+//
+// The flag is tested and changed under core1_owner's lock, and the hold is taken
+// or released after it. On the slave, take runs on the split thread (a deferred
+// BEGIN) and drop on the main thread (the erase completing), and the master
+// re-sends BEGIN while it polls, so a BEGIN can preempt a drop. Both orders are
+// safe: a BEGIN between the flag clear and the release takes a fresh hold first
+// (the count goes 2 -> 1), and a drop is skipped while an erase is pending, so a
+// drop that started for the old erase cannot release the new one's hold.
 static bool s_stage_hold = false;
 
 static void stage_hold_take(void) {
+    bool take = false;
+    core1_hw_lock();
     if (!s_stage_hold) {
-        core1_hold();
         s_stage_hold = true;
+        take         = true;
+    }
+    core1_hw_unlock();
+    if (take) {
+        core1_hold();
     }
 }
 
 static void stage_hold_drop(void) {
-    if (s_stage_hold) {
+    bool drop = false;
+    core1_hw_lock();
+    if (s_stage_hold && !s_erase_pending) {
         s_stage_hold = false;
+        drop         = true;
+    }
+    core1_hw_unlock();
+    if (drop) {
         core1_release();
     }
 }
@@ -262,7 +286,6 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload);
 // ---------------------------------------------------------------------------
 // Deferred-erase state (used by slave handler to avoid blocking the split link)
 // ---------------------------------------------------------------------------
-static bool     s_erase_pending;
 static uint32_t s_erase_sector_count;  // total sectors to erase (header + data)
 static uint32_t s_erase_sector_next;   // next sector index not yet erased
 

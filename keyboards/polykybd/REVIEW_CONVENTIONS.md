@@ -151,6 +151,14 @@ and relative links were adjusted to suit a standalone file.
     changed"*: no findings, no error, and nothing re-runs it. Push a fix after the
     review lands, or send a fresh `@coderabbitai review` right after the push
     (qmk#319, 2026-09-30).
+  - ⚠️ **By 2026-10-08 CodeRabbit auto-review was OFF on all four repos, not only
+    `polykybd-docs`.** On qmk#359, host#322 and ctnd#110 it posted *"Review skipped
+    — Auto reviews are disabled on this repository"*, and it said the same again on
+    every later push. Nothing was reviewed until `@coderabbitai review` was posted
+    by hand, once per push that should be read. So **ask for it right after opening
+    a PR and after each push that matters**, and treat a PR with no request as
+    unreviewed by CodeRabbit, whatever its status rows say. The setting lives in
+    the CodeRabbit org UI ("Configuration used: Organization UI"), not in the repo.
   **The full field guide — which bot goes quiet in which disguise, the sticky
   walkthrough, the Merge Risk sha, the false `✅ Addressed in <sha>` attribution,
   the quota shapes and the rate-limit arithmetic — is the `triage-pr-review`

@@ -59,6 +59,36 @@ is default and still striped; BLED=100 is worse). Use PetMe64 for a *solid* C64.
 python3 -c "from fontTools.ttLib import TTFont; f=TTFont('X.ttf'); c=f.getBestCmap();
 print('A-Z',sum(1 for x in range(0x41,0x5b) if x in c),'0-9',sum(1 for x in range(0x30,0x3a) if x in c))"
 ```
+⚠️ **Check the license in the FONT FILE, not only the repo.** A third-party font can
+ship with no LICENSE at all (that means all rights reserved), and its OS/2 `fsType`
+can forbid embedding even when a license allows it: `4` is "preview & print", and
+only `0` (installable) fits a font converted and flashed onto a keyboard. Read both,
+plus the license name fields (IDs 13/14), and scan the cmap for logo glyphs, which
+are a trademark problem whatever the license says:
+```bash
+python3 -I -c "from fontTools.ttLib import TTFont; f=TTFont('X.ttf')
+print('fsType', f['OS/2'].fsType)
+for r in f['name'].names:
+    if r.platformID==3 and r.nameID in (0,13,14): print(r.nameID, r.toUnicode()[:120])
+print('PUA', sorted(hex(c) for c in f.getBestCmap() if 0xE000<=c<=0xF8FF)[:12])"
+```
+The C64 keycap font (2026-10) arrived with no license and `fsType` 4, plus the
+Commodore logo at U+E000/E001. Its author fixed both after an issue
+(szabadkai/c64-keyboard-font#6): CC0 1.0, `fsType` 0, IDs 13/14 set. Pin the
+download to that commit (`raw.githubusercontent.com/<owner>/<repo>/<sha>/…`), not
+`main`.
+
+**Reading a repo that is not attached to the session:** the GitHub API (and the
+GitHub MCP tools) refuse it with 403, but anonymous `git` reads of a public repo go
+through the proxy. Clone it into its own empty directory and read it with `python3 -I`:
+```bash
+git clone -q --depth 1 https://github.com/<owner>/<repo> /tmp/claude-0/src/<repo>
+# list a big repo's files without downloading any blob:
+git clone -q --depth 1 --filter=blob:none --no-checkout <url> d && git -C d ls-tree -r --name-only HEAD
+git ls-remote --tags <url>          # release tags, to pin a download to
+```
+That is how noto-emoji's move from `fonts/` to `2D/fonts/` was found and pinned.
+
 Add the fetch to `fonts/dl-fonts.sh` (URL or `apt_font`) + a `sources:` line in
 `fonts.yaml`.
 
@@ -158,8 +188,13 @@ Copy `fontpack_render_settings.json` to the host and `cmp` it (mirrored file).
 - `polyhost/device/command_ids.py`: append `<NAME> = N` to `GlyphScript`
   (byte-identical to the firmware enum).
 - `polyhost/host.py`: add `GlyphScript.<NAME>: "<Generic Label>"` to
-  `GLYPH_SCRIPT_LABELS`. The tray menu + `polyctl glyph-script` build from the enum
-  automatically. No `__protocol__` bump.
+  `GLYPH_SCRIPT_LABELS`, **at the spot in the menu where it belongs**. The tray's
+  Keycap Script submenu is built in that dict's order, not the enum's (since
+  2026-10), so a related script can sit next to its sibling: "Commodore 64 (keycap)"
+  (11) follows "Commodore 64 (screen)" (7). `tests/gui/glyph_script_menu_order_test.py`
+  fails if a script is missing from the dict, which would otherwise mean a silently
+  absent menu entry. `polyctl glyph-script` still builds from the enum, listing names
+  sorted. No `__protocol__` bump.
 - Add the value to `tests/device/poly_kybd_glyph_script_test.py`
   `test_glyph_script_expansion_values`.
 - Add its `(base, digits)` row to `FIRMWARE_BLOCKS` in

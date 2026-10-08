@@ -30,6 +30,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MATRIX_COLS 6
 
 #define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_COLS+(col))
+// Display slots per half in DISPLAY space (some phantom: not every slot has a panel).
+#define DISP_SLOTS_PER_HALF (MATRIX_ROWS_PER_SIDE * MATRIX_COLS)
 
 /* split42 currently ships as two LEFT boards (no right board was ever fabbed). A
    left board used as the RIGHT half sits physically mirrored across the vertical

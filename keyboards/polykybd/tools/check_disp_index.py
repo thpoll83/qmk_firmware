@@ -88,6 +88,36 @@ def fold(board):
     return lo, hi
 
 
+def inverse_fold(board):
+    """display_index_to_matrix(), transcribed from <board>/<board>.c and checked against it.
+
+    Returns (fold_rows, col_shift): display rows 0..fold_rows-1 of the right half map
+    to matrix column dc + col_shift. Every other term of the arithmetic must match the
+    expected shape exactly, or this exits: a model that reads only part of the C
+    function would let a wrong mapping pass (review on #349).
+    """
+    with open(os.path.join(KB, board, board + ".c")) as f:
+        src = f.read()
+    body = src[src.index("bool display_index_to_matrix("):]
+    body = strip_comments(body[:body.index("\n}")])
+    flat = re.sub(r"\s+", " ", body).strip()
+    # The WHOLE body, as one pattern. Searching for the expected pieces would still
+    # pass with an extra statement or a later reassignment of *row / *col between
+    # them (review on #349), so anything this does not recognise fails closed.
+    shape = (r"bool display_index_to_matrix\(bool right, uint8_t idx, uint8_t \*row, uint8_t \*col\) \{ "
+             r"const uint8_t dr = \(uint8_t\)\(idx / MATRIX_COLS\), dc = \(uint8_t\)\(idx % MATRIX_COLS\); "
+             r"if \(right\) \{ "
+             r"\*row = \(uint8_t\)\(dr \+ MATRIX_ROWS_PER_SIDE\); "
+             r"\*col = \(dr < (\d+)\) \? \(uint8_t\)\(dc \+ (\d+)\) : dc; "
+             r"\} else \{ \*row = dr; \*col = dc; \} "
+             r"return \(\*row < MATRIX_ROWS\) && \(\*col < MATRIX_COLS\);")
+    m = re.fullmatch(shape, flat)
+    if not m:
+        raise SystemExit("%s: display_index_to_matrix() does not have the shape this check "
+                         "models; update inverse_fold() together with it" % board)
+    return int(m.group(1)), int(m.group(2))
+
+
 def table_select(board):
     """True when the variant selects each panel from key_display[] directly."""
     with open(os.path.join(KB, board, board + ".h")) as f:
@@ -147,7 +177,32 @@ def check(board, rows_per_side, cols, panels, verbose):
                 pos += 1
             pos += skip
             skip = 0
-    for half, r, c, pos, got in bad:
+    # The inverse fold (display_index_to_matrix) must undo key_display_index() for
+    # every key that has a panel, or the tutorial and Eden address the wrong key.
+    inv_rows, inv_shift = inverse_fold(board)
+
+    def display_index_to_matrix(right, idx):
+        dr, dc = idx // cols, idx % cols
+        if right:
+            return dr + rows_per_side, (dc + inv_shift if dr < inv_rows else dc)
+        return dr, dc
+
+    inv_bad = 0
+    for (r, c), code in sorted(kc.items()):
+        if code == "KC_NO":
+            continue
+        idx = key_display_index(r, c)
+        if idx == 255:
+            continue
+        back = display_index_to_matrix(r >= rows_per_side, idx)
+        if back != (r, c):
+            print("%s: display_index_to_matrix(panel %d) gives %s, expected %s"
+                  % (board, idx, back, (r, c)))
+            inv_bad += 1
+    print("%s: inverse fold round trip, %d mismatch(es)" % (board, inv_bad))
+    bad += [None] * inv_bad
+
+    for half, r, c, pos, got in [b for b in bad if b is not None]:
         print("%s: %s half matrix (%d,%d) renders to panel %d but key_display_index() says %s"
               % (board, half, r, c, pos, got))
     print("%s: %d key(s) checked, %d mismatch(es)" % (board, len(kc), len(bad)))

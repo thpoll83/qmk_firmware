@@ -25,6 +25,7 @@
 
 #include "base/update.h" // enum refresh_mode
 #include "base/fw_staging.h" // fw_apply_verdict_t
+#include "state.h"           // poly_sync_t
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -130,6 +131,12 @@ void poly_suspend(void);
 bool display_wakeup(keyrecord_t* record);
 // Wake from idle without a keypress (HID cmd 15 "stop idle", the demo's idle segment).
 void poly_wake_from_idle(void);
+
+// The state half of leaving idle: active brightness back, DISP_IDLE off,
+// STATUS_DISP_ON on, a fresh idle-jitter session. Callers add their own timestamp
+// and refresh, which differ on purpose: a key wake splits the render across two
+// passes so the keystroke is not swallowed (display_wakeup()).
+void poly_set_awake_state(poly_sync_t* local_state);
 // Can the flashed fonts draw this language (script=false) or glyph script (true)?
 bool poly_preview_renderable(bool script, uint8_t value);
 

@@ -27,6 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MATRIX_COLS 8
 
 #define LAYOUT_TO_INDEX(row, col) ((row)*MATRIX_COLS+(col))
+// Display slots per half in DISPLAY space (some phantom: not every slot has a panel).
+#define DISP_SLOTS_PER_HALF (MATRIX_ROWS_PER_SIDE * MATRIX_COLS)
 
 #define RGBLED_NUM       72
 #define DRIVER_LED_TOTAL RGBLED_NUM

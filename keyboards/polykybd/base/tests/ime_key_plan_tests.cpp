@@ -128,13 +128,14 @@ TEST(ImeKeyJapanese, NullBeliefStartsFromOff) {
 
 // ---- Right Alt: the ANSI layouts, every OS -----------------------------------------
 
-TEST(ImeKeyRalt, HeldRightAltOffMac) {
+TEST(ImeKeyRalt, HeldRightAltOnEveryOs) {
     for (uint8_t os : kAllOs) {
-        if (os == IME_OS_MACOS) continue;
         SCOPED_TRACE(int(os));
         for (bool shift : {false, true}) {
             uint8_t mode = IME_JA_HIRAGANA;
             const ime_stroke_t s = Press(IME_FAMILY_RALT, os, shift, &mode);
+            // Right Alt on macOS too: there it is Right Option, NOT the swapped Cmd
+            // the board's Alt key gives -- Option is the macOS key that types characters.
             EXPECT_EQ(s.usage, IME_HID_RALT);
             EXPECT_EQ(s.mods, 0u);
             EXPECT_TRUE(s.hold);               // a modifier stays down with the finger
@@ -143,25 +144,32 @@ TEST(ImeKeyRalt, HeldRightAltOffMac) {
     }
 }
 
-TEST(ImeKeyRalt, FollowsTheMacSwapLikeTheBoardsAltKey) {
-    const ime_stroke_t s = Press(IME_FAMILY_RALT, IME_OS_MACOS, false, nullptr);
-    EXPECT_EQ(s.usage, IME_HID_RGUI);
-    EXPECT_TRUE(s.hold);
+TEST(ImeKeyRalt, StandsInForTheGuiKeyOnMac) {
+    // KC_RGUI is what draws ⌥ on macOS and what the swap sends as Right Alt there.
+    EXPECT_EQ(ime_key_stand_in(IME_FAMILY_RALT, IME_OS_MACOS), IME_HID_RGUI);
+    EXPECT_EQ(ime_key_stand_in(IME_FAMILY_RALT, IME_OS_WINDOWS), IME_HID_RALT);
 }
 
 // ---- the display stand-in agrees with the stroke -----------------------------------
 
-TEST(ImeKeyStandIn, NamesWhatTheKeySendsOffMac) {
+// What a basic keycode sends, macOS GUI/Alt swap included (poly_keymap.c).
+uint8_t SentAs(uint8_t usage, uint8_t os) {
+    if (os != IME_OS_MACOS) return usage;
+    if (usage == IME_HID_RALT) return IME_HID_RGUI;
+    if (usage == IME_HID_RGUI) return IME_HID_RALT;
+    return usage;
+}
+
+TEST(ImeKeyStandIn, NamesWhatTheKeySends) {
     for (uint8_t fam : {IME_FAMILY_NONE, IME_FAMILY_KOREAN, IME_FAMILY_JAPANESE, IME_FAMILY_RALT}) {
         for (uint8_t os : kAllOs) {
-            if (os == IME_OS_MACOS) continue;   // the swap is the renderer's job there
             for (bool shift : {false, true}) {
                 SCOPED_TRACE(::testing::Message() << int(fam) << "/" << int(os) << "/" << shift);
                 uint8_t mode = IME_JA_OFF;
                 const ime_stroke_t s = Press(fam, os, shift, &mode);
-                const uint8_t in = ime_key_stand_in(fam);
+                const uint8_t in = ime_key_stand_in(fam, os);
                 if (in) {
-                    EXPECT_EQ(s.usage, in);
+                    EXPECT_EQ(s.usage, SentAs(in, os));
                     EXPECT_TRUE(s.hold);
                 } else {
                     EXPECT_NE(s.usage, IME_HID_NUBS);

@@ -34,7 +34,7 @@
 #define IME_HID_LANG1  0x90u   // KC_LANGUAGE_1       한/영 (Windows, Linux), かな (macOS)
 #define IME_HID_LANG2  0x91u   // KC_LANGUAGE_2       英数 (macOS)
 #define IME_HID_RALT   0xE6u   // KC_RIGHT_ALT
-#define IME_HID_RGUI   0xE7u   // KC_RIGHT_GUI        what KC_RALT becomes under the macOS swap
+#define IME_HID_RGUI   0xE7u   // KC_RIGHT_GUI        the macOS stand-in: the swap sends it as Right Alt (Option)
 
 // Modifier bits in QMK's 8-bit mod layout (MOD_BIT(KC_LCTL) etc.).
 #define IME_MOD_LCTL   0x01u
@@ -47,9 +47,9 @@ enum ime_family {
     IME_FAMILY_JAPANESE,
     // An ANSI layout whose NUBS only repeats the Backslash key (en-US and friends):
     // the key is a second, right-hand Alt on every OS (the split72 base layouts carry
-    // Alt on the left only). It behaves exactly like KC_RALT, macOS swap included,
-    // so it is the WinCompose compose key on Windows, a Compose/AltGr candidate on
-    // Linux, and the same modifier as the board's Alt key on macOS.
+    // Alt on the left only): the WinCompose compose key on Windows, a Compose/AltGr
+    // candidate on Linux, and Right OPTION on macOS (not the swapped Cmd the board's
+    // Alt key gives there), because Option is the macOS key that types characters.
     IME_FAMILY_RALT,
 };
 
@@ -83,8 +83,10 @@ typedef struct {
 
 // The basic keycode KC_IME stands in for, or 0 when it is an input-method key of
 // its own (Korean, Japanese). The display draws that keycode's legend, and
-// ime_key_stroke() sends exactly it, so the two cannot disagree.
-uint8_t ime_key_stand_in(uint8_t family);
+// ime_key_stroke() sends exactly it -- through the macOS GUI/Alt swap on macOS, where
+// the Right Alt family stands in for KC_RGUI (drawn ⌥, sent as Right Alt = Option) --
+// so the two cannot disagree.
+uint8_t ime_key_stand_in(uint8_t family, uint8_t os);
 
 // The stroke for one press of KC_IME. `shift` is whether a Shift is held at the
 // press. For Japanese, `*ja_mode` is read (the current belief) and updated to the

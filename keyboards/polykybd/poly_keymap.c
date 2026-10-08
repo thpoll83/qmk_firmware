@@ -3865,7 +3865,9 @@ static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t
     // DISPLAY ONLY — the key event keeps KC_IME, and ime_key_stroke() sends exactly
     // ime_key_stand_in()'s key, so the legend and the action cannot disagree.
     if (kc == KC_IME) {
-        const uint8_t stand_in = ime_key_stand_in(poly_ime_family(get_local_state()->lang));
+        const poly_sync_t* st = get_local_state();
+        const uint8_t stand_in = ime_key_stand_in(poly_ime_family(st->lang),
+                                                  st->active_os & POLY_OS_VALUE_MASK);
         if (stand_in) {
             kc = stand_in;
         }

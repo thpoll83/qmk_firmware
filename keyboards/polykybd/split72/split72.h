@@ -99,5 +99,14 @@ bool key_has_display(uint8_t r, uint8_t c);
  */
 uint8_t key_display_index(uint8_t r, uint8_t c);
 
+/*
+ * The INVERSE of key_display_index(): display index `idx` on the left
+ * (`right == false`) or right half -> matrix (row, col). Undoes the right-half
+ * column fold, so this and key_display_index() are the only two places that know
+ * it. Returns false when the index maps to no matrix position (the phantom slot
+ * past the last column). tools/check_disp_index.py checks the round trip.
+ */
+bool display_index_to_matrix(bool right, uint8_t idx, uint8_t *row, uint8_t *col);
+
 uint8_t get_disp_bitmask_size(void);
 

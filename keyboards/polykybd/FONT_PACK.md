@@ -259,10 +259,16 @@ flashes all stale bundles, `flash <id>` force-flashes one).
       followed by `\x`/`\u` or a split literal** or the compiler greedily merges the
       hex into one huge codepoint. Derive buffer coords from `tools/gfx_font.py` (it
       replicates the baseline-align math + the ops, so its render matches hardware).
-  - **Pack-category headers (`symbol_fonts.h`, etc.) are NOT compiled into the
-    firmware** — only `RESIDENT_FONTS[]` + `IconsFont` are `#include`d. So adding pack
-    glyphs (⍇/⍈, 🖧) does **not** grow the image; *removing* a resident glyph shrinks
-    it. Confirmed by grep: no firmware `.c` includes `symbol_fonts.h`.
+  - **Pack-category headers (`symbol_fonts.h`, etc.) are compiled but NOT linked.**
+    `gfx_used_fonts.h` `#include`s every category header, so their arrays are compiled
+    into `poly_keymap.o`. Only `RESIDENT_FONTS[]` (with `IconsFont`) references any of
+    them, and `--gc-sections` discards the rest. The split72 link map lists
+    `.rodata.C64Keyboard_Regular_C64Petscii_10pt7bBitmaps` under "Discarded input
+    sections" (2026-10-08). So adding pack glyphs (⍇/⍈, 🖧) does **not** grow the
+    image, and *removing* a resident glyph shrinks it. ⚠️ This line used to say no
+    firmware `.c` includes `symbol_fonts.h`, which was wrong. Check the map or `nm`,
+    never the `#include`s. The reasons every font is a header anyway are in
+    `fonts/README.md`, "Why every font is a C header".
 - **Regenerate** with `FONTCONVERT=<pinned> python3 generate_fonts.py`. **Byte-repro
   gotcha:** the per-category headers embed the fontconvert *binary path* in a
   provenance comment, so run from the **same path** the committed headers used

@@ -1,7 +1,7 @@
 {
   "abi_version": 2,
-  "font_count": 160,
-  "total_size": 681944,
+  "font_count": 163,
+  "total_size": 687552,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -953,12 +953,30 @@
     },
     {
       "all_fonts_index": 182,
+      "symbol": "C64Keyboard_Regular_C64Keycap_20pt7b",
+      "first": 60032,
+      "last": 60067
+    },
+    {
+      "all_fonts_index": 183,
+      "symbol": "C64Keyboard_Regular_C64KeyLtr_16pt7b",
+      "first": 60096,
+      "last": 60121
+    },
+    {
+      "all_fonts_index": 184,
+      "symbol": "C64Keyboard_Regular_C64Petscii_10pt7b",
+      "first": 60160,
+      "last": 60211
+    },
+    {
+      "all_fonts_index": 185,
       "symbol": "NotoColorEmoji_Regular_LangFlags_20pt7b",
       "first": 57344,
       "last": 57503
     },
     {
-      "all_fonts_index": 183,
+      "all_fonts_index": 186,
       "symbol": "PolyHintIcons",
       "first": 1048832,
       "last": 1048882

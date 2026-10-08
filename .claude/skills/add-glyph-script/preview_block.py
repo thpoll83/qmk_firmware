@@ -46,7 +46,7 @@ for c in CANDIDATES:
     if os.path.exists(os.path.join(c, "gfx_font.py")):
         sys.path.insert(0, c)
         break
-from gfx_font import _parse_header, OLED_W, OLED_H, BASELINE   # noqa: E402
+from gfx_font import _parse_header, OLED_W, OLED_H             # noqa: E402
 from PIL import Image, ImageDraw                                # noqa: E402
 
 base = int(sys.argv[1], 16)
@@ -66,28 +66,34 @@ for f in rf.values():
         break
 if not font:
     sys.exit(f"no font in {header} covers 0x{base:04X}")
-bmp, glyphs, first, yadv = bm[font["bmp"]], ga[font["gly"]], font["first"], font["yAdvance"]
-base_yadv = 40   # IconsFont yAdvance (fonts[0]); gscript fonts use 40 -> neutral
+bmp, glyphs, first = bm[font["bmp"]], ga[font["gly"]], font["first"]
 
 
 def blit(cp):
+    """One keycap, drawn the way render_key() draws a glyph-script override.
+
+    Two things this has to match, and both have been got wrong here before:
+    - The bitmap is COLUMN-NATIVE (PolyColGfx): each column is (height+7)>>3 OLED
+      page bytes, bit (y & 7) of byte (y >> 3) is row y. Reading it as row-major
+      MSB-first, as this script used to, turns every glyph into diagonal noise.
+    - The glyph is CENTRED in both axes from its own pixel bbox
+      (kdisp_gfx_text_bbox in render_key), not placed on the y=23 baseline.
+    """
     g = glyphs[cp - first]
     if g["width"] == 0 and g["height"] == 0:
         return None
     img = Image.new("L", (OLED_W, OLED_H), 0)
     px = img.load()
     x0 = (OLED_W - g["width"]) // 2
-    y = BASELINE + (yadv - base_yadv)
-    bo, bit, bits = g["bitmapOffset"], 0, 0
-    for yy in range(g["height"]):
-        for xx in range(g["width"]):
-            if (bit & 7) == 0:
-                bits = bmp[bo]; bo += 1
-            if bits & 0x80:
-                vx, vy = x0 + xx, y + g["yOffset"] + yy
+    y0 = (OLED_H - g["height"]) // 2
+    bo, cb = g["bitmapOffset"], (g["height"] + 7) >> 3
+    for xx in range(g["width"]):
+        col = bo + xx * cb
+        for yy in range(g["height"]):
+            if bmp[col + (yy >> 3)] & (1 << (yy & 7)):
+                vx, vy = x0 + xx, y0 + yy
                 if 0 <= vx < OLED_W and 0 <= vy < OLED_H:
                     px[vx, vy] = 255
-            bits = (bits << 1) & 0xFF; bit += 1
     return img
 
 

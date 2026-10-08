@@ -101,9 +101,7 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
 
             // Dedup re-polls so a new image kicks the erase once (mirrors hid_fw_up).
             // Keyed on bundle too, so switching bundles re-triggers the slot erase.
-            static uint32_t s_erased_size   = 0;
-            static uint32_t s_erased_crc    = 0;
-            static uint8_t  s_erased_bundle = 0xFF;
+            static fw_up_xfer_key_t s_erased = FW_UP_XFER_KEY_NONE;
             // One-shot dedup for the "slave not ready" diagnostic below. Hoisted
             // here (not local to the telemetry block) so a fresh flash re-arms it:
             // otherwise a second flash whose slave_ack equals the first's is
@@ -112,32 +110,16 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             // the image, not the bundle: tampered/unsigned share bundle 0x7e but
             // differ in pack_crc, so new_image re-arms between them.
             static uint8_t  s_last_begin_slave_ack = 0xFF;
-            bool new_image = (pack_size != s_erased_size || pack_crc != s_erased_crc ||
-                              bundle != s_erased_bundle);
-
-            if (new_image && master_ok) {
-                s_erased_size   = pack_size;
-                s_erased_crc    = pack_crc;
-                s_erased_bundle = bundle;
+            fw_up_xfer_begin_t r;
+            const char status = fw_up_xfer_begin(&begin_msg, master_ok, &s_erased, &r);
+            const uint8_t slave_ack   = r.slave_ack;
+            const bool    slave_ok    = r.slave_ok;
+            const bool    master_done = r.master_done;
+            if (r.new_image && master_ok) {
                 s_last_begin_slave_ack = 0xFF;   // re-arm the not-ready diagnostic for this flash
-                // Drop to the base layer + refresh before the flash holds the main
-                // loop, so the user can still type plain characters meanwhile.
-                poly_prepare_for_flash();
-                // Master stages its OWN copy (deferred erase via housekeeping) and
-                // kicks the slave's deferred erase, both targeting this slot.
-                fw_staging_begin_deferred_target(pack_size, pack_crc, target);
-                // Fire-and-forget: kicks the slave's deferred erase. Readiness is
-                // polled by the slave_ack send_to_bridge below (and on re-polls).
-                send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 3);
                 uprintf("FONTPACK_BEGIN: bundle=%u size=%lu crc=0x%08lx (master+slave staging)\n",
                         bundle, (unsigned long)pack_size, (unsigned long)pack_crc);
             }
-
-            uint8_t slave_ack = master_ok
-                ? send_to_bridge(USER_SYNC_FLASH_STAGE, &begin_msg, sizeof(begin_msg), 1)
-                : SYNC_GIVEUP;   // never asked — the master rejected the pack itself
-            bool slave_ok    = (slave_ack == SYNC_ACK);
-            bool master_done = !fw_staging_erase_pending();
 
             // Telemetry for the FW-9 3rd-doom-flash hang: when OUR erase is done but
             // the slave still isn't ready, surface WHAT the slave answered. The rig
@@ -165,47 +147,24 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             }
 
             memset(data, 0, length);
-            if (!master_ok) {
-                memcpy(data, "P\x50!", 3);   // invalid size
-            } else if (slave_ok && master_done) {
-                memcpy(data, "P\x50.", 3);   // both halves erased — host may stream chunks
-            } else {
-                memcpy(data, "P\x50~", 3);   // still erasing — host re-polls
-            }
+            // '!' invalid size, '.' both halves erased (stream chunks), '~' re-poll
+            fontpack_reply_status(data, CMD_FONTPACK_BEGIN, (uint8_t)status);
             raw_hid_send(data, length);
             return true;
         }
 
         case CMD_FONTPACK_CHUNK: {   // data[2..5]=offset, data[6..]=FW_UP_CHUNK_SIZE bytes
-            uint32_t offset;
-            memcpy(&offset, &data[HID_DATA_IDX], 4);
-            const uint8_t *chunk_data = &data[HID_DATA_IDX + 4];
-
             // Relay to the slave FIRST (identity-bound reply: a chunk only counts
             // once the slave's write cursor moved PAST this offset), then write the
             // master's own copy — so a failed relay leaves both cursors in lock-step.
-            // "FONTPACK_CHUNK" tag = the same per-retry / retry-success debug
-            // logging the standalone fontpack loop had (added for link diagnostics),
-            // now produced by the shared helper.
-            bool ok = fw_up_relay_chunk_to_slave(offset, chunk_data, "FONTPACK_CHUNK");
-            if (ok) ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
-
-            memset(data, 0, length);
-            memcpy(data, ok ? "P\x51." : "P\x51!", 3);
-            if (!ok) {
-                // Resume point = lower of the two halves' cursors (both ACK dups).
-                uint32_t resume = fw_staging_next_offset();
-                memcpy(&data[3], &resume, 4);
-                uprintf("FONTPACK_CHUNK: NACK offset=%lu resume=%lu\n",
-                        (unsigned long)offset, (unsigned long)resume);
-            }
+            // A NACK reports the lower of the two halves' cursors.
+            (void)fw_up_xfer_chunk(data, length, CMD_FONTPACK_CHUNK, "FONTPACK_CHUNK", NULL);
             raw_hid_send(data, length);
             return true;
         }
 
         case CMD_FONTPACK_COMMIT: {   // slave finalize+reload, then master finalize+reload (no reboot)
-            fw_up_commit_sync_t commit_msg = { .crc32 = 0, .op = FLASH_STAGE_COMMIT };
-            uint8_t slave_ack = send_to_bridge(USER_SYNC_FLASH_STAGE, &commit_msg, sizeof(commit_msg), 10);
+            uint8_t slave_ack = fw_up_xfer_commit_slave();
             bool master_ok = fw_staging_finalize();   // FONTPACK target: verifies CRC + fontpack_reload()
             bool is_doom = s_fontpack_bundle == FONTPACK_BUNDLE_DOOMWAD ||
                            s_fontpack_bundle == FONTPACK_BUNDLE_DOOMPACK;

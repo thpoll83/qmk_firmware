@@ -576,7 +576,7 @@ static bool doom_begin(bool screensaver) {
     s_saver_start = timer_read32();
     s_esc_down    = false;
     s_last_frame  = 0;
-    set_last_update((int32_t)timer_read32());
+    update_performed();
     doom_blit_blank_all();
     if (screensaver) {
         // Phase the two halves a half-cycle apart so their blocks aren't in
@@ -641,7 +641,7 @@ static void doom_exit(void) {
     // an app switch / reconnect, so staying on the same app after the egg left the
     // keycaps blank (field). Harmless on the slave (its GET_ID is never read).
     poly_mark_fresh_boot();
-    set_last_update((int32_t)timer_read32());
+    update_performed();
     // Symmetric with doom_slave_stop(): the blitter drew untracked full-window
     // frames, so force a full-window repaint on the handback. On the master the
     // generic s_disp_render_active path already covers this, but keeping it
@@ -1701,7 +1701,7 @@ void doom_tick(void) {
         printf("doom: screensaver deadline — suspending\n");
         doom_exit();
         poly_suspend();
-        set_last_update(-1);
+        disable_idle_tracking();
         return;
     }
     if (s_screensaver && timer_elapsed32(s_saver_move_at) > DOOM_SAVER_MOVE_MS) {
@@ -1709,7 +1709,7 @@ void doom_tick(void) {
     }
     // Hold off the idle/fade/turn-off pipeline — the pulse/jitter machinery
     // must never repaint the keycaps while the blitter owns them.
-    set_last_update((int32_t)timer_read32());
+    update_performed();
     doom_mirror_master_pump(); // before the (slow) blit: keeps the tic stream fresh
     // Screensaver runs chrome-free: no ESC corner, no fire hint, no vitals HUD.
     doom_frame_pump(!s_screensaver);

@@ -88,6 +88,10 @@ void invert_display(uint8_t r, uint8_t c, bool state);
  */
 uint8_t key_display_index(uint8_t r, uint8_t c);
 
+/* Inverse of key_display_index(): display index on the left/right half -> matrix
+ * (row, col). split42 has no column fold, only the row offset. */
+bool display_index_to_matrix(bool right, uint8_t idx, uint8_t *row, uint8_t *col);
+
 const uint8_t* get_key_disp_bitmask(uint8_t index);
 
 /*

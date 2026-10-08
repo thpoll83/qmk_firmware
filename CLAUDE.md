@@ -839,6 +839,12 @@ category and composes `gfx_used_fonts.h`; `--check` flags stale headers. Full do
   wrong controls otherwise.
 - **Byte-reproducible output requires the pinned `fontconvert` build** (FreeType 2.13.3 /
   HarfBuzz 2.6.7); the distro fast-path build renders ~1 px differently on some glyphs.
+- ⚠️ **Every font is a C header and `gfx_used_fonts.h` includes them all, but only
+  `RESIDENT_FONTS[]` reaches the image** — `--gc-sections` drops the packed fonts'
+  arrays. The headers are the pack's source of truth (`fontpack.py` parses them), so
+  "is it `#include`d?" says nothing about flash: check the link map or `nm`. The reasons
+  are in [`fonts/README.md`](keyboards/polykybd/fonts/README.md) → *Why every font is a
+  C header*.
 - ⚠️ **`parse_gfx_header()` CANONICALISES every glyph's `bitmapOffset`**, so a purely
   cosmetic header change cannot reach the `.plyf` bytes. Without it, reformatting the
   tree changed four shipped bundles and would have forced a reship for zero visual

@@ -51,6 +51,20 @@ uint8_t key_display_index(uint8_t r, uint8_t c) {
     return (disp_idx < table_size) ? disp_idx : 255;
 }
 
+bool display_index_to_matrix(bool right, uint8_t idx, uint8_t *row, uint8_t *col) {
+    const uint8_t dr = (uint8_t)(idx / MATRIX_COLS), dc = (uint8_t)(idx % MATRIX_COLS);
+    if (right) {
+        // Matrix rows 5..8 (display rows 0..3) carry no col-0 key: display col dc
+        // is matrix col dc+1. The bottom row is not folded. See key_display_index().
+        *row = (uint8_t)(dr + MATRIX_ROWS_PER_SIDE);
+        *col = (dr < 4) ? (uint8_t)(dc + 1) : dc;
+    } else {
+        *row = dr;
+        *col = dc;
+    }
+    return (*row < MATRIX_ROWS) && (*col < MATRIX_COLS);
+}
+
 void invert_display(uint8_t r, uint8_t c, bool state) {
     // Bounds guard only, matching split42 — callers screen out the keys that
     // have no display via key_has_display(). This replaces an `if (disp_idx !=

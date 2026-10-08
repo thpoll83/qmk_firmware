@@ -299,7 +299,8 @@ uint32_t fw_staging_next_offset(void);
 
 // True if any chunk data has been written to staging since the last fw_staging_begin/fw_staging_begin_deferred.
 // Used by the slave handler to detect partial writes from a previous failed attempt
-// that require re-erasing staging before accepting new chunks.
+// that require re-erasing staging before accepting new chunks. Also true when a
+// finalize cut a deferred erase short: the slot is then partly erased.
 bool fw_staging_written(void);
 
 // True after a successful fw_staging_finalize(); cleared after fw_staging_apply_and_reboot() is called.

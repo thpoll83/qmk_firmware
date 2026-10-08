@@ -390,5 +390,9 @@ are derived from the stage, so the wire format is unchanged.
 - One combination the flags allowed is gone: finalize during an erase used to clear
   `s_fw_up_active` and leave `s_erase_pending` set, so housekeeping kept erasing
   sectors after finalize had released core1. Finalize now returns to IDLE, which
-  stops the erase.
+  stops the erase. Two details make that safe. `process_deferred` rechecks the
+  stage with interrupts off before each sector, so a finalize on the split thread
+  cannot land between the check and the erase. An erase that finalize cut short
+  marks the slot dirty (`fw_staging_written()`), so an identical BEGIN retry
+  re-erases instead of being told a half-erased slot is ready.
 

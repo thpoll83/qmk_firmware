@@ -91,6 +91,10 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 // The stream stage: IDLE / ERASING / RECEIVING; transitions only through
 // fw_stage_next(). Declared here because the core1 stage hold reads it.
 static fw_stage_t s_stage = FW_STAGE_IDLE;
+// A finalize that landed mid-erase stopped it, so the slot is partly erased. It
+// counts as dirty (fw_staging_written()), or an identical BEGIN retry would be
+// told the slot is clean and ready. Cleared by the next BEGIN that erases.
+static bool s_erase_cut_short = false;
 
 #ifdef USE_CORE1
 #include "polymod_core1.h"
@@ -455,6 +459,7 @@ void fw_staging_init(void) {
     s_commit_pending       = false;
     s_reboot_pending       = false;
     s_stage                = FW_STAGE_IDLE;
+    s_erase_cut_short      = false;
     // Diagnostic counters: leave the cumulative call counts in place across
     // init so a re-arm during the same power cycle is visible, but clear the
     // last-chunk fields so they only ever describe the most recent attempt.
@@ -489,9 +494,10 @@ void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t ta
         s_stage      = fw_stage_next(s_stage, FW_EV_BEGIN_REFUSED);
         return;
     }
-    s_image_size = image_size;
-    s_image_crc  = image_crc;
-    s_stage      = fw_stage_next(s_stage, FW_EV_BEGIN_SYNC);
+    s_image_size      = image_size;
+    s_image_crc       = image_crc;
+    s_stage           = fw_stage_next(s_stage, FW_EV_BEGIN_SYNC);
+    s_erase_cut_short = false;
     // Per ATTEMPT, not per boot: fw_staging_init() runs once at keyboard_post_init,
     // so clearing the verdict only there let a second flash in the same power cycle
     // inherit the first one's. That matters because the master now READS this to
@@ -565,6 +571,7 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
     s_erase_sector_count    = (target_has_header() ? 1u : 0u) + data_sectors;
     s_erase_sector_next     = 0;
     s_stage                 = fw_stage_next(s_stage, FW_EV_BEGIN_DEFERRED);
+    s_erase_cut_short       = false;
 #ifdef USE_CORE1
     // Halt core1 now and keep it halted for the entire update sequence
     // (all sector erases + all page writes + finalize).  Restarting core1
@@ -611,6 +618,14 @@ void fw_staging_process_deferred(void) {
     }
     // core1 is already halted by fw_staging_begin_deferred(); no halt/restart here.
     uint32_t irq = save_and_disable_interrupts();
+    // Recheck with interrupts off. On the slave a finalize (an early COMMIT, on the
+    // split thread) can preempt this pass after the check at the top, end the
+    // stream and release core1. With interrupts off it cannot land between this
+    // check and the erase, and while the stage reads ERASING the hold is in place.
+    if (s_stage != FW_STAGE_ERASING) {
+        restore_interrupts(irq);
+        return;
+    }
     flash_range_erase(offset, FLASH_SECTOR_SIZE);
     restore_interrupts(irq);
     s_last_sector_ms = timer_read32();
@@ -949,6 +964,9 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
     // auto-apply/reboot.  s_commit_pending stays clear — the apply is armed only by
     // the explicit FW_UP_APPLY command (fw_staging_arm_apply), phase 2 master-only.
     s_commit_pending = false;
+    if (s_stage == FW_STAGE_ERASING) {
+        s_erase_cut_short = true;
+    }
     s_stage          = fw_stage_next(s_stage, FW_EV_FINALIZED);
 #ifdef USE_CORE1
     // We are NOT rebooting here, so core1 — halted in fw_staging_begin_deferred and
@@ -982,7 +1000,7 @@ uint32_t fw_staging_next_offset(void) {
 }
 
 bool fw_staging_written(void) {
-    return s_next_offset > 0;
+    return s_next_offset > 0 || s_erase_cut_short;
 }
 
 bool fw_staging_commit_pending(void) {

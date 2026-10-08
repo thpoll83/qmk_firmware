@@ -109,11 +109,13 @@ static void doom_core1_entry(void) {
     while (true) {}
 }
 
-static void doom_engine_start(void) {
+// False only when fw_staging holds core1 (a flash began during the session's
+// load), so the caller backs out instead of running without core1.
+static bool doom_engine_start(void) {
     if (!doom_whx_present()) {
         printf("doom: no WHX at %p — running the fire demo instead\n", (void *)TINY_WAD_ADDR);
         s_engine_running = false;
-        return;
+        return true;
     }
 #ifdef POLYKYBD_DOOM_PACK
     if (!doom_pack_loaded()) {
@@ -121,13 +123,30 @@ static void doom_engine_start(void) {
         // same degradation as a missing WHX.
         printf("doom: no usable engine pack — running the fire demo instead\n");
         s_engine_running = false;
-        return;
+        return true;
     }
 #endif
     // Take core1 from the overlay-RLE service (idle in game mode — the
     // pool-writing HID commands are frozen) and give it to the game, with its
     // stack at the tail of the pool.
-    doom_core1_reset();
+    // ⚠️ NOT if fw_staging took core1 while the session was loading. The gate in
+    // doom_session_start() runs BEFORE the pack load, and the load's signature
+    // check takes long enough that the master's next doom-slot BEGIN lands
+    // inside it on the slave's split thread: the erase halts core1, and this
+    // reset then CLEARED the force-off and launched the engine from the very
+    // slot being erased. core1 faulted on its first fetch from an erased
+    // sector, at the same shallow-stack pc every time (rig, 2026-10-07:
+    // pc=0x107d4456 sp=0x20034b38, 0x88 below the pool top). Checked and reset
+    // in one critical section for the same reason as doom_engine_stop().
+    chSysLock();
+    const bool held = fw_staging_core1_held() || fw_staging_fw_up_active();
+    if (!held) doom_core1_reset();
+    chSysUnlock();
+    if (held) {
+        printf("doom: engine start refused — fw_staging holds core1\n");
+        s_engine_running = false;
+        return false;
+    }
 #ifdef POLYKYBD_DOOM_PACK
     // ⚠️ This widens the alignment requirement (uint8_t* -> uint32_t*) on a
     // CORE1 STACK POINTER, where an unaligned result is worse than the HardFault
@@ -158,8 +177,18 @@ static void doom_engine_start(void) {
                           & ~(uintptr_t)7u;
     uint32_t *stack_bottom = (uint32_t *)stack_top;
 #endif
-    multicore_launch_core1_with_stack(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES);
+    // BOUNDED: a BEGIN can still land between the unlock above and the end of
+    // the handshake, and a core1 held in reset never answers it. The unbounded
+    // launcher would then spin on this, the loop that must run the erase.
+    if (!multicore_launch_core1_with_stack_bounded(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES,
+                                                   100u * 1000u)) {
+        printf("doom: engine start: core1 launch timed out (%s)\n",
+               fw_staging_core1_held() ? "fw_staging took core1" : "core1 wedged");
+        s_engine_running = false;
+        return false;
+    }
     s_engine_running = true;
+    return true;
 }
 
 static void doom_engine_stop(void) {
@@ -175,8 +204,29 @@ static void doom_engine_stop(void) {
         // decompression degrades until reboot) but the keyboard stays alive.
         const uint32_t t0 = timer_read32();
         bool ok = false;
+        // ⚠️ NOT while fw_staging holds core1 for a flash erase. The slave stops
+        // its engine a housekeeping pass after the master clears doom_ctl, and the
+        // master sends the next doom-slot BEGIN in the same second: the slave's
+        // erase has already halted core1 and turned XIP off when this runs.
+        // doom_core1_reset() CLEARS the PSM force-off as its last step, so the
+        // relaunch below handed core1 back mid-erase and it HardFaulted on its
+        // first flash fetch (rig, 2026-10-07: slave core1 pc=0x107d4456, inside
+        // the DOOMPACK slot being erased). fw_staging relaunches the RLE service
+        // itself when the erase lets core1 go.
+        // ⚠️ The check and the reset are ONE critical section, re-taken per
+        // attempt. The halt lands on the slave's split thread (HIGHPRIO), so a
+        // BEGIN can arrive between a bare check and the reset, or during a
+        // launch handshake (up to 100 ms each): the next attempt's reset would
+        // then clear the force-off the erase set. With the lock, a halt can only
+        // land before the check (seen, no release) or after the reset (it
+        // forces core1 off again, and the next check stops the loop).
+        bool held = false;
         for (uint8_t attempt = 0; attempt < 3 && !ok; ++attempt) {
-            doom_core1_reset();
+            chSysLock();
+            held = fw_staging_core1_held();
+            if (!held) doom_core1_reset();
+            chSysUnlock();
+            if (held) break;
             ok = multicore_launch_core1_bounded(100u * 1000u);
         }
         // The engine is GONE: every standalone vpatch decoder (ESC/label
@@ -194,7 +244,8 @@ static void doom_engine_stop(void) {
         doom_pack_unload();
 #endif
         printf("doom: engine stopped, RLE core relaunch %s (%lu ms)\n",
-               ok ? "ok" : "FAILED", (unsigned long)timer_elapsed32(t0));
+               held ? "deferred to fw_staging" : ok ? "ok" : "FAILED",
+               (unsigned long)timer_elapsed32(t0));
     }
 }
 
@@ -493,7 +544,15 @@ static bool doom_session_start(enum doom_pack_entry entry) {
     doom_session_reset();        // fresh HUD + frame/stats counters per entry
     doom_mirror_session_reset(); // fresh mirror-pump handshakes per entry
     doom_shim_set_role(is_usb_host_side());
-    doom_engine_start();
+    if (!doom_engine_start()) {
+        // A flash started during the load: hand the pool back untouched by the
+        // engine and report "blocked", so the caller retries after the flash.
+#ifdef POLYKYBD_DOOM_PACK
+        doom_pack_unload();
+#endif
+        s_fb = NULL;
+        return false;
+    }
     return true;
 }
 

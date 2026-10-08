@@ -1,3 +1,18 @@
+# ---------------------------------------------------------------------------
+# Main-thread stack: 0xAE0 (2784 B), up from ChibiOS's 2 KB default (0x800).
+# ---------------------------------------------------------------------------
+# An Ed25519 check (FW-2 firmware COMMIT, FW-9 doom pack load) needs ~1.66 KB on
+# its own: crypto_eddsa_check_equation 1088 B + fe_mul 360 B + the wrappers
+# (-fstack-usage, Cortex-M0+ -Os). Under main -> keyboard_task -> housekeeping
+# -> doom_pack_load, plus an IRQ frame, that crossed 0x800: the slave HardFaulted
+# mid-verify with sp=0x200403f8, 8 bytes below the stack base 0x20040400 (rig,
+# 2026-10-07, the doom pack load raced a split IRQ).
+# The stack lives in SCRATCH_X (ram4, 4 KB) with the 1 KB exception stack and
+# ChibiOS's core0 instance `ch0` (0x120 B, .ram4_clear). 0x1000 - 0x400 - 0x120
+# = 0xAE0 fills the bank exactly, so this costs no main RAM; anything larger fails
+# the link ("region `ram4' overflowed"), which is the guard.
+USE_PROCESS_STACKSIZE = 0xAE0
+
 
 # pico-sdk host header uses K&R-style empty () prototype; suppress the warning it triggers
 CFLAGS += -Wno-strict-prototypes

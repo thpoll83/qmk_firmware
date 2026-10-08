@@ -288,3 +288,11 @@ polykybd_core1_owner_SRC := \
 polykybd_core1_owner_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# fw_stage.c is the fw_staging stream's stage machine, with no dependencies.
+polykybd_fw_stage_SRC := \
+	$(POLY_BASE_PATH)/fw_stage.c \
+	$(POLY_BASE_PATH)/tests/fw_stage_tests.cpp
+
+polykybd_fw_stage_INC := \
+	$(POLY_BASE_PATH)

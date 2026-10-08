@@ -299,7 +299,8 @@ uint32_t fw_staging_next_offset(void);
 
 // True if any chunk data has been written to staging since the last fw_staging_begin/fw_staging_begin_deferred.
 // Used by the slave handler to detect partial writes from a previous failed attempt
-// that require re-erasing staging before accepting new chunks.
+// that require re-erasing staging before accepting new chunks. Also true when a
+// finalize cut a deferred erase short: the slot is then partly erased.
 bool fw_staging_written(void);
 
 // True after a successful fw_staging_finalize(); cleared after fw_staging_apply_and_reboot() is called.
@@ -413,12 +414,3 @@ void fw_staging_note_chunk_call(uint32_t offset, uint8_t ack);
 // Record the ack the slave's COMMIT handler is about to return, so a later STATUS
 // probe can report the verdict even if that reply never reached the master.
 void fw_staging_note_commit_ack(uint8_t ack);
-
-// Diagnostic helper used while bisecting the fw_up slave-hang bug
-// (see FW_UP_DEBUG_NOTES.md): set the s_fw_up_active flag without
-// performing the staging erase / core1 halt.  Lets the master act as a
-// pure relay (master never touches its own staging) so we can isolate
-// whether the failure is in the staging code or in the split transport.
-// Must be paired with a `false` call to clear when the relay-only flow
-// ends.
-void fw_staging_set_fw_up_active(bool active);

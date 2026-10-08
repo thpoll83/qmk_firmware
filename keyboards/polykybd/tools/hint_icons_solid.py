@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Style B for the OS shortcut-hint icons: SOLID.
 
-Same 65 actions and metaphors as tools/hint_icons.py (style A, outline), drawn
+Same actions and metaphors as tools/hint_icons.py (style A, outline), drawn
 natively on the 34x34 grid with a heavier hand:
   - objects are filled silhouettes; their details are CUT OUT at 2 px
   - remaining strokes (arrows, lens, brackets, arcs) are 3-4 px

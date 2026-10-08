@@ -312,9 +312,10 @@ def _(I):
 # ===================== screens / desktops =====================
 @icon("display")
 def _(I):
-    I.screen(0, 6, 15, 21)                       # stage: this display
-    I.solid(18, 6, 33, 21, ch=2)                 # actor: the second one
-    I.F(25, 22, 26, 24); I.F(21, 25, 30, 26)
+    I.thin(0, 0, 21, 15)                         # stage: this display
+    I.d.rectangle([10, 10, 33, 27], fill=0)      # moat where the second one overlaps
+    I.solid(12, 12, 33, 27, ch=2)                # actor: the display it goes to
+    I.F(21, 28, 24, 30); I.F(16, 31, 29, 33)
 
 def screen_corner(I, sym):
     I.screen(cx=9); I.corner(sym)
@@ -437,9 +438,12 @@ def _(I):
 
 @icon("narrator")
 def _(I):
-    I.F(1, 11, 7, 22); I.d.polygon([(7, 11), (15, 3), (15, 30), (7, 22)], fill=1)
-    I.d.line([(20, 11), (22, 13), (22, 20), (20, 22)], fill=1, width=2)
-    I.d.line([(25, 6), (29, 10), (29, 23), (25, 27)], fill=1, width=2)
+    # a bare speaker read as volume; the bubble says the PC is speaking
+    I.thin(0, 1, 33, 24)                         # stage: speech
+    I.d.polygon([(5, 23), (5, 31), (12, 24)], fill=1)
+    I.F(7, 9, 11, 16); I.d.polygon([(11, 9), (17, 5), (17, 20), (11, 16)], fill=1)   # actor
+    I.d.line([(20, 9), (22, 11), (22, 14), (20, 16)], fill=1, width=2)
+    I.d.line([(24, 6), (27, 9), (27, 16), (24, 19)], fill=1, width=2)
 
 @icon("volume_mixer")
 def _(I):

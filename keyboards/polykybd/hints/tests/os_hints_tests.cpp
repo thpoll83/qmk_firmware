@@ -167,7 +167,7 @@ TEST(OsHints, AppShortcutsHaveNoBuiltInHint) {
 // last macros are the generator's first and last slot. A hint that slipped back to a
 // spaces-plus-emoji string, or a slot outside the block, fails here.
 TEST(OsHints, EveryShortcutHintIsOneIconGlyph) {
-    const uint32_t first = static_cast<uint32_t>(ICON_HINT_COPY[0]);
+    const uint32_t first = static_cast<uint32_t>(ICON_HINT_SEARCH[0]);
     const uint32_t last  = static_cast<uint32_t>(ICON_HINT_QUICK_ASSIST[0]);
     ASSERT_LT(first, last);
     size_t hits = 0;

@@ -5,7 +5,8 @@ A hint appears only while a modifier is held: it previews what is about to
 happen. So every icon is a short sentence.
 
   1. STAGE + ACTOR. The stage is what is affected (a window, a screen, a page,
-     a line of text) and is drawn LIGHT: a 2 px line. The actor is what happens
+     a line of text) and is drawn LIGHT: a 2 px line
+     (3 px for a screen or a speech bubble, whose large empty frame reads faint). The actor is what happens
      and is drawn HEAVY: solid, or 4 px. One actor per icon. Where the object
      itself is the point (settings, lock, folder) it is the actor and there is
      no stage.
@@ -55,6 +56,10 @@ class Icon:
     def thin(self, x0, y0, x1, y1, ch=2):
         self.ring(x0, y0, x1, y1, ch, w=2)
 
+    def frame(self, x0, y0, x1, y1, ch=2):
+        """The stage of a screen or speech bubble: 3 px."""
+        self.ring(x0, y0, x1, y1, ch, w=3)
+
     def heavy(self, x0, y0, x1, y1, ch=3):
         self.ring(x0, y0, x1, y1, ch, w=4)
 
@@ -94,10 +99,10 @@ class Icon:
         self.F(x0 + 2, y0 + 5, x1 - 2, y0 + 6)                    # title line
 
     def screen(self, x0=0, y0=1, x1=33, y1=22, cx=None):
-        self.thin(x0, y0, x1, y1)
+        self.frame(x0, y0, x1, y1)
         cx = (x0 + x1) // 2 if cx is None else cx
-        self.F(cx - 1, y1 + 1, cx, y1 + 3)
-        self.F(cx - 6, y1 + 4, cx + 5, y1 + 5)
+        self.F(cx - 1, y1 + 1, cx + 1, y1 + 3)
+        self.F(cx - 6, y1 + 4, cx + 6, y1 + 6)
 
     def sheet(self, x0, y0, x1, y1, f=7, heavy=False):
         pts = [(x0, y0), (x1 - f, y0), (x1, y0 + f), (x1, y1), (x0, y1)]
@@ -312,7 +317,7 @@ def _(I):
 # ===================== screens / desktops =====================
 @icon("display")
 def _(I):
-    I.thin(0, 0, 21, 15)                         # stage: this display
+    I.frame(0, 0, 21, 15)                        # stage: this display
     I.d.rectangle([10, 10, 33, 27], fill=0)      # moat where the second one overlaps
     I.solid(12, 12, 33, 27, ch=2)                # actor: the display it goes to
     I.F(21, 28, 24, 30); I.F(16, 31, 29, 33)
@@ -431,15 +436,16 @@ def _(I):
 
 @icon("speech_rec")
 def _(I):
-    I.thin(0, 1, 33, 24)
+    I.frame(0, 1, 33, 24)
     I.d.polygon([(5, 23), (5, 31), (12, 24)], fill=1)
-    for x, h in ((6, 2), (11, 5), (16, 8), (21, 4), (26, 6)):
-        I.F(x, 12 - h, x + 2, 13 + h)
+    # four 4 px bars, 3 px clear of the 3 px frame on every side
+    for x, h in ((6, 2), (12, 5), (18, 3), (24, 4)):
+        I.F(x, 12 - h, x + 3, 13 + h)
 
 @icon("narrator")
 def _(I):
     # a bare speaker read as volume; the bubble says the PC is speaking
-    I.thin(0, 1, 33, 24)                         # stage: speech
+    I.frame(0, 1, 33, 24)                         # stage: speech
     I.d.polygon([(5, 23), (5, 31), (12, 24)], fill=1)
     I.F(7, 9, 11, 16); I.d.polygon([(11, 9), (17, 5), (17, 20), (11, 16)], fill=1)   # actor
     I.d.line([(20, 9), (22, 11), (22, 14), (20, 16)], fill=1, width=2)
@@ -476,7 +482,7 @@ def _(I):
 
 @icon("feedback")
 def _(I):
-    I.thin(0, 1, 33, 24)
+    I.frame(0, 1, 33, 24)
     I.d.polygon([(5, 23), (5, 31), (12, 24)], fill=1)
     I.F(15, 5, 18, 15); I.F(15, 18, 18, 20)
 

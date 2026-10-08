@@ -1,7 +1,7 @@
 {
   "abi_version": 2,
-  "font_count": 159,
-  "total_size": 672844,
+  "font_count": 160,
+  "total_size": 681944,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -956,6 +956,12 @@
       "symbol": "NotoColorEmoji_Regular_LangFlags_20pt7b",
       "first": 57344,
       "last": 57503
+    },
+    {
+      "all_fonts_index": 183,
+      "symbol": "PolyHintIcons",
+      "first": 1048614,
+      "last": 1048664
     }
   ]
 }

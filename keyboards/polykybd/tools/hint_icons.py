@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the OS shortcut-hint icon set and write it into the resident IconsFont.
+"""Draw the OS shortcut-hint icon set and write it as a font-pack font.
 
 One family for every hint in hints/os_hints.c: a 34x34 grid, 2 px strokes,
 outline = the object, solid = the part that acts, and a solid disc in the
@@ -7,15 +7,20 @@ bottom-right corner for a modifier (+ - x arrows i refresh clock record).
 Icons are AUTHORED on a 28 grid and drawn at 34 (ScaledDraw): coordinates
 scale, strokes and thin bars keep their authored 2 px.
 
-The glyphs are appended to IconsFont (base/fonts/gfx_icons.h) at U+100026..,
-between the BEGIN/END hint-icon markers in both arrays, and the font's `last`
-is moved to match. IconsFont is g_all_fonts[0], so growing it shifts no pack
-font index and needs no font-pack reship. Each glyph carries the keycap
-placement in its own metrics (xOffset 36, top at panel row 3), so a hint
-string is the bare glyph with no leading spaces.
+The glyphs form their own GFXfont, PolyHintIcons, in base/fonts/hint_icons.h at
+U+100026.., the slots right after the resident IconsFont (which ends at
+U+100025). It is NOT compiled into the firmware: fonts.yaml lists it under
+index.pack_extra_fonts and in the `symbol` bundle, so it ships in symbol.plyf and
+costs no firmware flash. It is the last font in the global order and a pack_extra
+font, so its gidx is pinned and adding it moves no other font. With no pack
+flashed the firmware shows no hint at all (keycode_to_disp_overlay checks the
+glyph). After a change here, reship the symbol bundle with the
+reship-fontpack-bundle skill. Each glyph carries the keycap placement in its own
+metrics (xOffset 36, top at panel row 3) and the font copies IconsFont's yAdvance
+40, so a hint string is the bare glyph with no leading spaces.
 
-    python3 tools/hint_icons.py            # rewrite the block in gfx_icons.h
-    python3 tools/hint_icons.py --check    # exit 1 if the header is stale
+    python3 tools/hint_icons.py            # rewrite hint_icons.h
+    python3 tools/hint_icons.py --check    # exit 1 if a header is stale
     python3 tools/hint_icons.py --sheet out.png   # contact sheet, 4x
     python3 tools/hint_icons.py --style d  # switch IconsFont to another style
 
@@ -627,7 +632,10 @@ def render(name):
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KB = os.path.dirname(HERE)
-HEADER = os.path.join(KB, "base", "fonts", "gfx_icons.h")
+HEADER = os.path.join(KB, "base", "fonts", "gfx_icons.h")       # resident IconsFont
+HINT_HEADER = os.path.join(KB, "base", "fonts", "hint_icons.h")  # the pack font
+SYMBOL = "PolyHintIcons"
+Y_ADVANCE = 40           # IconsFont's: glyphs are baseline-aligned against fonts[0]
 
 FIRST_CP = 0x100026      # the slot after ICON_LAYER_ONESHOT
 X_OFFSET = 36            # panel column of the grid's left edge (x 36..69)
@@ -682,9 +690,13 @@ def style_render(style):
     return mod.render
 
 
-def header_style(src):
-    m = re.search(re.escape(BEGIN) + r"\s*/\* style: ([a-z]) \*/", src)
-    return m.group(1) if m else "a"
+def header_style(*texts):
+    """The style the headers carry: the hint font's tag, else a legacy block's."""
+    for t in texts:
+        m = re.search(r"/\* style: ([a-z]) \*/", t or "")
+        if m:
+            return m.group(1)
+    return "a"
 
 
 def strip_block(text):
@@ -698,14 +710,24 @@ def bitmap_len(array_body):
     return len(re.findall(r"0x[0-9A-Fa-f]{2}\b", body))
 
 
-def build(src, style="a"):
-    draw = style_render(style)
+def resident_icons(src):
+    """gfx_icons.h without any hint block: IconsFont ends right before FIRST_CP.
+
+    The hints used to be appended to IconsFont between the BEGIN/END markers;
+    stripping them (if present) keeps the resident font to the hand-drawn icons."""
     src = strip_block(src)
     bm = re.search(r"(const uint8_t IconsBitmaps\[\] PROGMEM = \{)(.*?)(\n\};)", src, re.S)
-    base = bitmap_len(bm.group(2))
+    src = re.sub(r"(\(GFXglyph \*\)IconsGlyphs,\s*0x100000,\s*)0x[0-9A-Fa-f]+",
+                 lambda m: m.group(1) + f"0x{FIRST_CP - 1:06X}", src)
+    return re.sub(r"// Approx\. \d+ bytes", f"// Approx. {bitmap_len(bm.group(2))} bytes", src)
+
+
+def build(style="a"):
+    """The text of hint_icons.h: one GFXfont holding every icon in font_names()."""
+    draw = style_render(style)
     names = font_names()
     bmp_lines, glyph_lines = [], []
-    off = base
+    off = 0
     for i, n in enumerate(names):
         cp = FIRST_CP + i
         data = glyph_bytes(draw(n))
@@ -715,16 +737,34 @@ def build(src, style="a"):
                            f"   // 0x{cp:06X} {macro(n)}")
         off += len(data)
     last = FIRST_CP + len(names) - 1
-    bmp_block = ("\n  " + BEGIN + "\n  /* style: " + style + " */\n" + "\n".join(bmp_lines)
-                 + "\n  " + END)
-    src = src[:bm.end(2)] + bmp_block + src[bm.end(2):]
-    gl = re.search(r"(const GFXglyph IconsGlyphs\[\] PROGMEM = \{)(.*?)(\n\};)", src, re.S)
-    gl_block = "\n  " + BEGIN + "\n" + "\n".join(glyph_lines) + "\n  " + END
-    src = src[:gl.end(2)] + gl_block + src[gl.end(2):]
-    src = re.sub(r"(\(GFXglyph \*\)IconsGlyphs,\s*0x100000,\s*)0x[0-9A-Fa-f]+",
-                 lambda m: m.group(1) + f"0x{last:06X}", src)
-    src = re.sub(r"// Approx\. \d+ bytes", f"// Approx. {off} bytes", src)
-    return src, names
+    return f"""// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
+#pragma once
+// GENERATED by tools/hint_icons.py, do not hand-edit.
+// The OS shortcut-hint icons (hints/os_hints.c), one {S}x{S} glyph each. A FONT-PACK
+// font: fonts.yaml lists it under index.pack_extra_fonts and in the `symbol` bundle,
+// so it ships in symbol.plyf and nothing in the firmware includes this header.
+// The range starts right after the resident IconsFont, and yAdvance {Y_ADVANCE} matches
+// IconsFont so the baseline alignment against fonts[0] moves nothing.
+// ⚠️ Bitmap labels are BLOCK comments: the host's tools/gfx_font.py strips only
+// block comments inside a bitmap.
+/* style: {style} */
+// Approx. {off} bytes
+
+const uint8_t {SYMBOL}Bitmaps[] PROGMEM = {{
+""" + "\n".join(bmp_lines) + f"""
+}};
+
+const GFXglyph {SYMBOL}Glyphs[] PROGMEM = {{
+""" + "\n".join(glyph_lines) + f"""
+}};
+
+const GFXfont {SYMBOL} PROGMEM = {{
+  (uint8_t  *){SYMBOL}Bitmaps,
+  (GFXglyph *){SYMBOL}Glyphs, 0x{FIRST_CP:06X}, 0x{last:06X},
+  {Y_ADVANCE}
+}};
+""", names
 
 
 def sheet(path, scale=4, style="a"):
@@ -743,15 +783,16 @@ def sheet(path, scale=4, style="a"):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--check", action="store_true", help="exit 1 if gfx_icons.h is stale")
+    ap.add_argument("--check", action="store_true", help="exit 1 if a generated header is stale")
     ap.add_argument("--sheet", metavar="PNG", help="write a contact sheet instead")
     ap.add_argument("--macros", action="store_true",
                     help="print the ICON_HINT_* #defines for lang/named_glyphs.h")
     ap.add_argument("--style", choices=sorted(STYLES),
                     help="icon style to write (default: the one the header carries)")
     a = ap.parse_args()
-    src = open(HEADER, encoding="utf-8").read()
-    style = a.style or header_style(src)
+    icons = open(HEADER, encoding="utf-8").read()
+    hint = open(HINT_HEADER, encoding="utf-8").read() if os.path.exists(HINT_HEADER) else ""
+    style = a.style or header_style(hint, icons)
     if a.macros:
         for i, n in enumerate(font_names()):
             print(f'#define {macro(n):<33} U"\\x{FIRST_CP + i:06X}"')
@@ -759,7 +800,8 @@ def main():
     if a.sheet:
         sheet(a.sheet, style=style)
         return 0
-    new, names = build(src, style)
+    new_icons = resident_icons(icons)
+    new_hint, names = build(style)
     if a.check:
         # The ICON_HINT_* block in named_glyphs.h is pasted from --macros, so it can
         # name the wrong icons after a reorder while every slot is still valid.
@@ -770,15 +812,19 @@ def main():
             print("lang/named_glyphs.h ICON_HINT_* block is stale: paste python3 tools/hint_icons.py --macros",
                   file=sys.stderr)
             return 1
-        if new != src:
-            print("gfx_icons.h is stale: run python3 tools/hint_icons.py", file=sys.stderr)
+        stale = [p for p, new, old in ((HEADER, new_icons, icons), (HINT_HEADER, new_hint, hint)) if new != old]
+        if stale:
+            print(f"{', '.join(os.path.basename(p) for p in stale)} stale: run python3 tools/hint_icons.py",
+                  file=sys.stderr)
             return 1
-        print(f"gfx_icons.h up to date ({len(names)} hint icons, style {style})")
+        print(f"hint_icons.h up to date ({len(names)} hint icons, style {style})")
         return 0
-    if new != src:
-        with open(HEADER, "w", encoding="utf-8", newline="\n") as fh:
-            fh.write(new)
-    print(f"{len(names)} hint icons (style {style}) at U+{FIRST_CP:06X}..U+{FIRST_CP + len(names) - 1:06X}")
+    for path, new, old in ((HEADER, new_icons, icons), (HINT_HEADER, new_hint, hint)):
+        if new != old:
+            with open(path, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(new)
+    print(f"{len(names)} hint icons (style {style}) at U+{FIRST_CP:06X}..U+{FIRST_CP + len(names) - 1:06X}"
+          f" in {os.path.basename(HINT_HEADER)}")
     return 0
 
 

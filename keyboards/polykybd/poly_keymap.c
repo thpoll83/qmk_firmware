@@ -3183,7 +3183,16 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 // function. This wrapper is the only thing that knows where the two inputs come
 // from, so the table can be exercised directly in a unit test.
 const uint32_t* keycode_to_disp_overlay(uint16_t keycode) {
-    return os_hint_for_keycode(keycode, get_local_layer()->mods, get_local_state()->active_os);
+    const uint32_t* hint = os_hint_for_keycode(keycode, get_local_layer()->mods, get_local_state()->active_os);
+    // The hint icons are a font-pack font (tools/hint_icons.py, symbol bundle). With
+    // no pack flashed their glyphs are absent, and drawing one would show the
+    // missing-glyph '!' on every key the modifier touches: show no hint instead, so
+    // the key keeps its own legend. A leading control code is a display-list op
+    // (the mod-tap badge), whose glyphs are resident.
+    if (hint != NULL && hint[0] >= 0x20 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, hint[0]) == NULL) {
+        return NULL;
+    }
+    return hint;
 }
 
 // Which of the 90 overlay keycode-slots are currently on screen, rebuilt as a side

@@ -22,16 +22,20 @@ import re, sys, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 KB   = os.path.dirname(HERE)
 ICONS = os.path.join(KB, "base", "fonts", "gfx_icons.h")
+# The OS hint icons continue the plane-16 range in a font-PACK font of their own
+# (tools/hint_icons.py). It shares the macro namespace and the slot space, so the
+# check reads both: one range, and the two fonts must not overlap.
+HINTS = os.path.join(KB, "base", "fonts", "hint_icons.h")
 NAMES = os.path.join(KB, "lang", "named_glyphs.h")
 
 PUA_FIRST, PUA_LAST = 0x100000, 0x10FFFD   # Supplementary Private Use Area-B
 
 
-def icons_font():
+def icons_font(path=ICONS, sym="Icons"):
     """-> (first, last, {cp: (w, h)}) reading the glyph table, gaps excluded."""
-    src = open(ICONS, encoding="utf-8").read()
-    m = re.search(r'IconsGlyphs\[\]\s*PROGMEM\s*=\s*\{(.*?)\n\};', src, re.S)
-    rng = re.search(r'\(GFXglyph \*\)IconsGlyphs,\s*(0x[0-9A-Fa-f]+),\s*(0x[0-9A-Fa-f]+)', src)
+    src = open(path, encoding="utf-8").read()
+    m = re.search(sym + r'Glyphs\[\]\s*PROGMEM\s*=\s*\{(.*?)\n\};', src, re.S)
+    rng = re.search(r'\(GFXglyph \*\)' + sym + r'Glyphs,\s*(0x[0-9A-Fa-f]+),\s*(0x[0-9A-Fa-f]+)', src)
     first, last = int(rng.group(1), 16), int(rng.group(2), 16)
     glyphs, cp = {}, first
     for line in m.group(1).splitlines():
@@ -58,6 +62,14 @@ def named():
 first, last, glyphs = icons_font()
 names = named()
 problems = []
+if os.path.exists(HINTS):
+    h_first, h_last, h_glyphs = icons_font(HINTS, "PolyHintIcons")
+    if h_first <= last:
+        problems.append(f"hint_icons.h starts at U+{h_first:X}, inside IconsFont (ends U+{last:X})")
+    if h_first != last + 1:
+        problems.append(f"hint_icons.h starts at U+{h_first:X}, not right after IconsFont (U+{last + 1:X})")
+    glyphs.update(h_glyphs)
+    last = max(last, h_last)
 
 if not (PUA_FIRST <= first <= last <= PUA_LAST):
     problems.append(f"IconsFont range U+{first:X}..U+{last:X} leaves plane-16 PUA "

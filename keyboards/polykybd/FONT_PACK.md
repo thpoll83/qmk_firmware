@@ -160,6 +160,20 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   (Technical/Technical2 = Ctrl/Alt/GUI/Option/Del/Backspace/Esc/PrintScreen), the
   menu icons (Settings ⚙, World 🌐), Brightness moons, Hyper/Meh, GuiKey, Util
   (screenshot/calc/my-computer/paste), EmjLayer, plus the always-resident Arrows.
+- **The OS shortcut-hint icons are a PACK font, not resident** (2026-10).
+  `tools/hint_icons.py` writes them as their own GFXfont, `PolyHintIcons`, in
+  `base/fonts/hint_icons.h` (U+100026.., right after `IconsFont`, which ends at
+  U+100025; yAdvance 40 like `IconsFont`, so the baseline alignment against
+  `fonts[0]` moves nothing). `fonts.yaml` lists it under `index.pack_extra_fonts`
+  AFTER the flags and in the `symbol` bundle's `pack_extra`, so it gets the next
+  pinned gidx (0xF001) and moving it in shifted no other font: only `symbol.plyf`
+  changed (v9 → v10, +9,100 B) and the image shrank by 9 KB. Nothing in the firmware
+  includes the header. ⚠️ **With no pack flashed the glyphs are absent**, so
+  `keycode_to_disp_overlay()` returns no hint when the first glyph is missing; the key
+  keeps its legend instead of drawing the missing-glyph `!`. After any icon change:
+  `python3 tools/hint_icons.py`, then reship `symbol` with the
+  `reship-fontpack-bundle` skill. `check_icon_slots.py` reads both headers as one
+  plane-16 range and fails if they overlap.
 - **A single bigger/custom glyph → inject it into the resident IconsFont
   (`base/fonts/gfx_icons.h`), NOT a new resident font.** `IconsFont` is `g_all_fonts[0]`
   (prepended), so *extending it with another glyph* (append bitmap bytes + a `GFXglyph`

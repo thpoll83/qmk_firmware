@@ -29,13 +29,9 @@
 #include <stddef.h>   // NULL
 
 const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t active_os_packed) {
-    switch (keycode)
-    {
-        case KC_F2: return ICON_HINT_RENAME;
-        case KC_F5: return ICON_HINT_REFRESH;
-        default: break;
-    }
-
+    // No unmodified key carries a built-in hint. F2 (rename) and F5 (refresh) did
+    // once, but they mean that only in some programs, so the app overlays that
+    // really have them draw them instead.
     const uint8_t local_mods = mods_raw;
     // OS-aware shortcut-preview icons for the OS's OWN shortcuts. App shortcuts
     // (Ctrl/Alt + letter or digit, Cmd + letter or digit on macOS) are left to the

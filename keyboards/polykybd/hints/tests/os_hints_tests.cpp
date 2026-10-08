@@ -87,6 +87,10 @@ bool is_app_chord(uint16_t kc, uint8_t mods_raw, uint8_t os_packed) {
     return app == MOD_LCTL || app == MOD_LALT || (apple && app == MOD_LGUI);
 }
 
+// F2 (rename) and F5 (refresh) mean that only in some programs, so the app
+// overlays that have them draw them, and the built-in table answers nothing.
+bool is_app_key(uint16_t kc) { return kc == KC_F2 || kc == KC_F5; }
+
 std::string describe(uint16_t kc, uint8_t mods, uint8_t os) {
     char buf[96];
     snprintf(buf, sizeof(buf), "keycode=0x%04X mods=0x%02X os=0x%02X", kc, mods, os);
@@ -104,7 +108,8 @@ std::string describe(uint16_t kc, uint8_t mods, uint8_t os) {
 // replaced every hint's CONTENT on purpose, so the comparison is on presence: a
 // restyle may change what a hint looks like, never which chord has one. Then the
 // app shortcuts (is_app_chord) were handed to the app overlay on purpose, so the
-// reference's answer is masked by that one rule and nothing else. Binary comparison cannot answer this one —
+// reference's answer is masked by that rule, and F2/F5 (handed to the app
+// overlays the same way, is_app_key) are masked too. Nothing else. Binary comparison cannot answer this one —
 // extracting a function into another TU legitimately changes codegen (inlining,
 // stack slots, switch-table numbering).
 TEST(OsHintsExtraction, ShowsAHintForExactlyThePreExtractionChords) {
@@ -121,7 +126,8 @@ TEST(OsHintsExtraction, ShowsAHintForExactlyThePreExtractionChords) {
             for (uint8_t os : os_values()) {
                 const uint32_t* got  = os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os);
                 const uint32_t* ref  = os_hint_reference(kc, static_cast<uint8_t>(mods), os);
-                const uint32_t* want = is_app_chord(kc, static_cast<uint8_t>(mods), os) ? nullptr : ref;
+                const bool app = is_app_key(kc) || is_app_chord(kc, static_cast<uint8_t>(mods), os);
+                const uint32_t* want = app ? nullptr : ref;
                 ASSERT_EQ(got != nullptr, want != nullptr) << describe(kc, mods, os);
                 if (want != nullptr) ++hits;
                 ++compared;
@@ -223,10 +229,9 @@ TEST(OsHints, LeftAndRightModifiersAreEquivalent) {
 TEST(OsHints, ExtraModifierNeverLeaksTheNarrowerHint) {
     size_t checked = 0;
     for (uint16_t kc : interesting_keycodes()) {
-        // KC_F2/KC_F5 answer before modifiers are consulted, and a mod-tap key's
-        // hint is derived from the KEYCODE's mods, not from what is held — neither
-        // is a chord, so neither is in scope for this rule.
-        if (kc == KC_F2 || kc == KC_F5 || IS_QK_MOD_TAP(kc)) continue;
+        // A mod-tap key's hint is derived from the KEYCODE's mods, not from what is
+        // held, so it is not a chord and not in scope for this rule.
+        if (IS_QK_MOD_TAP(kc)) continue;
         for (uint8_t os = 0; os < POLY_OS_COUNT; ++os) {
             for (unsigned mods = 0; mods < 16; ++mods) {
                 const uint32_t* base = os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os);
@@ -246,23 +251,24 @@ TEST(OsHints, ExtraModifierNeverLeaksTheNarrowerHint) {
     EXPECT_GT(checked, 100u) << "no widening cases exercised — the table looks unreachable";
 }
 
-// KC_F2 / KC_F5 answer before any modifier or OS is consulted, so they hold for
-// every combination. This is the one deliberate early-out in the table.
-TEST(OsHints, UnconditionalKeysAnswerRegardlessOfModsAndOs) {
+// F2 and F5 carried a built-in rename/refresh hint under every modifier and OS.
+// They are app keys now: no modifier and no OS brings a hint back.
+TEST(OsHints, F2AndF5HaveNoBuiltInHint) {
     for (unsigned mods = 0; mods < 256; ++mods) {
         for (uint8_t os = 0; os < POLY_OS_COUNT; ++os) {
-            EXPECT_NE(os_hint_for_keycode(KC_F2, static_cast<uint8_t>(mods), os), nullptr);
-            EXPECT_NE(os_hint_for_keycode(KC_F5, static_cast<uint8_t>(mods), os), nullptr);
+            EXPECT_EQ(os_hint_for_keycode(KC_F2, static_cast<uint8_t>(mods), os), nullptr)
+                << describe(KC_F2, static_cast<uint8_t>(mods), os);
+            EXPECT_EQ(os_hint_for_keycode(KC_F5, static_cast<uint8_t>(mods), os), nullptr)
+                << describe(KC_F5, static_cast<uint8_t>(mods), os);
         }
     }
 }
 
-// With no modifiers held there is nothing to preview, except the two above.
+// With no modifiers held there is nothing to preview.
 TEST(OsHints, NoModifiersMeansNoHint) {
     for (uint16_t kc : interesting_keycodes()) {
-        // The unconditional keys answer before modifiers are read, and a mod-tap's
-        // hint comes from the keycode rather than from what is held.
-        if (kc == KC_F2 || kc == KC_F5 || IS_QK_MOD_TAP(kc)) continue;
+        // A mod-tap's hint comes from the keycode rather than from what is held.
+        if (IS_QK_MOD_TAP(kc)) continue;
         for (uint8_t os = 0; os < POLY_OS_COUNT; ++os) {
             EXPECT_EQ(os_hint_for_keycode(kc, 0, os), nullptr) << describe(kc, 0, os);
         }

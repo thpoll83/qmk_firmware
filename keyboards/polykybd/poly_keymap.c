@@ -162,6 +162,34 @@ void rgb_matrix_update_pwm_buffers(void);
 // USER_SYNC_POLY_DATA send site).
 #define PERIODIC_SYNC_RETRIES 3
 
+// The Intl latin table (picks + remap assignments) has no local/global diff
+// behind it, so a lost USER_SYNC_LATIN_EX_DATA frame would leave the slave
+// drawing stale variations until the next pick. Like the MRU push, it carries
+// its own pending flag: latin_publish() tries at once, and
+// sync_and_refresh_displays() re-sends until the slave acks.
+static bool     s_latin_sync_pending = false;
+static uint32_t s_latin_sync_last_try;
+
+// A re-send costs up to `retries` blocking UART attempts on the main loop, so a link
+// that answers but keeps failing must not be retried on every housekeeping pass.
+#define LATIN_SYNC_RETRY_MS 500
+
+static void latin_sync_send(uint8_t retries) {
+    const latin_sync_t* table = get_global_latin_table();
+    s_latin_sync_last_try = timer_read32();
+    uint8_t ack = send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), retries);
+    if (sync_succeeded(ack)) {
+        s_latin_sync_pending = false;
+    } else {
+        uprintf("USER_SYNC_LATIN_EX_DATA failed to send (ack=0x%02x), will retry\n", ack);
+    }
+}
+
+static void latin_publish(void) {
+    s_latin_sync_pending = true;
+    latin_sync_send(10);
+}
+
 /*[[[cog
 import cog
 import os
@@ -877,6 +905,10 @@ void sync_and_refresh_displays(void) {
             } else {
                 uprint("USER_SYNC_MRU_DATA failed to send\n");
             }
+        }
+
+        if (s_latin_sync_pending && timer_elapsed32(s_latin_sync_last_try) >= LATIN_SYNC_RETRY_MS) {
+            latin_sync_send(PERIODIC_SYNC_RETRIES);
         }
 
         access_local_layer()->led_state = host_keyboard_led_state();
@@ -2665,7 +2697,7 @@ static void latin_remap_apply(uint8_t slot, uint8_t letter) {
     // rather than leaving a stale index for latin_variation() to fall back from.
     latin_pick_set(table->ex, latin_pick_field((int8_t)slot, true),  0);
     latin_pick_set(table->ex, latin_pick_field((int8_t)slot, false), 0);
-    send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), 10);
+    latin_publish();
     mark_latin_dirty();
 }
 
@@ -2689,7 +2721,7 @@ static void latin_remap_reset_all(void) {
         }
     }
     memset(table->assign, LATIN_ASSIGN_FILL, sizeof(table->assign));
-    send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), 10);
+    latin_publish();
     mark_latin_dirty();
     request_disp_refresh();
 }
@@ -6829,7 +6861,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                         // the pick of whichever key owns that letter.
                         const int8_t pick_target = latin_target_slot(last_latin_keycode);
                         latin_pick_set(global_latin_table->ex, latin_pick_field(pick_target, pick_upper), (uint8_t)pick_idx);
-                        send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)global_latin_table, sizeof(*global_latin_table), 10);
+                        latin_publish();
 
                         // "or an alternative character has been selected"
                         if(s_picker_latched) {

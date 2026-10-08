@@ -164,7 +164,7 @@ const poly_last_t* get_global_last_latin(void) {
     return &g_last;
 }
 
-poly_last_t* access_global_last_latin_keycode(void) {
+poly_last_t* access_global_last_latin(void) {
     return &g_last;
 }
 

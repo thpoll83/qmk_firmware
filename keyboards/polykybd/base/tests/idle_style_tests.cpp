@@ -19,6 +19,15 @@ TEST(IdleStyleTest, EveryStyleHasANameAndTheNamesAreTheConsoleOnes) {
     EXPECT_STREQ(idle_style_desc(IDLE_STYLE_EDEN)->name, "eden");
 }
 
+// A row missing from the table reads as zeros, and idle_style_desc() would hand
+// back the pulse for it, so a forgotten style would idle as a pulse in silence.
+TEST(IdleStyleTest, EveryStyleHasARow) {
+    for (uint8_t s = 0; s < IDLE_STYLE_COUNT; ++s) {
+        if (s == IDLE_STYLE_PULSE) continue;
+        EXPECT_NE(idle_style_desc(s), idle_style_desc(IDLE_STYLE_PULSE)) << "style " << int(s) << " has no row";
+    }
+}
+
 TEST(IdleStyleTest, AnUnknownStyleBehavesLikeThePulse) {
     EXPECT_EQ(idle_style_desc(IDLE_STYLE_COUNT), idle_style_desc(IDLE_STYLE_PULSE));
     EXPECT_EQ(idle_style_desc(0xFF), idle_style_desc(IDLE_STYLE_PULSE));

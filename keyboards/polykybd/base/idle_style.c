@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <stddef.h>
 
-static const idle_style_desc_t s_styles[IDLE_STYLE_COUNT] = {
+static const idle_style_desc_t s_styles[] = {
     [IDLE_STYLE_PULSE]  = {.name = "pulse", .enter = IDLE_ENTER_PULSE, .in_key_cycle = true},
     [IDLE_STYLE_JITTER] = {.name = "jitter", .enter = IDLE_ENTER_PULSE, .jitter = true, .in_key_cycle = true},
     // Not in the key cycle: a settings key that cycled into the doom easter egg
@@ -14,6 +14,9 @@ static const idle_style_desc_t s_styles[IDLE_STYLE_COUNT] = {
     [IDLE_STYLE_EDEN]  = {.name = "eden", .enter = IDLE_ENTER_STEADY, .steady_contrast = EDEN_IDLE_BRIGHTNESS, .owns_keycaps = true, .in_key_cycle = true},
 };
 
+// Unsized on purpose: a style appended to the enum without a row here leaves the
+// array one short, and this fails. A gap in the middle is caught by the test
+// EveryStyleHasARow (make test:polykybd_idle_style).
 static_assert(sizeof(s_styles) / sizeof(s_styles[0]) == IDLE_STYLE_COUNT, "one row per idle style");
 
 const idle_style_desc_t *idle_style_desc(uint8_t style) {

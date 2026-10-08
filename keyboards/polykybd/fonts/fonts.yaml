@@ -105,7 +105,7 @@ index:
   # (gen-lang-fonts.sh, codepoints 0xE000+idx) ship here instead of resident, so
   # the ~63 KB flag font leaves the firmware image; render_lang_flag_key() draws
   # them via g_all_fonts and falls back to the xx-YY label when no pack is present.
-  # The OS shortcut-hint icons (tools/hint_icons.py, U+100026..) ship here too, in the
+  # The OS shortcut-hint icons (tools/hint_icons.py, U+100100..) ship here too, in the
   # symbol bundle: ~8.7 KB that left the firmware image. keycode_to_disp_overlay()
   # shows no hint when the glyph is absent, so a board with no pack keeps its legends.
   # Appended AFTER the flags so the flags' pinned pack_extra gidx does not move.

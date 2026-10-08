@@ -8,8 +8,8 @@ Icons are AUTHORED on a 28 grid and drawn at 34 (ScaledDraw): coordinates
 scale, strokes and thin bars keep their authored 2 px.
 
 The glyphs form their own GFXfont, PolyHintIcons, in base/fonts/hint_icons.h at
-U+100026.., the slots right after the resident IconsFont (which ends at
-U+100025). It is NOT compiled into the firmware: fonts.yaml lists it under
+U+100100.., a block of their own in plane-16 private use. The resident IconsFont
+starts at U+100000, so it can grow by up to 256 icons before reaching it. It is NOT compiled into the firmware: fonts.yaml lists it under
 index.pack_extra_fonts and in the `symbol` bundle, so it ships in symbol.plyf and
 costs no firmware flash. It is the last font in the global order and a pack_extra
 font, so its gidx is pinned and adding it moves no other font. With no pack
@@ -637,7 +637,7 @@ HINT_HEADER = os.path.join(KB, "base", "fonts", "hint_icons.h")  # the pack font
 SYMBOL = "PolyHintIcons"
 Y_ADVANCE = 40           # IconsFont's: glyphs are baseline-aligned against fonts[0]
 
-FIRST_CP = 0x100026      # the slot after ICON_LAYER_ONESHOT
+FIRST_CP = 0x100100      # own block; IconsFont (U+100000..) grows up to it
 X_OFFSET = 36            # panel column of the grid's left edge (x 36..69)
 TOP_ROW = 3              # panel row of the grid's top edge (y 3..36)
 BASELINE = 23            # os hints are drawn with the cursor at y 23
@@ -711,14 +711,19 @@ def bitmap_len(array_body):
 
 
 def resident_icons(src):
-    """gfx_icons.h without any hint block: IconsFont ends right before FIRST_CP.
+    """gfx_icons.h without any hint block: IconsFont ends at its last own glyph.
 
     The hints used to be appended to IconsFont between the BEGIN/END markers;
-    stripping them (if present) keeps the resident font to the hand-drawn icons."""
+    stripping them (if present) keeps the resident font to the hand-drawn icons,
+    and `last` is set from the glyph records that remain."""
     src = strip_block(src)
     bm = re.search(r"(const uint8_t IconsBitmaps\[\] PROGMEM = \{)(.*?)(\n\};)", src, re.S)
+    gl = re.search(r"const GFXglyph IconsGlyphs\[\] PROGMEM = \{(.*?)\n\};", src, re.S)
+    records = len(re.findall(r"^\s*\{\s*\d+\s*,", gl.group(1), re.M))
+    last = 0x100000 + records - 1
+    assert last < FIRST_CP, f"IconsFont (U+100000..U+{last:X}) runs into the hint block at U+{FIRST_CP:X}"
     src = re.sub(r"(\(GFXglyph \*\)IconsGlyphs,\s*0x100000,\s*)0x[0-9A-Fa-f]+",
-                 lambda m: m.group(1) + f"0x{FIRST_CP - 1:06X}", src)
+                 lambda m: m.group(1) + f"0x{last:06X}", src)
     return re.sub(r"// Approx\. \d+ bytes", f"// Approx. {bitmap_len(bm.group(2))} bytes", src)
 
 
@@ -744,7 +749,8 @@ def build(style="a"):
 // The OS shortcut-hint icons (hints/os_hints.c), one {S}x{S} glyph each. A FONT-PACK
 // font: fonts.yaml lists it under index.pack_extra_fonts and in the `symbol` bundle,
 // so it ships in symbol.plyf and nothing in the firmware includes this header.
-// The range starts right after the resident IconsFont, and yAdvance {Y_ADVANCE} matches
+// The range is a block of its own, clear of the resident IconsFont (U+100000..),
+// and yAdvance {Y_ADVANCE} matches
 // IconsFont so the baseline alignment against fonts[0] moves nothing.
 // ⚠️ Bitmap labels are BLOCK comments: the host's tools/gfx_font.py strips only
 // block comments inside a bitmap.

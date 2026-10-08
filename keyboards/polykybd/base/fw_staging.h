@@ -108,17 +108,9 @@ bool fw_staging_refused_unsigned(void);
 
 // Must be called once before any other fw_staging_* function.
 
-// Hold core1 out of flash for a caller doing its own flash work (EEPROM flush).
-// See the comment on the definition: QMK's wear-levelling backing store erases with
-// core1 running, which is only survivable while the window stays small.
-void fw_staging_core1_lockout_begin(void);
-void fw_staging_core1_lockout_end(void);
-
-// True while fw_staging holds core1 in PSM reset (a deferred erase, a page write, the
-// lockout above). Anything that would release or relaunch core1 in that window must
-// leave it alone: the erase turns XIP off, and a core1 fetching from flash then
-// HardFaults. fw_staging relaunches the RLE service itself when it lets core1 go.
-bool fw_staging_core1_held(void);
+// core1 holds for a caller doing its own flash work (an EEPROM flush, a crash
+// record, the hand stamp) are core1_hold()/core1_release() in core1_owner.h. They
+// nest with fw_staging's own hold, so none of them can release core1 mid-erase.
 
 // Why an apply was refused. The two failures are genuinely different events and the
 // user can act on the difference: NO_IMAGE means nothing ever reached the staging

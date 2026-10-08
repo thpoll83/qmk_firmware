@@ -278,3 +278,13 @@ polykybd_fw_sig_policy_SRC := \
 
 polykybd_fw_sig_policy_INC := \
 	$(POLY_BASE_PATH)
+
+# core1_owner.c is pure: the RP2040/ChibiOS calls sit behind the core1_hw_* seam,
+# which the suite fakes, so it links with just the tests.
+polykybd_core1_owner_SRC := \
+	$(POLY_BASE_PATH)/core1_owner.c \
+	$(POLY_BASE_PATH)/tests/core1_owner_tests.cpp
+
+polykybd_core1_owner_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

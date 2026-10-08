@@ -89,6 +89,7 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 // ---------------------------------------------------------------------------
 #ifdef USE_CORE1
 #include "polymod_core1.h"
+#include "core1_owner.h"
 
 #define _PSM_WDSEL     (*(volatile uint32_t *)(0x40010000u + 0x08u))
 #define _WD_CTRL       (*(volatile uint32_t *)(0x40058000u + 0x00u))
@@ -160,34 +161,25 @@ static inline uint32_t __attribute__((always_inline)) psm_wait_proc1_off(void) {
     return spins;
 }
 
-// True while this module holds a PSM reset on core1.
-static bool s_core1_halted = false;
+// fw_staging's own long hold on core1, from BEGIN until the erase completes or the
+// stream is finalized. A flag rather than a bare core1_hold() per call because
+// BEGIN can arrive again for the same image (the re-erase of a dirty slot): a
+// second hold without a second release would keep core1 down for good. Other
+// holders (the EEPROM flush, the crash record, the hand stamp) nest on top
+// through core1_owner's count, so none of them can release this one.
+static bool s_stage_hold = false;
 
-static void fw_staging_halt_core1(void) {
-    _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
-    __asm volatile ("dsb" ::: "memory");
-    // ...and then WAIT for it. The DSB orders the store; only PSM->DONE says the
-    // reset has landed and core1 has stopped fetching from XIP. See psm_wait_proc1_off().
-    (void)psm_wait_proc1_off();
-    s_core1_halted = true;
+static void stage_hold_take(void) {
+    if (!s_stage_hold) {
+        core1_hold();
+        s_stage_hold = true;
+    }
 }
 
-static void fw_staging_restart_core1(void) {
-    _PSM_FRCE_OFF &= ~_PSM_PROC1_BIT;
-    s_core1_halted = false;
-    // BOUNDED relaunch, NOT the unbounded multicore_launch_core1(). core0 can
-    // reach here with core1's FIFO launch handshake left desynced by a prior Doom
-    // engine launch/stop cycle (doom_engine_stop uses the bounded launcher for the
-    // same reason). The unbounded handshake then blocks FOREVER, freezing this
-    // half — on the SLAVE that means it never answers the master's FONTPACK BEGIN
-    // re-poll, so the master polls '~' forever and the flash hangs. Seen on the
-    // 3rd consecutive doom-slot flash of the FW-9 rig set (accept/tampered/unsigned),
-    // once two doom load+teardown cycles had degraded core1. Bounded: a still-wedged
-    // core1 leaves the RLE service down until the next reboot (the identical worst
-    // case doom_engine_stop already accepts) but keeps THIS half's main loop alive,
-    // so the erase's cleared s_erase_pending is actually observable to the master.
-    if (!multicore_launch_core1_bounded(100u * 1000u)) {
-        uprintf("fw_staging: core1 relaunch timed out — RLE service down until reboot\n");
+static void stage_hold_drop(void) {
+    if (s_stage_hold) {
+        s_stage_hold = false;
+        core1_release();
     }
 }
 #endif
@@ -287,20 +279,18 @@ static uint8_t  s_last_chunk_ack;
 static uint8_t  s_last_commit_ack;   // ack the slave's COMMIT handler last returned
 
 // ---------------------------------------------------------------------------
-// flash_range_program wrapped in the IRQ-disable + (conditional) core1-halt guard
-// the bootrom flash ops require.  s_core1_halted lets a caller that has already
-// halted core1 (e.g. inside a wider erase) reuse it without a redundant restart.
+// flash_range_program wrapped in the IRQ-disable + core1 hold the bootrom flash ops
+// require. The hold nests: inside a wider erase hold it releases nothing.
 // ---------------------------------------------------------------------------
 static void flash_program_guarded(uint32_t flash_offs, const uint8_t *buf, uint32_t size) {
 #ifdef USE_CORE1
-    bool already_halted = s_core1_halted;
-    if (!already_halted) fw_staging_halt_core1();
+    core1_hold();
 #endif
     uint32_t irq = save_and_disable_interrupts();
     flash_range_program(flash_offs, buf, size);
     restore_interrupts(irq);
 #ifdef USE_CORE1
-    if (!already_halted) fw_staging_restart_core1();
+    core1_release();
 #endif
 }
 
@@ -397,38 +387,6 @@ bool fw_staging_apply_breadcrumb(uint32_t *last_sector, bool *completed, uint32_
     return true;
 }
 
-// Public core1 lockout for a caller that is about to do its OWN flash work.
-//
-// The RP2040 hazard is not specific to this file: while core0 has the QSPI out of
-// XIP mode, core1 must not fetch an instruction from flash or the bus stalls and the
-// operation never completes. fw_staging halts core1 around every write it makes --
-// but QMK's wear-levelling backing store (platforms/chibios/drivers/wear_leveling/
-// wear_leveling_rp2040_flash.c) calls flash_range_erase() with core1 running and free
-// to be anywhere. Normally the window is small enough to get away with; on the apply
-// path save_all_dirty() can force a consolidation at the exact moment core1 has just
-// been relaunched after the staging erase, which is where it stops being survivable.
-//
-// Wrapping the whole flush is the fix, and it is a lockout rather than a fw_staging
-// internal because the caller (poly_keymap's apply block) owns the sequencing.
-void fw_staging_core1_lockout_begin(void) {
-#ifdef USE_CORE1
-    if (!s_core1_halted) fw_staging_halt_core1();
-#endif
-}
-
-void fw_staging_core1_lockout_end(void) {
-#ifdef USE_CORE1
-    if (s_core1_halted) fw_staging_restart_core1();
-#endif
-}
-
-bool fw_staging_core1_held(void) {
-#ifdef USE_CORE1
-    return s_core1_halted;
-#else
-    return false;
-#endif
-}
 
 void fw_staging_init(void) {
     for (uint32_t i = 0; i < FW_APPLY_LOG_PAGES; i++) {
@@ -481,9 +439,6 @@ void fw_staging_init(void) {
     s_last_chunk_offset    = 0;
     s_last_chunk_ack       = 0;
     s_last_commit_ack      = 0;
-#ifdef USE_CORE1
-    s_core1_halted   = false;
-#endif
 }
 
 // Synchronous begin: erases staging sector-by-sector with interrupts briefly
@@ -530,7 +485,7 @@ void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t ta
     uint32_t irq;
 
 #ifdef USE_CORE1
-    fw_staging_halt_core1();
+    core1_hold();
 #endif
     if (target_has_header()) {
         irq = save_and_disable_interrupts();
@@ -544,7 +499,7 @@ void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t ta
         restore_interrupts(irq);
     }
 #ifdef USE_CORE1
-    fw_staging_restart_core1();
+    core1_release();
 #endif
 }
 
@@ -596,7 +551,7 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
     // on every restart; keeping it halted throughout eliminates that risk.
     // On the success path the chip hard-resets, so core1 is never restarted.
     // On the failure path fw_staging_finalize() restarts core1 explicitly.
-    fw_staging_halt_core1();
+    stage_hold_take();
 #endif
 }
 
@@ -655,7 +610,7 @@ void fw_staging_process_deferred(void) {
         // explain it).  If chunk 0 now ACKs and the lock instead moves to the
         // first page flush (the chunk at offset 224), the per-flush halt/restart
         // cycle is the culprit -> cooperative core1 park.  See CLAUDE.md fw_up.
-        if (s_core1_halted) fw_staging_restart_core1();
+        stage_hold_drop();
         uprintf("fw_staging_process_deferred: erase complete (%lu sectors), core1 restarted\n", s_erase_sector_count);
 #else
         uprintf("fw_staging_process_deferred: erase complete (%lu sectors)\n", s_erase_sector_count);
@@ -978,7 +933,7 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
     // We are NOT rebooting here, so core1 — halted in fw_staging_begin_deferred and
     // kept halted through every chunk flush — must be restarted, or the half resumes
     // normal operation with a dead core1 (no RLE overlay decompression).
-    if (s_core1_halted) fw_staging_restart_core1();
+    stage_hold_drop();
 #endif
     return ok;
 }
@@ -1126,8 +1081,8 @@ static void __no_inline_not_in_flash_func(fw_staging_do_apply)(uint32_t image_si
     // Halt core1 via PSM reset.  _PSM_FRCE_OFF / _PSM_PROC1_BIT are #defines
     // (pure preprocessor text substitution → an inlined register write, no flash
     // fetch), so this is byte-for-byte identical machine code to the raw literal
-    // it replaces — same as fw_staging_halt_core1(), inlined here for the
-    // not-in-flash apply path.
+    // it replaces — the same steps as core1_hw_force_off(), inlined here for the
+    // not-in-flash apply path, which must not call into flash or take a lock.
     _PSM_FRCE_OFF |= _PSM_PROC1_BIT;
     __asm volatile ("dsb" ::: "memory");
     // The DSB only orders the store. Wait for the reset to actually land before any

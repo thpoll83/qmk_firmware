@@ -41,6 +41,7 @@
 #endif
 #include "split_fw_up.h"
 #include "base/fw_staging.h"
+#include "base/core1_owner.h"
 #include "uni.h"
 #include "side.h"
 #include "fill_overlay.h"
@@ -825,9 +826,9 @@ static void poly_tutorial_finish_if_done(void) {
             // The overlay decompressor is free to be anywhere in flash, and the
             // refresh just requested above is exactly what puts it there. Same
             // lockout the fw-apply flush takes, and for the same hazard.
-            fw_staging_core1_lockout_begin();
+            core1_hold();
             mark_boot_intro_done();
-            fw_staging_core1_lockout_end();
+            core1_release();
             uprintf("Tutorial %s; displays handed back\n", was_skipped ? "skipped" : "done");
         }
 }
@@ -1443,9 +1444,9 @@ void housekeeping_task_user(void) {
                 // it, so core0 would hang before the apply could even start. The
                 // window is a pass or two; the failure is permanent. Holding it here
                 // bought nothing either: fw_staging_do_apply() halts core1 itself.
-                fw_staging_core1_lockout_begin();
+                core1_hold();
                 save_all_dirty();
-                fw_staging_core1_lockout_end();
+                core1_release();
                 uprintf("APPLY 2/4: EEPROM flushed with core1 held off\n");
                 apply_step = 2;
                 return;
@@ -1510,10 +1511,11 @@ void housekeeping_task_user(void) {
                 // Only reached when the apply was refused (no valid staged image /
                 // failed flash CRC); it disarms itself there and the board keeps
                 // running. Stage 2 already handed core1 back, and the refusal checks
-                // sit above the PSM halt inside do_apply, so this is a no-op today --
-                // kept because it is the one path where a future halt-then-refuse
-                // would otherwise leave the RLE service down for good.
-                fw_staging_core1_lockout_end();
+                // sit above the PSM halt inside do_apply, so this relaunches a service
+                // that is already running today -- kept because it is the one path
+                // where a future halt-then-refuse would otherwise leave the RLE
+                // service down for good. It respects any outstanding hold.
+                (void)core1_restore_service();
                 // ...and it is now also the path that has to take the screen back. The
                 // board is alive and the panel is showing a restart that is not coming,
                 // with the keycaps still blanked from stage 0.
@@ -1743,9 +1745,9 @@ void housekeeping_task_user(void) {
                     tutorial_start(timer_read32());
                     poly_tutorial_publish_active();
                     if (!tutorial_active()) {                        // nothing to teach
-                        fw_staging_core1_lockout_begin();            // see the teardown
+                        core1_hold();            // see the teardown
                         mark_boot_intro_done();
-                        fw_staging_core1_lockout_end();
+                        core1_release();
                     }
                 }
                 // Eden ran at full brightness; restore the user's normal
@@ -6084,9 +6086,9 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             // anim_nonce when it starts the intro, and that replays Eden on a slave whose
             // own marker is already consumed (split_sync.c, the anim_replay guard).
             // ⚠️ EEPROM writes run with the QSPI out of XIP; halt core1 across it.
-            fw_staging_core1_lockout_begin();
+            core1_hold();
             rearm_boot_intro();
-            fw_staging_core1_lockout_end();
+            core1_release();
             arm_tutorial_after_intro();
             // Trigger the startup ("Eden") animation NOW on this (master) half and bump
             // the synced nonce so the slave plays in lockstep (the nonce is delivered by

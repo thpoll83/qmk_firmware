@@ -70,11 +70,16 @@ static bool launch_service_claimed(const char *what) {
             }
             return ok;
         }
+        // Out of attempts: leave core1 as the last handshake left it. Claiming
+        // here would reset a service that handshake may just have started, and
+        // nothing would launch it again.
+        if (attempt + 1u == 3u) {
+            break;
+        }
         if (!claim_launch()) {
             return false; // held again, or another launch runs: theirs
         }
     }
-    (void)end_launch(false, CORE1_TENANT_SERVICE);
     core1_hw_report(what);
     return false;
 }

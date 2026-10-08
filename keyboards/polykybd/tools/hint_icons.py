@@ -761,6 +761,15 @@ def main():
         return 0
     new, names = build(src, style)
     if a.check:
+        # The ICON_HINT_* block in named_glyphs.h is pasted from --macros, so it can
+        # name the wrong icons after a reorder while every slot is still valid.
+        ng = open(os.path.join(KB, "lang", "named_glyphs.h"), encoding="utf-8").read()
+        have = [(m, int(c, 16)) for m, c in re.findall(r'#define\s+(ICON_HINT_\w+)\s+U"\\x([0-9A-Fa-f]+)"', ng)]
+        want = [(macro(n), FIRST_CP + i) for i, n in enumerate(names)]
+        if have != want:
+            print("lang/named_glyphs.h ICON_HINT_* block is stale: paste python3 tools/hint_icons.py --macros",
+                  file=sys.stderr)
+            return 1
         if new != src:
             print("gfx_icons.h is stale: run python3 tools/hint_icons.py", file=sys.stderr)
             return 1

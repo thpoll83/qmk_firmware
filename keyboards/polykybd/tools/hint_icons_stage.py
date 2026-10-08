@@ -349,7 +349,7 @@ def _(I):
 
 @icon("network")
 def _(I):
-    I.F(16, 9, 17, 15); I.F(5, 14, 28, 15); I.F(5, 14, 6, 22); I.F(27, 14, 28, 22)
+    I.F(15, 9, 17, 14); I.F(4, 14, 29, 16); I.F(4, 14, 6, 22); I.F(27, 14, 29, 22)
     I.solid(10, 0, 23, 9); I.solid(0, 22, 11, 33); I.solid(22, 22, 33, 33)
 
 # ===================== capture =====================
@@ -366,8 +366,8 @@ def _(I):
 @icon("text_recog")
 def _(I):
     for x, y, sx, sy in ((0, 0, 1, 1), (33, 0, -1, 1), (0, 33, 1, -1), (33, 33, -1, -1)):
-        I.F(min(x, x + sx * 7), min(y, y + sy), max(x, x + sx * 7), max(y, y + sy))
-        I.F(min(x, x + sx), min(y, y + sy * 7), max(x, x + sx), max(y, y + sy * 7))
+        I.F(min(x, x + sx * 7), min(y, y + 2 * sy), max(x, x + sx * 7), max(y, y + 2 * sy))
+        I.F(min(x, x + 2 * sx), min(y, y + sy * 7), max(x, x + 2 * sx), max(y, y + sy * 7))
     I.F(8, 8, 25, 11); I.F(15, 8, 18, 26)
 
 # ===================== system =====================
@@ -454,7 +454,7 @@ def _(I):
 @icon("volume_mixer")
 def _(I):
     for x, k in ((5, 19), (16, 5), (27, 12)):
-        I.F(x, 0, x + 1, 33)
+        I.F(x - 1, 0, x + 1, 33)
         I.solid(x - 4, k, x + 5, k + 8, ch=2)
 
 @icon("emoji")

@@ -421,6 +421,14 @@ void fw_staging_core1_lockout_end(void) {
 #endif
 }
 
+bool fw_staging_core1_held(void) {
+#ifdef USE_CORE1
+    return s_core1_halted;
+#else
+    return false;
+#endif
+}
+
 void fw_staging_init(void) {
     for (uint32_t i = 0; i < FW_APPLY_LOG_PAGES; i++) {
         const uint32_t w = *(const uint32_t *)(XIP_BASE + FW_APPLY_LOG_OFFSET + i * FLASH_PAGE_SIZE);

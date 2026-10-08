@@ -88,9 +88,9 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 // so core1 never needs to be restarted.  On the failure path (CRC mismatch),
 // fw_staging_finalize() restarts core1 explicitly.
 // ---------------------------------------------------------------------------
-// Deferred erase in progress (set by a deferred BEGIN, cleared when the last
-// sector is erased). Declared here because the core1 stage hold reads it.
-static bool s_erase_pending;
+// The stream stage: IDLE / ERASING / RECEIVING; transitions only through
+// fw_stage_next(). Declared here because the core1 stage hold reads it.
+static fw_stage_t s_stage = FW_STAGE_IDLE;
 
 #ifdef USE_CORE1
 #include "polymod_core1.h"
@@ -198,7 +198,7 @@ static void stage_hold_take(void) {
 static void stage_hold_drop(void) {
     bool drop = false;
     core1_hw_lock();
-    if (s_stage_hold && !s_erase_pending) {
+    if (s_stage_hold && s_stage != FW_STAGE_ERASING) {
         s_stage_hold = false;
         drop         = true;
     }
@@ -216,8 +216,6 @@ extern uint8_t __flash_binary_start;
 extern uint8_t __flash_binary_end;
 
 static bool     s_initialized = false;
-// IDLE / ERASING / RECEIVING; transitions only through fw_stage_next().
-static fw_stage_t s_stage = FW_STAGE_IDLE;
 
 // Target of the current begin/chunk/finalize sequence (set at begin).
 static uint8_t  s_target = FW_TARGET_FIRMWARE;

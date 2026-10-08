@@ -91,6 +91,87 @@ bool is_app_chord(uint16_t kc, uint8_t mods_raw, uint8_t os_packed) {
 // overlays that have them draw them, and the built-in table answers nothing.
 bool is_app_key(uint16_t kc) { return kc == KC_F2 || kc == KC_F5; }
 
+// What each pre-extraction hint became. Keyed by the reference's glyph with its
+// leading spacing stripped, because the restyle changed every hint's content on
+// purpose: the presence comparison alone would pass a table that drew the WRONG
+// icon (Win+L showing close). One old glyph had two meanings, so an entry may
+// also name the collapsed modifier set it applies to (kAnyMods otherwise).
+// Entries only the app shortcuts reached (copy, save, undo, ...) are absent: those
+// chords are masked before the lookup.
+constexpr uint8_t kAnyMods = 0xFF;
+struct ExpectedIcon {
+    const uint32_t* old_glyph;
+    uint8_t mods;
+    const uint32_t* icon;
+};
+#define G(s) reinterpret_cast<const uint32_t*>(s)
+const ExpectedIcon kExpected[] = {
+    {G(PRIVATE_LOCK), kAnyMods, G(ICON_HINT_LOCK)},
+    {G(PRIVATE_MAXIMIZE), MOD_LGUI | MOD_LCTL, G(ICON_HINT_FULLSCREEN)},   // Ctrl+Cmd+F
+    {G(PRIVATE_MAXIMIZE), MOD_LGUI, G(ICON_HINT_MAXIMIZE)},                // Win/Super+Up
+    {G(PRIVATE_WINDOW), kAnyMods, G(ICON_HINT_MINIMIZE)},
+    {G(ICON_WORD_LEFT), kAnyMods, G(ICON_HINT_WORD_LEFT)},
+    {G(ICON_WORD_RIGHT), kAnyMods, G(ICON_HINT_WORD_RIGHT)},
+    {G(ICON_APP_SWITCH), kAnyMods, G(ICON_HINT_APP_SWITCH)},
+    {G(ICON_LAUNCHER), kAnyMods, G(ICON_HINT_SEARCH)},
+    {G(ICON_CLOSE), kAnyMods, G(ICON_HINT_CLOSE)},
+    {G(ICON_WINDOW_SWITCH), kAnyMods, G(ICON_HINT_WINDOW_SWITCH)},
+    {G(ARROWS_LEFTSTOP), kAnyMods, G(ICON_HINT_LINE_START)},
+    {G(ARROWS_RIGHTSTOP), kAnyMods, G(ICON_HINT_LINE_END)},
+    {G(ICON_GFX_RESTART HINT_MOVE(HINT_POS_SCREEN) HINT_HALF ICON_GFX_RELOAD), kAnyMods, G(ICON_HINT_GFX_RESTART)},
+    {G(PRIVATE_SCREEN U"+"), kAnyMods, G(ICON_HINT_DESKTOP_NEW)},
+    {G(ICON_LEFT PRIVATE_SCREEN), kAnyMods, G(ICON_HINT_DESKTOP_PREV)},
+    {G(PRIVATE_SCREEN ICON_RIGHT), kAnyMods, G(ICON_HINT_DESKTOP_NEXT)},
+    {G(PRIVATE_SCREEN U"x"), kAnyMods, G(ICON_HINT_DESKTOP_CLOSE)},
+    {G(ICON_NET), kAnyMods, G(ICON_HINT_NETWORK)},
+    {G(ICON_VOLUME_MIXER), kAnyMods, G(ICON_HINT_VOLUME_MIXER)},
+    {G(ICON_NARRATOR), kAnyMods, G(ICON_HINT_NARRATOR)},
+    {G(ICON_QUICK_ASSIST), kAnyMods, G(ICON_HINT_QUICK_ASSIST)},
+    {G(ICON_SPEECH_REC), kAnyMods, G(ICON_HINT_SPEECH_REC)},
+    {G(ICON_SCREEN_RECORD), kAnyMods, G(ICON_HINT_SCREEN_RECORD)},
+    {G(ICON_SNIP), kAnyMods, G(ICON_HINT_SNIP)},
+    {G(PRIVATE_PC), kAnyMods, G(ICON_HINT_SHOW_DESKTOP)},
+    {G(PRIVATE_SCREEN), kAnyMods, G(ICON_HINT_DISPLAY)},
+    {G(ICON_DICTATION), kAnyMods, G(ICON_HINT_DICTATION)},
+    {G(ICON_SETTINGS), kAnyMods, G(ICON_HINT_SETTINGS)},
+    {G(PRIVATE_MINIMIZE), kAnyMods, G(ICON_HINT_MINIMIZE_ALL)},
+    {G(HINT_MOVE(HINT_POS_RUNBOX) HINT_FRAME(HINT_SZ_RUNBOX) HINT_RESET U"    >_"), kAnyMods, G(ICON_HINT_RUN)},
+    {G(ICON_TASK_CYCLE), kAnyMods, G(ICON_HINT_TASK_CYCLE)},
+    {G(ICON_CAST), kAnyMods, G(ICON_HINT_CAST)},
+    {G(ICON_CLIP_HISTORY), kAnyMods, G(ICON_HINT_CLIP_HISTORY)},
+    {G(ICON_QUICK_MENU), kAnyMods, G(ICON_HINT_QUICK_MENU)},
+    {G(ICON_PEEK), kAnyMods, G(ICON_HINT_PEEK_DESKTOP)},
+    {G(PRIVATE_EMOJI_1F600), kAnyMods, G(ICON_HINT_EMOJI)},
+    {G(ICON_GIF), kAnyMods, G(ICON_HINT_EMOJI)},                               // Win+; opens the same panel
+    {G(ICON_LIGHTNING), kAnyMods, G(ICON_HINT_QUICK_SETTINGS)},
+    {G(ICON_EXPLORER), kAnyMods, G(ICON_HINT_EXPLORER)},
+    {G(ICON_ACCESSIBILITY), kAnyMods, G(ICON_HINT_ACCESSIBILITY)},
+    {G(ICON_MAC_CONTROL), kAnyMods, G(ICON_HINT_TRAY)},
+    {G(ICON_FOCUS_WINDOW), kAnyMods, G(ICON_HINT_MINIMIZE_OTHERS)},
+    {G(ICON_SNAP_LEFT), kAnyMods, G(ICON_HINT_SNAP_LEFT)},
+    {G(ICON_SNAP_RIGHT), kAnyMods, G(ICON_HINT_SNAP_RIGHT)},
+    {G(ICON_SLIDERS), kAnyMods, G(ICON_HINT_SYSTEM_PROPS)},
+    {G(ICON_SCREENSHOT), kAnyMods, G(ICON_HINT_SCREENSHOT)},
+    {G(ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMIN) U"+"), kAnyMods, G(ICON_HINT_ZOOM_IN)},
+    {G(ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMOUT) U"-"), kAnyMods, G(ICON_HINT_ZOOM_OUT)},
+    {G(ICON_TEXT_RECOG), kAnyMods, G(ICON_HINT_TEXT_RECOG)},
+    {G(ICON_GAME_BAR), kAnyMods, G(ICON_HINT_GAME_BAR)},
+    {G(ICON_FEEDBACK), kAnyMods, G(ICON_HINT_FEEDBACK)},
+    {G(ICON_COPILOT), kAnyMods, G(ICON_HINT_COPILOT)},
+};
+#undef G
+
+// The icon a reference hint must have become, or nullptr if the table has no
+// entry for it (which the caller reports as a failure, so the table stays complete).
+const uint32_t* expected_icon(const uint32_t* ref, uint8_t mods_raw) {
+    while (*ref == U' ' || *ref == U'\t' || *ref == U'\b') ++ref;
+    const uint8_t m = static_cast<uint8_t>((mods_raw | (mods_raw >> 4)) & 0x0F);
+    for (const ExpectedIcon& e : kExpected) {
+        if (same_hint(ref, e.old_glyph) && (e.mods == kAnyMods || e.mods == m)) return e.icon;
+    }
+    return nullptr;
+}
+
 std::string describe(uint16_t kc, uint8_t mods, uint8_t os) {
     char buf[96];
     snprintf(buf, sizeof(buf), "keycode=0x%04X mods=0x%02X os=0x%02X", kc, mods, os);
@@ -106,7 +187,8 @@ std::string describe(uint16_t kc, uint8_t mods, uint8_t os) {
 // shortcuts. This was first the evidence that the extraction changed no
 // behaviour, and compared content. The icon restyle (tools/hint_icons.py) then
 // replaced every hint's CONTENT on purpose, so the comparison is on presence: a
-// restyle may change what a hint looks like, never which chord has one. Then the
+// restyle may change what a hint looks like, never which chord has one. Which
+// icon each chord shows is then pinned against kExpected, keyed by the old glyph. Then the
 // app shortcuts (is_app_chord) were handed to the app overlay on purpose, so the
 // reference's answer is masked by that rule, and F2/F5 (handed to the app
 // overlays the same way, is_app_key) are masked too. Nothing else. Binary comparison cannot answer this one —
@@ -129,7 +211,13 @@ TEST(OsHintsExtraction, ShowsAHintForExactlyThePreExtractionChords) {
                 const bool app = is_app_key(kc) || is_app_chord(kc, static_cast<uint8_t>(mods), os);
                 const uint32_t* want = app ? nullptr : ref;
                 ASSERT_EQ(got != nullptr, want != nullptr) << describe(kc, mods, os);
-                if (want != nullptr) ++hits;
+                if (want != nullptr) {
+                    const uint32_t* icon = expected_icon(want, static_cast<uint8_t>(mods));
+                    ASSERT_NE(icon, nullptr) << describe(kc, mods, os)
+                        << ": kExpected has no entry for this reference hint";
+                    ASSERT_TRUE(same_hint(got, icon)) << describe(kc, mods, os) << " shows the wrong icon";
+                    ++hits;
+                }
                 ++compared;
             }
         }

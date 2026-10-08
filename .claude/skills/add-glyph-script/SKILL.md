@@ -189,8 +189,8 @@ was needed.
 ## Pitfalls
 
 - **Never bump the protocol or re-add a range NACK** for a new script — the index
-  is open-ended (v10+). Bump only `FW_VERSION` (+ the host `__patch__` if you ship
-  a host change).
+  is open-ended (v10+). Don't hand-edit `FW_VERSION` or the host version either:
+  both repos bump them at merge from the PR's label (none = patch).
 - **`glyph_script_blocks[]` base MUST equal the `fonts.yaml` `-F` base** and be a
   free 0x40-aligned block; a mismatch renders the wrong/no glyph.
 - **`fontconvert` needs an ABSOLUTE `-f` path** — a relative path gives

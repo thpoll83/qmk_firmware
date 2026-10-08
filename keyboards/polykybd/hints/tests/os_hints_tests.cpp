@@ -76,6 +76,17 @@ std::vector<uint8_t> os_values() {
     return v;
 }
 
+// An APP shortcut: a letter or digit with Ctrl or Alt held (Shift may be added),
+// or with Cmd on macOS. Those are left to the app overlay and have no built-in
+// hint. Written out independently of os_hints.c so the two can disagree.
+bool is_app_chord(uint16_t kc, uint8_t mods_raw, uint8_t os_packed) {
+    if (kc < KC_A || kc > KC_0) return false;
+    const uint8_t m   = static_cast<uint8_t>((mods_raw | (mods_raw >> 4)) & 0x0F);
+    const uint8_t app = static_cast<uint8_t>(m & ~MOD_LSFT);
+    const bool apple  = (os_packed & POLY_OS_VALUE_MASK) == POLY_OS_MACOS;
+    return app == MOD_LCTL || app == MOD_LALT || (apple && app == MOD_LGUI);
+}
+
 std::string describe(uint16_t kc, uint8_t mods, uint8_t os) {
     char buf[96];
     snprintf(buf, sizeof(buf), "keycode=0x%04X mods=0x%02X os=0x%02X", kc, mods, os);
@@ -87,12 +98,13 @@ std::string describe(uint16_t kc, uint8_t mods, uint8_t os) {
 // ---------------------------------------------------------------------------
 
 // Exhaustive over (keycode x mods x os): the live table must show a hint for
-// EXACTLY the chords the pre-extraction table in poly_keymap.c did. This was first
-// the evidence that the extraction changed no behaviour, and compared content.
-// The icon restyle (tools/hint_icons.py) then replaced every hint's CONTENT on
-// purpose, so the comparison is now on presence only: the restyle may change what
-// a hint looks like, never which chord has one. The content is pinned by
-// EveryShortcutHintIsOneIconGlyph below. Binary comparison cannot answer this one —
+// EXACTLY the chords the pre-extraction table in poly_keymap.c did, minus the app
+// shortcuts. This was first the evidence that the extraction changed no
+// behaviour, and compared content. The icon restyle (tools/hint_icons.py) then
+// replaced every hint's CONTENT on purpose, so the comparison is on presence: a
+// restyle may change what a hint looks like, never which chord has one. Then the
+// app shortcuts (is_app_chord) were handed to the app overlay on purpose, so the
+// reference's answer is masked by that one rule and nothing else. Binary comparison cannot answer this one —
 // extracting a function into another TU legitimately changes codegen (inlining,
 // stack slots, switch-table numbering).
 TEST(OsHintsExtraction, ShowsAHintForExactlyThePreExtractionChords) {
@@ -108,7 +120,8 @@ TEST(OsHintsExtraction, ShowsAHintForExactlyThePreExtractionChords) {
         for (unsigned mods = 0; mods < 256; ++mods) {
             for (uint8_t os : os_values()) {
                 const uint32_t* got  = os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os);
-                const uint32_t* want = os_hint_reference(kc, static_cast<uint8_t>(mods), os);
+                const uint32_t* ref  = os_hint_reference(kc, static_cast<uint8_t>(mods), os);
+                const uint32_t* want = is_app_chord(kc, static_cast<uint8_t>(mods), os) ? nullptr : ref;
                 ASSERT_EQ(got != nullptr, want != nullptr) << describe(kc, mods, os);
                 if (want != nullptr) ++hits;
                 ++compared;
@@ -120,6 +133,27 @@ TEST(OsHintsExtraction, ShowsAHintForExactlyThePreExtractionChords) {
     // NULL == NULL and this test would still be green.
     EXPECT_GT(hits, 1000u) << "suspiciously few non-NULL hints — is the table reachable?";
     EXPECT_GT(compared, 100000u);
+}
+
+// No app shortcut gets a built-in hint, on any OS, with either modifier side.
+// The probe set includes the chords that used to have one (Ctrl+C, Cmd+C, Ctrl+Y,
+// Ctrl+Shift+Z, Cmd+Shift+Z, Alt+F...), so a revert of the rule fails here by name.
+TEST(OsHints, AppShortcutsHaveNoBuiltInHint) {
+    size_t checked = 0;
+    for (uint16_t kc = KC_A; kc <= KC_0; ++kc) {
+        for (unsigned mods = 0; mods < 256; ++mods) {
+            for (uint8_t os : os_values()) {
+                if (!is_app_chord(kc, static_cast<uint8_t>(mods), os)) continue;
+                ASSERT_EQ(os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os), nullptr)
+                    << describe(kc, mods, os) << " is an app shortcut and must be left to the overlay";
+                ++checked;
+            }
+        }
+    }
+    EXPECT_GT(checked, 10000u);
+    // OS chords on the same letters keep their hints: Win+L lock, Ctrl+Cmd+Q lock.
+    EXPECT_NE(os_hint_for_keycode(KC_L, MOD_BIT_LGUI, POLY_OS_WINDOWS), nullptr);
+    EXPECT_NE(os_hint_for_keycode(KC_Q, MOD_BIT_LGUI | MOD_BIT_LCTRL, POLY_OS_MACOS), nullptr);
 }
 
 // Every non-mod-tap hint is ONE glyph from the hint-icon block and nothing else: no
@@ -244,14 +278,14 @@ TEST(OsHints, NoModifiersMeansNoHint) {
 // Windows shortcuts, which is the right default for the common case but is silent
 // about being a default.
 TEST(OsHints, UnknownOsBehavesAsTheNonAppleDefault) {
-    // Ctrl+A is "select all" on Windows/Linux and nothing on macOS (Cmd+A is), so
-    // it separates the two arms cleanly.
+    // Alt+Tab is the app switcher on Windows/Linux and nothing on macOS (Cmd+Tab
+    // is), so it separates the two arms cleanly.
     for (uint8_t os = POLY_OS_COUNT; os < POLY_OS_COUNT + 2; ++os) {
-        EXPECT_NE(os_hint_for_keycode(KC_A, MOD_BIT_LCTRL, os), nullptr)
+        EXPECT_NE(os_hint_for_keycode(KC_TAB, MOD_BIT_LALT, os), nullptr)
             << "unknown OS " << static_cast<int>(os) << " should take the non-Apple arm";
     }
-    EXPECT_EQ(os_hint_for_keycode(KC_A, MOD_BIT_LCTRL, POLY_OS_MACOS), nullptr)
-        << "Ctrl+A is not a macOS chord — if this changes the test above needs a new probe";
+    EXPECT_EQ(os_hint_for_keycode(KC_TAB, MOD_BIT_LALT, POLY_OS_MACOS), nullptr)
+        << "Alt+Tab is not a macOS chord — if this changes the test above needs a new probe";
 }
 
 // ---------------------------------------------------------------------------

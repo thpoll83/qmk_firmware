@@ -37,13 +37,12 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
     }
 
     const uint8_t local_mods = mods_raw;
-    // OS-aware shortcut-preview icons. The "editing" shortcuts (copy/paste/undo/…)
-    // hang off the OS's primary command modifier: Cmd (GUI) on macOS, Ctrl
-    // everywhere else — so on a Mac these show under Cmd, not Ctrl (where Ctrl+C
-    // does not copy). The "window-management" shortcuts (lock/show-desktop/display/
-    // maximize/minimize) hang off the GUI/Super key on Windows & Linux desktops; on
-    // macOS Cmd is already the editing modifier (so e.g. Cmd+L is NOT lock and shows
-    // nothing here), and on Android the Search key is not a window manager.
+    // OS-aware shortcut-preview icons for the OS's OWN shortcuts. App shortcuts
+    // (Ctrl/Alt + letter or digit, Cmd + letter or digit on macOS) are left to the
+    // app overlay; see the rule below. The "window-management" shortcuts (lock/
+    // show-desktop/display/maximize/minimize) hang off the GUI/Super key on Windows
+    // & Linux desktops; on macOS Cmd is the app modifier (so e.g. Cmd+L is NOT lock
+    // and shows nothing here), and on Android the Search key is not a window manager.
     // Masked here, not at the call site, so a caller cannot forget the auto-mode bit.
     const uint8_t active_os = active_os_packed & POLY_OS_VALUE_MASK;
     const bool apple = (active_os == POLY_OS_MACOS);
@@ -53,8 +52,18 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
     // subset match (Win+Ctrl+Shift+X no longer shows the Win+Ctrl+X hint, Win+Ctrl+C no
     // longer falls through to plain Ctrl+C, etc.). Side (L/R) is intentionally ignored.
     const uint8_t mods_now = (uint8_t)((local_mods | (local_mods >> 4)) & 0x0F);
+    // App shortcuts belong to the app overlay, not to a built-in hint. A letter or
+    // digit with Ctrl or Alt (Shift may be added), or with Cmd on macOS, means
+    // whatever the focused app says it means, so the keycap stays free for the
+    // overlay the host sends (copy_overlay_to_buffer()). Shift alone is typing, and
+    // a chord with Win/Super (or Ctrl+Cmd on macOS) is the OS's, so those stay.
+    if (keycode >= KC_A && keycode <= KC_0) {          // KC_A..KC_Z, KC_1..KC_0
+        const uint8_t app = (uint8_t)(mods_now & (uint8_t)~MOD_LSFT);
+        if (app == MOD_LCTL || app == MOD_LALT || (apple && app == MOD_LGUI)) return NULL;
+    }
     if (apple) {
-        // macOS: editing lives on Cmd (GUI). Each block is an exact modifier set.
+        // macOS. Each block is an exact modifier set; Cmd+letter is an app shortcut
+        // (see the rule above), so only Cmd's OS chords remain here.
         if (mods_now == (MOD_LGUI | MOD_LCTL)) {
             switch(keycode) {
                 case KC_Q: return ICON_HINT_LOCK;       // Ctrl+Cmd+Q = lock screen
@@ -68,29 +77,10 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
                 case KC_RIGHT: return ICON_HINT_WORD_RIGHT;
                 default: break;
             }
-        } else if (mods_now == (MOD_LGUI | MOD_LSFT)) {
-            // Cmd+Shift+Z = redo (mac has no Cmd+Y redo).
-            switch(keycode) {
-                case KC_Z: return ICON_HINT_REDO;
-                default: break;
-            }
         } else if (mods_now == MOD_LGUI) {
             switch(keycode) {
-                case KC_A: return ICON_HINT_SELECT_ALL;
-                case KC_C: return ICON_HINT_COPY;
-                case KC_F: return ICON_HINT_FIND;
-                case KC_X: return ICON_HINT_CUT;
-                case KC_V: return ICON_HINT_PASTE;
-                case KC_S: return ICON_HINT_SAVE;
-                case KC_O: return ICON_HINT_OPEN;
-                case KC_P: return ICON_HINT_PRINT;
-                case KC_M: return ICON_HINT_MINIMIZE;    // Cmd+M = minimize
-                case KC_Z: return ICON_HINT_UNDO;      // Cmd+Z = undo (Cmd+Shift+Z redo above)
-                // OS-aware shortcut hints (wave B).
                 case KC_TAB:   return ICON_HINT_APP_SWITCH;    // Cmd+Tab app switcher
                 case KC_SPACE: return ICON_HINT_SEARCH;      // Cmd+Space (Spotlight)
-                case KC_W:     return ICON_HINT_CLOSE;         // Cmd+W close
-                case KC_Q:     return ICON_HINT_QUIT;         // Cmd+Q quit
                 case KC_GRV:   return ICON_HINT_WINDOW_SWITCH; // Cmd+` window switcher
                 case KC_LEFT:  return ICON_HINT_LINE_START;    // Cmd+Left  line start
                 case KC_RIGHT: return ICON_HINT_LINE_END;   // Cmd+Right line end
@@ -98,7 +88,7 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
             }
         }
     } else {
-    // Windows / Linux / Android / undetected: editing on Ctrl, window-mgmt on GUI.
+    // Windows / Linux / Android / undetected: window-mgmt on GUI.
     // The two host-detected Linux desktops (GNOME/KDE) behave as Linux here, but a
     // few Super-key hints differ between them — see the Super (GUI) switch below.
     const bool gnome = (active_os == POLY_OS_LINUX_GNOME);
@@ -108,8 +98,7 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
                             || active_os == POLY_OS_LINUX_KDE);
     const bool wm = (win_or_unknown || linux_any);   // OSes whose window-mgmt hangs off GUI/Super
     // Windows multi-modifier Super chords (wave D), each on its EXACT modifier set. An
-    // unmatched key returns nothing (no fall-through to the Ctrl/Alt editing hints) —
-    // Win+Ctrl+C is a different chord from Ctrl+C, so it no longer previews "copy".
+    // unmatched key returns nothing (no fall-through to the Ctrl/Alt hints below).
     if (win_or_unknown && mods_now == (MOD_LGUI | MOD_LCTL | MOD_LSFT)) {
         switch(keycode) {
             // Win+Ctrl+Shift+B restart graphics: screen + refresh badge.
@@ -136,28 +125,11 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
             default: break;
         }
     }
-    if (mods_now == (MOD_LCTL | MOD_LSFT)) {
+    if (mods_now == MOD_LCTL) {
+        // Ctrl+letter is an app shortcut (see the rule above); word nav stays.
         switch(keycode) {
-            case KC_Z: return ICON_HINT_REDO;        // Ctrl+Shift+Z redo (Linux/cross-app)
-            default: break;
-        }
-    } else if (mods_now == MOD_LCTL) {
-        switch(keycode) {
-            case KC_A: return ICON_HINT_SELECT_ALL;
-            case KC_C: return ICON_HINT_COPY;
-            case KC_D: return ICON_HINT_DELETE;
-            case KC_F: return ICON_HINT_FIND;
-            case KC_X: return ICON_HINT_CUT;
-            case KC_V: return ICON_HINT_PASTE;
-            case KC_S: return ICON_HINT_SAVE;
-            case KC_O: return ICON_HINT_OPEN;
-            case KC_P: return ICON_HINT_PRINT;
-            case KC_Y: return ICON_HINT_REDO;         // Ctrl+Y redo (Windows)
-            case KC_Z: return ICON_HINT_UNDO;         // Ctrl+Z undo (Ctrl+Shift+Z redo above)
-            // OS-aware shortcut hints (wave B): word nav + close on Ctrl.
             case KC_LEFT:  return ICON_HINT_WORD_LEFT;   // Ctrl+Left  word left
             case KC_RIGHT: return ICON_HINT_WORD_RIGHT;  // Ctrl+Right word right
-            case KC_W:     return ICON_HINT_CLOSE;       // Ctrl+W close
             default: break;
         }
     } else if (mods_now == MOD_LALT) {

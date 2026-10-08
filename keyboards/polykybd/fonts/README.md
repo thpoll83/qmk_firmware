@@ -45,6 +45,33 @@ Outputs (overwritten in place):
 The generator deletes any stale `generated/*.h` that the config no longer
 produces, so the directory always reflects `fonts.yaml`.
 
+### Why every font is a C header, including the ones the firmware never links
+
+Every font, resident or packed, is generated as a C header, and
+`gfx_used_fonts.h` `#include`s all of them. Only the fonts listed in
+`RESIDENT_FONTS[]` reach the firmware image. The arrays of every packed font
+(emoji, CJK, the glyph scripts, …) are compiled into `poly_keymap.o` and then
+dropped by the linker's `--gc-sections`, because nothing references them. The link
+map lists them under "Discarded input sections". A packed font costs compile time,
+never flash. The header is the format on purpose, for three reasons:
+
+1. **One format whichever side a font lives on.** Moving a font between the image
+   and the pack is a `fonts.yaml` flag (`resident: true` on a category, or an
+   `index.resident_fonts` entry). It changes only `RESIDENT_FONTS[]`, never the
+   font data or any `#include`.
+2. **The committed headers are the pack's source of truth.** `fontpack.py` builds
+   every `.plyf` by parsing them, so a reship needs no `fontconvert`, no pinned
+   FreeType/HarfBuzz and none of the ~75 MB of source fonts. That is what makes a
+   reship possible in a container without the toolchain, keeps the bundles
+   byte-reproducible, and turns a glyph change into a reviewable text diff.
+3. **The host tools read the same bytes.** `PolyKybdHost/tools/gfx_font.py`,
+   `oled_preview.py` and the skills' preview scripts parse these headers. The
+   firmware, the pack and every preview render from one copy of each glyph.
+
+To check whether a font is in the image, look it up in the link map
+(`.build/<kb>.map`) or run `arm-none-eabi-nm` on the ELF. Do not grep the
+`#include`s, which list every header.
+
 ## Font pack (external-flash, position-independent `PlyF`)
 
 Most of the glyph data — emoji, symbols, CJK, Indic, Arabic, … (~400 KB, the

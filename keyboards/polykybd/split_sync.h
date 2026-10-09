@@ -92,6 +92,9 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
 // (housekeeping): the handler above runs on the split-protocol thread and must not
 // touch the panels.
 void split_sync_drain_anim_replay(void);
+// Run a keymap reset the master bridged over. Main thread only (housekeeping): the
+// reset's EEPROM writes take far longer than the split handler may.
+void split_sync_drain_keymap_reset(void);
 
 // Handles incoming latin_sync data with CRC32 validation, saves to EEPROM and refreshes display.
 void user_sync_latin_ex_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);

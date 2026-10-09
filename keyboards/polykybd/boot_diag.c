@@ -267,6 +267,13 @@ void emit_apply_breadcrumb_line(void) {
 // started: a restarted PolyHost, a woken PC, the reconnect after a firmware update.
 // The banner's own repeats end ~30 s after boot, long before most of those, so without
 // this a log collected later never says which build the keyboard runs.
+// Known cost, accepted: uprintf blocks. If a host probes but nobody reads the console,
+// the first send waits out QMK's 100 ms IN timeout and the matrix scan pauses that long,
+// so a tap in that window can be missed. QMK then latches the endpoint's `timed_out`
+// and later sends do not wait (usb_driver.c, usb_endpoint_in_send). This is the same
+// cost as any other uprintf in raw_hid_receive(), e.g. cmd 16's "Start with compressed
+// data". PolyKybdHost opens its console reader before its first report, so the normal
+// reconnect never pays it. Not worth a second, non-blocking console path.
 #define BANNER_HOST_GAP_MS 5000u
 void boot_banner_on_host_probe(void) {
     static bool     seen = false;

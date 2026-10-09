@@ -207,7 +207,7 @@ void decompress_overlay_buffer(uint8_t* compressed, bool first) {
     uint8_t compressed_len = first?COMPRESSED_START:COMPRESSED_MAX;
 
     if (is_on_current_side(pos)) {
-        core1_decompress_fragment(keycode, ctx_mod, idx, compressed, visible);
+        core1_decompress_fragment(keycode, ctx_mod, idx, compressed, visible, first);
     }
 
     if (is_on_other_side(pos)) {

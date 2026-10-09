@@ -33,8 +33,9 @@ void core1_eden_key(uint32_t arg);
 // All fragments have to be processed in order and until the end, no parallel processing possible
 // `visible` = this overlay's modifier variant is the one currently on screen; core1 only
 // requests a display refresh on completion when it is (see fill_overlay.c overlay_variant_visible).
+// `first` = this is an image's first fragment (cmd 16): the decode cursor rewinds to 0.
 // Global variables: core0_decomp_count, core1_decomp_count, core1_bit_index, core1_max_bitlen, core1_idx, core1_buffer, hid_modifier
-void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* compressed, bool visible);
+void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* compressed, bool visible, bool first);
 
 // Queues a region-of-interest overlay update for core1 processing, waits if previous update is ongoing.
 // `visible`: see core1_decompress_fragment.

@@ -294,7 +294,7 @@ bool raw_hid_pre_receive_kb(void) {
     return true;
 }
 
-void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* compressed, bool visible) {
+void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* compressed, bool visible, bool first) {
     // Defense in depth: callers that respect the raw_hid_pre_receive_kb() gate
     // will never enter the wait. For any caller that didn't gate (e.g. the
     // split-sync bridge path), spin without the uprintf — the previous wait
@@ -308,6 +308,13 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
         dmb();
     }
     crash_phase_leave(crash_tag);
+    // A new image starts at pixel 0. core1 only rewinds its cursor when it has decoded
+    // a whole image, so an image left incomplete (the fragment a stall recovery
+    // dropped) would otherwise start the NEXT key's image part-way through its buffer.
+    // core1 is idle on decode work here (the counts match), so core0 may write it.
+    if (first) {
+        core1_bit_index = 0;
+    }
     //copy data to dedicated buffers
     uint8_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
     core1_max_bitlen = 360 - core1_bit_index/8;

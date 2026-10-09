@@ -290,7 +290,9 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
     // into adj_idx), so the slave can't tell an off-screen variant from a visible one —
     // pass visible=true (always refresh, still coalesced by note_overlay_activity above).
     // The visibility gate is a master-side optimization (see fill_overlay.c).
-    core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed, true);
+    // The master bridges a first fragment at COMPRESSED_START bytes, a continuation at
+    // COMPRESSED_MAX (fill_overlay.c), so the length says which one this is.
+    core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed, true, ov->len == COMPRESSED_START);
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
 }
 

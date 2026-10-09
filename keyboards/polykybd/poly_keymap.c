@@ -1689,6 +1689,8 @@ void housekeeping_task_user(void) {
         eden_idle_tick();
         // An Eden replay the split handler recorded (it may not start one itself).
         split_sync_drain_anim_replay();
+        // A keymap reset the split handler recorded (too slow to run there).
+        split_sync_drain_keymap_reset();
         // One-time startup animation: render a frame while active (both halves
         // render their own keycaps). On the finishing edge, persist the "played"
         // marker and request a normal refresh so the base legends come back. Gated

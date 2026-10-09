@@ -10,7 +10,7 @@ uint8_t ime_ja_next(uint8_t current, bool shift) {
 }
 
 static ime_stroke_t stroke(uint8_t usage, uint8_t mods, bool hold) {
-    ime_stroke_t s = {usage, mods, hold};
+    ime_stroke_t s = {usage, mods, hold, false};
     return s;
 }
 
@@ -36,9 +36,30 @@ static ime_stroke_t japanese_stroke(uint8_t os, uint8_t mode) {
             default:              return stroke(IME_HID_LANG2, 0, false);  // 英数
         }
     }
-    // MS-IME (and mozc's MS-IME keymap): カタカナ/ひらがな selects hiragana and
-    // Shift+ it katakana. 無変換 turns the IME OFF only with MS-IME's
-    // "無変換: IME-オフ" key setting; there is no absolute off key by default.
+    if (os == IME_OS_WINDOWS) {
+        // MS-IME's mode keys for the English (101/102) layout, all on Caps Lock, so
+        // neither the Japanese (106/109) layout nor any IME setting is needed. The
+        // 無変換 / カタカナひらがな keys below exist only on that layout: on the
+        // English one Windows ignored them entirely (field test, 2026-10-09, which
+        // also confirmed all three of these). They are ABSOLUTE, like the Mac's:
+        //   Shift+Caps   alphanumeric (英数, indicator "A")
+        //   Ctrl+Caps    hiragana
+        //   Alt+Caps     katakana
+        // Shift+tap asks for katakana, so the user's own Shift is LIFTED for that
+        // stroke: the host must see Alt+Caps, not Shift+Alt+Caps.
+        switch (mode) {
+            case IME_JA_HIRAGANA: return stroke(IME_HID_CAPS, IME_MOD_LCTL, false);
+            case IME_JA_KATAKANA: {
+                ime_stroke_t s = stroke(IME_HID_CAPS, IME_MOD_LALT, false);
+                s.drop_shift = true;
+                return s;
+            }
+            default:              return stroke(IME_HID_CAPS, IME_MOD_LSFT, false);
+        }
+    }
+    // Linux/Android/unknown (mozc, and MS-IME on a Japanese layout): カタカナ/
+    // ひらがな selects hiragana and Shift+ it katakana. 無変換 turns MS-IME OFF only
+    // with its "無変換: IME-オフ" key setting.
     switch (mode) {
         case IME_JA_HIRAGANA: return stroke(IME_HID_INT2, 0, false);
         case IME_JA_KATAKANA: return stroke(IME_HID_INT2, IME_MOD_LSFT, false);

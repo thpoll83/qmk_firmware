@@ -89,9 +89,52 @@ TEST(ImeKeyJapanese, MacSendsEisuKanaAndCtrlShiftK) {
     EXPECT_EQ(s.mods, IME_MOD_LCTL | IME_MOD_LSFT);
 }
 
+TEST(ImeKeyJapanese, WindowsUsesCapsLockModeKeys) {
+    // MS-IME's absolute mode keys on Caps Lock work on the English (101/102)
+    // layout; 無変換 / カタカナひらがな did nothing there.
+    uint8_t mode = IME_JA_OFF;
+    ime_stroke_t s = Press(IME_FAMILY_JAPANESE, IME_OS_WINDOWS, false, &mode);
+    EXPECT_EQ(mode, IME_JA_HIRAGANA);
+    EXPECT_EQ(s.usage, IME_HID_CAPS);
+    EXPECT_EQ(s.mods, IME_MOD_LCTL);
+    EXPECT_FALSE(s.hold);
+    EXPECT_FALSE(s.drop_shift);
+
+    s = Press(IME_FAMILY_JAPANESE, IME_OS_WINDOWS, false, &mode);
+    EXPECT_EQ(mode, IME_JA_OFF);
+    EXPECT_EQ(s.usage, IME_HID_CAPS);
+    EXPECT_EQ(s.mods, IME_MOD_LSFT);
+    EXPECT_FALSE(s.drop_shift);
+
+    // Shift+tap: Alt+Caps Lock, with the user's Shift lifted for the stroke.
+    s = Press(IME_FAMILY_JAPANESE, IME_OS_WINDOWS, true, &mode);
+    EXPECT_EQ(mode, IME_JA_KATAKANA);
+    EXPECT_EQ(s.usage, IME_HID_CAPS);
+    EXPECT_EQ(s.mods, IME_MOD_LALT);
+    EXPECT_TRUE(s.drop_shift);
+
+    // Katakana counts as on, so the next plain tap goes to alphanumeric.
+    s = Press(IME_FAMILY_JAPANESE, IME_OS_WINDOWS, false, &mode);
+    EXPECT_EQ(mode, IME_JA_OFF);
+    EXPECT_EQ(s.mods, IME_MOD_LSFT);
+}
+
+TEST(ImeKeyJapanese, NoOtherStrokeDropsShift) {
+    for (uint8_t fam : {IME_FAMILY_NONE, IME_FAMILY_KOREAN, IME_FAMILY_JAPANESE, IME_FAMILY_RALT}) {
+        for (uint8_t os : kAllOs) {
+            for (bool shift : {false, true}) {
+                if (fam == IME_FAMILY_JAPANESE && os == IME_OS_WINDOWS && shift) continue;
+                uint8_t mode = IME_JA_OFF;
+                EXPECT_FALSE(Press(fam, os, shift, &mode).drop_shift)
+                    << int(fam) << "/" << int(os) << "/" << shift;
+            }
+        }
+    }
+}
+
 TEST(ImeKeyJapanese, OtherOsSendMsImeKeys) {
     for (uint8_t os : kAllOs) {
-        if (os == IME_OS_MACOS) continue;
+        if (os == IME_OS_MACOS || os == IME_OS_WINDOWS) continue;
         SCOPED_TRACE(int(os));
         uint8_t mode = IME_JA_OFF;
         ime_stroke_t s = Press(IME_FAMILY_JAPANESE, os, false, &mode);
@@ -122,7 +165,9 @@ TEST(ImeKeyJapanese, EveryStrokeIsATap) {
 }
 
 TEST(ImeKeyJapanese, NullBeliefStartsFromOff) {
-    const ime_stroke_t s = Press(IME_FAMILY_JAPANESE, IME_OS_WINDOWS, false, nullptr);
+    // Linux: off and hiragana are different keys there, so the stroke shows
+    // which way the null belief went.
+    const ime_stroke_t s = Press(IME_FAMILY_JAPANESE, IME_OS_LINUX, false, nullptr);
     EXPECT_EQ(s.usage, IME_HID_INT2);   // off -> hiragana
 }
 

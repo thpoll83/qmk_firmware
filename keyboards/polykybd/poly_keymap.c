@@ -5887,6 +5887,7 @@ static uint8_t s_apple_swap_latch = 0;
 // The planner's usages are QMK basic keycodes; pin each name so a wrong hex value in
 // the pure header cannot hide behind the tests, which only compare it with itself.
 _Static_assert(IME_HID_K     == KC_K,               "IME_HID_K");
+_Static_assert(IME_HID_CAPS  == KC_CAPS_LOCK,       "IME_HID_CAPS");
 _Static_assert(IME_HID_SPACE == KC_SPACE,           "IME_HID_SPACE");
 _Static_assert(IME_HID_NUBS  == KC_NONUS_BACKSLASH, "IME_HID_NUBS");
 _Static_assert(IME_HID_INT2  == KC_INTERNATIONAL_2, "IME_HID_INT2");
@@ -5897,6 +5898,7 @@ _Static_assert(IME_HID_RALT  == KC_RIGHT_ALT,       "IME_HID_RALT");
 _Static_assert(IME_HID_RGUI  == KC_RIGHT_GUI,       "IME_HID_RGUI");
 _Static_assert(IME_MOD_LCTL  == MOD_BIT(KC_LCTL),   "IME_MOD_LCTL");
 _Static_assert(IME_MOD_LSFT  == MOD_BIT(KC_LSFT),   "IME_MOD_LSFT");
+_Static_assert(IME_MOD_LALT  == MOD_BIT(KC_LALT),   "IME_MOD_LALT");
 _Static_assert((int)IME_OS_WINDOWS == (int)POLY_OS_WINDOWS && (int)IME_OS_MACOS == (int)POLY_OS_MACOS &&
                (int)IME_OS_LINUX == (int)POLY_OS_LINUX && (int)IME_OS_ANDROID == (int)POLY_OS_ANDROID &&
                (int)IME_OS_LINUX_GNOME == (int)POLY_OS_LINUX_GNOME &&
@@ -6050,10 +6052,21 @@ static void ime_key_record(keyrecord_t* record) {
     // A tap with a chord. Add only the modifiers that are not already down, and
     // release only those: Shift+tap for katakana arrives with the user's own Shift
     // held, and releasing it here would drop a key the finger is still holding.
+    // drop_shift: lift the user's Shift (real and pending one-shot) for this one
+    // stroke and put the real one back after, so the host sees exactly s.mods.
+    const uint8_t lifted = s.drop_shift ? (uint8_t)(get_mods() & MOD_MASK_SHIFT) : 0;
+    if (s.drop_shift) {
+        del_oneshot_mods(MOD_MASK_SHIFT);
+        if (lifted) del_mods(lifted);
+    }
     const uint8_t add = (uint8_t)(s.mods & ~get_mods());
     if (add) register_mods(add);
     tap_code(s.usage);
     if (add) unregister_mods(add);
+    if (lifted) {
+        add_mods(lifted);
+        send_keyboard_report();
+    }
 }
 
 // Every PolyKybd settings/utility keycode is handled HERE, in process_record_user,

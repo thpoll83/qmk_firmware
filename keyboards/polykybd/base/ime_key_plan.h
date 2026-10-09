@@ -27,6 +27,7 @@
 // HID keyboard usages. QMK's basic keycodes ARE these values; poly_keymap.c
 // static-asserts each against its KC_* name so a typo cannot hide here.
 #define IME_HID_K      0x0Eu   // KC_K
+#define IME_HID_CAPS   0x39u   // KC_CAPS_LOCK        (英数 on a Japanese layout)
 #define IME_HID_SPACE  0x2Cu   // KC_SPACE
 #define IME_HID_NUBS   0x64u   // KC_NONUS_BACKSLASH
 #define IME_HID_INT2   0x88u   // KC_INTERNATIONAL_2  カタカナ/ひらがな
@@ -39,6 +40,7 @@
 // Modifier bits in QMK's 8-bit mod layout (MOD_BIT(KC_LCTL) etc.).
 #define IME_MOD_LCTL   0x01u
 #define IME_MOD_LSFT   0x02u
+#define IME_MOD_LALT   0x04u
 
 // Which input-method family the active language has. Values are internal.
 enum ime_family {
@@ -79,6 +81,9 @@ typedef struct {
     bool    hold;    // true: register on press, unregister on release (keeps
                      // auto-repeat and the user's own press length, which macOS
                      // needs for Caps-style keys); false: tap once on the press
+    bool    drop_shift; // a TAP only: lift the user's own Shift for the stroke, so
+                        // the host sees exactly `mods` (Shift is how the user ASKED
+                        // for katakana, not part of the shortcut that selects it)
 } ime_stroke_t;
 
 // The basic keycode KC_IME stands in for, or 0 when it is an input-method key of

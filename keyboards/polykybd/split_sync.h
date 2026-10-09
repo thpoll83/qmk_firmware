@@ -63,6 +63,10 @@ typedef struct _dynamic_keymap_sync_t {
 // PRC rides the compressed one: a new id would cost the split42 transaction
 // budget. The low bits are the value width; a real mapping width never sets it.
 #define OVERLAY_MAP_ICON_FILL 0x80u
+// Flag in overlay_map_sync_t.width (protocol v23): every pair in this chunk is drawn
+// dimmed. The host's own bit for it is OVERLAY_MAP_W_DIM (0x80), which this
+// transaction already uses for the icon fill, so the master translates it.
+#define OVERLAY_MAP_SYNC_DIM  0x40u
 
 typedef struct _overlay_map_sync_t {
     uint32_t crc32;

@@ -257,7 +257,11 @@
 //      sets them only at v21+ (PROTOCOL_HISTORY.md).
 //  v22 cmd 43 (REBOOT) reboots both halves without writing anything persistent,
 //      for the host's boot-loop diagnostic. Older firmware NACKs it.
-#define PROTOCOL_VERSION 22
+//  v23 cmd 33's width byte bit 7 (OVERLAY_MAP_W_DIM) draws every pair in that report
+//      DIMMED: the overlay icon through a 25% pattern, the legend untouched. The host
+//      sets it for a browser's icons under a website's overlay. Older firmware masks
+//      the width with 0x1F and draws those icons at full strength.
+#define PROTOCOL_VERSION 23
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -399,6 +403,10 @@
 #define OVERLAY_MAP_W_WIDTH_MASK 0x1Fu
 #define OVERLAY_MAP_W_SHOW       0x20u  // enable overlays after applying (cmd 11, 0x01)
 #define OVERLAY_MAP_W_RESET      0x40u  // prepare before applying (cmd 11, 0x04|0x40|0x80)
+// v23: draw every pair in this report dimmed. It never reaches the split transaction
+// as 0x80 (that is OVERLAY_MAP_ICON_FILL there); the handler forwards it as
+// OVERLAY_MAP_SYNC_DIM instead.
+#define OVERLAY_MAP_W_DIM        0x80u
 // Values a stream of `bytes` bytes holds at `width` bits — the ONE definition
 // host and firmware must agree on, since there is no count field: the host fills
 // every value (padding by repeating the last pair, which is idempotent) so a

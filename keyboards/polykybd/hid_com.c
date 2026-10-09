@@ -896,7 +896,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // an all-off-screen chunk (non-held variants, off-layer keys) is
                     // staged silently and shown by the enable-overlays refresh.
                     if (set_packed_overlay_mapping(&data[HID_DATA_IDX], HID_DATA_MAX,
-                                                   OVERLAY_MAP_IDX_BITS)) {
+                                                   OVERLAY_MAP_IDX_BITS, false)) {
                         request_disp_refresh();
                     }
                     // Routine per-chunk chatter — set_packed_overlay_mapping already
@@ -917,8 +917,11 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // high GUI combos pay for 11. Silent, like cmd 21.
                     // v21: bits 5/6 of the width byte are the prepare / enable
                     // flags; only the masked width reaches the decoder and the slave.
+                    // v23: bit 7 dims every pair in the report. The slave gets it as
+                    // OVERLAY_MAP_SYNC_DIM, never as bit 7 (the icon-fill flag there).
                     const uint8_t flags = data[HID_DATA_IDX];
                     const uint8_t width = flags & OVERLAY_MAP_W_WIDTH_MASK;
+                    const bool    dim   = (flags & OVERLAY_MAP_W_DIM) != 0;
                     // Refuse a bad width BEFORE either flag runs: otherwise the
                     // reset and the enable would apply around pairs the decoder
                     // then drops, leaving overlays on with a stale mapping.
@@ -930,7 +933,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         overlay_flags_on(local_state, MIRROR_OVERLAYS | USAGE_RESET | MAPPING_RESET);
                     }
                     overlay_map_sync_t map_sync;
-                    map_sync.width = width;
+                    map_sync.width = (uint8_t)(width | (dim ? OVERLAY_MAP_SYNC_DIM : 0u));
                     map_sync.bytes = OVERLAY_MAP_W_BYTES;
                     memcpy(map_sync.mapping, &data[OVERLAY_MAP_W_HDR], OVERLAY_MAP_W_BYTES);
                     if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync,
@@ -939,7 +942,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         uprint("Warning: overlay mapping chunk did not reach the slave; repairing at enable.\n");
                     }
                     if (set_packed_overlay_mapping(&data[OVERLAY_MAP_W_HDR],
-                                                   OVERLAY_MAP_W_BYTES, width)) {
+                                                   OVERLAY_MAP_W_BYTES, width, dim)) {
                         request_disp_refresh();
                     }
                     if (debug_enable) {

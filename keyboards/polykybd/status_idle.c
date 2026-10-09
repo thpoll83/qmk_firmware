@@ -557,10 +557,12 @@ void status_idle_task(void) {
     const uint32_t took = timer_elapsed32(t_start);
     if (took > s_worst_ms) s_worst_ms = (uint8_t)(took > 255u ? 255u : took);
     if ((int32_t)(now - s_next_log) >= 0) {
-        uprintf("Status idle: %u frames/5s, worst compose %ums\n", s_frames, s_worst_ms);
+        // Once a minute, like Eden's idle line (startup_anim.c): every 5 s, the two
+        // lines buried everything else in a long idle log.
+        uprintf("Status idle: %u frames/60s, worst compose %ums\n", s_frames, s_worst_ms);
         s_frames   = 0;
         s_worst_ms = 0;
-        s_next_log = now + 5000u;
+        s_next_log = now + 60000u;
     }
     oled_write_raw((char *)get_scratch_buffer(), get_scratch_buffer_size());
 }

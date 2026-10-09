@@ -119,6 +119,8 @@ static uint32_t sa_total_ms(void) { return SA_TOTAL_MS + (s_tail ? SA_TAIL_MS : 
 static uint32_t sa_star_window_ms(void) { return sa_total_ms() - SA_STAR_START_MS; }
 static uint32_t s_start;
 static uint32_t s_next_log;   // next elapsed-ms threshold at which to emit a progress log
+static bool     s_logged_c1;  // the core the last idle-loop log line reported (core1 = true)
+#define EDEN_IDLE_LOG_MS 60000u  // idle-loop log cadence; a core change logs at once
 static uint32_t s_last_frame; // last idle-loop frame time (frame-rate throttle, loop only)
 
 // ---- idle-loop frame slicing (the responsiveness lever) ----
@@ -944,11 +946,16 @@ void startup_anim_tick(void) {
             s_last_frame = timer_read32();   // gap timed from the END of the frame
             ++s_frames_done;
             // Report at frame END (so the numbers describe the frame that just
-            // finished) and report the FIRST completed frame immediately, then on a
-            // quiet ~5 s cadence. A 5 s-only cadence yields NOTHING from a short idle
-            // session — a 4.4 s glance at the screensaver printed no timing at all,
-            // which makes the instrument useless exactly when you want a quick look.
-            if (!s_logged_frame || el >= s_next_log) {
+            // finished) and report the FIRST completed frame immediately, then once a
+            // minute. A periodic-only cadence yields NOTHING from a short idle session
+            // — a 4.4 s glance at the screensaver printed no timing at all, which makes
+            // the instrument useless exactly when you want a quick look.
+            // A change of core is reported at once too: falling back to core0 is the
+            // first sign core1 has stopped answering (field 2026-10-09: the console
+            // read `core0` before the raw-HID stall), so it must not wait a minute.
+            // The cadence was 5 s until 2026-10-09: two lines every 5 s (this one and
+            // status_idle.c's) buried everything else in a long idle log.
+            if (!s_logged_frame || el >= s_next_log || s_c1_frame != s_logged_c1) {
                 // `frames` is the rate the keycaps actually got since the last report.
                 // `frame` sums CORE0's time only: render time on the core0 path, the
                 // copy + legend + SPI push per keycap on the core1 path.
@@ -959,7 +966,8 @@ void startup_anim_tick(void) {
                 uprintf("Eden idle: core1 stack HWM %lu of %u B\n",
                         (unsigned long)core1_stack_high_water_mark(), (unsigned)CORE1_STACK_SIZE);
 #endif
-                s_next_log       = el + 5000;
+                s_next_log       = el + EDEN_IDLE_LOG_MS;
+                s_logged_c1      = s_c1_frame;
                 s_slice_worst_ms = 0;   // worst-since-the-last-report, not worst-ever
                 s_frames_done    = 0;
                 s_logged_frame   = true;

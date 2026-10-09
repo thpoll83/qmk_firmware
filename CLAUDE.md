@@ -257,6 +257,16 @@ auto-bump `[skip ci]` commit and triggers nothing. Use the `polykybd-github-rele
 skill; the mechanics, the `release-notes` branch and `scripts/publish_release.py` are in
 [`keyboards/polykybd/RELEASES.md`](keyboards/polykybd/RELEASES.md).
 
+- ⚠️ **`scripts/publish_release.py` is byte-identical across `qmk_firmware`,
+  `PolyKybdHost` and `wincompose`, nothing checks that, and it had already
+  diverged in BOTH directions at once** — these two repos held the
+  commit-pin and the `make_latest` correctness, wincompose held the
+  create-time gate, and each copy was the newer one for a different thing.
+  `md5sum */scripts/publish_release.py` is the check. Its tests live in
+  **`PolyKybdHost/tests/scripts/publish_release_test.py`**, the only one of
+  the three repos with a Python runner, so a break introduced here fails
+  there.
+
 - ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being released**
   (`tools/require_fwapply_run.py`). The HID-apply brick shipped because no release
   artifact had ever been applied on hardware — the rig flashes by UF2 over GPIO BOOTSEL,

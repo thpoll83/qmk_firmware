@@ -188,6 +188,13 @@ string in a test.
   confirmed the fix and resolved the thread. Name the call site for EACH half of
   a two-sided fix: on #317 it confirmed only the master side until the reply named
   the slave side's line too.
+- ⚠️ **From Claude Code on the web, GraphQL is refused by the GitHub proxy**, so
+  the usual `resolveReviewThread` mutation fails (*"GitHub GraphQL is not
+  available through this session's GitHub proxy"*). The proxy serves its own
+  REST route instead, keyed on any comment id in the thread:
+  `gh api -X POST repos/<owner>/<repo>/pulls/<n>/ccr/comments/<comment-id>/resolve`.
+  Replies go through `gh api -X POST repos/<o>/<r>/pulls/<n>/comments/<id>/replies
+  -f body=...` (host#340, 2026-10-09).
 - Post **one** comment, not one per finding. Table of findings → verdict, then a
   short section for what you declined and why. End with the attribution footer:
 

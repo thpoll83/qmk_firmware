@@ -135,9 +135,12 @@ that cost real debugging to learn (2026-07):
     else says so.** `PolyKybd`'s ruleset requires a pull request, and the built-in
     `GITHUB_TOKEN` cannot be on its bypass list, so `bump-version.yml` checks out with a
     PAT (Contents: write) whose owner IS on that list, and pushes the bump commit
-    directly. **When that PAT expires or is revoked, every bump fails with `GH013` …
-    Changes must be made through a pull request**, and `FW_VERSION` stops moving with no
-    other sign. Renew the secret, then re-run the failed job.
+    directly. Either failure stops `FW_VERSION` moving with no other sign:
+    - **The PAT expired or was revoked:** the job fails at checkout, unable to
+      authenticate, before it pushes anything. Replace `secrets.BUMP_PAT`, then re-run.
+    - **The push is rejected with `GH013` … Changes must be made through a pull
+      request:** the token works but its owner is no longer on the ruleset's bypass list.
+      Put them back on it, then re-run.
   - The host solved the same rule the other way (2026-10-09, PolyKybdHost#329): its bump
     job opens a bump PR with `GITHUB_TOKEN` and merges it at once, so it needs no secret,
     but needs "Allow GitHub Actions to create and approve pull requests" and a rule that

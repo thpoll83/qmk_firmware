@@ -472,6 +472,12 @@ contrast with their neighbour that the wire format does not show. The
   set-handedness also reboots both halves, but rewrites the EEPROM byte and the
   handedness flash stamp on every call. It ACKs BEFORE the reset (the reset never
   returns) and hands off to the slave with the QK_REBOOT key's hardened 20-retry path.
+- **v23's cmd 33 DIM flag (width byte bit 7) draws the report's icons dimmed** — a
+  browser's icons under a website's overlay. The keyboard dims the ICON at draw time
+  (25% of its pixels, `display_dim_bits[]`), never the bitmap and never the keycap:
+  host-side dimming would turn every browser image into a cache miss, and per-panel
+  contrast would dim the legend. ⚠️ On the split transaction bit 7 is the icon fill,
+  so the flag crosses as `OVERLAY_MAP_SYNC_DIM` (0x40). See `PROTOCOL_HISTORY.md`.
 - ⚠️ **The flat overlay index is the only ADDRESS an upload has, resolved through
   `overlay_map[]` — so `reset_overlay_mapping()`'s identity default is LOAD-BEARING FOR
   WRITES**, not a display convenience. Zeroing it sent every image to slot 0: nearly

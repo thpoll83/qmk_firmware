@@ -266,6 +266,28 @@ reading before you change either one.
     `shutdown_user()` flushes only dirty state and disarms the watchdog, so a
     deliberate reboot is never archived as a crash.
   - Older firmware NACKs an unknown command; the host gates it on v22.
+  **v23** adds cmd `33`'s **DIM** flag (width byte bit 7, `OVERLAY_MAP_W_DIM`): every
+  pair in that report is drawn dimmed. On a website the host layers the site's
+  overlay over the browser's, and marks the positions the browser's files still own
+  (`handler/common.Underlay`), so the site's own shortcuts stand out.
+  - **The keyboard draws the dimming, not the host.** Dimming the bitmaps on the
+    host would make every browser image a new image to the cache: a re-upload on
+    each switch between the plain browser and a website, and no icon-library fill
+    (it matches exact pixels). The pool image never changes; the bit lives in
+    `display_dim_bits[]`, beside `display_has_overlay_bits[]` and cleared with it.
+  - **The ICON is dimmed, never the keycap.** `draw_overlay()` draws every other row
+    and column of the bitmap (25% of its pixels, picked on hardware over every-other-
+    row and a checkerboard), and cuts the courtyard from the FULL icon, so the legend
+    keeps its clearance and its strength. Per-panel contrast was rejected for that
+    reason: it would dim the legend too.
+  - **Per report, not per pair:** the host sends dimmed and plain pairs in separate
+    reports. Every pair writes the bit either way, so a position that moves to a
+    plain report is drawn full again.
+  - **Two bits for one flag.** Bit 7 is `OVERLAY_MAP_ICON_FILL` on the split
+    transaction, so the master forwards the flag as `OVERLAY_MAP_SYNC_DIM` (0x40),
+    and the mapping repair replays plain pairs, then dimmed ones.
+  - v21/v22 firmware masks the width with 0x1F and draws those icons at full
+    strength; the host sets the bit only at v23.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload

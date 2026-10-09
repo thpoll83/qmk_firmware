@@ -358,7 +358,7 @@ uint8_t receive_prc_overlay_report(const uint8_t* data, uint8_t avail) {
 // Returns true if any mapping in this chunk lands on a currently-displayed position
 // (see overlay_from_index_visible) — the caller renders only then; an all-off-screen
 // chunk is staged silently and shown by the eventual layer/modifier/enable refresh.
-bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t width) {
+bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t width, bool dim) {
     bool any_visible = false;
     uint16_t from = UNSET_OVERLAY_MAPPING;
     if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
@@ -388,6 +388,9 @@ bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t w
                     // "in use" iff it has an overlay assigned. Establishing
                     // the mapping is exactly that act, so set the bit here.
                     mark_display_has_overlay(from);
+                    // Every pair sets the dim bit either way, so a position that
+                    // moves from a dimmed report to a plain one is drawn full again.
+                    set_display_dim(from, dim);
                     if (overlay_from_index_visible(from)) {
                         any_visible = true;
                     }
@@ -454,6 +457,9 @@ static void pack_map_value(uint8_t *buf, uint16_t idx, uint16_t v, uint8_t width
 static bool     s_repair_active = false;
 static bool     s_repair_reset_pending = false;
 static uint16_t s_repair_from   = 0;
+// The replay walks the index space twice: plain pairs, then dimmed ones (v23),
+// because the dim flag belongs to a whole report, not to a pair.
+static bool     s_repair_dim_pass = false;
 static uint16_t s_repair_pairs  = 0;
 static uint8_t  s_repair_reports = 0;
 
@@ -465,6 +471,7 @@ void arm_overlay_map_repair(void) {
     s_repair_active  = true;
     s_repair_reset_pending = true;
     s_repair_from    = 0;
+    s_repair_dim_pass = false;
     s_repair_pairs   = 0;
     s_repair_reports = 0;
 }
@@ -506,11 +513,12 @@ void overlay_map_repair_tick(void) {
         uint16_t slot = 0;      // value slot in this report (from,to,from,to,...)
         uint16_t last_from = 0, last_to = 0;
         memset(msg.mapping, 0, sizeof(msg.mapping));
-        msg.width = width;
+        msg.width = (uint8_t)(width | (s_repair_dim_pass ? OVERLAY_MAP_SYNC_DIM : 0u));
         msg.bytes = (uint8_t)sizeof(msg.mapping);
         // Collect up to one report's worth of used entries from the cursor.
         while (s_repair_from < OVERLAY_MAP_IDX_CNT && slot + 1 < values) {
-            if (display_has_overlay(s_repair_from)) {
+            if (display_has_overlay(s_repair_from) &&
+                display_is_dim(s_repair_from) == s_repair_dim_pass) {
                 last_from = s_repair_from;
                 last_to   = get_display_pool_slot(s_repair_from);
                 pack_map_value(msg.mapping, slot++, last_from, width);
@@ -518,6 +526,11 @@ void overlay_map_repair_tick(void) {
                 ++s_repair_pairs;
             }
             ++s_repair_from;
+        }
+        if (slot == 0 && !s_repair_dim_pass) {   // plain pairs done -> dimmed ones
+            s_repair_dim_pass = true;
+            s_repair_from     = 0;
+            continue;
         }
         if (slot == 0) {        // cursor ran out with nothing pending -> done
             s_repair_active = false;

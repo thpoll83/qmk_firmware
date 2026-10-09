@@ -5937,6 +5937,15 @@ static struct {
 // fresh login and costs one extra press otherwise.
 static uint8_t s_ime_ja_mode = IME_JA_OFF;
 
+// A slot is LIVE only while its key is physically down. An early gate in
+// process_record_user (the macro picker, a confirm prompt) can swallow a KC_IME
+// release after clear_keyboard() has already emptied the report; the slot it leaves
+// behind must not count as "another key still holds this usage", or every later
+// release skips its unregister and Right Alt stays down (Greptile on #355).
+static bool ime_slot_live(uint8_t i) {
+    return s_ime_held[i].usage != 0 && matrix_is_on(s_ime_held[i].row, s_ime_held[i].col);
+}
+
 static void ime_key_release(const keyrecord_t* record) {
     for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
         if (s_ime_held[i].usage == 0 || s_ime_held[i].row != record->event.key.row ||
@@ -5948,7 +5957,7 @@ static void ime_key_release(const keyrecord_t* record) {
         // Two KC_IME keys holding the SAME usage: the report carries it once, so
         // releasing it now would drop it under the finger still holding the other.
         for (uint8_t j = 0; j < IME_HELD_SLOTS; ++j) {
-            if (s_ime_held[j].usage == usage) return;
+            if (s_ime_held[j].usage == usage && ime_slot_live(j)) return;
         }
         unregister_code(usage);
         return;
@@ -5974,6 +5983,15 @@ static void ime_key_record(keyrecord_t* record) {
         return;
     }
     if (s.hold) {
+        // Retire slots whose release was swallowed (see ime_slot_live), so they
+        // neither block a free slot nor keep a usage "held" for a key that is up.
+        // A slot at THIS key's position is stale by definition: a key cannot be
+        // pressed twice without a release in between.
+        for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
+            const bool here = s_ime_held[i].row == record->event.key.row &&
+                              s_ime_held[i].col == record->event.key.col;
+            if (s_ime_held[i].usage != 0 && (here || !ime_slot_live(i))) s_ime_held[i].usage = 0;
+        }
         for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
             if (s_ime_held[i].usage == 0) {
                 s_ime_held[i].row   = record->event.key.row;

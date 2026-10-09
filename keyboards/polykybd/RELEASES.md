@@ -131,6 +131,18 @@ that cost real debugging to learn (2026-07):
     tool or a small addition stays a patch even when it bumps the protocol. After 1.0
     nearly every PR took `bump:minor` (firmware 1.0.0 → 1.7.0 in six days, host 1.3.0 →
     1.15.0 in nine), and the maintainer asked for the 0.9.x habit back (2026-10-03).
+  - ⚠️ **The bump pushes with a personal access token, `secrets.BUMP_PAT`, and nothing
+    else says so.** `PolyKybd`'s ruleset requires a pull request, and the built-in
+    `GITHUB_TOKEN` cannot be on its bypass list, so `bump-version.yml` checks out with a
+    PAT (Contents: write) whose owner IS on that list, and pushes the bump commit
+    directly. **When that PAT expires or is revoked, every bump fails with `GH013` …
+    Changes must be made through a pull request**, and `FW_VERSION` stops moving with no
+    other sign. Renew the secret, then re-run the failed job.
+  - The host solved the same rule the other way (2026-10-09, PolyKybdHost#329): its bump
+    job opens a bump PR with `GITHUB_TOKEN` and merges it at once, so it needs no secret,
+    but needs "Allow GitHub Actions to create and approve pull requests" and a rule that
+    asks for a PR and nothing more. Its `docs/releases.md` has the mechanics. Porting it
+    here would retire the PAT.
   - **`bump:none` skips the bump entirely**, for a PR that cannot change the firmware
     image — docs, skills, `scripts/`. It is tested FIRST and beats every other label:
     a PR carrying both is contradictory, and the safe reading of a contradiction is

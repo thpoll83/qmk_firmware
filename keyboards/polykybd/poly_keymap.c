@@ -1689,6 +1689,8 @@ void housekeeping_task_user(void) {
         eden_idle_tick();
         // An Eden replay the split handler recorded (it may not start one itself).
         split_sync_drain_anim_replay();
+        // A keymap reset the split handler recorded (too slow to run there).
+        split_sync_drain_keymap_reset();
         // One-time startup animation: render a frame while active (both halves
         // render their own keycaps). On the finishing edge, persist the "played"
         // marker and request a normal refresh so the base legends come back. Gated
@@ -3270,7 +3272,16 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 // function. This wrapper is the only thing that knows where the two inputs come
 // from, so the table can be exercised directly in a unit test.
 const uint32_t* keycode_to_disp_overlay(uint16_t keycode) {
-    return os_hint_for_keycode(keycode, get_local_layer()->mods, get_local_state()->active_os);
+    const uint32_t* hint = os_hint_for_keycode(keycode, get_local_layer()->mods, get_local_state()->active_os);
+    // The hint icons are a font-pack font (tools/hint_icons.py, symbol bundle). With
+    // no pack flashed their glyphs are absent, and drawing one would show the
+    // missing-glyph '!' on every key the modifier touches: show no hint instead, so
+    // the key keeps its own legend. A leading control code is a display-list op
+    // (the mod-tap badge), whose glyphs are resident.
+    if (hint != NULL && hint[0] >= 0x20 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, hint[0]) == NULL) {
+        return NULL;
+    }
+    return hint;
 }
 
 // Which of the 90 overlay keycode-slots are currently on screen, rebuilt as a side
@@ -3311,6 +3322,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     if(!display_has_overlay(idx)) {
         return false;
     }
+    const bool dim = display_is_dim(idx);
     idx = get_display_pool_slot(idx);
 
     // Overlay images are ROW-MAJOR MSB-first (host: np.packbits over the 40x72 mask),
@@ -3318,8 +3330,15 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     // reader. The column-native variant (for font glyphs) reads the same 360 bytes
     // without complaint and dilates a scrambled mask, which punched a big garbage
     // rectangle through the legend underneath (field, 2026-08-01).
+    // The courtyard is cut from the FULL icon even when it is drawn dimmed, so the
+    // legend keeps the same clearance either way.
     kdisp_clear_rowmajor_courtyard(28, 0, get_overlay(idx), 72, 40, KDISP_CY_DEFAULT);
-    kdisp_draw_bitmap(28, 0, get_overlay(idx), 72, 40); //don't understnad why we start at offset 28... need to think about it
+    if (dim) {
+        // v23: a browser's icon under a website's overlay (cmd 33 OVERLAY_MAP_W_DIM).
+        kdisp_draw_bitmap_dimmed(28, 0, get_overlay(idx), 72, 40);
+    } else {
+        kdisp_draw_bitmap(28, 0, get_overlay(idx), 72, 40); //don't understnad why we start at offset 28... need to think about it
+    }
     return true;
 }
 

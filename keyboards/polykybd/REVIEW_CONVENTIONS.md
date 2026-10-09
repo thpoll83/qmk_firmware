@@ -146,7 +146,12 @@ and relative links were adjusted to suit a standalone file.
     measured, more than once.
   - ⚠️ **CodeRabbit gives ONE included review per hour, and a push mid-review
     ABORTS it.** Every summary says *"1 included review per hour; 0 remain after
-    this review"*, so several PRs in one hour queue behind each other. A push
+    this review"*. ⚠️ **A request over the limit is REFUSED, not queued**: three
+    `@coderabbitai review` requests posted together (host#327, host#328, qmk#370,
+    2026-10-09) each came back *"⚠️ Action not completed — Review rate limited"*, all
+    naming the same *"next review in 18 minutes"*, so the hour is shared across the
+    repos. Nothing re-runs a refused request. Re-send it after the hour, one PR per
+    hour, the PR that merges first first. A push
     while a review is running ends it with *"⚠️ Action not completed — Head commit
     changed"*: no findings, no error, and nothing re-runs it. Push a fix after the
     review lands, or send a fresh `@coderabbitai review` right after the push

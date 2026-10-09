@@ -33,7 +33,18 @@ and is evidence the discipline is working rather than that the check is unnecess
 | `fontpack_render_settings.json` | qmk `base/fonts/generated/`, host `polyhost/res/fontpack/` | the font-pack **edit** dialog pre-fills the wrong render options |
 | `lang_flags.json` | same two | the editor cannot rebuild a flag glyph correctly |
 | `keycodes.h` | qmk `quantum/`, host `polyhost/res/` | the layout editor shows wrong keycode names, files new ones under the wrong tab, and offers values the firmware moved |
+| `publish_release.py` | qmk + host + wincompose `scripts/` | a release gate present in one copy and absent in another, which is how wincompose shipped two mislabelled releases |
 | the nine mirrored skills | qmk + host `.claude/skills/` | each copy becomes the newer one for a different note |
+
+⚠️ **`publish_release.py` drifted in BOTH directions at once, which no single-sided
+check would have caught** (2026-10-07). qmk + host held `commit_for_version()` — the pin
+that tags the commit DECLARING the version — and the `make_latest` correctness;
+wincompose held the create-time version gate. Each copy was therefore the newer one, and
+the missing half in wincompose is the mechanism behind two mislabelled releases
+(`PK-0.9.19`, `PK-0.9.20`: real builds, assets named with the previous version). ⚠️ It is
+**three** copies, not two, and wincompose is the one a `for` loop over qmk/host misses.
+Its tests live in host `tests/scripts/publish_release_test.py` only — the one repo with a
+Python runner — so that is where a break in any copy surfaces.
 
 ⚠️ **The skills are the case where drift is PURE LOSS, not tailoring.** Measured before
 they were harmonised: each copy was ahead of the other on a different note, and nothing

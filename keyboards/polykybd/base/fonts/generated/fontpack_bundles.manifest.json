@@ -11,8 +11,8 @@
       "index": 0,
       "slot_offset": 4096,
       "slot_size": 98304,
-      "total_size": 38976,
-      "font_count": 13,
+      "total_size": 48076,
+      "font_count": 14,
       "fonts": [
         {
           "all_fonts_index": 19,
@@ -91,6 +91,12 @@
           "symbol": "NotoSansMayanNumerals_Regular_Mayan_20pt16b",
           "first": 119520,
           "last": 119539
+        },
+        {
+          "all_fonts_index": 61441,
+          "symbol": "PolyHintIcons",
+          "first": 1048832,
+          "last": 1048882
         }
       ]
     },

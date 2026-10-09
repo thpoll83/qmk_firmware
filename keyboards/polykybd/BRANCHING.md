@@ -107,3 +107,30 @@ Two more rules came out of landing #324 → #325 here (2026-10-01):
   only `config.h` differed, by the `FW_VERSION` auto-bump. Then confirm
   `git diff --stat origin/PolyKybd` shows exactly the stacked PR's own
   additions/deletions (+374/−104 for #325) before pushing.
+- **A stacked PR that is ONE commit on your own branch: rebase it instead.** Skip the
+  per-file merge and move the commit:
+
+  ```bash
+  git rebase --onto origin/PolyKybd <base PR's last head> <stacked branch>
+  diff <(git diff <base PR's last head> <old stacked head>) <(git diff HEAD~1 HEAD) && echo PATCH-SAME
+  git push --force-with-lease=<stacked branch>:<old stacked head> origin HEAD:<stacked branch>
+  ```
+
+  ⚠️ **Prove it by the PATCH, not the tree.** The default has usually moved past the
+  base PR, so `git diff <old stacked head> HEAD` lists every unrelated merge and fails on
+  a perfect rebase. Host #328 after #327's squash (2026-10-09): the tree check failed on
+  #329/#330's files, and the patch compare was identical.
+- **Squashing a branch full of merges before review**: build the squash beside the
+  branch and prove it is the tested code before replacing it.
+
+  ```bash
+  git checkout -B tmp origin/PolyKybd
+  git merge --squash <branch> && git commit      # reuse the feature commit's message
+  git diff --quiet <branch> HEAD && echo TREE-SAME
+  git push --force-with-lease=<branch>:<old head sha> origin HEAD:<branch>
+  ```
+
+  If the squash itself conflicts (a stacked branch over a rewritten base),
+  `git read-tree -u --reset <old head>` writes the exact tested tree. Done three times on
+  2026-10-09 (#370, host #327, host #328); each result was byte-identical to the head CI
+  had tested.

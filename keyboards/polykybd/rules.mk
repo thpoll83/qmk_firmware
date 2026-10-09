@@ -484,6 +484,22 @@ endif
 OPT_DEFS += -DFW_REQUIRE_SIGNATURE
 
 # ---------------------------------------------------------------------------
+# Build identity: the git branch, printed in the boot banner beside QMK_GIT_HASH
+# ---------------------------------------------------------------------------
+# FW_VERSION cannot tell test builds apart: every build of one version reports it.
+# The banner prints `build <branch>@<hash> <date>` so a console log names the image
+# that wrote it. CI checks out a detached HEAD, so GitHub's own variables come
+# first: GITHUB_HEAD_REF is the PR's branch, GITHUB_REF_NAME a push's branch or tag.
+# Only path-safe characters survive, so a branch name cannot break the quoting.
+ifdef SKIP_GIT
+    POLY_GIT_BRANCH := NA
+else
+    POLY_GIT_BRANCH := $(or $(GITHUB_HEAD_REF),$(GITHUB_REF_NAME),$(shell git -C $(TOP_DIR) rev-parse --abbrev-ref HEAD 2>/dev/null))
+endif
+POLY_GIT_BRANCH := $(shell printf '%s' '$(subst ',,$(POLY_GIT_BRANCH))' | tr -cd 'A-Za-z0-9._/-')
+OPT_DEFS += -DPOLY_GIT_BRANCH=\"$(or $(POLY_GIT_BRANCH),unknown)\"
+
+# ---------------------------------------------------------------------------
 # Deliberate crashes, for exercising base/crash_record.* on real hardware
 # ---------------------------------------------------------------------------
 # `qmk compile ... -e POLYKYBD_CRASH_TEST=yes` compiles diag/crash_test.c and makes a

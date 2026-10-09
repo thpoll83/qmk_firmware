@@ -9,9 +9,10 @@
 #    include "base/shift_reg.h"
 #    include "base/tutorial_plan.h"   // the ring geometry + the dither field
 #    include "side.h"
+#    include "base/bitset.h"
 #    include QMK_KEYBOARD_H           // get_key_disp_bitmask, get_disp_bitmask_size
 
-#    define POLY_FOCUS_KEYS      40   // display slots per half
+#    define POLY_FOCUS_KEYS      DISP_SLOTS_PER_HALF
 #    define POLY_FOCUS_STRIDE   128   // scratch bytes per page row
 #    define POLY_FOCUS_KEY_REACH 41   // half-diagonal of a 72x40 keycap, board units
 #    define POLY_FOCUS_SLICE_MS   3   // the hard per-pass budget (see the header)
@@ -30,7 +31,7 @@ static uint32_t   s_start;
 static bool       s_sweep;            // board-reveal profile (see poly_focus_start_sweep)
 static uint32_t   s_sweep_ms;         // that profile's run: the reveal's, or the wipe's
 static uint8_t    s_scan;             // round-robin cursor over this half's slots
-static uint8_t    s_marked[(POLY_FOCUS_KEYS + 7) / 8];   // keys currently carrying ink
+static uint8_t    s_marked[BITSET_BYTES(POLY_FOCUS_KEYS)];   // keys currently carrying ink
 
 // Latched once per tick so every key of one pass draws the SAME instant — the same
 // reason the startup animation latches its comet set.
@@ -42,12 +43,6 @@ static uint8_t    s_dens;
 static bool       s_trail;            // false for the letter ring
 static uint32_t   s_trail_in2;
 static uint8_t    s_spark_tick;       // time bucket: the sparks re-roll per bucket
-
-static inline bool bit_get(const uint8_t *m, uint8_t i) { return (m[i >> 3] >> (i & 7)) & 1u; }
-static inline void bit_set(uint8_t *m, uint8_t i, bool v) {
-    if (v) m[i >> 3] |= (uint8_t)(1u << (i & 7));
-    else   m[i >> 3] &= (uint8_t)~(1u << (i & 7));
-}
 
 bool poly_focus_active(void) { return s_active; }
 
@@ -190,33 +185,35 @@ void poly_focus_overlay(uint8_t disp_idx, const sa_geom_t *g) {
             inked = true;
         }
     }
-    if (disp_idx < POLY_FOCUS_KEYS) bit_set(s_marked, disp_idx, inked);
+    if (disp_idx < POLY_FOCUS_KEYS) bitset_put(s_marked, disp_idx, inked);
+}
+
+void poly_key_select(uint8_t idx) {
+    sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
+}
+
+bool poly_key_repaint_begin(uint8_t idx, uint8_t slot) {
+    // The tutorial's own renderer was caught by the untracked-write trap and has to
+    // invalidate everything on teardown; tracking here avoids the need.
+    kdisp_track_panel(idx);
+    kdisp_set_buffer(0x00);
+    const bool drawn = poly_focus_draw_legend(slot);
+    kdisp_set_gfx_erase(false);
+    return drawn;
 }
 
 // Repaint one key: its ordinary legend, plus the arc when the band is over it.
 static void focus_repaint(uint8_t idx, bool with_arc, const sa_geom_t *g) {
-    const uint8_t slot = TUT_SLOT(is_left_side() ? 0 : 1, idx);
-    sr_shift_out_buffer_latch(get_key_disp_bitmask(idx), get_disp_bitmask_size());
-    // ⚠️ TRACK the panel. These writes happen outside update_displays()' own pass, and
-    // an untracked write leaves that panel's dirty-window box describing whatever was
-    // there before — which the first repaint afterwards then pushes as a delta, giving
-    // black and half-erased keycaps. The tutorial's own renderer was caught by exactly
-    // this and has to invalidate everything on teardown; tracking avoids the need.
-    kdisp_track_panel(idx);
-    kdisp_set_buffer(0x00);
+    poly_key_select(idx);
     // ⚠️ The LEGEND is what a hidden key must not show. The ARC still must — it is the
     // whole point of the ring that it crosses the board, and chapter 1's lit set is
     // exactly ONE key, so gating the arc on visibility too left "only a few ring
     // artifacts on the actual key" and no expanding ring at all (hardware).
     // poly_focus_draw_legend() draws nothing for a hidden key and says so; the arc is
-    // drawn regardless.
-    (void)poly_focus_draw_legend(slot);
+    // drawn regardless. The arc ORs straight into the buffer, so the erase flag the
+    // helper cleared does not touch it.
+    (void)poly_key_repaint_begin(idx, TUT_SLOT(is_left_side() ? 0 : 1, idx));
     if (with_arc) poly_focus_overlay(idx, g);
-    // ⚠️ The gfx plotter flags are STATIC. A legend that set erase (an inverted keycap)
-    // would otherwise leave it set and blank every keycap drawn after this one, here and
-    // in the next update_displays() pass. Clearing it is the caller's job at every draw
-    // site, and this is one.
-    kdisp_set_gfx_erase(false);
     kdisp_send_window();
 }
 
@@ -238,7 +235,7 @@ void poly_focus_tick(void) {
         if (!g.valid) continue;
 
         const bool want = s_live && tut_ring_hit(&s_cull, g.cx - s_cx, g.cy - s_cy);
-        const bool have = bit_get(s_marked, idx);
+        const bool have = bitset_get(s_marked, idx);
         // ⚠️ REPAINT EVERY FRAME THE KEY IS IN THE BAND — not only when its membership
         // changes. The arc MOVES THROUGH the key: painting it once on entry freezes it
         // at the radius it had then, so each key lights up and sits there and the whole
@@ -248,7 +245,7 @@ void poly_focus_tick(void) {
         // not 6 keys per ripple.
         if (!want && !have) continue;
         focus_repaint(idx, want, &g);
-        bit_set(s_marked, idx, want);
+        bitset_put(s_marked, idx, want);
 
         if (timer_elapsed32(slice) >= POLY_FOCUS_SLICE_MS) return;   // resume next pass
     }
@@ -285,4 +282,6 @@ void poly_focus_cancel(void) {}
 bool poly_focus_active(void) { return false; }
 void poly_focus_tick(void) {}
 void poly_focus_overlay(uint8_t disp_idx, const sa_geom_t *g) { (void)disp_idx; (void)g; }
+void poly_key_select(uint8_t idx) { (void)idx; }
+bool poly_key_repaint_begin(uint8_t idx, uint8_t slot) { (void)idx; (void)slot; return false; }
 #endif

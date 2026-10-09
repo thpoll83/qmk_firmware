@@ -22,16 +22,20 @@ import re, sys, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 KB   = os.path.dirname(HERE)
 ICONS = os.path.join(KB, "base", "fonts", "gfx_icons.h")
+# The OS hint icons continue the plane-16 range in a font-PACK font of their own
+# (tools/hint_icons.py). It shares the macro namespace and the slot space, so the
+# check reads both: one range, and the two fonts must not overlap.
+HINTS = os.path.join(KB, "base", "fonts", "hint_icons.h")
 NAMES = os.path.join(KB, "lang", "named_glyphs.h")
 
 PUA_FIRST, PUA_LAST = 0x100000, 0x10FFFD   # Supplementary Private Use Area-B
 
 
-def icons_font():
+def icons_font(path=ICONS, sym="Icons"):
     """-> (first, last, {cp: (w, h)}) reading the glyph table, gaps excluded."""
-    src = open(ICONS, encoding="utf-8").read()
-    m = re.search(r'IconsGlyphs\[\]\s*PROGMEM\s*=\s*\{(.*?)\n\};', src, re.S)
-    rng = re.search(r'\(GFXglyph \*\)IconsGlyphs,\s*(0x[0-9A-Fa-f]+),\s*(0x[0-9A-Fa-f]+)', src)
+    src = open(path, encoding="utf-8").read()
+    m = re.search(sym + r'Glyphs\[\]\s*PROGMEM\s*=\s*\{(.*?)\n\};', src, re.S)
+    rng = re.search(r'\(GFXglyph \*\)' + sym + r'Glyphs,\s*(0x[0-9A-Fa-f]+),\s*(0x[0-9A-Fa-f]+)', src)
     first, last = int(rng.group(1), 16), int(rng.group(2), 16)
     glyphs, cp = {}, first
     for line in m.group(1).splitlines():
@@ -58,20 +62,37 @@ def named():
 first, last, glyphs = icons_font()
 names = named()
 problems = []
+if os.path.exists(HINTS):
+    h_first, h_last, h_glyphs = icons_font(HINTS, "PolyHintIcons")
+    if h_first <= last:
+        problems.append(f"hint_icons.h starts at U+{h_first:X}, inside IconsFont (ends U+{last:X})")
+    hint_range = (h_first, h_last)
+    glyphs.update(h_glyphs)
+else:
+    hint_range = None
 
 if not (PUA_FIRST <= first <= last <= PUA_LAST):
     problems.append(f"IconsFont range U+{first:X}..U+{last:X} leaves plane-16 PUA "
                     "and would shadow a real character")
 
-print(f"IconsFont range U+{first:X}..U+{last:X}  ({len(glyphs)} glyphs)\n")
-print(f"{'cp':<9} {'glyph':<8} {'macro':<24} state")
-for cp in range(first, max(last, max(names, default=last)) + 1):
+ranges = [("IconsFont", first, last)] + ([("PolyHintIcons", *hint_range)] if hint_range else [])
+for nm_, lo, hi in ranges:
+    print(f"{nm_} range U+{lo:X}..U+{hi:X}")
+if hint_range and hint_range[0] <= hint_range[1] and not (PUA_FIRST <= hint_range[0] <= hint_range[1] <= PUA_LAST):
+    problems.append("hint_icons.h range leaves plane-16 PUA")
+print(f"\n{'cp':<9} {'glyph':<8} {'macro':<24} state")
+
+
+def in_font(cp):
+    return any(lo <= cp <= hi for _, lo, hi in ranges)
+
+
+for cp in sorted(set(c for _, lo, hi in ranges for c in range(lo, hi + 1)) | set(names)):
     g = glyphs.get(cp)
     nm = names.get(cp, "")
-    if cp > last:
-        state = "past last, but NAMED" if nm else "free (past last)"
-        if nm:
-            problems.append(f"U+{cp:X} macro {nm} points past IconsFont.last (no glyph)")
+    if not in_font(cp):
+        state = "outside every font, but NAMED"
+        problems.append(f"U+{cp:X} macro {nm} points outside IconsFont and the hint font (no glyph)")
     elif g:
         state = "taken"
         if not nm:
@@ -84,10 +105,14 @@ for cp in range(first, max(last, max(names, default=last)) + 1):
             state = "gap, but NAMED"
     print(f"U+{cp:X}  {(f'{g[0]}x{g[1]}' if g else '-'):<8} {nm:<24} {state}")
 
+# A new resident icon extends IconsFont's `last`; the hint block above it is the ceiling.
 free = [cp for cp in range(first, last + 1) if cp not in glyphs]
+ceiling = hint_range[0] if hint_range else PUA_LAST + 1
 nxt = free[0] if free else last + 1
 print(f"\nfree gaps: {', '.join(f'U+{c:X}' for c in free) or '(none)'}; "
-      f"otherwise extend `last` to U+{last + 1:X}")
+      f"otherwise extend `last` to U+{last + 1:X} ({ceiling - last - 1} slots before U+{ceiling:X})")
+if nxt >= ceiling:
+    problems.append(f"IconsFont is full: the next slot U+{nxt:X} is the hint block")
 
 if "--free" in sys.argv:
     print(f"\nnext free: U+{nxt:X}")

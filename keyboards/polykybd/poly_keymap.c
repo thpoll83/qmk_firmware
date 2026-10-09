@@ -149,6 +149,15 @@ _Static_assert((int)POLY_OS_LINUX   == (int)OSA_OS_LINUX,   "enum poly_os must m
 _Static_assert((int)POLY_OS_ANDROID == (int)OSA_OS_ANDROID, "enum poly_os must match enum polymod_os_action_os");
 _Static_assert((int)POLY_OS_IOS     == (int)OSA_OS_IOS,     "enum poly_os must match enum polymod_os_action_os");
 
+// The base-layer switch: drop every layer, then turn `layer` on. layer_clear() +
+// layer_on(index) is deliberate, NOT default_layer_set(), which takes a BITMASK and
+// so set the wrong base when handed an index (see KC_L0 ... KC_L4).
+static inline void layer_reset_to(uint8_t layer) {
+    layer_clear();
+    layer_on(layer);
+}
+_Static_assert(KC_L4 - KC_L0 == 4 && _L4 - _L0 == 4, "KC_L0 ... KC_L4 maps onto _L0.._L4 by offset");
+
 #ifdef RGB_MATRIX_ENABLE
 // Forward-declare this helper function
 void rgb_matrix_update_pwm_buffers(void);
@@ -162,6 +171,34 @@ void rgb_matrix_update_pwm_buffers(void);
 // diff re-fire alone does NOT cover for transient state (see the comment at the
 // USER_SYNC_POLY_DATA send site).
 #define PERIODIC_SYNC_RETRIES 3
+
+// The Intl latin table (picks + remap assignments) has no local/global diff
+// behind it, so a lost USER_SYNC_LATIN_EX_DATA frame would leave the slave
+// drawing stale variations until the next pick. Like the MRU push, it carries
+// its own pending flag: latin_publish() tries at once, and
+// sync_and_refresh_displays() re-sends until the slave acks.
+static bool     s_latin_sync_pending = false;
+static uint32_t s_latin_sync_last_try;
+
+// A re-send costs up to `retries` blocking UART attempts on the main loop, so a link
+// that answers but keeps failing must not be retried on every housekeeping pass.
+#define LATIN_SYNC_RETRY_MS 500
+
+static void latin_sync_send(uint8_t retries) {
+    const latin_sync_t* table = get_global_latin_table();
+    s_latin_sync_last_try = timer_read32();
+    uint8_t ack = send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), retries);
+    if (sync_succeeded(ack)) {
+        s_latin_sync_pending = false;
+    } else {
+        uprintf("USER_SYNC_LATIN_EX_DATA failed to send (ack=0x%02x), will retry\n", ack);
+    }
+}
+
+static void latin_publish(void) {
+    s_latin_sync_pending = true;
+    latin_sync_send(10);
+}
 
 /*[[[cog
 import cog
@@ -597,8 +634,7 @@ void tutorial_enter_base_layout(void) {
     poly_layer_t *ll = access_local_layer();
     if (s_tut_saved_def_layer == 0xFF) s_tut_saved_def_layer = ll->def_layer;
     ll->def_layer = _L0;
-    layer_clear();
-    layer_on(_L0);
+    layer_reset_to(_L0);
     ll->layer = layer_state;
 }
 
@@ -611,8 +647,7 @@ void tutorial_restore_layout(void) {
         ll->def_layer         = s_tut_saved_def_layer;
         s_tut_saved_def_layer = 0xFF;
     }
-    layer_clear();
-    layer_on(ll->def_layer);
+    layer_reset_to(ll->def_layer);
     ll->layer = layer_state;
 }
 
@@ -710,8 +745,7 @@ static void poly_tutorial_hold_lesson_layer(void) {
     uprintf("Tutorial: layer drifted (state 0x%08lX, def %u), back to _L0\n",
             (unsigned long)layer_state, (unsigned)ll->def_layer);
     ll->def_layer = _L0;
-    layer_clear();
-    layer_on(_L0);
+    layer_reset_to(_L0);
     if (extra != 0xFFu) layer_on(extra);
     ll->layer = layer_state;
     request_disp_refresh();
@@ -878,6 +912,10 @@ void sync_and_refresh_displays(void) {
             } else {
                 uprint("USER_SYNC_MRU_DATA failed to send\n");
             }
+        }
+
+        if (s_latin_sync_pending && timer_elapsed32(s_latin_sync_last_try) >= LATIN_SYNC_RETRY_MS) {
+            latin_sync_send(PERIODIC_SYNC_RETRIES);
         }
 
         access_local_layer()->led_state = host_keyboard_led_state();
@@ -1089,6 +1127,15 @@ void sync_and_refresh_displays(void) {
 // dropping it on layer exit can never release a Ctrl the user is really holding.
 static bool s_picker_latched = false;
 
+// Drop the picker's Ctrl latch, if WE hold it. Gated on ownership, never on the key:
+// releasing a Ctrl the user is really holding would leave it stuck (INTL_LAYER.md).
+static void picker_latch_release(void) {
+    if (s_picker_latched) {
+        unregister_mods(MOD_MASK_CTRL);
+        s_picker_latched = false;
+    }
+}
+
 // Sets layer state variable tracking the active keyboard layer.
 static void latin_picker_reset_page(void);   // defined with the picker helpers below
 static void latin_remap_cancel(void);        // ditto
@@ -1105,10 +1152,7 @@ layer_state_t layer_state_set_user(layer_state_t state) {
         // Leaving Intl closes the picker. Without this the latched Ctrl would stay
         // registered with the layer gone, so every following keystroke reaches the
         // host as Ctrl+key.
-        if(s_picker_latched) {
-            unregister_mods(MOD_MASK_CTRL);
-            s_picker_latched = false;
-        }
+        picker_latch_release();
         // Reset the page unconditionally, NOT only when we owned the latch: the
         // user can hold Ctrl themselves and page, in which case s_picker_latched is
         // false and the page would survive to the next visit to the layer.
@@ -1182,8 +1226,7 @@ void poly_prepare_for_flash(void) {
     // boot path — so a Colemak/Neo base dropped to QWERTY here, and that
     // cleared layer state was bridged to the slave, leaving the slave on the
     // QMK default layer after the flash.
-    layer_clear();
-    layer_on(access_local_layer()->def_layer);
+    layer_reset_to(access_local_layer()->def_layer);
     request_disp_refresh();
     // Push the base layer + refresh to the SLAVE and render the master, before
     // fw_up freezes display sync — so BOTH halves show legible base legends and
@@ -2070,9 +2113,7 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         return emoji;
     }
 
-    if(IS_QK_MOD_TAP(keycode)) {
-        keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
-    }
+    keycode = poly_mt_tap(keycode);
 
     const poly_sync_t* local_state = get_local_state();
 #ifndef ENABLE_NUMLOCK_FOR_OSX
@@ -2409,6 +2450,7 @@ static const glyph_script_block_t glyph_script_blocks[GLYPH_SCRIPT_COUNT] = {
     [GLYPH_AMIGA]    = { 0xE9C0u, true  },
     [GLYPH_APL]      = { 0xEA00u, true  },
     [GLYPH_BRAILLE]  = { 0xEA40u, true  },
+    [GLYPH_C64KEYS]  = { 0xEA80u, true  },
 };
 
 // The dense mapping relies on the USB-HID keycodes being contiguous
@@ -2426,6 +2468,50 @@ static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
     // KC_1..KC_0 are contiguous (1 first, 0 last) -> dense indices 26..35.
     if (blk.digits && keycode >= KC_1 && keycode <= KC_0) return blk.base + 26u + (uint32_t)(keycode - KC_1);
     return 0;
+}
+
+// C64 keycap script, LETTER keys only: the letter at 22 px on top and the key's two
+// PETSCII graphics (14x14 framed cells) side by side below it, the way a real C64 key
+// prints them on its front: Commodore+key on the left, Shift+key on the right. They
+// are drawn, never typed. Each glyph comes from its own block in the fantasy bundle
+// (fonts.yaml _C64KeyLtr_ / _C64Petscii_): letters a..z at LETTER_BASE, then the
+// Commodore graphics a..z and the Shift graphics a..z at PETSCII_BASE.
+#define C64KEYS_LETTER_BASE  0xEAC0u
+#define C64KEYS_PETSCII_BASE 0xEB00u
+#define C64KEYS_LETTER_TOP   1    // 22 px capitals: y 1..22
+#define C64KEYS_CELL_TOP     25   // 14 px cells: y 25..38, 2 px under the letter
+#define C64KEYS_CELL_LEFT_CX  (SCREEN_WIDTH / 2 - 12)
+#define C64KEYS_CELL_RIGHT_CX (SCREEN_WIDTH / 2 + 12)
+
+// Draws one glyph with its ink centred on column `cx` and its top on row `top`.
+static void c64keys_glyph_at(uint32_t cp, int8_t cx, int8_t top, int8_t cy_radius) {
+    const uint32_t s[2] = { cp, 0 };
+    int8_t xmin, xmax, ymin, ymax;
+    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, s, &xmin, &xmax, &ymin, &ymax);
+    const int8_t gx = (int8_t)(BUFFER_X + cx - (xmax - xmin + 1) / 2 - xmin);
+    const int8_t gy = (int8_t)(top - ymin);
+    kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, gx, gy, s, cy_radius);
+}
+
+// Returns false, drawing nothing, when any of the three glyphs is missing (a fantasy
+// bundle from before these fonts): the caller then draws the plain large letter.
+static bool render_c64_keycap(uint16_t keycode) {
+    if (keycode < KC_A || keycode > KC_Z) return false;
+    const uint32_t i      = (uint32_t)(keycode - KC_A);
+    const uint32_t letter = C64KEYS_LETTER_BASE + i;
+    const uint32_t cbm    = C64KEYS_PETSCII_BASE + i;
+    const uint32_t shift  = C64KEYS_PETSCII_BASE + 26u + i;
+    if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, letter) == NULL ||
+        kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cbm) == NULL ||
+        kdisp_gfx_glyph(g_all_fonts, g_all_font_count, shift) == NULL) {
+        return false;
+    }
+    c64keys_glyph_at(letter, SCREEN_WIDTH / 2, C64KEYS_LETTER_TOP, KDISP_CY_DEFAULT);
+    // Courtyard 0 for the cells: they sit 2 px under the letter, and the default 3 px
+    // courtyard would erase the letter's bottom row.
+    c64keys_glyph_at(cbm,   C64KEYS_CELL_LEFT_CX,  C64KEYS_CELL_TOP, 0);
+    c64keys_glyph_at(shift, C64KEYS_CELL_RIGHT_CX, C64KEYS_CELL_TOP, 0);
+    return true;
 }
 
 // ── Keycap legend SIZE (enum poly_glyph_size, HID cmd 34) ────────────────────
@@ -2634,7 +2720,7 @@ static void latin_remap_apply(uint8_t slot, uint8_t letter) {
     // rather than leaving a stale index for latin_variation() to fall back from.
     latin_pick_set(table->ex, latin_pick_field((int8_t)slot, true),  0);
     latin_pick_set(table->ex, latin_pick_field((int8_t)slot, false), 0);
-    send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), 10);
+    latin_publish();
     mark_latin_dirty();
 }
 
@@ -2658,7 +2744,7 @@ static void latin_remap_reset_all(void) {
         }
     }
     memset(table->assign, LATIN_ASSIGN_FILL, sizeof(table->assign));
-    send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)table, sizeof(*table), 10);
+    latin_publish();
     mark_latin_dirty();
     request_disp_refresh();
 }
@@ -2729,9 +2815,7 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     // and translate_keycode() has no row for it) and the keycap drew NO letter at
     // all: only the mod-tap hint badge, floating in an empty cell (field, 2026-08-18).
     // The two legend producers have to agree; keep the unwrap in both.
-    if(IS_QK_MOD_TAP(keycode)) {
-        keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
-    }
+    keycode = poly_mt_tap(keycode);
 
     const poly_layer_t* local_layer = get_local_layer();
 
@@ -2867,6 +2951,9 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     // the override is only for the resting/base letter legend, and the AltGr output
     // is a genuinely different character, not a cased form of the same letter.
     if (local_state->glyph_script != GLYPH_STD && !add_lang && !(mods & MOD_RALT)) {
+        if (local_state->glyph_script == GLYPH_C64KEYS && render_c64_keycap(keycode)) {
+            return true;
+        }
         uint32_t cp = glyph_script_codepoint(local_state->glyph_script, keycode);
         if (cp != 0 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) != NULL) {
             const uint32_t s[2] = { cp, 0 };
@@ -3197,7 +3284,16 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 // function. This wrapper is the only thing that knows where the two inputs come
 // from, so the table can be exercised directly in a unit test.
 const uint32_t* keycode_to_disp_overlay(uint16_t keycode) {
-    return os_hint_for_keycode(keycode, get_local_layer()->mods, get_local_state()->active_os);
+    const uint32_t* hint = os_hint_for_keycode(keycode, get_local_layer()->mods, get_local_state()->active_os);
+    // The hint icons are a font-pack font (tools/hint_icons.py, symbol bundle). With
+    // no pack flashed their glyphs are absent, and drawing one would show the
+    // missing-glyph '!' on every key the modifier touches: show no hint instead, so
+    // the key keeps its own legend. A leading control code is a display-list op
+    // (the mod-tap badge), whose glyphs are resident.
+    if (hint != NULL && hint[0] >= 0x20 && kdisp_gfx_glyph(g_all_fonts, g_all_font_count, hint[0]) == NULL) {
+        return NULL;
+    }
+    return hint;
 }
 
 // Which of the 90 overlay keycode-slots are currently on screen, rebuilt as a side
@@ -3238,6 +3334,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     if(!display_has_overlay(idx)) {
         return false;
     }
+    const bool dim = display_is_dim(idx);
     idx = get_display_pool_slot(idx);
 
     // Overlay images are ROW-MAJOR MSB-first (host: np.packbits over the 40x72 mask),
@@ -3245,8 +3342,15 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     // reader. The column-native variant (for font glyphs) reads the same 360 bytes
     // without complaint and dilates a scrambled mask, which punched a big garbage
     // rectangle through the legend underneath (field, 2026-08-01).
+    // The courtyard is cut from the FULL icon even when it is drawn dimmed, so the
+    // legend keeps the same clearance either way.
     kdisp_clear_rowmajor_courtyard(28, 0, get_overlay(idx), 72, 40, KDISP_CY_DEFAULT);
-    kdisp_draw_bitmap(28, 0, get_overlay(idx), 72, 40); //don't understnad why we start at offset 28... need to think about it
+    if (dim) {
+        // v23: a browser's icon under a website's overlay (cmd 33 OVERLAY_MAP_W_DIM).
+        kdisp_draw_bitmap_dimmed(28, 0, get_overlay(idx), 72, 40);
+    } else {
+        kdisp_draw_bitmap(28, 0, get_overlay(idx), 72, 40); //don't understnad why we start at offset 28... need to think about it
+    }
     return true;
 }
 
@@ -4039,7 +4143,7 @@ void tutorial_shift_slots(uint8_t out[TUT_SHIFT_STAGES]) {
     for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             uint16_t kc = keymaps[_BL][r][c];
-            if (IS_QK_MOD_TAP(kc)) kc = QK_MOD_TAP_GET_TAP_KEYCODE(kc);
+            kc = poly_mt_tap(kc);
             if (kc != KC_LEFT_SHIFT && kc != KC_RIGHT_SHIFT) continue;
             const uint8_t slot = tutorial_slot_of(r, c);
             if (slot == TUT_SLOT_NONE) continue;
@@ -4054,17 +4158,8 @@ void tutorial_shift_slots(uint8_t out[TUT_SHIFT_STAGES]) {
 
 uint32_t tutorial_slot_letter(uint8_t slot) {
     if (slot == TUT_SLOT_NONE) return 0;
-    const uint8_t idx = TUT_SLOT_IDX(slot);
-    const uint8_t dr = (uint8_t)(idx / MATRIX_COLS), dc = (uint8_t)(idx % MATRIX_COLS);
-    uint8_t       mr, mc;
-    if (TUT_SLOT_RIGHT(slot)) {
-        mr = (uint8_t)(dr + MATRIX_ROWS_PER_SIDE);
-        mc = (dr < 4) ? (uint8_t)(dc + 1) : dc;
-    } else {
-        mr = dr;
-        mc = dc;
-    }
-    if (mr >= MATRIX_ROWS || mc >= MATRIX_COLS) return 0;
+    uint8_t mr, mc;
+    if (!display_index_to_matrix(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot), &mr, &mc)) return 0;
     const uint16_t kc = keymaps[_BL][mr][mc];
     if (kc < KC_A || kc > KC_Z) return 0;
     // Upper case: at 2x the 19px face this fills the keycap, and a lone capital reads
@@ -4105,7 +4200,7 @@ bool tutorial_key_in_chapter_set(uint8_t row, uint8_t col, bool layer_chapter) {
     uint16_t kc = keymaps[_BL][row][col];
     // A mod-tap's legend is its TAP keycode's legend, so unwrap before asking what this
     // key is — the same unwrap render_key() opens with, and for the same reason.
-    if (IS_QK_MOD_TAP(kc)) kc = QK_MOD_TAP_GET_TAP_KEYCODE(kc);
+    kc = poly_mt_tap(kc);
     if (kc >= KC_A && kc <= KC_Z) return true;
     return layer_chapter ? tutorial_is_layer_key(kc)
                          : (kc == KC_LEFT_SHIFT || kc == KC_RIGHT_SHIFT);
@@ -4115,16 +4210,7 @@ bool tutorial_key_in_chapter_set(uint8_t row, uint8_t col, bool layer_chapter) {
 // Matrix (row,col) for a slot on THIS half, or false when it does not map back.
 static bool tutorial_matrix_of(uint8_t slot, uint8_t *row, uint8_t *col) {
     if (slot == TUT_SLOT_NONE) return false;
-    const uint8_t idx = TUT_SLOT_IDX(slot);
-    const uint8_t dr = (uint8_t)(idx / MATRIX_COLS), dc = (uint8_t)(idx % MATRIX_COLS);
-    if (TUT_SLOT_RIGHT(slot)) {
-        *row = (uint8_t)(dr + MATRIX_ROWS_PER_SIDE);
-        *col = (dr < 4) ? (uint8_t)(dc + 1) : dc;
-    } else {
-        *row = dr;
-        *col = dc;
-    }
-    return (*row < MATRIX_ROWS) && (*col < MATRIX_COLS);
+    return display_index_to_matrix(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot), row, col);
 }
 
 // Defined further down, beside update_displays()' own use of them.
@@ -4373,7 +4459,9 @@ uint8_t tutorial_preview_prepare(void) {
     const uint8_t own = poly_reported_lang();
     for (uint8_t i = 0; i < TUT_PREVIEW_ALL; ++i) {
         const tut_preview_t *e = &s_tut_preview_all[i];
-        // A Greek user's board already speaks Greek: showing it would change nothing.
+        // Skip the user's own language: the chapter shows what ELSE the board speaks.
+        // (The lesson runs on TUT_PARKED_LANG, so showing it would change the board, but
+        // a Greek user does not need Greek introduced.)
         if (!e->script && e->value == own) continue;
         if (tut_preview_renderable(e)) s_tut_preview[s_tut_preview_n++] = i;
     }
@@ -5049,6 +5137,11 @@ uint8_t poly_reported_lang(void) {
     return cur;
 }
 
+void poly_set_host_lang(uint8_t lang) {
+    access_local_state()->lang = lang;
+    if (s_tut_real_lang != 0xFF) s_tut_real_lang = lang;
+}
+
 // The language to STORE. Only the master keeps s_tut_real_lang; the slave receives the
 // preview through the ordinary sync and cannot tell it from the user's language. So
 // while the lesson runs the slave keeps the language it already stored, or a flush
@@ -5064,6 +5157,13 @@ uint8_t poly_persisted_lang(void) {
 // The demo's language tour writes its preview through here too (demo_preview()), so the
 // host-facing guarantees above hold for it unchanged: GET_LANG and the settings save keep
 // reading the user's real language.
+//
+// ⚠️ The whole tutorial runs on TUT_PARKED_LANG, the way tutorial_enter_base_layout()
+// parks the layout on _L0. The lesson names letters from keymaps[_BL]
+// (tutorial_slot_letter()) while the keycap draws them in the board's language, so on
+// Korean the status panel asked for "A" over a key showing a Hangul letter. A script
+// item keeps the parked language underneath; only a language item replaces it.
+#define TUT_PARKED_LANG LANG_ENUS
 static uint8_t poly_tutorial_apply_preview(void) {
     poly_sync_t          *ls = access_local_state();
     const tut_preview_t *e  = tut_preview_live();
@@ -5071,15 +5171,21 @@ static uint8_t poly_tutorial_apply_preview(void) {
     bool    script = has && e->script;
     uint8_t value  = has ? e->value : 0;
     if (!has) has = demo_preview(&script, &value);
-    if (has && !script) {
+    bool    lang_has   = has && !script;
+    uint8_t lang_value = value;
+    if (!lang_has && tutorial_active()) {
+        lang_has   = true;
+        lang_value = TUT_PARKED_LANG;
+    }
+    if (lang_has) {
         if (s_tut_real_lang == 0xFF || ls->lang != s_tut_written_lang) {
-            s_tut_real_lang = ls->lang;           // first item, or the host moved it
+            s_tut_real_lang = ls->lang;           // first write, or the host moved it
         }
-        if (ls->lang != value) {
-            ls->lang = value;
+        if (ls->lang != lang_value) {
+            ls->lang = lang_value;
             request_disp_refresh();
         }
-        s_tut_written_lang = value;
+        s_tut_written_lang = lang_value;
     } else if (s_tut_real_lang != 0xFF) {
         if (ls->lang == s_tut_written_lang && ls->lang != s_tut_real_lang) {
             ls->lang = s_tut_real_lang;
@@ -5094,20 +5200,9 @@ static uint8_t poly_tutorial_apply_preview(void) {
 bool eden_idle_erase_legend(uint8_t disp_idx) {
     if (disp_idx >= MATRIX_ROWS_PER_SIDE * MATRIX_COLS) return false;
     // disp_idx == the anim geom index == display row*8 + col. Invert to the matrix
-    // (row,col), undoing the right-half `c--` display fold that invert_display()
-    // applies to the upper display rows (mirrors the host sim's disp_mp): LEFT is a
-    // straight (dr, dc); RIGHT is (dr+MATRIX_ROWS_PER_SIDE, dc+1) on rows 0..3 and
-    // (dr+MATRIX_ROWS_PER_SIDE, dc) on the bottom row 4.
-    uint8_t dr = disp_idx / MATRIX_COLS, dc = disp_idx % MATRIX_COLS;
+    // (row,col), undoing the right-half display fold (mirrors the host sim's disp_mp).
     uint8_t mr, mc;
-    if (is_left_side()) {
-        mr = dr;
-        mc = dc;
-    } else {
-        mr = dr + MATRIX_ROWS_PER_SIDE;
-        mc = (dr < 4) ? (uint8_t)(dc + 1) : dc;
-    }
-    if (mc >= MATRIX_COLS) return false;   // phantom col — no OLED behind it
+    if (!display_index_to_matrix(!is_left_side(), disp_idx, &mr, &mc)) return false;   // phantom col — no OLED behind it
     const poly_layer_t* local_layer = get_local_layer();
     uint16_t keycode = display_keycode_at(local_layer, mr, mc);
     if (keycode == KC_NO || keycode == KC_TRNS) return false;
@@ -5934,6 +6029,15 @@ static void ime_key_record(keyrecord_t* record) {
 // so the extra dispatches cost nothing there either.
 //
 // Returns true when the keycode was ours.
+// Pick language `li` from the language layer and close it. `push_mru` puts it on the
+// recents row; the cycle key and the direct per-language selectors do not.
+static void poly_select_lang(poly_sync_t* local_state, uint8_t li, bool push_mru) {
+    local_state->lang = li;
+    if (push_mru) mru_lang_push(li);
+    mark_settings_dirty();
+    layer_off(_LL);
+}
+
 static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
     poly_sync_t*  local_state = access_local_state();
     poly_layer_t* local_layer = access_local_layer();
@@ -5956,9 +6060,7 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         switch (keycode) {
         case KC_LANG:
             if (IS_LAYER_ON(_LL)) {
-                local_state->lang = (local_state->lang + 1) % NUM_LANG;
-                mark_settings_dirty();
-                layer_off(_LL);
+                poly_select_lang(local_state, (uint8_t)((local_state->lang + 1) % NUM_LANG), false);
             }
             else {
                 layer_on(_LL);
@@ -6002,50 +6104,16 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         // (e.g. _L2=2 -> 0b10 = layer 1), making the keys type a different layer than
         // the keycaps showed. Persistence still round-trips the index via eeconfig
         // (defer_default_layer_save -> persistent_default_layer_get at boot).
-        case KC_L0:
+        case KC_L0 ... KC_L4:   // KC_L0..KC_L4 and _L0.._L4 are both contiguous
             if (!act) break;
-            local_layer->def_layer = _L0;
+            local_layer->def_layer = (uint8_t)(_L0 + (keycode - KC_L0));
             defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L1:
-            if (!act) break;
-            local_layer->def_layer = _L1;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L2:
-            if (!act) break;
-            local_layer->def_layer = _L2;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L3:
-            if (!act) break;
-            local_layer->def_layer = _L3;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
-            request_disp_refresh();
-            break;
-        case KC_L4:
-            if (!act) break;
-            local_layer->def_layer = _L4;
-            defer_default_layer_save(local_layer->def_layer);
-            layer_clear();
-            layer_on(local_layer->def_layer);
+            layer_reset_to(local_layer->def_layer);
             request_disp_refresh();
             break;
         case KC_BASE:
             if (!act) break;
-            layer_clear();
-            layer_on(local_layer->def_layer);
+            layer_reset_to(local_layer->def_layer);
             break;
         case KC_D1Q:
             if (!act) break;
@@ -6268,10 +6336,7 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             if (!act) break;
             int16_t li = lang_index_for_keycode(keycode);
             if (li >= 0) {
-                local_state->lang = (uint8_t)li;
-                mru_lang_push((uint8_t)li);
-                mark_settings_dirty();
-                layer_off(_LL);
+                poly_select_lang(local_state, (uint8_t)li, true);
             }
             break;
         }
@@ -6281,9 +6346,7 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         // above guard that — and the whole per-language block is one range case.
         case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1:
             if (!act) break;
-            local_state->lang = (uint8_t)(keycode - KCL_ENUS);
-            mark_settings_dirty();
-            layer_off(_LL);
+            poly_select_lang(local_state, (uint8_t)(keycode - KCL_ENUS), false);
             break;
         default:
             handled = false;
@@ -6368,7 +6431,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         // mid-lesson" survives; this is also the standing rule that modifiers and layer
         // keys must fall through a swallow, which the Intl layer learned twice.
         uint16_t kc = poly_keycode_at(_BL, row, col);
-        if (IS_QK_MOD_TAP(kc)) kc = QK_MOD_TAP_GET_TAP_KEYCODE(kc);
+        kc = poly_mt_tap(kc);
         // ⚠️ SHIFT AND THE LAYER KEYS ARE THE EXCEPTIONS, and they have to be real
         // ones. Chapters 2 and 3 ask the user to hold a key and watch every legend
         // change — and the legends follow local_layer->mods and ->layer, which only
@@ -6744,10 +6807,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             clear_keyboard();
             // Drop the variation picker if it was open: the two prompts would
             // otherwise both claim the keycaps.
-            if(s_picker_latched) {
-                unregister_mods(MOD_MASK_CTRL);
-                s_picker_latched = false;
-            }
+            picker_latch_release();
             latin_picker_reset_page();
             request_disp_refresh();
         }
@@ -6802,18 +6862,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 // the identical flaw: a single dropped reboot frame at only 5 retries
                 // left the slave alive on stale state, the master rebooted alone and
                 // hung on the boot splash until the slave was replugged (field 2026-07
-                // — plain reset key, no firmware apply).  Use 20 retries and re-fire the
-                // whole round once if the slave still hasn't acked.  Safe: the slave
-                // reset handler is idempotent (it only arms a deferred mcu_reset),
-                // send_to_bridge is synchronous (returns only after the slave has
-                // handled it), and we're about to reset anyway — the extra worst-case
-                // ~1 s is free insurance on this critical step.
+                // — plain reset key, no firmware apply).  fw_up_send_slave_reset()
+                // carries the hardened retry policy for every reboot handoff.
                 poly_reset_sync_t reboot_msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
                                                  .action = RESET_ACTION_REBOOT };
-                uint8_t ack = send_to_bridge(USER_SYNC_RESET, &reboot_msg, sizeof(reboot_msg), 20);
-                if (!sync_succeeded(ack)) {
-                    ack = send_to_bridge(USER_SYNC_RESET, &reboot_msg, sizeof(reboot_msg), 20);
-                }
+                uint8_t ack = fw_up_send_slave_reset(&reboot_msg);
                 uprintf("Master: slave reboot ack=0x%02x\n", ack);
                 return true;   // let QMK's QK_REBOOT handler reset the master
             }
@@ -6916,13 +6969,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                         // the pick of whichever key owns that letter.
                         const int8_t pick_target = latin_target_slot(last_latin_keycode);
                         latin_pick_set(global_latin_table->ex, latin_pick_field(pick_target, pick_upper), (uint8_t)pick_idx);
-                        send_to_bridge(USER_SYNC_LATIN_EX_DATA, (void*)global_latin_table, sizeof(*global_latin_table), 10);
+                        latin_publish();
 
                         // "or an alternative character has been selected"
-                        if(s_picker_latched) {
-                            unregister_mods(MOD_MASK_CTRL);
-                            s_picker_latched = false;
-                        }
+                        picker_latch_release();
                         latin_picker_reset_page();
                         mark_latin_dirty();
                         request_disp_refresh();
@@ -7079,6 +7129,13 @@ void set_displays(uint8_t contrast, bool idle) {
     }
 }
 
+void poly_set_awake_state(poly_sync_t* local_state) {
+    local_state->contrast = get_active_brightness();
+    local_state->flags &= ~((uint8_t)DISP_IDLE);
+    local_state->flags |= STATUS_DISP_ON;
+    reset_idle_jitter();   // fresh, centred idle session next time
+}
+
 // Wake the board out of idle (or out of a suspend that left the status display off)
 // without a keypress: the host's "stop idle" (HID cmd 15) and the demo's end of an idle
 // segment. ONE copy, because a wake that forgets one of these leaves a dark half: the
@@ -7116,10 +7173,7 @@ bool display_wakeup(keyrecord_t* record) {
         // longer blocked by startup_anim_active()) can repaint the woken legends.
         startup_anim_stop();
         uprint("Wake by keypress\n");
-        local_state->contrast = get_active_brightness();
-        local_state->flags &= ~((uint8_t)DISP_IDLE);
-        local_state->flags |= STATUS_DISP_ON;
-        reset_idle_jitter();   // fresh, centred idle session next time
+        poly_set_awake_state(local_state);
         update_performed();
         // Wake-from-idle is the single worst render stall (measured ~107 ms in one
         // pass — the user is pressing a key to wake it, so it is also the most likely
@@ -7227,8 +7281,7 @@ void keyboard_post_init_user(void) {
     layer_state_t default_layer = persistent_default_layer_get();
     access_local_layer()->def_layer = default_layer;
     access_local_state()->unicode_mode = get_unicode_input_mode();
-    layer_clear();
-    layer_on(default_layer);
+    layer_reset_to(default_layer);
     g_force_layer_resync = true;   // push this boot's default layer to the slave
     g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;  // (re-arm the bounded budget)
 
@@ -7847,7 +7900,6 @@ void suspend_wakeup_init_kb(void) {
     local_state->flags &= ~((uint8_t)DISP_IDLE);
     local_state->contrast = get_active_brightness();
     reset_idle_jitter();
-    set_last_update(0);
 
     //rgb_matrix_reload_from_eeprom();
 #ifdef RGB_MATRIX_ENABLE

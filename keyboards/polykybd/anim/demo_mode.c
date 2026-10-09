@@ -135,7 +135,7 @@ static uint8_t def_layer(void) {
 
 static uint16_t base_keycode(uint8_t row, uint8_t col) {
     uint16_t kc = keymap_key_to_keycode(def_layer(), (keypos_t){.row = row, .col = col});
-    if (IS_QK_MOD_TAP(kc)) kc = QK_MOD_TAP_GET_TAP_KEYCODE(kc);
+    kc = poly_mt_tap(kc);
     return kc;
 }
 

@@ -42,6 +42,8 @@
 #include "poly_keymap.h"
 #include "layer_names.h"
 #include "base/crash_record.h"
+#include "multicore_exec.h"   // core1_stall_report
+#include "boot_diag.h"        // boot_banner_on_host_probe
 
 
 /*[[[cog
@@ -256,6 +258,11 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     if (length<1) {
         return;
     }
+#ifdef USE_CORE1
+    // A host report means a host is attached and reading the console, so this is
+    // where a core1 stall found while nobody was listening gets reported.
+    core1_stall_report();
+#endif
 
     if(data[0] == id_custom_save || data[0] == 'P') {
         // Doom easter egg: while game mode has borrowed the overlay pool as
@@ -288,6 +295,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             // case id_custom_channel...id_qmk_led_matrix_channel: //maybe now usable :)
             //     break;
             case 6: { //id
+                boot_banner_on_host_probe();
                 memset(data, 0, length);
                 size_t nlen = strlen(name);
                 memcpy(data, name, nlen);
@@ -542,7 +550,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 
                     memset(data, 0, length);
                     if(new_lang<NUM_LANG) {
-                        local_state->lang = new_lang;
+                        poly_set_host_lang(new_lang);
                         uprintf("Setting lang to %u.\n", new_lang);
                         request_disp_refresh();
                         update_performed();
@@ -719,6 +727,15 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // Modular uint32 arithmetic makes this correct even in the first
                     // interval after boot — the old signed subtraction underflowed
                     // there, was clamped to 0, and idle never started.
+                    //
+                    // ⚠️ An ALREADY-idle board is woken first. The style is chosen only
+                    // on the way INTO idle (the `(flags & DISP_IDLE) == 0` test in
+                    // housekeeping), so a board that went idle in one style and was
+                    // then given another (cmd 28) kept the old one: "start idle"
+                    // backdated a timer nothing read. The rig's signed-DOOM-pack test
+                    // hit exactly that after the flash-only soak left the board idle
+                    // in jitter, and read it as a pack that never loaded.
+                    if (access_local_state()->flags & DISP_IDLE) poly_wake_from_idle();
                     backdate_last_update(get_idle_timeout_ms());
                     uprint("Start idle.\n");
                 }
@@ -879,7 +896,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // an all-off-screen chunk (non-held variants, off-layer keys) is
                     // staged silently and shown by the enable-overlays refresh.
                     if (set_packed_overlay_mapping(&data[HID_DATA_IDX], HID_DATA_MAX,
-                                                   OVERLAY_MAP_IDX_BITS)) {
+                                                   OVERLAY_MAP_IDX_BITS, false)) {
                         request_disp_refresh();
                     }
                     // Routine per-chunk chatter — set_packed_overlay_mapping already
@@ -900,8 +917,11 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // high GUI combos pay for 11. Silent, like cmd 21.
                     // v21: bits 5/6 of the width byte are the prepare / enable
                     // flags; only the masked width reaches the decoder and the slave.
+                    // v23: bit 7 dims every pair in the report. The slave gets it as
+                    // OVERLAY_MAP_SYNC_DIM, never as bit 7 (the icon-fill flag there).
                     const uint8_t flags = data[HID_DATA_IDX];
                     const uint8_t width = flags & OVERLAY_MAP_W_WIDTH_MASK;
+                    const bool    dim   = (flags & OVERLAY_MAP_W_DIM) != 0;
                     // Refuse a bad width BEFORE either flag runs: otherwise the
                     // reset and the enable would apply around pairs the decoder
                     // then drops, leaving overlays on with a stale mapping.
@@ -913,7 +933,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         overlay_flags_on(local_state, MIRROR_OVERLAYS | USAGE_RESET | MAPPING_RESET);
                     }
                     overlay_map_sync_t map_sync;
-                    map_sync.width = width;
+                    map_sync.width = (uint8_t)(width | (dim ? OVERLAY_MAP_SYNC_DIM : 0u));
                     map_sync.bytes = OVERLAY_MAP_W_BYTES;
                     memcpy(map_sync.mapping, &data[OVERLAY_MAP_W_HDR], OVERLAY_MAP_W_BYTES);
                     if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync,
@@ -922,7 +942,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         uprint("Warning: overlay mapping chunk did not reach the slave; repairing at enable.\n");
                     }
                     if (set_packed_overlay_mapping(&data[OVERLAY_MAP_W_HDR],
-                                                   OVERLAY_MAP_W_BYTES, width)) {
+                                                   OVERLAY_MAP_W_BYTES, width, dim)) {
                         request_disp_refresh();
                     }
                     if (debug_enable) {
@@ -967,10 +987,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     raw_hid_send(data, length);
                     poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
                                               .action = RESET_ACTION_REBOOT };
-                    uint8_t ack = send_to_bridge(USER_SYNC_RESET, &msg, sizeof(msg), 20);
-                    if (!sync_succeeded(ack)) {
-                        ack = send_to_bridge(USER_SYNC_RESET, &msg, sizeof(msg), 20);
-                    }
+                    uint8_t ack = fw_up_send_slave_reset(&msg);
                     uprintf("Host reboot: slave ack=0x%02x\n", ack);
                     soft_reset_keyboard();
                 }
@@ -995,14 +1012,20 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // one torn EEPROM write away from silently reverting.
                     poly_hand_set_pending(master_is_left);
                     poly_hand_flush_pending();   // main loop, so the sector write is safe inline here
-                    poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
-                                              .action = RESET_ACTION_REBOOT,
-                                              .set_handedness = 1, .is_left = master_is_left ? 0 : 1 };
-                    uint8_t ack = send_to_bridge(USER_SYNC_RESET, &msg, sizeof(msg), 5);
-                    uprintf("Set handedness: master=%s, slave ack=%d.\n", master_is_left ? "LEFT" : "RIGHT", ack);
+                    // ACK first, like cmd 43: the reset never returns, and the hardened
+                    // handoff below can take a couple of seconds on a bad link.
                     memset(data, 0, length);
                     hid_reply(data, 0x19, true);
                     raw_hid_send(data, length);
+                    // Hardened handoff, same as cmd 43 and the reset key. A dropped
+                    // frame here does double damage: the master reboots alone and
+                    // hangs on the boot splash, AND the slave never records its new
+                    // side, so after a replug both halves claim the same one.
+                    poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
+                                              .action = RESET_ACTION_REBOOT,
+                                              .set_handedness = 1, .is_left = master_is_left ? 0 : 1 };
+                    uint8_t ack = fw_up_send_slave_reset(&msg);
+                    uprintf("Set handedness: master=%s, slave ack=0x%02x\n", master_is_left ? "LEFT" : "RIGHT", ack);
                     soft_reset_keyboard();
                 }
                 break;
@@ -1359,8 +1382,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                         if (n > POLY_MACRO_LABEL_LEN) n = POLY_MACRO_LABEL_LEN;
                         poly_macro_look_t look;
                         look.style = data[4];
-                        look.icon  = (uint32_t)data[5] | ((uint32_t)data[6] << 8)
-                                   | ((uint32_t)data[7] << 16) | ((uint32_t)data[8] << 24);
+                        look.icon  = poly_macro_icon_get(&data[5]);
                         memcpy(look.text, &data[header], n);
                         look.text[n] = '\0';
                         poly_macro_look_set(id, &look);
@@ -1373,9 +1395,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     hid_reply(data, 0x26, true);
                     data[3] = len;
                     data[4] = look.style;
-                    for (uint8_t b = 0; b < POLY_MACRO_ICON_LEN; b++) {
-                        data[5 + b] = (uint8_t)((look.icon >> (8 * b)) & 0xFFu);
-                    }
+                    poly_macro_icon_put(&data[5], look.icon);
                     memcpy(&data[header], look.text, len);
                     raw_hid_send(data, length);
                 }

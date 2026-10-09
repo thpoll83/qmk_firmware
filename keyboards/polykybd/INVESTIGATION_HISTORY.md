@@ -536,8 +536,9 @@ path calls the new **`backdate_last_update(FADE_OUT_TIME)`** — modular
 `timer_read32() - ms`, correct even when `now < ms`, so idle begins on the next
 pass regardless of uptime. The old `set_last_update(-1)` "idle off" calls are now
 the clearer **`disable_idle_tracking()`** (suspend / host display-off cmd 24 /
-turn-off-reached); `set_last_update(int32_t)` is kept as a thin compat shim (`<0`
-disables, `≥0` sets+enables). No wire-protocol change (cmd 15 payload identical),
+turn-off-reached); `set_last_update(int32_t)` was kept as a thin compat shim (`<0`
+disables, `≥0` sets+enables) until 2026-10, when DOOM was found still feeding it
+`(int32_t)timer_read32()` — the same sign bug past 24.86 days — and it was deleted. No wire-protocol change (cmd 15 payload identical),
 so no `PROTOCOL_VERSION`/`__protocol__` bump.
 
 **Relevant files**:

@@ -69,6 +69,8 @@ fetch "https://raw.githubusercontent.com/standardgalactic/alphabet/core/Sga-Regu
       "fantasy/Sga-Regular.ttf"                                              # Standard Galactic (CC0)
 fetch "https://raw.githubusercontent.com/kittykatattack/ga/master/examples/fonts/PetMe64.ttf" \
       "fantasy/PetMe64.ttf"                                                  # Commodore 64 ROM (KreativeKorp KSRFL)
+fetch "https://raw.githubusercontent.com/szabadkai/c64-keyboard-font/9dab47a07022cc8a6720371190acdec67faa3c47/fonts/C64Keyboard-Regular.ttf" \
+      "fantasy/C64Keyboard-Regular.ttf"                                      # C64 keycap lettering (CC0, v1.111)
 
 # The remaining sources ship as Debian packages (no stable raw URL); fetch the
 # .deb from the archive (no root needed) and extract the font. Debian-vetted

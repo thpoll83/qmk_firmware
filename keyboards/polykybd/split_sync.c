@@ -290,7 +290,9 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
     // into adj_idx), so the slave can't tell an off-screen variant from a visible one —
     // pass visible=true (always refresh, still coalesced by note_overlay_activity above).
     // The visibility gate is a master-side optimization (see fill_overlay.c).
-    core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed, true);
+    // The master bridges a first fragment at COMPRESSED_START bytes, a continuation at
+    // COMPRESSED_MAX (fill_overlay.c), so the length says which one this is.
+    core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed, true, ov->len == COMPRESSED_START);
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
 }
 
@@ -444,14 +446,7 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     if (in_len < sizeof(uint32_t) + 2 + POLY_MACRO_LOOK_LEN) break;
                     {
                         poly_macro_look_t look;
-                        look.style = command_data[1];
-                        look.icon  = (uint32_t)command_data[2]
-                                   | ((uint32_t)command_data[3] << 8)
-                                   | ((uint32_t)command_data[4] << 16)
-                                   | ((uint32_t)command_data[5] << 24);
-                        memcpy(look.text, &command_data[2 + POLY_MACRO_ICON_LEN],
-                               POLY_MACRO_LABEL_LEN);
-                        look.text[POLY_MACRO_LABEL_LEN] = '\0';
+                        poly_macro_look_unpack(&command_data[1], &look);
                         poly_macro_look_adopt(command_data[0], &look);
                         request_disp_refresh();
                     }
@@ -534,7 +529,9 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
     // Render only if this chunk remapped an on-screen position (the slave has its own
     // displayed-slot set + synced mods); an all-off-screen chunk is shown by the
     // enable-overlays state sync (DISPLAY_OVERLAYS in OVERLAY_SYNCED_STATE_FLAGS).
-    if (set_packed_overlay_mapping(data->mapping, data->bytes, data->width)) {
+    if (set_packed_overlay_mapping(data->mapping, data->bytes,
+                                   (uint8_t)(data->width & OVERLAY_MAP_W_WIDTH_MASK),
+                                   (data->width & OVERLAY_MAP_SYNC_DIM) != 0)) {
         request_disp_refresh();
     }
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;

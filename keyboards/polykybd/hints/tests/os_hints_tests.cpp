@@ -8,6 +8,7 @@ extern "C" {
 #include "quantum/quantum_keycodes.h"
 #include "quantum/modifiers.h"
 #include "poly_os.h"
+#include "lang/named_glyphs.h"
 
 // The pre-extraction table, compiled into this binary alongside the live one.
 const uint32_t* os_hint_reference(uint16_t keycode, uint8_t mods_raw, uint8_t active_os_packed);
@@ -75,6 +76,102 @@ std::vector<uint8_t> os_values() {
     return v;
 }
 
+// An APP shortcut: a letter or digit with Ctrl or Alt held (Shift may be added),
+// or with Cmd on macOS. Those are left to the app overlay and have no built-in
+// hint. Written out independently of os_hints.c so the two can disagree.
+bool is_app_chord(uint16_t kc, uint8_t mods_raw, uint8_t os_packed) {
+    if (kc < KC_A || kc > KC_0) return false;
+    const uint8_t m   = static_cast<uint8_t>((mods_raw | (mods_raw >> 4)) & 0x0F);
+    const uint8_t app = static_cast<uint8_t>(m & ~MOD_LSFT);
+    const bool apple  = (os_packed & POLY_OS_VALUE_MASK) == POLY_OS_MACOS;
+    return app == MOD_LCTL || app == MOD_LALT || (apple && app == MOD_LGUI);
+}
+
+// F2 (rename) and F5 (refresh) mean that only in some programs, so the app
+// overlays that have them draw them, and the built-in table answers nothing.
+bool is_app_key(uint16_t kc) { return kc == KC_F2 || kc == KC_F5; }
+
+// What each pre-extraction hint became. Keyed by the reference's glyph with its
+// leading spacing stripped, because the restyle changed every hint's content on
+// purpose: the presence comparison alone would pass a table that drew the WRONG
+// icon (Win+L showing close). One old glyph had two meanings, so an entry may
+// also name the collapsed modifier set it applies to (kAnyMods otherwise).
+// Entries only the app shortcuts reached (copy, save, undo, ...) are absent: those
+// chords are masked before the lookup.
+constexpr uint8_t kAnyMods = 0xFF;
+struct ExpectedIcon {
+    const uint32_t* old_glyph;
+    uint8_t mods;
+    const uint32_t* icon;
+};
+#define G(s) reinterpret_cast<const uint32_t*>(s)
+const ExpectedIcon kExpected[] = {
+    {G(PRIVATE_LOCK), kAnyMods, G(ICON_HINT_LOCK)},
+    {G(PRIVATE_MAXIMIZE), MOD_LGUI | MOD_LCTL, G(ICON_HINT_FULLSCREEN)},   // Ctrl+Cmd+F
+    {G(PRIVATE_MAXIMIZE), MOD_LGUI, G(ICON_HINT_MAXIMIZE)},                // Win/Super+Up
+    {G(PRIVATE_WINDOW), kAnyMods, G(ICON_HINT_MINIMIZE)},
+    {G(ICON_WORD_LEFT), kAnyMods, G(ICON_HINT_WORD_LEFT)},
+    {G(ICON_WORD_RIGHT), kAnyMods, G(ICON_HINT_WORD_RIGHT)},
+    {G(ICON_APP_SWITCH), kAnyMods, G(ICON_HINT_APP_SWITCH)},
+    {G(ICON_LAUNCHER), kAnyMods, G(ICON_HINT_SEARCH)},
+    {G(ICON_CLOSE), kAnyMods, G(ICON_HINT_CLOSE)},
+    {G(ICON_WINDOW_SWITCH), kAnyMods, G(ICON_HINT_WINDOW_SWITCH)},
+    {G(ARROWS_LEFTSTOP), kAnyMods, G(ICON_HINT_LINE_START)},
+    {G(ARROWS_RIGHTSTOP), kAnyMods, G(ICON_HINT_LINE_END)},
+    {G(ICON_GFX_RESTART HINT_MOVE(HINT_POS_SCREEN) HINT_HALF ICON_GFX_RELOAD), kAnyMods, G(ICON_HINT_GFX_RESTART)},
+    {G(PRIVATE_SCREEN U"+"), kAnyMods, G(ICON_HINT_DESKTOP_NEW)},
+    {G(ICON_LEFT PRIVATE_SCREEN), kAnyMods, G(ICON_HINT_DESKTOP_PREV)},
+    {G(PRIVATE_SCREEN ICON_RIGHT), kAnyMods, G(ICON_HINT_DESKTOP_NEXT)},
+    {G(PRIVATE_SCREEN U"x"), kAnyMods, G(ICON_HINT_DESKTOP_CLOSE)},
+    {G(ICON_NET), kAnyMods, G(ICON_HINT_NETWORK)},
+    {G(ICON_VOLUME_MIXER), kAnyMods, G(ICON_HINT_VOLUME_MIXER)},
+    {G(ICON_NARRATOR), kAnyMods, G(ICON_HINT_NARRATOR)},
+    {G(ICON_QUICK_ASSIST), kAnyMods, G(ICON_HINT_QUICK_ASSIST)},
+    {G(ICON_SPEECH_REC), kAnyMods, G(ICON_HINT_SPEECH_REC)},
+    {G(ICON_SCREEN_RECORD), kAnyMods, G(ICON_HINT_SCREEN_RECORD)},
+    {G(ICON_SNIP), kAnyMods, G(ICON_HINT_SNIP)},
+    {G(PRIVATE_PC), kAnyMods, G(ICON_HINT_SHOW_DESKTOP)},
+    {G(PRIVATE_SCREEN), kAnyMods, G(ICON_HINT_DISPLAY)},
+    {G(ICON_DICTATION), kAnyMods, G(ICON_HINT_DICTATION)},
+    {G(ICON_SETTINGS), kAnyMods, G(ICON_HINT_SETTINGS)},
+    {G(PRIVATE_MINIMIZE), kAnyMods, G(ICON_HINT_MINIMIZE_ALL)},
+    {G(HINT_MOVE(HINT_POS_RUNBOX) HINT_FRAME(HINT_SZ_RUNBOX) HINT_RESET U"    >_"), kAnyMods, G(ICON_HINT_RUN)},
+    {G(ICON_TASK_CYCLE), kAnyMods, G(ICON_HINT_TASK_CYCLE)},
+    {G(ICON_CAST), kAnyMods, G(ICON_HINT_CAST)},
+    {G(ICON_CLIP_HISTORY), kAnyMods, G(ICON_HINT_CLIP_HISTORY)},
+    {G(ICON_QUICK_MENU), kAnyMods, G(ICON_HINT_QUICK_MENU)},
+    {G(ICON_PEEK), kAnyMods, G(ICON_HINT_PEEK_DESKTOP)},
+    {G(PRIVATE_EMOJI_1F600), kAnyMods, G(ICON_HINT_EMOJI)},
+    {G(ICON_GIF), kAnyMods, G(ICON_HINT_EMOJI)},                               // Win+; opens the same panel
+    {G(ICON_LIGHTNING), kAnyMods, G(ICON_HINT_QUICK_SETTINGS)},
+    {G(ICON_EXPLORER), kAnyMods, G(ICON_HINT_EXPLORER)},
+    {G(ICON_ACCESSIBILITY), kAnyMods, G(ICON_HINT_ACCESSIBILITY)},
+    {G(ICON_MAC_CONTROL), kAnyMods, G(ICON_HINT_TRAY)},
+    {G(ICON_FOCUS_WINDOW), kAnyMods, G(ICON_HINT_MINIMIZE_OTHERS)},
+    {G(ICON_SNAP_LEFT), kAnyMods, G(ICON_HINT_SNAP_LEFT)},
+    {G(ICON_SNAP_RIGHT), kAnyMods, G(ICON_HINT_SNAP_RIGHT)},
+    {G(ICON_SLIDERS), kAnyMods, G(ICON_HINT_SYSTEM_PROPS)},
+    {G(ICON_SCREENSHOT), kAnyMods, G(ICON_HINT_SCREENSHOT)},
+    {G(ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMIN) U"+"), kAnyMods, G(ICON_HINT_ZOOM_IN)},
+    {G(ICON_MAGNIFIER HINT_MOVE(HINT_POS_ZOOMOUT) U"-"), kAnyMods, G(ICON_HINT_ZOOM_OUT)},
+    {G(ICON_TEXT_RECOG), kAnyMods, G(ICON_HINT_TEXT_RECOG)},
+    {G(ICON_GAME_BAR), kAnyMods, G(ICON_HINT_GAME_BAR)},
+    {G(ICON_FEEDBACK), kAnyMods, G(ICON_HINT_FEEDBACK)},
+    {G(ICON_COPILOT), kAnyMods, G(ICON_HINT_COPILOT)},
+};
+#undef G
+
+// The icon a reference hint must have become, or nullptr if the table has no
+// entry for it (which the caller reports as a failure, so the table stays complete).
+const uint32_t* expected_icon(const uint32_t* ref, uint8_t mods_raw) {
+    while (*ref == U' ' || *ref == U'\t' || *ref == U'\b') ++ref;
+    const uint8_t m = static_cast<uint8_t>((mods_raw | (mods_raw >> 4)) & 0x0F);
+    for (const ExpectedIcon& e : kExpected) {
+        if (same_hint(ref, e.old_glyph) && (e.mods == kAnyMods || e.mods == m)) return e.icon;
+    }
+    return nullptr;
+}
+
 std::string describe(uint16_t kc, uint8_t mods, uint8_t os) {
     char buf[96];
     snprintf(buf, sizeof(buf), "keycode=0x%04X mods=0x%02X os=0x%02X", kc, mods, os);
@@ -85,13 +182,19 @@ std::string describe(uint16_t kc, uint8_t mods, uint8_t os) {
 // The equivalence proof for the extraction.
 // ---------------------------------------------------------------------------
 
-// Exhaustive over (keycode x mods x os): the extracted pure table must return
-// exactly what the pre-extraction table in poly_keymap.c returned. This is the
-// evidence that moving 310 lines into their own translation unit and replacing
-// two global reads with parameters changed no behaviour. Binary comparison cannot
-// answer this one — extracting a function into another TU legitimately changes
-// codegen (inlining, stack slots, switch-table numbering).
-TEST(OsHintsExtraction, MatchesPreExtractionTableExhaustively) {
+// Exhaustive over (keycode x mods x os): the live table must show a hint for
+// EXACTLY the chords the pre-extraction table in poly_keymap.c did, minus the app
+// shortcuts. This was first the evidence that the extraction changed no
+// behaviour, and compared content. The icon restyle (tools/hint_icons.py) then
+// replaced every hint's CONTENT on purpose, so the comparison is on presence: a
+// restyle may change what a hint looks like, never which chord has one. Which
+// icon each chord shows is then pinned against kExpected, keyed by the old glyph. Then the
+// app shortcuts (is_app_chord) were handed to the app overlay on purpose, so the
+// reference's answer is masked by that rule, and F2/F5 (handed to the app
+// overlays the same way, is_app_key) are masked too. Nothing else. Binary comparison cannot answer this one —
+// extracting a function into another TU legitimately changes codegen (inlining,
+// stack slots, switch-table numbering).
+TEST(OsHintsExtraction, ShowsAHintForExactlyThePreExtractionChords) {
     size_t compared = 0, hits = 0;
     for (uint16_t kc : interesting_keycodes()) {
         // ⚠️ Mod-taps are DELIBERATELY excluded: their block was rewritten to fix the
@@ -104,9 +207,17 @@ TEST(OsHintsExtraction, MatchesPreExtractionTableExhaustively) {
         for (unsigned mods = 0; mods < 256; ++mods) {
             for (uint8_t os : os_values()) {
                 const uint32_t* got  = os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os);
-                const uint32_t* want = os_hint_reference(kc, static_cast<uint8_t>(mods), os);
-                ASSERT_TRUE(same_hint(got, want)) << describe(kc, mods, os);
-                if (want != nullptr) ++hits;
+                const uint32_t* ref  = os_hint_reference(kc, static_cast<uint8_t>(mods), os);
+                const bool app = is_app_key(kc) || is_app_chord(kc, static_cast<uint8_t>(mods), os);
+                const uint32_t* want = app ? nullptr : ref;
+                ASSERT_EQ(got != nullptr, want != nullptr) << describe(kc, mods, os);
+                if (want != nullptr) {
+                    const uint32_t* icon = expected_icon(want, static_cast<uint8_t>(mods));
+                    ASSERT_NE(icon, nullptr) << describe(kc, mods, os)
+                        << ": kExpected has no entry for this reference hint";
+                    ASSERT_TRUE(same_hint(got, icon)) << describe(kc, mods, os) << " shows the wrong icon";
+                    ++hits;
+                }
                 ++compared;
             }
         }
@@ -116,6 +227,51 @@ TEST(OsHintsExtraction, MatchesPreExtractionTableExhaustively) {
     // NULL == NULL and this test would still be green.
     EXPECT_GT(hits, 1000u) << "suspiciously few non-NULL hints — is the table reachable?";
     EXPECT_GT(compared, 100000u);
+}
+
+// No app shortcut gets a built-in hint, on any OS, with either modifier side.
+// The probe set includes the chords that used to have one (Ctrl+C, Cmd+C, Ctrl+Y,
+// Ctrl+Shift+Z, Cmd+Shift+Z, Alt+F...), so a revert of the rule fails here by name.
+TEST(OsHints, AppShortcutsHaveNoBuiltInHint) {
+    size_t checked = 0;
+    for (uint16_t kc = KC_A; kc <= KC_0; ++kc) {
+        for (unsigned mods = 0; mods < 256; ++mods) {
+            for (uint8_t os : os_values()) {
+                if (!is_app_chord(kc, static_cast<uint8_t>(mods), os)) continue;
+                ASSERT_EQ(os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os), nullptr)
+                    << describe(kc, mods, os) << " is an app shortcut and must be left to the overlay";
+                ++checked;
+            }
+        }
+    }
+    EXPECT_GT(checked, 10000u);
+    // OS chords on the same letters keep their hints: Win+L lock, Ctrl+Cmd+Q lock.
+    EXPECT_NE(os_hint_for_keycode(KC_L, MOD_BIT_LGUI, POLY_OS_WINDOWS), nullptr);
+    EXPECT_NE(os_hint_for_keycode(KC_Q, MOD_BIT_LGUI | MOD_BIT_LCTRL, POLY_OS_MACOS), nullptr);
+}
+
+// Every non-mod-tap hint is ONE glyph from the hint-icon block and nothing else: no
+// leading spaces (the glyph metrics place it) and no display-list ops. The first and
+// last macros are the generator's first and last slot. A hint that slipped back to a
+// spaces-plus-emoji string, or a slot outside the block, fails here.
+TEST(OsHints, EveryShortcutHintIsOneIconGlyph) {
+    const uint32_t first = static_cast<uint32_t>(ICON_HINT_SEARCH[0]);
+    const uint32_t last  = static_cast<uint32_t>(ICON_HINT_QUICK_ASSIST[0]);
+    ASSERT_LT(first, last);
+    size_t hits = 0;
+    for (uint16_t kc : interesting_keycodes()) {
+        if (IS_QK_MOD_TAP(kc)) continue;
+        for (unsigned mods = 0; mods < 256; ++mods) {
+            for (uint8_t os : os_values()) {
+                const uint32_t* got = os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os);
+                if (got == nullptr) continue;
+                ++hits;
+                ASSERT_TRUE(got[0] >= first && got[0] <= last) << describe(kc, mods, os);
+                ASSERT_EQ(got[1], 0u) << describe(kc, mods, os);
+            }
+        }
+    }
+    EXPECT_GT(hits, 1000u);
 }
 
 // ---------------------------------------------------------------------------
@@ -161,10 +317,9 @@ TEST(OsHints, LeftAndRightModifiersAreEquivalent) {
 TEST(OsHints, ExtraModifierNeverLeaksTheNarrowerHint) {
     size_t checked = 0;
     for (uint16_t kc : interesting_keycodes()) {
-        // KC_F2/KC_F5 answer before modifiers are consulted, and a mod-tap key's
-        // hint is derived from the KEYCODE's mods, not from what is held — neither
-        // is a chord, so neither is in scope for this rule.
-        if (kc == KC_F2 || kc == KC_F5 || IS_QK_MOD_TAP(kc)) continue;
+        // A mod-tap key's hint is derived from the KEYCODE's mods, not from what is
+        // held, so it is not a chord and not in scope for this rule.
+        if (IS_QK_MOD_TAP(kc)) continue;
         for (uint8_t os = 0; os < POLY_OS_COUNT; ++os) {
             for (unsigned mods = 0; mods < 16; ++mods) {
                 const uint32_t* base = os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os);
@@ -184,23 +339,24 @@ TEST(OsHints, ExtraModifierNeverLeaksTheNarrowerHint) {
     EXPECT_GT(checked, 100u) << "no widening cases exercised — the table looks unreachable";
 }
 
-// KC_F2 / KC_F5 answer before any modifier or OS is consulted, so they hold for
-// every combination. This is the one deliberate early-out in the table.
-TEST(OsHints, UnconditionalKeysAnswerRegardlessOfModsAndOs) {
+// F2 and F5 carried a built-in rename/refresh hint under every modifier and OS.
+// They are app keys now: no modifier and no OS brings a hint back.
+TEST(OsHints, F2AndF5HaveNoBuiltInHint) {
     for (unsigned mods = 0; mods < 256; ++mods) {
         for (uint8_t os = 0; os < POLY_OS_COUNT; ++os) {
-            EXPECT_NE(os_hint_for_keycode(KC_F2, static_cast<uint8_t>(mods), os), nullptr);
-            EXPECT_NE(os_hint_for_keycode(KC_F5, static_cast<uint8_t>(mods), os), nullptr);
+            EXPECT_EQ(os_hint_for_keycode(KC_F2, static_cast<uint8_t>(mods), os), nullptr)
+                << describe(KC_F2, static_cast<uint8_t>(mods), os);
+            EXPECT_EQ(os_hint_for_keycode(KC_F5, static_cast<uint8_t>(mods), os), nullptr)
+                << describe(KC_F5, static_cast<uint8_t>(mods), os);
         }
     }
 }
 
-// With no modifiers held there is nothing to preview, except the two above.
+// With no modifiers held there is nothing to preview.
 TEST(OsHints, NoModifiersMeansNoHint) {
     for (uint16_t kc : interesting_keycodes()) {
-        // The unconditional keys answer before modifiers are read, and a mod-tap's
-        // hint comes from the keycode rather than from what is held.
-        if (kc == KC_F2 || kc == KC_F5 || IS_QK_MOD_TAP(kc)) continue;
+        // A mod-tap's hint comes from the keycode rather than from what is held.
+        if (IS_QK_MOD_TAP(kc)) continue;
         for (uint8_t os = 0; os < POLY_OS_COUNT; ++os) {
             EXPECT_EQ(os_hint_for_keycode(kc, 0, os), nullptr) << describe(kc, 0, os);
         }
@@ -216,14 +372,14 @@ TEST(OsHints, NoModifiersMeansNoHint) {
 // Windows shortcuts, which is the right default for the common case but is silent
 // about being a default.
 TEST(OsHints, UnknownOsBehavesAsTheNonAppleDefault) {
-    // Ctrl+A is "select all" on Windows/Linux and nothing on macOS (Cmd+A is), so
-    // it separates the two arms cleanly.
+    // Alt+Tab is the app switcher on Windows/Linux and nothing on macOS (Cmd+Tab
+    // is), so it separates the two arms cleanly.
     for (uint8_t os = POLY_OS_COUNT; os < POLY_OS_COUNT + 2; ++os) {
-        EXPECT_NE(os_hint_for_keycode(KC_A, MOD_BIT_LCTRL, os), nullptr)
+        EXPECT_NE(os_hint_for_keycode(KC_TAB, MOD_BIT_LALT, os), nullptr)
             << "unknown OS " << static_cast<int>(os) << " should take the non-Apple arm";
     }
-    EXPECT_EQ(os_hint_for_keycode(KC_A, MOD_BIT_LCTRL, POLY_OS_MACOS), nullptr)
-        << "Ctrl+A is not a macOS chord — if this changes the test above needs a new probe";
+    EXPECT_EQ(os_hint_for_keycode(KC_TAB, MOD_BIT_LALT, POLY_OS_MACOS), nullptr)
+        << "Alt+Tab is not a macOS chord — if this changes the test above needs a new probe";
 }
 
 // ---------------------------------------------------------------------------

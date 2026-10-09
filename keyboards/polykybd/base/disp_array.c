@@ -1037,6 +1037,17 @@ void kdisp_draw_bitmap(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_w
     }
 }
 
+void kdisp_draw_bitmap_dimmed(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height) {
+    const int8_t byte_width = (bmp_width + 7) / 8;
+    for (int8_t bmp_y = 0; bmp_y < bmp_height; bmp_y += 2) {
+        for (int8_t bmp_x = 0; bmp_x < bmp_width; bmp_x += 2) {
+            if (pgm_read_byte(&pgm_bmp[bmp_y * byte_width + (bmp_x >> 3)]) & (0x80 >> (bmp_x & 7))) {
+                SET_PIXEL_CLIPPED(x + bmp_x, y + bmp_y);
+            }
+        }
+    }
+}
+
 void clear_line(int8_t from_x, int8_t to_x, int8_t y) {
     for (int8_t x = from_x; x < to_x; ++x) {
         CLEAR_PIXEL_CLIPPED(x, y);

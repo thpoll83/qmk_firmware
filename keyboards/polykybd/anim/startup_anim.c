@@ -100,7 +100,7 @@ _Static_assert(SA_LINE_CLEAR_AT_MS + SA_LINE_CLEAR_SPREAD_MS < SA_INTRO_MS + SA_
                                 // round). A shift, NOT a divide — no per-pixel software divide.
 
 // Number of keycap slots per half in the generated geometry tables.
-#define SA_NUM_KEYS 40
+#define SA_NUM_KEYS DISP_SLOTS_PER_HALF
 // Both halves are walked by the same `idx < SA_NUM_KEYS` loop, so assert BOTH —
 // a regenerated geom header that changed only one table would otherwise read past
 // the shorter one with no compiler complaint.
@@ -119,6 +119,8 @@ static uint32_t sa_total_ms(void) { return SA_TOTAL_MS + (s_tail ? SA_TAIL_MS : 
 static uint32_t sa_star_window_ms(void) { return sa_total_ms() - SA_STAR_START_MS; }
 static uint32_t s_start;
 static uint32_t s_next_log;   // next elapsed-ms threshold at which to emit a progress log
+static bool     s_logged_c1;  // the core the last idle-loop log line reported (core1 = true)
+#define EDEN_IDLE_LOG_MS 60000u  // idle-loop log cadence; a core change logs at once
 static uint32_t s_last_frame; // last idle-loop frame time (frame-rate throttle, loop only)
 
 // ---- idle-loop frame slicing (the responsiveness lever) ----
@@ -704,6 +706,17 @@ void __attribute__((noinline)) startup_anim_core1_job(uint32_t arg) {
     s_c1_done = (uint16_t)(arg >> 16);
 }
 
+void startup_anim_core1_lost(void) {
+    if (s_c1_frame && s_c1_count > 0) {
+        // The same fallback as the job timeout in startup_anim_tick().
+        s_c1_off    = true;
+        s_c1_frame  = false;
+        s_frame_idx = s_c1_idx[s_c1_head];
+        s_c1_count  = 0;
+    }
+    s_c1_done = s_c1_seq;   // core1 is held in reset: core0 owns this word now
+}
+
 // The next keycap with a panel, from `from` on; SA_NUM_KEYS when there is none.
 static uint8_t sa_next_key(uint8_t from) {
     const sa_key_geom_t *T = is_left_side() ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
@@ -933,11 +946,16 @@ void startup_anim_tick(void) {
             s_last_frame = timer_read32();   // gap timed from the END of the frame
             ++s_frames_done;
             // Report at frame END (so the numbers describe the frame that just
-            // finished) and report the FIRST completed frame immediately, then on a
-            // quiet ~5 s cadence. A 5 s-only cadence yields NOTHING from a short idle
-            // session — a 4.4 s glance at the screensaver printed no timing at all,
-            // which makes the instrument useless exactly when you want a quick look.
-            if (!s_logged_frame || el >= s_next_log) {
+            // finished) and report the FIRST completed frame immediately, then once a
+            // minute. A periodic-only cadence yields NOTHING from a short idle session
+            // — a 4.4 s glance at the screensaver printed no timing at all, which makes
+            // the instrument useless exactly when you want a quick look.
+            // A change of core is reported at once too: falling back to core0 is the
+            // first sign core1 has stopped answering (field 2026-10-09: the console
+            // read `core0` before the raw-HID stall), so it must not wait a minute.
+            // The cadence was 5 s until 2026-10-09: two lines every 5 s (this one and
+            // status_idle.c's) buried everything else in a long idle log.
+            if (!s_logged_frame || el >= s_next_log || s_c1_frame != s_logged_c1) {
                 // `frames` is the rate the keycaps actually got since the last report.
                 // `frame` sums CORE0's time only: render time on the core0 path, the
                 // copy + legend + SPI push per keycap on the core1 path.
@@ -948,7 +966,8 @@ void startup_anim_tick(void) {
                 uprintf("Eden idle: core1 stack HWM %lu of %u B\n",
                         (unsigned long)core1_stack_high_water_mark(), (unsigned)CORE1_STACK_SIZE);
 #endif
-                s_next_log       = el + 5000;
+                s_next_log       = el + EDEN_IDLE_LOG_MS;
+                s_logged_c1      = s_c1_frame;
                 s_slice_worst_ms = 0;   // worst-since-the-last-report, not worst-ever
                 s_frames_done    = 0;
                 s_logged_frame   = true;
@@ -990,6 +1009,7 @@ bool startup_anim_take_welcome_said(void) { return false; }
 bool startup_anim_is_loop(void) { return false; }
 bool startup_anim_idle_on_core1(void) { return false; }
 void startup_anim_core1_job(uint32_t arg) { (void)arg; }
+void startup_anim_core1_lost(void) {}
 bool startup_anim_frame_busy(void) { return false; }
 void startup_anim_tick(void) {}
 bool startup_anim_active(void) { return false; }

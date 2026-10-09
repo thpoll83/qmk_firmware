@@ -199,7 +199,7 @@ Nine rules bind work outside that file:
 
 The mechanics — the HIL tiers, the FW-APPLY and doom tiers, the paths filters, the
 inherited upstream lint, and how to read a job log — are
-[`keyboards/polykybd/CI_CHECKS.md`](keyboards/polykybd/CI_CHECKS.md). Seven things every
+[`keyboards/polykybd/CI_CHECKS.md`](keyboards/polykybd/CI_CHECKS.md). Eight things every
 PR author needs without opening it:
 
 - ⚠️ **The HIL suite has TWO tiers and the default one skips the deepest checks** — the
@@ -234,6 +234,17 @@ PR author needs without opening it:
 - ⚠️ **PR CI does NOT build the monolith** (`POLYKYBD_DOOM=yes`) — only the release
   workflow does, and it is the tightest RAM flavour. Build it locally before merging
   anything that adds statics.
+- ⚠️ **GitHub can switch Actions OFF for this whole fork, and nothing on a PR says so.**
+  On 2026-10-09 four PR pushes and the #365 merge started no run at all: no build, no
+  HIL, no unit tests, and no `bump-version.yml`, so a `bump:minor` merge left
+  `FW_VERSION` unmoved. The Actions tab carried "Workflows on this fork have been
+  disabled", blaming workflows inherited from upstream (here `auto_approve.yml` every
+  30 min, always skipped by its `qmk/qmk_firmware` gate, and `stale.yml` daily with no
+  gate). **The tell is NO run, not a queued one**: an offline rig leaves a HIL job
+  `queued`; a disabled fork creates nothing, while the host repo's CI keeps running.
+  Re-enabling replays nothing. `bump-version.yml` has no `workflow_dispatch`, so a
+  missed bump is a one-line `FW_VERSION` PR labelled `bump:none` (#367); dispatch
+  `qmk-test.yml` for the HIL.
 
 The `diagnose-hil-failure` skill classifies a red rig check; `debug-firmware-on-rig`
 drives a one-off probe when the graded suite cannot answer the question.
@@ -461,6 +472,12 @@ contrast with their neighbour that the wire format does not show. The
   set-handedness also reboots both halves, but rewrites the EEPROM byte and the
   handedness flash stamp on every call. It ACKs BEFORE the reset (the reset never
   returns) and hands off to the slave with the QK_REBOOT key's hardened 20-retry path.
+- **v23's cmd 33 DIM flag (width byte bit 7) draws the report's icons dimmed** — a
+  browser's icons under a website's overlay. The keyboard dims the ICON at draw time
+  (25% of its pixels, `display_dim_bits[]`), never the bitmap and never the keycap:
+  host-side dimming would turn every browser image into a cache miss, and per-panel
+  contrast would dim the legend. ⚠️ On the split transaction bit 7 is the icon fill,
+  so the flag crosses as `OVERLAY_MAP_SYNC_DIM` (0x40). See `PROTOCOL_HISTORY.md`.
 - ⚠️ **The flat overlay index is the only ADDRESS an upload has, resolved through
   `overlay_map[]` — so `reset_overlay_mapping()`'s identity default is LOAD-BEARING FOR
   WRITES**, not a display convenience. Zeroing it sent every image to slot 0: nearly
@@ -503,7 +520,8 @@ Host sends a compressed bitmap → `fill_overlay.c` decompresses (optionally on 
 an app switch swaps all 72 images. How a legend is drawn is
 [`LEGEND_RENDERING.md`](keyboards/polykybd/LEGEND_RENDERING.md), where the elements GO is
 [`LEGEND_LAYOUT.md`](keyboards/polykybd/LEGEND_LAYOUT.md), the status OLED is
-[`STATUS_OLED.md`](keyboards/polykybd/STATUS_OLED.md), and the per-keycap grid, the three
+[`STATUS_OLED.md`](keyboards/polykybd/STATUS_OLED.md), the OS shortcut-hint icons'
+design and decisions are [`HINT_ICONS.md`](keyboards/polykybd/HINT_ICONS.md), and the per-keycap grid, the three
 render seams and the settings-gate post-mortem are
 [`DISPLAY_PIPELINE.md`](keyboards/polykybd/DISPLAY_PIPELINE.md). Six rules bind code
 outside those files:
@@ -839,6 +857,12 @@ category and composes `gfx_used_fonts.h`; `--check` flags stale headers. Full do
   wrong controls otherwise.
 - **Byte-reproducible output requires the pinned `fontconvert` build** (FreeType 2.13.3 /
   HarfBuzz 2.6.7); the distro fast-path build renders ~1 px differently on some glyphs.
+- ⚠️ **Every font is a C header and `gfx_used_fonts.h` includes them all, but only
+  `RESIDENT_FONTS[]` reaches the image** — `--gc-sections` drops the packed fonts'
+  arrays. The headers are the pack's source of truth (`fontpack.py` parses them), so
+  "is it `#include`d?" says nothing about flash: check the link map or `nm`. The reasons
+  are in [`fonts/README.md`](keyboards/polykybd/fonts/README.md) → *Why every font is a
+  C header*.
 - ⚠️ **`parse_gfx_header()` CANONICALISES every glyph's `bitmapOffset`**, so a purely
   cosmetic header change cannot reach the `.plyf` bytes. Without it, reformatting the
   tree changed four shipped bundles and would have forced a reship for zero visual

@@ -121,7 +121,15 @@ void emit_boot_banner(void) {
     // PRODUCT is the QMK-generated keyboard_name from keyboard.json
     // ("PolyKybd Split72" / "PolyKybd Split42"), so the banner names the variant
     // with no extra per-variant define.
-    uprintf("== " PRODUCT " " FW_VERSION " P%d HW0x%04X | %s %s ==\n",
+    // ⚠️ FW_VERSION does NOT identify a build: every test build of one version reports
+    // the same number, and a branch build differs from CI's build of the same commit.
+    // The branch, commit and build time do, so a log can always be tied to the image
+    // that wrote it (POLY_GIT_BRANCH from rules.mk, the rest from QMK's generated
+    // version.h; a "*" on the hash marks a dirty tree).
+#ifndef POLY_GIT_BRANCH
+#    define POLY_GIT_BRANCH "unknown"
+#endif
+    uprintf("== " PRODUCT " " FW_VERSION " P%d HW0x%04X | %s %s | build " POLY_GIT_BRANCH "@" QMK_GIT_HASH " " QMK_BUILDDATE " ==\n",
             (int)PROTOCOL_VERSION, (unsigned int)DEVICE_VER,
             is_keyboard_left() ? "left" : "right",
             is_keyboard_master() ? "master" : "slave");
@@ -252,6 +260,30 @@ void emit_apply_breadcrumb_line(void) {
     uprintf("   apply: previous self-apply reached sector %lu, copy %s (psm_spins=%lu)\n",
             (unsigned long)last_sector, completed ? "COMPLETE" : "INCOMPLETE",
             (unsigned long)spins);
+}
+
+// Called on every GET_ID (cmd 6). A host probes with it about once a second while it is
+// attached, so a GET_ID after a silence of BANNER_HOST_GAP_MS means a host session has
+// started: a restarted PolyHost, a woken PC, the reconnect after a firmware update.
+// The banner's own repeats end ~30 s after boot, long before most of those, so without
+// this a log collected later never says which build the keyboard runs.
+// Known cost, accepted: uprintf blocks. If a host probes but nobody reads the console,
+// the first send waits out QMK's 100 ms IN timeout and the matrix scan pauses that long,
+// so a tap in that window can be missed. QMK then latches the endpoint's `timed_out`
+// and later sends do not wait (usb_driver.c, usb_endpoint_in_send). This is the same
+// cost as any other uprintf in raw_hid_receive(), e.g. cmd 16's "Start with compressed
+// data". PolyKybdHost opens its console reader before its first report, so the normal
+// reconnect never pays it. Not worth a second, non-blocking console path.
+#define BANNER_HOST_GAP_MS 5000u
+void boot_banner_on_host_probe(void) {
+    static bool     seen = false;
+    static uint32_t last = 0;
+    const bool new_session = !seen || timer_elapsed32(last) >= BANNER_HOST_GAP_MS;
+    seen = true;
+    last = timer_read32();
+    if (new_session) {
+        emit_boot_banner();
+    }
 }
 
 void emit_keymap_storage_line(void) {

@@ -97,6 +97,17 @@ Confirm:
   done
   ```
 
+  ⚠️ **A keycap legend is a `U"…"` literal, stored as UTF-32, so `strings` never
+  sees it**, at any `-n`. The settings key's "C64K" label read as missing from a good
+  build (2026-10-08). Search for the UTF-32LE bytes instead, with a made-up string
+  as the control that must come back missing:
+
+  ```bash
+  python3 -c "import sys; d=open(sys.argv[1],'rb').read()
+  [print(s, 'FOUND' if s.encode('utf-32-le') in d else 'missing') for s in sys.argv[2:]]" \
+      "$BIN" C64K Brail ZZZQ
+  ```
+
   Only for literals the compiler actually emits. A reply **assembled byte-by-byte at
   runtime** is absent by design and its absence proves nothing — see the `PRR`/`PRL`
   note in `CLAUDE.md`, which cost a double-take for exactly this reason.

@@ -160,6 +160,21 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   (Technical/Technical2 = Ctrl/Alt/GUI/Option/Del/Backspace/Esc/PrintScreen), the
   menu icons (Settings ⚙, World 🌐), Brightness moons, Hyper/Meh, GuiKey, Util
   (screenshot/calc/my-computer/paste), EmjLayer, plus the always-resident Arrows.
+- **The OS shortcut-hint icons are a PACK font, not resident** (2026-10).
+  `tools/hint_icons.py` writes them as their own GFXfont, `PolyHintIcons`, in
+  `base/fonts/hint_icons.h` (U+100100.., a block of its own: `IconsFont` runs
+  U+100000..U+100025 and can grow by 218 icons before reaching it; yAdvance 40 like
+  `IconsFont`, so the baseline alignment against `fonts[0]` moves nothing). `fonts.yaml` lists it under `index.pack_extra_fonts`
+  AFTER the flags and in the `symbol` bundle's `pack_extra`, so it gets the next
+  pinned gidx (0xF001) and moving it in shifted no other font: only `symbol.plyf`
+  changed (v9 → v10, +9,100 B) and the image shrank by 9 KB. Nothing in the firmware
+  includes the header. ⚠️ **With no pack flashed the glyphs are absent**, so
+  `keycode_to_disp_overlay()` returns no hint when the first glyph is missing; the key
+  keeps its legend instead of drawing the missing-glyph `!`. After any icon change:
+  `python3 tools/hint_icons.py`, then reship `symbol` with the
+  `reship-fontpack-bundle` skill. `check_icon_slots.py` reads both headers, fails
+  on a macro that points between them, and reports how many slots `IconsFont` has left. The design
+  rules and the reason for each icon's shape are [`HINT_ICONS.md`](HINT_ICONS.md).
 - **A single bigger/custom glyph → inject it into the resident IconsFont
   (`base/fonts/gfx_icons.h`), NOT a new resident font.** `IconsFont` is `g_all_fonts[0]`
   (prepended), so *extending it with another glyph* (append bitmap bytes + a `GFXglyph`
@@ -245,10 +260,16 @@ flashes all stale bundles, `flash <id>` force-flashes one).
       followed by `\x`/`\u` or a split literal** or the compiler greedily merges the
       hex into one huge codepoint. Derive buffer coords from `tools/gfx_font.py` (it
       replicates the baseline-align math + the ops, so its render matches hardware).
-  - **Pack-category headers (`symbol_fonts.h`, etc.) are NOT compiled into the
-    firmware** — only `RESIDENT_FONTS[]` + `IconsFont` are `#include`d. So adding pack
-    glyphs (⍇/⍈, 🖧) does **not** grow the image; *removing* a resident glyph shrinks
-    it. Confirmed by grep: no firmware `.c` includes `symbol_fonts.h`.
+  - **Pack-category headers (`symbol_fonts.h`, etc.) are compiled but NOT linked.**
+    `gfx_used_fonts.h` `#include`s every category header, so their arrays are compiled
+    into `poly_keymap.o`. Only `RESIDENT_FONTS[]` (with `IconsFont`) references any of
+    them, and `--gc-sections` discards the rest. The split72 link map lists
+    `.rodata.C64Keyboard_Regular_C64Petscii_10pt7bBitmaps` under "Discarded input
+    sections" (2026-10-08). So adding pack glyphs (⍇/⍈, 🖧) does **not** grow the
+    image, and *removing* a resident glyph shrinks it. ⚠️ This line used to say no
+    firmware `.c` includes `symbol_fonts.h`, which was wrong. Check the map or `nm`,
+    never the `#include`s. The reasons every font is a header anyway are in
+    `fonts/README.md`, "Why every font is a C header".
 - **Regenerate** with `FONTCONVERT=<pinned> python3 generate_fonts.py`. **Byte-repro
   gotcha:** the per-category headers embed the fontconvert *binary path* in a
   provenance comment, so run from the **same path** the committed headers used

@@ -163,6 +163,47 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, cons
 // COMMIT / STATUS); it reads the `op` word and routes to the per-op logic.
 void user_sync_flash_stage_handler  (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
 
+// ── The master's half of a staged transfer (BEGIN / CHUNK / COMMIT) ───────────
+// The firmware update (cmds 0x40..0x42) and the font-pack / DOOM transfer (cmds
+// 0x50..0x52) run the same state machine over fw_staging; these are its shared
+// steps. What differs stays with each caller: the target and slot, the per-target
+// diagnostics, and the COMMIT status bytes, which are deliberately NOT the same
+// set ('. ? S !' for firmware, '. R L' for a font pack).
+
+// The image a BEGIN last kicked, so the host's ~1 Hz re-polls do not restart the
+// erase. Keyed on the bundle too, so switching bundles re-erases.
+typedef struct {
+    uint32_t size;
+    uint32_t crc;
+    uint8_t  bundle;
+} fw_up_xfer_key_t;
+#define FW_UP_XFER_KEY_NONE {0u, 0u, 0xFFu}
+
+typedef struct {
+    bool    new_image;   // `msg` differs from the last image this BEGIN kicked
+    uint8_t slave_ack;   // the readiness poll's answer; SYNC_GIVEUP when never asked
+    bool    slave_ok;    // slave_ack == SYNC_ACK (BEGIN's ACK_SIG means "keep polling")
+    bool    master_done; // the master's own deferred erase has finished
+} fw_up_xfer_begin_t;
+
+// One BEGIN poll. On a new image with master_ok: drop the board to its base layer
+// (poly_prepare_for_flash), start the master's deferred erase for msg->target and
+// kick the slave's. Then ask the slave once whether it is ready. Returns the reply
+// status: '!' the master rejected the image, '.' both halves ready, '~' re-poll.
+char fw_up_xfer_begin(fw_up_begin_sync_t *msg, bool master_ok, fw_up_xfer_key_t *last,
+                      fw_up_xfer_begin_t *out);
+
+// One CHUNK: data[2..5] = offset, data[6..] = FW_UP_CHUNK_SIZE bytes. Relays to the
+// slave FIRST, then writes the master's copy, so a failed relay leaves both write
+// cursors in lock-step. Rewrites `data` as the reply "P<cmd>." or "P<cmd>!"; a NACK
+// carries the resume offset at data[3..6], the lower of the two halves' cursors
+// (both ACK a duplicate chunk, so the host rewinds there). `*relay_ok` reports
+// whether the slave took it. Returns true on ACK.
+bool fw_up_xfer_chunk(uint8_t *data, uint8_t length, uint8_t cmd, const char *tag, bool *relay_ok);
+
+// COMMIT's slave half: finalize the slave's staged copy (10 retries).
+uint8_t fw_up_xfer_commit_slave(void);
+
 // Master-side helpers over the read-only FLASH_STAGE_STATUS op.
 bool fw_up_query_slave_status(fw_staging_status_t *out);
 void fw_up_log_slave_status(const char *tag);
@@ -172,3 +213,13 @@ bool fw_up_slave_refused_commit(uint8_t slave_ack, const char *tag);
 // One transaction (USER_SYNC_RESET) for apply-and-reboot, plain reboot, and the
 // handedness-change reboot; the poly_reset_sync_t `action` byte selects which.
 void user_sync_reset_handler        (uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data);
+
+// Master-side: hand the slave a USER_SYNC_RESET with the hardened retry policy
+// (20 retries, then the whole round once more), and return the final ack. A
+// dropped reset frame lets the master reboot alone and hang on the boot splash
+// waiting for a slave that never restarted (field 2026-06-22 apply, 2026-07 plain
+// reset key), so every reboot handoff goes through this one function. Safe to
+// re-fire: the slave handler only arms a deferred action, and send_to_bridge()
+// is synchronous, so a returned ack means the slave has handled it. Fills
+// msg->crc32. Worst case ~1 s, which is free on a path that reboots anyway.
+uint8_t fw_up_send_slave_reset(poly_reset_sync_t *msg);

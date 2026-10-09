@@ -19,20 +19,6 @@
 #include "state.h"           // get_local_state() -> the synced doom_pack_auth
 #include "polymod_crc32.h"
 
-#ifdef FW_REQUIRE_SIGNATURE
-// FW-9: the pack is executable code, so it gets the same Ed25519 gate as the
-// firmware image — verified HERE, at load time, not at flash COMMIT (flash can
-// be rewritten after a COMMIT succeeds, so a "was validated once" flag is not a
-// control). The __has_include fallback bridges the vendored Monocypher's move
-// into the polymod_monocypher module (#242) — drop it once that lands.
-#    if defined(__has_include) && __has_include("monocypher-ed25519.h")
-#        include "monocypher-ed25519.h"
-#    else
-#        include "base/crypto/monocypher-ed25519.h"
-#    endif
-#    include "base/fw_pubkey.h"
-#endif
-
 #include <string.h>
 
 // FW-9: a 64-byte Ed25519 signature over (header || image) — the header too, or
@@ -300,18 +286,8 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
         pack_refusal_latch(hdr->image_crc, auth_crc, entry);
         return false;
     }
-    // crc32_1byte takes a uint16_t length — chain it over the ~230 KB image
-    // (chunked continuation is exact: the seed round-trips through the
-    // final/initial complement).
-    uint32_t       crc       = 0;
-    const uint8_t *body      = slot + sizeof(*hdr);
-    uint32_t       remaining = hdr->image_size;
-    while (remaining) {
-        const uint16_t n = remaining > 0xFFFFu ? 0xFFFFu : (uint16_t)remaining;
-        crc = crc32_1byte(body, n, crc);
-        body += n;
-        remaining -= n;
-    }
+    // crc32_large(): the ~230 KB image is past crc32_1byte()'s uint16_t length.
+    const uint32_t crc = crc32_large(slot + sizeof(*hdr), hdr->image_size, 0);
     if (crc != hdr->image_crc) {
         printf("doom: pack CRC %08lx != %08lx — refuse\n",
                (unsigned long)crc, (unsigned long)hdr->image_crc);
@@ -343,8 +319,12 @@ bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entr
     // prompt exists for. Only a trailer that was actually written gets the crypto.
     enum doom_pack_sig sig_state = DOOM_PACK_SIG_BLANK;
     if (!doom_pack_trailer_is_blank(sig, DOOM_PACK_SIG_SIZE)) {
-        sig_state = crypto_ed25519_check(sig, FW_SIGNING_PUBKEY, slot,
-                                         sizeof(*hdr) + hdr->image_size) == 0
+        // FW-9: the pack is executable code, so it gets the same Ed25519 gate as
+        // the firmware image — verified HERE, at load time, not at flash COMMIT
+        // (flash can be rewritten after a COMMIT succeeds, so a "was validated
+        // once" flag is not a control). fw_sig_verify() also refuses the
+        // placeholder key, which would otherwise make a pack forgeable.
+        sig_state = fw_sig_verify(sig, slot, sizeof(*hdr) + hdr->image_size)
                         ? DOOM_PACK_SIG_VALID
                         : DOOM_PACK_SIG_INVALID;
     }

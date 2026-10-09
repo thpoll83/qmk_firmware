@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 // ── PolyKybd RP2040 flash map (8 MB external QSPI) ───────────────────────────
 // All offsets are from the start of physical flash (XIP_BASE + offset = XIP addr):
@@ -112,6 +113,12 @@ bool fw_staging_refused_unsigned(void);
 // core1 running, which is only survivable while the window stays small.
 void fw_staging_core1_lockout_begin(void);
 void fw_staging_core1_lockout_end(void);
+
+// True while fw_staging holds core1 in PSM reset (a deferred erase, a page write, the
+// lockout above). Anything that would release or relaunch core1 in that window must
+// leave it alone: the erase turns XIP off, and a core1 fetching from flash then
+// HardFaults. fw_staging relaunches the RLE service itself when it lets core1 go.
+bool fw_staging_core1_held(void);
 
 // Why an apply was refused. The two failures are genuinely different events and the
 // user can act on the difference: NO_IMAGE means nothing ever reached the staging
@@ -326,6 +333,14 @@ bool fw_staging_has_valid_staged_image(void);
 // ── Firmware image signature (FW-2) ─────────────────────────────────────────
 // Ed25519 signature length over the staged firmware image.
 #define FW_SIG_LEN 64
+
+// Verify a detached Ed25519 signature over `len` bytes at `msg` against
+// FW_SIGNING_PUBKEY. Returns false on a bad signature AND when the compiled-in key
+// is still the all-zero placeholder: that key is a low-order point, so checking
+// against it would make forgery trivial (see fw_pubkey_provisioned()). The ONE
+// signature check for every signed artifact (firmware image FW-2, DOOM pack FW-9).
+// HEAVY (SHA-512 over `len` bytes) — never inside a split transaction window.
+bool fw_sig_verify(const uint8_t sig[FW_SIG_LEN], const void *msg, size_t len);
 
 // Provide the detached Ed25519 signature for the image being staged (FIRMWARE
 // target). Set by the host's CMD_FW_UP_SIGNATURE before COMMIT. fw_staging_finalize()

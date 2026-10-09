@@ -1,3 +1,18 @@
+# ---------------------------------------------------------------------------
+# Main-thread stack: 0xAE0 (2784 B), up from ChibiOS's 2 KB default (0x800).
+# ---------------------------------------------------------------------------
+# An Ed25519 check (FW-2 firmware COMMIT, FW-9 doom pack load) needs ~1.66 KB on
+# its own: crypto_eddsa_check_equation 1088 B + fe_mul 360 B + the wrappers
+# (-fstack-usage, Cortex-M0+ -Os). Under main -> keyboard_task -> housekeeping
+# -> doom_pack_load, plus an IRQ frame, that crossed 0x800: the slave HardFaulted
+# mid-verify with sp=0x200403f8, 8 bytes below the stack base 0x20040400 (rig,
+# 2026-10-07, the doom pack load raced a split IRQ).
+# The stack lives in SCRATCH_X (ram4, 4 KB) with the 1 KB exception stack and
+# ChibiOS's core0 instance `ch0` (0x120 B, .ram4_clear). 0x1000 - 0x400 - 0x120
+# = 0xAE0 fills the bank exactly, so this costs no main RAM; anything larger fails
+# the link ("region `ram4' overflowed"), which is the guard.
+USE_PROCESS_STACKSIZE = 0xAE0
+
 
 # pico-sdk host header uses K&R-style empty () prototype; suppress the warning it triggers
 CFLAGS += -Wno-strict-prototypes
@@ -467,6 +482,22 @@ endif
 # would be forgeable by the attacker it is meant to stop. BOOTSEL/UF2 also remains
 # unaffected (it bypasses fw_staging entirely), so this can never brick a board.
 OPT_DEFS += -DFW_REQUIRE_SIGNATURE
+
+# ---------------------------------------------------------------------------
+# Build identity: the git branch, printed in the boot banner beside QMK_GIT_HASH
+# ---------------------------------------------------------------------------
+# FW_VERSION cannot tell test builds apart: every build of one version reports it.
+# The banner prints `build <branch>@<hash> <date>` so a console log names the image
+# that wrote it. CI checks out a detached HEAD, so GitHub's own variables come
+# first: GITHUB_HEAD_REF is the PR's branch, GITHUB_REF_NAME a push's branch or tag.
+# Only path-safe characters survive, so a branch name cannot break the quoting.
+ifdef SKIP_GIT
+    POLY_GIT_BRANCH := NA
+else
+    POLY_GIT_BRANCH := $(or $(GITHUB_HEAD_REF),$(GITHUB_REF_NAME),$(shell git -C $(TOP_DIR) rev-parse --abbrev-ref HEAD 2>/dev/null))
+endif
+POLY_GIT_BRANCH := $(shell printf '%s' '$(subst ',,$(POLY_GIT_BRANCH))' | tr -cd 'A-Za-z0-9._/-')
+OPT_DEFS += -DPOLY_GIT_BRANCH=\"$(or $(POLY_GIT_BRANCH),unknown)\"
 
 # ---------------------------------------------------------------------------
 # Deliberate crashes, for exercising base/crash_record.* on real hardware

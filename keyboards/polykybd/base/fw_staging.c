@@ -8,6 +8,7 @@
 #include "polymod_crc32.h"
 #include "monocypher-ed25519.h"   // FW-2: Ed25519 image signature verify (polymod_monocypher)
 #include "fw_pubkey.h"                    // FW-2: FW_SIGNING_PUBKEY (image signing key)
+#include "fw_sig_policy.h"                // fw_sig_verify_with(): the placeholder-key refusal
 #include "crash_record.h"                 // crash_watchdog_stop() before the self-apply
 #include "doom/doom_mode.h"               // DOOMPACK target: drop the loader's refusal latch
                                           // (no-op stubs when the game is not compiled in)
@@ -286,21 +287,6 @@ static uint8_t  s_last_chunk_ack;
 static uint8_t  s_last_commit_ack;   // ack the slave's COMMIT handler last returned
 
 // ---------------------------------------------------------------------------
-// Helper: chain CRC32 over a large buffer in 60 000-byte chunks
-// (crc32_1byte length parameter is uint16_t, max 65535)
-// ---------------------------------------------------------------------------
-static uint32_t crc32_large(const uint8_t *data, uint32_t size) {
-    uint32_t crc = 0;
-    while (size > 0) {
-        uint16_t chunk = (size > 60000u) ? 60000u : (uint16_t)size;
-        crc  = crc32_1byte(data, chunk, crc);
-        data += chunk;
-        size -= chunk;
-    }
-    return crc;
-}
-
-// ---------------------------------------------------------------------------
 // flash_range_program wrapped in the IRQ-disable + (conditional) core1-halt guard
 // the bootrom flash ops require.  s_core1_halted lets a caller that has already
 // halted core1 (e.g. inside a wider erase) reuse it without a redundant restart.
@@ -433,6 +419,14 @@ void fw_staging_core1_lockout_begin(void) {
 void fw_staging_core1_lockout_end(void) {
 #ifdef USE_CORE1
     if (s_core1_halted) fw_staging_restart_core1();
+#endif
+}
+
+bool fw_staging_core1_held(void) {
+#ifdef USE_CORE1
+    return s_core1_halted;
+#else
+    return false;
 #endif
 }
 
@@ -788,24 +782,17 @@ bool fw_staging_refused_unsigned(void) {
     return s_refused_unsigned;
 }
 
-// Is a real signing key compiled in, or is this still the all-zero placeholder that
-// fw_pubkey.h ships before `gen_signing_key.py` has been run?
-//
-// ⚠️ The all-zero key is NOT an inert value that simply fails every check. Its
-// encoding is y=0, which decodes to a point that is genuinely ON the curve with
-// ORDER 4 — and crypto_eddsa_check_equation() only verifies that A and R are on the
-// curve and that 0 <= S < L. It has no low-order-key rejection. With an order-4 A,
-// [h]A depends only on h mod 4, so an attacker can guess that value and land a
-// forgery in a handful of attempts. A placeholder key therefore makes enforcement
-// FORGEABLE rather than fail-closed — the opposite of the intuition that a dummy key
-// "rejects everything". Guard it explicitly so a botched key regeneration or a bad
-// merge can never silently downgrade FW_REQUIRE_SIGNATURE into theatre.
-static bool fw_pubkey_provisioned(void) {
-    uint8_t acc = 0;
-    for (size_t i = 0; i < sizeof(FW_SIGNING_PUBKEY); i++) {
-        acc |= FW_SIGNING_PUBKEY[i];
+// The decision, and why the all-zero placeholder key is refused, is
+// base/fw_sig_policy.h (unit-tested: polykybd_fw_sig_policy).
+_Static_assert(sizeof(FW_SIGNING_PUBKEY) == FW_SIG_KEY_LEN, "FW_SIGNING_PUBKEY is an Ed25519 public key");
+
+bool fw_sig_verify(const uint8_t sig[FW_SIG_LEN], const void *msg, size_t len) {
+    if (!fw_sig_key_provisioned(FW_SIGNING_PUBKEY)) {
+        // Report INVALID, not UNSIGNED: a signature WAS supplied, we just have no
+        // trustworthy key to judge it with. Under enforcement both are refused.
+        uprintf("SIG: no signing key provisioned (placeholder pubkey) — cannot verify\n");
     }
-    return acc != 0;
+    return fw_sig_verify_with(FW_SIGNING_PUBKEY, crypto_ed25519_check, sig, msg, len);
 }
 
 // FW-2: verify the staged FIRMWARE image's Ed25519 signature against the embedded
@@ -816,15 +803,8 @@ static bool fw_pubkey_provisioned(void) {
 // transaction window.
 static int fw_staging_check_signature(void) {
     if (!s_signature_present) return 0;
-    if (!fw_pubkey_provisioned()) {
-        // Report INVALID, not UNSIGNED: a signature WAS supplied, we just have no
-        // trustworthy key to judge it with. Under enforcement both are refused.
-        uprintf("FW_UP: no signing key provisioned (placeholder pubkey) — cannot verify\n");
-        return -1;
-    }
     const uint8_t *img = (const uint8_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET);
-    // monocypher crypto_ed25519_check() returns 0 on success, -1 on any failure.
-    return (crypto_ed25519_check(s_signature, FW_SIGNING_PUBKEY, img, s_image_size) == 0) ? 1 : -1;
+    return fw_sig_verify(s_signature, img, s_image_size) ? 1 : -1;
 }
 
 bool fw_staging_finalize(void) {
@@ -1055,7 +1035,7 @@ uint32_t fw_staging_get_own_fw_size(void) {
 }
 
 uint32_t fw_staging_get_own_fw_crc(void) {
-    return crc32_large(&__flash_binary_start, fw_staging_get_own_fw_size());
+    return crc32_large(&__flash_binary_start, fw_staging_get_own_fw_size(), 0);
 }
 
 const uint8_t *fw_staging_get_fw_base(void) {
@@ -1344,9 +1324,9 @@ fw_apply_verdict_t fw_staging_verify_staged_flash(uint32_t *size, uint32_t *expe
     // the first few percent of the file. It then never matches, so the verify below
     // refuses EVERY image over 64 KB -- which is exactly what it did on its first
     // outing (reported c48f3db3, the CRC of the leading 34164 bytes of a 492916-byte
-    // image). The helper exists for this and says so in its own comment.
+    // image). polymod_crc32.h says so beside the helper.
     const uint32_t crc = crc32_large((const uint8_t *)(XIP_BASE + FW_STAGING_DATA_OFFSET),
-                                     hdr[1]);
+                                     hdr[1], 0);
     if (size)       *size       = hdr[1];
     if (expect_crc) *expect_crc = hdr[2];
     if (actual_crc) *actual_crc = crc;

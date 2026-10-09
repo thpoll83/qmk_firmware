@@ -14,9 +14,10 @@
 // next packet until core1 catches up.
 bool core1_is_busy(void);
 
-// Print what the last core1 stall recovery found, once (raw_hid_pre_receive_kb()
-// relaunches a core1 that owes a fragment for too long). Called from the HID path,
-// where a host is attached and draining the console; a no-op when nothing happened.
+// Print what the last core1 stall recovery found (raw_hid_pre_receive_kb() relaunches
+// a core1 that owes a fragment for too long): up to three copies, 10 s apart, each
+// with the same recovery ID. Called from the HID path, where a host is attached and
+// draining the console; a no-op when nothing happened.
 void core1_stall_report(void);
 
 // 1 once core1 has entered core1_entry() (IRQs masked); core0 clears it before launch.

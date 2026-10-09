@@ -198,7 +198,14 @@ bool core1_is_busy(void) {
 // What the last recovery found. Printed from the HID path (core1_stall_report()), not
 // at recovery time: QMK drops console output nobody drains, and core1 can stop while
 // no host is attached (field 2026-10-09: it was already down before the host
-// connected). The next host report proves somebody is reading the console.
+// connected). A host report almost always means somebody is reading the console. The
+// exception is a host whose console interface was not up yet when it opened the
+// device, which it repairs within a second, so the line is printed CORE1_STALL_REPORTS
+// times, CORE1_STALL_REPORT_GAP_MS apart. Every copy carries the same recovery ID,
+// "recovery <n> since boot at <uptime> ms", which is how the host's problem scan counts
+// one recovery once. The uptime is part of the ID because <n> restarts after a reboot.
+#define CORE1_STALL_REPORTS      3u
+#define CORE1_STALL_REPORT_GAP_MS 10000u
 static struct {
     uint32_t count;      // recoveries since boot
     uint32_t stalled_ms; // how long the oldest fragment had waited
@@ -206,8 +213,10 @@ static struct {
     uint32_t last_arg;
     uint32_t c0, c1;     // core0_decomp_count / core1_decomp_count
     uint32_t entered;    // g_core1_entered
+    uint32_t at_ms;      // uptime of the recovery: with `count`, the recovery's ID
+    uint32_t printed_at; // uptime of the last copy printed
+    uint8_t  printed;    // copies printed of this recovery
     bool     relaunched; // the bounded relaunch answered
-    bool     unreported;
 } s_c1_stall;
 
 // Hard-reset core1 through the power-on state machine: hold it off until the PSM
@@ -231,7 +240,8 @@ static void core1_recover(uint32_t stalled_ms) {
     s_c1_stall.c0         = core0_decomp_count;
     s_c1_stall.c1         = core1_decomp_count;
     s_c1_stall.entered    = g_core1_entered;
-    s_c1_stall.unreported = true;
+    s_c1_stall.at_ms      = timer_read32();
+    s_c1_stall.printed    = 0;
 
     core1_psm_reset();
     // core1 is held in the bootrom now, so core0 owns every word it shares. The
@@ -251,17 +261,22 @@ static void core1_recover(uint32_t stalled_ms) {
 }
 
 void core1_stall_report(void) {
-    if (!s_c1_stall.unreported) {
+    if (s_c1_stall.count == 0 || s_c1_stall.printed >= CORE1_STALL_REPORTS) {
         return;
     }
-    s_c1_stall.unreported = false;
+    if (s_c1_stall.printed > 0 && timer_elapsed32(s_c1_stall.printed_at) < CORE1_STALL_REPORT_GAP_MS) {
+        return;
+    }
+    s_c1_stall.printed++;
+    s_c1_stall.printed_at = timer_read32();
     uprintf("WARNING core1 stalled: no answer for %lu ms (last cmd 0x%08lx arg 0x%08lx, "
-            "counts %lu/%lu, entered %lu) - %s (recovery %lu since boot)\n",
+            "counts %lu/%lu, entered %lu) - %s (recovery %lu since boot at %lu ms, report %u/%u)\n",
             (unsigned long)s_c1_stall.stalled_ms, (unsigned long)s_c1_stall.last_cmd,
             (unsigned long)s_c1_stall.last_arg, (unsigned long)s_c1_stall.c0,
             (unsigned long)s_c1_stall.c1, (unsigned long)s_c1_stall.entered,
             s_c1_stall.relaunched ? "core1 relaunched" : "core1 relaunch FAILED, overlays degraded until reboot",
-            (unsigned long)s_c1_stall.count);
+            (unsigned long)s_c1_stall.count, (unsigned long)s_c1_stall.at_ms,
+            (unsigned)s_c1_stall.printed, (unsigned)CORE1_STALL_REPORTS);
 }
 
 // Strong override of the weak hook in tmk_core/protocol/chibios/usb_main.c:

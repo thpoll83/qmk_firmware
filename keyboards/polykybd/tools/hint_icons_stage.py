@@ -158,7 +158,8 @@ def _(I):
 def _(I):
     I.thin(3, 4, 30, 33)
     I.F(10, 1, 23, 8, 0); I.thin(11, 1, 22, 7, ch=1)
-    I.F(8, 12, 25, 15); I.F(8, 19, 25, 22); I.F(8, 26, 18, 29)
+    # the clipped lines are content, not a stage: 2 px, so the 3 px board reads as the frame
+    I.F(8, 13, 25, 14); I.F(8, 20, 25, 21); I.F(8, 27, 18, 28)
     I.corner("clock")
 
 @icon("undo")
@@ -461,9 +462,22 @@ def _(I):
 
 @icon("emoji")
 def _(I):
-    I.oct(16.5, 16.5, 16, w=3)
+    I.ring(0, 0, 33, 33, ch=9, w=3)              # the face fills the whole 34 grid
     I.F(10, 9, 13, 14); I.F(20, 9, 23, 14)
-    I.d.polygon([(7, 19), (26, 19), (21, 26), (12, 26)], fill=1)
+    # The mouth is every empty pixel below row 19 at least 4 px from the face, so its
+    # gap to the outline is the same at the sides, the diagonals and the bottom.
+    px = I.im.load()
+    frame = [(x, y) for y in range(S) for x in range(S) if px[x, y]]
+    inside, todo = set(), [(16, 16)]
+    while todo:
+        x, y = todo.pop()
+        if (x, y) in inside or not (0 <= x < S and 0 <= y < S) or px[x, y]:
+            continue
+        inside.add((x, y))
+        todo += [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+    for x, y in inside:
+        if y >= 19 and min((x - fx) ** 2 + (y - fy) ** 2 for fx, fy in frame) >= 16:
+            px[x, y] = 1
 
 @icon("zoom_in")
 def _(I):

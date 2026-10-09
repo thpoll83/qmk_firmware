@@ -5946,20 +5946,30 @@ static bool ime_slot_live(uint8_t i) {
     return s_ime_held[i].usage != 0 && matrix_is_on(s_ime_held[i].row, s_ime_held[i].col);
 }
 
+// Drop slot i AND let go of its usage, unless a live slot still holds the same one.
+// Retiring must release, not just forget: QMK updates the whole matrix before it
+// delivers a scan's events in row/column order, so a slot can read as dead while its
+// own release event is still queued behind this press. Forgetting it there left that
+// release nothing to undo, and a usage registered before a language switch stayed
+// down (Greptile on #355). Unregistering an already-cleared usage is a no-op.
+static void ime_slot_retire(uint8_t i) {
+    const uint8_t usage = s_ime_held[i].usage;
+    s_ime_held[i].usage = 0;
+    for (uint8_t j = 0; j < IME_HELD_SLOTS; ++j) {
+        if (s_ime_held[j].usage == usage && ime_slot_live(j)) return;
+    }
+    unregister_code(usage);
+}
+
 static void ime_key_release(const keyrecord_t* record) {
     for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
         if (s_ime_held[i].usage == 0 || s_ime_held[i].row != record->event.key.row ||
             s_ime_held[i].col != record->event.key.col) {
             continue;
         }
-        const uint8_t usage = s_ime_held[i].usage;
-        s_ime_held[i].usage = 0;
         // Two KC_IME keys holding the SAME usage: the report carries it once, so
-        // releasing it now would drop it under the finger still holding the other.
-        for (uint8_t j = 0; j < IME_HELD_SLOTS; ++j) {
-            if (s_ime_held[j].usage == usage && ime_slot_live(j)) return;
-        }
-        unregister_code(usage);
+        // ime_slot_retire keeps it while the finger on the other one is still down.
+        ime_slot_retire(i);
         return;
     }
 }
@@ -5983,14 +5993,15 @@ static void ime_key_record(keyrecord_t* record) {
         return;
     }
     if (s.hold) {
-        // Retire slots whose release was swallowed (see ime_slot_live), so they
-        // neither block a free slot nor keep a usage "held" for a key that is up.
+        // Retire slots whose key is up (a swallowed release, or one still queued in
+        // this scan; see ime_slot_retire), so they neither block a free slot nor keep
+        // a usage held for a key that is up.
         // A slot at THIS key's position is stale by definition: a key cannot be
         // pressed twice without a release in between.
         for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
             const bool here = s_ime_held[i].row == record->event.key.row &&
                               s_ime_held[i].col == record->event.key.col;
-            if (s_ime_held[i].usage != 0 && (here || !ime_slot_live(i))) s_ime_held[i].usage = 0;
+            if (s_ime_held[i].usage != 0 && (here || !ime_slot_live(i))) ime_slot_retire(i);
         }
         for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
             if (s_ime_held[i].usage == 0) {

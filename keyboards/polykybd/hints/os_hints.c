@@ -10,9 +10,10 @@
 // keyboard, no split state and no display — see tests/os_hints_tests.cpp.
 //
 // The returned string is a mini DISPLAY LIST drawn by kdisp_write_gfx_text_cy(). The
-// shortcut hints are each ONE resident IconsFont glyph (ICON_HINT_*, drawn by
-// tools/hint_icons.py): a 34x34 icon whose metrics already place it at panel x 36..69,
-// y 3..36, so the string carries no leading spaces. The mod-tap badges below still use
+// shortcut hints are each ONE glyph of the PolyHintIcons PACK font (ICON_HINT_*, drawn
+// by tools/hint_icons.py, shipped in symbol.plyf): a 34x34 icon whose metrics already
+// place it at panel x 36..69, y 3..36, so the string carries no leading spaces. With no
+// pack flashed the glyph is absent and keycode_to_disp_overlay() draws no hint. The mod-tap badges below still use
 // the HINT_* ops (MOVE etc.); see lang/named_glyphs.h.
 
 #include "os_hints.h"

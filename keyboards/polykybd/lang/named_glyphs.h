@@ -2375,7 +2375,7 @@
 
 // ---- OS shortcut-hint icons (hints/os_hints.c), drawn by tools/hint_icons.py ----
 // One 34x34 glyph per hint; the style (A..E) is whichever tools/hint_icons.py
-// last wrote into gfx_icons.h. Each glyph carries its keycap placement (xOffset
+// last wrote into base/fonts/hint_icons.h (the PolyHintIcons pack font). Each glyph carries its keycap placement (xOffset
 // 36, top row 3 for a cursor at y 23), so a hint is the bare glyph with no
 // leading spaces. Slots and order are generated: paste the output of
 // `python3 tools/hint_icons.py --macros` here whenever an icon is added or retired.

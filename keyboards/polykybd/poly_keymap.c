@@ -5946,6 +5946,31 @@ static bool ime_slot_live(uint8_t i) {
     return s_ime_held[i].usage != 0 && matrix_is_on(s_ime_held[i].row, s_ime_held[i].col);
 }
 
+// Whether the host report still carries `usage`. A modifier lives in the mods byte,
+// every other key in the key array (is_key_pressed covers both 6KRO and NKRO).
+static bool ime_usage_in_report(uint8_t usage) {
+    if (usage >= KC_LEFT_CTRL && usage <= KC_RIGHT_GUI) {
+        return (get_mods() & MOD_BIT(usage)) != 0;
+    }
+    return is_key_pressed(usage);
+}
+
+// Forget every slot whose usage the report no longer carries: clear_keyboard() ran
+// (the macro picker, a confirm prompt, demo mode, ...) and took the hold with it, so
+// the slot has nothing left to release. Called at the TOP of process_record_user, so
+// the next key event of any kind drops it -- before a gate can swallow that event,
+// and before a newer ordinary Right Alt lands in the report and makes a stale slot
+// look like a live hold that ime_slot_retire would then release (Greptile on #355).
+// That is what keeps the matrix test in ime_slot_live honest: by the time a press
+// retires a dead slot, the slot's usage is in the report because the slot put it there.
+static void ime_forget_cleared_slots(void) {
+    for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
+        if (s_ime_held[i].usage != 0 && !ime_usage_in_report(s_ime_held[i].usage)) {
+            s_ime_held[i].usage = 0;
+        }
+    }
+}
+
 // Drop slot i AND let go of its usage, unless a live slot still holds the same one.
 // Retiring must release, not just forget: QMK updates the whole matrix before it
 // delivers a scan's events in row/column order, so a slot can read as dead while its
@@ -6385,6 +6410,9 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+    // Before anything below can swallow this event: drop KC_IME holds that a
+    // clear_keyboard() has already released (see ime_forget_cleared_slots).
+    ime_forget_cleared_slots();
 
     // TEST BUILDS ONLY (-e POLYKYBD_CRASH_TEST=yes): the deliberate-crash chord.
     // FIRST, so it works even while another mode below would swallow the event --

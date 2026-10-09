@@ -60,6 +60,7 @@
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
 #include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
 #include "base/ime_key_plan.h"           // what KC_IME sends, per language and OS
+#include "base/ime_held_slots.h"         // which KC_IME key holds which usage
 // Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
@@ -5924,29 +5925,12 @@ uint8_t poly_ime_family(uint8_t lang) {
     }
 }
 
-// The usage each HELD stroke registered on its press, per KEY POSITION. The release
-// unregisters exactly what that key's press registered, even if the language or OS
-// changed while it was down — the same latch reasoning as s_apple_swap_latch. One
-// latch shared by every KC_IME key was not enough: a second KC_IME key pressed
-// after a language switch overwrote the first key's usage, and the Right Alt it
-// had registered was never released (Greptile on #355). usage 0 = slot free.
-#define IME_HELD_SLOTS 4
-static struct {
-    uint8_t row, col, usage;
-} s_ime_held[IME_HELD_SLOTS];
+// Held KC_IME strokes, per key position (base/ime_held_slots.h).
+static ime_slots_t s_ime_held;
 // The Japanese mode the key last selected (enum ime_ja_mode). RAM only: after a
 // reboot the first press assumes "off" and goes to hiragana, which is right for a
 // fresh login and costs one extra press otherwise.
 static uint8_t s_ime_ja_mode = IME_JA_OFF;
-
-// A slot is LIVE only while its key is physically down. An early gate in
-// process_record_user (the macro picker, a confirm prompt) can swallow a KC_IME
-// release after clear_keyboard() has already emptied the report; the slot it leaves
-// behind must not count as "another key still holds this usage", or every later
-// release skips its unregister and Right Alt stays down (Greptile on #355).
-static bool ime_slot_live(uint8_t i) {
-    return s_ime_held[i].usage != 0 && matrix_is_on(s_ime_held[i].row, s_ime_held[i].col);
-}
 
 // Whether the host report still carries `usage`. A modifier lives in the mods byte,
 // every other key in the key array (is_key_pressed covers both 6KRO and NKRO).
@@ -5956,54 +5940,21 @@ static bool ime_usage_in_report(uint8_t usage) {
     }
     return is_key_pressed(usage);
 }
+static void ime_press(uint8_t usage) { register_code(usage); }
+static void ime_release(uint8_t usage) { unregister_code(usage); }
+static void ime_tap(uint8_t usage) { tap_code(usage); }
 
-// Forget every slot whose usage the report no longer carries: clear_keyboard() ran
-// (the macro picker, a confirm prompt, demo mode, ...) and took the hold with it, so
-// the slot has nothing left to release. Called at the TOP of process_record_user, so
-// the next key event of any kind drops it -- before a gate can swallow that event,
-// and before a newer ordinary Right Alt lands in the report and makes a stale slot
-// look like a live hold that ime_slot_retire would then release (Greptile on #355).
-// That is what keeps the matrix test in ime_slot_live honest: by the time a press
-// retires a dead slot, the slot's usage is in the report because the slot put it there.
-static void ime_forget_cleared_slots(void) {
-    for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
-        if (s_ime_held[i].usage != 0 && !ime_usage_in_report(s_ime_held[i].usage)) {
-            s_ime_held[i].usage = 0;
-        }
-    }
-}
-
-// Drop slot i AND let go of its usage, unless a live slot still holds the same one.
-// Retiring must release, not just forget: QMK updates the whole matrix before it
-// delivers a scan's events in row/column order, so a slot can read as dead while its
-// own release event is still queued behind this press. Forgetting it there left that
-// release nothing to undo, and a usage registered before a language switch stayed
-// down (Greptile on #355). Unregistering an already-cleared usage is a no-op.
-static void ime_slot_retire(uint8_t i) {
-    const uint8_t usage = s_ime_held[i].usage;
-    s_ime_held[i].usage = 0;
-    for (uint8_t j = 0; j < IME_HELD_SLOTS; ++j) {
-        if (s_ime_held[j].usage == usage && ime_slot_live(j)) return;
-    }
-    unregister_code(usage);
-}
-
-static void ime_key_release(const keyrecord_t* record) {
-    for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
-        if (s_ime_held[i].usage == 0 || s_ime_held[i].row != record->event.key.row ||
-            s_ime_held[i].col != record->event.key.col) {
-            continue;
-        }
-        // Two KC_IME keys holding the SAME usage: the report carries it once, so
-        // ime_slot_retire keeps it while the finger on the other one is still down.
-        ime_slot_retire(i);
-        return;
-    }
-}
+static const ime_slot_io_t s_ime_io = {
+    .key_down  = matrix_is_on,
+    .in_report = ime_usage_in_report,
+    .press     = ime_press,
+    .release   = ime_release,
+    .tap       = ime_tap,
+};
 
 static void ime_key_record(keyrecord_t* record) {
     if (!record->event.pressed) {
-        ime_key_release(record);
+        ime_slots_release(&s_ime_held, record->event.key.row, record->event.key.col, &s_ime_io);
         return;
     }
     // One-shot Shift counts as Shift: QMK's send_keyboard_report() adds pending
@@ -6020,33 +5971,7 @@ static void ime_key_record(keyrecord_t* record) {
         return;
     }
     if (s.hold) {
-        // Retire slots whose key is up (a swallowed release, or one still queued in
-        // this scan; see ime_slot_retire), so they neither block a free slot nor keep
-        // a usage held for a key that is up.
-        // A slot at THIS key's position is stale by definition: a key cannot be
-        // pressed twice without a release in between.
-        for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
-            const bool here = s_ime_held[i].row == record->event.key.row &&
-                              s_ime_held[i].col == record->event.key.col;
-            if (s_ime_held[i].usage != 0 && (here || !ime_slot_live(i))) ime_slot_retire(i);
-        }
-        for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
-            if (s_ime_held[i].usage == 0) {
-                s_ime_held[i].row   = record->event.key.row;
-                s_ime_held[i].col   = record->event.key.col;
-                s_ime_held[i].usage = s.usage;
-                register_code(s.usage);
-                return;
-            }
-        }
-        // More KC_IME keys down at once than there are slots: a held key nobody
-        // could release would be stuck, so this press gets a tap instead -- unless
-        // a slot already holds the same usage, whose release the tap would steal
-        // from the keys still down (Greptile, #355).
-        for (uint8_t i = 0; i < IME_HELD_SLOTS; ++i) {
-            if (s_ime_held[i].usage == s.usage) return;
-        }
-        tap_code(s.usage);
+        ime_slots_press(&s_ime_held, record->event.key.row, record->event.key.col, s.usage, &s_ime_io);
         return;
     }
     // A tap with a chord. Add only the modifiers that are not already down, and
@@ -6424,8 +6349,8 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // Before anything below can swallow this event: drop KC_IME holds that a
-    // clear_keyboard() has already released (see ime_forget_cleared_slots).
-    ime_forget_cleared_slots();
+    // clear_keyboard() has already released (see ime_slots_forget_cleared).
+    ime_slots_forget_cleared(&s_ime_held, &s_ime_io);
 
     // TEST BUILDS ONLY (-e POLYKYBD_CRASH_TEST=yes): the deliberate-crash chord.
     // FIRST, so it works even while another mode below would swallow the event --

@@ -288,3 +288,13 @@ polykybd_ime_key_plan_SRC := \
 
 polykybd_ime_key_plan_INC := \
 	$(POLY_BASE_PATH)
+
+# ime_held_slots.c is the KC_IME held-key table: which key position holds which
+# usage, and when a slot is stale. Pure: the matrix, the host report and the
+# register/unregister calls come in through ime_slot_io_t, faked by the tests.
+polykybd_ime_held_slots_SRC := \
+	$(POLY_BASE_PATH)/ime_held_slots.c \
+	$(POLY_BASE_PATH)/tests/ime_held_slots_tests.cpp
+
+polykybd_ime_held_slots_INC := \
+	$(POLY_BASE_PATH)

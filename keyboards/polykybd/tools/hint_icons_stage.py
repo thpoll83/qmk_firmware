@@ -158,9 +158,9 @@ def _(I):
 def _(I):
     I.thin(3, 4, 30, 33)
     I.F(10, 1, 23, 8, 0); I.thin(11, 1, 22, 7, ch=1)
-    # the clipped lines are content, not a stage: 2 px (the lower half of the old 4 px
-    # bars), so the 3 px board reads as the frame
-    I.F(8, 14, 25, 15); I.F(8, 21, 25, 22); I.F(8, 28, 18, 29)
+    # the clipped lines are content, not a stage: 2 px, so the 3 px board reads as the
+    # frame. They sit high on the board: 2 px below the clip, 4 px above the bottom edge.
+    I.F(8, 11, 25, 12); I.F(8, 18, 25, 19); I.F(8, 25, 18, 26)
     I.corner("clock")
 
 @icon("undo")

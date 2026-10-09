@@ -273,8 +273,9 @@ every frame comes from the font's column bytes in flash and Eden's tables.
   pass), so the task never draws over another screen. Motion is a function of time,
   so pacing lowers the frame rate, never the speed. `oled_render_dirty(true)` would
   block the matrix ~26 ms per frame instead. The console prints
-  `Status idle: N frames/60s, worst compose Nms` once a minute (every 5 s until
-  2026-10-09), and Eden's idle line, on the same cadence, now ends in
+  `Status idle: N frames/60s, worst compose Nms` once a minute of an idle session
+  (every 5 s until 2026-10-09). The count starts with each session, so a session
+  shorter than a minute leaves no such line. Eden's idle line, on the same cadence, now ends in
   `N frames` since the last report — its `frame Nms` sums render time only, so it
   cannot show time lost to other main-loop work.
 

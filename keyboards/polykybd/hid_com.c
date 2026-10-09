@@ -42,6 +42,7 @@
 #include "poly_keymap.h"
 #include "layer_names.h"
 #include "base/crash_record.h"
+#include "multicore_exec.h"   // core1_stall_report
 
 
 /*[[[cog
@@ -256,6 +257,11 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     if (length<1) {
         return;
     }
+#ifdef USE_CORE1
+    // A host report means a host is attached and reading the console, so this is
+    // where a core1 stall found while nobody was listening gets reported.
+    core1_stall_report();
+#endif
 
     if(data[0] == id_custom_save || data[0] == 'P') {
         // Doom easter egg: while game mode has borrowed the overlay pool as

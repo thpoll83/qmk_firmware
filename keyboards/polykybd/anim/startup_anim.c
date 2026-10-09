@@ -704,6 +704,17 @@ void __attribute__((noinline)) startup_anim_core1_job(uint32_t arg) {
     s_c1_done = (uint16_t)(arg >> 16);
 }
 
+void startup_anim_core1_lost(void) {
+    if (s_c1_frame && s_c1_count > 0) {
+        // The same fallback as the job timeout in startup_anim_tick().
+        s_c1_off    = true;
+        s_c1_frame  = false;
+        s_frame_idx = s_c1_idx[s_c1_head];
+        s_c1_count  = 0;
+    }
+    s_c1_done = s_c1_seq;   // core1 is held in reset: core0 owns this word now
+}
+
 // The next keycap with a panel, from `from` on; SA_NUM_KEYS when there is none.
 static uint8_t sa_next_key(uint8_t from) {
     const sa_key_geom_t *T = is_left_side() ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
@@ -990,6 +1001,7 @@ bool startup_anim_take_welcome_said(void) { return false; }
 bool startup_anim_is_loop(void) { return false; }
 bool startup_anim_idle_on_core1(void) { return false; }
 void startup_anim_core1_job(uint32_t arg) { (void)arg; }
+void startup_anim_core1_lost(void) {}
 bool startup_anim_frame_busy(void) { return false; }
 void startup_anim_tick(void) {}
 bool startup_anim_active(void) { return false; }

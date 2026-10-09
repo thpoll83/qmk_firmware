@@ -106,8 +106,13 @@ index:
   # (gen-lang-fonts.sh, codepoints 0xE000+idx) ship here instead of resident, so
   # the ~63 KB flag font leaves the firmware image; render_lang_flag_key() draws
   # them via g_all_fonts and falls back to the xx-YY label when no pack is present.
+  # The OS shortcut-hint icons (tools/hint_icons.py, U+100100..) ship here too, in the
+  # symbol bundle: ~8.7 KB that left the firmware image. keycode_to_disp_overlay()
+  # shows no hint when the glyph is absent, so a board with no pack keeps its legends.
+  # Appended AFTER the flags so the flags' pinned pack_extra gidx does not move.
   pack_extra_fonts:
     - {symbol: NotoColorEmoji_Regular_LangFlags_20pt7b, header: flag_fonts.h}
+    - {symbol: PolyHintIcons, header: hint_icons.h}
 
 # Split-pack bundles: the non-resident pack is also emitted as one PlyF per
 # script family, laid out in fixed sector-aligned slots inside the 2 MB fontpack
@@ -127,7 +132,7 @@ bundles:
   # functional minimum so the keyboard renders ASCII/Cyrillic/Greek with NO pack),
   # so it is NOT a bundle here — only non-resident pack fonts get bundles.
   list:
-    - {id: symbol,   slot_kb: 96,   categories: [symbols]}
+    - {id: symbol,   slot_kb: 96,   categories: [symbols], pack_extra: [PolyHintIcons]}
     - {id: mideast,  slot_kb: 96,   categories: [arabic, hebrew, ethiopic]}
     - {id: syllabic, slot_kb: 96,   categories: [canadian, cherokee]}
     - {id: asia,     slot_kb: 128,  categories: [jp, kr, bopomofo, devanagari,

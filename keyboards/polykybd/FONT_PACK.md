@@ -173,7 +173,8 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   keeps its legend instead of drawing the missing-glyph `!`. After any icon change:
   `python3 tools/hint_icons.py`, then reship `symbol` with the
   `reship-fontpack-bundle` skill. `check_icon_slots.py` reads both headers, fails
-  on a macro that points between them, and reports how many slots `IconsFont` has left.
+  on a macro that points between them, and reports how many slots `IconsFont` has left. The design
+  rules and the reason for each icon's shape are [`HINT_ICONS.md`](HINT_ICONS.md).
 - **A single bigger/custom glyph → inject it into the resident IconsFont
   (`base/fonts/gfx_icons.h`), NOT a new resident font.** `IconsFont` is `g_all_fonts[0]`
   (prepended), so *extending it with another glyph* (append bitmap bytes + a `GFXglyph`

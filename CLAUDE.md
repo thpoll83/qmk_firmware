@@ -199,7 +199,7 @@ Nine rules bind work outside that file:
 
 The mechanics — the HIL tiers, the FW-APPLY and doom tiers, the paths filters, the
 inherited upstream lint, and how to read a job log — are
-[`keyboards/polykybd/CI_CHECKS.md`](keyboards/polykybd/CI_CHECKS.md). Seven things every
+[`keyboards/polykybd/CI_CHECKS.md`](keyboards/polykybd/CI_CHECKS.md). Eight things every
 PR author needs without opening it:
 
 - ⚠️ **The HIL suite has TWO tiers and the default one skips the deepest checks** — the
@@ -234,6 +234,17 @@ PR author needs without opening it:
 - ⚠️ **PR CI does NOT build the monolith** (`POLYKYBD_DOOM=yes`) — only the release
   workflow does, and it is the tightest RAM flavour. Build it locally before merging
   anything that adds statics.
+- ⚠️ **GitHub can switch Actions OFF for this whole fork, and nothing on a PR says so.**
+  On 2026-10-09 four PR pushes and the #365 merge started no run at all: no build, no
+  HIL, no unit tests, and no `bump-version.yml`, so a `bump:minor` merge left
+  `FW_VERSION` unmoved. The Actions tab carried "Workflows on this fork have been
+  disabled", blaming workflows inherited from upstream (here `auto_approve.yml` every
+  30 min, always skipped by its `qmk/qmk_firmware` gate, and `stale.yml` daily with no
+  gate). **The tell is NO run, not a queued one**: an offline rig leaves a HIL job
+  `queued`; a disabled fork creates nothing, while the host repo's CI keeps running.
+  Re-enabling replays nothing. `bump-version.yml` has no `workflow_dispatch`, so a
+  missed bump is a one-line `FW_VERSION` PR labelled `bump:none` (#367); dispatch
+  `qmk-test.yml` for the HIL.
 
 The `diagnose-hil-failure` skill classifies a red rig check; `debug-firmware-on-rig`
 drives a one-off probe when the graded suite cannot answer the question.
@@ -503,7 +514,8 @@ Host sends a compressed bitmap → `fill_overlay.c` decompresses (optionally on 
 an app switch swaps all 72 images. How a legend is drawn is
 [`LEGEND_RENDERING.md`](keyboards/polykybd/LEGEND_RENDERING.md), where the elements GO is
 [`LEGEND_LAYOUT.md`](keyboards/polykybd/LEGEND_LAYOUT.md), the status OLED is
-[`STATUS_OLED.md`](keyboards/polykybd/STATUS_OLED.md), and the per-keycap grid, the three
+[`STATUS_OLED.md`](keyboards/polykybd/STATUS_OLED.md), the OS shortcut-hint icons'
+design and decisions are [`HINT_ICONS.md`](keyboards/polykybd/HINT_ICONS.md), and the per-keycap grid, the three
 render seams and the settings-gate post-mortem are
 [`DISPLAY_PIPELINE.md`](keyboards/polykybd/DISPLAY_PIPELINE.md). Six rules bind code
 outside those files:

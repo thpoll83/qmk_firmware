@@ -43,6 +43,7 @@
 #include "layer_names.h"
 #include "base/crash_record.h"
 #include "multicore_exec.h"   // core1_stall_report
+#include "boot_diag.h"        // boot_banner_on_host_probe
 
 
 /*[[[cog
@@ -294,6 +295,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             // case id_custom_channel...id_qmk_led_matrix_channel: //maybe now usable :)
             //     break;
             case 6: { //id
+                boot_banner_on_host_probe();
                 memset(data, 0, length);
                 size_t nlen = strlen(name);
                 memcpy(data, name, nlen);

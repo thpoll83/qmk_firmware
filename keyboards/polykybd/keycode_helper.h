@@ -311,6 +311,15 @@ enum my_keycodes {
     // and more so: a stray tap would start typing into whatever has focus. Appended
     // at the very end for the same no-renumbering reason as KC_EDEN.
     KC_DEMO_KEYS,
+    // The INPUT-METHOD key (base/ime_key_plan.h): on ko-KR it is the 한/영 toggle,
+    // on ja-JP it walks off/hiragana (Shift: katakana) with absolute keys, on the
+    // ANSI English layouts (en-US and a short list) it is a second Right Alt, and
+    // on every other language it is a plain KC_NUBS — legend included — which is
+    // why it replaces KC_NUBS on the base layouts. The OS picks the actual stroke.
+    // Handled and SWALLOWED in process_record_user(), like every key here that
+    // sends something. Appended at the very end for the same no-renumbering
+    // reason as KC_EDEN.
+    KC_IME,
 };
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // ⚠️ Anchor the range guards on the LAST keyboard-range keycode, not on KC_DAUTO —
@@ -325,10 +334,10 @@ static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_M
 // ⚠️ Same re-anchoring rule as the QK_KB guards above, and the same way it goes
 // stale: the two asserts directly above name KC_LANG_END / KC_OS_SET_END, but
 // KC_EDEN, KC_IDLE_STYLE, KC_GLYPH_SCRIPT, KC_SETTINGS_MORE, KC_MACRO_REC,
-// KC_IDLE_TIMEOUT, KC_DEMO and KC_DEMO_KEYS are appended AFTER them, so neither
+// KC_IDLE_TIMEOUT, KC_DEMO, KC_DEMO_KEYS and KC_IME are appended AFTER them, so neither
 // covers the tail of the QK_USER_0 block any more. Anchor on the LAST member and
 // re-anchor whenever something is appended.
-static_assert((int)KC_DEMO_KEYS <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
+static_assert((int)KC_IME <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))
@@ -340,3 +349,9 @@ static_assert((int)KC_DEMO_KEYS <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX"
 #define LMRU(n)        ((uint16_t)((uint16_t)KC_LANG_MRU_BASE  + (uint16_t)(n)))
 
 const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags);
+
+// The input-method family (enum ime_family, base/ime_key_plan.h) of a language
+// index: Korean for ko-KR, Japanese for ja-JP, Right Alt for the ANSI English
+// layouts, none otherwise. One function, so the
+// legend, the display normalisation and the key action cannot disagree on it.
+uint8_t poly_ime_family(uint8_t lang);

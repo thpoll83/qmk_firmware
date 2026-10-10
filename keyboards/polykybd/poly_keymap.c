@@ -59,6 +59,8 @@
 #include "base/fonts/gfx_used_fonts.h"
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
 #include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
+#include "base/ime_key_plan.h"           // what KC_IME sends, per language and OS
+#include "base/ime_held_slots.h"         // which KC_IME key holds which usage
 // Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
@@ -2182,6 +2184,21 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         // (doom_mode.c; always blank in non-doom builds via the stub).
         case KC_IDDQD:                      return doom_egg_armed() ? U"IDDQD" : U"";
 
+        // The input-method key, in the wording a Korean / Japanese keyboard prints.
+        // Only reached on ko-KR / ja-JP: elsewhere display_keycode_at() hands the
+        // renderer the key KC_IME stands in for (ime_key_stand_in): KC_NUBS, or on
+        // the ANSI English layouts Right Alt (KC_RGUI on macOS, which the board draws
+        // as Option). On ja-JP it follows Shift, because Shift+tap selects
+        // katakana (base/ime_key_plan.c) and the key should say so while it is held.
+        // HERE rather than in keycode_to_static_text() for the KC_GLYPH_SIZE_UP
+        // reason below: Shift must come from the SYNCED poly_layer_t.mods, or the
+        // slave half would never show カナ.
+        case KC_IME:
+            if (poly_ime_family(local_state->lang) == IME_FAMILY_JAPANESE) {
+                return (local_layer->mods & MOD_MASK_SHIFT) != 0 ? ICON_KATAKANA : ICON_EISU_KANA;
+            }
+            return ICON_HAN_YEONG;
+
         // The legend-size key states BOTH what it will do and where you are: the
         // increase/decrease icon plus the current tier as a digit in the top-right.
         // Shift swaps the icon and reverses the step (poly_custom_key_action reads
@@ -3951,6 +3968,18 @@ static uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t
     uint16_t kc = poly_keycode_at(layer, row, col);
     if (kc == KC_TRNS) {
         kc = poly_keycode_at(get_highest_layer(eff & ~((layer_state_t)1 << layer)), row, col);
+    }
+    // KC_IME that stands in for a plain key (NUBS, or Right Alt on the ANSI English
+    // layouts) draws as that key: its legend, overlay slot and macOS swap and all.
+    // DISPLAY ONLY — the key event keeps KC_IME, and ime_key_stroke() sends exactly
+    // ime_key_stand_in()'s key, so the legend and the action cannot disagree.
+    if (kc == KC_IME) {
+        const poly_sync_t* st = get_local_state();
+        const uint8_t stand_in = ime_key_stand_in(poly_ime_family(st->lang),
+                                                  st->active_os & POLY_OS_VALUE_MASK);
+        if (stand_in) {
+            kc = stand_in;
+        }
     }
     return kc;
 }
@@ -5859,6 +5888,116 @@ void kdisp_idle(uint8_t contrast) {
 // if the active OS changed while the key was held. See the swap block below.
 static uint8_t s_apple_swap_latch = 0;
 
+// ---- KC_IME (base/ime_key_plan.h) ---------------------------------------------------
+// The planner's usages are QMK basic keycodes; pin each name so a wrong hex value in
+// the pure header cannot hide behind the tests, which only compare it with itself.
+_Static_assert(IME_HID_K     == KC_K,               "IME_HID_K");
+_Static_assert(IME_HID_CAPS  == KC_CAPS_LOCK,       "IME_HID_CAPS");
+_Static_assert(IME_HID_SPACE == KC_SPACE,           "IME_HID_SPACE");
+_Static_assert(IME_HID_NUBS  == KC_NONUS_BACKSLASH, "IME_HID_NUBS");
+_Static_assert(IME_HID_INT2  == KC_INTERNATIONAL_2, "IME_HID_INT2");
+_Static_assert(IME_HID_INT5  == KC_INTERNATIONAL_5, "IME_HID_INT5");
+_Static_assert(IME_HID_LANG1 == KC_LANGUAGE_1,      "IME_HID_LANG1");
+_Static_assert(IME_HID_LANG2 == KC_LANGUAGE_2,      "IME_HID_LANG2");
+_Static_assert(IME_HID_RALT  == KC_RIGHT_ALT,       "IME_HID_RALT");
+_Static_assert(IME_HID_RGUI  == KC_RIGHT_GUI,       "IME_HID_RGUI");
+_Static_assert(IME_MOD_LCTL  == MOD_BIT(KC_LCTL),   "IME_MOD_LCTL");
+_Static_assert(IME_MOD_LSFT  == MOD_BIT(KC_LSFT),   "IME_MOD_LSFT");
+_Static_assert(IME_MOD_LALT  == MOD_BIT(KC_LALT),   "IME_MOD_LALT");
+_Static_assert((int)IME_OS_WINDOWS == (int)POLY_OS_WINDOWS && (int)IME_OS_MACOS == (int)POLY_OS_MACOS &&
+               (int)IME_OS_LINUX == (int)POLY_OS_LINUX && (int)IME_OS_ANDROID == (int)POLY_OS_ANDROID &&
+               (int)IME_OS_LINUX_GNOME == (int)POLY_OS_LINUX_GNOME &&
+               (int)IME_OS_LINUX_KDE == (int)POLY_OS_LINUX_KDE,
+               "enum ime_os must equal enum poly_os");
+
+uint8_t poly_ime_family(uint8_t lang) {
+    switch (lang) {
+        case LANG_KOKR: return IME_FAMILY_KOREAN;
+        case LANG_JAJP: return IME_FAMILY_JAPANESE;
+        // ANSI English layouts: the OS layout is plain US, where NUBS only repeats
+        // the Backslash key, so the key earns more as a right-hand Alt. An explicit
+        // list on purpose: a NULL NUBS cell in lang_lut is NOT the signal, because
+        // ISO layouts with a real <> key (es-ES, it-IT, pl-PL, ...) are NULL too.
+        case LANG_ENUS:
+        case LANG_ENCA:
+        case LANG_ENAU:
+        case LANG_ENNZ:
+        case LANG_ENIN:
+        case LANG_ENPH:
+        case LANG_ENSG: return IME_FAMILY_RALT;
+        default:        return IME_FAMILY_NONE;
+    }
+}
+
+// Held KC_IME strokes, per key position (base/ime_held_slots.h).
+static ime_slots_t s_ime_held;
+// The Japanese mode the key last selected (enum ime_ja_mode). RAM only: after a
+// reboot the first press assumes "off" and goes to hiragana, which is right for a
+// fresh login and costs one extra press otherwise.
+static uint8_t s_ime_ja_mode = IME_JA_OFF;
+
+// Whether the host report still carries `usage`. A modifier lives in the mods byte,
+// every other key in the key array (is_key_pressed covers both 6KRO and NKRO).
+static bool ime_usage_in_report(uint8_t usage) {
+    if (usage >= KC_LEFT_CTRL && usage <= KC_RIGHT_GUI) {
+        return (get_mods() & MOD_BIT(usage)) != 0;
+    }
+    return is_key_pressed(usage);
+}
+static void ime_press(uint8_t usage) { register_code(usage); }
+static void ime_release(uint8_t usage) { unregister_code(usage); }
+static void ime_tap(uint8_t usage) { tap_code(usage); }
+
+static const ime_slot_io_t s_ime_io = {
+    .key_down  = matrix_is_on,
+    .in_report = ime_usage_in_report,
+    .press     = ime_press,
+    .release   = ime_release,
+    .tap       = ime_tap,
+};
+
+static void ime_key_record(keyrecord_t* record) {
+    if (!record->event.pressed) {
+        ime_slots_release(&s_ime_held, record->event.key.row, record->event.key.col, &s_ime_io);
+        return;
+    }
+    // One-shot Shift counts as Shift: QMK's send_keyboard_report() adds pending
+    // one-shot mods to the very report this stroke sends (and clears them there),
+    // so ignoring it sent Shift+カタカナひらがな — katakana — while recording
+    // hiragana, and Shift+LANG1 instead of Ctrl+Shift+K on macOS (Greptile, #355).
+    const uint8_t shift_mods = (uint8_t)((get_mods() | get_oneshot_mods()) & MOD_MASK_SHIFT);
+    const poly_sync_t* st = get_local_state();
+    const ime_stroke_t s = ime_key_stroke(poly_ime_family(st->lang),
+                                          st->active_os & POLY_OS_VALUE_MASK,
+                                          shift_mods != 0,
+                                          &s_ime_ja_mode);
+    if (s.usage == 0) {
+        return;
+    }
+    if (s.hold) {
+        ime_slots_press(&s_ime_held, record->event.key.row, record->event.key.col, s.usage, &s_ime_io);
+        return;
+    }
+    // A tap with a chord. Add only the modifiers that are not already down, and
+    // release only those: Shift+tap for katakana arrives with the user's own Shift
+    // held, and releasing it here would drop a key the finger is still holding.
+    // drop_shift: lift the user's Shift (real and pending one-shot) for this one
+    // stroke and put the real one back after, so the host sees exactly s.mods.
+    const uint8_t lifted = s.drop_shift ? (uint8_t)(get_mods() & MOD_MASK_SHIFT) : 0;
+    if (s.drop_shift) {
+        del_oneshot_mods(MOD_MASK_SHIFT);
+        if (lifted) del_mods(lifted);
+    }
+    const uint8_t add = (uint8_t)(s.mods & ~get_mods());
+    if (add) register_mods(add);
+    tap_code(s.usage);
+    if (add) unregister_mods(add);
+    if (lifted) {
+        add_mods(lifted);
+        send_keyboard_report();
+    }
+}
+
 // Every PolyKybd settings/utility keycode is handled HERE, in process_record_user,
 // and swallowed (`return false`) — not in post_process_record_user. That is the
 // QMK-sanctioned shape for a custom keycode, and it is what keeps one physical
@@ -6213,6 +6352,9 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+    // Before anything below can swallow this event: drop KC_IME holds that a
+    // clear_keyboard() has already released (see ime_slots_forget_cleared).
+    ime_slots_forget_cleared(&s_ime_held, &s_ime_io);
 
     // TEST BUILDS ONLY (-e POLYKYBD_CRASH_TEST=yes): the deliberate-crash chord.
     // FIRST, so it works even while another mode below would swallow the event --
@@ -6406,6 +6548,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
             s_pick_press_col = POLY_PICK_NO_PRESS;
             poly_macro_rec_toggle();
         }
+        display_wakeup(record);
+        return false;
+    }
+
+    // The input-method key. Swallowed on BOTH edges: the press sends (or holds) the
+    // stroke, the release lets go of a held one. Never on the release edge alone — on
+    // an OSL() layer that edge fires up to three times, and a toggle fired three
+    // times is a toggle fired once with two stray switches.
+    if (keycode == KC_IME) {
+        ime_key_record(record);
         display_wakeup(record);
         return false;
     }

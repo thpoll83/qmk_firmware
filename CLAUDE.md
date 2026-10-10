@@ -273,6 +273,18 @@ skill; the mechanics, the `release-notes` branch and `scripts/publish_release.py
   the three repos with a Python runner, so a break introduced here fails
   there.
 
+- ⚠️ **The assets are named from the TAG, and `release.yml` now REFUSES a tag whose
+  tree declares a different `FW_VERSION`** — its first step, before the build and before
+  the fwapply gate, so a refusal changes nothing. Otherwise a release published before
+  its bump merged ships `polykybd_split72_v<tag>.bin` built from a tree declaring
+  another number: the board reports one version, the download claims another, and the
+  host updater offers that release forever because the install can never reach the
+  advertised number. wincompose shipped exactly that (`PK-0.9.19`). ⚠️ **The fix is to
+  MOVE the tag, and only while no release holds it** — publishing never moves one, and
+  a dispatch would build the dispatch ref and leave the tag on the old tree. Delete the
+  assetless release the refusal left behind first. `RELEASES.md` → the asset-naming
+  bullet has both refusal cases.
+
 - ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being released**
   (`tools/require_fwapply_run.py`). The HID-apply brick shipped because no release
   artifact had ever been applied on hardware — the rig flashes by UF2 over GPIO BOOTSEL,

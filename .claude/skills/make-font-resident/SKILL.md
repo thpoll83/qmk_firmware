@@ -17,7 +17,7 @@ a large **pack** in external flash (4–8 MB) flashed over HID. `g_all_fonts =
 resident ++ pack`. A glyph that lives only in the pack shows as tofu when no pack
 is present. This skill moves a glyph into the resident set.
 
-See `CLAUDE.md` → "Font pack: resident fonts + external-flash pack" for the
+See `keyboards/polykybd/FONT_PACK.md` (resident fonts + external-flash pack) for the
 architecture; this is the operational recipe.
 
 ## Steps
@@ -47,7 +47,7 @@ architecture; this is the operational recipe.
    (this is what keeps it compiled-in / out of the pack).
 
 4. **Ensure the toolchain is ready** (only if regen fails):
-   - Pinned `fontconvert` built once (byte-reproducible): see `AdafruitGFX/CLAUDE.md`
+   - Pinned `fontconvert` built once (byte-reproducible): see `Adafruit-GFX-Library/CLAUDE.md`
      (CMake ExternalProject). Copy it to a stable path: `cp ~/.local/bin/fontconvert /tmp/fontconvert_pinned`.
    - Noto sources: `bash fonts/dl-fonts.sh` (some are variable fonts fetched
      separately — canadian-aboriginal, cherokee). `Font load error: 1` = missing source.

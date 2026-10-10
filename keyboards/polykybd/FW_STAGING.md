@@ -282,8 +282,12 @@ An image that fails that check is **not refused outright** — the keyboard asks
   clips one of them. Preview the cells with `PolyKybdHost/tools/gfx_font.py`.
 - Full user-facing story: `keyboards/polykybd/tools/SIGNING.md`. BOOTSEL/UF2 bypasses
   `fw_staging` entirely, so enforcement can never brick a board.
-- ⚠️ **Signing gates the FIRMWARE image only — it does NOT close the code-execution
-  surface, and this section reads as though it does.** `fw_staging_check_signature()`
+- ✅ **FIXED (FW-9, qmk #243): the `.plyx` engine pack is now signed too**, and
+  `doom_pack_load.c` verifies its Ed25519 signature at load time under
+  `FW_REQUIRE_SIGNATURE` (unsigned packs get the prompt, invalid ones are refused; see
+  the pack-gate bullets further down). The rest of this bullet is the HISTORY of the
+  gap, kept for the reasoning: ⚠️ **Signing gated the FIRMWARE image only, and did NOT
+  close the code-execution surface.** `fw_staging_check_signature()`
   is called exclusively in the `FW_TARGET_FIRMWARE` branch of `fw_staging_finalize()`;
   the **resource region** (4–8 MB) has no signature check at any target. That matters
   because one of the things flashed there is **executable code**: `doom_pack_load.c`
@@ -293,7 +297,7 @@ An image that fails that check is **not refused outright** — the keyboard asks
   over HID with no keypress: flash a crafted `.plyx` (cmds `0x50`–`0x52`) → set
   `IDLE_STYLE_IDDQD` (cmd 28) → the next idle runs it. So the A/ACCEPT prompt guards
   the firmware image while an unguarded path loads code beside it. Tracked as **FW-9**
-  (open, high) in `polykybd-ctnd/docs/SECURITY_AUDIT.md`, with the fix sketch — verify
+  (since fixed) in `polykybd-ctnd/docs/SECURITY_AUDIT.md`, with the fix sketch — verify
   the pack with the Ed25519 machinery already compiled in, **at load time, not at
   COMMIT** (flash can be rewritten after a COMMIT succeeds). Interim mitigation:
   build without `POLYKYBD_DOOM_PACK`. `.whx` / `.plyf` ride the same unsigned
@@ -344,4 +348,62 @@ An image that fails that check is **not refused outright** — the keyboard asks
     what the stub path actually leaves running.**
   - **Boot-intro-done persistence rides the suspend-only dirty-flag EEPROM model** —
     `mark_boot_intro_done()` sets `g_boot_dirty`, never a direct write.
+
+
+## Firmware staging, the self-apply, and the on-keycap signing prompt (FW-2)
+
+_Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
+
+
+`rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so an image without a valid Ed25519 signature
+is not refused outright — **the board becomes the dialog**, blanking every keycap except
+an **A / ACCEPT** and **R / REJECT** pair. The state machine, the render details and the
+user-facing story are
+[`keyboards/polykybd/FW_STAGING.md`](FW_STAGING.md) and
+`keyboards/polykybd/tools/SIGNING.md`. Seven rules bind code outside them:
+
+- ⚠️ **The self-apply's page buffer must be `uint32_t`.** A `static uint8_t
+  page_buf[256]` word-copied through a `(uint32_t *)` cast has alignment 1, and an
+  unaligned `STMIA` is a **HardFault on Cortex-M0+** taken inside a function that never
+  returns. It shipped, and it bricked boards. The fix is the TYPE, not an `aligned(4)`
+  attribute, so no later edit can reintroduce it.
+- ⚠️ **When a bisect blames a commit that cannot have touched the failing code, check
+  whether it moved the failing code's DATA.** That brick bisected cleanly to a macro PR
+  that touches nothing in the applier: it grew `.bss` and shifted the buffer off a word
+  boundary, while `fw_staging_do_apply` was byte-identical across the regression. Ten
+  rounds were aimed at the code on the strength of that comparison.
+  (`arm-none-eabi-nm -S <elf> | grep <buffer>`, then `addr % 4`.)
+- ⚠️ **COMMIT must NOT block waiting for the answer** — it runs inside
+  `raw_hid_receive()` on the loop that scans the matrix, so a busy-wait guarantees the
+  keypress is never seen. It is a state machine answering `?` until resolved.
+- ⚠️ **An UNSIGNED artifact gets the prompt; an INVALID one is refused outright.** Opposite
+  events: offering a keypress for the second hands an attacker the one thing the physical
+  gate exists to withhold. **Accept is physical, cancel may be remote.** The rule now
+  covers the DOOM pack too (below), and both prompts share one presentation —
+  `poly_sync_t.fw_confirm` carries the KIND (`enum poly_confirm_kind`), and the render
+  gate, the key swallow and the `clear_keyboard()` are written once.
+- ⚠️ **`clear_keyboard()` before ANY path that swallows keys or does not return**, or the
+  host keeps a keycode registered and auto-repeats it until USB drops.
+- ⚠️ **A visual cue set on a path that never returns is never painted.** The orange RGB
+  cue had, in practice, never been seen — anything that must be *visible* before a
+  blocking self-flash has to be flushed by the code that draws it.
+- ⚠️ **Signing covers the firmware image AND the `.plyx` engine pack (FW-9), but NOT the
+  rest of the resource region** — no signature check there at any target. Do not
+  describe the keyboard as "signed firmware, so a malicious flash is covered".
+- ⚠️ **The pack's unsigned prompt is gated on the ENTRY, and `build_pack.sh` does not
+  sign.** `doom/doom_pack_gate.h` is the table: valid loads; INVALID is refused on every
+  path; UNSIGNED prompts only on a deliberate `KC_IDDQD` entry and is refused on the idle
+  screensaver, where nobody is there to answer. A locally built `.plyx` therefore always
+  takes the prompt route — signing is `sign_doompack.py`, a separate step only
+  `release.yml` runs. An accepted pack is remembered **for the boot, bound to its image
+  CRC**, and reaches the slave through `poly_sync_t.doom_pack_auth_crc` — the CRC, not a
+  flag, because the slave must honour the answer only for the pack IT holds (a partial
+  `install_doompack` can leave the halves different, and the GET_ID slot block covers the
+  master's slots only, so nothing downstream notices). The slave loads the pack too and
+  never sees the keypress. ⚠️ **That binding, and the refusal latch's key, are the two
+  places this gate has already been got wrong — the `audit-derived-verdict` skill is the
+  checklist for any cached or delegated verdict, here or elsewhere.** ⚠️ The load runs on
+  the loop that scans the matrix, so it **raises the prompt and returns false**; `doom_tick()` re-enters once the
+  answer lands. Blocking there would guarantee the keypress is never seen — the same trap
+  `FW_UP_COMMIT` avoids.
 

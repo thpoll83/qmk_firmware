@@ -2186,7 +2186,9 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
 
         // The input-method key, in the wording a Korean / Japanese keyboard prints.
         // Only reached on ko-KR / ja-JP: elsewhere display_keycode_at() hands the
-        // renderer KC_NUBS. On ja-JP it follows Shift, because Shift+tap selects
+        // renderer the key KC_IME stands in for (ime_key_stand_in): KC_NUBS, or on
+        // the ANSI English layouts Right Alt (KC_RGUI on macOS, which the board draws
+        // as Option). On ja-JP it follows Shift, because Shift+tap selects
         // katakana (base/ime_key_plan.c) and the key should say so while it is held.
         // HERE rather than in keycode_to_static_text() for the KC_GLYPH_SIZE_UP
         // reason below: Shift must come from the SYNCED poly_layer_t.mods, or the

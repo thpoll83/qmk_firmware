@@ -157,8 +157,8 @@ per-variant logic. [`VARIANTS.md`](keyboards/polykybd/VARIANTS.md).
   `polyctl keymap set <layer> <row> <col> <keycode>` is non-destructive.
 - ⚠️ **The host's keymap reset also wipes every macro.** Tray Maintenance → "Reset keymap
   to default…" (control method `keymap.reset`, no `polyctl`) sends
-  `id_dynamic_keymap_reset`, and `dynamic_keymap_reset_poly()` resets layers 0..7 and
-  zeroes the macro buffer. The host has no EEPROM clear.
+  `id_dynamic_keymap_reset`, and `dynamic_keymap_reset_poly()` resets layers 0..7 (keys
+  and encoder bindings) and zeroes the macro buffer. The host has no EEPROM clear.
 - **All keymap mutation goes through a `*_poly` wrapper in `split_sync.c`.**
 - ⚠️ **`poly_keycode_at()` is the one resolver for legend and action**, so a derivation
   there cannot make a key show one thing and type another. The host layout editor reads

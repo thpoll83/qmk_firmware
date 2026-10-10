@@ -115,8 +115,9 @@ recoveries (the third, the host's reset, is below), and they are not equivalent:
 Maintenance → "Reset keymap to default…" (and the control-socket method `keymap.reset`;
 there is no `polyctl` command) sends `id_dynamic_keymap_reset`. `legacy_command_kb()` in
 `hid_com.c` answers it with `dynamic_keymap_reset_poly()`, so it rewrites layers 0..7
-from the compiled keymap **and zeroes the macro buffer**, the same as a format-stamp bump
-on one board. It exists since host commit `a1180727` (2026-02).
+from the compiled keymap, restores their encoder bindings from the compiled
+`encoder_map[]` (both default keymaps set `ENCODER_MAP_ENABLE`), **and zeroes the macro
+buffer**, the same as a format-stamp bump on one board. It exists since host commit `a1180727` (2026-02).
 
 ⚠️ **This section used to say the host had no keymap reset at all.** That was wrong for
 its whole life: the reset predates the note by seven months, so the advice the note

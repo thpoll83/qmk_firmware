@@ -40,15 +40,25 @@ that cost real debugging to learn (2026-07):
   could not be bumped at all for two weeks (wincompose#21). The check reads the TAG's
   tree, so `PolyKybd` drifting ahead of a prepared tag is harmless — which it always
   is, since every merge auto-bumps.
-  - **Recovery depends on WHY it refused, and the two cases take different actions.**
+  - **Recovery always ends in moving the tag; WHY it refused only decides whether a
+    commit exists to move it to.**
     `scripts/publish_release.py` pins the tag to the oldest commit whose tree declares
-    the version (`commit_for_version`), so a refusal means one of two things.
-    - **The bump has not merged yet.** Nothing declares that version, so there is no
-      commit to point a tag at and moving it is not an option. Merge the bump; the pin
-      then finds it and tags the right commit with no further intervention.
-    - **The tag already exists in the wrong place.** **Publishing never moves a tag**
-      (`target_commitish` is documented as *"Unused if the Git tag already exists"*),
-      so the build comes from wherever it points. Move it, then publish normally:
+    the version (`commit_for_version`), so a refusal means one of two things. ⚠️ **Both
+    of them end in MOVING THE TAG.** Every trigger that can reach this step requires a
+    tag to already exist — `push: tags: PolyKybd-fw-v*`, or the tag a published release
+    names — so merging the bump never repairs the tag by itself. What differs between
+    the two cases is only whether there is yet a commit to move it to.
+    - **No commit declares the version** (the bump has not merged). Merge it first;
+      until then there is nothing to point the tag at. Then move the tag, below.
+      ⚠️ **Do not confuse this with `publish_release.py` refusing the same condition
+      BEFORE any tag exists.** There, merging the bump genuinely is the whole fix,
+      because the script then creates the tag at the pinned commit itself. Here the tag
+      is already placed and wrong, and nothing but moving it will do.
+    - **A commit declares it and the tag is elsewhere.** Move the tag straight away.
+
+    **Moving the tag.** **Publishing never moves one** (`target_commitish` is
+      documented as *"Unused if the Git tag already exists"*), so the build comes from
+      wherever it points:
       `git tag -f PolyKybd-fw-v<ver> <commit declaring it>` then
       `git push --force origin refs/tags/PolyKybd-fw-v<ver>`.
       ⚠️ **Only while no release holds that tag.** This gate fires on

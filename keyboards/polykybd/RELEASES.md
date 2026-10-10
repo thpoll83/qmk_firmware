@@ -29,8 +29,30 @@ that cost real debugging to learn (2026-07):
     understand the new protocol, so that order never leaves a user holding firmware
     their app cannot drive.
 
+- ⚠️ **The release assets are named from the TAG, so `release.yml`'s first step
+  asserts that `FW_VERSION` in the tag's own tree equals the tag's version.** Without
+  it, a release published before its version bump merged ships
+  `polykybd_split72_v<tag>.bin` built from a tree declaring something else: the board
+  reports one number, the download claims another, and the host updater then offers
+  that release forever, because it compares the installed `FW_VERSION` against the tag
+  and the install can never reach it. wincompose shipped exactly that — `PK-0.9.19`
+  carries `WinCompose-Setup-0.9.18.exe`, its About tab reads 0.9.18, and `status.txt`
+  could not be bumped at all for two weeks (wincompose#21). The check reads the TAG's
+  tree, so `PolyKybd` drifting ahead of a prepared tag is harmless — which it always
+  is, since every merge auto-bumps.
+  - **Recovery is to MOVE the tag, not to force the release through.**
+    `scripts/publish_release.py` pins the tag to the oldest commit whose tree declares
+    the version (`commit_for_version`), so a refusal here means either the bump has not
+    merged yet or the tag already existed in the wrong place — **publishing never moves
+    a tag** (`target_commitish` is documented as *"Unused if the Git tag already
+    exists"*). Move it and publish normally:
+    `git tag -f PolyKybd-fw-v<ver> <commit declaring it>` then
+    `git push --force origin refs/tags/PolyKybd-fw-v<ver>`. A `workflow_dispatch`
+    recovery is the wrong tool: it builds the dispatch ref, leaving the tag pointing at
+    a tree that declares the previous version.
+
 - ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being
-  released** (`tools/require_fwapply_run.py`, the first step of `release.yml`,
+  released** (`tools/require_fwapply_run.py`, an early step of `release.yml`,
   before the build so a refusal changes nothing). The HID-apply brick shipped
   because no release artifact had ever been applied on hardware — the rig flashes
   by UF2 over GPIO BOOTSEL, which bypasses `fw_staging` entirely, and this

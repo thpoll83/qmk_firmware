@@ -345,3 +345,29 @@ An image that fails that check is **not refused outright** — the keyboard asks
   - **Boot-intro-done persistence rides the suspend-only dirty-flag EEPROM model** —
     `mark_boot_intro_done()` sets `g_boot_dirty`, never a direct write.
 
+
+## Who may stop and start core1 (`base/core1_owner.c`)
+
+Anything that rewrites flash keeps core1 in PSM reset, because a core1 fetch from XIP
+while the QSPI is out of XIP mode stalls the bus for good. **One module owns that
+decision**: `core1_hold()` / `core1_release()` nest through a count, core1 leaves reset
+only when the last hold goes (and the RLE service is relaunched then, bounded), and
+`core1_run()` / `core1_restore_service()` refuse to launch anything while a hold is
+outstanding. The check and the reset share one critical section.
+
+- fw_staging's long hold (BEGIN until the erase completes or the stream is finalized)
+  is a flag over one `core1_hold()`, because BEGIN can arrive twice for the same image.
+  The flag is tested and changed under core1_owner's lock, and the drop is skipped
+  while an erase is pending: on the slave a re-sent BEGIN (split thread) can preempt
+  the erase-complete drop (main thread), which used to leave the new erase unheld.
+- One launch handshake at a time. A launch runs outside the lock, so the split thread
+  can do a whole hold and release during one; that release marks the running launch
+  disturbed instead of starting a second handshake, and the launcher redoes it.
+- The EEPROM flush, the crash record and the hand stamp take their own nested holds.
+  Before this module their "lockout" restarted core1 whenever it was halted, so one of
+  them finishing during a flash erase would have released core1 mid-erase.
+- Not covered on purpose: the boot launch in post_init, and `fw_staging_do_apply()`,
+  which runs from RAM, never returns and must not call into flash or take a lock.
+- The logic is pure behind a `core1_hw_*` seam; `make test:polykybd_core1_owner` covers
+  the three bug shapes of 2026-10-07 (engine start mid-erase, engine stop mid-erase, a
+  hold landing during a launch handshake) plus the nested-release case.

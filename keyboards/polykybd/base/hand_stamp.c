@@ -6,7 +6,8 @@
 #include "hand_stamp.h"
 
 #include "quantum.h"          // eeconfig_read_handedness / eeconfig_update_handedness
-#include "fw_staging.h"       // FW_HAND_STAMP_OFFSET, fw_staging_core1_lockout_*()
+#include "fw_staging.h"       // FW_HAND_STAMP_OFFSET
+#include "core1_owner.h"      // core1_hold()/core1_release() around the write
 #include "crash_record.h"     // CRASH_PHASE_FLASH breadcrumb
 #include "polymod_crc32.h"
 
@@ -80,12 +81,12 @@ uint8_t poly_hand_stamp_writer(void) {
 // `lockout` = park core1 around the write (it serves RLE from XIP, so it must not
 // be fetching while the bootrom rewrites flash). MUST be false from
 // poly_hand_boot_init(): at pre_init core1 has never been launched, and the
-// lockout's release would do a bounded relaunch that leaves post_init's own
+// hold's release would do a bounded relaunch that leaves post_init's own
 // unbounded multicore_launch_core1() handshake blocked forever. Same rule, and
 // the same reason, as crash_record.c's flash_guarded().
 static void stamp_flash(bool erase, uint32_t off, const uint8_t *page, bool lockout) {
     uint32_t tag = crash_phase_enter(CRASH_PHASE_FLASH, erase ? 2 : 1);
-    if (lockout) fw_staging_core1_lockout_begin();
+    if (lockout) core1_hold();
     uint32_t irq = save_and_disable_interrupts();
     if (erase) {
         flash_range_erase(off, FLASH_SECTOR_SIZE);
@@ -93,7 +94,7 @@ static void stamp_flash(bool erase, uint32_t off, const uint8_t *page, bool lock
         flash_range_program(off, page, FLASH_PAGE_SIZE);
     }
     restore_interrupts(irq);
-    if (lockout) fw_staging_core1_lockout_end();
+    if (lockout) core1_release();
     crash_phase_leave(tag);
 }
 

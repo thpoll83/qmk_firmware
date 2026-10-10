@@ -13,6 +13,7 @@
 #include QMK_KEYBOARD_H
 
 #include "doom_mode.h"
+#include "base/core1_owner.h"
 #include "doom_arena.h"
 #include "doom_blit.h"
 #include "doom_game.h"
@@ -35,7 +36,6 @@
 
 #include "doomkeys.h"           // engine key codes (doom_translate_key)
 #include "doom_weapon_icons.h"  // slave weapon-pad bitmaps (shareware sprites)
-#include "hardware/structs/psm.h"
 #include "../poly_keymap.h"
 
 #ifdef POLYKYBD_DOOM
@@ -81,20 +81,6 @@ static bool doom_whx_present(void) {
     return whx[0] == 'I' && whx[1] == 'W' && whx[2] == 'H' && whx[3] == 'X';
 }
 
-// Hard-reset core1 via the power-on state machine (pico-sdk
-// multicore_reset_core1 — not compiled here because the SDK's multicore.c
-// collides with the polymod_core1 launcher).
-static void doom_core1_reset(void) {
-    io_rw_32 *power_off     = (io_rw_32 *)(PSM_BASE + PSM_FRCE_OFF_OFFSET);
-    io_rw_32 *power_off_set = hw_set_alias(power_off);
-    io_rw_32 *power_off_clr = hw_clear_alias(power_off);
-    *power_off_set = PSM_FRCE_OFF_PROC1_BITS;
-    while (!(*power_off & PSM_FRCE_OFF_PROC1_BITS)) {
-        tight_loop_contents();
-    }
-    *power_off_clr = PSM_FRCE_OFF_PROC1_BITS;
-}
-
 static void doom_core1_entry(void) {
     // Interrupts masked on core1 for the same reason as multicore_exec.c's
     // core1_entry (the Vector80/NMI hang — see that file and CLAUDE.md). The
@@ -109,8 +95,8 @@ static void doom_core1_entry(void) {
     while (true) {}
 }
 
-// False only when fw_staging holds core1 (a flash began during the session's
-// load), so the caller backs out instead of running without core1.
+// False when a flash is in progress or holds core1 (it began during the
+// session's load), so the caller backs out instead of running without core1.
 static bool doom_engine_start(void) {
     if (!doom_whx_present()) {
         printf("doom: no WHX at %p — running the fire demo instead\n", (void *)TINY_WAD_ADDR);
@@ -129,21 +115,15 @@ static bool doom_engine_start(void) {
     // Take core1 from the overlay-RLE service (idle in game mode — the
     // pool-writing HID commands are frozen) and give it to the game, with its
     // stack at the tail of the pool.
-    // ⚠️ NOT if fw_staging took core1 while the session was loading. The gate in
+    // ⚠️ NOT while a flash holds core1 or is in progress. The gate in
     // doom_session_start() runs BEFORE the pack load, and the load's signature
     // check takes long enough that the master's next doom-slot BEGIN lands
-    // inside it on the slave's split thread: the erase halts core1, and this
-    // reset then CLEARED the force-off and launched the engine from the very
-    // slot being erased. core1 faulted on its first fetch from an erased
-    // sector, at the same shallow-stack pc every time (rig, 2026-10-07:
-    // pc=0x107d4456 sp=0x20034b38, 0x88 below the pool top). Checked and reset
-    // in one critical section for the same reason as doom_engine_stop().
-    chSysLock();
-    const bool held = fw_staging_core1_held() || fw_staging_fw_up_active();
-    if (!held) doom_core1_reset();
-    chSysUnlock();
-    if (held) {
-        printf("doom: engine start refused — fw_staging holds core1\n");
+    // inside it on the slave's split thread (rig, 2026-10-07: core1 faulted at
+    // pc=0x107d4456, launched from the slot being erased). core1_run() refuses
+    // while any hold is outstanding, and its launch is bounded, so a hold that
+    // lands during the handshake makes it fail instead of hanging this loop.
+    if (fw_staging_fw_up_active()) {
+        printf("doom: engine start refused — a flash is in progress\n");
         s_engine_running = false;
         return false;
     }
@@ -177,13 +157,8 @@ static bool doom_engine_start(void) {
                           & ~(uintptr_t)7u;
     uint32_t *stack_bottom = (uint32_t *)stack_top;
 #endif
-    // BOUNDED: a BEGIN can still land between the unlock above and the end of
-    // the handshake, and a core1 held in reset never answers it. The unbounded
-    // launcher would then spin on this, the loop that must run the erase.
-    if (!multicore_launch_core1_with_stack_bounded(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES,
-                                                   100u * 1000u)) {
-        printf("doom: engine start: core1 launch timed out (%s)\n",
-               fw_staging_core1_held() ? "fw_staging took core1" : "core1 wedged");
+    if (!core1_run(doom_core1_entry, stack_bottom, DOOM_ARENA_STACK_BYTES)) {
+        printf("doom: engine start refused — %s\n", core1_held() ? "core1 is held for a flash" : "core1 launch timed out");
         s_engine_running = false;
         return false;
     }
@@ -195,40 +170,16 @@ static void doom_engine_stop(void) {
     if (s_engine_running) {
         s_engine_running = false;
         // Kill the game mid-frame (it only touches pool memory) and hand core1
-        // back to the overlay-RLE service. The relaunch handshake is BOUNDED:
-        // if core1 is not back in the bootrom wait loop, the plain
-        // multicore_launch_core1() blocks forever — a deaf/wedged keyboard on
-        // session exit (field rounds 19+20; the host even declared a
-        // disconnect during the ~15 s post-exit silence). On a miss, PSM-reset
-        // core1 and retry; worst case the RLE service stays down (overlay
-        // decompression degrades until reboot) but the keyboard stays alive.
-        const uint32_t t0 = timer_read32();
-        bool ok = false;
-        // ⚠️ NOT while fw_staging holds core1 for a flash erase. The slave stops
-        // its engine a housekeeping pass after the master clears doom_ctl, and the
-        // master sends the next doom-slot BEGIN in the same second: the slave's
-        // erase has already halted core1 and turned XIP off when this runs.
-        // doom_core1_reset() CLEARS the PSM force-off as its last step, so the
-        // relaunch below handed core1 back mid-erase and it HardFaulted on its
-        // first flash fetch (rig, 2026-10-07: slave core1 pc=0x107d4456, inside
-        // the DOOMPACK slot being erased). fw_staging relaunches the RLE service
-        // itself when the erase lets core1 go.
-        // ⚠️ The check and the reset are ONE critical section, re-taken per
-        // attempt. The halt lands on the slave's split thread (HIGHPRIO), so a
-        // BEGIN can arrive between a bare check and the reset, or during a
-        // launch handshake (up to 100 ms each): the next attempt's reset would
-        // then clear the force-off the erase set. With the lock, a halt can only
-        // land before the check (seen, no release) or after the reset (it
-        // forces core1 off again, and the next check stops the loop).
-        bool held = false;
-        for (uint8_t attempt = 0; attempt < 3 && !ok; ++attempt) {
-            chSysLock();
-            held = fw_staging_core1_held();
-            if (!held) doom_core1_reset();
-            chSysUnlock();
-            if (held) break;
-            ok = multicore_launch_core1_bounded(100u * 1000u);
-        }
+        // back to the overlay-RLE service. The relaunch is BOUNDED and retried
+        // inside core1_restore_service(): an unbounded handshake blocked forever
+        // on session exit (field rounds 19+20). ⚠️ While a flash holds core1 it
+        // relaunches nothing: the slave stops its engine a pass after doom_ctl
+        // drops, when the next doom-slot erase may already hold core1, and a
+        // relaunch then faulted on the slot being erased (rig, 2026-10-07). The
+        // last release restarts the service instead.
+        const uint32_t t0   = timer_read32();
+        const bool     ok   = core1_restore_service();
+        const bool     held = core1_held();
         // The engine is GONE: every standalone vpatch decoder (ESC/label
         // STCFN, tall digits, menu tiles, the face) gates on this — with it
         // stale at 4, a post-exit render resolved vpatches through zone
@@ -244,7 +195,7 @@ static void doom_engine_stop(void) {
         doom_pack_unload();
 #endif
         printf("doom: engine stopped, RLE core relaunch %s (%lu ms)\n",
-               held ? "deferred to fw_staging" : ok ? "ok" : "FAILED",
+               held ? "deferred to the last core1 release" : ok ? "ok" : "FAILED",
                (unsigned long)timer_elapsed32(t0));
     }
 }

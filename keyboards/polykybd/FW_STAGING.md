@@ -282,8 +282,12 @@ An image that fails that check is **not refused outright** — the keyboard asks
   clips one of them. Preview the cells with `PolyKybdHost/tools/gfx_font.py`.
 - Full user-facing story: `keyboards/polykybd/tools/SIGNING.md`. BOOTSEL/UF2 bypasses
   `fw_staging` entirely, so enforcement can never brick a board.
-- ⚠️ **Signing gates the FIRMWARE image only — it does NOT close the code-execution
-  surface, and this section reads as though it does.** `fw_staging_check_signature()`
+- ✅ **FIXED (FW-9, qmk #243): the `.plyx` engine pack is now signed too**, and
+  `doom_pack_load.c` verifies its Ed25519 signature at load time under
+  `FW_REQUIRE_SIGNATURE` (unsigned packs get the prompt, invalid ones are refused; see
+  the pack-gate bullets further down). The rest of this bullet is the HISTORY of the
+  gap, kept for the reasoning: ⚠️ **Signing gated the FIRMWARE image only, and did NOT
+  close the code-execution surface.** `fw_staging_check_signature()`
   is called exclusively in the `FW_TARGET_FIRMWARE` branch of `fw_staging_finalize()`;
   the **resource region** (4–8 MB) has no signature check at any target. That matters
   because one of the things flashed there is **executable code**: `doom_pack_load.c`
@@ -293,7 +297,7 @@ An image that fails that check is **not refused outright** — the keyboard asks
   over HID with no keypress: flash a crafted `.plyx` (cmds `0x50`–`0x52`) → set
   `IDLE_STYLE_IDDQD` (cmd 28) → the next idle runs it. So the A/ACCEPT prompt guards
   the firmware image while an unguarded path loads code beside it. Tracked as **FW-9**
-  (open, high) in `polykybd-ctnd/docs/SECURITY_AUDIT.md`, with the fix sketch — verify
+  (since fixed) in `polykybd-ctnd/docs/SECURITY_AUDIT.md`, with the fix sketch — verify
   the pack with the Ed25519 machinery already compiled in, **at load time, not at
   COMMIT** (flash can be rewritten after a COMMIT succeeds). Interim mitigation:
   build without `POLYKYBD_DOOM_PACK`. `.whx` / `.plyf` ride the same unsigned

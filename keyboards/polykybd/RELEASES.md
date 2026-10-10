@@ -54,8 +54,14 @@ that cost real debugging to learn (2026-07):
       ⚠️ **Only while no release holds that tag.** This gate fires on
       `release: published`, so by the time you read its refusal a release usually DOES
       exist — with no assets, since the gate runs before the upload. **Delete that
-      empty release first**, then move the tag and publish: `git checkout <tag>` has to
-      keep giving the source some release was built from. If a release on that tag is
+      empty release first**, then move the tag and publish. Two reasons, and the second
+      is the one that gets the downloads back: `git checkout <tag>` has to keep giving
+      the source some release was built from, **and only a CREATE re-runs this
+      workflow** — `publish_release.py` against a release that still exists merely
+      edits its notes, firing no event, so no build and no assets. Deleting it makes
+      the next run a create, which fires `release: published`; that is also why the
+      `[skip ci]` on the bump commit does not matter here, since a release event
+      ignores it where the tag-push trigger does not. If a release on that tag is
       already live WITH assets, do not move it at all — cut the next patch version
       instead. (Nothing in the repo enforces this: there is no tag ruleset and no tag
       protection, so the force-push will simply succeed.)

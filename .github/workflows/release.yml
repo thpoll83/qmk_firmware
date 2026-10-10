@@ -50,7 +50,13 @@ jobs:
       #
       # ⚠️ Before the build AND before the fwapply gate: a refusal must cost
       # nothing and, more importantly, change nothing — no assets uploaded, no
-      # release body edited.
+      # release body edited. ⚠️ "Changes nothing" means ATTACHES nothing: on the
+      # `release: published` path the release is already public before this runs,
+      # since publishing is what started the run. What the refusal buys is that
+      # nobody can download a mislabelled image — the empty release left behind is
+      # the v0.27.1 state, and deleting it is step one of the recovery below. The
+      # host's copy of this gate cannot even buy that much, because its workflow
+      # uploads nothing (PolyKybdHost#349).
       #
       # ⚠️ config.h is the authority here, unlike wincompose, which reads the
       # number back off the built exe because iscc names the installer from its

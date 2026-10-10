@@ -22,3 +22,4 @@ TEST_LIST += polykybd_icon_lib
 TEST_LIST += polykybd_oled_i2c_diag
 TEST_LIST += polykybd_crash_ack
 TEST_LIST += polykybd_fw_sig_policy
+TEST_LIST += polykybd_idle_style

@@ -32,6 +32,12 @@ For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGF
   - **Record the disposition even when nothing changes** — dismissed findings that leave
     no artifact get re-raised in full by the next scan. Tracker:
     `polykybd-ctnd/docs/SECURITY_AUDIT.md`; the `verify-security-finding` skill drives it.
+- ⚠️ **Raise a new LIMIT with the maintainer before writing it into code or docs**
+  (maintainer's rule, 2026-10-09) — a cap, a bound, a ceiling, a size. The host's
+  unmeasured 48-icon cap per app cut Kate's F1, F2 and Find in Files, and two
+  replacements guessed on the spot repeated the mistake in the same session. Say the
+  number, what it counts and what it is measured against, and wait for an answer.
+  Prefer a value the system already defines (`NUM_OVERLAY_SLOTS`) to a new one.
 - ⚠️ **A green board is NOT evidence a reviewer read your code.** A quota refusal is a
   real review object carrying the head sha, and a CLEAN CodeRabbit pass creates no
   review object at all. Check `get_reviews` **and** the summary comment's `📥 Commits`

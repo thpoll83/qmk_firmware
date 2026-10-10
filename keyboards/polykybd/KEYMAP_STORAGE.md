@@ -100,8 +100,8 @@ of the dynamic keymap, so the freshly compiled `keymaps[]` is only consulted for
 at or above the cap — or on a board whose EEPROM has never been written. Flash, press the
 key, get the old keycode, and nothing anywhere says why. It is the flip side of this
 section's own correct advice that a CONTENTS change "needs no reset": no reset is needed
-for *correctness*, and none happens, which is exactly what leaves the edit unseen. Two
-recoveries, and they are not equivalent:
+for *correctness*, and none happens, which is exactly what leaves the edit unseen. Three
+recoveries (the third, the host's reset, is below), and they are not equivalent:
 - **Bump `KEYMAP_LAYERS_FL_MERGED`.** Reaches every board automatically at the next boot,
   and **WIPES THE USER'S MACROS** — `dynamic_keymap_reset_poly()` calls
   `poly_macro_reset_all()`. Right for a layer add/remove/reorder, far too blunt for a
@@ -111,12 +111,20 @@ recoveries, and they are not equivalent:
   flags**, and the keycode goes through `int(x, 0)` so `0x2804` works. One invocation per
   changed key.
 
-⚠️ **There is NO keymap-reset and no EEPROM-clear anywhere in PolyKybdHost** — not in
-`polyctl`, not on the control socket, not in the tray. `EE_CLR` appears in the host only
-as a preview legend for `QK_CLEAR_EEPROM` in `res/preview/legends.json`, i.e. a label for
-a key the user presses **on the board**. Do not tell anyone to "reset the keymap from the
-host app"; that route does not exist (asserted three times in one session, 2026-09-10,
-and wrong every time).
+**The host's keymap reset is the third route, and it is not a selective one.** Tray
+Maintenance → "Reset keymap to default…" (and the control-socket method `keymap.reset`;
+there is no `polyctl` command) sends `id_dynamic_keymap_reset`. `legacy_command_kb()` in
+`hid_com.c` answers it with `dynamic_keymap_reset_poly()`, so it rewrites layers 0..7
+from the compiled keymap **and zeroes the macro buffer**, the same as a format-stamp bump
+on one board. It exists since host commit `a1180727` (2026-02).
+
+⚠️ **This section used to say the host had no keymap reset at all.** That was wrong for
+its whole life: the reset predates the note by seven months, so the advice the note
+recorded as "asserted three times, wrong every time" (2026-09-10) may well have been
+right. It was found on 2026-10-10 by reading `gui/cmd_menu.py`, not by any check. What IS true: the host has no
+EEPROM clear. `ID_EEPROM_RESET` is defined in `command_ids.py` and nothing sends it;
+`EE_CLR` appears only as a preview legend for `QK_CLEAR_EEPROM`, a key the user presses
+on the board.
 
 
 ## `poly_keycode_at()` is the ONE resolver for both the render and the key-event path

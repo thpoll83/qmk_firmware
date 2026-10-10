@@ -917,3 +917,80 @@ The split42 rebuild + subsystem bisect itself lives on branch
 LTR-559 `d74e7e11`, trackpad-removed bisect step `b25f2045`, trackpad restored after
 the bisect confirmed it).
 
+
+## Rules that came out of closed investigations
+
+_Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
+
+
+The narratives moved to
+[`keyboards/polykybd/INVESTIGATION_HISTORY.md`](INVESTIGATION_HISTORY.md)
+(11 resolved bugs, the split42 split-link saga, the split-link integrity analysis
+and the HIL language-timeout note). **Read it when you need the evidence behind one
+of these rules, a root cause to compare a new symptom against, or the reasoning
+somebody is about to reverse.** What must stay in context is the rules themselves:
+
+- ⚠️ **Never bool-test `send_to_bridge()` — classify with `sync_succeeded()`.**
+  Every return value is non-zero, give-up included, so `if(!send_to_bridge(...))`
+  is dead code: the master advanced `global` to `local`, produced no diff, and
+  never re-fired the lost sync. The diff IS the retry queue, and only a successful
+  sync may advance `global`. The *discarding* sibling applies to the bulk overlay
+  sends, which threw the ack away entirely.
+- ⚠️ **The split UART has NO payload integrity check of its own.** QMK's transport
+  checks a 1-byte handshake token and nothing else; the per-transaction CRC32 in
+  `split_sync.c` is the only thing between wire noise and the slave applying
+  garbage. Do not remove it on the theory that the transport covers it.
+- **Ack byte values are Hamming-spaced (min pairwise distance 4), built as
+  complement pairs at popcount 4**, because the 1-byte reply carries no CRC. A
+  seventh value must keep distance 4 or single-bit tolerance degrades for the whole
+  set. `sync_succeeded()` is a deliberate **whitelist** so a new failure value is a
+  failure at every existing call site with no edits.
+- **`sync_is_link_fault()` is a COMPLEMENT, not an enumeration of its siblings** —
+  a link fault is "nobody answered" or "what reached the slave was corrupt", and
+  every other byte means the slave answered with a verdict. Listing the non-fault
+  values is the guard shape that goes stale. `nack` is excluded from `err%` for the
+  same reason: `SYNC_BUSY` arrives on every erase re-poll of a flash.
+- **The split link is full-duplex two-wire** (`SERIAL_USART_FULL_DUPLEX`, TX GP5 /
+  RX GP4, `SERIAL_USART_PIN_SWAP` giving the crossover by role at runtime so one
+  image serves both halves). Steady-state error rate measured **zero** after the
+  migration. ⚠️ `SELECT_SOFT_SERIAL_SPEED` is **0 = 460800 baud**, not the 230400
+  the historical half-duplex analysis quotes.
+- ⚠️ **split42 needs `POLY_SPLIT_SHMEM_RPC_GUARD`** — an 8-byte pad at the pointing
+  member's position in `split_shared_memory_t`, in front of the RPC buffers
+  (`transport.h`, tracked in `UPSTREAM_PATCHES.md`). **Do not remove it**: the
+  latent writer it guards against was never found.
+- **EEPROM persistence is the suspend-only dirty-flag model.** Never write EEPROM
+  inside a split-transaction handler (a ~50 ms wear-levelling consolidation erase
+  there costs the UART its response window), and never re-add a per-housekeeping
+  default-layer drain — `save_all_dirty()` flushes at suspend / reset / store.
+- **`g_user_brightness` is the MANUAL brightness and is updated only at deliberate
+  set-points**; idle/suspend transients must never be persisted as it. Host-auto
+  mode plus its last value persist separately in `poly_eeconf_t.auto_brightness`,
+  with a **known bit** so engaging auto before the host pushes cannot bank the
+  default as if real.
+- **Idle tracking is a `bool` plus a `uint32_t` timestamp**, never a signed
+  sentinel: `is_idle_tracking()` / `disable_idle_tracking()` /
+  `backdate_last_update()`. The old signed `last_update` silently disabled idle for
+  the ~25-day window past uptime 2³¹, and underflowed near boot.
+- **An overlay mapping chunk is ONE-SHOT — nothing re-fires it**, unlike the
+  periodic state syncs where the diff is the retry queue. The master holds the
+  authoritative tables, so a lost chunk arms a repair that drains from
+  **housekeeping**, never inline in the HID handler. The two *image* bridges cannot
+  be repaired: `resolve_upload_side()` means the master never had the bytes.
+- **`DISPLAY_OVERLAYS` belongs in `OVERLAY_SYNCED_STATE_FLAGS`**, and every
+  mapping-apply site pairs `set_packed_overlay_mapping()` (formerly `set_10bit_overlay_mapping()`) with
+  `request_disp_refresh()` — on both halves.
+- **core1 runs with interrupts masked** (`cpsid i` at the top of `core1_entry`).
+  Empirically the only fix for the overlay/ROI hang; the mechanism was never
+  established, and it is safe because core1 polls the FIFO rather than waiting on an
+  IRQ. Do not remove it on the strength of a theory.
+- ⚠️ **The RP2040 USB driver is a VENDORED copy** (`keyboards/polykybd/chibios_overrides/`,
+  selected by `PLATFORM_MK`), carrying ChibiOS trunk's bus-reset-before-SETUP fix that
+  Contrib lacks. A `lib/chibios-contrib` bump does **not** update it: diff the copy
+  against the new submodule after every bump (`UPSTREAM_PATCHES.md` → "ChibiOS-Contrib
+  RP2040 USB driver"). Any code that masks interrupts for tens of ms (a flash erase)
+  while the host can reset the bus is exactly what that fix exists for.
+- ⚠️ **A clean `dmesg` does NOT mean enumeration was clean.** Linux retries a STALLed
+  GET_DESCRIPTOR silently; on the rig 9 of 10 broken transfers left no log line. Count
+  EP0 STALLs on the device (`-e POLYKYBD_USB_STRESS=yes`, the `usb_reset_race` probe).
+

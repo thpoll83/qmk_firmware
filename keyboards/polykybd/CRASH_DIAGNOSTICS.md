@@ -542,3 +542,42 @@ watchdog is running: earlier steps can legitimately take longer than 6 s. Disarm
 1 in 43.** A probe that alters timing can hide the fault it is aimed at. Keep the run
 going until it does fire, and A/B the probe's side effects separately (the
 `ramvtor-only` build) before reading a clean probe run as a fix.
+
+## A crash, a hang, or a board that "just stopped"
+
+_Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
+
+
+**How a fault is recorded, rebooted through and announced on the next boot is
+[`keyboards/polykybd/CRASH_DIAGNOSTICS.md`](CRASH_DIAGNOSTICS.md)** —
+the phase breadcrumb, the 8 s watchdog, cmd 39 / `polyctl crash show`, and the boot
+window's own instruments. Read it before chasing any "it froze and a replug fixed it".
+Three rules that bind code outside it:
+
+- ⚠️ **BOOT is the one unwatched window**, so a stall there is permanent: no reset, no
+  record, **and no console output at all** — `console_task()` and
+  `usb_event_queue_task()` are MAIN-LOOP calls and `keyboard_init()` has not reached
+  the loop. The status panel is the only live channel a wedged board has; do not
+  conclude "it printed nothing" from one that structurally cannot carry it.
+- ⚠️ **The final boot render is ~40 blocking `spiSend()` calls with no timeout**
+  (`osalThreadSuspendS`), which is where a cold-boot wedge has actually landed. A
+  watchdog guard covers boot step 5 (core1 up, 63%) through that render, armed with
+  `crash_watchdog_arm()` — never `crash_watchdog_start()`, which declares the boot
+  survived. A new slow step in that window must feed it.
+- ⚠️ **A watchdog reset runs NO code**, so it never reaches the crash-loop halt in
+  `record_and_reboot()`. Any watchdog armed inside boot must be one-shot, or a hang
+  that recurs every boot becomes a reboot loop.
+- ⚠️ **No peripheral IRQ may preempt the USB IRQ** — I2C0 and SPI0/1 sit at the USB
+  priority (3) in both `mcuconf.h` files. (`RP_IRQ_I2C1_PRIORITY` is 2, but I2C1 is
+  disabled, `RP_I2C_USE_I2C1 FALSE`; SysTick and the timer alarms are also at 2.) I2C0 at 2 nesting into a running USB IRQ sent
+  core0 to a garbage address: the `0x16C1`/`0x16E1` boot hang, ~1 boot in 3 under a
+  reboot loop, 0 in 845 after the change (I2C0 + SPI at 3). The evidence is CRASH_DIAGNOSTICS.md →
+  *Boot hang: an IRQ nested into USB*.
+- **A boot hang is reproduced with the host's boot loop, not by waiting for the field**
+  (`polyctl bootloop --rounds N`, cmd 43). It brought the `0x16C1` hang from "now and
+  then" to about 1 boot in 3, because the host re-enumerates and polls the keyboard
+  while the boot runs. ⚠️ **Size every A/B from the rate: ruling out a hang of 1 in N
+  at ~95% takes about 3·N clean rounds.** 17 clean rounds against a 1-in-3 baseline is
+  already conclusive; 845 clean rounds bound what is left at 1 in 280. The
+  `hunt-boot-hang` skill drives the loop.
+

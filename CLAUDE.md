@@ -1,1067 +1,370 @@
-# CLAUDE.md — qmk_firmware (PolyKybd)
+# CLAUDE.md: qmk_firmware (PolyKybd firmware)
 
-This file provides guidance to Claude Code (claude.ai/code) when working in this QMK fork. The PolyKybd-specific firmware lives at `keyboards/polykybd/`.
+QMK fork. Our code is `keyboards/polykybd/` (split72, split42) and
+`modules/polykybd/`. Everything else is upstream QMK.
 
-For cross-repo context (how this repo relates to `PolyKybdHost/` and `AdafruitGFX/`), see [`../CLAUDE.md`](../CLAUDE.md).
+**Rules for all PolyKybd repos** (review, branching, mirrored files, releases, web
+session limits) are in `../polykybd-claude/CLAUDE.md`, with the shared skills. If that
+repo is not attached, ask the user to attach `thpoll83/polykybd-claude`. This file holds
+only firmware rules. Each section names the doc with the full detail and history; read
+it before changing that subsystem. `.claude/rules/*.md` add warnings when you Read a
+matching file.
 
-## Code review conventions (all PolyKybd repos)
+## Building and flashing
 
-- **Docstring coverage: ignore CodeRabbit's "Docstring Coverage … threshold 80%"
-  pre-merge check.** It is a CodeRabbit default, **not** a project policy, and the check
-  is non-blocking. Document new code where a docstring genuinely helps a reader.
-- **Verify an AI reviewer's finding against the code before acting on it** — several
-  arrive confidently wrong, some refuted by their own evidence. The rule is **verify,
-  not dismiss**; the same rounds produce genuinely valuable findings. Reply with the
-  counter-evidence, because CodeRabbit stores a repo learning from the thread.
-- ⚠️ **A security-scanner finding on a file under `.github/` or `lib/` is probably
-  UPSTREAM's, and two checks settle it in minutes: is it stock, and is it reachable?**
-  `diff` the path against upstream's raw file (identical is conclusive; a *difference*
-  is not proof we own it — check `UPSTREAM_PATCHES.md` first), and for a workflow ask
-  upstream whether it exists at all (**404 = ours**; only 5 of 23 are). Then read the
-  triggers: a `workflow_call`-only file is dead unless something calls it, and upstream
-  gates several on `github.repository == 'qmk/qmk_firmware'`, permanently false here.
-  - ⚠️ **The inverse is what makes this worth doing: the scanner looked at the inherited
-    file and NOT at ours.** The one genuine injection in the same sweep was in
-    `bump-version.yml`, a file we wrote, and nothing flagged it. Treat a report naming
-    an upstream path as a prompt to audit the sibling files we own.
-  - ⚠️ **A third direction: an inherited upstream POLICY file tells a reviewer to REFUSE
-    the files this fork owns.** `.github/copilot-instructions.md` is byte-identical to
-    upstream's and scopes review to `keyboards/`, so CodeRabbit defers `release.yml`,
-    `qmk-test.yml` and `CLAUDE.md` to a role this repository has nobody to fill. Reply
-    with the evidence; do **not** delete the inherited file.
-  - **Record the disposition even when nothing changes** — dismissed findings that leave
-    no artifact get re-raised in full by the next scan. Tracker:
-    `polykybd-ctnd/docs/SECURITY_AUDIT.md`; the `verify-security-finding` skill drives it.
-- ⚠️ **Raise a new LIMIT with the maintainer before writing it into code or docs**
-  (maintainer's rule, 2026-10-09) — a cap, a bound, a ceiling, a size. The host's
-  unmeasured 48-icon cap per app cut Kate's F1, F2 and Find in Files, and two
-  replacements guessed on the spot repeated the mistake in the same session. Say the
-  number, what it counts and what it is measured against, and wait for an answer.
-  Prefer a value the system already defines (`NUM_OVERLAY_SLOTS`) to a new one.
-- ⚠️ **A green board is NOT evidence a reviewer read your code.** A quota refusal is a
-  real review object carrying the head sha, and a CLEAN CodeRabbit pass creates no
-  review object at all. Check `get_reviews` **and** the summary comment's `📥 Commits`
-  range; no check run answers this question.
-- ⚠️ **After changing a function SIGNATURE, grep THIS FILE for other prose references to
-  it** — nothing in CI reads Markdown, so a stale API example ships silently and reads
-  as authoritative. Applies to a renamed or re-typed symbol too, and to the sibling
-  repos' CLAUDE.md files for a symbol they mirror.
+`qmk compile -kb polykybd/split72 -km default`. The ARM toolchain installs in the remote
+container, so don't claim it is unavailable. Setup, submodule failures, the
+`-Wcast-align` guard and the DOOM `-Werror` collateral:
+[`BUILD_ENVIRONMENT.md`](keyboards/polykybd/BUILD_ENVIRONMENT.md).
 
-The worked examples, the exact commands and the reviewer field guide are
-[`keyboards/polykybd/REVIEW_CONVENTIONS.md`](keyboards/polykybd/REVIEW_CONVENTIONS.md)
-and the `triage-pr-review` skill.
-
-## Mirrored skills (`qmk_firmware` ↔ `PolyKybdHost`)
-
-Nine skills exist in **both** repos and are kept **byte-identical**:
-`add-gated-hid-command`, `check-mirrored-artifacts`, `cross-repo-pr-sweep`,
-`mutation-test-suite`, `polykybd-github-release`, `prune-claude-md`,
-`session-retro`, `triage-pr-review`, `update-polykybd-docs`. A skill loads only from the
-repos a session has attached, so one describing cross-repo work is unreachable from a
-session opened on the other repo alone.
-
-**The rule is copy, never fork**: edit one, `cp` it to the other, and check with
-
-```bash
-for s in add-gated-hid-command check-mirrored-artifacts cross-repo-pr-sweep \
-         mutation-test-suite polykybd-github-release prune-claude-md \
-         session-retro triage-pr-review update-polykybd-docs; do
-    cmp -s /home/user/qmk_firmware/.claude/skills/$s/SKILL.md \
-           /home/user/PolyKybdHost/.claude/skills/$s/SKILL.md \
-      && echo "$s: ok" || echo "$s: DRIFTED"
-done
-```
-
-⚠️ **A skill under `keyboards/` does NOT load** — five lived at
-`keyboards/polykybd/.claude/skills/` and were invisible for months while the pointer
-here looked live. A new skill goes at the **repo root** `.claude/skills/`. ⚠️ A move
-re-bases every hardcoded `../` depth in a helper script: **derive** the repo root by
-walking parents for `keyboards/polykybd`, and **baseline a script before relocating it**
-so a post-move failure cannot be confused with one that never worked.
-
-⚠️ **A shared `CLAUDE-SHARED.md` imported by both repos would NOT reduce context** —
-imported files load at launch. What *does* reduce it, in increasing order: a `.md` read
-on demand; a **path-scoped rule** (`.claude/rules/*.md` with `paths:` frontmatter),
-which loads only when a matching file is read; and a **skill**, which costs nothing
-until invoked. ⚠️ A path-scoped rule fires on the **Read tool**, not on `cat`/`sed`
-through Bash — it supplements a CLAUDE.md pointer, never replaces one. The measurements,
-and the `keycap_preview.py` parser bug that surfaced only once its skill became
-reachable, are in
-[`keyboards/polykybd/SKILLS_AND_CONTEXT.md`](keyboards/polykybd/SKILLS_AND_CONTEXT.md).
-
-## Branching (all PolyKybd repos)
-
-- **Give every branch a name that hints at its content** — a short descriptive slug, so
-  the branch list reads as a changelog.
-- **Always start new work on a FRESH branch cut from the updated default** (**`PolyKybd`**
-  here; `main` in the host and rig repos). Once a PR is merged that branch is done; a
-  push to it succeeds silently and orphans the commit.
-- ⚠️ **A cross-repo feature can leave one repo with commits PUSHED and NO PR, and
-  nothing surfaces it.** Every "is everything saved?" check passes on the repo you
-  forgot — the branch is committed, pushed, in sync, and `git status` is clean. Only the
-  *absence of a PR* is wrong, and no local command looks for that.
-  - ⚠️ **"Commits ahead" cannot answer the question**, on one branch or on all of them:
-    a squash-merged branch reads as ahead forever (95 of 525 `claude/*` branches read as
-    ahead; 3 had an open PR). **The only reliable signal is whether a PR EXISTS**, which
-    is a GitHub query, not a git one.
-  - The sweep loop and its five fail-open modes — `~` is `/root`, `origin/HEAD` is
-    unset, a stale ref cries wolf, a failed fetch reads as inspected, and it only sees
-    the branch you are standing on — are in
-    [`keyboards/polykybd/BRANCHING.md`](keyboards/polykybd/BRANCHING.md). Treat a silent
-    sweep as "nothing obvious on this branch", never a clean bill of health.
-- ⚠️ **A stacked PR is NOT retargeted when its base merges** — GitHub does that only
-  when the base branch is deleted, and merged branches are kept here. Retarget it
-  yourself before merging; after a squash-merged base, resolve the merge per file
-  against the base PR's last head. Both rules: `BRANCHING.md` → "Landing a stacked PR".
-
-## Building & flashing
-
-**The ARM toolchain is installable in the dev/remote container — do not claim it is
-unavailable.** `qmk compile -kb polykybd/split72 -km default`. The once-per-container
-setup, the submodule failure modes, the `-Wcast-align` guard and its path filter, and the
-vendored-DOOM `-Werror` collateral are in
-[`keyboards/polykybd/BUILD_ENVIRONMENT.md`](keyboards/polykybd/BUILD_ENVIRONMENT.md).
-Nine rules bind work outside that file:
-
-- **The deliverable for testing is the `.bin`, NOT the `.uf2`** — the user flashes over
-  HID. ⚠️ **Put the commit sha in the filename**: every test build reports the same
-  `FW_VERSION`, so N hardware rounds hand over N indistinguishable files. That cost a
-  full round once. The `deliver-test-firmware` skill wraps it.
-- ⚠️ **A branch-built `.bin` reports a DIFFERENT `FW_VERSION` from CI for the SAME
-  commit** — CI builds the PR *merged into* its base and picks up every auto-bump since
-  the branch was cut. Settle it by **diffing, not rebuilding**, and read the content and
-  the unrestricted path list: a PolyKybd-scoped `--stat` proves neither half.
-- ⚠️ **NEVER run two `qmk compile` invocations at once** — every flavour shares one
-  `.build/` tree and the collision presents as an `undefined reference`, i.e. a code
-  error. `build_pack.sh` is safe because it sequences them.
-- ⚠️ **In the session container `qmk` is at `/root/.qmk_venv/bin/qmk`, NOT on `PATH`.**
+- ⚠️ **`qmk` is at `/root/.qmk_venv/bin/qmk`, not on `PATH`.**
   `export QMK_HOME=$PWD && export PATH="/root/.qmk_venv/bin:$PATH"`.
-- ⚠️ **The checkout can be SILENTLY RESET to an older commit** when the container is
-  reclaimed — nothing announces it, and it once sent a code review chasing a mismatch
-  that existed only in the reverted tree. Run `git log --oneline -1` before trusting any
-  grep or "the code says…" conclusion.
-- ⚠️ **The container's clone is SHALLOW, and `git merge-base` then returns an EMPTY
-  STRING rather than an error** — so a diff-vs-upstream or a tag-anchored release range
-  silently produces a wrong answer that looks like plausible history. Run
-  `git rev-parse --is-shallow-repository` before ANY such question;
-  `git fetch origin --unshallow --no-recurse-submodules` takes ~45 s.
-- ⚠️ **A hand-built UF2 must declare `payloadSize` 256 on EVERY block, whatever it
-  actually carries.** The RP2040 bootrom's `vd_write_block()` tests
-  `uf2->payload_size == 256` before it looks at a block at all, and then programs a full
-  page regardless — so a block sized to its own 12-byte record is dropped, the download
-  never completes, and **`safe_reboot()` never runs**: the half sits in BOOTSEL with the
-  drive still mounted. That is a *file* fault presenting as a dead board, and it shipped
-  in three releases' handedness UF2s (v0.23.0–v0.27.1, `tools/make_hand_uf2.py`). Two
-  generalisations: a **round-trip verifier proves self-consistency, not conformance** —
-  `verify()` read the size field back out of the file it had just written and passed
-  every time; and a **generated artifact no test consumes is checked by nothing**, since
-  the firmware builds and the rig flashes over GPIO BOOTSEL with picotool-made images.
-  The tool audits the container against the bootrom's rules now, so the release build is
-  the gate.
-- ⚠️ **"It booted" is NOT evidence a flash LANDED — make the artifact say so.** The
-  fixed stamp UF2 was read as harmless on the strength of a board coming up, twice,
-  when in fact nothing had been written: `hand: LEFT (flash stamp)` prints whenever
-  `stamp_read()` finds ANY valid record, so a dragged file that was ignored and a
-  previous record read identically. A probe built to ERASE that sector "booted",
-  which meant the erase never happened. The banner now carries `slot=N/M writer=0xNN`
-  (`poly_hand_stamp_slot/count/writer()`, `pad[0]` = 0x55 from `make_hand_uf2.py` and
-  0x00 from `stamp_write()`), and a real hardware round then settled it in one flash:
-  **`slot=0/1 writer=0x55` is the bootrom's own signature** — erase-then-program
-  leaves exactly one record at page 0 — so the fixed UF2 DOES apply and the half DOES
-  boot. Generalises past handedness: **an experiment whose result is "the board came
-  up" proves nothing unless the artifact identifies itself.**
-- ⚠️ **One unreproduced brick remains, and the confounders matter more than the
-  event.** With the `payloadSize` fix a fresh half completed its write (the drive
-  unmounted, so `safe_reboot()` ran) and then did not boot for minutes, recovering
-  only on a firmware `.uf2`. It has not recurred: a provisioned half takes the same
-  file and boots. Weigh it against two confounders discovered afterwards, both of
-  which make that session's readings unreliable — a second single-block UF2 in one
-  BOOTSEL session is silently dropped (below), and the old banner could not tell an
-  applied record from a pre-existing one. The **field report is NOT a second data
-  point**: it used a released `payloadSize=12` file, which never writes at all, so a
-  half left in BOOTSEL with the drive mounted — no RGB, no displays, no console —
-  is exactly what it should look like. Do not cite it as a brick. Ruled out by measurement, not argument: the record's content and the
-  side change (`-e POLYKYBD_FORCE_HAND=left|right` writes the identical record through
-  `stamp_write()` and boots), a stale `.ram0.bootloader_magic` double-tap flag (30 s
-  unpowered still lands in BOOTSEL), an invalid boot2 (a firmware `.uf2` recovers it),
-  and any software `reset_usb_boot()`, which has no boot-time caller. The release ships
-  neither stamp UF2 while this is open; `POLYKYBD_FORCE_HAND` is the provisioning route
-  that has worked on hardware. **When a write breaks a boot, re-do the same write by
-  another path before debugging what reads it.**
-- ⚠️ **Two single-block UF2s in ONE BOOTSEL session: the second is silently dropped.**
-  `vd_reset()` clears `_uf2_info` only on a USB reset, and the written-blocks bitmap is
-  re-cleared only when an arriving block's `num_blocks` DIFFERS from the current
-  transfer. Every stamp file has `num_blocks=1`, so a second one hits
-  `"Ignore duplicate write"`, writes nothing, and does not even reboot. Power-cycle
-  between such drags, or a multi-block firmware `.uf2` in between resets it.
-- ⚠️ **`boot: spans ms … 2=65535` is a SATURATION sentinel, not 65 seconds measured.**
-  `boot_timing_mark()` clamps at `0xFFFF`, so span 2 — the whole of QMK's
-  `keyboard_init()` — took *at least* 65.5 s. Seen on two boots with
-  `transport_connected=1` and `err=0.0%`, so it is NOT a master waiting on an absent
-  partner. Unexplained; do not read a 65535 as a measurement.
-- **Docker is NOT usable** in the remote container (no daemon).
+- ⚠️ **Never run two `qmk compile` at once.** All flavours share `.build/`, and the
+  collision presents as an `undefined reference`.
+- **The test deliverable is the `.bin`, not the `.uf2`** (the user flashes over HID),
+  with the commit sha in the filename, since every test build reports the same
+  `FW_VERSION`. The `deliver-test-firmware` skill does this.
+- ⚠️ **A branch-built `.bin` reports a different `FW_VERSION` from CI for the same
+  commit.** CI builds the PR merged into its base. Settle it by diffing, not rebuilding.
+- ⚠️ **PR CI does not build the monolith** (`POLYKYBD_DOOM=yes`, the tightest RAM
+  flavour). Build it locally before merging anything that adds statics.
+- **Docker is not usable** in the remote container (no daemon).
+- ⚠️ **"It booted" is not evidence a flash landed. Make the artifact identify itself.**
+  The handedness banner prints `slot=N/M writer=0xNN` for this reason. When a write
+  breaks a boot, redo the same write by another path before debugging what reads it.
+- ⚠️ **A hand-built UF2 must declare `payloadSize` 256 on every block.** The bootrom
+  drops any other block, the download never completes, and the half sits in BOOTSEL.
+  Three releases shipped such stamp UF2s. A round-trip verifier proves
+  self-consistency, not conformance. A second single-block UF2 in one BOOTSEL session
+  is silently dropped, so power-cycle between them. One brick after the fix remains
+  unreproduced, so the release ships no stamp UF2. `POLYKYBD_FORCE_HAND=left|right` is
+  the provisioning route that works.
+- ⚠️ **`boot: spans ms … 2=65535` is a saturation sentinel** (`boot_timing_mark()`
+  clamps at `0xFFFF`), not 65 s measured.
 
-## Continuous integration (PR checks)
+The stamp UF2 history and the brick's confounders: `BUILD_ENVIRONMENT.md` → *Hand-built
+UF2s* and `keyboards/polykybd/readme.md` → *The stamp UF2*.
 
-The mechanics — the HIL tiers, the FW-APPLY and doom tiers, the paths filters, the
-inherited upstream lint, and how to read a job log — are
-[`keyboards/polykybd/CI_CHECKS.md`](keyboards/polykybd/CI_CHECKS.md). Eight things every
-PR author needs without opening it:
+## CI (PR checks)
 
-- ⚠️ **The HIL suite has TWO tiers and the default one skips the deepest checks** — the
-  startup animation, idle + Eden, the 450-frame split-link soak, and the reboot power
-  cycle that is the ONLY thing verifying user state survives a power loss. **Ask for
-  `TIER_EXTENDED` on anything touching EEPROM/persisted state, the split link, the
-  idle/animation paths, or a release**: the `hil-extended` label, `[hil-extended]` in a
-  pushed commit, or a dispatch. The log says which tier ran.
-- ⚠️ **A HIL job that never STARTS is not a red one, and it alerts nobody** — an offline
-  rig leaves it `queued` with no conclusion and silently arms a release refusal hours
-  later. **Read `status` before `conclusion`**, and do not re-run: the rig runs one job
-  at a time.
-- ⚠️ **A GREEN HIL run can cover NONE of the change you just shipped — read the `SKIP`
-  lines, not the conclusion.** The suite announces each opt-in test it declines
-  (`[test] SKIP: … (doom suite — re-run with --doom + a signed --plyx-valid …)`), and a
-  run full of them still reports success. #298 merged on a green `TIER_EXTENDED` pass
-  whose log skipped **all four** doom tests — so the FW-9 gate and its new on-keycap
-  prompt, the largest change in the PR, have never run on hardware. **Grep the job log
-  for your feature's own test name** before treating a green board as coverage.
-- ⚠️ **A green board does NOT mean a rig test from an unmerged `polykybd-ctnd` PR ran** —
-  CI force-syncs the station to ctnd `main`, so that test does not exist on the rig.
-  Land the ctnd PR first, then re-run HIL; verify by grepping the job log for the test's
-  own name.
-- **`cppcheck` gates, and is the only reviewer here that is not an LLM** — no quota, no
-  file limit, so it cannot go quiet on the PR that needs it. ⚠️ A bare `#` line in
-  `.cppcheck-suppressions` kills the whole run **before checking anything** and presents
-  as "no findings". Every suppression carries a written reason.
-- ⚠️ **Applying N labels in ONE API call fires N workflow runs.** Apply them one call at
-  a time when one is a trigger.
-- ⚠️ **A `check_suite.completed` wake can name a SUPERSEDED head** — compare the event's
-  `head_sha` against the PR's actual head before believing "CI is green".
-- ⚠️ **PR CI does NOT build the monolith** (`POLYKYBD_DOOM=yes`) — only the release
-  workflow does, and it is the tightest RAM flavour. Build it locally before merging
-  anything that adds statics.
-- ⚠️ **GitHub can switch Actions OFF for this whole fork, and nothing on a PR says so.**
-  On 2026-10-09 four PR pushes and the #365 merge started no run at all: no build, no
-  HIL, no unit tests, and no `bump-version.yml`, so a `bump:minor` merge left
-  `FW_VERSION` unmoved. The Actions tab carried "Workflows on this fork have been
-  disabled", blaming workflows inherited from upstream (here `auto_approve.yml` every
-  30 min, always skipped by its `qmk/qmk_firmware` gate, and `stale.yml` daily with no
-  gate). **The tell is NO run, not a queued one**: an offline rig leaves a HIL job
-  `queued`; a disabled fork creates nothing, while the host repo's CI keeps running.
-  Re-enabling replays nothing. `bump-version.yml` has no `workflow_dispatch`, so a
-  missed bump is a one-line `FW_VERSION` PR labelled `bump:none` (#367); dispatch
-  `qmk-test.yml` for the HIL.
+HIL tiers, paths filters, the inherited upstream lint, reading a job log:
+[`CI_CHECKS.md`](keyboards/polykybd/CI_CHECKS.md). `diagnose-hil-failure` classifies a
+red rig check; `debug-firmware-on-rig` runs a one-off probe.
 
-The `diagnose-hil-failure` skill classifies a red rig check; `debug-firmware-on-rig`
-drives a one-off probe when the graded suite cannot answer the question.
+- ⚠️ **The default HIL tier skips the deepest checks**: the startup animation, idle +
+  Eden, the 450-frame split-link soak, and the reboot power cycle (the only check that
+  user state survives power loss). Ask for `TIER_EXTENDED` on anything touching EEPROM,
+  the split link, idle/animation paths, or a release: the `hil-extended` label,
+  `[hil-extended]` in a commit, or a dispatch.
+- ⚠️ **A green HIL run can cover none of your change.** Grep the job log for your test's
+  own name and read the `SKIP` lines. #298 merged on a green extended run that skipped
+  all four doom tests.
+- ⚠️ **A rig test from an unmerged `polykybd-ctnd` PR never runs.** CI force-syncs the
+  rig to ctnd `main`. Land the ctnd PR first, then re-run HIL.
+- ⚠️ **A HIL job that never starts is not red, and alerts nobody.** An offline rig
+  leaves it `queued`. Read `status` before `conclusion`, and don't re-run.
+- ⚠️ **GitHub can switch Actions off for this fork, and nothing on a PR says so.** The
+  tell is NO run at all (a queued job means the rig). Re-enabling replays nothing.
+  `bump-version.yml` has no `workflow_dispatch`, so a missed bump is a one-line
+  `FW_VERSION` PR labelled `bump:none` (#367).
+- **`cppcheck` gates and is the only non-LLM reviewer.** A bare `#` line in
+  `.cppcheck-suppressions` kills the run before it checks anything. Every suppression
+  carries a written reason.
+- ⚠️ **Applying N labels in one API call fires N workflow runs.**
+- ⚠️ **A `check_suite.completed` wake can name a superseded head.** Compare its
+  `head_sha` with the PR head.
+
+## Upstream files and security findings
+
+This is a fork of a 30k-commit project, so most of what a scanner flags under `.github/`
+or `lib/` is upstream's. Two checks settle it: `diff` the path against upstream's raw
+file (identical is conclusive; a difference is not proof we own it, so check
+[`UPSTREAM_PATCHES.md`](keyboards/polykybd/UPSTREAM_PATCHES.md)), and read the triggers
+(`workflow_call`-only and `github.repository == 'qmk/qmk_firmware'` gates are dead here).
+For a workflow, a 404 from upstream means ours: 5 of the 24 are (`bump-version.yml`,
+`cppcheck.yml`, `polykybd-unit-test.yml`, `qmk-test.yml`, `release.yml`).
+
+- ⚠️ **The scanner looked at the inherited file and not at ours.** The one real
+  injection in that sweep was in `bump-version.yml`. A report naming an upstream path is
+  a prompt to audit the files we own.
+- ⚠️ **`.github/copilot-instructions.md` is upstream's and tells CodeRabbit to defer
+  `release.yml`, `qmk-test.yml` and `CLAUDE.md` to a QMK Collaborator.** Reply with the
+  evidence. Do not delete the file; it would conflict at the next upstream merge.
+
+Full procedure: `../polykybd-claude/docs/review-conventions.md` and the
+`verify-security-finding` skill.
 
 ## Releases
 
-Firmware releases are **GitHub Releases** (tag `PolyKybd-fw-vX.Y.Z`; `FW_VERSION` in
-`config.h`), created by **publishing** — *not* by pushing a tag, which lands on the
-auto-bump `[skip ci]` commit and triggers nothing. Use the `polykybd-github-release`
-skill; the mechanics, the `release-notes` branch and `scripts/publish_release.py` are in
-[`keyboards/polykybd/RELEASES.md`](keyboards/polykybd/RELEASES.md).
+Firmware tag `PolyKybd-fw-vX.Y.Z`, version `FW_VERSION` in `config.h`. Shared release
+rules are in polykybd-claude. Mechanics, the `release-notes` branch and the gates:
+[`RELEASES.md`](keyboards/polykybd/RELEASES.md).
 
-- ⚠️ **`scripts/publish_release.py` is byte-identical across `qmk_firmware`,
-  `PolyKybdHost` and `wincompose`, nothing checks that, and it had already
-  diverged in BOTH directions at once** — these two repos held the
-  commit-pin and the `make_latest` correctness, wincompose held the
-  create-time gate, and each copy was the newer one for a different thing.
-  `md5sum */scripts/publish_release.py` is the check. Its tests live in
-  **`PolyKybdHost/tests/scripts/publish_release_test.py`**, the only one of
-  the three repos with a Python runner, so a break introduced here fails
-  there.
-
-- ⚠️ **The assets are named from the TAG, and `release.yml` now REFUSES a tag whose
-  tree declares a different `FW_VERSION`** — its first step, before the build and before
-  the fwapply gate, so a refusal changes nothing. Otherwise a release published before
-  its bump merged ships `polykybd_split72_v<tag>.bin` built from a tree declaring
-  another number: the board reports one version, the download claims another, and the
-  host updater offers that release forever because the install can never reach the
-  advertised number. wincompose shipped exactly that (`PK-0.9.19`). ⚠️ **The fix is to
-  MOVE the tag, and only while no release holds it** — publishing never moves one, and
-  a dispatch would build the dispatch ref and leave the tag on the old tree. Delete the
-  assetless release the refusal left behind first. `RELEASES.md` → the asset-naming
-  bullet has both refusal cases.
-
-- ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being released**
+- ⚠️ **Publishing is gated on a green firmware-APPLY run for the released commit**
   (`tools/require_fwapply_run.py`). The HID-apply brick shipped because no release
-  artifact had ever been applied on hardware — the rig flashes by UF2 over GPIO BOOTSEL,
-  which bypasses `fw_staging` entirely. It walks back through ancestors and proves the
-  delta to the release commit is **only** the auto-bump. Recovery when it refuses:
-  dispatch *Build and HIL Test* on that commit with `tier: fwapply`, then re-run release.
-  ⚠️ **A docs-only merge in the way no longer costs that round-trip**: the delta may
-  also carry files the build and the rig never read, decided by replaying
-  `qmk-test.yml`'s own `paths:` filter rather than a second copy of it, and failing
-  closed if that filter cannot be read. `PolyKybd-fw-v0.27.1` published with zero
-  assets before this existed. `bump:none` additionally skips the version bump for such
-  a PR — a convenience, since the gate no longer depends on anyone remembering it.
-  ⚠️ **Publishing within ~11 minutes of a firmware merge RACES that merge's own apply
-  run, and the gate only accepts a FINISHED green one.** v1.3.1 was published at ~08:27;
-  the #320 merge run's apply job finished at 08:32:37; the gate checked at 08:29 and
-  refused (2026-09-30). **On a refusal, first look up the runs for the newest firmware
-  merge commit BY `head_sha`** — if its apply job is still running, wait and re-run the
-  release; a `tier: fwapply` dispatch is for a merge whose run went red or never started.
-  ⚠️ **Never read "no run exists" off a filtered run listing.** `list_workflow_runs`
-  filtered by branch + event omitted the three newest merge runs, which produced the
-  false claim that squash merges start no HIL run; the `head_sha` query found all three.
-- ⚠️ **A `PROTOCOL_VERSION` bump means BOTH artifacts get released, and the check is the
-  PUBLISHED versions, not the in-tree ones.** The source-lockstep rule can be perfectly
-  satisfied while the releases sit a protocol apart, and nothing downstream catches it —
-  the connect gate is not exact-match, so an old host pairs with new firmware and
-  silently leaves the new features off. **Publish the host first**, then the firmware.
-- ⚠️ **Since 1.0, PATCH is the default and `bump:minor` is the exception** (maintainer's
-  rule, 2026-10-03). Before 1.0 a small change landed as a 0.9.x patch; after 1.0 almost
-  every PR carried `bump:minor`, so the firmware went 1.0.0 → 1.7.0 in six days and the
-  host 1.3.0 → 1.15.0 in nine. Leave the label off (patch) for fixes, diagnostics,
-  developer tools and small additions, **even when the PR bumps `PROTOCOL_VERSION`**:
-  the protocol is its own number. Use `bump:minor` only for a feature an owner would
-  call new, the kind that names a release. When unsure, ask.
-- ⚠️ **A MISSING bump label is silent, and "before the merge" means AT OPEN.** The label
-  is read at merge time; a request in the PR body is documentation, not a label, and one
-  applied as the merge happens lands too late (twice, 12 s late once). `create_pull_request`
-  cannot set labels — use `issue_write` with `labels:` right after opening. A missing
-  label made the live docs promise a version that would never exist, because a docs PR
-  ships the moment it merges while a firmware PR only bumps a number and waits.
-  ⚠️ **Then READ THE LABELS BACK a few minutes later** — a successful `issue_write` is
-  not proof the label stayed. On qmk#319 (2026-09-30) `bump:minor` was set at 06:53 and
-  gone by 07:20, leaving only `keyboard`; the Pull Request Labeler had run on open at
-  06:52, most likely writing its list from a snapshot taken before ours (inferred, not
-  proven). The host PR, which has no labeler, kept its label. Unnoticed, 1.3.0 would
-  have shipped as 1.2.1. Re-set it as the FULL list (`["keyboard","bump:minor"]`) —
-  `issue_write` replaces, it does not add.
-- ⚠️ **From Claude Code on the web you can neither push tags nor create a release** —
-  stage the notes on the branch and hand the user `python scripts/publish_release.py`.
+  artifact had ever been applied on hardware. The gate accepts a delta to the release
+  commit of only the auto-bump and files the build never reads (replayed from
+  `qmk-test.yml`'s `paths:` filter).
+- ⚠️ **Publishing within ~11 min of a firmware merge races that merge's own apply run.**
+  On a refusal, look up the newest firmware merge's runs BY `head_sha` first. If its
+  apply job is still running, wait and re-run the release. Dispatch `tier: fwapply` only
+  for a run that went red or never started. Never read "no run exists" off a filtered
+  run listing.
 
-## Firmware overview (`keyboards/polykybd/`)
+## Firmware overview
 
-The firmware runs on a **Raspberry Pi RP2040** (dual-core ARM M0+) and is a heavily customised QMK build. ⚠️ **The clock is 200 MHz by default** (since 0.10.x). It was **125 MHz** before that — never the 133 MHz this file and several code comments used to claim, which was the chip's old *rated maximum*. Nothing in QMK sets the clock; ChibiOS's `hal_lld_init()` (and, earlier in the boot, the double-tap `__late_init`) calls the pico-sdk `clocks_init()`, which reads the compile-time `SYS_CLK_KHZ`, so `rules.mk` sets it. **`-e POLYKYBD_SYS_CLK=125`** opts back out and produces an image **byte-identical** to the pre-200 MHz builds (verified) — the escape hatch if a board ever misbehaves. 200 MHz is the operating point Raspberry Pi certified in 2025 (1200 MHz VCO / 6 / 1), which requires the core voltage raised to **1.15 V** — the vendored pico-sdk predates the SDK's automatic raise and does not compile `hardware_vreg`, so `POLYKYBD_VREG_VSEL` drives it as a register write before the first `clocks_init()` (see `UPSTREAM_PATCHES.md` → `platforms/chibios/bootloaders/rp2040.c`). Peripherals need no rework: SPI (`SPI_DIVISOR`/`CPU_CLOCK`), I2C, the PIO split UART and WS2812 all derive their dividers from the **live** `clock_get_hz(clk_sys)`, and USB is on the separate 48 MHz PLL. The boot banner prints `clk: sys=…Hz vreg_vsel=0x…` so the pairing is verifiable on hardware. The one **fixed** divider is XIP flash — boot2 runs it at `clk_sys/PICO_FLASH_SPI_CLKDIV` (4), i.e. 50 MHz at 200 and 31.25 at 125, both far inside any QSPI part's rating; re-check that list rather than assuming it holds if another clock is ever added. This is **custom hardware with 8 MB of external QSPI flash** (NOT the stock 2 MB). The 8 MB is **partitioned** (see `base/fw_staging.h` for the authoritative map): **0–2 MB running firmware** (the linker `flash1` XIP window), **2–4 MB firmware-update staging**, **4–8 MB resource/overlay data** (`FLASH_TARGET_OFFSET`). So the budget that matters for adding languages/fonts is the **2 MB firmware partition**, of which `split72:default` currently uses ~0.76 MB (~38 %). `FW_STAGING_OFFSET` is kept equal to the linker `flash1` length so a build that exceeds 2 MB fails to *link* rather than silently growing into the staging area (this firmware/staging split was raised from 1 MB → 2 MB in 2026-06 as the image neared the old boundary). ⚠️ **The sectors carved off the TOP of staging (the apply log, the crash archive, the handedness stamp) need an ALIGNMENT assert as well as an overlap one — the overlap asserts do not imply it.** Each is derived by subtraction from the one above (`FW_HAND_STAMP_OFFSET` is `FW_RESOURCE_OFFSET - FW_APPLY_LOG_BYTES - 8192`), so its 4096-alignment rides on constants that can move without any two regions ever overlapping — and `flash_range_erase()` requires the boundary. Caught in review of #282; `fw_staging.c` carries both terms now. The keyboard is split (left + right halves connected via UART) with up to 72 per-keycap OLED displays (72×40 px monochrome, SPI-driven) plus a 128×64 status OLED.
+RP2040 (dual M0+) at **200 MHz** (since 0.10.x; 125 MHz before), with the core voltage
+raised to 1.15 V by `POLYKYBD_VREG_VSEL`. `-e POLYKYBD_SYS_CLK=125` builds an image
+byte-identical to the pre-200 MHz builds. Peripherals derive their dividers from the
+live `clk_sys`, except XIP flash (`clk_sys/PICO_FLASH_SPI_CLKDIV` = 4); re-check that if
+another clock is added. The boot banner prints `clk: sys=…Hz vreg_vsel=0x…`.
 
-The host software (`PolyKybdHost/`) communicates with this firmware over a custom HID report protocol (64-byte reports, v0.7.0+).
+**8 MB external QSPI flash**, partitioned (authoritative map: `base/fw_staging.h`):
+0–2 MB running firmware, 2–4 MB update staging, 4–8 MB resources/overlays. The budget
+that matters is the 2 MB firmware partition. `FW_STAGING_OFFSET` equals the linker
+`flash1` length, so an oversized image fails to link. ⚠️ Sectors carved off the top of
+staging (apply log, crash archive, handedness stamp) need an alignment assert as well as
+an overlap assert.
 
-### The dynamic keymap: storage, the write cap, and the one resolver
+Split keyboard (halves over a full-duplex UART), up to 72 per-keycap 72×40 OLEDs plus a
+128×64 status OLED. The host talks over 64-byte raw HID reports.
 
-`DYNAMIC_KEYMAP_LAYER_COUNT` stays **12**, but only layers 0..7 are ever read or written
-from EEPROM — `_SL` and up are served from flash. `config.h` rebases the encoder map and
-macro buffer on **`DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT`**, reclaiming 672 B. The
-reclaim mechanics, the two guards that keep it sound, `poly_keycode_at()`'s role as the
-single resolver for both the render and the key-event path, and how to read the real
-addresses out of an object file are in
-[`keyboards/polykybd/KEYMAP_STORAGE.md`](keyboards/polykybd/KEYMAP_STORAGE.md).
-Five rules bind code outside it:
+⚠️ **VIA is NOT supported. Don't write "VIA-compatible" anywhere.** Only
+`DYNAMIC_KEYMAP_ENABLE` is on; remapping goes through PolyKybdHost's editor. The
+`quantum/via.h` include only supplies command IDs.
 
-- ⚠️ **The dynamic keymap is indexed BY LAYER NUMBER and QMK does not version it.**
-  Remove or reorder a layer and every stored layer above it silently changes meaning —
-  no error, no log line, just wrong keys. **Bump `KEYMAP_LAYERS_FL_MERGED` whenever a
-  layer is added, removed or reordered — never when a layer's CONTENTS change.**
-- ⚠️ **The consequence for a KEYMAP EDIT: on any board that has ever stored a keymap, a
-  change to a layer below the write cap is INVISIBLE** — the EEPROM copy wins, and
-  nothing says why. Two recoveries, not equivalent: bumping the format stamp reaches
-  every board and **WIPES THE USER'S MACROS**; `polyctl keymap set <layer> <row> <col>
-  <keycode>` (POSITIONAL args) is non-destructive, one call per changed key.
-- ⚠️ **There is NO keymap-reset and no EEPROM-clear anywhere in PolyKybdHost.** Do not
-  tell anyone to "reset the keymap from the host app"; that route does not exist.
-- **Every mutation goes through a `*_poly` wrapper in `split_sync.c`** — the invariant is
-  "all keymap mutation goes through a `_poly` function", not "these four places also
-  call the invalidator".
-- ⚠️ **`poly_keycode_at()` is the ONE resolver for both paths, so anything derived there
-  cannot make a keycap show one thing and type another — but the host layout editor
-  CANNOT see it** (it reads straight out of EEPROM). That, not taste, is why the F-row
-  alignment is all-or-nothing and self-disabling. Any future runtime derivation on a
-  remappable layer faces the same three-way choice.
+### Variants and the shared keymap
 
-### `poly_keycode_at()` is the ONE resolver for both the render and the key-event path
+`split72` (72 keys, RGB matrix, Cirque trackpad) and `split42` (CRKBD footprint) share
+one `poly_keymap.c`; each variant's `keymap.c` is data only. Don't reintroduce
+per-variant logic. [`VARIANTS.md`](keyboards/polykybd/VARIANTS.md).
 
-`display_keycode_at()` (legend) and `keymap_key_to_keycode()` (action) both bottom out
-there, so anything derived inside it **cannot** make a keycap show one thing and type
-another. That makes it the correct — and only correct — seam for a runtime keycode
-derivation. The F-row alignment (`fl_aligned_keycode`, split72's `POLY_FL_ALIGN_FROW`)
-lives there for exactly that reason.
+- ⚠️ **The two variants share the MCU schematic.** `variations/poly_corne/` (in the
+  PolyKybd hardware repo) has no processor, so an MCU grep there finds nothing. An
+  empty grep is evidence only once you have shown it covered the thing you asked about.
 
-Both callers feed it the **synced** `def_layer` from `get_local_layer()`, not live state
-for one and synced for the other. ⚠️ This is the OPPOSITE of the glyph-size key's
-deliberate asymmetry, and the difference is what changes at human speed: *modifiers*
-change within a single keypress so the action must follow the finger, while `def_layer`
-only moves on a deliberate layout switch — so the one-housekeeping-pass lag is
-irrelevant and two sources could render F6 on a keycap that types F7.
+### The dynamic keymap
 
-⚠️ **The host layout editor CANNOT see anything derived there — it reads through
-`dynamic_keymap_get_buffer()` (`hid_com.c`), straight out of EEPROM.** So a derivation
-on a host-remappable layer would show one keycode in the editor while the board typed
-another, with nothing on screen to explain it. That constraint, not taste, is why the
-F-row alignment is **all-or-nothing and self-disabling**: it applies only while all 14
-slots still hold exactly what was compiled, and any edit hands the whole row back to the
-stored values. Two options were rejected — deriving unconditionally (fights the editor)
-and moving `_FL` above the write cap (costs remappability entirely). Any future runtime
-derivation on a remappable layer faces the same three-way choice.
+`DYNAMIC_KEYMAP_LAYER_COUNT` is 12, but only layers 0..7 live in EEPROM
+(`DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT` = 8); `_SL` and up come from flash.
+[`KEYMAP_STORAGE.md`](keyboards/polykybd/KEYMAP_STORAGE.md).
 
-⚠️ **The derivation is cached** (`fl_row_is_pristine`, 14 dynamic-keymap reads) because
-`poly_keycode_at()` runs per keycap per render, not just per keypress. See the `_poly`
-wrapper invariant above for how it is invalidated.
+- ⚠️ **The stored keymap is indexed by layer number, unversioned.** Bump
+  `KEYMAP_LAYERS_FL_MERGED` when a layer is added, removed or reordered, never when its
+  contents change.
+- ⚠️ **A keymap edit below the write cap is invisible on any board that stored a
+  keymap.** Bumping the format stamp reaches every board and wipes the user's macros;
+  `polyctl keymap set <layer> <row> <col> <keycode>` is non-destructive.
+- ⚠️ **There is no keymap reset or EEPROM clear anywhere in PolyKybdHost.**
+- **All keymap mutation goes through a `*_poly` wrapper in `split_sync.c`.**
+- ⚠️ **`poly_keycode_at()` is the one resolver for legend and action**, so a derivation
+  there cannot make a key show one thing and type another. The host layout editor reads
+  EEPROM directly and cannot see such a derivation, which is why the F-row alignment is
+  all-or-nothing and self-disabling.
 
-### Keyboard variants & the shared keymap (`poly_keymap.c`)
+### Custom keycodes
 
-Two hardware variants share one firmware: **`split72`** (72-key, RGB matrix, Cirque
-trackpad, 128×64 status OLED) and **`split42`** (42-key CRKBD footprint, renamed from
-`corne42` in 2026-06). All behaviour lives in the keyboard-level `poly_keymap.c`; each
-variant's `keymap.c` is **data only**, and differences resolve at compile time. Details:
-[`keyboards/polykybd/VARIANTS.md`](keyboards/polykybd/VARIANTS.md).
+Handle a custom keycode in `process_record_user()` and return false, never on the
+release edge: on an `OSL()` layer a release action fires up to three times. Real
+keycodes stay on the release edge. [`KEYCODE_HANDLING.md`](keyboards/polykybd/KEYCODE_HANDLING.md).
 
-**Consequence:** a feature added to `poly_keymap.c` lands on both keyboards at once —
-they can't drift apart. Don't re-introduce per-variant copies of the keymap logic; that
-drift is exactly what this extraction fixed (`corne42` had silently fallen ~98 languages
-behind).
+- ⚠️ **Tap-hold settings are `config.h` defines.** A make variable is a switch only if
+  some `.mk` translates it: `grep -rn "<NAME>" builddefs/` before trusting a `rules.mk`
+  line. `HOLD_ON_OTHER_KEY_PRESS` is deliberately not defined.
 
-⚠️ **The two variants also share the MCU SCHEMATIC**, so an MCU-level question is never
-answered from `variations/poly_corne/` — that directory contains no processor. A grep
-there reports every MCU net as absent and reads as a hardware fact; that is how "split42
-has no VBUS_SENSE net" was asserted here when the boards are identical. **An empty grep
-is evidence only once you have shown the search covered the thing you asked about.**
+### HID protocol
 
-### Custom keycodes: where they are handled, and why not on the release edge
+Byte 0 report ID, byte 1 command ID, byte 2+ payload; replies `"P\xNN."` (ACK) or
+`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (23, `config.h`) gates host features. Read
+[`PROTOCOL_HISTORY.md`](keyboards/polykybd/PROTOCOL_HISTORY.md) before changing any
+command; several were shaped by a contrast the wire format does not show. A new command
+goes through the `add-gated-hid-command` skill.
 
-**A custom PolyKybd keycode is handled and SWALLOWED in `process_record_user()`, never
-left to `post_process_record_user()`.** On an `OSL()` layer a release-edge action fires
-up to **THREE** times — `process_action()` re-dispatches the press as a synthetic
-release on the same record, the outer `process_record` sees it too, and then the real
-release arrives. One tap of `KC_GLYPH_SIZE_UP` stepped the legend size three tiers; an
-inc/dec reads as ×3 and a **toggle reads as doing nothing at all**. Returning false from
-`process_record_user()` stops the synthetic release being generated, and QMK still
-resolves the one-shot. ⚠️ **A REAL keycode cannot use this** — swallowing it would stop
-it reaching the host — so the shifts and F-keys stay on the release edge, where they are
-idempotent repaints.
+- **Bump `FW_VERSION`, `PROTOCOL_VERSION` and the host's `__protocol__` together.** The
+  connect gate is a range, so a missed bump silently leaves the feature disabled.
+- ⚠️ **Cmd 30 (glyph script) accepts any index; cmd 34 (glyph size) is a closed range.**
+  This is deliberate, and the two HIL tests assert opposite things on purpose.
+- ⚠️ **A QMK `*_set_user` hook is a notification, never a setter.** Calling one to change
+  state moves the UI and not the behaviour. Grep for `*_set_user` being called.
+- **Cmd 32 (profiler) exists only in `POLYKYBD_LOOP_PROFILE` builds.** Its NACK on a
+  normal build is the capability signal.
+- ⚠️ **On the split transaction, `width` bit 7 is `OVERLAY_MAP_ICON_FILL` (0x80).** No
+  real mapping width may set it. Cmd 33's own flags (0x40 prepare, 0x20 enable, 0x80 dim)
+  are masked to 0x1F before the decoder or the slave; dim crosses as
+  `OVERLAY_MAP_SYNC_DIM` (0x40).
+- ⚠️ **PRC overlays (cmd 41) decode against a frozen table** compiled into both ends
+  (`prc_table_v1.h` ↔ host `res/prc_table_v1.bin`). A retrained table is a new protocol
+  version. An RLE fragment length must stay below 0x80.
+- ⚠️ **The flat overlay index is the only address an upload has**, so
+  `reset_overlay_mapping()`'s identity default is load-bearing for writes.
+- **To tell the host the board changed state, bump the `G` state-generation counter in
+  the GET_ID reply** (`poly_state_touch()`), which the host polls every second. It goes
+  after the `V` font-pack block, which the host finds positionally. Do not add
+  unsolicited raw HID.
 
-⚠️ **Tap-hold settings are `config.h` DEFINES — `PERMISSIVE_HOLD = yes` and
-`HOLD_ON_OTHER_KEY_PRESS = yes` sat in both `rules.mk` files and did NOTHING for years**,
-while the build stayed green and the source read as configured. **A make variable is
-only a feature switch when some `.mk` file translates it:**
-`grep -rn "<NAME>" builddefs/` before believing a line in a `rules.mk`.
-⚠️ **`HOLD_ON_OTHER_KEY_PRESS` is deliberately NOT defined** — it fires a mod on ordinary
-fast rolls, which is exactly what `CHORDAL_HOLD` and `FLOW_TAP_TERM` exist to prevent.
-⚠️ **`CHORDAL_HOLD`'s weak hook is what a SPLIT board wants** — override
-`chordal_hold_handedness()` with row arithmetic rather than hand-maintaining an 80-entry
-table that must be kept in step with the matrix.
+### Language list (`lang/iso_lang_country.py`)
 
-Both write-ups: [`keyboards/polykybd/KEYCODE_HANDLING.md`](keyboards/polykybd/KEYCODE_HANDLING.md).
+Cmd 27 packs each `xx-YY` code as two indices into the frozen, append-only table in
+`lang/iso_lang_country.py`, which is mirrored in host and rig (see polykybd-claude).
+Re-run `cog -r hid_com.c` after changing the list or the table. `NUM_LANG` is 160.
+Adding a language: the `add-polykybd-language` skill and
+[`lang/FUTURE_LANGUAGES.md`](keyboards/polykybd/lang/FUTURE_LANGUAGES.md).
 
-### HID protocol (host → firmware)
+### Display rendering
 
-64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload. All
-responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK). **`PROTOCOL_VERSION`**
-(`config.h`, reported in GET_ID) gates host features; the per-version table and the
-rationale behind each command are
-[`keyboards/polykybd/PROTOCOL_HISTORY.md`](keyboards/polykybd/PROTOCOL_HISTORY.md) —
-**read it before changing any of these commands**, because several were shaped by a
-contrast with their neighbour that the wire format does not show. The
-`add-gated-hid-command` skill drives a new one end to end.
+Compressed bitmap → `fill_overlay.c` → `overlays[idx][360]`; a key event inverts the
+keycap. Legend drawing: [`LEGEND_RENDERING.md`](keyboards/polykybd/LEGEND_RENDERING.md);
+placement: [`LEGEND_LAYOUT.md`](keyboards/polykybd/LEGEND_LAYOUT.md); status OLED:
+[`STATUS_OLED.md`](keyboards/polykybd/STATUS_OLED.md); hint icons:
+[`HINT_ICONS.md`](keyboards/polykybd/HINT_ICONS.md); the grid and the three render seams:
+[`DISPLAY_PIPELINE.md`](keyboards/polykybd/DISPLAY_PIPELINE.md).
 
-- **Bump `FW_VERSION` + `PROTOCOL_VERSION` and the host's `__protocol__` in lockstep.**
-  ⚠️ The connect gate is NOT exact-match, so forgetting the bump no longer rejects the
-  keyboard — it silently leaves the new feature disabled. Quieter, and worse.
-- ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
-  over.** An unknown glyph SCRIPT falls through to the normal legend, so accepting it
-  costs nothing and lets the host ship faces a keyboard lacks. An unknown SIZE would be
-  stored, synced and persisted while still rendering small. The two HIL tests assert
-  opposite things about neighbouring commands **on purpose**.
-- ⚠️ **A QMK `*_set_user` hook is a NOTIFICATION, never a setter** — calling one to
-  CHANGE state fails in the quietest possible way: the UI moves and the behaviour does
-  not. Cmd 20 did this for years, relabelling keycaps while `unicode_config.input_mode`
-  never moved. **The tell is a state whose display and effect disagree**; grep for any
-  `*_set_user` being CALLED rather than implemented.
-- **Cmd `32` (profiler) is present ONLY in a `POLYKYBD_LOOP_PROFILE` build and bumps no
-  `PROTOCOL_VERSION`.** Its NACK on a normal build is the deliberate capability signal.
-- ⚠️ **v18's idle TIMEOUT (cmd 40) deletes `FADE_OUT_TIME`** — the delay before the
-  idle style engages is a per-board setting now (`enum poly_idle_timeout`,
-  `base/idle_timeout.h`, six presets 15 s…5 min), read through
-  `get_idle_timeout_ms()`. The constant is GONE rather than left to rot, because a
-  stale `> FADE_OUT_TIME` would compile and then silently ignore the user's choice.
-  `TURN_OFF_TIME` is unchanged and deliberately not scaled by it. It is persisted as
-  the enum **biased by one**, so a zero byte means "never chosen" — the property
-  `idle_style_fmt` needed a whole second byte to provide.
-- ⚠️ **v19's PRC overlays (cmd 41) decode against a FIXED table compiled
-  into both ends** (`modules/polykybd/polymod_prc/prc_table_v1.h` ↔ the host's
-  `res/prc_table_v1.bin`). A table
-  that differs draws garbage with no error anywhere, so v1 is frozen and a retrained
-  table is a new protocol version. Its slave copy rides the compressed transaction
-  flagged by `PRC_BRIDGE_FLAG` in `len`, so **an RLE fragment length must stay below
-  0x80** (a `_Static_assert` holds it).
-- ⚠️ **v20's icon fills (cmd 42) ride the MAPPING transaction, flagged by
-  `OVERLAY_MAP_ICON_FILL` (0x80) in `width`** — so no real mapping width may ever set
-  that bit. The icon bundle is a `PlyI` in font-pack slot 8 and is validated by
-  `base/icon_lib.c`, never by the font loader; the `V` block now reports
-  `min(master, slave)` per bundle.
-- **v21's cmd 33 width byte carries flags** — 0x40 runs the prepare step before the
-  pairs, 0x20 the enable step after, through the same `overlay_flags_on()` as cmd 11.
-  ⚠️ Only the masked width (0x1F) may reach the decoder or the slave: bit 7 is
-  `OVERLAY_MAP_ICON_FILL` on the split transaction.
-- **v22's cmd 43 (REBOOT) reboots both halves and persists nothing** — it exists so
-  the host's boot-loop diagnostic can reboot 50 times. ⚠️ Do not substitute cmd 25:
-  set-handedness also reboots both halves, but rewrites the EEPROM byte and the
-  handedness flash stamp on every call. It ACKs BEFORE the reset (the reset never
-  returns) and hands off to the slave with the QK_REBOOT key's hardened 20-retry path.
-- **v23's cmd 33 DIM flag (width byte bit 7) draws the report's icons dimmed** — a
-  browser's icons under a website's overlay. The keyboard dims the ICON at draw time
-  (25% of its pixels, `display_dim_bits[]`), never the bitmap and never the keycap:
-  host-side dimming would turn every browser image into a cache miss, and per-panel
-  contrast would dim the legend. ⚠️ On the split transaction bit 7 is the icon fill,
-  so the flag crosses as `OVERLAY_MAP_SYNC_DIM` (0x40). See `PROTOCOL_HISTORY.md`.
-- ⚠️ **The flat overlay index is the only ADDRESS an upload has, resolved through
-  `overlay_map[]` — so `reset_overlay_mapping()`'s identity default is LOAD-BEARING FOR
-  WRITES**, not a display convenience. Zeroing it sent every image to slot 0: nearly
-  every keycap blank, the whole set piled onto Esc.
-
-**When the BOARD changes something the host caches, the answer is a counter on a reply
-the host ALREADY polls** — `['G'][u16 state_generation]` in the GET_ID reply, bumped by
-`poly_state_touch()`. The host's reconnect probe sends GET_ID every second forever, so
-that reaches it within ~1 s at **zero** additional reports; a dedicated poll or an
-unsolicited push both solve a problem that does not exist. ⚠️ **It goes AFTER the `V`
-font-pack block** — the host finds that block positionally, and prepending makes every
-deployed host re-flash all eight bundles on every connect. ⚠️ **Unsolicited raw HID is
-not a drop-in**: nothing reads that interface except a pending command, and the drain
-rests on "since v3 the firmware sends no unsolicited replies". **The console may
-announce, never define** — it is lossy, does not survive re-enumeration, and any local
-process can read it.
-
-### Language list encoding (`lang/iso_lang_country.py`)
-The packed list (cmd `27`) maps each 4-char code to two 1-byte indices: the
-language's position in the ISO 639-1 table and the country's in ISO 3166-1
-alpha-2. `lang/iso_lang_country.py` is the **frozen, append-only** index table —
-generated once from the `iso-codes` package then frozen (indices never reorder;
-new ISO codes append at the next free slot; private pseudo-codes with no ISO
-639-1 entry, e.g. `hw`, live in a reserved block above the standard codes). The
-`hid_com.c` case-27 cog imports it and emits the index bytes, so the table is a
-**build-time artifact only** — it is *not* compiled into the firmware.
-- ⚠️ **Single source of truth across three repos**: this file is byte-identical
-  to `PolyKybdHost/polyhost/services/iso_lang_country.py` and
-  `polykybd-ctnd/station/iso_lang_country.py`. When it changes, copy it to all
-  three (verify with `cmp`); a mismatch silently decodes wrong languages on the
-  host/rig. Adding a standard ISO language needs no table change (the code is
-  already present); only a new private pseudo-code requires appending an entry.
-- Re-run `cog -r hid_com.c` after any change to the list or the table (needs
-  `cogapp` + `openpyxl`).
-
-### Display rendering pipeline
-
-Host sends a compressed bitmap → `fill_overlay.c` decompresses (optionally on core1) →
-`overlays[idx][360]`; a key event inverts the keycap via the shift-register chip-select;
-an app switch swaps all 72 images. How a legend is drawn is
-[`LEGEND_RENDERING.md`](keyboards/polykybd/LEGEND_RENDERING.md), where the elements GO is
-[`LEGEND_LAYOUT.md`](keyboards/polykybd/LEGEND_LAYOUT.md), the status OLED is
-[`STATUS_OLED.md`](keyboards/polykybd/STATUS_OLED.md), the OS shortcut-hint icons'
-design and decisions are [`HINT_ICONS.md`](keyboards/polykybd/HINT_ICONS.md), and the per-keycap grid, the three
-render seams and the settings-gate post-mortem are
-[`DISPLAY_PIPELINE.md`](keyboards/polykybd/DISPLAY_PIPELINE.md). Six rules bind code
-outside those files:
-
-- ⚠️ **Adding a display-list op is TWO walkers, not one — THREE counting the host.** The
-  draw dispatch and the measurement must clear the same flags and skip the same
-  arguments, or the bbox describes a legend the draw does not produce. `oled_preview.py`
-  is the third edit, and skipping it is silent: a refused op falls back to the keycode
-  TEXT, which looks exactly like the op not working.
-- ⚠️ **Nudge-run arithmetic is unverifiable by any test in this repo.** Render every
-  legend you touched through `PolyKybdHost/tools/oled_preview.py` and require **0**
-  pixels outside the 72×40 window.
-- ⚠️ **Keep every glyph of one legend in ONE font** — `kdisp_write_gfx_char` baseline-
-  aligns by `font->yAdvance - fonts[0]->yAdvance`, so two faces sit on two baselines
-  (`a»ñ` put its `a` 7 px high).
-- ⚠️ **`render_key()` and `to_static_text()` are a PAIR** — both must normalise the
-  keycode the same way, or a key draws its chrome and NO legend. A third seam,
-  `update_displays()`, can carry a bespoke per-keycode branch that makes the legend
-  DEAD: **grep for your keycode there before believing a legend edit does anything.**
-- ⚠️ **"Hidden" is TWO invariants — blank AND inert.** The advanced-row gate covered only
-  the drawing half, so a blank Restart keycap still rebooted the board, reaching the
-  field as "two crashes in a row". Gate ONE check ABOVE the switch, and when you gate a
-  keycode for display, grep `process_record_user()` for it in the same pass.
-- ⚠️ **The per-keycap DISPLAY grid is NOT a rectangle, and two physical keys have no OLED
-  at all** (74 keys, 72 OLEDs). Anything mapping a key to a display must gate on
-  `key_has_display(r,c)` first — a bounds check is not a substitute, since both
-  offending keys index in-range phantom slots. ⚠️ **Model placement from the OLED
-  chip-select, NOT the RGB `g_led_config` x-order** — they do not match.
-- ⚠️ **The MATRIX index and the DISPLAY index are different spaces on split72's right
-  half, and `LAYOUT_TO_INDEX(r,c)` gives you the matrix one.** Its upper four matrix rows
-  carry no col-0 key, so matrix col `c` sits behind display col `c-1`; the chip-select
-  table, `SA_GEOM_*[]` and the per-panel dirty-window bboxes are all in DISPLAY space.
-  `update_displays()`/`kdisp_idle()` used the unfolded index, so every right-half panel's
-  bbox was remembered under its NEIGHBOUR's — 28 of 74 keys, invisible for as long as the
-  feature existed because legends are similar centred boxes and the union covered the old
-  ink anyway. A thin off-centre arc is not, and parts of one stopped being erased **on
-  one half only**. `key_display_index()` is the one fold now; `python3
-  tools/check_disp_index.py` replays the walk against the real keymap and is the gate.
-  ⚠️ **One half only is the tell** — a wrong panel index reads as a bug in whatever drew
-  the unusual shape.
-  - ⚠️ **A gate that SCANS SOURCE must strip comments before it tests for a call, or it
-    asserts its own documentation.** `check_disp_index.py`'s caller check looks for
-    `key_display_index(` in each of `update_displays`/`kdisp_idle`; `update_displays()`
-    carries a comment *explaining* the fold, so a mutant that reverted the actual call
-    still PASSED — the substring matched the prose. `strip_comments()` is load-bearing
-    for that reason and is commented as such (#308, 2026-09-24). It cost nothing to find
-    only because the mutation was run; a grep-based gate is otherwise untested by
-    construction. The same shape binds every other `check_*.py` here.
+- ⚠️ **A new display-list op needs three walkers**: the draw dispatch, the measurement,
+  and the host's `oled_preview.py`. A missing one fails silently.
+- ⚠️ **Render every legend you touched with `PolyKybdHost/tools/oled_preview.py`** and
+  require 0 pixels outside the 72×40 window. No test here checks nudge arithmetic.
+- ⚠️ **Keep every glyph of one legend in one font**, or two faces sit on two baselines.
+- ⚠️ **`render_key()` and `to_static_text()` must normalise keycodes the same way.**
+  Grep `update_displays()` for your keycode before believing a legend edit does
+  anything.
+- ⚠️ **Hidden means blank AND inert.** When you gate a keycode for display, grep
+  `process_record_user()` for it too.
+- ⚠️ **Gate key→display mapping on `key_has_display(r,c)`** (74 keys, 72 OLEDs). Matrix
+  and display indices differ on split72's right half; `key_display_index()` is the one
+  fold and `tools/check_disp_index.py` checks it (manual, not in CI). A bug on one half
+  only is the tell of a wrong panel index.
+- ⚠️ **A gate that scans source must strip comments first**, or it matches its own
+  documentation. This binds every `tools/check_*.py`.
 
 ### Split synchronisation
 
-Seven custom QMK transaction IDs carry state and overlay data to the slave over UART with
-CRC32 validation and up to 10 retries. Sizes, the buffer ceiling arithmetic and the
-split42 shmem guard are
-[`keyboards/polykybd/SPLIT_SYNC.md`](keyboards/polykybd/SPLIT_SYNC.md).
+Twelve custom transaction IDs carry state to the slave with CRC32 and up to 10 retries.
+[`SPLIT_SYNC.md`](keyboards/polykybd/SPLIT_SYNC.md).
 
-⚠️ **`RPC_M2S_BUFFER_SIZE` is a SILENT CEILING on every one of them, and it is a CAPACITY
-rather than a transfer size.** `transaction_rpc_exec()` returns false **before sending
-anything** when a payload exceeds it, and the bulk call sites discard the ack — so a
-struct that grows past the cap produces a master that applies the change and a slave that
-never hears it, with **nothing in the log**. `state.h` carries `static_assert`s; add one
-for any struct that can grow. ⚠️ **The overlay path sits 3 bytes under the old cap** —
-one more field, or an `HID_REPORT_SIZE` bump, and an app switch presents as missing
-keycap images. Raising the cap costs RAM and nothing else (measured, not reasoned: `.bss`
-+32, `.text` identical).
+- ⚠️ **`RPC_M2S_BUFFER_SIZE` is a silent ceiling.** An oversized payload is dropped
+  before sending, and bulk call sites discard the ack. Add a `static_assert` for any
+  struct that can grow. The overlay path sits 3 bytes under the old cap.
+- ⚠️ **A `user_sync_*` handler runs on the slave's split-protocol thread**, concurrently
+  with its main loop. Record the request and act in housekeeping
+  (`split_sync_drain_anim_replay()`); never touch the SPI bus there.
+- ⚠️ **Never bool-test `send_to_bridge()`; classify with `sync_succeeded()`.** Every
+  return value is non-zero. Only a successful sync may advance `global`.
+- ⚠️ **The split UART has no payload integrity check of its own.** The per-transaction
+  CRC32 is the only one. Keep it.
+- **Ack bytes are Hamming-spaced (distance 4)** and `sync_succeeded()` is a whitelist.
+  `sync_is_link_fault()` is a complement, not a list.
+- **An overlay mapping chunk is one-shot.** A lost chunk arms a repair drained from
+  housekeeping. Every mapping-apply site pairs `set_packed_overlay_mapping()` with
+  `request_disp_refresh()` on both halves.
+- ⚠️ **split42 needs `POLY_SPLIT_SHMEM_RPC_GUARD`.** Don't remove it; the writer it
+  guards against was never found.
 
-⚠️ **A `user_sync_*` handler runs on the SLAVE's split-protocol THREAD**
-(`serial_protocol.c`'s `SlaveThread`, `HIGHPRIO`), concurrently with the slave's main
-loop — not in it. So a handler must never touch the keycap SPI bus, the shift registers
-or anything the main thread may be mid-way through: record the request and let
-housekeeping act (`split_sync_drain_anim_replay()` is the pattern). Starting Eden from
-the handler collided with the slave's own boot render and froze it at "100%" with no
-render sub-steps — the boot hang that kept the first-run intro off for months (fixed
-2026-09-25).
+### Persistence and state
 
-### Firmware staging, the self-apply, and the on-keycap signing prompt (FW-2)
+- **EEPROM writes happen only at suspend/reset/store** (`save_all_dirty()`). Never write
+  EEPROM in a split-transaction handler.
+- ⚠️ **An unwritten EEPROM byte reads `0x00`, not `0xFF`**, after wear levelling. Gate a
+  new field on the format version, and retire a broken version value rather than reuse
+  it.
+- **`g_user_brightness` changes only at deliberate set-points**, never from idle or
+  suspend transients.
+- **Idle tracking is a `bool` plus a `uint32_t` timestamp**, never a signed sentinel.
+  The idle delay is the per-board `get_idle_timeout_ms()`; `FADE_OUT_TIME` is gone.
 
-`rules.mk` sets `-DFW_REQUIRE_SIGNATURE`, so an image without a valid Ed25519 signature
-is not refused outright — **the board becomes the dialog**, blanking every keycap except
-an **A / ACCEPT** and **R / REJECT** pair. The state machine, the render details and the
-user-facing story are
-[`keyboards/polykybd/FW_STAGING.md`](keyboards/polykybd/FW_STAGING.md) and
-`keyboards/polykybd/tools/SIGNING.md`. Seven rules bind code outside them:
+### Firmware staging and the signing prompt
 
-- ⚠️ **The self-apply's page buffer must be `uint32_t`.** A `static uint8_t
-  page_buf[256]` word-copied through a `(uint32_t *)` cast has alignment 1, and an
-  unaligned `STMIA` is a **HardFault on Cortex-M0+** taken inside a function that never
-  returns. It shipped, and it bricked boards. The fix is the TYPE, not an `aligned(4)`
-  attribute, so no later edit can reintroduce it.
-- ⚠️ **When a bisect blames a commit that cannot have touched the failing code, check
-  whether it moved the failing code's DATA.** That brick bisected cleanly to a macro PR
-  that touches nothing in the applier: it grew `.bss` and shifted the buffer off a word
-  boundary, while `fw_staging_do_apply` was byte-identical across the regression. Ten
-  rounds were aimed at the code on the strength of that comparison.
-  (`arm-none-eabi-nm -S <elf> | grep <buffer>`, then `addr % 4`.)
-- ⚠️ **COMMIT must NOT block waiting for the answer** — it runs inside
-  `raw_hid_receive()` on the loop that scans the matrix, so a busy-wait guarantees the
-  keypress is never seen. It is a state machine answering `?` until resolved.
-- ⚠️ **An UNSIGNED artifact gets the prompt; an INVALID one is refused outright.** Opposite
-  events: offering a keypress for the second hands an attacker the one thing the physical
-  gate exists to withhold. **Accept is physical, cancel may be remote.** The rule now
-  covers the DOOM pack too (below), and both prompts share one presentation —
-  `poly_sync_t.fw_confirm` carries the KIND (`enum poly_confirm_kind`), and the render
-  gate, the key swallow and the `clear_keyboard()` are written once.
-- ⚠️ **`clear_keyboard()` before ANY path that swallows keys or does not return**, or the
-  host keeps a keycode registered and auto-repeats it until USB drops.
-- ⚠️ **A visual cue set on a path that never returns is never painted.** The orange RGB
-  cue had, in practice, never been seen — anything that must be *visible* before a
-  blocking self-flash has to be flushed by the code that draws it.
-- ⚠️ **Signing covers the firmware image AND the `.plyx` engine pack (FW-9), but NOT the
-  rest of the resource region** — no signature check there at any target. Do not
-  describe the keyboard as "signed firmware, so a malicious flash is covered".
-- ⚠️ **The pack's unsigned prompt is gated on the ENTRY, and `build_pack.sh` does not
-  sign.** `doom/doom_pack_gate.h` is the table: valid loads; INVALID is refused on every
-  path; UNSIGNED prompts only on a deliberate `KC_IDDQD` entry and is refused on the idle
-  screensaver, where nobody is there to answer. A locally built `.plyx` therefore always
-  takes the prompt route — signing is `sign_doompack.py`, a separate step only
-  `release.yml` runs. An accepted pack is remembered **for the boot, bound to its image
-  CRC**, and reaches the slave through `poly_sync_t.doom_pack_auth_crc` — the CRC, not a
-  flag, because the slave must honour the answer only for the pack IT holds (a partial
-  `install_doompack` can leave the halves different, and the GET_ID slot block covers the
-  master's slots only, so nothing downstream notices). The slave loads the pack too and
-  never sees the keypress. ⚠️ **That binding, and the refusal latch's key, are the two
-  places this gate has already been got wrong — the `audit-derived-verdict` skill is the
-  checklist for any cached or delegated verdict, here or elsewhere.** ⚠️ The load runs on
-  the loop that scans the matrix, so it **raises the prompt and returns false**; `doom_tick()` re-enters once the
-  answer lands. Blocking there would guarantee the keypress is never seen — the same trap
-  `FW_UP_COMMIT` avoids.
+`-DFW_REQUIRE_SIGNATURE`: an unsigned image turns the board into an ACCEPT/REJECT
+dialog. [`FW_STAGING.md`](keyboards/polykybd/FW_STAGING.md),
+`keyboards/polykybd/tools/SIGNING.md`.
 
-### The Intl layer: latin-variation picker and letter remap (`_ADDLANG1`)
+- ⚠️ **The self-apply page buffer must be `uint32_t`.** A `uint8_t` buffer word-copied
+  through a cast HardFaults the M0+, and it bricked boards. When a bisect blames a commit
+  that cannot touch the failing code, check whether it moved that code's DATA
+  (`arm-none-eabi-nm -S`, then `addr % 4`).
+- ⚠️ **Anything waiting for a keypress must not block.** COMMIT and the DOOM pack load
+  run on the loop that scans the matrix, so they answer `?` / raise the prompt and
+  return.
+- ⚠️ **Unsigned gets the prompt; invalid is refused.** Accept is physical, cancel may be
+  remote.
+- ⚠️ **Call `clear_keyboard()` before any path that swallows keys or does not return.**
+- ⚠️ **A visual cue on a path that never returns is never painted** unless the code that
+  draws it flushes it.
+- ⚠️ **Signing covers the firmware image and the `.plyx` DOOM pack (FW-9), not `.whx` or
+  `.plyf`.** Don't call the keyboard "signed, so a malicious flash is covered".
+  `build_pack.sh` does not sign; a local `.plyx` always takes the prompt route. An
+  accepted pack is bound to its image CRC and reaches the slave as
+  `poly_sync_t.doom_pack_auth_crc`. Any cached or delegated verdict like this one goes
+  through the `audit-derived-verdict` skill.
 
-Holding **Intl** shows each letter's selected accented variation; tapping **Ctrl** turns
-the number row into a picker, and `KC_LAT_REMAP` reassigns a key to another letter's row
-(so `e`, `q`, `j` can carry `é è ê`). Both mechanisms, the storage split and the four
-traps behind them are
-[`keyboards/polykybd/INTL_LAYER.md`](keyboards/polykybd/INTL_LAYER.md). Five rules
-generalise beyond this feature:
+### Feature areas
 
-- ⚠️ **An unwritten EEPROM byte reads `0x00` here, NOT `0xFF`** — QMK's wear levelling
-  normalises cleared bytes to zero, so a map designed to need no migration sentinel read
-  back as "every key hosts letter 0" and **every Intl keycap rendered a variation of
-  `a`**. Gate such a field on the format version. ⚠️ **A version gate alone does not HEAL
-  an already-flashed board**: retire the broken version value rather than reusing it.
-- ⚠️ **Gate a release swallow on OWNERSHIP, not on the keycode** — swallowing the release
-  of a modifier the user is really holding leaves it registered forever. **Modifiers and
-  layer keys must fall through**; swallowing `MO(_ADDLANG1)`'s own release made the mode
-  inescapable. The same rule bit twice, one function apart.
-- ⚠️ **`render_key()` is only consulted when `to_static_text()` returns NULL**, so a key
-  that HAS a legend bypasses a "the board becomes a dialog" mode entirely — including the
-  key that opens it. Suppress `text` in `update_displays()` too.
-- **The picker LATCHES by registering the REAL modifier**, because the slave only ever
-  sees `poly_layer_t.mods` and both flag bytes in `base/com.h` are full.
-- **Nothing may overlay this layer** — the letters *are* the payload. The `!add_lang`
-  guard must wrap **both** arms of the display_overlays if/else; folding it into the
-  first condition looks equivalent and is not.
+Each has a doc; the rules below bind code outside it.
 
-### Glyph-script override (HID cmd 30, protocol v9+; expanded v10)
+- **Intl layer** ([`INTL_LAYER.md`](keyboards/polykybd/INTL_LAYER.md)): gate a release
+  swallow on ownership, not the keycode, and let modifiers and layer keys fall through.
+  Nothing may overlay this layer.
+- **Glyph script, cmd 30** ([`GLYPH_SCRIPT.md`](keyboards/polykybd/GLYPH_SCRIPT.md),
+  skill `add-glyph-script`): the index is open-ended, so a new face needs no protocol
+  bump. Don't add a range NACK. Codepoints are relocated into private blocks 0x40 apart.
+- **Layer names, cmd 35** ([`LAYER_NAMES.md`](keyboards/polykybd/LAYER_NAMES.md)): the
+  count is `DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT`, not `DYNAMIC_KEYMAP_LAYER_COUNT`.
+- **RGB settings row** ([`RGB_SETTINGS_ROW.md`](keyboards/polykybd/RGB_SETTINGS_ROW.md)):
+  ⚠️ a legend is not evidence a keycode does anything; grep for the `case` that handles
+  it. Enable an effect on both variants. New RGB defaults reach only a fresh eeconfig.
+- **Cirque trackpad** ([`TRACKPAD.md`](keyboards/polykybd/TRACKPAD.md)): the gesture
+  layer is the default (`-e POLYKYBD_CIRQUE_RELATIVE=yes` opts out). A flavour only a
+  hand-typed `-e` reaches is tested by nothing. `POINTING_DEVICE_ROTATION_90` is
+  relative-only.
+- **Community modules** ([`COMMUNITY_MODULES.md`](keyboards/polykybd/COMMUNITY_MODULES.md),
+  skill `extract-qmk-module`): declared in each variant's `keyboard.json` (there is no
+  `keyboards/polykybd/keyboard.json`), and listing a module is the enable. Module hooks
+  run before `_kb`/`_user`. Overriding a non-suffixed hook means calling `_kb` yourself.
+  The LTR-559 sensor is side-agnostic.
+- **First-run tutorial** ([`anim/TUTORIAL.md`](keyboards/polykybd/anim/TUTORIAL.md)): it
+  annotates the normal renderer, never redraws the board. On the slave, what the master
+  drew is known only as what the link carried. GET_LANG reads `poly_reported_lang()`, so
+  the preview never reaches the host.
+- **Demo mode** ([`anim/DEMO_MODE.md`](keyboards/polykybd/anim/DEMO_MODE.md)): ⚠️ demo
+  mode must not change any behaviour outside demo mode (maintainer's rule). The key demo
+  sends no modifier and no Tab. Its typing text IS the idle screen's poems.
 
-An OS-independent override of the language-layer legends with an alternative script
-(Tengwar, runes, Aurebesh, IBM VGA, C64, Braille, APL…). The enum, the relocated PUA
-blocks, the per-script font licensing and the render hook are
-[`keyboards/polykybd/GLYPH_SCRIPT.md`](keyboards/polykybd/GLYPH_SCRIPT.md); the
-`add-glyph-script` skill drives adding one.
+## Fonts
 
-- **The index is OPEN-ENDED (v10+): cmd 30 accepts any value `0..0xFE`, and an unknown
-  one renders the normal legend.** That is what lets the host offer scripts a keyboard
-  lacks and lets **new font faces ship without a protocol bump** — adding a `GLYPH_*`
-  value needs only the enum entry, the `glyph_script_blocks[]` row, the font and the host
-  label. **Don't re-add a range NACK.**
-- **Codepoints are RELOCATED, not native** — the `flags` bundle already occupies the CSUR
-  PUA, so a raw script codepoint would render a language flag. Each script gets a dense
-  private block 0x40 apart, and the firmware needs only the base + dense index.
-- **Keep user-facing strings generic** — trademark caveat on the fictional scripts, though
-  the fonts themselves are license-clean.
+Generated by `fontconvert` (`../Adafruit-GFX-Library/`) from
+`keyboards/polykybd/fonts/fonts.yaml`, whose list order is the font priority.
+[`fonts/README.md`](keyboards/polykybd/fonts/README.md),
+[`FONT_PACK.md`](keyboards/polykybd/FONT_PACK.md).
 
-### Layer names over the wire (HID cmd 35, protocol v14+)
+- **Byte-reproducible output needs the pinned `fontconvert`** (FreeType 2.13.3 /
+  HarfBuzz 2.6.7).
+- ⚠️ **Only `RESIDENT_FONTS[]` reaches the image**, though every font is a header.
+  Check the link map or `nm`, not the `#include`.
+- ⚠️ **Adding a resident FONT shifts every pack font's index and forces a full reship.**
+  Extend `IconsFont` (U+100000..) instead.
+- ⚠️ **`tools/check_glyph_coverage.py` must pass**: every codepoint a legend draws must
+  be in a font. A gap once HardFaulted the master (#329).
+- ⚠️ **No heavy work in a split-transaction handler**, and FONTPACK writes in place, so a
+  slot is valid when its last chunk lands. Reship with the `reship-fontpack-bundle` skill.
 
-The host layout editor used to label its tabs from a generated file whose generator's
-source path had been dead through two renames — so it listed 14 layers ending
-`EMJ0`/`EMJ1`, a split this firmware had not had in a very long time. **A name the
-keyboard states itself cannot drift from the keyboard.** The encoding rationale is
-[`keyboards/polykybd/LAYER_NAMES.md`](keyboards/polykybd/LAYER_NAMES.md).
+## Crashes, hangs and investigations
 
-- ⚠️ **The count is NOT a second opinion** — it is the same
-  `DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT` cmd 17 reports. Do not "improve" it to
-  `DYNAMIC_KEYMAP_LAYER_COUNT`: that invites the editor to draw tabs it cannot write to.
-- **All three name widths live in ONE record** (full, ≤5 for split42's panel, ≤8 for the
-  wire). They were three hand-kept lists, two carrying a "keep in sync" comment — the
-  guard shape this repo keeps getting caught by.
-- ⚠️ **The TOTAL is what makes the reply decodable**, and it is why the length is not in
-  the records: without it, an **unnamed layer** is indistinguishable from the zero fill.
-  ⚠️ The claim that a terminated form is *unsafe against truncation* is **FALSE** and was
-  asserted here on a bad fixture — measured across every reachable failure mode, the
-  three encodings behave identically. Don't re-derive a robustness argument without
-  checking which scenarios the firmware can actually emit.
+How faults are recorded and reported, the watchdog, and the boot window:
+[`CRASH_DIAGNOSTICS.md`](keyboards/polykybd/CRASH_DIAGNOSTICS.md); the `hunt-boot-hang`
+skill. Closed investigations and the evidence behind the rules here:
+[`INVESTIGATION_HISTORY.md`](keyboards/polykybd/INVESTIGATION_HISTORY.md).
 
-### The settings-layer RGB row
-
-⚠️ **A LEGEND IS NOT EVIDENCE A KEYCODE DOES ANYTHING — the four RGB effect presets drew
-a keycap for years and were dispatched nowhere.** `RGB_M_P`/`RGB_M_B`/`RGB_M_R`/`RGB_M_SW`
-are legacy *underglow* mode keycodes with no case in `process_underglow()`, none in
-`process_rgb_matrix()`, and `IS_RGB_KEYCODE` dispatched nowhere at all. The keys
-rendered, felt real, and did nothing. **Before believing a key works because it has a
-legend, grep for a `case` that handles its keycode** — the display pipeline and the
-action pipeline share nothing, and this repo has now been caught by that seam in both
-directions. Details:
-[`keyboards/polykybd/RGB_SETTINGS_ROW.md`](keyboards/polykybd/RGB_SETTINGS_ROW.md).
-
-- ⚠️ **An effect must be enabled on BOTH variants**, because the handler is in the shared
-  keymap; read the indices out of the compiled object rather than counting the enum.
-- ⚠️ **`val_to_percent()` scaled against 255 while the value is CAPPED at
-  `RGB_MATRIX_MAXIMUM_BRIGHTNESS`**, so a fully-lit matrix reported 39% and could never
-  reach 100. Saturation genuinely is a `/255` value — same row, different scale.
-- ⚠️ **New RGB defaults reach only a FRESH eeconfig.** Say so in release notes rather
-  than implying the value moved for everyone.
-
-### Cirque trackpad gesture layer (split72)
-
-- **The custom gesture layer — why the stock ASIC gestures are not used, the pure
-  decision FSM, the tunables, and the analysis of running ONE image on either half —
-  is [`keyboards/polykybd/TRACKPAD.md`](keyboards/polykybd/TRACKPAD.md).** Three rules
-  that bind code outside `cirque_gestures.c` / `base/cirque_gesture_fsm.c`:
-  - ⚠️ **The gesture layer is the DEFAULT; `-e POLYKYBD_CIRQUE_RELATIVE=yes` opts
-    out.** It was opt-in until 2026-09-15, which meant PR CI and the release
-    workflow — both of which build the *default* — produced a flavour no hardware
-    round had ever run. **A build flavour only a hand-typed `-e` reaches is covered
-    by nothing**; if a tested flavour is not the default, that is a gap, not caution.
-  - ⚠️ **`POINTING_DEVICE_ROTATION_90` is RELATIVE-ONLY** (`split72/config.h`). Our
-    layer emits deltas already in the pad's physical frame, and
-    `pointing_device_adjust_by_defines()` would rotate them a second time — a 90°
-    cursor error that reads as a wiring fault.
-  - ⚠️ **`POINTING_DEVICE_RIGHT` does NOT bake in a side** — it only selects the
-    runtime expression `!is_keyboard_left()` that three gates and both split handlers
-    evaluate every boot. So "the pad is on the right" is a build-time *assertion*, not
-    a hardware constraint; TRACKPAD.md has what a side-agnostic image would take.
-
-### Community modules (`modules/polykybd/`) and the LTR-559 sensor
-
-Self-contained, keyboard-independent code lives in **QMK community modules** rather than
-`keyboards/polykybd/`: `polymod_core1`, `polymod_crc32`, `polymod_monocypher`,
-`polymod_os_actions`, `polymod_prc` (the cmd 41 image decoder, its table and a table
-trainer), `polymod_rle`, and `polymod_ltr559` — the
-**entirely optional** ambient-light + proximity sensor that shares the Cirque I2C bus and
-cleanly no-ops when no sensor is fitted. The module mechanics, the sensor's tuning
-numbers, the auto-brightness policy and the slave→master backchannel are
-[`keyboards/polykybd/COMMUNITY_MODULES.md`](keyboards/polykybd/COMMUNITY_MODULES.md); the
-`extract-qmk-module` skill drives a conversion.
-
-- **Declared in each VARIANT's `keyboard.json` (`split72/`, `split42/`), not `keymap.json`,
-  and listing a module IS the enable** — there is no `keyboards/polykybd/keyboard.json`;
-  the build defines `COMMUNITY_MODULE_<NAME>_ENABLE`. No `SRC +=` line, no bespoke `-D`;
-  gate consumer code on the generated define.
-- ⚠️ **Module hooks run BEFORE `_kb`/`_user`.** That is what makes a self-driving module
-  safe, and it is the whole argument for deleting explicit init/task calls in favour of
-  hooks — verify it before doing so.
-- ⚠️ **Overriding the non-suffixed hook means you must call the `_kb` link yourself**, or
-  the keyboard/keymap specialisations are silently dropped.
-- **What is worth extracting**: code with no PolyKybd types and no display/protocol
-  coupling. **Not** `poly_keymap.c` / `hid_com.c` / the overlay stack — that is the
-  product.
-- ⚠️ **The LTR-559 is side-agnostic** — do not re-gate it on `is_right_side()`; a
-  left-soldered sensor was never read once, in the field. Its proximity baseline is
-  **housing-dependent** (~129 open bench, ~325 mounted), so re-check the threshold after
-  any housing change.
-
-### Notable QMK features enabled
-RGB matrix (72 LEDs, 35 effects), dynamic keymap (9 host-remappable layers), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
-
-⚠️ **VIA is NOT supported and must not be advertised as such.** `VIA_ENABLE` is
-unset on both variants — only `DYNAMIC_KEYMAP_ENABLE` is on, and remapping happens
-through PolyKybdHost's own layout editor over our raw-HID channel. The one residue
-is `poly_keymap.c`'s `#include "quantum/via.h"`, which is where QMK happens to
-define the `id_dynamic_keymap_*` command IDs the dynamic keymap uses; that include
-is a QMK header path, not a VIA feature. Don't reintroduce "VIA-compatible" wording
-in docs, UI strings or comments.
-
-### The first-run intro and tutorial (`anim/tutorial.c`, `base/tutorial_plan.c`)
-
-Eden, then a ten-step lesson that points at real keys (letters, Shift, the board reveal,
-a board-only language preview, the Lang and emoji menus, Fn, Num, the Intl picker).
-**On by default since 1.0.0** (`-e POLYKYBD_BOOT_INTRO=no` opts out; HIL images default
-it off, since a rig never presses a key). Plays once per board (EEPROM marker), again
-after RESET Eden. The design, every hardware round and the traps are
-[`keyboards/polykybd/anim/TUTORIAL.md`](keyboards/polykybd/anim/TUTORIAL.md); the phase
-machine is pure and unit-tested (`make test:polykybd_tutorial_plan`). Three rules bind
-code outside it:
-
-- ⚠️ **The tutorial ANNOTATES the normal renderer, it never re-draws the board** — it
-  hides keys (`tutorial_key_visible`) and owns the status panels. Every chapter that
-  re-implemented rendering was a bug.
-- ⚠️ **On the slave, anything the master DREW is known only as what the link carried.**
-  The Intl letter is drawn at random on the master; prose built from the slave's own
-  draw named a different letter than the ring pointed at.
-- ⚠️ **The preview never reaches the host**: `poly_reported_lang()` is what GET_LANG and
-  the settings save read, because the host switches the OS layout to whatever GET_LANG
-  says.
-
-### Demo mode (`anim/demo_mode.c`, `base/demo_plan.c`)
-
-`KC_DEMO` on the settings layer (behind More) plays a 15-minute showroom loop until Esc
-is held for 2 s. The playlist and its timing are pure (`make test:polykybd_demo_plan`).
-`KC_DEMO_KEYS`, beside it, is the **key demo**: the same loop, and each TYPE segment
-also reaches the host as plain keystrokes plus an Enter per line, as a notepad typing
-test. ⚠️ **The demo's longer typing IS the idle screen's poems** (`idle_poem_0..4`,
-pointed at, not copied — ~900 B of the demo's own prose was removed for it), so editing a
-poem changes both the split72 idle screen and the demo, and `idle_poem_plan.c` is now in
-the shared `POLY_SRC` rather than split72's `SRC`. Two decisions that will be questioned again:
-
-- ⚠️ **The key demo sends NO modifier, ever** — a shifted character goes out as its
-  unshifted key (`H` → h, `(` → 9), and Tab is refused (`demo_host_usage()`), so an
-  hours-long run cannot switch windows or fire a shortcut. Strokes are **counted, not
-  sampled** from the highlight (`host_keys_tick()`): a slow housekeeping pass can step
-  over an 85 ms press, and a typing test must not lose that character.
-
-- ⚠️ **Demo mode must not change any behaviour outside demo mode** (the maintainer's
-  rule, 2026-10-01). A suspend veto added so the demo would run with no host was
-  reverted for breaking it.
-- **No change is needed for a power-only demo**: stock firmware already runs on a USB-C
-  charger or power bank (confirmed on hardware, 2026-10-01).
-
-## Font generation
-
-Fonts for the per-keycap OLEDs are generated by `fontconvert` from the
-[`AdafruitGFX/`](../AdafruitGFX/CLAUDE.md) repo, config-driven from
-`keyboards/polykybd/fonts/fonts.yaml` — whose **list order IS the `ALL_FONTS[]`
-priority** (front-to-back, first match wins). `generate_fonts.py` writes one header per
-category and composes `gfx_used_fonts.h`; `--check` flags stale headers. Full docs:
-[`keyboards/polykybd/fonts/README.md`](keyboards/polykybd/fonts/README.md).
-
-- ⚠️ **Several artifacts are mirrored BYTE-IDENTICALLY into the host repo** —
-  `fonts/noto-fonts.yaml`, `base/fonts/generated/fontpack_render_settings.json` and
-  `lang_flags.json`. Keep them in sync (`cmp`); the host editor silently pre-fills the
-  wrong controls otherwise.
-- **Byte-reproducible output requires the pinned `fontconvert` build** (FreeType 2.13.3 /
-  HarfBuzz 2.6.7); the distro fast-path build renders ~1 px differently on some glyphs.
-- ⚠️ **Every font is a C header and `gfx_used_fonts.h` includes them all, but only
-  `RESIDENT_FONTS[]` reaches the image** — `--gc-sections` drops the packed fonts'
-  arrays. The headers are the pack's source of truth (`fontpack.py` parses them), so
-  "is it `#include`d?" says nothing about flash: check the link map or `nm`. The reasons
-  are in [`fonts/README.md`](keyboards/polykybd/fonts/README.md) → *Why every font is a
-  C header*.
-- ⚠️ **`parse_gfx_header()` CANONICALISES every glyph's `bitmapOffset`**, so a purely
-  cosmetic header change cannot reach the `.plyf` bytes. Without it, reformatting the
-  tree changed four shipped bundles and would have forced a reship for zero visual
-  change. Don't "simplify" it away.
-- **Everything is grid-fitted EXCEPT emoji**, and ⚠️ setting `hinting: auto` on emoji is a
-  measured **no-op** — those codepoints match no autohinter script, so 0 of 1156 glyphs
-  change and only the provenance comment moves.
-- **Adding codepoints to an existing `latin` font is the cheap case** (resident, in no
-  bundle: no reship, no `content_version` bump) — and a codepoint **inside** an existing
-  span costs only its bitmap, since the record already exists.
-- ⚠️ **Every codepoint a legend draws must be in a font, and
-  `tools/check_glyph_coverage.py` is what says so** — it walks all four LUT columns of
-  all 160 layouts, skipping display-list ops the way `bbox_walk()` does, and exits 1 on
-  a gap. CI runs it through `tools/tests` (`RealTreeTest`). A gap used to HardFault the
-  master: the missing-glyph fallback read `'!'` from `g_all_fonts[0]`, which is
-  `IconsFont` at U+100000, and the glyph index underflowed (hy-AM's U+2014 Shift legend,
-  2026-10-01, twice in demo mode; #329). It now draws `'!'` from the font that has one,
-  which is still a visible defect — so a gap fails the PR rather than shipping.
-
-The font pack itself — the eight `PlyF` bundles, the slot layout and the HID transport —
-is [`keyboards/polykybd/FONT_PACK.md`](keyboards/polykybd/FONT_PACK.md). ⚠️ **`g_all_fonts`
-is scanned FRONT TO BACK and resident is always in front**, so adding a whole new
-resident FONT shifts every pack font's gidx and forces a full-pack reship; extend the
-resident `IconsFont` instead. It lives in plane-16 PUA (U+100000..), where no icon can
-shadow a real character; it left the C1 band after that filled up (`FONT_PACK.md`).
-`fonts.yaml` `append_fonts` orders a resident font LAST so no pack font moves. ⚠️ **Never do heavy work in a split-transaction handler** —
-re-CRCing the whole pack inside a ~20 ms RPC callback made the master report a perfect
-flash as a CRC failure. ⚠️ **Because FONTPACK writes IN PLACE, a slot is valid as soon as
-the last chunk lands — COMMIT is not what makes it so.** The `reship-fontpack-bundle`
-skill handles a reship; it needs no `fontconvert`.
-
-## Future language candidates
-
-Adding a language needs (1) a new `LANG_*` entry in `lang/lang_lut.c` (cog-generated from
-`lang_lut.xlsx`), (2) `fonts/gen-lang-fonts.sh` re-run for the flag glyph, and (3) the
-host's `LANG_REGION` map only if the country code is non-standard. Full mechanics, the
-candidate tables and the status of each shipped wave are in
-[`keyboards/polykybd/lang/FUTURE_LANGUAGES.md`](keyboards/polykybd/lang/FUTURE_LANGUAGES.md);
-the `add-polykybd-language` skill drives the job.
-
-**`NUM_LANG` is 160.** ⚠️ Protocol codes are fixed 2+2 chars, so an ISO-639-2/3 language
-needs a **pseudo-code** stored verbatim in the frozen index table (Hawaiian is `hw-US`,
-Sorani `ku-IQ`). Adding a standard ISO language needs no table change.
-
-## Hard-won lessons (and where the history lives)
-
-### Troubleshooting principle: mechanical, auditable steps beat clever guesses
-
-When a bug resists the "smart" theories, do the **dumb, exhaustive, fully-auditable
-exercise** instead. Five rules, each of which was earned on the split42 rebuild (the
-narrative is in
-[`keyboards/polykybd/INVESTIGATION_HISTORY.md`](keyboards/polykybd/INVESTIGATION_HISTORY.md)):
-
-1. **One change per commit**, so any subset can be flashed or reverted to bisect. The
-   deliverable of an investigation is often the *commit sequence*, not just the fix.
-2. **Derive facts from the authoritative source, not memory or an old file** — pins from
-   the KiCad schematic, not a stale header.
-3. **Suspect what is ABSENT or DISABLED, not only what is present.** A missing subsystem
-   or dropped build flag can change timing, linker layout, split transactions or init
-   order in ways that break an unrelated-looking feature. Diff a broken variant against a
-   working one for *removed* config.
-4. ⚠️ **If you claim you copied or reset something, actually do it from the source.** An
-   earlier "rebuild" silently reused old files, hid the real diff, and produced "same
-   problem as before". A reviewer must be able to verify each step from the git history.
-5. **Don't over-narrate conclusions before the test.** State what a build contains and
-   what each outcome would imply; let the hardware decide.
-
-### A crash, a hang, or a board that "just stopped"
-
-**How a fault is recorded, rebooted through and announced on the next boot is
-[`keyboards/polykybd/CRASH_DIAGNOSTICS.md`](keyboards/polykybd/CRASH_DIAGNOSTICS.md)** —
-the phase breadcrumb, the 8 s watchdog, cmd 39 / `polyctl crash show`, and the boot
-window's own instruments. Read it before chasing any "it froze and a replug fixed it".
-Three rules that bind code outside it:
-
-- ⚠️ **BOOT is the one unwatched window**, so a stall there is permanent: no reset, no
-  record, **and no console output at all** — `console_task()` and
-  `usb_event_queue_task()` are MAIN-LOOP calls and `keyboard_init()` has not reached
-  the loop. The status panel is the only live channel a wedged board has; do not
-  conclude "it printed nothing" from one that structurally cannot carry it.
-- ⚠️ **The final boot render is ~40 blocking `spiSend()` calls with no timeout**
-  (`osalThreadSuspendS`), which is where a cold-boot wedge has actually landed. A
-  watchdog guard covers boot step 5 (core1 up, 63%) through that render, armed with
-  `crash_watchdog_arm()` — never `crash_watchdog_start()`, which declares the boot
-  survived. A new slow step in that window must feed it.
-- ⚠️ **A watchdog reset runs NO code**, so it never reaches the crash-loop halt in
-  `record_and_reboot()`. Any watchdog armed inside boot must be one-shot, or a hang
-  that recurs every boot becomes a reboot loop.
-- ⚠️ **No peripheral IRQ may preempt the USB IRQ** — I2C0 and SPI0/1 sit at the USB
-  priority (3) in both `mcuconf.h` files. I2C0 at 2 nesting into a running USB IRQ sent
-  core0 to a garbage address: the `0x16C1`/`0x16E1` boot hang, ~1 boot in 3 under a
-  reboot loop, 0 in 845 after the change (I2C0 + SPI at 3). The evidence is CRASH_DIAGNOSTICS.md →
-  *Boot hang: an IRQ nested into USB*.
-- **A boot hang is reproduced with the host's boot loop, not by waiting for the field**
-  (`polyctl bootloop --rounds N`, cmd 43). It brought the `0x16C1` hang from "now and
-  then" to about 1 boot in 3, because the host re-enumerates and polls the keyboard
-  while the boot runs. ⚠️ **Size every A/B from the rate: ruling out a hang of 1 in N
-  at ~95% takes about 3·N clean rounds.** 17 clean rounds against a 1-in-3 baseline is
-  already conclusive; 845 clean rounds bound what is left at 1 in 280. The
-  `hunt-boot-hang` skill drives the loop.
-
-### Rules that came out of closed investigations
-
-The narratives moved to
-[`keyboards/polykybd/INVESTIGATION_HISTORY.md`](keyboards/polykybd/INVESTIGATION_HISTORY.md)
-(11 resolved bugs, the split42 split-link saga, the split-link integrity analysis
-and the HIL language-timeout note). **Read it when you need the evidence behind one
-of these rules, a root cause to compare a new symptom against, or the reasoning
-somebody is about to reverse.** What must stay in context is the rules themselves:
-
-- ⚠️ **Never bool-test `send_to_bridge()` — classify with `sync_succeeded()`.**
-  Every return value is non-zero, give-up included, so `if(!send_to_bridge(...))`
-  is dead code: the master advanced `global` to `local`, produced no diff, and
-  never re-fired the lost sync. The diff IS the retry queue, and only a successful
-  sync may advance `global`. The *discarding* sibling applies to the bulk overlay
-  sends, which threw the ack away entirely.
-- ⚠️ **The split UART has NO payload integrity check of its own.** QMK's transport
-  checks a 1-byte handshake token and nothing else; the per-transaction CRC32 in
-  `split_sync.c` is the only thing between wire noise and the slave applying
-  garbage. Do not remove it on the theory that the transport covers it.
-- **Ack byte values are Hamming-spaced (min pairwise distance 4), built as
-  complement pairs at popcount 4**, because the 1-byte reply carries no CRC. A
-  seventh value must keep distance 4 or single-bit tolerance degrades for the whole
-  set. `sync_succeeded()` is a deliberate **whitelist** so a new failure value is a
-  failure at every existing call site with no edits.
-- **`sync_is_link_fault()` is a COMPLEMENT, not an enumeration of its siblings** —
-  a link fault is "nobody answered" or "what reached the slave was corrupt", and
-  every other byte means the slave answered with a verdict. Listing the non-fault
-  values is the guard shape that goes stale. `nack` is excluded from `err%` for the
-  same reason: `SYNC_BUSY` arrives on every erase re-poll of a flash.
-- **The split link is full-duplex two-wire** (`SERIAL_USART_FULL_DUPLEX`, TX GP5 /
-  RX GP4, `SERIAL_USART_PIN_SWAP` giving the crossover by role at runtime so one
-  image serves both halves). Steady-state error rate measured **zero** after the
-  migration. ⚠️ `SELECT_SOFT_SERIAL_SPEED` is **0 = 460800 baud**, not the 230400
-  the historical half-duplex analysis quotes.
-- ⚠️ **split42 needs `POLY_SPLIT_SHMEM_RPC_GUARD`** — an 8-byte pad at the pointing
-  member's position in `split_shared_memory_t`, in front of the RPC buffers
-  (`transport.h`, tracked in `UPSTREAM_PATCHES.md`). **Do not remove it**: the
-  latent writer it guards against was never found.
-- **EEPROM persistence is the suspend-only dirty-flag model.** Never write EEPROM
-  inside a split-transaction handler (a ~50 ms wear-levelling consolidation erase
-  there costs the UART its response window), and never re-add a per-housekeeping
-  default-layer drain — `save_all_dirty()` flushes at suspend / reset / store.
-- **`g_user_brightness` is the MANUAL brightness and is updated only at deliberate
-  set-points**; idle/suspend transients must never be persisted as it. Host-auto
-  mode plus its last value persist separately in `poly_eeconf_t.auto_brightness`,
-  with a **known bit** so engaging auto before the host pushes cannot bank the
-  default as if real.
-- **Idle tracking is a `bool` plus a `uint32_t` timestamp**, never a signed
-  sentinel: `is_idle_tracking()` / `disable_idle_tracking()` /
-  `backdate_last_update()`. The old signed `last_update` silently disabled idle for
-  the ~25-day window past uptime 2³¹, and underflowed near boot.
-- **An overlay mapping chunk is ONE-SHOT — nothing re-fires it**, unlike the
-  periodic state syncs where the diff is the retry queue. The master holds the
-  authoritative tables, so a lost chunk arms a repair that drains from
-  **housekeeping**, never inline in the HID handler. The two *image* bridges cannot
-  be repaired: `resolve_upload_side()` means the master never had the bytes.
-- **`DISPLAY_OVERLAYS` belongs in `OVERLAY_SYNCED_STATE_FLAGS`**, and every
-  mapping-apply site pairs `set_10bit_overlay_mapping()` with
-  `request_disp_refresh()` — on both halves.
-- **core1 runs with interrupts masked** (`cpsid i` at the top of `core1_entry`).
-  Empirically the only fix for the overlay/ROI hang; the mechanism was never
-  established, and it is safe because core1 polls the FIFO rather than waiting on an
-  IRQ. Do not remove it on the strength of a theory.
-- ⚠️ **The RP2040 USB driver is a VENDORED copy** (`keyboards/polykybd/chibios_overrides/`,
-  selected by `PLATFORM_MK`), carrying ChibiOS trunk's bus-reset-before-SETUP fix that
-  Contrib lacks. A `lib/chibios-contrib` bump does **not** update it: diff the copy
-  against the new submodule after every bump (`UPSTREAM_PATCHES.md` → "ChibiOS-Contrib
-  RP2040 USB driver"). Any code that masks interrupts for tens of ms (a flash erase)
-  while the host can reset the bus is exactly what that fix exists for.
-- ⚠️ **A clean `dmesg` does NOT mean enumeration was clean.** Linux retries a STALLed
-  GET_DESCRIPTOR silently; on the rig 9 of 10 broken transfers left no log line. Count
-  EP0 STALLs on the device (`-e POLYKYBD_USB_STRESS=yes`, the `usb_reset_race` probe).
-
+- ⚠️ **Boot is the one unwatched window and prints nothing**: the console runs from the
+  main loop. The status panel is the only live channel a wedged board has.
+- ⚠️ **Arm a boot-window watchdog with `crash_watchdog_arm()`**, never
+  `crash_watchdog_start()`, and keep it one-shot: a watchdog reset runs no code.
+- ⚠️ **No enabled peripheral IRQ may preempt USB** (I2C0, SPI0/1 at priority 3 in both
+  `mcuconf.h`). I2C0 at 2 caused the `0x16C1` boot hang.
+- **Reproduce a boot hang with `polyctl bootloop --rounds N`.** Ruling out a 1-in-N hang
+  at ~95% takes about 3·N clean rounds.
+- ⚠️ **The RP2040 USB driver is a vendored copy** (`chibios_overrides/`). Diff it after
+  every `lib/chibios-contrib` bump.
+- **core1 runs with interrupts masked.** Don't remove it on the strength of a theory.
+- **When a bug resists clever theories, do the mechanical, auditable thing:** one change
+  per commit, facts from the authoritative source (the KiCad schematic, not an old
+  header), suspect what is absent or disabled, actually redo a step you claim to have
+  redone, and let the hardware decide.

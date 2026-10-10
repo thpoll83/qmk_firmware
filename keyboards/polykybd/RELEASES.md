@@ -40,16 +40,28 @@ that cost real debugging to learn (2026-07):
   could not be bumped at all for two weeks (wincompose#21). The check reads the TAG's
   tree, so `PolyKybd` drifting ahead of a prepared tag is harmless — which it always
   is, since every merge auto-bumps.
-  - **Recovery is to MOVE the tag, not to force the release through.**
+  - **Recovery depends on WHY it refused, and the two cases take different actions.**
     `scripts/publish_release.py` pins the tag to the oldest commit whose tree declares
-    the version (`commit_for_version`), so a refusal here means either the bump has not
-    merged yet or the tag already existed in the wrong place — **publishing never moves
-    a tag** (`target_commitish` is documented as *"Unused if the Git tag already
-    exists"*). Move it and publish normally:
-    `git tag -f PolyKybd-fw-v<ver> <commit declaring it>` then
-    `git push --force origin refs/tags/PolyKybd-fw-v<ver>`. A `workflow_dispatch`
-    recovery is the wrong tool: it builds the dispatch ref, leaving the tag pointing at
-    a tree that declares the previous version.
+    the version (`commit_for_version`), so a refusal means one of two things.
+    - **The bump has not merged yet.** Nothing declares that version, so there is no
+      commit to point a tag at and moving it is not an option. Merge the bump; the pin
+      then finds it and tags the right commit with no further intervention.
+    - **The tag already exists in the wrong place.** **Publishing never moves a tag**
+      (`target_commitish` is documented as *"Unused if the Git tag already exists"*),
+      so the build comes from wherever it points. Move it, then publish normally:
+      `git tag -f PolyKybd-fw-v<ver> <commit declaring it>` then
+      `git push --force origin refs/tags/PolyKybd-fw-v<ver>`.
+      ⚠️ **Only while no release holds that tag.** This gate fires on
+      `release: published`, so by the time you read its refusal a release usually DOES
+      exist — with no assets, since the gate runs before the upload. **Delete that
+      empty release first**, then move the tag and publish: `git checkout <tag>` has to
+      keep giving the source some release was built from. If a release on that tag is
+      already live WITH assets, do not move it at all — cut the next patch version
+      instead. (Nothing in the repo enforces this: there is no tag ruleset and no tag
+      protection, so the force-push will simply succeed.)
+    A `workflow_dispatch` recovery is the wrong tool in either case: `workflow_dispatch`
+    carries no tag input here, so it builds the dispatch ref and leaves the tag pointing
+    at a tree that declares the previous version.
 
 - ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being
   released** (`tools/require_fwapply_run.py`, an early step of `release.yml`,

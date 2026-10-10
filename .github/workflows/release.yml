@@ -62,7 +62,9 @@ jobs:
           TAG: ${{ github.event.release.tag_name || github.ref_name }}
         run: |
           want="${TAG#PolyKybd-fw-v}"
-          have=$(sed -n 's/^#define FW_VERSION "\(.*\)".*/\1/p' keyboards/polykybd/config.h)
+          # ⚠️ `|| true`: GitHub runs this under `bash -e`, so a sed that cannot read
+          # the file would kill the step before the clean error below prints.
+          have=$(sed -n 's/^#define FW_VERSION "\(.*\)".*/\1/p' keyboards/polykybd/config.h 2>/dev/null || true)
           if [ -z "$have" ]; then
             echo "::error::could not read FW_VERSION from keyboards/polykybd/config.h"
             exit 1

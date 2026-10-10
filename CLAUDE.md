@@ -274,9 +274,10 @@ skill; the mechanics, the `release-notes` branch and `scripts/publish_release.py
   another number: the board reports one version, the download claims another, and the
   host updater offers that release forever because the install can never reach the
   advertised number. wincompose shipped exactly that (`PK-0.9.19`). ⚠️ **The fix is to
-  MOVE the tag** — publishing never moves one — not to dispatch, which would build the
-  dispatch ref and leave the tag on the old tree. `RELEASES.md` → the asset-naming
-  bullet.
+  MOVE the tag, and only while no release holds it** — publishing never moves one, and
+  a dispatch would build the dispatch ref and leave the tag on the old tree. Delete the
+  assetless release the refusal left behind first. `RELEASES.md` → the asset-naming
+  bullet has both refusal cases.
 
 - ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being released**
   (`tools/require_fwapply_run.py`). The HID-apply brick shipped because no release

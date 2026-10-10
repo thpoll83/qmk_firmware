@@ -33,6 +33,60 @@ jobs:
         with:
           submodules: recursive
 
+      # ── refuse to ship assets labelled a version the image does not report ──
+      # The asset filenames below are derived from the TAG
+      # (polykybd_split72_v${TAG#PolyKybd-fw-v}.bin), while the version the board
+      # reports — GET_ID, the status OLED, the boot banner, the crash record — is
+      # FW_VERSION from keyboards/polykybd/config.h, compiled into the image.
+      # Nothing made the two agree. So publishing a tag whose version bump has
+      # not merged ships a .bin whose filename and whose self-reported version
+      # differ, and the host updater then offers that release forever: it
+      # compares the installed FW_VERSION against the tag, and the install can
+      # never reach the advertised number.
+      #
+      # wincompose shipped exactly that (wincompose#21, PK-0.9.19: assets named
+      # 0.9.18, About tab 0.9.18, status.txt unbumpable for two weeks) and now
+      # asserts it in its own release.yml. This is the same gate for firmware.
+      #
+      # ⚠️ Before the build AND before the fwapply gate: a refusal must cost
+      # nothing and, more importantly, change nothing — no assets uploaded, no
+      # release body edited. ⚠️ "Changes nothing" means ATTACHES nothing: on the
+      # `release: published` path the release is already public before this runs,
+      # since publishing is what started the run. What the refusal buys is that
+      # nobody can download a mislabelled image — the empty release left behind is
+      # the v0.27.1 state, and deleting it is step one of the recovery below. The
+      # host's copy of this gate cannot even buy that much, because its workflow
+      # uploads nothing (PolyKybdHost#349).
+      #
+      # ⚠️ config.h is the authority here, unlike wincompose, which reads the
+      # number back off the built exe because iscc names the installer from its
+      # version resource. The .bin is compiled from this very checkout two steps
+      # down, so the tree cannot disagree with the artifact.
+      - name: Assert FW_VERSION matches the tag
+        if: github.event_name == 'release' || github.ref_type == 'tag'
+        env:
+          TAG: ${{ github.event.release.tag_name || github.ref_name }}
+        run: |
+          want="${TAG#PolyKybd-fw-v}"
+          # ⚠️ `|| true`: GitHub runs this under `bash -e`, so a sed that cannot read
+          # the file would kill the step before the clean error below prints.
+          have=$(sed -n 's/^#define FW_VERSION "\(.*\)".*/\1/p' keyboards/polykybd/config.h 2>/dev/null || true)
+          if [ -z "$have" ]; then
+            echo "::error::could not read FW_VERSION from keyboards/polykybd/config.h"
+            exit 1
+          fi
+          if [ "$want" != "$have" ]; then
+            echo "::error::Tag $TAG wants $want, but this tree declares FW_VERSION $have."
+            echo "FW_VERSION in keyboards/polykybd/config.h is what the board reports and what"
+            echo "the assets below would be named against. The tag has to point at a commit"
+            echo "declaring $want: scripts/publish_release.py pins it to that commit"
+            echo "(commit_for_version), so a refusal here means either the version bump has"
+            echo "not merged yet, or the tag already existed somewhere else — a release never"
+            echo "moves a tag. keyboards/polykybd/RELEASES.md covers both."
+            exit 1
+          fi
+          echo "FW_VERSION $have matches tag $TAG."
+
       # ── refuse to publish firmware no APPLY run has covered ─────────────────
       # The HID-apply brick (qmk#258) shipped in a release because nothing ever
       # applied an image on hardware: the rig flashes by UF2 over GPIO BOOTSEL,

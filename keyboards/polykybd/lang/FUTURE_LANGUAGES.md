@@ -625,3 +625,25 @@ Adding a language requires: (1) a new `LANG_*` entry in `lang/lang_lut.c` (code-
 
 ---
 
+
+## Language list encoding (`lang/iso_lang_country.py`)
+
+_Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
+
+The packed list (cmd `27`) maps each 4-char code to two 1-byte indices: the
+language's position in the ISO 639-1 table and the country's in ISO 3166-1
+alpha-2. `lang/iso_lang_country.py` is the **frozen, append-only** index table —
+generated once from the `iso-codes` package then frozen (indices never reorder;
+new ISO codes append at the next free slot; private pseudo-codes with no ISO
+639-1 entry, e.g. `hw`, live in a reserved block above the standard codes). The
+`hid_com.c` case-27 cog imports it and emits the index bytes, so the table is a
+**build-time artifact only** — it is *not* compiled into the firmware.
+- ⚠️ **Single source of truth across three repos**: this file is byte-identical
+  to `PolyKybdHost/polyhost/services/iso_lang_country.py` and
+  `polykybd-ctnd/station/iso_lang_country.py`. When it changes, copy it to all
+  three (verify with `cmp`); a mismatch silently decodes wrong languages on the
+  host/rig. Adding a standard ISO language needs no table change (the code is
+  already present); only a new private pseudo-code requires appending an entry.
+- Re-run `cog -r hid_com.c` after any change to the list or the table (needs
+  `cogapp` + `openpyxl`).
+

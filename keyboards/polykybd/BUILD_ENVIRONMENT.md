@@ -271,8 +271,76 @@ rather than assuming a loop worked.
   trust: `arm-none-eabi-objdump -t <elf> | grep g_led_config` must show `.rodata` at a
   `0x10xxxxxx` (flash) address, not `0x20xxxxxx` (RAM). **Nothing to fix** — dropping
   the attribute costs the RAM it saves, and adding `const` clashes with the extern.
-  - ⚠️ **This is the exact INVERSE of the security-scanner rule** in `REVIEW_CONVENTIONS.md` ("a finding on
+  - ⚠️ **This is the exact INVERSE of the security-scanner rule** in `../polykybd-claude/docs/review-conventions.md` ("a finding on
     an upstream path is probably UPSTREAM's"): here the *file named* is upstream's and
     the *cause* is ours. `diff`ing `keymap_introspection.c` against upstream proves it
     identical and proves nothing about the warning. When a diagnostic names an
     inherited file, check what that file **includes** before concluding it is not ours.
+
+## Hand-built UF2s, the handedness stamp and the boot timing sentinel
+
+_Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
+
+- ⚠️ **A hand-built UF2 must declare `payloadSize` 256 on EVERY block, whatever it
+  actually carries.** The RP2040 bootrom's `vd_write_block()` tests
+  `uf2->payload_size == 256` before it looks at a block at all, and then programs a full
+  page regardless — so a block sized to its own 12-byte record is dropped, the download
+  never completes, and **`safe_reboot()` never runs**: the half sits in BOOTSEL with the
+  drive still mounted. That is a *file* fault presenting as a dead board, and it shipped
+  in three releases' handedness UF2s (v0.23.0–v0.27.1, `tools/make_hand_uf2.py`). Two
+  generalisations: a **round-trip verifier proves self-consistency, not conformance** —
+  `verify()` read the size field back out of the file it had just written and passed
+  every time; and a **generated artifact no test consumes is checked by nothing**, since
+  the firmware builds and the rig flashes over GPIO BOOTSEL with picotool-made images.
+  The tool audits the container against the bootrom's rules now, so the release build is
+  the gate.
+- ⚠️ **"It booted" is NOT evidence a flash LANDED — make the artifact say so.** The
+  fixed stamp UF2 was read as harmless on the strength of a board coming up, twice,
+  when in fact nothing had been written: `hand: LEFT (flash stamp)` prints whenever
+  `stamp_read()` finds ANY valid record, so a dragged file that was ignored and a
+  previous record read identically. A probe built to ERASE that sector "booted",
+  which meant the erase never happened. The banner now carries `slot=N/M writer=0xNN`
+  (`poly_hand_stamp_slot/count/writer()`, `pad[0]` = 0x55 from `make_hand_uf2.py` and
+  0x00 from `stamp_write()`), and a real hardware round then settled it in one flash:
+  **`slot=0/1 writer=0x55` is the bootrom's own signature** — erase-then-program
+  leaves exactly one record at page 0 — so the fixed UF2 DOES apply and the half DOES
+  boot. Generalises past handedness: **an experiment whose result is "the board came
+  up" proves nothing unless the artifact identifies itself.**
+- ⚠️ **One unreproduced brick remains, and the confounders matter more than the
+  event.** With the `payloadSize` fix a fresh half completed its write (the drive
+  unmounted, so `safe_reboot()` ran) and then did not boot for minutes, recovering
+  only on a firmware `.uf2`. It has not recurred: a provisioned half takes the same
+  file and boots. Weigh it against two confounders discovered afterwards, both of
+  which make that session's readings unreliable — a second single-block UF2 in one
+  BOOTSEL session is silently dropped (below), and the old banner could not tell an
+  applied record from a pre-existing one. The **field report is NOT a second data
+  point**: it used a released `payloadSize=12` file, which never writes at all, so a
+  half left in BOOTSEL with the drive mounted — no RGB, no displays, no console —
+  is exactly what it should look like. Do not cite it as a brick. Ruled out by measurement, not argument: the record's content and the
+  side change (`-e POLYKYBD_FORCE_HAND=left|right` writes the identical record through
+  `stamp_write()` and boots), a stale `.ram0.bootloader_magic` double-tap flag (30 s
+  unpowered still lands in BOOTSEL), an invalid boot2 (a firmware `.uf2` recovers it),
+  and any software `reset_usb_boot()`, which has no boot-time caller. The release ships
+  neither stamp UF2 while this is open; `POLYKYBD_FORCE_HAND` is the provisioning route
+  that has worked on hardware. **When a write breaks a boot, re-do the same write by
+  another path before debugging what reads it.**
+- ⚠️ **Two single-block UF2s in ONE BOOTSEL session: the second is silently dropped.**
+  `vd_reset()` clears `_uf2_info` only on a USB reset, and the written-blocks bitmap is
+  re-cleared only when an arriving block's `num_blocks` DIFFERS from the current
+  transfer. Every stamp file has `num_blocks=1`, so a second one hits
+  `"Ignore duplicate write"`, writes nothing, and does not even reboot. Power-cycle
+  between such drags, or a multi-block firmware `.uf2` in between resets it.
+- ⚠️ **`boot: spans ms … 2=65535` is a SATURATION sentinel, not 65 seconds measured.**
+  `boot_timing_mark()` clamps at `0xFFFF`, so span 2 — the whole of QMK's
+  `keyboard_init()` — took *at least* 65.5 s. Seen on two boots with
+  `transport_connected=1` and `err=0.0%`, so it is NOT a master waiting on an absent
+  partner. Unexplained; do not read a 65535 as a measurement.
+
+
+## Clock, core voltage and the flash map
+
+_Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short summary._
+
+The firmware runs on a **Raspberry Pi RP2040** (dual-core ARM M0+) and is a heavily customised QMK build. ⚠️ **The clock is 200 MHz by default** (since 0.10.x). It was **125 MHz** before that — never the 133 MHz this file and several code comments used to claim, which was the chip's old *rated maximum*. Nothing in QMK sets the clock; ChibiOS's `hal_lld_init()` (and, earlier in the boot, the double-tap `__late_init`) calls the pico-sdk `clocks_init()`, which reads the compile-time `SYS_CLK_KHZ`, so `rules.mk` sets it. **`-e POLYKYBD_SYS_CLK=125`** opts back out and produces an image **byte-identical** to the pre-200 MHz builds (verified) — the escape hatch if a board ever misbehaves. 200 MHz is the operating point Raspberry Pi certified in 2025 (1200 MHz VCO / 6 / 1), which requires the core voltage raised to **1.15 V** — the vendored pico-sdk predates the SDK's automatic raise and does not compile `hardware_vreg`, so `POLYKYBD_VREG_VSEL` drives it as a register write before the first `clocks_init()` (see `UPSTREAM_PATCHES.md` → `platforms/chibios/bootloaders/rp2040.c`). Peripherals need no rework: SPI (`SPI_DIVISOR`/`CPU_CLOCK`), I2C, the PIO split UART and WS2812 all derive their dividers from the **live** `clock_get_hz(clk_sys)`, and USB is on the separate 48 MHz PLL. The boot banner prints `clk: sys=…Hz vreg_vsel=0x…` so the pairing is verifiable on hardware. The one **fixed** divider is XIP flash — boot2 runs it at `clk_sys/PICO_FLASH_SPI_CLKDIV` (4), i.e. 50 MHz at 200 and 31.25 at 125, both far inside any QSPI part's rating; re-check that list rather than assuming it holds if another clock is ever added. This is **custom hardware with 8 MB of external QSPI flash** (NOT the stock 2 MB). The 8 MB is **partitioned** (see `base/fw_staging.h` for the authoritative map): **0–2 MB running firmware** (the linker `flash1` XIP window), **2–4 MB firmware-update staging**, **4–8 MB resource/overlay data** (`FLASH_TARGET_OFFSET`). So the budget that matters for adding languages/fonts is the **2 MB firmware partition**, of which `split72:default` currently uses ~0.76 MB (~38 %). `FW_STAGING_OFFSET` is kept equal to the linker `flash1` length so a build that exceeds 2 MB fails to *link* rather than silently growing into the staging area (this firmware/staging split was raised from 1 MB → 2 MB in 2026-06 as the image neared the old boundary). ⚠️ **The sectors carved off the TOP of staging (the apply log, the crash archive, the handedness stamp) need an ALIGNMENT assert as well as an overlap one — the overlap asserts do not imply it.** Each is derived by subtraction from the one above (`FW_HAND_STAMP_OFFSET` is `FW_RESOURCE_OFFSET - FW_APPLY_LOG_BYTES - 8192`), so its 4096-alignment rides on constants that can move without any two regions ever overlapping — and `flash_range_erase()` requires the boundary. Caught in review of #282; `fw_staging.c` carries both terms now. The keyboard is split (left + right halves connected via UART) with up to 72 per-keycap OLED displays (72×40 px monochrome, SPI-driven) plus a 128×64 status OLED.
+
+The host software (`PolyKybdHost/`) communicates with this firmware over a custom HID report protocol (64-byte reports, v0.7.0+).

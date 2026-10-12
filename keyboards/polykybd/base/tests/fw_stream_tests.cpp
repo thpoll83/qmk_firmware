@@ -30,6 +30,10 @@ struct FakeHw {
     // the split thread preempting the main thread there.
     int                   preempt_at = 0;
     std::function<void()> preempt;
+    // The same, at the Nth core1 unlock: on the keyboard that is chSysUnlock(),
+    // where the split thread can resume.
+    int                   unlock_preempt_at = 0;
+    std::function<void()> unlock_preempt;
 };
 FakeHw g;
 } // namespace
@@ -51,7 +55,14 @@ void fw_stream_hw_erase_sector(uint32_t index) {
     g.erased.push_back(index);
 }
 void fw_stream_hw_lock(void) { g.locks++; }
-void fw_stream_hw_unlock(void) { g.locks--; }
+void fw_stream_hw_unlock(void) {
+    g.locks--;
+    if (g.unlock_preempt && --g.unlock_preempt_at == 0) {
+        auto f = g.unlock_preempt;
+        g.unlock_preempt = nullptr;
+        f();
+    }
+}
 void fw_stream_hw_hold(void) {
     g.holds++;
     g.takes++;
@@ -226,6 +237,27 @@ TEST_F(FwStreamTest, ABeginRightAfterTheLastSectorStillErasesItsOwnImage) {
     // one when it found the flag clear, or kept the old one.
     EXPECT_TRUE(fw_stream_erase_pending(&s)) << "the new erase was marked complete";
     EXPECT_EQ(g.holds, 1) << "core1 runs during the new erase";
+
+    g.erased.clear();
+    EXPECT_EQ(FW_ERASE_DONE, run_erase());
+    EXPECT_EQ(g.erased, (std::vector<uint32_t>{0, 1}));
+    EXPECT_EQ(g.holds, 0);
+}
+
+// Greptile on #382: the drop clears the hold flag under the lock and releases core1
+// after it. A BEGIN landing in that gap finds the flag clear, takes a fresh hold,
+// and the old release must then leave that new hold in place.
+TEST_F(FwStreamTest, ABeginBetweenTheFlagClearAndTheReleaseKeepsItsOwnHold) {
+    fw_stream_begin_deferred(&s, 1);
+    // The step's only core1 unlock is the drop's, after the erase completed.
+    g.unlock_preempt_at = 1;
+    g.unlock_preempt    = [this] { fw_stream_begin_deferred(&s, 2); };
+    EXPECT_EQ(FW_ERASE_DONE, fw_stream_erase_step(&s, true));
+
+    EXPECT_EQ(g.takes, 2) << "the new BEGIN must take its own hold";
+    EXPECT_EQ(g.holds, 1) << "core1 runs during the new erase";
+    EXPECT_TRUE(fw_stream_erase_pending(&s));
+    EXPECT_TRUE(s.hold);
 
     g.erased.clear();
     EXPECT_EQ(FW_ERASE_DONE, run_erase());

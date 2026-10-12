@@ -53,6 +53,13 @@ enum ime_family {
     // candidate on Linux, and Right OPTION on macOS (not the swapped Cmd the board's
     // Alt key gives there), because Option is the macOS key that types characters.
     IME_FAMILY_RALT,
+    // Japanese on a JIS (106/109-key) OS layout, ja-JP. There the Caps key IS the
+    // IME key -- 英数 on its own, Caps Lock with Shift -- and `/~ is 半角/全角, so on
+    // Windows and Linux KC_IME is simply Caps Lock (the split72 base layouts carry
+    // none). macOS treats Caps as Caps Lock even on a JIS keyboard type, so there
+    // the key keeps the IME_FAMILY_JAPANESE 英数/かな cycle. ja-US, Japanese on the
+    // 101-key layout, is IME_FAMILY_JAPANESE everywhere: its Caps is plain Caps Lock.
+    IME_FAMILY_JAPANESE_JIS,
 };
 
 // The Japanese mode the firmware last SENT (its belief, not the host's truth).

@@ -29,8 +29,9 @@ bool mines_active(void);
 // gesture, in which case the caller swallows it.
 bool mines_try_start(uint16_t keycode, keyrecord_t *record);
 
-// Master: every key event while mines_active(). Always swallows.
-void mines_process_record(keyrecord_t *record);
+// Master: every key event while mines_active(). Returns true to swallow the event,
+// which is every event except the release of a layer key pressed before the game began.
+bool mines_process_record(uint16_t keycode, keyrecord_t *record);
 
 // Master, every housekeeping pass: starts the game once Hyper was held long enough,
 // holds the normal idle countdown off while the game runs and hides the game after

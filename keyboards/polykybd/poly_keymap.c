@@ -6552,8 +6552,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // while an idle animation runs starts it, or resumes the board hidden last
     // (mines_mode.h); a shorter tap only wakes the board.
     if (mines_active()) {
-        mines_process_record(record);
-        return false;
+        return !mines_process_record(keycode, record);
     }
     if (mines_try_start(keycode, record)) {
         return false;

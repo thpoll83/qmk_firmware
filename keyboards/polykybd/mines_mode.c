@@ -241,8 +241,10 @@ void mines_tick(void) {
         update_performed();
         if (timer_elapsed32(s_last_input) > MINES_INACTIVE_MS) {
             mines_hide();
-        } else if (s_press_row != NO_KEY && !s_press_flagged &&
-                   timer_elapsed(s_press_t) >= MINES_FLAG_HOLD_MS) {
+            return;
+        }
+        if (s_press_row != NO_KEY && !s_press_flagged &&
+            timer_elapsed(s_press_t) >= MINES_FLAG_HOLD_MS) {
             // Flag on the hold itself, so the flag shows while the key is still down
             // and the user knows the release will not open the cell.
             const uint8_t cell = cell_of(s_press_row, s_press_col);
@@ -253,7 +255,10 @@ void mines_tick(void) {
                 s_press_flagged = true;
                 request_disp_refresh();
             }
-        } else if (anim_running() && timer_elapsed(s_step_t) >= MINES_REVEAL_STEP_MS) {
+        }
+        // Separate from the hold check: a key held on an open cell or a control never
+        // flags, and must not stop the reveal while it is down.
+        if (anim_running() && timer_elapsed(s_step_t) >= MINES_REVEAL_STEP_MS) {
             anim_step();
         }
         return;
@@ -273,7 +278,12 @@ void mines_tick(void) {
     }
 }
 
-void mines_process_record(keyrecord_t *record) {
+static bool is_layer_key(uint16_t kc) {
+    return IS_QK_MOMENTARY(kc) || IS_QK_LAYER_TAP(kc) || IS_QK_LAYER_MOD(kc) ||
+           IS_QK_ONE_SHOT_LAYER(kc) || IS_QK_LAYER_TAP_TOGGLE(kc);
+}
+
+bool mines_process_record(uint16_t keycode, keyrecord_t *record) {
     const uint8_t row = record->event.key.row;
     const uint8_t col = record->event.key.col;
     s_last_input = timer_read32();
@@ -287,18 +297,23 @@ void mines_process_record(keyrecord_t *record) {
         s_press_col = col;
         s_press_t   = timer_read();
         s_press_flagged = false;
-        return;
+        return true;
     }
-    if (row != s_press_row || col != s_press_col) return;
+    if (row != s_press_row || col != s_press_col) {
+        // A release whose press came before the game started. A layer key's release
+        // goes on to QMK, or its layer would stay on after the game (clear_keyboard()
+        // releases keys and modifiers, not layers). Everything else stays swallowed.
+        return !is_layer_key(keycode);
+    }
     s_press_row = NO_KEY;
     s_press_col = NO_KEY;
-    if (s_press_flagged) return;   // mines_tick() flagged it while held
+    if (s_press_flagged) return true;   // mines_tick() flagged it while held
 
     anim_flush();
     mines_board_t *b = board();
     if (IS_KEY(row, col, MINES_KEY_HIDE)) {
         mines_hide();
-        return;
+        return true;
     }
     if (IS_KEY(row, col, MINES_KEY_NEW)) {
         // "Next" after a win (one more mine), "New" otherwise (back to level 1).
@@ -309,10 +324,12 @@ void mines_process_record(keyrecord_t *record) {
         }
         mines_reset(b);
         request_disp_refresh();
-        return;
+        return true;
     }
     const uint8_t cell = cell_of(row, col);
-    if (cell == MINES_NO_CELL) return;
+    // A finished board takes no moves: New / Next above is the way on. (The move path
+    // below clears MINES_WON on its copy, which a no-op move would never restore.)
+    if (cell == MINES_NO_CELL || mines_over(b)) return true;
     // Play the move on a copy, then animate what it opened. A loss shows at once.
     mines_board_t next = *b;
     if (mines_bit(b->open, cell)) {
@@ -325,7 +342,7 @@ void mines_process_record(keyrecord_t *record) {
         *b = next;
         uprint("mines: boom\n");
         request_disp_refresh();
-        return;
+        return true;
     }
     for (uint8_t i = 0; i < MINES_MASK_BYTES; ++i) {
         s_pending[i] = (uint8_t)(next.open[i] & ~b->open[i]);
@@ -338,6 +355,7 @@ void mines_process_record(keyrecord_t *record) {
     *b = next;
     s_origin = cell;
     anim_step();   // the tapped key opens at once
+    return true;
 }
 
 // ---- drawing ----------------------------------------------------------------------

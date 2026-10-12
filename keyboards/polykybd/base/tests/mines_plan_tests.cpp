@@ -33,7 +33,7 @@ void SetMine(mines_board_t &b, int cell) {
 
 // A board with mines at `cells`, already placed, so the first reveal does not move them.
 mines_board_t Fixed(std::initializer_list<int> cells) {
-    mines_board_t b;
+    mines_board_t b{};
     mines_reset(&b);
     for (int c : cells) SetMine(b, c);
     b.state |= MINES_PLACED;
@@ -47,7 +47,7 @@ TEST(MinesPlan, BoardFitsTheSyncStruct) {
 }
 
 TEST(MinesPlan, ResetKeepsOnlyTheActiveBitAndTheLevel) {
-    mines_board_t b;
+    mines_board_t b{};
     std::memset(&b, 0xA5, sizeof(b));
     b.state = MINES_ACTIVE | MINES_LOST | MINES_PLACED;
     b.level = 7;
@@ -63,7 +63,7 @@ TEST(MinesPlan, FirstRevealPlacesExactlyTheMinesAwayFromTheTap) {
         const int n = g->w * g->h;
         for (int first = 0; first < n; ++first) {
             for (uint32_t seed : {0u, 1u, 0xDEADBEEFu, (uint32_t)first * 7919u}) {
-                mines_board_t b;
+                mines_board_t b{};
                 mines_reset(&b);
                 mines_reveal(g, &b, (uint8_t)first, seed);
                 ASSERT_EQ(Count(b.mine, *g), g->mines) << "first=" << first << " seed=" << seed;
@@ -80,7 +80,7 @@ TEST(MinesPlan, FirstRevealPlacesExactlyTheMinesAwayFromTheTap) {
 }
 
 TEST(MinesPlan, PlacementDependsOnTheSeed) {
-    mines_board_t a, b;
+    mines_board_t a{}, b{};
     mines_reset(&a);
     mines_reset(&b);
     mines_reveal(&kSplit72, &a, 0, 1);
@@ -236,7 +236,7 @@ TEST(MinesPlan, EachLevelAddsAMineUpToThePlacementCeiling) {
     // At the ceiling the first tap still opens its 3x3 area, from every cell.
     const mines_geom_t full = {14, 4, mines_for_level(&kSplit72, 255)};
     for (int first = 0; first < 56; ++first) {
-        mines_board_t b;
+        mines_board_t b{};
         mines_reset(&b);
         mines_reveal(&full, &b, (uint8_t)first, 99);
         ASSERT_FALSE(b.state & MINES_LOST) << first;
@@ -245,7 +245,7 @@ TEST(MinesPlan, EachLevelAddsAMineUpToThePlacementCeiling) {
 }
 
 TEST(MinesPlan, OutOfRangeCellsAreIgnored) {
-    mines_board_t b;
+    mines_board_t b{};
     mines_reset(&b);
     mines_reveal(&kSplit42, &b, 36, 0);
     mines_reveal(&kSplit42, &b, MINES_NO_CELL, 0);

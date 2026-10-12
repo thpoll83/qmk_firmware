@@ -15,8 +15,7 @@
 #include "fill_overlay.h"   // for mark_display_has_overlay_post_upload
 #include "anim/startup_anim.h"   // startup_anim_core1_job (the Eden idle keycap job)
 #include "doom/doom_mode.h"      // doom_mode_active: DOOM owns core1 while it runs
-#include "base/fw_staging.h"     // fw_staging_core1_held: a flash erase owns core1
-#include "hardware/structs/psm.h"
+#include "base/core1_owner.h"    // core1_held/hold/release: the one owner of core1
 
 #ifdef USE_CORE1
 static volatile uint16_t core1_bit_index = 0;
@@ -219,17 +218,6 @@ static struct {
     bool     relaunched; // the bounded relaunch answered
 } s_c1_stall;
 
-// Hard-reset core1 through the power-on state machine: hold it off until the PSM
-// reports it down, then release it into the bootrom's launch wait.
-static void core1_psm_reset(void) {
-    hw_set_bits(&psm_hw->frce_off, PSM_FRCE_OFF_PROC1_BITS);
-    uint32_t spins = 0;
-    while ((psm_hw->done & PSM_DONE_PROC1_BITS) && spins < 1000000u) {
-        spins++;
-    }
-    hw_clear_bits(&psm_hw->frce_off, PSM_FRCE_OFF_PROC1_BITS);
-}
-
 // core1 owes a fragment and has not answered for CORE1_STALL_MS: reset it, drop the
 // work it lost, and launch the service again.
 static void core1_recover(uint32_t stalled_ms) {
@@ -243,8 +231,11 @@ static void core1_recover(uint32_t stalled_ms) {
     s_c1_stall.at_ms      = timer_read32();
     s_c1_stall.printed    = 0;
 
-    core1_psm_reset();
-    // core1 is held in the bootrom now, so core0 owns every word it shares. The
+    // Through core1_owner, not a raw PSM write: the hold forces core1 off and waits
+    // for the PSM, and its release relaunches the service (bounded, 100 ms) once no
+    // other holder remains. A second driver of the PSM here would bypass the count.
+    core1_hold();
+    // core1 is held in reset now, so core0 owns every word it shares. The
     // fragment in flight is lost: its overlay keeps whatever was decoded so far.
     core1_bit_index    = 0;
     core1_decomp_count = core0_decomp_count;
@@ -255,9 +246,9 @@ static void core1_recover(uint32_t stalled_ms) {
     // them and stay on core0 until the next boot.
     startup_anim_core1_lost();
     dmb();
-    // BOUNDED, as in fw_staging and doom_mode: a core1 that does not come back must
-    // not take core0's main loop with it.
-    s_c1_stall.relaunched = multicore_launch_core1_bounded(100u * 1000u);
+    // The relaunch is bounded: a core1 that does not come back must not take core0's
+    // main loop with it.
+    s_c1_stall.relaunched = core1_release();
 }
 
 void core1_stall_report(void) {
@@ -298,8 +289,8 @@ bool raw_hid_pre_receive_kb(void) {
     if (!core1_is_busy()) {
         return true;
     }
-    if (!is_keyboard_master() || doom_mode_active() || fw_staging_core1_held()) {
-        return false;   // core1 is busy on purpose, or not ours to reset from here
+    if (!is_keyboard_master() || doom_mode_active() || core1_held()) {
+        return false;   // core1 is busy on purpose (a flash write holds it), or not ours to reset from here
     }
     const uint32_t stalled_ms = timer_elapsed32(core1_pushed_at);
     if (stalled_ms < CORE1_STALL_MS) {

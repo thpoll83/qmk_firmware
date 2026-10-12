@@ -102,7 +102,7 @@ hole.** Reported from hardware after the overpaint fix: "for a very brief moment
 the status screen between the percent update / accept-reject / apply screens". Three
 separate conditions used to select these screens, and nothing owned the gaps:
 
-- **transfer → prompt.** `fw_staging_finalize()` clears `s_fw_up_active` when it raises
+- **transfer → prompt.** `fw_staging_finalize()` returns the stream stage to IDLE when it raises
   the prompt, but the synced `poly_sync_t.fw_confirm` is only set from housekeeping a
   pass later — and on the slave, a split sync later still. `fw_screen_live()` now tests
   `fw_staging_awaiting_confirm()` as well, which is true from the moment COMMIT raises
@@ -406,4 +406,54 @@ user-facing story are
   the loop that scans the matrix, so it **raises the prompt and returns false**; `doom_tick()` re-enters once the
   answer lands. Blocking there would guarantee the keypress is never seen — the same trap
   `FW_UP_COMMIT` avoids.
+
+## Who may stop and start core1 (`base/core1_owner.c`)
+
+Anything that rewrites flash keeps core1 in PSM reset, because a core1 fetch from XIP
+while the QSPI is out of XIP mode stalls the bus for good. **One module owns that
+decision**: `core1_hold()` / `core1_release()` nest through a count, core1 leaves reset
+only when the last hold goes (and the RLE service is relaunched then, bounded), and
+`core1_run()` / `core1_restore_service()` refuse to launch anything while a hold is
+outstanding. The check and the reset share one critical section.
+
+- fw_staging's long hold (BEGIN until the erase completes or the stream is finalized)
+  is a flag over one `core1_hold()`, because BEGIN can arrive twice for the same image.
+  The flag is tested and changed under core1_owner's lock, and the drop is skipped
+  while an erase is pending: on the slave a re-sent BEGIN (split thread) can preempt
+  the erase-complete drop (main thread), which used to leave the new erase unheld.
+- One launch handshake at a time. A launch runs outside the lock, so the split thread
+  can do a whole hold and release during one; that release marks the running launch
+  disturbed instead of starting a second handshake, and the launcher redoes it.
+- The EEPROM flush, the crash record and the hand stamp take their own nested holds.
+  Before this module their "lockout" restarted core1 whenever it was halted, so one of
+  them finishing during a flash erase would have released core1 mid-erase.
+- Not covered on purpose: the boot launch in post_init, and `fw_staging_do_apply()`,
+  which runs from RAM, never returns and must not call into flash or take a lock.
+- The logic is pure behind a `core1_hw_*` seam; `make test:polykybd_core1_owner` covers
+  the three bug shapes of 2026-10-07 (engine start mid-erase, engine stop mid-erase, a
+  hold landing during a launch handshake) plus the nested-release case.
+
+## The stream stage (`base/fw_stage.c`)
+
+A stream is in one of three stages: IDLE, ERASING (a deferred BEGIN is erasing the
+slot, one sector per housekeeping pass) or RECEIVING (chunks are accepted until
+finalize). It used to be two flags, `s_fw_up_active` and `s_erase_pending`. Every
+assignment now goes through `fw_stage_next()`, a pure function covered by
+`make test:polykybd_fw_stage`; `fw_up_active` and `erase_pending` in the STATUS block
+are derived from the stage, so the wire format is unchanged.
+
+- ⚠️ **A refused BEGIN (size 0 or past the slot) does NOT end a stream in progress.**
+  It stops a pending erase and leaves the stage RECEIVING, with fw_staging's core1
+  hold still taken. This is the two flags' old behaviour, kept on purpose; the test
+  pins it, so changing it is a decision, not an accident.
+- ⚠️ **Nothing cancels a stream.** A host that stops mid-stream leaves the stage
+  RECEIVING and the core1 hold taken until the next BEGIN and finalize, or a reboot.
+- One combination the flags allowed is gone: finalize during an erase used to clear
+  `s_fw_up_active` and leave `s_erase_pending` set, so housekeeping kept erasing
+  sectors after finalize had released core1. Finalize now returns to IDLE, which
+  stops the erase. Two details make that safe. `process_deferred` rechecks the
+  stage with interrupts off before each sector, so a finalize on the split thread
+  cannot land between the check and the erase. An erase that finalize cut short
+  marks the slot dirty (`fw_staging_written()`), so an identical BEGIN retry
+  re-erases instead of being told a half-erased slot is ready.
 

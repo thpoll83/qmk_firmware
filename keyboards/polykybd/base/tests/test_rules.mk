@@ -299,6 +299,24 @@ polykybd_ime_held_slots_SRC := \
 polykybd_ime_held_slots_INC := \
 	$(POLY_BASE_PATH)
 
+# core1_owner.c is pure: the RP2040/ChibiOS calls sit behind the core1_hw_* seam,
+# which the suite fakes, so it links with just the tests.
+polykybd_core1_owner_SRC := \
+	$(POLY_BASE_PATH)/core1_owner.c \
+	$(POLY_BASE_PATH)/tests/core1_owner_tests.cpp
+
+polykybd_core1_owner_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
+# fw_stage.c is the fw_staging stream's stage machine, with no dependencies.
+polykybd_fw_stage_SRC := \
+	$(POLY_BASE_PATH)/fw_stage.c \
+	$(POLY_BASE_PATH)/tests/fw_stage_tests.cpp
+
+polykybd_fw_stage_INC := \
+	$(POLY_BASE_PATH)
+
 # The idle style table is pure (no quantum.h), so it links with just the tests.
 polykybd_idle_style_SRC := \
 	$(POLY_BASE_PATH)/idle_style.c \

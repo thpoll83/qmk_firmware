@@ -41,6 +41,7 @@
 #endif
 #include "split_fw_up.h"
 #include "base/fw_staging.h"
+#include "base/core1_owner.h"
 #include "uni.h"
 #include "side.h"
 #include "fill_overlay.h"
@@ -61,7 +62,7 @@
 #include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
 #include "base/ime_key_plan.h"           // what KC_IME sends, per language and OS
 #include "base/ime_held_slots.h"         // which KC_IME key holds which usage
-// Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
+// Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+glyph)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
 #include "base/fonts/nano_font.h"          // 10px label font under the flags
@@ -827,9 +828,9 @@ static void poly_tutorial_finish_if_done(void) {
             // The overlay decompressor is free to be anywhere in flash, and the
             // refresh just requested above is exactly what puts it there. Same
             // lockout the fw-apply flush takes, and for the same hazard.
-            fw_staging_core1_lockout_begin();
+            core1_hold();
             mark_boot_intro_done();
-            fw_staging_core1_lockout_end();
+            core1_release();
             uprintf("Tutorial %s; displays handed back\n", was_skipped ? "skipped" : "done");
         }
 }
@@ -1442,9 +1443,9 @@ void housekeeping_task_user(void) {
                 // it, so core0 would hang before the apply could even start. The
                 // window is a pass or two; the failure is permanent. Holding it here
                 // bought nothing either: fw_staging_do_apply() halts core1 itself.
-                fw_staging_core1_lockout_begin();
+                core1_hold();
                 save_all_dirty();
-                fw_staging_core1_lockout_end();
+                core1_release();
                 uprintf("APPLY 2/4: EEPROM flushed with core1 held off\n");
                 apply_step = 2;
                 return;
@@ -1509,10 +1510,11 @@ void housekeeping_task_user(void) {
                 // Only reached when the apply was refused (no valid staged image /
                 // failed flash CRC); it disarms itself there and the board keeps
                 // running. Stage 2 already handed core1 back, and the refusal checks
-                // sit above the PSM halt inside do_apply, so this is a no-op today --
-                // kept because it is the one path where a future halt-then-refuse
-                // would otherwise leave the RLE service down for good.
-                fw_staging_core1_lockout_end();
+                // sit above the PSM halt inside do_apply, so this relaunches a service
+                // that is already running today -- kept because it is the one path
+                // where a future halt-then-refuse would otherwise leave the RLE
+                // service down for good. It respects any outstanding hold.
+                (void)core1_restore_service();
                 // ...and it is now also the path that has to take the screen back. The
                 // board is alive and the panel is showing a restart that is not coming,
                 // with the keycaps still blanked from stage 0.
@@ -1744,9 +1746,9 @@ void housekeeping_task_user(void) {
                     tutorial_start(timer_read32());
                     poly_tutorial_publish_active();
                     if (!tutorial_active()) {                        // nothing to teach
-                        fw_staging_core1_lockout_begin();            // see the teardown
+                        core1_hold();            // see the teardown
                         mark_boot_intro_done();
-                        fw_staging_core1_lockout_end();
+                        core1_release();
                     }
                 }
                 // Eden ran at full brightness; restore the user's normal
@@ -3364,7 +3366,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // vertically up the right side in a tiny font.  The currently-selected language's
 // code is drawn as dark text on a filled bar (see kdisp_write_gfx_vtext) rather
 // than with a frame.  Flag glyphs live in flag_fonts.h at codepoints
-// FLAG_CP_BASE + LANG_* (see fonts/gen-lang-fonts.sh); the label uses the tiny
+// FLAG_CP_BASE + LANG_FLAG_GLYPH[LANG_*] (see fonts/gen-lang-fonts.sh); the label uses the tiny
 // NotoSans font.
 #define FLAG_CP_BASE   0xE000u
 #define FLAG_LEFT_X    (BUFFER_X - 2)    // flag glyph left (keeps the left border on-screen)
@@ -3374,7 +3376,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // and clipped so the flag content fills the keycap height), language code running
 // vertically up the right side (inverted bar when it is the active language).
 //
-// The flag glyphs (FLAG_CP_BASE + idx) live in the external-flash font pack, so
+// The flag glyphs (FLAG_CP_BASE + glyph) live in the external-flash font pack, so
 // they resolve through g_all_fonts only when a pack is present. With no pack the
 // flag is simply omitted — the xx-YY code label below it still identifies the
 // language (graceful fallback). The tiny label font stays resident.
@@ -3708,10 +3710,38 @@ static void render_macro_key(uint8_t id) {
     }
 }
 
+// One flag glyph per COUNTRY (fonts/gen-lang-fonts.sh): the six Indian languages,
+// the four US ones and so on share theirs, so a language's glyph is looked up rather
+// than being its enum index.
+#include "base/fonts/generated/lang_flag_glyph.h"
+#include "base/fonts/generated/fontpack_layout.h"
+_Static_assert(sizeof(LANG_FLAG_GLYPH) == NUM_LANG,
+               "lang_flag_glyph.h is stale: re-run fonts/gen-lang-fonts.sh");
+
+// The flags bundle's slot index, from the generated layout table.
+enum {
+#define X(id, index, offset, size) LANG_FLAG_SLOT_##id = (index),
+    FONTPACK_BUNDLE_LIST
+#undef X
+};
+// The flags bundle that first carries one glyph per country. An older one is still
+// one glyph per LANGUAGE, and a keyboard keeps it until the host re-flashes the slot
+// on its next connect, so until then the enum index is still the right glyph.
+#define LANG_FLAG_PER_COUNTRY_VERSION 6u
+
+static uint8_t lang_flag_glyph(uint8_t idx) {
+    if (idx >= NUM_LANG) {
+        return 0;
+    }
+    return fontpack_bundle_version(LANG_FLAG_SLOT_flags) >= LANG_FLAG_PER_COUNTRY_VERSION
+               ? LANG_FLAG_GLYPH[idx] : idx;
+}
+
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
+    const uint32_t flag_cp = FLAG_CP_BASE + lang_flag_glyph(idx);
     const GFXfont* flag_font = NULL;
     const GFXglyph* g = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count,
-                                             FLAG_CP_BASE + idx, &flag_font);
+                                             flag_cp, &flag_font);
     if (g) {
         // The glyph is taller than the keycap, so centre it vertically — the
         // empty top/bottom margins clip off and the flag content fills the height.
@@ -3733,7 +3763,7 @@ static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t cur
         const int8_t fxo = (int8_t)pgm_read_byte(&g->xOffset);
         kdisp_write_gfx_char(flag_only, 1, (int8_t)(FLAG_LEFT_X - fxo),
                              (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
-                             FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
+                             flag_cp, 1);   // flags: tight 1px courtyard
         // Language code: vertical, up the right side; inverted bar when selected.
         kdisp_write_gfx_vtext(&NotoSans_Regular_Nano_10px7b, LABEL_COL_X, label,
                               current_lang == idx);
@@ -6240,9 +6270,9 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             // anim_nonce when it starts the intro, and that replays Eden on a slave whose
             // own marker is already consumed (split_sync.c, the anim_replay guard).
             // ⚠️ EEPROM writes run with the QSPI out of XIP; halt core1 across it.
-            fw_staging_core1_lockout_begin();
+            core1_hold();
             rearm_boot_intro();
-            fw_staging_core1_lockout_end();
+            core1_release();
             arm_tutorial_after_intro();
             // Trigger the startup ("Eden") animation NOW on this (master) half and bump
             // the synced nonce so the slave plays in lockstep (the nonce is delivered by

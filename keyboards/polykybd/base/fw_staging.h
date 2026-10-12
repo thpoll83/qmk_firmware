@@ -108,17 +108,9 @@ bool fw_staging_refused_unsigned(void);
 
 // Must be called once before any other fw_staging_* function.
 
-// Hold core1 out of flash for a caller doing its own flash work (EEPROM flush).
-// See the comment on the definition: QMK's wear-levelling backing store erases with
-// core1 running, which is only survivable while the window stays small.
-void fw_staging_core1_lockout_begin(void);
-void fw_staging_core1_lockout_end(void);
-
-// True while fw_staging holds core1 in PSM reset (a deferred erase, a page write, the
-// lockout above). Anything that would release or relaunch core1 in that window must
-// leave it alone: the erase turns XIP off, and a core1 fetching from flash then
-// HardFaults. fw_staging relaunches the RLE service itself when it lets core1 go.
-bool fw_staging_core1_held(void);
+// core1 holds for a caller doing its own flash work (an EEPROM flush, a crash
+// record, the hand stamp) are core1_hold()/core1_release() in core1_owner.h. They
+// nest with fw_staging's own hold, so none of them can release core1 mid-erase.
 
 // Why an apply was refused. The two failures are genuinely different events and the
 // user can act on the difference: NO_IMAGE means nothing ever reached the staging
@@ -307,7 +299,8 @@ uint32_t fw_staging_next_offset(void);
 
 // True if any chunk data has been written to staging since the last fw_staging_begin/fw_staging_begin_deferred.
 // Used by the slave handler to detect partial writes from a previous failed attempt
-// that require re-erasing staging before accepting new chunks.
+// that require re-erasing staging before accepting new chunks. Also true when a
+// finalize cut a deferred erase short: the slot is then partly erased.
 bool fw_staging_written(void);
 
 // True after a successful fw_staging_finalize(); cleared after fw_staging_apply_and_reboot() is called.
@@ -421,12 +414,3 @@ void fw_staging_note_chunk_call(uint32_t offset, uint8_t ack);
 // Record the ack the slave's COMMIT handler is about to return, so a later STATUS
 // probe can report the verdict even if that reply never reached the master.
 void fw_staging_note_commit_ack(uint8_t ack);
-
-// Diagnostic helper used while bisecting the fw_up slave-hang bug
-// (see FW_UP_DEBUG_NOTES.md): set the s_fw_up_active flag without
-// performing the staging erase / core1 halt.  Lets the master act as a
-// pure relay (master never touches its own staging) so we can isolate
-// whether the failure is in the staging code or in the split transport.
-// Must be paired with a `false` call to clear when the relay-only flow
-// ends.
-void fw_staging_set_fw_up_active(bool active);

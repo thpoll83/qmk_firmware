@@ -339,14 +339,14 @@
       "index": 4,
       "slot_offset": 430080,
       "slot_size": 131072,
-      "total_size": 65172,
+      "total_size": 52964,
       "font_count": 1,
       "fonts": [
         {
           "all_fonts_index": 61440,
           "symbol": "NotoColorEmoji_Regular_LangFlags_20pt7b",
           "first": 57344,
-          "last": 57503
+          "last": 57473
         }
       ]
     },

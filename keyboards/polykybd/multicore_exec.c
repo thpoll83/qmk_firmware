@@ -15,11 +15,22 @@
 #include "fill_overlay.h"   // for mark_display_has_overlay_post_upload
 #include "anim/startup_anim.h"   // startup_anim_core1_job (the Eden idle keycap job)
 #include "doom/doom_mode.h"      // doom_mode_active: DOOM owns core1 while it runs
+#include "base/fw_staging.h"     // fw_staging_core1_held: a flash erase owns core1
+#include "hardware/structs/psm.h"
 
 #ifdef USE_CORE1
 static volatile uint16_t core1_bit_index = 0;
 static volatile uint32_t core1_decomp_count = 0;
 static volatile uint32_t core0_decomp_count = 0;
+// When core0 last handed core1 a fragment (DECOMPRESS / ROI_UPDATE). Written by
+// core0 only; read by the stall check in raw_hid_pre_receive_kb().
+static uint32_t core1_pushed_at = 0;
+
+// The FIFO command core1 last STARTED, and its argument (the Eden job's word; 0 for the
+// others). Written by core1 only. When core1 stops answering, this names what it was
+// doing: a decode, an Eden keycap, or nothing at all (0 = never got a command).
+static volatile uint32_t core1_last_cmd = 0;
+static volatile uint32_t core1_last_arg = 0;
 
 static volatile uint8_t core1_buffer[HID_DATA_MAX];
 // Despite the "bitlen" name this holds a BYTE count, not a bit count: the number
@@ -75,6 +86,8 @@ void core1_entry(void) {
     multicore_fifo_drain();
     while (true) {
         uint32_t cmd = multicore_fifo_pop_blocking();  // blocks if empty
+        core1_last_cmd = cmd;
+        core1_last_arg = 0;
         switch (cmd) {
             case CORE1_CMD_DECOMPRESS:{
                     uint16_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
@@ -128,7 +141,11 @@ void core1_entry(void) {
                 // One Eden idle keycap (anim/startup_anim.c). The argument follows the
                 // command in the FIFO; the job publishes its own completion. Its stack
                 // path is measured: IDLE_STYLES.md, "The idle loop on core1".
-                startup_anim_core1_job(multicore_fifo_pop_blocking());
+                {
+                    const uint32_t arg = multicore_fifo_pop_blocking();
+                    core1_last_arg = arg;
+                    startup_anim_core1_job(arg);
+                }
                 break;
 #ifdef POLYKYBD_CRASH_TEST
             case CORE1_CMD_CRASH_TEST: {
@@ -173,15 +190,126 @@ bool core1_is_busy(void) {
     return core0_decomp_count != core1_decomp_count;
 }
 
+// ---- core1 stall recovery ----------------------------------------------------
+// A fragment takes core1 well under a millisecond, and at most two Eden keycap jobs
+// (~4.3 ms each) can sit in front of it. Half a second means core1 has stopped.
+#define CORE1_STALL_MS 500u
+
+// What the last recovery found. Printed from the HID path (core1_stall_report()), not
+// at recovery time: QMK drops console output nobody drains, and core1 can stop while
+// no host is attached (field 2026-10-09: it was already down before the host
+// connected). A host report almost always means somebody is reading the console. The
+// exception is a host whose console interface was not up yet when it opened the
+// device, which it repairs within a second, so the line is printed CORE1_STALL_REPORTS
+// times, CORE1_STALL_REPORT_GAP_MS apart. Every copy carries the same recovery ID,
+// "recovery <n> since boot at <uptime> ms", which is how the host's problem scan counts
+// one recovery once. The uptime is part of the ID because <n> restarts after a reboot.
+#define CORE1_STALL_REPORTS      3u
+#define CORE1_STALL_REPORT_GAP_MS 10000u
+static struct {
+    uint32_t count;      // recoveries since boot
+    uint32_t stalled_ms; // how long the oldest fragment had waited
+    uint32_t last_cmd;   // core1_last_cmd when it was found stopped
+    uint32_t last_arg;
+    uint32_t c0, c1;     // core0_decomp_count / core1_decomp_count
+    uint32_t entered;    // g_core1_entered
+    uint32_t at_ms;      // uptime of the recovery: with `count`, the recovery's ID
+    uint32_t printed_at; // uptime of the last copy printed
+    uint8_t  printed;    // copies printed of this recovery
+    bool     relaunched; // the bounded relaunch answered
+} s_c1_stall;
+
+// Hard-reset core1 through the power-on state machine: hold it off until the PSM
+// reports it down, then release it into the bootrom's launch wait.
+static void core1_psm_reset(void) {
+    hw_set_bits(&psm_hw->frce_off, PSM_FRCE_OFF_PROC1_BITS);
+    uint32_t spins = 0;
+    while ((psm_hw->done & PSM_DONE_PROC1_BITS) && spins < 1000000u) {
+        spins++;
+    }
+    hw_clear_bits(&psm_hw->frce_off, PSM_FRCE_OFF_PROC1_BITS);
+}
+
+// core1 owes a fragment and has not answered for CORE1_STALL_MS: reset it, drop the
+// work it lost, and launch the service again.
+static void core1_recover(uint32_t stalled_ms) {
+    s_c1_stall.count++;
+    s_c1_stall.stalled_ms = stalled_ms;
+    s_c1_stall.last_cmd   = core1_last_cmd;
+    s_c1_stall.last_arg   = core1_last_arg;
+    s_c1_stall.c0         = core0_decomp_count;
+    s_c1_stall.c1         = core1_decomp_count;
+    s_c1_stall.entered    = g_core1_entered;
+    s_c1_stall.at_ms      = timer_read32();
+    s_c1_stall.printed    = 0;
+
+    core1_psm_reset();
+    // core1 is held in the bootrom now, so core0 owns every word it shares. The
+    // fragment in flight is lost: its overlay keeps whatever was decoded so far.
+    core1_bit_index    = 0;
+    core1_decomp_count = core0_decomp_count;
+    core1_last_cmd     = 0;
+    core1_last_arg     = 0;
+    g_core1_entered    = 0u;
+    // The Eden keycap jobs died with it; without this the idle loop would wait for
+    // them and stay on core0 until the next boot.
+    startup_anim_core1_lost();
+    dmb();
+    // BOUNDED, as in fw_staging and doom_mode: a core1 that does not come back must
+    // not take core0's main loop with it.
+    s_c1_stall.relaunched = multicore_launch_core1_bounded(100u * 1000u);
+}
+
+void core1_stall_report(void) {
+    if (s_c1_stall.count == 0 || s_c1_stall.printed >= CORE1_STALL_REPORTS) {
+        return;
+    }
+    if (s_c1_stall.printed > 0 && timer_elapsed32(s_c1_stall.printed_at) < CORE1_STALL_REPORT_GAP_MS) {
+        return;
+    }
+    s_c1_stall.printed++;
+    s_c1_stall.printed_at = timer_read32();
+    uprintf("WARNING core1 stalled: no answer for %lu ms (last cmd 0x%08lx arg 0x%08lx, "
+            "counts %lu/%lu, entered %lu) - %s (recovery %lu since boot at %lu ms, report %u/%u)\n",
+            (unsigned long)s_c1_stall.stalled_ms, (unsigned long)s_c1_stall.last_cmd,
+            (unsigned long)s_c1_stall.last_arg, (unsigned long)s_c1_stall.c0,
+            (unsigned long)s_c1_stall.c1, (unsigned long)s_c1_stall.entered,
+            s_c1_stall.relaunched ? "core1 relaunched" : "core1 relaunch FAILED, overlays degraded until reboot",
+            (unsigned long)s_c1_stall.count, (unsigned long)s_c1_stall.at_ms,
+            (unsigned)s_c1_stall.printed, (unsigned)CORE1_STALL_REPORTS);
+}
+
 // Strong override of the weak hook in tmk_core/protocol/chibios/usb_main.c:
 // when core1 is still chewing on the previous fragment, refuse to pull the
 // next packet off the Raw HID OUT queue this main-loop pass. The packet stays
 // queued by the USB driver (RAW_OUT_CAPACITY=4) and matrix_task gets to run.
+//
+// ⚠️ The refusal must END. A core1 that has stopped never catches up, and a gate
+// that waits for it closes the raw HID OUT queue for good: the four slots fill and
+// the endpoint NAKs every later write, while typing, the console and the idle
+// animations go on, and no watchdog fires because nothing spins. Field 2026-10-09:
+// the host's writes timed out with 0x3E5 for a minute until a replug. So after
+// CORE1_STALL_MS the gate relaunches core1 instead of waiting for it.
+//
+// Master only: there the gate is the one place a fragment waits, and every core1
+// user runs on the main thread. On the slave the split thread hands core1 its
+// fragments, and a relaunch from the main thread could interleave with that push.
 bool raw_hid_pre_receive_kb(void) {
-    return !core1_is_busy();
+    if (!core1_is_busy()) {
+        return true;
+    }
+    if (!is_keyboard_master() || doom_mode_active() || fw_staging_core1_held()) {
+        return false;   // core1 is busy on purpose, or not ours to reset from here
+    }
+    const uint32_t stalled_ms = timer_elapsed32(core1_pushed_at);
+    if (stalled_ms < CORE1_STALL_MS) {
+        return false;
+    }
+    core1_recover(stalled_ms);
+    return true;
 }
 
-void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* compressed, bool visible) {
+void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* compressed, bool visible, bool first) {
     // Defense in depth: callers that respect the raw_hid_pre_receive_kb() gate
     // will never enter the wait. For any caller that didn't gate (e.g. the
     // split-sync bridge path), spin without the uprintf — the previous wait
@@ -195,6 +323,13 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
         dmb();
     }
     crash_phase_leave(crash_tag);
+    // A new image starts at pixel 0. core1 only rewinds its cursor when it has decoded
+    // a whole image, so an image left incomplete (the fragment a stall recovery
+    // dropped) would otherwise start the NEXT key's image part-way through its buffer.
+    // core1 is idle on decode work here (the counts match), so core0 may write it.
+    if (first) {
+        core1_bit_index = 0;
+    }
     //copy data to dedicated buffers
     uint8_t data_len = core1_bit_index==0?COMPRESSED_START:COMPRESSED_MAX;
     core1_max_bitlen = 360 - core1_bit_index/8;
@@ -214,6 +349,7 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
     (void)keycode;
     (void)mod;
 #endif
+    core1_pushed_at = timer_read32();
     core0_decomp_count++;
     if(core0_decomp_count==0) { //handle overflow
         core0_decomp_count=1;
@@ -261,6 +397,7 @@ void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const 
     (void)keycode;
     (void)mod;
 #endif
+    core1_pushed_at = timer_read32();
     core0_decomp_count++;
     if(core0_decomp_count==0) { //handle overflow
         core0_decomp_count=1;

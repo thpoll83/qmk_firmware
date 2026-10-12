@@ -76,6 +76,10 @@ bool startup_anim_idle_on_core1(void);
 // Runs ON CORE1 (core1_entry(), CORE1_CMD_EDEN_KEY): compute one idle keycap into
 // core1's buffer. `arg` = idx | left << 8 | seq << 16. Never call it from core0.
 void startup_anim_core1_job(uint32_t arg);
+// core0, after core1 was reset (multicore_exec.c's stall recovery): the keycap jobs it
+// held are gone. A frame waiting on one finishes on core0, and the next idle session
+// may use core1 again because nothing is owed any more.
+void startup_anim_core1_lost(void);
 // Render one frame; call every housekeeping pass while active (like doom_tick()).
 void startup_anim_tick(void);
 // True while the animation owns the keycaps — update_displays() must early-return.

@@ -3698,11 +3698,31 @@ static void render_macro_key(uint8_t id) {
 // the four US ones and so on share theirs, so a language's glyph is looked up rather
 // than being its enum index.
 #include "base/fonts/generated/lang_flag_glyph.h"
+#include "base/fonts/generated/fontpack_layout.h"
 _Static_assert(sizeof(LANG_FLAG_GLYPH) == NUM_LANG,
                "lang_flag_glyph.h is stale: re-run fonts/gen-lang-fonts.sh");
 
+// The flags bundle's slot index, from the generated layout table.
+enum {
+#define X(id, index, offset, size) LANG_FLAG_SLOT_##id = (index),
+    FONTPACK_BUNDLE_LIST
+#undef X
+};
+// The flags bundle that first carries one glyph per country. An older one is still
+// one glyph per LANGUAGE, and a keyboard keeps it until the host re-flashes the slot
+// on its next connect, so until then the enum index is still the right glyph.
+#define LANG_FLAG_PER_COUNTRY_VERSION 6u
+
+static uint8_t lang_flag_glyph(uint8_t idx) {
+    if (idx >= NUM_LANG) {
+        return 0;
+    }
+    return fontpack_bundle_version(LANG_FLAG_SLOT_flags) >= LANG_FLAG_PER_COUNTRY_VERSION
+               ? LANG_FLAG_GLYPH[idx] : idx;
+}
+
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
-    const uint32_t flag_cp = FLAG_CP_BASE + (idx < NUM_LANG ? LANG_FLAG_GLYPH[idx] : 0u);
+    const uint32_t flag_cp = FLAG_CP_BASE + lang_flag_glyph(idx);
     const GFXfont* flag_font = NULL;
     const GFXglyph* g = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count,
                                              flag_cp, &flag_font);

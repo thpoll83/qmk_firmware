@@ -208,8 +208,14 @@ jobs:
     # other event and tier runs it exactly as before — `inputs.tier` is null
     # outside a dispatch, and the left operand short-circuits there.
     # ⚠️ doom-test / perf-test / fwapply-test all `needs: hil-test` purely to
-    # stop the flashes interleaving, and all carry `always()`, so skipping this
-    # job does not cascade into skipping them.
+    # stop the flashes interleaving, and all carry `!cancelled()`, so skipping
+    # this job does not cascade into skipping them.
+    # ⚠️ Never `always()` on a rig job. It also survives a CANCELLED run: every run
+    # cancelled after its build finished still queued its doom or fwapply job on
+    # the one rig, against code that had already been replaced (2026-10-12: about
+    # seven such jobs, ~35 min each, ahead of the current PRs; a plain cancel does
+    # not stop them, only a force-cancel does). `!cancelled()` runs after a
+    # failed or skipped need exactly like `always()`, and stops on a cancel.
     if: >-
       github.event_name != 'workflow_dispatch' ||
       inputs.tier != 'debug'
@@ -459,11 +465,11 @@ jobs:
   perf-test:
     name: Performance measurement (split72)
     # Ordered after hil-test so the two rig jobs can't interleave their flashes.
-    # `always()` so a red HIL suite doesn't skip the measurement — a perf number
+    # `!cancelled()` so a red HIL suite doesn't skip the measurement — a perf number
     # is often exactly what explains a timing-related HIL failure. It still needs
     # its own build to have succeeded.
     needs: [build-perf, hil-test]
-    if: always() && needs.build-perf.result == 'success'
+    if: ${{ !cancelled() && needs.build-perf.result == 'success' }}
     runs-on: [self-hosted, polykybd-ctnd]
     permissions:
       contents: read
@@ -770,11 +776,11 @@ jobs:
   doom-test:
     name: DOOM engine-pack signature (split72)
     # Ordered after hil-test so the two rig jobs can't interleave their flashes
-    # (same reason as perf-test). `always()` so it still runs when hil-test was
+    # (same reason as perf-test). `!cancelled()` so it still runs when hil-test was
     # skipped (a pure `doom` label does not run the build/hil-test pipeline); it
     # flashes its own doom HIL images, so it does not depend on hil-test's flash.
     needs: [build-doom, hil-test]
-    if: always() && needs.build-doom.result == 'success'
+    if: ${{ !cancelled() && needs.build-doom.result == 'success' }}
     runs-on: [self-hosted, polykybd-ctnd]
     permissions:
       contents: read
@@ -864,10 +870,10 @@ jobs:
   debug-test:
     name: Debug probe (split72)
     # `needs: hil-test` only orders the rig flashes; a `debug` dispatch skips
-    # that job, hence `always()` plus an explicit check that the BUILD succeeded.
+    # that job, hence `!cancelled()` plus an explicit check that the BUILD succeeded.
     needs: [build, hil-test]
     if: >-
-      always() && github.event_name == 'workflow_dispatch' &&
+      !cancelled() && github.event_name == 'workflow_dispatch' &&
       inputs.tier == 'debug' && inputs.probe != '' &&
       needs.build.result == 'success'
     runs-on: [self-hosted, polykybd-ctnd]
@@ -940,10 +946,10 @@ jobs:
     name: Firmware apply round-trip (split72)
     # Ordered after the other rig jobs so the flashes cannot interleave — the rig
     # runs one job at a time, and this one reflashes both halves with its own
-    # ephemeral-key images. `always()` so it still runs when hil-test/doom-test
+    # ephemeral-key images. `!cancelled()` so it still runs when hil-test/doom-test
     # were skipped (a bare hil-fwapply label does not start the main pipeline).
     needs: [build-fwapply, hil-test, doom-test]
-    if: always() && needs.build-fwapply.result == 'success'
+    if: ${{ !cancelled() && needs.build-fwapply.result == 'success' }}
     runs-on: [self-hosted, polykybd-ctnd]
     permissions:
       contents: read

@@ -25,4 +25,5 @@ TEST_LIST += polykybd_fw_sig_policy
 TEST_LIST += polykybd_ime_key_plan
 TEST_LIST += polykybd_ime_held_slots
 TEST_LIST += polykybd_core1_owner
+TEST_LIST += polykybd_core1_suspend
 TEST_LIST += polykybd_fw_stage

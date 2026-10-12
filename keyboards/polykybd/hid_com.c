@@ -998,7 +998,8 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 sync_and_refresh_displays();
                 // Treat host display-off (e.g. system going to sleep) as a cue to
                 // flush all dirty user state to EEPROM (dirty-gated, so cheap).
-                save_all_dirty();
+                // With core1 off the flash bus: Eden may have left a job in flight.
+                core1_off_during(save_all_dirty);
                 disable_idle_tracking();
                 memset(data, 0, length);
                 hid_reply(data, 0x18, true);
@@ -1035,7 +1036,9 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             // independently via its own suspend hook. (Distinct from KC_STORE_EE,
             // which sets SAVE_EEPROM and syncs that flag to the slave — see base/com.h.)
             case 26:
-                save_all_dirty();
+                // Sent while the board may sit in Eden, so core1 can be computing a
+                // keycap from flash: keep it off the bus for the write.
+                core1_off_during(save_all_dirty);
                 memset(data, 0, length);
                 hid_reply(data, 0x1A, true);
                 raw_hid_send(data, length);

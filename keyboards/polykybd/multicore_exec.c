@@ -16,8 +16,24 @@
 #include "anim/startup_anim.h"   // startup_anim_core1_job (the Eden idle keycap job)
 #include "doom/doom_mode.h"      // doom_mode_active: DOOM owns core1 while it runs
 #include "base/core1_owner.h"    // core1_held/hold/release: the one owner of core1
+#include "base/core1_suspend.h"  // core1_suspend_step/core1_resume_step: the hold across a USB suspend
 
 #ifdef USE_CORE1
+#include "pico/platform.h"   // __no_inline_not_in_flash_func
+
+// core1's wait for its next FIFO word, in RAM. Idle core1 spends nearly all its time
+// here, and an EEPROM write (a flash program or erase on core0) flushes the XIP cache
+// while the QSPI is out of XIP mode: a wait loop in flash then faults or stalls on its
+// next fetch (fw_staging.c, "Dual-core flash safety"). From RAM, an idle core1 cannot
+// touch flash however long the write takes. The work a command starts still runs from
+// flash, so a writer must also wait until core1 owes no work (multicore_exec.h).
+static uint32_t __no_inline_not_in_flash_func(core1_fifo_pop_ram)(void) {
+    while (!(sio_hw->fifo_st & SIO_FIFO_ST_VLD_BITS)) {
+        __asm volatile("wfe");
+    }
+    return sio_hw->fifo_rd;
+}
+
 static volatile uint16_t core1_bit_index = 0;
 static volatile uint32_t core1_decomp_count = 0;
 static volatile uint32_t core0_decomp_count = 0;
@@ -84,7 +100,7 @@ void core1_entry(void) {
     dmb();
     multicore_fifo_drain();
     while (true) {
-        uint32_t cmd = multicore_fifo_pop_blocking();  // blocks if empty
+        uint32_t cmd = core1_fifo_pop_ram();  // blocks if empty; in RAM (see above)
         core1_last_cmd = cmd;
         core1_last_arg = 0;
         switch (cmd) {
@@ -141,7 +157,7 @@ void core1_entry(void) {
                 // command in the FIFO; the job publishes its own completion. Its stack
                 // path is measured: IDLE_STYLES.md, "The idle loop on core1".
                 {
-                    const uint32_t arg = multicore_fifo_pop_blocking();
+                    const uint32_t arg = core1_fifo_pop_ram();
                     core1_last_arg = arg;
                     startup_anim_core1_job(arg);
                 }
@@ -216,11 +232,11 @@ static struct {
     uint32_t printed_at; // uptime of the last copy printed
     uint8_t  printed;    // copies printed of this recovery
     bool     relaunched; // the bounded relaunch answered
+    bool     at_suspend; // found by the suspend hold (core1_suspend_tick), not the raw-HID gate
 } s_c1_stall;
 
-// core1 owes a fragment and has not answered for CORE1_STALL_MS: reset it, drop the
-// work it lost, and launch the service again.
-static void core1_recover(uint32_t stalled_ms) {
+// Record what a stalled core1 left behind. Call before the hold clears it.
+static void core1_note_stall(uint32_t stalled_ms, bool at_suspend) {
     s_c1_stall.count++;
     s_c1_stall.stalled_ms = stalled_ms;
     s_c1_stall.last_cmd   = core1_last_cmd;
@@ -230,14 +246,26 @@ static void core1_recover(uint32_t stalled_ms) {
     s_c1_stall.entered    = g_core1_entered;
     s_c1_stall.at_ms      = timer_read32();
     s_c1_stall.printed    = 0;
+    s_c1_stall.at_suspend = at_suspend;
+    s_c1_stall.relaunched = false;
+}
 
+// Hold core1 in reset and drop the work it held. The caller's core1_release() brings
+// the service back.
+static void core1_hold_and_drop(void) {
+    // A fragment is lost only when core1 still owed one. Otherwise the decode cursor
+    // must survive the hold: an image upload spans several reports, and a hold between
+    // two of them (a suspend, a HID flush) would restart the next one at pixel 0.
+    const bool fragment_lost = core1_is_busy();
     // Through core1_owner, not a raw PSM write: the hold forces core1 off and waits
     // for the PSM, and its release relaunches the service (bounded, 100 ms) once no
     // other holder remains. A second driver of the PSM here would bypass the count.
     core1_hold();
-    // core1 is held in reset now, so core0 owns every word it shares. The
-    // fragment in flight is lost: its overlay keeps whatever was decoded so far.
-    core1_bit_index    = 0;
+    // core1 is held in reset now, so core0 owns every word it shares. A fragment in
+    // flight is lost: its overlay keeps whatever was decoded so far.
+    if (fragment_lost) {
+        core1_bit_index = 0;
+    }
     core1_decomp_count = core0_decomp_count;
     core1_last_cmd     = 0;
     core1_last_arg     = 0;
@@ -246,13 +274,105 @@ static void core1_recover(uint32_t stalled_ms) {
     // them and stay on core0 until the next boot.
     startup_anim_core1_lost();
     dmb();
+}
+
+// core1 owes a fragment and has not answered for CORE1_STALL_MS: reset it, drop the
+// work it lost, and launch the service again.
+static void core1_recover(uint32_t stalled_ms) {
+    core1_note_stall(stalled_ms, false);
+    core1_hold_and_drop();
     // The relaunch is bounded: a core1 that does not come back must not take core0's
     // main loop with it.
     s_c1_stall.relaunched = core1_release();
 }
 
+// ---- core1 across a USB suspend (base/core1_suspend.h) -----------------------
+// Master only, like the raw-HID gate: on the slave the split thread hands core1 its
+// fragments, and a fragment pushed into a held core1 would spin
+// core1_decompress_fragment() until the watchdog fires.
+static core1_suspend_t s_c1_suspend;
+static bool            s_c1_suspend_stalled;   // this suspend's hold recorded a stall
+
+// core1 runs the overlay service on this half, and core0 may reset it from the main
+// loop: the master (the slave's split thread pushes its fragments), no DOOM.
+static bool core1_service_ours(void) {
+    return is_keyboard_master() && !doom_mode_active() && core1_tenant() == CORE1_TENANT_SERVICE;
+}
+
+void core1_suspend_tick(void) {
+    const bool eligible = core1_service_ours() && !core1_held();
+    const bool owes = eligible && (core1_is_busy() || startup_anim_core1_owes());
+    const uint32_t now = timer_read32();
+    switch (core1_suspend_step(&s_c1_suspend, eligible, owes, now)) {
+        case CORE1_SUSPEND_HOLD:
+            s_c1_suspend_stalled = false;
+            core1_hold_and_drop();
+            break;
+        case CORE1_SUSPEND_HOLD_STALLED: {
+            // A fragment's age is known; an Eden job's is not, so it is at least the
+            // time this suspend waited for it.
+            uint32_t stalled_ms = s_c1_suspend.waited;
+            if (core1_is_busy()) {
+                const uint32_t fragment_ms = timer_elapsed32(core1_pushed_at);
+                if (fragment_ms > stalled_ms) stalled_ms = fragment_ms;
+            }
+            core1_note_stall(stalled_ms, true);
+            s_c1_suspend_stalled = true;
+            core1_hold_and_drop();
+        } break;
+        case CORE1_SUSPEND_NONE:
+            break;
+    }
+}
+
+void core1_resume(void) {
+    if (!core1_resume_step(&s_c1_suspend)) {
+        return;
+    }
+    const bool relaunched = core1_release();
+    if (s_c1_suspend_stalled) {
+        s_c1_stall.relaunched = relaunched;
+        s_c1_suspend_stalled  = false;
+    }
+    // A clean hold whose relaunch did not answer is reported by core1_owner, and the
+    // raw-HID gate resets that core1 again once a fragment waits on it.
+}
+
+bool core1_suspend_flush_ready(void) {
+    if (core1_held()) {
+        return true;    // in reset: nothing to fetch
+    }
+    if (core1_service_ours()) {
+        return false;   // master: core1_suspend_tick() takes the hold first
+    }
+    if (doom_mode_active() || core1_tenant() != CORE1_TENANT_SERVICE) {
+        return true;    // DOOM's engine: unchanged behaviour
+    }
+    // Slave: its split thread hands core1 fragments, so the main loop must not reset
+    // it. Flush once core1 owes nothing: the Eden jobs poly_suspend() left in flight
+    // take a few ms, and an idle core1 waits in RAM (core1_fifo_pop_ram). A core1 that never finishes skips this suspend's flush; the dirty
+    // flags stay set for the next one.
+    return !core1_is_busy() && !startup_anim_core1_owes();
+}
+
+void core1_off_during(void (*write)(void)) {
+    if (!core1_service_ours() || core1_held()) {
+        write();   // core1 is off already, or not ours to reset (unchanged behaviour)
+        return;
+    }
+    // The HID path takes a command only when core1 owes no fragment (the raw-HID gate),
+    // so what the reset can drop here is Eden keycap jobs, which the hold marks done.
+    core1_hold_and_drop();
+    write();
+    (void)core1_release();   // a relaunch that does not answer is reported by core1_owner
+}
+
 void core1_stall_report(void) {
     if (s_c1_stall.count == 0 || s_c1_stall.printed >= CORE1_STALL_REPORTS) {
+        return;
+    }
+    // Recorded at suspend but not relaunched yet: the wake decides the outcome.
+    if (s_c1_suspend_stalled) {
         return;
     }
     if (s_c1_stall.printed > 0 && timer_elapsed32(s_c1_stall.printed_at) < CORE1_STALL_REPORT_GAP_MS) {
@@ -260,9 +380,13 @@ void core1_stall_report(void) {
     }
     s_c1_stall.printed++;
     s_c1_stall.printed_at = timer_read32();
-    uprintf("WARNING core1 stalled: no answer for %lu ms (last cmd 0x%08lx arg 0x%08lx, "
+    // " at suspend" sits before the outcome on purpose: the host's problem scan
+    // (PolyKybdHost problem_scan.py) reads "core1 relaunched (recovery N since boot at
+    // M ms" as one unbroken run.
+    uprintf("WARNING core1 stalled: no answer for %lu ms%s (last cmd 0x%08lx arg 0x%08lx, "
             "counts %lu/%lu, entered %lu) - %s (recovery %lu since boot at %lu ms, report %u/%u)\n",
-            (unsigned long)s_c1_stall.stalled_ms, (unsigned long)s_c1_stall.last_cmd,
+            (unsigned long)s_c1_stall.stalled_ms, s_c1_stall.at_suspend ? " at suspend" : "",
+            (unsigned long)s_c1_stall.last_cmd,
             (unsigned long)s_c1_stall.last_arg, (unsigned long)s_c1_stall.c0,
             (unsigned long)s_c1_stall.c1, (unsigned long)s_c1_stall.entered,
             s_c1_stall.relaunched ? "core1 relaunched" : "core1 relaunch FAILED, overlays degraded until reboot",
@@ -286,6 +410,11 @@ void core1_stall_report(void) {
 // user runs on the main thread. On the slave the split thread hands core1 its
 // fragments, and a relaunch from the main thread could interleave with that push.
 bool raw_hid_pre_receive_kb(void) {
+    // A host that sends reports is awake. The wake normally released the suspend hold
+    // already (suspend_wakeup_init_kb()); this covers a wake event QMK's USB event
+    // queue dropped, which would otherwise leave core1 held and this gate refusing
+    // every report once a fragment waits. A no-op when no suspend hold is taken.
+    core1_resume();
     if (!core1_is_busy()) {
         return true;
     }
@@ -407,4 +536,8 @@ void core1_crash_test(void) {
 #else  // !USE_CORE1: no core1 service, so the Eden idle loop renders on core0
 bool core1_eden_available(void) { return false; }
 void core1_eden_key(uint32_t arg) { (void)arg; }
+void core1_suspend_tick(void) {}
+void core1_resume(void) {}
+bool core1_suspend_flush_ready(void) { return true; }
+void core1_off_during(void (*write)(void)) { write(); }
 #endif

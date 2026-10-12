@@ -80,6 +80,9 @@ void startup_anim_core1_job(uint32_t arg);
 // held are gone. A frame waiting on one finishes on core0, and the next idle session
 // may use core1 again because nothing is owed any more.
 void startup_anim_core1_lost(void);
+// True while core1 has not finished every Eden keycap job it was handed, whether or
+// not an idle session still waits for them (core1_suspend_tick() reads it).
+bool startup_anim_core1_owes(void);
 // Render one frame; call every housekeeping pass while active (like doom_tick()).
 void startup_anim_tick(void);
 // True while the animation owns the keycaps — update_displays() must early-return.

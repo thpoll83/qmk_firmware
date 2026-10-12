@@ -191,6 +191,14 @@ for f in lang/lang_lut.h lang/lang_lut.c lang/named_glyphs.h keycode_helper.h \
   /tmp/pkvenv/bin/python -m cogapp -r "$f"; done
 # (or just: bash run_cog.sh)
 ```
+⚠️ **The `KCL_` keycode block is frozen at 160 languages.** Every keycode after it
+(`KC_OS_*`, `KC_IME`, the emoji and language layers) can be stored in a keyboard's
+EEPROM, so the 161st language onward gets its `KCL_` keycode in the tail block cog
+appends after `KC_IME`. Re-cog does this on its own. Add a `LANG_xx` /
+`KCL_xx` `static_assert` beside the `LANG_JAUS` one in `poly_keymap.c`, and bump the
+language count in `tools/tests/check_glyph_coverage_test.py`. The pins on
+`LBL_TEXT` and `KC_IME` fail the build if a keycode moves.
+
 If only cell *values* changed (not the language list/order), `keycode_helper.h`,
 `hid_com.c`, the keymaps and `lang_layer.c` won't change — a good scope check.
 

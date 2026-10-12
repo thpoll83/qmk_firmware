@@ -231,6 +231,27 @@ static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 // divergence between the two generators is a build error, not a silent mis-map.
 static_assert((int)LANG_DEDE == (int)(KCL_DEDE - KCL_ENUS), "KCL_/LANG_ enum order drift");
 static_assert((int)LANG_CKUS == (int)(KCL_CKUS - KCL_ENUS), "KCL_/LANG_ enum order drift");
+// Languages past the frozen KCL_ block take their keycode from the tail block after
+// KC_IME (keycode_helper.h), so the identity above holds for the first
+// KCL_FROZEN_COUNT only. These two convert in both directions for every language.
+static_assert((int)LANG_JAUS == KCL_FROZEN_COUNT + (int)(KCL_JAUS - KCL_TAIL_FIRST), "KCL_ tail / LANG_ order drift");
+static_assert((int)(KCL_TAIL_LAST - KCL_TAIL_FIRST) == NUM_LANG - KCL_FROZEN_COUNT - 1, "KCL_ tail length != NUM_LANG");
+
+static uint16_t kcl_for_lang(uint8_t lang) {
+    return lang < KCL_FROZEN_COUNT ? (uint16_t)(KCL_ENUS + lang)
+                                   : (uint16_t)(KCL_TAIL_FIRST + (lang - KCL_FROZEN_COUNT));
+}
+
+// The LANG index of a KCL_ keycode, or -1.
+static int16_t kcl_lang_index(uint16_t keycode) {
+    if (keycode >= KCL_ENUS && keycode < KCL_ENUS + KCL_FROZEN_COUNT) {
+        return (int16_t)(keycode - KCL_ENUS);
+    }
+    if (keycode >= KCL_TAIL_FIRST && keycode <= KCL_TAIL_LAST) {
+        return (int16_t)(KCL_FROZEN_COUNT + (keycode - KCL_TAIL_FIRST));
+    }
+    return -1;
+}
 
 static enum lang_layer g_lang_init = INIT_LANG;
 
@@ -2051,7 +2072,7 @@ layer_state_t get_function_layer(layer_state_t def_layer) {
 const uint32_t* poly_lang_code(uint8_t lang) {
     if(lang >= NUM_LANG) return U"";
     const led_t none = {0};
-    return to_static_text((uint16_t)(KCL_ENUS + lang), none);
+    return to_static_text(kcl_for_lang(lang), none);
 }
 
 // The settings layer opens with only its everyday keys; this names the rest.
@@ -2241,9 +2262,10 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
                                                                 : MID_TWO_LINE("REC", "macro");
 
         // Language selection keycodes: the tiny "xx-YY" code shown under the flag
-        // (the flag + selection frame are drawn by render_lang_flag_key()). KCL_ENUS..
-        // are contiguous (QK_USER_0-based), so index a cog-generated table by offset.
-        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1: {
+        // (the flag + selection frame are drawn by render_lang_flag_key()). The KCL_
+        // keycodes sit in two blocks (frozen + tail); kcl_lang_index() joins them.
+        case KCL_ENUS ... KCL_ENUS + KCL_FROZEN_COUNT - 1:
+        case KCL_TAIL_FIRST ... KCL_TAIL_LAST: {
             static const uint32_t* const lang_code[NUM_LANG] = {
                 /*[[[cog
                 for lang in languages:
@@ -2412,7 +2434,7 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
                 U"ja-US",
                 //[[[end]]]
             };
-            return lang_code[keycode - KCL_ENUS];
+            return lang_code[kcl_lang_index(keycode)];
         }
         default:
             return NULL;
@@ -4298,7 +4320,7 @@ static bool render_menu_key(uint16_t keycode, led_t state, uint8_t current_lang)
     const int16_t lang_idx = lang_index_for_keycode(keycode);
     if (lang_idx >= 0) {
         draw_mru_top_bar(keycode);
-        render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state),
+        render_lang_flag_key((uint8_t)lang_idx, to_static_text(kcl_for_lang((uint8_t)lang_idx), state),
                              current_lang);
         return true;
     }
@@ -6375,13 +6397,12 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             }
             break;
         }
-        // Direct per-language selectors on the language layer (KCL_ENUS..last).
-        // The KCL_* and LANG_* enums are both generated from the same ordered
-        // language list, so LANG_xx == (KCL_xx - KCL_ENUS) — the two _Static_asserts
-        // above guard that — and the whole per-language block is one range case.
-        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1:
+        // Direct per-language selectors on the language layer: the frozen KCL_ block
+        // and its tail, mapped to a LANG index by kcl_lang_index().
+        case KCL_ENUS ... KCL_ENUS + KCL_FROZEN_COUNT - 1:
+        case KCL_TAIL_FIRST ... KCL_TAIL_LAST:
             if (!act) break;
-            poly_select_lang(local_state, (uint8_t)(keycode - KCL_ENUS), false);
+            poly_select_lang(local_state, (uint8_t)kcl_lang_index(keycode), false);
             break;
         default:
             handled = false;

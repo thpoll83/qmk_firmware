@@ -7868,6 +7868,9 @@ void suspend_power_down_kb(void) {
         return;
     }
     poly_suspend();
+    // After poly_suspend() stopped Eden: no new jobs reach core1, so what it still owes
+    // either finishes within a few ms or is a stall (multicore_exec.h).
+    core1_suspend_tick();
 #ifdef RGB_MATRIX_ENABLE
     rgb_matrix_disable_noeeprom();
 #endif
@@ -7958,6 +7961,9 @@ bool shutdown_user(bool jump_to_bootloader) {
 
 // Resumes keyboard on wakeup: restores display state, brightness, RGB settings, calls housekeeping.
 void suspend_wakeup_init_kb(void) {
+    // First, so the woken board decodes overlays on a fresh core1. A no-op unless the
+    // suspend took the hold (multicore_exec.h).
+    core1_resume();
     poly_sync_t* local_state = access_local_state();
     local_state->flags |= STATUS_DISP_ON;
     local_state->flags &= ~((uint8_t)DISP_IDLE);

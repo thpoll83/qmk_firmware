@@ -20,6 +20,15 @@ bool core1_is_busy(void);
 // draining the console; a no-op when nothing happened.
 void core1_stall_report(void);
 
+// Hold core1 in reset across a USB suspend and relaunch it at the wake, so a core1
+// that stopped while the host was away comes back fresh (base/core1_suspend.h).
+// core1_suspend_tick() runs on every suspend tick (suspend_power_down_kb()); it holds
+// once, after core1 finishes the work it owes, and records a stall when that work is
+// still owed after 500 ms. core1_resume() releases at the wake (suspend_wakeup_init_kb())
+// and does nothing when no hold was taken. Master half only. No-ops without USE_CORE1.
+void core1_suspend_tick(void);
+void core1_resume(void);
+
 // 1 once core1 has entered core1_entry() (IRQs masked); core0 clears it before launch.
 extern volatile uint32_t g_core1_entered;
 

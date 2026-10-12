@@ -339,8 +339,19 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
       loop before the timeout could run (CodeRabbit on #325, twice: the first fix
       gated only the timeout path, and a wake inside 100 ms skipped it). A healthy
       core1 finishes a job in ~3 ms, long before the next idle timeout, so this never
-      costs a working board its core1. A core1 relaunch loses the jobs in flight, so
-      after one Eden can stay on core0 until the next boot.
+      costs a working board its core1. A core1 relaunch loses the jobs in flight;
+      `startup_anim_core1_lost()` marks them done, so the next session uses core1
+      again.
+    - **A USB suspend holds core1 in reset and the wake relaunches it**
+      (`core1_suspend_tick()` / `core1_resume()`, decision logic in
+      `base/core1_suspend.c`, master only). Twice in the field (2026-10-09,
+      2026-10-12) core1 stopped inside an Eden job with no host attached, and the
+      raw-HID gate recovered it only 500 ms into the first overlay switch, losing that
+      fragment. The hold waits for the jobs `poly_suspend()` left in flight; work still
+      owed after 500 ms is recorded as a stall and printed after the wake as
+      `WARNING core1 stalled: no answer for N ms at suspend …`. That line means core1
+      had died before the host slept. The same line without `at suspend` after a wake
+      means it died after the wake.
   - ⚠️ **The status panel's idle screen takes turns with the loop only on the core0
     fallback path**, where every 3 ms slice waited behind ~6 ms of its I2C flush.
     `eden_idle_tick()` then starts no frame while a status frame is being sent

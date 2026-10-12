@@ -672,9 +672,14 @@ in either shape, so "not failed" is never "passed".
   ⚠️ It **never fails on a regression** (wall-clock numbers on
   shared hardware — a flaky red check is one people learn to ignore); only a
   *measurement* failure (wrong build flashed, device dead) fails the job. Ordered
-  `needs: [build-perf, hil-test]` + `always()` so the two rig jobs can't interleave
-  flashes, but a red HIL suite still yields a perf number — often exactly what
-  explains a timing-related HIL failure. **Use this instead of asking the user to
+  `needs: [build-perf, hil-test]` + `!cancelled()` so the two rig jobs can't
+  interleave flashes, but a red HIL suite still yields a perf number — often exactly
+  what explains a timing-related HIL failure. ⚠️ **Never `always()` on a rig job**
+  (perf, doom, fwapply, debug): it also survives a cancelled run, so every run
+  cancelled after its build finished still queued its rig job against replaced
+  code (2026-10-12, about seven ~35 min jobs ahead of the current PRs, removable
+  only by force-cancel). `!cancelled()` runs after a failed or skipped need just
+  the same and stops on a cancel. **Use this instead of asking the user to
   flash a build and paste the console log.** See
   `keyboards/polykybd/profiling/README.md` (§ on-demand control, HID cmd 32) and the
   `polykybd-ctnd` CLAUDE.md § Performance measurement.

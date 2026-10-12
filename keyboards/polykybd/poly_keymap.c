@@ -59,7 +59,7 @@
 #include "base/fonts/gfx_used_fonts.h"
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
 #include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
-// Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
+// Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+glyph)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
 #include "base/fonts/nano_font.h"          // 10px label font under the flags
@@ -3350,7 +3350,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // vertically up the right side in a tiny font.  The currently-selected language's
 // code is drawn as dark text on a filled bar (see kdisp_write_gfx_vtext) rather
 // than with a frame.  Flag glyphs live in flag_fonts.h at codepoints
-// FLAG_CP_BASE + LANG_* (see fonts/gen-lang-fonts.sh); the label uses the tiny
+// FLAG_CP_BASE + LANG_FLAG_GLYPH[LANG_*] (see fonts/gen-lang-fonts.sh); the label uses the tiny
 // NotoSans font.
 #define FLAG_CP_BASE   0xE000u
 #define FLAG_LEFT_X    (BUFFER_X - 2)    // flag glyph left (keeps the left border on-screen)
@@ -3360,7 +3360,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // and clipped so the flag content fills the keycap height), language code running
 // vertically up the right side (inverted bar when it is the active language).
 //
-// The flag glyphs (FLAG_CP_BASE + idx) live in the external-flash font pack, so
+// The flag glyphs (FLAG_CP_BASE + glyph) live in the external-flash font pack, so
 // they resolve through g_all_fonts only when a pack is present. With no pack the
 // flag is simply omitted — the xx-YY code label below it still identifies the
 // language (graceful fallback). The tiny label font stays resident.
@@ -3694,10 +3694,18 @@ static void render_macro_key(uint8_t id) {
     }
 }
 
+// One flag glyph per COUNTRY (fonts/gen-lang-fonts.sh): the six Indian languages,
+// the four US ones and so on share theirs, so a language's glyph is looked up rather
+// than being its enum index.
+#include "base/fonts/generated/lang_flag_glyph.h"
+_Static_assert(sizeof(LANG_FLAG_GLYPH) == NUM_LANG,
+               "lang_flag_glyph.h is stale: re-run fonts/gen-lang-fonts.sh");
+
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
+    const uint32_t flag_cp = FLAG_CP_BASE + (idx < NUM_LANG ? LANG_FLAG_GLYPH[idx] : 0u);
     const GFXfont* flag_font = NULL;
     const GFXglyph* g = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count,
-                                             FLAG_CP_BASE + idx, &flag_font);
+                                             flag_cp, &flag_font);
     if (g) {
         // The glyph is taller than the keycap, so centre it vertically — the
         // empty top/bottom margins clip off and the flag content fills the height.
@@ -3719,7 +3727,7 @@ static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t cur
         const int8_t fxo = (int8_t)pgm_read_byte(&g->xOffset);
         kdisp_write_gfx_char(flag_only, 1, (int8_t)(FLAG_LEFT_X - fxo),
                              (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
-                             FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
+                             flag_cp, 1);   // flags: tight 1px courtyard
         // Language code: vertical, up the right side; inverted bar when selected.
         kdisp_write_gfx_vtext(&NotoSans_Regular_Nano_10px7b, LABEL_COL_X, label,
                               current_lang == idx);

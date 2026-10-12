@@ -70,6 +70,7 @@
 #include "polymod_core1.h"
 #include "anim/tutorial.h"
 #include "anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
+#include "mines_mode.h"                   // the idle-screen mine sweeper (Hyper while idle)
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
@@ -1676,6 +1677,10 @@ void housekeeping_task_user(void) {
         // preview go out this pass, and before the idle block so a non-idle segment's
         // update_performed() lands first.
         demo_tick();
+        // The idle-screen mine sweeper: holds the idle countdown off while it runs and
+        // hands the board back to the idle animation on hide or after 2 min untouched.
+        // Before the idle block for the same reason as the demo.
+        if (is_keyboard_master()) mines_tick();
         // The segment just entered may preview another language or script: write it
         // BEFORE the render below, or each board is first drawn in the previous
         // segment's language and repainted a pass later (the tutorial's lesson, see
@@ -5549,6 +5554,13 @@ void update_displays(enum refresh_mode mode) {
                         }
                         kdisp_send_window();
                         doom_handled = true;
+                    } else if (mines_active()) {
+                        // The idle-screen mine sweeper: every key is a cell, a
+                        // control or dark. Drawn from the SYNCED board, so the slave
+                        // draws its half too.
+                        mines_render_key((uint8_t)(r + offset), c);
+                        kdisp_send_window();
+                        doom_handled = true;
                     } else if (tutorial_intro_mode() &&
                                tutorial_is_chrome_key((uint8_t)(r + offset), c)) {
                         // The tutorial's chrome: "Hold to / skip..." on Esc, the chapter
@@ -6500,6 +6512,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         } else if (tutorial_is_skip_key(row, col)) {
             s_tut_skip_since = 0;   // released early — the hold has to be continuous
         }
+        return false;
+    }
+
+    // The idle-screen mine sweeper IS the board while it runs: every key event is
+    // swallowed and answered there, so nothing reaches the host. Hyper while an idle
+    // animation runs starts it, or resumes the board hidden last (mines_mode.h).
+    if (mines_active()) {
+        mines_process_record(record);
+        return false;
+    }
+    if (mines_try_start(keycode, record)) {
         return false;
     }
 

@@ -30,7 +30,7 @@ extern const GFXfont NotoSans_Regular_Mid_19px7b;
 #    define MINES_HALF_W     7     // left cols 0..6, right cols 1..7
 #    define MINES_ROWS       4
 #    define MINES_RIGHT_COL0 1     // right half rows 0..3 have no col-0 key
-#    define MINES_COUNT      9     // 56 cells, 16 %
+#    define MINES_COUNT      9     // level 1: 56 cells, 16 %
 #    define MINES_KEY_HIDE    4, 0 // left thumb row, outermost
 #    define MINES_KEY_COUNTER 4, 1
 #    define MINES_KEY_STATUS  9, 6
@@ -39,7 +39,7 @@ extern const GFXfont NotoSans_Regular_Mid_19px7b;
 #    define MINES_HALF_W     6
 #    define MINES_ROWS       3
 #    define MINES_RIGHT_COL0 0
-#    define MINES_COUNT      6     // 36 cells, 17 %
+#    define MINES_COUNT      6     // level 1: 36 cells, 17 %
 #    define MINES_KEY_HIDE    3, 3
 #    define MINES_KEY_COUNTER 3, 4
 #    define MINES_KEY_STATUS  7, 1
@@ -50,9 +50,17 @@ extern const GFXfont NotoSans_Regular_Mid_19px7b;
 
 _Static_assert(2 * MINES_HALF_W * MINES_ROWS <= MINES_MAX_CELLS, "board larger than mines_board_t holds");
 
-static const mines_geom_t s_geom = {2 * MINES_HALF_W, MINES_ROWS, MINES_COUNT};
+// The shape and the level-1 mine count. Each completed level adds a mine
+// (mines_for_level); geom() is the shape with the current level's count.
+static const mines_geom_t s_base = {2 * MINES_HALF_W, MINES_ROWS, MINES_COUNT};
 
-// A press held this long toggles a flag instead of opening the cell.
+static mines_geom_t geom(const mines_board_t *b) {
+    mines_geom_t g = s_base;
+    g.mines = mines_for_level(&s_base, b->level);
+    return g;
+}
+
+// A press held this long toggles a flag, at that moment, while the key is still down.
 #define MINES_FLAG_HOLD_MS 300
 // After hiding, how long the normal legends get to repaint (both halves) before the
 // idle animation takes the keycaps. The pulse style dims whatever the panels hold, so
@@ -66,6 +74,7 @@ static const mines_geom_t s_geom = {2 * MINES_HALF_W, MINES_ROWS, MINES_COUNT};
 static uint8_t  s_press_row = NO_KEY;   // the press this game saw (its release acts)
 static uint8_t  s_press_col = NO_KEY;
 static uint16_t s_press_t;
+static bool     s_press_flagged;        // the hold already toggled a flag; the release does nothing
 static uint32_t s_last_input;           // for MINES_INACTIVE_MS
 static uint32_t s_hide_t;               // when the hide began (0 = not hiding)
 static uint32_t s_hide_stamp;           // get_last_update() at the hide
@@ -92,13 +101,13 @@ bool mines_active(void) {
 
 static uint8_t cell_of(uint8_t row, uint8_t col) {
     if (row < MATRIX_ROWS_PER_SIDE) {
-        if (row < MINES_ROWS && col < MINES_HALF_W) return (uint8_t)(row * s_geom.w + col);
+        if (row < MINES_ROWS && col < MINES_HALF_W) return (uint8_t)(row * s_base.w + col);
         return MINES_NO_CELL;
     }
     const uint8_t r = (uint8_t)(row - MATRIX_ROWS_PER_SIDE);
     // Unsigned wrap: a col left of MINES_RIGHT_COL0 becomes large and fails the test.
     if (r < MINES_ROWS && (uint8_t)(col - MINES_RIGHT_COL0) < MINES_HALF_W) {
-        return (uint8_t)(r * s_geom.w + MINES_HALF_W + (col - MINES_RIGHT_COL0));
+        return (uint8_t)(r * s_base.w + MINES_HALF_W + (col - MINES_RIGHT_COL0));
     }
     return MINES_NO_CELL;
 }
@@ -121,7 +130,15 @@ bool mines_try_start(uint16_t keycode, keyrecord_t *record) {
     startup_anim_stop();
     poly_set_awake_state(ls);
     mines_board_t *b = board();
-    if (mines_over(b) || (b->state & MINES_PLACED) == 0) mines_reset(b);   // else resume
+    // A finished board does not resume: a win goes on to the next level, a loss starts
+    // again at level 1. An unfinished one resumes as it was.
+    if (b->state & MINES_WON) {
+        if (b->level < 0xFF) ++b->level;
+        mines_reset(b);
+    } else if ((b->state & MINES_LOST) || (b->state & MINES_PLACED) == 0) {
+        if (b->state & MINES_LOST) b->level = 0;
+        mines_reset(b);
+    }
     b->state |= MINES_ACTIVE;
     s_press_row = NO_KEY;   // Hyper's own release must not act
     s_press_col = NO_KEY;
@@ -148,12 +165,12 @@ static void open_bit(mines_board_t *b, uint8_t cell) {
 // The win waits for the animation: the move's own win check ran on a board whose
 // open bits were then held back.
 static void anim_done(mines_board_t *b) {
-    mines_check_win(&s_geom, b);
+    mines_check_win(&s_base, b);
     if (b->state & MINES_WON) uprint("mines: won\n");
 }
 
 static void anim_step(void) {
-    const uint8_t cell = mines_next_pending(&s_geom, s_pending, s_origin);
+    const uint8_t cell = mines_next_pending(&s_base, s_pending, s_origin);
     if (cell == MINES_NO_CELL) return;
     mines_board_t *b = board();
     open_bit(b, cell);
@@ -193,6 +210,18 @@ void mines_tick(void) {
         update_performed();
         if (timer_elapsed32(s_last_input) > MINES_INACTIVE_MS) {
             mines_hide();
+        } else if (s_press_row != NO_KEY && !s_press_flagged &&
+                   timer_elapsed(s_press_t) >= MINES_FLAG_HOLD_MS) {
+            // Flag on the hold itself, so the flag shows while the key is still down
+            // and the user knows the release will not open the cell.
+            const uint8_t cell = cell_of(s_press_row, s_press_col);
+            mines_board_t *b = board();
+            if (cell != MINES_NO_CELL && !mines_over(b) && !mines_bit(b->open, cell)) {
+                anim_flush();
+                mines_toggle_flag(&s_base, b, cell);
+                s_press_flagged = true;
+                request_disp_refresh();
+            }
         } else if (anim_running() && timer_elapsed(s_step_t) >= MINES_REVEAL_STEP_MS) {
             anim_step();
         }
@@ -221,12 +250,13 @@ void mines_process_record(keyrecord_t *record) {
         s_press_row = row;
         s_press_col = col;
         s_press_t   = timer_read();
+        s_press_flagged = false;
         return;
     }
     if (row != s_press_row || col != s_press_col) return;
     s_press_row = NO_KEY;
     s_press_col = NO_KEY;
-    const bool held = timer_elapsed(s_press_t) >= MINES_FLAG_HOLD_MS;
+    if (s_press_flagged) return;   // mines_tick() flagged it while held
 
     anim_flush();
     mines_board_t *b = board();
@@ -235,23 +265,25 @@ void mines_process_record(keyrecord_t *record) {
         return;
     }
     if (IS_KEY(row, col, MINES_KEY_NEW)) {
+        // "Next" after a win (one more mine), "New" otherwise (back to level 1).
+        if (b->state & MINES_WON) {
+            if (b->level < 0xFF) ++b->level;
+        } else {
+            b->level = 0;
+        }
         mines_reset(b);
         request_disp_refresh();
         return;
     }
     const uint8_t cell = cell_of(row, col);
     if (cell == MINES_NO_CELL) return;
-    if (held) {
-        mines_toggle_flag(&s_geom, b, cell);
-        request_disp_refresh();
-        return;
-    }
     // Play the move on a copy, then animate what it opened. A loss shows at once.
     mines_board_t next = *b;
     if (mines_bit(b->open, cell)) {
-        mines_chord(&s_geom, &next, cell);
+        mines_chord(&s_base, &next, cell);
     } else {
-        mines_reveal(&s_geom, &next, cell, timer_read32() ^ ((uint32_t)s_press_t << 16));
+        const mines_geom_t g = geom(b);
+        mines_reveal(&g, &next, cell, timer_read32() ^ ((uint32_t)s_press_t << 16));
     }
     if (next.state & MINES_LOST) {
         *b = next;
@@ -329,11 +361,25 @@ static void draw_big_char(int cx, uint32_t ch) {
     kdisp_draw_glyph_double_at(s_fonts, 1, (int8_t)(cx - w / 2), (int8_t)((SCREEN_HEIGHT - h) / 2), ch);
 }
 
-static void draw_text(const uint32_t *text) {
+// `text` centred on column cx.
+static void draw_text_at(int cx, const uint32_t *text) {
     int8_t xmin, xmax, ymin, ymax;
     kdisp_gfx_text_bbox(s_fonts, 1, text, &xmin, &xmax, &ymin, &ymax);
-    kdisp_write_gfx_text(s_fonts, 1, (int8_t)(BUFFER_X + (SCREEN_WIDTH - (xmax - xmin + 1)) / 2 - xmin),
+    kdisp_write_gfx_text(s_fonts, 1, (int8_t)(cx - (xmax - xmin + 1) / 2 - xmin),
                          (int8_t)((SCREEN_HEIGHT - (ymax - ymin + 1)) / 2 - ymin), text);
+}
+
+static void draw_text(const uint32_t *text) {
+    draw_text_at(CX, text);
+}
+
+// `prefix` followed by n in decimal (n < 1000).
+static void format_number(uint32_t *out, const uint32_t *prefix, unsigned n) {
+    while (*prefix) *out++ = *prefix++;
+    if (n >= 100) *out++ = (uint32_t)('0' + n / 100);
+    if (n >= 10) *out++ = (uint32_t)('0' + n / 10 % 10);
+    *out++ = (uint32_t)('0' + n % 10);
+    *out   = 0;
 }
 
 // A hidden cell: a square outline, the same size on every key, filled with staggered
@@ -371,22 +417,36 @@ void mines_render_key(uint8_t row, uint8_t col) {
         return;
     }
     if (IS_KEY(row, col, MINES_KEY_NEW)) {
-        draw_text(U"New");
+        draw_text((b->state & MINES_WON) ? U"Next" : U"New");
         return;
     }
     if (IS_KEY(row, col, MINES_KEY_STATUS)) {
-        draw_text((b->state & MINES_LOST) ? U"Boom" : (b->state & MINES_WON) ? U"Win!" : U"Mines");
+        if (b->state & MINES_LOST) {
+            draw_text(U"Boom");
+        } else {
+            uint32_t text[8];
+            format_number(text, U"Lv ", b->level + 1u);
+            draw_text(text);
+        }
         return;
     }
     if (IS_KEY(row, col, MINES_KEY_COUNTER)) {
         draw_flag(CX - 24, true);
-        draw_big_char(CX + 16, (uint32_t)('0' + mines_flags_left(&s_geom, b)));
+        const mines_geom_t g    = geom(b);
+        const uint8_t      left = mines_flags_left(&g, b);
+        if (left < 10) {
+            draw_big_char(CX + 16, (uint32_t)('0' + left));
+        } else {
+            uint32_t text[4];
+            format_number(text, U"", left);
+            draw_text_at(CX + 16, text);   // two digits do not fit at double size
+        }
         return;
     }
     const uint8_t cell = cell_of(row, col);
     if (cell == MINES_NO_CELL) return;   // every other key stays dark
 
-    const enum mines_show show = mines_cell_show(&s_geom, b, cell);
+    const enum mines_show show = mines_cell_show(&s_base, b, cell);
     switch (show) {
         case MINES_SHOW_HIDDEN:
             draw_tile(true);

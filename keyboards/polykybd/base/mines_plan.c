@@ -30,8 +30,10 @@ static bool near(const mines_geom_t *g, uint8_t c, uint8_t n) {
 
 void mines_reset(mines_board_t *b) {
     const uint8_t active = b->state & MINES_ACTIVE;
+    const uint8_t level  = b->level;
     memset(b, 0, sizeof(*b));
     b->state = active;
+    b->level = level;
     b->boom  = MINES_NO_CELL;
 }
 
@@ -193,4 +195,11 @@ uint8_t mines_next_pending(const mines_geom_t *g, const uint8_t *pending, uint8_
         }
     }
     return best;
+}
+
+uint8_t mines_for_level(const mines_geom_t *base, uint8_t level) {
+    const uint8_t n   = cells(base);
+    const uint8_t cap = n > 9 ? (uint8_t)(n - 9) : 1;
+    const unsigned want = (unsigned)base->mines + level;
+    return want > cap ? cap : (uint8_t)want;
 }

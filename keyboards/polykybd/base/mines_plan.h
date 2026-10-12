@@ -35,7 +35,7 @@ typedef struct _mines_board_t {
     uint8_t mine[MINES_MASK_BYTES];
     uint8_t open[MINES_MASK_BYTES];
     uint8_t flag[MINES_MASK_BYTES];
-    uint8_t pad;                      // keeps the size a multiple of 4 (poly_sync_t's CRC range)
+    uint8_t level;                    // 0 = first level; one more mine per level (mines_for_level)
 } mines_board_t;
 
 // The board shape: w x h cells, row-major (cell = y * w + x), `mines` mines.
@@ -59,7 +59,7 @@ static inline bool mines_bit(const uint8_t *mask, uint8_t cell) {
     return (mask[cell >> 3] >> (cell & 7)) & 1u;
 }
 
-// Clear the board for a new game. Keeps MINES_ACTIVE as it was.
+// Clear the board for a new game. Keeps MINES_ACTIVE and the level as they were.
 void mines_reset(mines_board_t *b);
 
 bool mines_over(const mines_board_t *b);
@@ -89,6 +89,11 @@ void mines_check_win(const mines_geom_t *g, mines_board_t *b);
 // tie), or MINES_NO_CELL when `pending` is empty. The order of the reveal animation:
 // it spreads outward from the tapped key.
 uint8_t mines_next_pending(const mines_geom_t *g, const uint8_t *pending, uint8_t origin);
+
+// The mine count for `level`: base->mines plus one per level, capped where the first
+// tap can still open a 3x3 area (cells - 9). The cap is the ceiling the placement rule
+// itself sets, not a difficulty choice.
+uint8_t mines_for_level(const mines_geom_t *base, uint8_t level);
 
 // Mines minus flags, floored at 0 (the counter keycap).
 uint8_t mines_flags_left(const mines_geom_t *g, const mines_board_t *b);

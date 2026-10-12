@@ -46,12 +46,14 @@ TEST(MinesPlan, BoardFitsTheSyncStruct) {
     EXPECT_LE(kSplit42.w * kSplit42.h, MINES_MAX_CELLS);
 }
 
-TEST(MinesPlan, ResetKeepsOnlyTheActiveBit) {
+TEST(MinesPlan, ResetKeepsOnlyTheActiveBitAndTheLevel) {
     mines_board_t b;
     std::memset(&b, 0xA5, sizeof(b));
     b.state = MINES_ACTIVE | MINES_LOST | MINES_PLACED;
+    b.level = 7;
     mines_reset(&b);
     EXPECT_EQ(b.state, MINES_ACTIVE);
+    EXPECT_EQ(b.level, 7);
     EXPECT_EQ(b.boom, MINES_NO_CELL);
     EXPECT_EQ(Count(b.mine, kSplit72) + Count(b.open, kSplit72) + Count(b.flag, kSplit72), 0);
 }
@@ -221,6 +223,25 @@ TEST(MinesPlan, CheckWinWaitsForEverySafeCell) {
     for (int i = 1; i < 56; ++i) l.open[i >> 3] |= (uint8_t)(1u << (i & 7));
     mines_check_win(&g, &l);
     EXPECT_FALSE(l.state & MINES_WON);
+}
+
+TEST(MinesPlan, EachLevelAddsAMineUpToThePlacementCeiling) {
+    EXPECT_EQ(mines_for_level(&kSplit72, 0), 9);
+    EXPECT_EQ(mines_for_level(&kSplit72, 1), 10);
+    EXPECT_EQ(mines_for_level(&kSplit72, 38), 47);
+    EXPECT_EQ(mines_for_level(&kSplit72, 39), 47);    // 56 cells - the 3x3 opening
+    EXPECT_EQ(mines_for_level(&kSplit72, 255), 47);
+    EXPECT_EQ(mines_for_level(&kSplit42, 0), 6);
+    EXPECT_EQ(mines_for_level(&kSplit42, 255), 27);
+    // At the ceiling the first tap still opens its 3x3 area, from every cell.
+    const mines_geom_t full = {14, 4, mines_for_level(&kSplit72, 255)};
+    for (int first = 0; first < 56; ++first) {
+        mines_board_t b;
+        mines_reset(&b);
+        mines_reveal(&full, &b, (uint8_t)first, 99);
+        ASSERT_FALSE(b.state & MINES_LOST) << first;
+        ASSERT_EQ(Count(b.mine, full), full.mines) << first;
+    }
 }
 
 TEST(MinesPlan, OutOfRangeCellsAreIgnored) {

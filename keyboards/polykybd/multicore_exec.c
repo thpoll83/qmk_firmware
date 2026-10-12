@@ -318,7 +318,20 @@ void core1_resume(void) {
 }
 
 bool core1_suspend_flush_ready(void) {
-    return !core1_service_ours() || core1_held();
+    if (core1_held()) {
+        return true;    // in reset: nothing to fetch
+    }
+    if (core1_service_ours()) {
+        return false;   // master: core1_suspend_tick() takes the hold first
+    }
+    if (doom_mode_active() || core1_tenant() != CORE1_TENANT_SERVICE) {
+        return true;    // DOOM's engine: unchanged behaviour
+    }
+    // Slave: its split thread hands core1 fragments, so the main loop must not reset
+    // it. Flush once core1 owes nothing: the Eden jobs poly_suspend() left in flight
+    // take a few ms. A core1 that never finishes skips this suspend's flush; the dirty
+    // flags stay set for the next one.
+    return !core1_is_busy() && !startup_anim_core1_owes();
 }
 
 void core1_off_during(void (*write)(void)) {

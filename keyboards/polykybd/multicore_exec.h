@@ -34,9 +34,10 @@ void core1_resume(void);
 // is out of XIP mode, the fetch never completes: core1 stops for good, or the bus
 // stalls and the flash call never returns, so core0 hangs until the watchdog. Field
 // 2026-10-12: both, at USB suspends with Eden computing keycaps on core1.
-// core1_suspend_flush_ready(): the suspend flush may run now. False on the master
-// until core1_suspend_tick() has taken its hold; true where core1 is not ours to
-// reset (the slave, DOOM), which keeps the old behaviour there.
+// core1_suspend_flush_ready(): the suspend flush may run now. On the master, once
+// core1_suspend_tick() has taken its hold. On the slave, which may not reset core1
+// from the main loop, once core1 owes no fragment and no Eden job. Under DOOM,
+// always (unchanged).
 bool core1_suspend_flush_ready(void);
 // Run `write` (an EEPROM flush) with core1 in reset, then relaunch it. For the HID
 // path (cmd 24 display off, cmd 26 flush), where core1 owes no fragment. Runs `write`

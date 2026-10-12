@@ -33,6 +33,9 @@ struct FakeCore1 {
     int interrupt_launches = 0;
     // Running a launched program: set by a launch that answers, cleared by a reset.
     bool running = false;
+    // Runs after a handshake has answered, before the owner looks at the result:
+    // the window between the launch returning and end_launch() taking the lock.
+    void (*after_launch)(void) = nullptr;
 };
 FakeCore1 g;
 
@@ -65,6 +68,11 @@ bool core1_hw_launch_service(void) {
     if (g.forced_off || !g.launch_ok) return false;
     g.service_runs++;
     g.running = true;
+    if (g.after_launch) {
+        auto f = g.after_launch;
+        g.after_launch = nullptr;
+        f();
+    }
     return true;
 }
 bool core1_hw_launch(void (*)(void), uint32_t *, size_t) {
@@ -83,6 +91,11 @@ bool core1_hw_launch(void (*)(void), uint32_t *, size_t) {
     if (g.forced_off || !g.launch_ok) return false;
     g.custom_runs++;
     g.running = true;
+    if (g.after_launch) {
+        auto f = g.after_launch;
+        g.after_launch = nullptr;
+        f();
+    }
     return true;
 }
 void core1_hw_report(const char *what) { g.reports.emplace_back(what); }
@@ -265,5 +278,35 @@ TEST_F(Core1OwnerTest, ReleaseReportsWhetherItsRelaunchAnswered) {
     g.launch_ok = false;
     core1_hold();
     EXPECT_FALSE(core1_release());
+}
+
+// --- a hold that lands after the handshake answered (revix, #361) --------------
+
+TEST_F(Core1OwnerTest, RunFailsWhenAHoldLandsAfterTheEntryAnswered) {
+    g.after_launch = [] { core1_hold(); };
+    EXPECT_FALSE(core1_run(entry_stub, stack_stub, sizeof stack_stub)) << "reported a halted engine as running";
+    EXPECT_TRUE(g.forced_off);
+    EXPECT_EQ(core1_tenant(), CORE1_TENANT_SERVICE);
+    core1_release();
+    EXPECT_EQ(g.service_runs, 1) << "the release did not bring the service back";
+    EXPECT_TRUE(g.running);
+}
+
+TEST_F(Core1OwnerTest, RestoreReportsHeldWhenAHoldLandsAfterTheServiceAnswered) {
+    g.after_launch = [] { core1_hold(); };
+    EXPECT_FALSE(core1_restore_service());
+    EXPECT_TRUE(g.forced_off);
+    core1_release();
+    EXPECT_TRUE(g.running);
+}
+
+TEST_F(Core1OwnerTest, AReleaseRelaunchCutShortByAHoldLeavesItToThatHoldsRelease) {
+    core1_hold();
+    g.after_launch = [] { core1_hold(); };
+    EXPECT_TRUE(core1_release()) << "the pending hold's release relaunches, so this is not a failure";
+    EXPECT_TRUE(g.forced_off);
+    EXPECT_TRUE(core1_release());
+    EXPECT_EQ(g.service_runs, 2);
+    EXPECT_TRUE(g.running);
 }
 

@@ -457,3 +457,29 @@ are derived from the stage, so the wire format is unchanged.
   marks the slot dirty (`fw_staging_written()`), so an identical BEGIN retry
   re-erases instead of being told a half-erased slot is ready.
 
+
+## The stream's bookkeeping (`base/fw_stream.c`)
+
+The stage, the deferred erase's sector counters and fw_staging's core1 hold live in
+one `fw_stream_t`, and every decision about them is in `base/fw_stream.c`.
+`fw_staging.c` keeps the image, the CRC, the signature and the flash layout, and
+implements the `fw_stream_hw_*` seam: the interrupt mask, one sector erase by index,
+the core1 lock, and the hold.
+
+`make test:polykybd_fw_stream` fakes that seam. The fake can run a "split thread"
+action (a finalize, or a BEGIN) at any chosen point where interrupts come back on,
+which is where the slave's split thread can preempt housekeeping. It also checks
+that every sector is erased with interrupts off and that core1 is never released
+more often than it was held.
+
+- ⚠️ **One erase pass is atomic: erase, advance and the completion decision all run
+  with interrupts off.** Advancing after the restore let a BEGIN for another image,
+  landing between the restore and the increment, lose its sector 0. Landing after
+  the last sector, it had its new erase marked complete without being run. The
+  current host cannot send that BEGIN, since it polls BEGIN until the slave reports
+  ready, and the slave answers a same-image BEGIN with BUSY. The tests found it.
+- **What these tests cannot show:** preemption inside a single C statement. The
+  fake preempts only at an interrupt restore, so a read-modify-write that is merely
+  short (the old `s_stage = fw_stage_next(s_stage, …)` after the restore) passes.
+  Keeping each such decision inside the interrupts-off section is a rule of the code,
+  not something a test can enforce.

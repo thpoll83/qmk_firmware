@@ -4,7 +4,7 @@
 #include "quantum.h"
 
 #include "fw_staging.h"
-#include "fw_stage.h"         // IDLE / ERASING / RECEIVING transitions (pure)
+#include "fw_stream.h"        // the stream's stage, deferred erase and core1 hold (pure)
 #include "fontpack.h"        // FONTPACK target: fontpack_reload()/present + max size
 #include "polymod_crc32.h"
 #include "monocypher-ed25519.h"   // FW-2: Ed25519 image signature verify (polymod_monocypher)
@@ -88,13 +88,9 @@ _Static_assert(FW_RESOURCE_OFFSET + FW_DOOMPACK_SLOT_OFF + FW_DOOMPACK_SLOT_SIZE
 // so core1 never needs to be restarted.  On the failure path (CRC mismatch),
 // fw_staging_finalize() restarts core1 explicitly.
 // ---------------------------------------------------------------------------
-// The stream stage: IDLE / ERASING / RECEIVING; transitions only through
-// fw_stage_next(). Declared here because the core1 stage hold reads it.
-static fw_stage_t s_stage = FW_STAGE_IDLE;
-// A finalize that landed mid-erase stopped it, so the slot is partly erased. It
-// counts as dirty (fw_staging_written()), or an identical BEGIN retry would be
-// told the slot is clean and ready. Cleared by the next BEGIN that erases.
-static bool s_erase_cut_short = false;
+// The stream's stage, deferred erase and core1 hold: base/fw_stream.c decides
+// when things may happen, through the fw_stream_hw_* seam implemented below.
+static fw_stream_t s_stream = {.stage = FW_STAGE_IDLE};
 
 #ifdef USE_CORE1
 #include "polymod_core1.h"
@@ -170,48 +166,34 @@ static inline uint32_t __attribute__((always_inline)) psm_wait_proc1_off(void) {
     return spins;
 }
 
-// fw_staging's own long hold on core1, from BEGIN until the erase completes or the
-// stream is finalized. A flag rather than a bare core1_hold() per call because
-// BEGIN can arrive again for the same image (the re-erase of a dirty slot): a
-// second hold without a second release would keep core1 down for good. Other
-// holders (the EEPROM flush, the crash record, the hand stamp) nest on top
-// through core1_owner's count, so none of them can release this one.
-//
-// The flag is tested and changed under core1_owner's lock, and the hold is taken
-// or released after it. On the slave, take runs on the split thread (a deferred
-// BEGIN) and drop on the main thread (the erase completing), and the master
-// re-sends BEGIN while it polls, so a BEGIN can preempt a drop. Both orders are
-// safe: a BEGIN between the flag clear and the release takes a fresh hold first
-// (the count goes 2 -> 1), and a drop is skipped while an erase is pending, so a
-// drop that started for the old erase cannot release the new one's hold.
-static bool s_stage_hold = false;
-
-static void stage_hold_take(void) {
-    bool take = false;
-    core1_hw_lock();
-    if (!s_stage_hold) {
-        s_stage_hold = true;
-        take         = true;
-    }
-    core1_hw_unlock();
-    if (take) {
-        core1_hold();
-    }
-}
-
-static void stage_hold_drop(void) {
-    bool drop = false;
-    core1_hw_lock();
-    if (s_stage_hold && s_stage != FW_STAGE_ERASING) {
-        s_stage_hold = false;
-        drop         = true;
-    }
-    core1_hw_unlock();
-    if (drop) {
-        core1_release();
-    }
-}
 #endif
+
+// fw_stream's core1 seam. The stream keeps one long hold on core1, from a deferred
+// BEGIN until the erase completes or the stream is finalized. It is a flag over a
+// single core1_hold() because BEGIN can arrive again for the same image (the
+// re-erase of a dirty slot): a second hold without a second release would keep
+// core1 down for good. Other holders (the EEPROM flush, the crash record, the hand
+// stamp) nest on top through core1_owner's count, so none of them can release it.
+void fw_stream_hw_lock(void) {
+#ifdef USE_CORE1
+    core1_hw_lock();
+#endif
+}
+void fw_stream_hw_unlock(void) {
+#ifdef USE_CORE1
+    core1_hw_unlock();
+#endif
+}
+void fw_stream_hw_hold(void) {
+#ifdef USE_CORE1
+    core1_hold();
+#endif
+}
+void fw_stream_hw_release(void) {
+#ifdef USE_CORE1
+    core1_release();
+#endif
+}
 
 // ---------------------------------------------------------------------------
 // Linker-exported firmware boundary symbols
@@ -286,12 +268,6 @@ static bool     s_reboot_pending;   // deferred plain reboot (QK_REBOOT slave pa
 static bool     s_fontpack_reload_pending;  // slave: defer the heavy FONTPACK reload to housekeeping
 
 static bool fw_staging_finalize_impl(bool defer_fontpack_reload);
-
-// ---------------------------------------------------------------------------
-// Deferred-erase state (used by slave handler to avoid blocking the split link)
-// ---------------------------------------------------------------------------
-static uint32_t s_erase_sector_count;  // total sectors to erase (header + data)
-static uint32_t s_erase_sector_next;   // next sector index not yet erased
 
 // ---------------------------------------------------------------------------
 // Diagnostic counters (read via fw_staging_get_status)
@@ -458,8 +434,7 @@ void fw_staging_init(void) {
     s_initialized          = true;
     s_commit_pending       = false;
     s_reboot_pending       = false;
-    s_stage                = FW_STAGE_IDLE;
-    s_erase_cut_short      = false;
+    fw_stream_init(&s_stream);
     // Diagnostic counters: leave the cumulative call counts in place across
     // init so a re-arm during the same power cycle is visible, but clear the
     // last-chunk fields so they only ever describe the most recent attempt.
@@ -491,13 +466,12 @@ void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t ta
     if (image_size == 0 || image_size > target_max_size()) {
         s_image_size = 0;
         s_image_crc  = 0;
-        s_stage      = fw_stage_next(s_stage, FW_EV_BEGIN_REFUSED);
+        fw_stream_begin_refused(&s_stream);
         return;
     }
     s_image_size      = image_size;
     s_image_crc       = image_crc;
-    s_stage           = fw_stage_next(s_stage, FW_EV_BEGIN_SYNC);
-    s_erase_cut_short = false;
+    fw_stream_begin_sync(&s_stream);
     // Per ATTEMPT, not per boot: fw_staging_init() runs once at keyboard_post_init,
     // so clearing the verdict only there let a second flash in the same power cycle
     // inherit the first one's. That matters because the master now READS this to
@@ -553,7 +527,7 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
     if (image_size == 0 || image_size > target_max_size()) {
         s_image_size = 0;
         s_image_crc  = 0;
-        s_stage      = fw_stage_next(s_stage, FW_EV_BEGIN_REFUSED);
+        fw_stream_begin_refused(&s_stream);
         return;
     }
     s_image_size = image_size;
@@ -568,34 +542,32 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
 
     uint32_t data_sectors   = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
     // FIRMWARE: index 0 = header sector, 1..N = data. FONTPACK: 0..N-1 = data (no header).
-    s_erase_sector_count    = (target_has_header() ? 1u : 0u) + data_sectors;
-    s_erase_sector_next     = 0;
-    s_stage                 = fw_stage_next(s_stage, FW_EV_BEGIN_DEFERRED);
-    s_erase_cut_short       = false;
-#ifdef USE_CORE1
-    // Halt core1 now and keep it halted for the entire update sequence
-    // (all sector erases + all page writes + finalize).  Restarting core1
-    // once per sector erase exposes the ChibiOS Vector80/NMI danger window
-    // on every restart; keeping it halted throughout eliminates that risk.
-    // On the success path the chip hard-resets, so core1 is never restarted.
-    // On the failure path fw_staging_finalize() restarts core1 explicitly.
-    stage_hold_take();
-#endif
+    // Takes the stream's core1 hold. On the success path the chip hard-resets, so
+    // core1 is never restarted; otherwise the erase completing or
+    // fw_staging_finalize() releases it.
+    fw_stream_begin_deferred(&s_stream, (target_has_header() ? 1u : 0u) + data_sectors);
 }
 
-// ERASING -> RECEIVING with interrupts off, from the read of s_stage through the
-// store. On the slave, a finalize (an early COMMIT, on the split thread) can
-// preempt housekeeping; between a plain read and the store it would set IDLE, and
-// the stale store would put the stage back to RECEIVING for good. Returns whether
-// this call made the transition, so only that caller drops the core1 hold.
-static bool erase_done_transition(void) {
-    uint32_t   irq  = save_and_disable_interrupts();
-    const bool done = s_stage == FW_STAGE_ERASING;
-    if (done) {
-        s_stage = fw_stage_next(s_stage, FW_EV_ERASE_DONE);
+// fw_stream's erase seam: interrupts and one staging sector by index.
+uint32_t fw_stream_hw_irq_save(void) {
+    return save_and_disable_interrupts();
+}
+
+void fw_stream_hw_irq_restore(uint32_t saved) {
+    restore_interrupts(saved);
+}
+
+// Called with interrupts off, and core1 held by the stream.
+void fw_stream_hw_erase_sector(uint32_t index) {
+    uint32_t offset;
+    if (target_has_header()) {
+        // FIRMWARE: sector 0 = header, sectors 1..N = data.
+        offset = (index == 0) ? FW_STAGING_OFFSET : target_data_offset() + (index - 1) * FLASH_SECTOR_SIZE;
+    } else {
+        // FONTPACK: no header — sectors 0..N-1 are data.
+        offset = target_data_offset() + index * FLASH_SECTOR_SIZE;
     }
-    restore_interrupts(irq);
-    return done;
+    flash_range_erase(offset, FLASH_SECTOR_SIZE);
 }
 
 // Erase one staging sector per call.  Must be called repeatedly from
@@ -606,68 +578,30 @@ void fw_staging_process_deferred(void) {
     // which is what the symptom would look like from the master side).
     if (s_process_deferred_calls != UINT16_MAX) s_process_deferred_calls++;
 
-    if (s_stage != FW_STAGE_ERASING) return;
-
-    if (s_erase_sector_next >= s_erase_sector_count) {
-        (void)erase_done_transition();
-        return;
-    }
-
     // Rate-limit to one sector per 70ms: each sector takes ~50ms (irqs disabled),
     // leaving ~20ms of UART-responsive time between erasures.  Without this gate
     // housekeeping fires every ~1ms and the slave spends >98% of the erase period
     // with interrupts off, making the split link completely unresponsive and
     // causing every chunk transaction from the master to fail.
     static uint32_t s_last_sector_ms = 0;
-    if (timer_elapsed32(s_last_sector_ms) < 70) return;
-
-    uint32_t offset;
-    if (target_has_header()) {
-        // FIRMWARE: sector 0 = header, sectors 1..N = data.
-        offset = (s_erase_sector_next == 0)
-                     ? FW_STAGING_OFFSET
-                     : target_data_offset() + (s_erase_sector_next - 1) * FLASH_SECTOR_SIZE;
-    } else {
-        // FONTPACK: no header — sectors 0..N-1 are data.
-        offset = target_data_offset() + s_erase_sector_next * FLASH_SECTOR_SIZE;
-    }
-    // core1 is already halted by fw_staging_begin_deferred(); no halt/restart here.
-    uint32_t irq = save_and_disable_interrupts();
-    // Recheck with interrupts off. On the slave a finalize (an early COMMIT, on the
-    // split thread) can preempt this pass after the check at the top, end the
-    // stream and release core1. With interrupts off it cannot land between this
-    // check and the erase, and while the stage reads ERASING the hold is in place.
-    if (s_stage != FW_STAGE_ERASING) {
-        restore_interrupts(irq);
+    const fw_erase_step_t step = fw_stream_erase_step(&s_stream, timer_elapsed32(s_last_sector_ms) >= 70);
+    if (step != FW_ERASE_SECTOR && step != FW_ERASE_DONE) {
         return;
     }
-    flash_range_erase(offset, FLASH_SECTOR_SIZE);
-    restore_interrupts(irq);
     s_last_sector_ms = timer_read32();
 
     // Bump the advance counter — proves we actually got back from
     // flash_range_erase (i.e. the bootrom returned, didn't hang in XIP-off).
     if (s_process_deferred_advances != UINT16_MAX) s_process_deferred_advances++;
 
-    s_erase_sector_next++;
-    if (s_erase_sector_next >= s_erase_sector_count && erase_done_transition()) {
-#ifdef USE_CORE1
-        // DIAGNOSTIC PROBE (2026-05-29): restart core1 the instant erase
-        // completes, before the first chunk arrives.  Hypothesis: holding
-        // core1 in PSM reset across the begin->chunk handoff hard-locks the
-        // slave on chunk 0 (core0 blocks forever on a full SIO FIFO signalling
-        // a non-draining core1 — chunk 0 does no flash, so a flash fault can't
-        // explain it).  If chunk 0 now ACKs and the lock instead moves to the
-        // first page flush (the chunk at offset 224), the per-flush halt/restart
-        // cycle is the culprit -> cooperative core1 park.  See CLAUDE.md fw_up.
-        stage_hold_drop();
-        uprintf("fw_staging_process_deferred: erase complete (%lu sectors), core1 restarted\n", s_erase_sector_count);
-#else
-        uprintf("fw_staging_process_deferred: erase complete (%lu sectors)\n", s_erase_sector_count);
-#endif
+    if (step == FW_ERASE_DONE) {
+        // The stream released its core1 hold the instant the erase completed,
+        // before the first chunk arrives (2026-05-29 probe: holding core1 in PSM
+        // reset across the begin->chunk handoff hard-locked the slave on chunk 0).
+        uprintf("fw_staging_process_deferred: erase complete (%lu sectors)\n", s_stream.sector_count);
     } else {
 #ifdef FW_UP_VERBOSE
-        uprintf("fw_staging_process_deferred: erased sector %lu/%lu\n", s_erase_sector_next, s_erase_sector_count);
+        uprintf("fw_staging_process_deferred: erased sector %lu/%lu\n", s_stream.sector_next, s_stream.sector_count);
 #endif
     }
 }
@@ -677,11 +611,11 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
         uprintf("fw_staging_write_chunk: not initialized\n");
         return false;
     }
-    if (!fw_stage_accepts_chunk(s_stage, s_erase_cut_short)) {
-        if (s_erase_cut_short) {
-            uprintf("fw_staging_write_chunk: erase was cut short at sector %lu/%lu, BEGIN again\n", s_erase_sector_next, s_erase_sector_count);
+    if (!fw_stream_accepts_chunk(&s_stream)) {
+        if (s_stream.erase_cut_short) {
+            uprintf("fw_staging_write_chunk: erase was cut short at sector %lu/%lu, BEGIN again\n", s_stream.sector_next, s_stream.sector_count);
         } else {
-            uprintf("fw_staging_write_chunk: erase still pending (sector %lu/%lu)\n", s_erase_sector_next, s_erase_sector_count);
+            uprintf("fw_staging_write_chunk: erase still pending (sector %lu/%lu)\n", s_stream.sector_next, s_stream.sector_count);
         }
         return false;
     }
@@ -982,35 +916,29 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
     // auto-apply/reboot.  s_commit_pending stays clear — the apply is armed only by
     // the explicit FW_UP_APPLY command (fw_staging_arm_apply), phase 2 master-only.
     s_commit_pending = false;
-    if (s_stage == FW_STAGE_ERASING) {
-        s_erase_cut_short = true;
-    }
-    s_stage          = fw_stage_next(s_stage, FW_EV_FINALIZED);
-#ifdef USE_CORE1
-    // We are NOT rebooting here, so core1 — halted in fw_staging_begin_deferred and
-    // kept halted through every chunk flush — must be restarted, or the half resumes
-    // normal operation with a dead core1 (no RLE overlay decompression).
-    stage_hold_drop();
-#endif
+    // Ends the stream and releases its core1 hold: we are NOT rebooting here, so
+    // core1 must be restarted, or the half resumes normal operation with a dead
+    // core1 (no RLE overlay decompression). A finalize mid-erase stops the erase.
+    fw_stream_finalize(&s_stream);
     return ok;
 }
 
 bool fw_staging_erase_pending(void) {
-    return s_stage == FW_STAGE_ERASING;
+    return fw_stream_erase_pending(&s_stream);
 }
 
 bool fw_staging_fw_up_active(void) {
-    return s_stage != FW_STAGE_IDLE;
+    return fw_stream_active(&s_stream);
 }
 
 // 0xFF when idle, else the FW_TARGET_* of the in-progress flash (for a UI label).
 uint8_t fw_staging_active_target(void) {
-    return s_stage != FW_STAGE_IDLE ? s_target : 0xFFu;
+    return fw_stream_active(&s_stream) ? s_target : 0xFFu;
 }
 
 // Total bytes of the image currently being staged (for a progress bar). 0 if idle.
 uint32_t fw_staging_image_size(void) {
-    return s_stage != FW_STAGE_IDLE ? s_image_size : 0u;
+    return fw_stream_active(&s_stream) ? s_image_size : 0u;
 }
 
 uint32_t fw_staging_next_offset(void) {
@@ -1018,7 +946,7 @@ uint32_t fw_staging_next_offset(void) {
 }
 
 bool fw_staging_written(void) {
-    return s_next_offset > 0 || s_erase_cut_short;
+    return s_next_offset > 0 || s_stream.erase_cut_short;
 }
 
 bool fw_staging_commit_pending(void) {
@@ -1057,12 +985,12 @@ const uint8_t *fw_staging_get_fw_base(void) {
 void fw_staging_get_status(fw_staging_status_t *out) {
     if (!out) return;
     out->initialized          = s_initialized ? 1 : 0;
-    out->fw_up_active         = s_stage != FW_STAGE_IDLE ? 1 : 0;
-    out->erase_pending        = s_stage == FW_STAGE_ERASING ? 1 : 0;
+    out->fw_up_active         = fw_stream_active(&s_stream) ? 1 : 0;
+    out->erase_pending        = fw_stream_erase_pending(&s_stream) ? 1 : 0;
     out->last_chunk_ack       = s_last_chunk_ack;
     out->last_commit_ack      = s_last_commit_ack;
-    out->erase_sector_next    = (uint16_t)s_erase_sector_next;
-    out->erase_sector_count   = (uint16_t)s_erase_sector_count;
+    out->erase_sector_next    = (uint16_t)s_stream.sector_next;
+    out->erase_sector_count   = (uint16_t)s_stream.sector_count;
     out->next_offset          = s_next_offset;
     out->last_chunk_offset    = s_last_chunk_offset;
     out->begin_handler_calls  = s_begin_handler_calls;

@@ -316,3 +316,14 @@ polykybd_fw_stage_SRC := \
 
 polykybd_fw_stage_INC := \
 	$(POLY_BASE_PATH)
+
+# fw_stream.c is the stream's bookkeeping (stage, deferred erase, core1 hold) over
+# a fw_stream_hw_* seam the tests fake, so a finalize or BEGIN can be injected at
+# each point where interrupts come back on.
+polykybd_fw_stream_SRC := \
+	$(POLY_BASE_PATH)/fw_stream.c \
+	$(POLY_BASE_PATH)/fw_stage.c \
+	$(POLY_BASE_PATH)/tests/fw_stream_tests.cpp
+
+polykybd_fw_stream_INC := \
+	$(POLY_BASE_PATH)

@@ -359,7 +359,11 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
       core1, and the suspend flush is the likely cause of the 2026-10-09 stall too.
       The master's suspend flush waits for the hold (`core1_suspend_flush_ready()`);
       the slave's waits until its core1 owes no Eden job or fragment, because only
-      the slave's split thread may touch its core1. HID cmds 24 and 26 flush through
+      the slave's split thread may touch its core1. That is enough because core1's
+      FIFO wait runs from RAM (`core1_fifo_pop_ram()`): an idle core1 fetches
+      nothing from flash. Before 2026-10-12 the wait was flash-resident, so even an
+      idle core1 could fault on the cache flush (`fw_staging.c`, "Dual-core flash
+      safety"). HID cmds 24 and 26 flush through
       `core1_off_during()`. Not covered yet: the EEPROM writes outside these paths
       (keymap edits from the host on both halves, macro recording, KC_STORE_EE).
   - ⚠️ **The status panel's idle screen takes turns with the loop only on the core0

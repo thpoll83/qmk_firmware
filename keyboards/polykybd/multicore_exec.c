@@ -19,6 +19,21 @@
 #include "base/core1_suspend.h"  // core1_suspend_step/core1_resume_step: the hold across a USB suspend
 
 #ifdef USE_CORE1
+#include "pico/platform.h"   // __no_inline_not_in_flash_func
+
+// core1's wait for its next FIFO word, in RAM. Idle core1 spends nearly all its time
+// here, and an EEPROM write (a flash program or erase on core0) flushes the XIP cache
+// while the QSPI is out of XIP mode: a wait loop in flash then faults or stalls on its
+// next fetch (fw_staging.c, "Dual-core flash safety"). From RAM, an idle core1 cannot
+// touch flash however long the write takes. The work a command starts still runs from
+// flash, so a writer must also wait until core1 owes no work (multicore_exec.h).
+static uint32_t __no_inline_not_in_flash_func(core1_fifo_pop_ram)(void) {
+    while (!(sio_hw->fifo_st & SIO_FIFO_ST_VLD_BITS)) {
+        __asm volatile("wfe");
+    }
+    return sio_hw->fifo_rd;
+}
+
 static volatile uint16_t core1_bit_index = 0;
 static volatile uint32_t core1_decomp_count = 0;
 static volatile uint32_t core0_decomp_count = 0;
@@ -85,7 +100,7 @@ void core1_entry(void) {
     dmb();
     multicore_fifo_drain();
     while (true) {
-        uint32_t cmd = multicore_fifo_pop_blocking();  // blocks if empty
+        uint32_t cmd = core1_fifo_pop_ram();  // blocks if empty; in RAM (see above)
         core1_last_cmd = cmd;
         core1_last_arg = 0;
         switch (cmd) {
@@ -142,7 +157,7 @@ void core1_entry(void) {
                 // command in the FIFO; the job publishes its own completion. Its stack
                 // path is measured: IDLE_STYLES.md, "The idle loop on core1".
                 {
-                    const uint32_t arg = multicore_fifo_pop_blocking();
+                    const uint32_t arg = core1_fifo_pop_ram();
                     core1_last_arg = arg;
                     startup_anim_core1_job(arg);
                 }
@@ -238,13 +253,19 @@ static void core1_note_stall(uint32_t stalled_ms, bool at_suspend) {
 // Hold core1 in reset and drop the work it held. The caller's core1_release() brings
 // the service back.
 static void core1_hold_and_drop(void) {
+    // A fragment is lost only when core1 still owed one. Otherwise the decode cursor
+    // must survive the hold: an image upload spans several reports, and a hold between
+    // two of them (a suspend, a HID flush) would restart the next one at pixel 0.
+    const bool fragment_lost = core1_is_busy();
     // Through core1_owner, not a raw PSM write: the hold forces core1 off and waits
     // for the PSM, and its release relaunches the service (bounded, 100 ms) once no
     // other holder remains. A second driver of the PSM here would bypass the count.
     core1_hold();
-    // core1 is held in reset now, so core0 owns every word it shares. The
-    // fragment in flight is lost: its overlay keeps whatever was decoded so far.
-    core1_bit_index    = 0;
+    // core1 is held in reset now, so core0 owns every word it shares. A fragment in
+    // flight is lost: its overlay keeps whatever was decoded so far.
+    if (fragment_lost) {
+        core1_bit_index = 0;
+    }
     core1_decomp_count = core0_decomp_count;
     core1_last_cmd     = 0;
     core1_last_arg     = 0;
@@ -329,7 +350,7 @@ bool core1_suspend_flush_ready(void) {
     }
     // Slave: its split thread hands core1 fragments, so the main loop must not reset
     // it. Flush once core1 owes nothing: the Eden jobs poly_suspend() left in flight
-    // take a few ms. A core1 that never finishes skips this suspend's flush; the dirty
+    // take a few ms, and an idle core1 waits in RAM (core1_fifo_pop_ram). A core1 that never finishes skips this suspend's flush; the dirty
     // flags stay set for the next one.
     return !core1_is_busy() && !startup_anim_core1_owes();
 }

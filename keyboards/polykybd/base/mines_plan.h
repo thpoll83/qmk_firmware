@@ -80,6 +80,16 @@ void mines_chord(const mines_geom_t *g, mines_board_t *b, uint8_t cell);
 // Put a flag on a hidden cell or take it off. No-op on an open cell or a finished game.
 void mines_toggle_flag(const mines_geom_t *g, mines_board_t *b, uint8_t cell);
 
+// Set MINES_WON (and flag every mine) when every safe cell is open. The reveal and
+// chord calls do this themselves; the firmware calls it again after its key-by-key
+// reveal animation, which holds the open bits back for a while.
+void mines_check_win(const mines_geom_t *g, mines_board_t *b);
+
+// The cell of `pending` closest to `origin` (Chebyshev distance, lowest index on a
+// tie), or MINES_NO_CELL when `pending` is empty. The order of the reveal animation:
+// it spreads outward from the tapped key.
+uint8_t mines_next_pending(const mines_geom_t *g, const uint8_t *pending, uint8_t origin);
+
 // Mines minus flags, floored at 0 (the counter keycap).
 uint8_t mines_flags_left(const mines_geom_t *g, const mines_board_t *b);
 

@@ -58,6 +58,8 @@ static const mines_geom_t s_geom = {2 * MINES_HALF_W, MINES_ROWS, MINES_COUNT};
 // idle animation takes the keycaps. The pulse style dims whatever the panels hold, so
 // handing over sooner would leave the board pulsing on them.
 #define MINES_HIDE_REPAINT_MS 400
+// The reveal animation opens one key per step, outward from the tapped key.
+#define MINES_REVEAL_STEP_MS 35
 
 #define NO_KEY 0xFF
 
@@ -67,6 +69,12 @@ static uint16_t s_press_t;
 static uint32_t s_last_input;           // for MINES_INACTIVE_MS
 static uint32_t s_hide_t;               // when the hide began (0 = not hiding)
 static uint32_t s_hide_stamp;           // get_last_update() at the hide
+// Reveal animation (master only): cells the last move opened that are not shown yet.
+// The synced board's open bits are held back and released one per step, so the slave
+// animates too without any extra synced state.
+static uint8_t  s_pending[MINES_MASK_BYTES];
+static uint8_t  s_origin;
+static uint16_t s_step_t;
 
 static const GFXfont *const s_fonts[] = {&NotoSans_Regular_Mid_19px7b};
 
@@ -125,7 +133,50 @@ bool mines_try_start(uint16_t keycode, keyrecord_t *record) {
     return true;
 }
 
+static bool anim_running(void) {
+    for (uint8_t i = 0; i < MINES_MASK_BYTES; ++i) {
+        if (s_pending[i]) return true;
+    }
+    return false;
+}
+
+static void open_bit(mines_board_t *b, uint8_t cell) {
+    b->open[cell >> 3] |= (uint8_t)(1u << (cell & 7));
+    s_pending[cell >> 3] &= (uint8_t)~(1u << (cell & 7));
+}
+
+// The win waits for the animation: the move's own win check ran on a board whose
+// open bits were then held back.
+static void anim_done(mines_board_t *b) {
+    mines_check_win(&s_geom, b);
+    if (b->state & MINES_WON) uprint("mines: won\n");
+}
+
+static void anim_step(void) {
+    const uint8_t cell = mines_next_pending(&s_geom, s_pending, s_origin);
+    if (cell == MINES_NO_CELL) return;
+    mines_board_t *b = board();
+    open_bit(b, cell);
+    if (!anim_running()) anim_done(b);
+    s_step_t = timer_read();
+    request_disp_refresh();
+}
+
+// Show the rest of a running animation at once (before the next move, a hide or a
+// new game).
+static void anim_flush(void) {
+    if (!anim_running()) return;
+    mines_board_t *b = board();
+    for (uint8_t i = 0; i < MINES_MASK_BYTES; ++i) {
+        b->open[i] |= s_pending[i];
+        s_pending[i] = 0;
+    }
+    anim_done(b);
+    request_disp_refresh();
+}
+
 static void mines_hide(void) {
+    anim_flush();
     board()->state &= (uint8_t)~MINES_ACTIVE;
     request_disp_refresh();   // the normal legends, which idle then takes over
     update_performed();
@@ -140,7 +191,11 @@ void mines_tick(void) {
         // idle countdown (which may be far shorter) from fading it. The game has its
         // own, fixed timeout instead.
         update_performed();
-        if (timer_elapsed32(s_last_input) > MINES_INACTIVE_MS) mines_hide();
+        if (timer_elapsed32(s_last_input) > MINES_INACTIVE_MS) {
+            mines_hide();
+        } else if (anim_running() && timer_elapsed(s_step_t) >= MINES_REVEAL_STEP_MS) {
+            anim_step();
+        }
         return;
     }
     if (s_hide_t != 0 && timer_elapsed32(s_hide_t) >= MINES_HIDE_REPAINT_MS) {
@@ -173,6 +228,7 @@ void mines_process_record(keyrecord_t *record) {
     s_press_col = NO_KEY;
     const bool held = timer_elapsed(s_press_t) >= MINES_FLAG_HOLD_MS;
 
+    anim_flush();
     mines_board_t *b = board();
     if (IS_KEY(row, col, MINES_KEY_HIDE)) {
         mines_hide();
@@ -185,17 +241,35 @@ void mines_process_record(keyrecord_t *record) {
     }
     const uint8_t cell = cell_of(row, col);
     if (cell == MINES_NO_CELL) return;
-    const uint8_t before = b->state;
     if (held) {
         mines_toggle_flag(&s_geom, b, cell);
-    } else if (mines_bit(b->open, cell)) {
-        mines_chord(&s_geom, b, cell);
-    } else {
-        mines_reveal(&s_geom, b, cell, timer_read32() ^ ((uint32_t)s_press_t << 16));
+        request_disp_refresh();
+        return;
     }
-    if ((b->state & MINES_LOST) && !(before & MINES_LOST)) uprint("mines: boom\n");
-    if ((b->state & MINES_WON) && !(before & MINES_WON)) uprint("mines: won\n");
-    request_disp_refresh();
+    // Play the move on a copy, then animate what it opened. A loss shows at once.
+    mines_board_t next = *b;
+    if (mines_bit(b->open, cell)) {
+        mines_chord(&s_geom, &next, cell);
+    } else {
+        mines_reveal(&s_geom, &next, cell, timer_read32() ^ ((uint32_t)s_press_t << 16));
+    }
+    if (next.state & MINES_LOST) {
+        *b = next;
+        uprint("mines: boom\n");
+        request_disp_refresh();
+        return;
+    }
+    for (uint8_t i = 0; i < MINES_MASK_BYTES; ++i) {
+        s_pending[i] = (uint8_t)(next.open[i] & ~b->open[i]);
+    }
+    // Keep everything the move decided (mine placement) except what the animation
+    // releases: the open bits, and the win with the flags it sets.
+    memcpy(next.open, b->open, sizeof(next.open));
+    memcpy(next.flag, b->flag, sizeof(next.flag));
+    next.state &= (uint8_t)~MINES_WON;
+    *b = next;
+    s_origin = cell;
+    anim_step();   // the tapped key opens at once
 }
 
 // ---- drawing ----------------------------------------------------------------------
@@ -228,12 +302,22 @@ static void draw_mine(int cx, int cy, bool ink) {
 
 // A solid pennant flying right from a pole, on a foot; `px` is the pole's x. Pointing
 // right and solid so it cannot be read as the digit 1, whose serif points left.
-static void draw_flag(int px) {
-    rect(px, 7, 2, 24, true);
-    rect(px - 6, 29, 14, 3, true);
+// `ink` false cuts the flag out of a lit square.
+static void draw_flag(int px, bool ink) {
+    rect(px, 7, 2, 24, ink);
+    rect(px - 6, 29, 14, 3, ink);
     for (int i = 0; i < 15; ++i) {
         const int w = (i < 8 ? i + 1 : 15 - i) * 2;
-        rect(px + 2, 7 + i, w, 1, true);
+        rect(px + 2, 7 + i, w, 1, ink);
+    }
+}
+
+// A filled disc of radius r, centred on (cx, cy).
+static void draw_disc(int cx, int cy, int r, bool ink) {
+    for (int dy = -r; dy <= r; ++dy) {
+        int half = 0;
+        while ((half + 1) * (half + 1) + dy * dy <= r * r) ++half;
+        rect(cx - half, cy + dy, 2 * half + 1, 1, ink);
     }
 }
 
@@ -252,8 +336,21 @@ static void draw_text(const uint32_t *text) {
                          (int8_t)((SCREEN_HEIGHT - (ymax - ymin + 1)) / 2 - ymin), text);
 }
 
+// A hidden cell: a solid square, the same size on every key.
+#define MINES_TILE 32
 static void draw_tile(void) {
-    kdisp_draw_badge_rect(BUFFER_X + 2, 2, SCREEN_WIDTH - 4, SCREEN_HEIGHT - 4, 4, 2);
+    kdisp_draw_badge_rect(CX - MINES_TILE / 2, (SCREEN_HEIGHT - MINES_TILE) / 2, MINES_TILE, MINES_TILE, 3, 0);
+}
+
+// The mine that was hit: diagonal hatching, a clear ring, the mine in the middle.
+static void draw_boom(void) {
+    for (int y = 0; y < SCREEN_HEIGHT; ++y) {
+        for (int x = 0; x < SCREEN_WIDTH; ++x) {
+            if ((x + y) % 5 == 0) rect(BUFFER_X + x, y, 1, 1, true);
+        }
+    }
+    draw_disc(CX, CY, 16, false);
+    draw_mine(CX, CY, true);
 }
 
 void mines_render_key(uint8_t row, uint8_t col) {
@@ -273,7 +370,7 @@ void mines_render_key(uint8_t row, uint8_t col) {
         return;
     }
     if (IS_KEY(row, col, MINES_KEY_COUNTER)) {
-        draw_flag(CX - 24);
+        draw_flag(CX - 24, true);
         draw_big_char(CX + 16, (uint32_t)('0' + mines_flags_left(&s_geom, b)));
         return;
     }
@@ -287,10 +384,10 @@ void mines_render_key(uint8_t row, uint8_t col) {
             break;
         case MINES_SHOW_FLAG:
             draw_tile();
-            draw_flag(CX - 8);
+            draw_flag(CX - 8, false);
             break;
         case MINES_SHOW_WRONG_FLAG:
-            draw_flag(CX - 8);
+            draw_flag(CX - 8, true);
             for (int i = 0; i < 30; ++i) {
                 rect(CX - 15 + i, 5 + i, 2, 1, true);
                 rect(CX + 14 - i, 5 + i, 2, 1, true);
@@ -300,8 +397,7 @@ void mines_render_key(uint8_t row, uint8_t col) {
             draw_mine(CX, CY, true);
             break;
         case MINES_SHOW_BOOM:
-            rect(BUFFER_X, 0, SCREEN_WIDTH, SCREEN_HEIGHT, true);
-            draw_mine(CX, CY, false);
+            draw_boom();
             break;
         default:
             if (show > MINES_SHOW_0) draw_big_char(CX, (uint32_t)('0' + (show - MINES_SHOW_0)));

@@ -88,7 +88,8 @@ static void place_mines(const mines_geom_t *g, mines_board_t *b, uint8_t first, 
     b->state |= MINES_PLACED;
 }
 
-static void check_win(const mines_geom_t *g, mines_board_t *b) {
+void mines_check_win(const mines_geom_t *g, mines_board_t *b) {
+    if (mines_over(b)) return;
     const uint8_t n = cells(g);
     for (uint8_t i = 0; i < n; ++i) {
         if (!mines_bit(b->mine, i) && !mines_bit(b->open, i)) return;
@@ -130,7 +131,7 @@ void mines_reveal(const mines_geom_t *g, mines_board_t *b, uint8_t cell, uint32_
     if (mines_bit(b->flag, cell) || mines_bit(b->open, cell)) return;
     if (!(b->state & MINES_PLACED)) place_mines(g, b, cell, seed);
     open_cell(g, b, cell);
-    if (!mines_over(b)) check_win(g, b);
+    mines_check_win(g, b);
 }
 
 void mines_chord(const mines_geom_t *g, mines_board_t *b, uint8_t cell) {
@@ -146,7 +147,7 @@ void mines_chord(const mines_geom_t *g, mines_board_t *b, uint8_t cell) {
     for (uint8_t i = 0; i < n && !mines_over(b); ++i) {
         if (i != cell && near(g, cell, i)) open_cell(g, b, i);
     }
-    if (!mines_over(b)) check_win(g, b);
+    mines_check_win(g, b);
 }
 
 void mines_toggle_flag(const mines_geom_t *g, mines_board_t *b, uint8_t cell) {
@@ -174,4 +175,22 @@ enum mines_show mines_cell_show(const mines_geom_t *g, const mines_board_t *b, u
     if (flag) return MINES_SHOW_FLAG;
     if (!mines_bit(b->open, cell)) return MINES_SHOW_HIDDEN;
     return (enum mines_show)(MINES_SHOW_0 + mines_neighbour_count(g, b, cell));
+}
+
+uint8_t mines_next_pending(const mines_geom_t *g, const uint8_t *pending, uint8_t origin) {
+    const uint8_t n = cells(g);
+    uint8_t best = MINES_NO_CELL, best_d = 0xFF;
+    for (uint8_t i = 0; i < n; ++i) {
+        if (!mines_bit(pending, i)) continue;
+        int dx = (int)(i % g->w) - (int)(origin % g->w);
+        int dy = (int)(i / g->w) - (int)(origin / g->w);
+        if (dx < 0) dx = -dx;
+        if (dy < 0) dy = -dy;
+        const uint8_t d = (uint8_t)(dx > dy ? dx : dy);
+        if (d < best_d) {   // strict: the lowest index wins a tie
+            best   = i;
+            best_d = d;
+        }
+    }
+    return best;
 }

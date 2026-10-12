@@ -7,6 +7,7 @@ extern "C" {
 #include "mines_plan.h"
 }
 
+#include <cstdlib>
 #include <cstring>
 
 namespace {
@@ -180,6 +181,46 @@ TEST(MinesPlan, ChordWithAWrongFlagLoses) {
     mines_chord(&kSplit72, &b, 15);
     EXPECT_TRUE(b.state & MINES_LOST);
     EXPECT_EQ(b.boom, 0);
+}
+
+TEST(MinesPlan, RevealOrderSpreadsOutwardFromTheTap) {
+    // Pending: the whole board but the origin (cell 15 = (1,1)). Each next cell is no
+    // farther than the one before, and the first ring comes in index order.
+    uint8_t pending[MINES_MASK_BYTES] = {};
+    for (int i = 0; i < 56; ++i) pending[i >> 3] |= (uint8_t)(1u << (i & 7));
+    pending[15 >> 3] &= (uint8_t)~(1u << (15 & 7));
+    const int first_ring[] = {0, 1, 2, 14, 16, 28, 29, 30};
+    int prev_d = 0;
+    for (int k = 0; k < 55; ++k) {
+        const uint8_t c = mines_next_pending(&kSplit72, pending, 15);
+        ASSERT_NE(c, MINES_NO_CELL);
+        ASSERT_TRUE(mines_bit(pending, c));
+        const int dx = std::abs(c % 14 - 1), dy = std::abs(c / 14 - 1);
+        const int d = dx > dy ? dx : dy;
+        ASSERT_GE(d, prev_d) << "step " << k;
+        if (k < 8) ASSERT_EQ(c, first_ring[k]);
+        prev_d = d;
+        pending[c >> 3] &= (uint8_t)~(1u << (c & 7));
+    }
+    EXPECT_EQ(mines_next_pending(&kSplit72, pending, 15), MINES_NO_CELL);
+}
+
+TEST(MinesPlan, CheckWinWaitsForEverySafeCell) {
+    mines_board_t b = Fixed({0});
+    const mines_geom_t g = {14, 4, 1};
+    for (int i = 1; i < 55; ++i) b.open[i >> 3] |= (uint8_t)(1u << (i & 7));
+    mines_check_win(&g, &b);
+    EXPECT_FALSE(b.state & MINES_WON);
+    b.open[55 >> 3] |= (uint8_t)(1u << (55 & 7));
+    mines_check_win(&g, &b);
+    EXPECT_TRUE(b.state & MINES_WON);
+    EXPECT_TRUE(mines_bit(b.flag, 0));
+    // A lost board never turns into a win.
+    mines_board_t l = Fixed({0});
+    l.state |= MINES_LOST;
+    for (int i = 1; i < 56; ++i) l.open[i >> 3] |= (uint8_t)(1u << (i & 7));
+    mines_check_win(&g, &l);
+    EXPECT_FALSE(l.state & MINES_WON);
 }
 
 TEST(MinesPlan, OutOfRangeCellsAreIgnored) {

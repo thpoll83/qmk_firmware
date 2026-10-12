@@ -373,8 +373,10 @@ want the popular option.
 6. **Flag + language label** (language-selection layer) — every new language
    needs a country flag. Add its ISO-3166-1 alpha-2 code to `COUNTRIES=()` in
    `fonts/gen-lang-fonts.sh` **in the exact same order as `enum lang_layer`**
-   (flag codepoint = `FLAG_CP_BASE 0xE000 + LANG_*` index — order MUST match or
-   flags misalign), then regenerate `base/fonts/flag_fonts.h` with the pinned
+   (since 2026-10 the script emits ONE glyph per country and
+   `base/fonts/generated/lang_flag_glyph.h` maps each `LANG_*` to it, so a
+   language whose country already has a flag adds no glyph; `poly_keymap.c`
+   asserts the table has `NUM_LANG` entries), then regenerate `base/fonts/flag_fonts.h` with the pinned
    fontconvert + NotoColorEmoji (`-F` sequence option). Caveat: languages that
    share a country (e.g. Serbian Cyrillic & Serbian Latin both = RS → 🇷🇸) get
    the **same** flag and "sr" label, so they are indistinguishable on the

@@ -30,7 +30,7 @@ bool prc_overlay_apply(uint16_t slot, uint8_t top, uint8_t left, uint8_t height,
 // carried the stream — they are NOT globals, since cmd 21 and cmd 33 differ.
 // Returns true if any pair maps a currently-displayed position, so the caller can
 // skip the display refresh for an all-off-screen chunk (see fill_overlay.c).
-bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t width);
+bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t width, bool dim);
 
 // Runs the four overlay self-actions (RESET_BUFFERS / USAGE_RESET /
 // MAPPING_RESET / MAPPING_ALLSET) for whichever bits are set in `flags`.

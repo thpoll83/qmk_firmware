@@ -839,3 +839,20 @@ inherited-upstream noise:
   `qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes`, or run
   `doom/pack/build_pack.sh`, which builds both flavours.
 
+
+## When GitHub switches Actions off for the fork
+
+_Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
+
+- ⚠️ **GitHub can switch Actions OFF for this whole fork, and nothing on a PR says so.**
+  On 2026-10-09 four PR pushes and the #365 merge started no run at all: no build, no
+  HIL, no unit tests, and no `bump-version.yml`, so a `bump:minor` merge left
+  `FW_VERSION` unmoved. The Actions tab carried "Workflows on this fork have been
+  disabled", blaming workflows inherited from upstream (here `auto_approve.yml` every
+  30 min, always skipped by its `qmk/qmk_firmware` gate, and `stale.yml` daily with no
+  gate). **The tell is NO run, not a queued one**: an offline rig leaves a HIL job
+  `queued`; a disabled fork creates nothing, while the host repo's CI keeps running.
+  Re-enabling replays nothing. `bump-version.yml` has no `workflow_dispatch`, so a
+  missed bump is a one-line `FW_VERSION` PR labelled `bump:none` (#367); dispatch
+  `qmk-test.yml` for the HIL.
+

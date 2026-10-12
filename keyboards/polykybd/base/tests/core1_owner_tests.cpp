@@ -256,3 +256,14 @@ TEST_F(Core1OwnerTest, EveryLaunchDisturbedStillLeavesTheLastOneRunning) {
     EXPECT_EQ(g.reports.size(), 1u);
 }
 
+// multicore_exec's stall recovery reports whether its relaunch answered.
+TEST_F(Core1OwnerTest, ReleaseReportsWhetherItsRelaunchAnswered) {
+    core1_hold();
+    core1_hold();
+    EXPECT_TRUE(core1_release()) << "an inner release launches nothing";
+    EXPECT_TRUE(core1_release());
+    g.launch_ok = false;
+    core1_hold();
+    EXPECT_FALSE(core1_release());
+}
+

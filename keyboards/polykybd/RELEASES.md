@@ -29,8 +29,58 @@ that cost real debugging to learn (2026-07):
     understand the new protocol, so that order never leaves a user holding firmware
     their app cannot drive.
 
+- ⚠️ **The release assets are named from the TAG, so `release.yml`'s first step
+  asserts that `FW_VERSION` in the tag's own tree equals the tag's version.** Without
+  it, a release published before its version bump merged ships
+  `polykybd_split72_v<tag>.bin` built from a tree declaring something else: the board
+  reports one number, the download claims another, and the host updater then offers
+  that release forever, because it compares the installed `FW_VERSION` against the tag
+  and the install can never reach it. wincompose shipped exactly that — `PK-0.9.19`
+  carries `WinCompose-Setup-0.9.18.exe`, its About tab reads 0.9.18, and `status.txt`
+  could not be bumped at all for two weeks (wincompose#21). The check reads the TAG's
+  tree, so `PolyKybd` drifting ahead of a prepared tag is harmless — which it always
+  is, since every merge auto-bumps.
+  - **Recovery always ends in moving the tag; WHY it refused only decides whether a
+    commit exists to move it to.**
+    `scripts/publish_release.py` pins the tag to the oldest commit whose tree declares
+    the version (`commit_for_version`), so a refusal means one of two things. ⚠️ **Both
+    of them end in MOVING THE TAG.** Every trigger that can reach this step requires a
+    tag to already exist — `push: tags: PolyKybd-fw-v*`, or the tag a published release
+    names — so merging the bump never repairs the tag by itself. What differs between
+    the two cases is only whether there is yet a commit to move it to.
+    - **No commit declares the version** (the bump has not merged). Merge it first;
+      until then there is nothing to point the tag at. Then move the tag, below.
+      ⚠️ **Do not confuse this with `publish_release.py` refusing the same condition
+      BEFORE any tag exists.** There, merging the bump genuinely is the whole fix,
+      because the script then creates the tag at the pinned commit itself. Here the tag
+      is already placed and wrong, and nothing but moving it will do.
+    - **A commit declares it and the tag is elsewhere.** Move the tag straight away.
+
+    **Moving the tag.** **Publishing never moves one** (`target_commitish` is
+      documented as *"Unused if the Git tag already exists"*), so the build comes from
+      wherever it points:
+      `git tag -f PolyKybd-fw-v<ver> <commit declaring it>` then
+      `git push --force origin refs/tags/PolyKybd-fw-v<ver>`.
+      ⚠️ **Only while no release holds that tag.** This gate fires on
+      `release: published`, so by the time you read its refusal a release usually DOES
+      exist — with no assets, since the gate runs before the upload. **Delete that
+      empty release first**, then move the tag and publish. Two reasons, and the second
+      is the one that gets the downloads back: `git checkout <tag>` has to keep giving
+      the source some release was built from, **and only a CREATE re-runs this
+      workflow** — `publish_release.py` against a release that still exists merely
+      edits its notes, firing no event, so no build and no assets. Deleting it makes
+      the next run a create, which fires `release: published`; that is also why the
+      `[skip ci]` on the bump commit does not matter here, since a release event
+      ignores it where the tag-push trigger does not. If a release on that tag is
+      already live WITH assets, do not move it at all — cut the next patch version
+      instead. (Nothing in the repo enforces this: there is no tag ruleset and no tag
+      protection, so the force-push will simply succeed.)
+    A `workflow_dispatch` recovery is the wrong tool in either case: `workflow_dispatch`
+    carries no tag input here, so it builds the dispatch ref and leaves the tag pointing
+    at a tree that declares the previous version.
+
 - ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being
-  released** (`tools/require_fwapply_run.py`, the first step of `release.yml`,
+  released** (`tools/require_fwapply_run.py`, an early step of `release.yml`,
   before the build so a refusal changes nothing). The HID-apply brick shipped
   because no release artifact had ever been applied on hardware — the rig flashes
   by UF2 over GPIO BOOTSEL, which bypasses `fw_staging` entirely, and this
@@ -131,6 +181,21 @@ that cost real debugging to learn (2026-07):
     tool or a small addition stays a patch even when it bumps the protocol. After 1.0
     nearly every PR took `bump:minor` (firmware 1.0.0 → 1.7.0 in six days, host 1.3.0 →
     1.15.0 in nine), and the maintainer asked for the 0.9.x habit back (2026-10-03).
+  - ⚠️ **The bump pushes with a personal access token, `secrets.BUMP_PAT`, and nothing
+    else says so.** `PolyKybd`'s ruleset requires a pull request, and the built-in
+    `GITHUB_TOKEN` cannot be on its bypass list, so `bump-version.yml` checks out with a
+    PAT (Contents: write) whose owner IS on that list, and pushes the bump commit
+    directly. Either failure stops `FW_VERSION` moving with no other sign:
+    - **The PAT expired or was revoked:** the job fails at checkout, unable to
+      authenticate, before it pushes anything. Replace `secrets.BUMP_PAT`, then re-run.
+    - **The push is rejected with `GH013` … Changes must be made through a pull
+      request:** the token works but its owner is no longer on the ruleset's bypass list.
+      Put them back on it, then re-run.
+  - The host solved the same rule the other way (2026-10-09, PolyKybdHost#329): its bump
+    job opens a bump PR with `GITHUB_TOKEN` and merges it at once, so it needs no secret,
+    but needs "Allow GitHub Actions to create and approve pull requests" and a rule that
+    asks for a PR and nothing more. Its `docs/releases.md` has the mechanics. Porting it
+    here would retire the PAT.
   - **`bump:none` skips the bump entirely**, for a PR that cannot change the firmware
     image — docs, skills, `scripts/`. It is tested FIRST and beats every other label:
     a PR carrying both is contradictory, and the safe reading of a contradiction is

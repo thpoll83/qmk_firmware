@@ -1,169 +1,164 @@
 ---
 name: add-polykybd-shortcut-hint
 description: >
-  Add an OS-aware keycap shortcut-hint glyph to the PolyKybd firmware — a
-  display-only preview icon shown on a key while a modifier is held (e.g. Win+V
-  clipboard, Cmd+Tab app-switch, Ctrl+Left word-nav). Use when asked to "add a
-  hint for Win/Cmd/Super+X", "show an icon when <modifier>+<key> is held", "wire
-  a shortcut preview", or to extend the wave-A/B/C OS-aware hint set in
-  keycode_to_disp_overlay(). Handles glyph selection + legibility check, the
-  per-glyph leading-space tuning, adding a NEW glyph (symbol font-pack bundle or
-  resident IconsFont), wiring the correct OS branch, the byte-repro regenerate +
-  host reship, build, and real-keycap preview. NOT for full keyboard languages
-  (use add-polykybd-language) or app overlay PNGs (use generate-app-overlays).
+  Add, retouch or retire an OS shortcut-hint icon on the PolyKybd keycaps: the
+  34x34 icon shown on a key while a modifier is held (Win+V clipboard history,
+  Win+L lock, Cmd+Tab app switch, Ctrl+Left word left). Use when asked to "add a
+  hint for Win/Cmd/Super+X", "change the <name> icon", "make the lines thicker /
+  move them up", "try variations of the network icon", or "remove a hint". Covers
+  drawing in the style-D grammar, before/after sheets, regenerating
+  PolyHintIcons and the named_glyphs.h macros, wiring hints/os_hints.c and its
+  tests, reshipping the symbol font-pack bundle, and handing the tester a .bin,
+  the .plyf and the flash command. NOT for app shortcuts like Ctrl+C or F2 (those
+  belong to the host app overlays: generate-app-overlays), full keyboard
+  languages (add-polykybd-language), or legend glyphs (LEGEND_RENDERING.md).
 ---
 
-# Add an OS-aware keycap shortcut-hint glyph
+# Add or retouch an OS shortcut-hint icon
 
-Hints are returned by `keycode_to_disp_overlay(keycode, state)` in
-`keyboards/polykybd/poly_keymap.c` as a `U"..."` string = **N leading spaces +
-the glyph codepoint(s)**. They render through the normal text path (full
-`g_all_fonts` lookup, baseline-aligned), so a hint glyph must resolve in either
-the **resident** set or a **shipped pack bundle**.
+Read [`keyboards/polykybd/HINT_ICONS.md`](../../../keyboards/polykybd/HINT_ICONS.md)
+first. It holds the style-D rules and the reason behind every icon's current shape,
+and most change requests were already decided there once.
 
-## 0. Decide the glyph + the OS branch
+Every hint is ONE glyph of the font `PolyHintIcons` (U+100100..), drawn by
+`tools/hint_icons_stage.py`, written by `tools/hint_icons.py` to
+`base/fonts/hint_icons.h`, and shipped in the `symbol` font-pack bundle, NOT in the
+firmware image. `hints/os_hints.c` returns the `ICON_HINT_*` macro for a chord.
 
-For each shortcut, pick a codepoint and which OS the chord belongs to. The branch
-structure in `keycode_to_disp_overlay()`:
+All paths below are relative to `keyboards/polykybd/` unless they start with a repo
+name.
 
-- `apple` (macOS): editing on **Cmd (GUI)**, word-nav on **Option+arrows**.
-- non-mac (`else`): editing on **Ctrl**; window-mgmt on **GUI/Super** via the
-  `wm_held` switch. Gate per-OS inside it:
-  - `win_or_unknown` — Windows-only chords (Win+H/I/M/R/T/K/V/X/`,`/`.`, etc.).
-  - `gnome` / `linux_any` — desktop-specific (GNOME vs KDE differ; see wave-B/C).
+## 0. Is it a hint at all?
 
-⚠️ Confirm the chord is **real for that OS**. e.g. dictation is **Windows-only**
-(Win+H): macOS triggers it with a double-tap Fn/Ctrl — not a held GUI+letter
-chord the hint engine can preview — and Linux/Android bind nothing standard.
+- **App shortcuts are NOT hints.** Ctrl/Alt + letter or digit (Shift allowed), Cmd +
+  letter or digit on macOS, F2 and F5 mean different things per program, so the
+  host app overlays draw them. `os_hints.c` returns nothing for them and the
+  `AppShortcutsHaveNoBuiltInHint` test enforces it.
+- **The chord must be real for the OS you gate it on.** Dictation is Win+H on
+  Windows; macOS has no held-chord equivalent. Gate with the predicates in
+  `os_hints.c` (`apple`, `win_or_unknown`, `gnome`, `linux_any`).
 
-## 1. Check the glyph renders (reject notdef)
+## 1. Draw (or retouch) the icon
 
-From the **PolyKybdHost repo root** (so `tools/gfx_font.py` imports):
+In `tools/hint_icons_stage.py`, an icon is a function on the 34×34 grid:
+
+```python
+@icon("clip_history")
+def _(I):
+    I.thin(3, 4, 30, 33)                          # stage: 3 px chamfered outline
+    I.F(10, 1, 23, 8, 0); I.thin(11, 1, 22, 7, ch=1)
+    I.F(8, 11, 25, 12); I.F(8, 18, 25, 19); I.F(8, 25, 18, 26)   # 2 px content lines
+    I.corner("clock")                             # modifier badge, bottom right
+```
+
+The primitives: `F` (filled rect, inclusive corners), `thin`/`frame` (3 px stage
+outline), `solid`/`heavy` (actor), `ring` (outline of any width), `oct` (octagon),
+`wedge` (the one direction mark), `dash_h`/`dash_box`, `screen`, `window`, `sheet`,
+and `corner(sym)`. Keep the grammar: stage 3 px, actor solid, 0/45/90° only.
+
+- **A NEW icon also needs a drawing in the other four style modules**
+  (`hint_icons.py` itself, `hint_icons_solid.py`, `hint_icons_bold.py`,
+  `hint_icons_retro.py`). `style_render()` asserts every style covers the same
+  names. A placeholder there is fine; the shipped style is D.
+- **Append a new name to `ICONS` in `hint_icons.py` at the END.** The order there
+  is the slot order, so inserting in the middle renumbers every later slot.
+- **Retiring** is adding the name to `RETIRED` (it stays drawn, is not written).
+  That renumbers every later slot, which is harmless because only the firmware
+  uses these codepoints, but step 3 must re-paste the macros.
+
+## 2. Show it before writing anything else
 
 ```bash
-cd PolyKybdHost
-HP=../qmk_firmware/.claude/skills/add-polykybd-shortcut-hint/hint_preview.py
-python3 $HP --check 1F5E3 1F4DC 1F4D1 2699   # owning font + lit-pixel count per cp
+SK=.claude/skills/add-polykybd-shortcut-hint
+python3 -B $SK/compare_sheet.py /tmp/cmp.png                  # HEAD vs working tree
+python3 -B $SK/compare_sheet.py /tmp/cmp.png --base <rev> clip_history emoji
 ```
 
-`lit px == 0` ⇒ the glyph is **notdef** in the font that claims its range — pick
-another glyph or another source (this is how 🗃 1F5C3 / 🗂 1F5C2 were rejected:
-notdef in `_Util_`). Many `1F5xx` "symbol" emoji are **notdef in NotoSansSymbols2
-but present in NotoEmoji-Medium** (`noto-emoji`) — source those from the emoji
-font.
+12× with row numbers, before and after side by side. Send it to the maintainer.
+For "give me variations", draw each variant as its own `@icon` name in a scratch
+copy and render them on one sheet; never rewrite-and-reload one module (see
+Pitfalls). A whole-set overview at 4×: `python3 tools/hint_icons.py --sheet /tmp/all.png --style d`.
 
-## 2. Tune the leading-space count (centering)
+## 3. Regenerate and check
 
 ```bash
-python3 $HP --sweep 1F4DC        # prints x-range per space count + a recommendation
-python3 $HP --string '   ' 1F4DC --out /tmp/v.png   # render the exact firmware string
+cd keyboards/polykybd
+python3 tools/hint_icons.py                # rewrite base/fonts/hint_icons.h (keeps style d)
+python3 tools/hint_icons.py --macros       # only when names or slots changed:
+                                           #   paste into lang/named_glyphs.h's ICON_HINT block
+python3 tools/hint_icons.py --check        # header + macro block both current
+python3 tools/check_icon_slots.py          # no macro between the two icon fonts
 ```
 
-Hints sit **right-of-center (~x46-50** in the 72px window), NOT mathematically
-centered — match the existing hints. The sweep picks the **largest space count
-with `max_x <= 69`** (no clip). **Wide emoji need fewer spaces than narrow
-symbol/math glyphs** (4 clipped every wide emoji at x71 this session; 3 was
-right; a narrow glyph like 📑 took 4).
+## 4. Wire a new chord (skip for a retouch)
 
-## 3. Named-glyph defines
-
-Add to the **hand-defined wave section** at the BOTTOM of
-`keyboards/polykybd/lang/named_glyphs.h` (after `ICON_CLOSE`), NOT the cog table
-at the top (that round-trips through `lang_lut.xlsx` and strips cached formula
-values headlessly):
-
-```c
-#define ICON_CLIP_HISTORY  U"\x1F4DC"   // 📜 scroll — Win+V clipboard history
-```
-
-Reference them in `poly_keymap.c` with the tuned spaces, e.g.
-`case KC_V: if (win_or_unknown) return U"   " ICON_CLIP_HISTORY;`.
-
-## 4. A NEW glyph (not already shipped) — pick the cheapest home
-
-- **Reuse a shipped glyph** (resident or already in a pack bundle): nothing to
-  generate — just steps 3 + 5. (Most hints land here.)
-- **Symbol-bundle singleton** (a new mono glyph, matching the crisp hint style):
-  append to `fonts/fonts.yaml` symbols **last** (highest index), e.g.
-  `- {category: symbols, variant: _Dictation_, source: noto-emoji, bits: 32, ranges: [[0x1f5e3, 0x1f5e3]]}`.
-  Regenerate (step 6), bump the `symbol` `content_version`, reship `symbol.plyf`.
-  Thanks to the **pack_extra gidx pin** this changes **only** `symbol.plyf` now
-  (flags no longer shifts).
-- **A single bigger/custom glyph** (e.g. the Win+R `>_` at 16 pt): inject into the
-  **resident IconsFont** `base/fonts/gfx_icons.h` at a free PUA slot (`0x9A`…) —
-  it is `g_all_fonts[0]`, so adding a glyph shifts no pack index and needs **no
-  reship**. Generate the glyph with the pinned `fontconvert`, append its bitmap
-  bytes + a `GFXglyph` record, bump the `GFXfont` `last`. Do NOT add a whole new
-  *resident font* (that prepends ahead of the pack and shifts every pack gidx).
-
-## 5. Wire the case(s)
-
-Add `case KC_<x>:` returns in the correct branch of `keycode_to_disp_overlay()`,
-each gated on its OS predicate, with the step-2 leading spaces.
-
-## 6. Regenerate (byte-repro) + reship
+- Return the macro from the right OS branch of `hints/os_hints.c`, with a trailing
+  comment naming the chord, like its neighbours.
+- **The extraction test will refuse a NEW chord.**
+  `OsHintsExtraction.ShowsAHintForExactlyThePreExtractionChords` compares every
+  (keycode × mods × OS) against a frozen copy of the pre-extraction table, and a
+  chord that table lacked fails as "shows a hint the reference did not". Keep the
+  reference file verbatim (its value is being unedited) and admit the new chord the
+  same way the app-shortcut rule masks its chords: a small `is_added_chord()`
+  predicate written independently of `os_hints.c`, plus a positive test that names
+  the chord and the icon.
+- A new icon used by a pre-extraction chord goes in `kExpected` instead.
+- `EveryShortcutHintIsOneIconGlyph` bounds the block by its first and last macro
+  (`ICON_HINT_SEARCH`, `ICON_HINT_QUICK_ASSIST`). An icon appended at the end is
+  the new last: update that line.
 
 ```bash
-cd keyboards/polykybd/fonts
-FONTCONVERT=/tmp/fontconvert_pinned python3 generate_fonts.py --check   # should be clean before
-FONTCONVERT=/tmp/fontconvert_pinned python3 generate_fonts.py \
-  --emit-bundles /tmp/b \
-  --bundle-version symbol=N --bundle-version mideast=1 --bundle-version syllabic=1 \
-  --bundle-version asia=1 --bundle-version flags=3 --bundle-version emoji=1
-# cmp /tmp/b/<id>.plyf vs PolyKybdHost/polyhost/res/fontpack/<id>.plyf -> copy + bump only changed
+export QMK_HOME=$PWD PATH="/root/.qmk_venv/bin:$PATH"     # from the qmk_firmware root
+make test:polykybd_os_hints
 ```
 
-⚠️ Pass **every** `--bundle-version` id or unspecified ones reset to 0. Rebuild
-`bundles.json` from the firmware manifest + each `.plyf` (`size=len`,
-`sha256=hexdigest()[:16]`). Use `/tmp/fontconvert_pinned` (FreeType 2.13.3) or
-category headers show 1-line provenance diffs. (Full reship recipe: qmk
-`CLAUDE.md` "Font pack".)
+## 5. Reship the symbol bundle
 
-## 7. Build + preview the real keycaps
+Use the `reship-fontpack-bundle` skill: `--check`, then
+`--apply symbol=<N>`. Keep N while the bundle is unshipped; bump it only once a
+release has carried it. Then run the host font-pack tests it lists.
+
+## 6. Build and hand it over
 
 ```bash
-QMK_HOME=$PWD/../../.. /tmp/qmkvenv/bin/qmk compile -kb polykybd/split72 -km default
-python3 $HP --string '   ' <cp> --out /tmp/key.png   # send to the user before committing
+qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes   # also split42
 ```
 
-Build `split42` too (shared keymap). Commit firmware (poly_keymap.c +
-named_glyphs.h + fonts.yaml + generated/) and, if a bundle changed, the host
-(`res/fontpack/*.plyf` + `bundles.json`) — separate repos, separate commits.
+Use the `deliver-test-firmware` skill (sha in the `.bin` name). For an icon-only
+change the `.bin` does not change at all; the new pixels are in `symbol.plyf`. Hand
+the tester the `.plyf` too, with the flash command, because a bundle at an
+unchanged version is NOT re-flashed on connect:
+
+```bash
+python -m polyhost.cli.polyctl fontpack flash --file symbol_v<N>.plyf --bundle-id 0
+```
+
+Commit firmware (`hint_icons_stage.py`, `hint_icons.h`, and when wired
+`named_glyphs.h`, `os_hints.c`, the tests) and host (`res/fontpack/symbol.plyf`,
+`bundles.json`) separately. Release order: host first.
 
 ## Output
 
-Per shortcut: the chosen glyph + codepoint, owning font, lit-pixel count, tuned
-space count, OS branch, and whether it needed a new glyph (and where it landed).
-Always **send the user a real-keycap render** (step 7) before committing.
+Per icon: name, chord(s) and OS, what changed (with the row numbers), the
+before/after sheet, test count, and the files handed over (`.bin` with sha,
+`.plyf` with version, the flash command).
 
 ## Pitfalls
 
-- **notdef renders blank.** Always `--check` lit-pixel count > 0 before choosing a
-  glyph; `1F5xx` "symbols" are often notdef in NotoSansSymbols2 → use `noto-emoji`.
-- **4 leading spaces clips wide emoji.** Sweep per glyph; hints are right-of-center
-  (~46-50), not centered. Don't hand-pick a fixed count.
-- **Don't touch the cog table.** Add named defines to the hand-defined wave section
-  of `named_glyphs.h`, not `lang_lut.xlsx`.
-- **`--bundle-version` resets unlisted bundles to 0.** Pass all ids; `cmp` to find
-  the changed `.plyf`; only the edited bundle changes now (flags gidx is pinned).
-- **Run the preview from PolyKybdHost** (so `gfx_font`/`tools` resolve) and use the
-  pinned `fontconvert` for byte-repro.
-- **A new resident *font* shifts every pack gidx** → full reship. For one/two glyphs
-  inject into the resident IconsFont (`gfx_icons.h`, `g_all_fonts[0]`) instead.
-- **Verify the chord is real for the gated OS** (e.g. mac dictation is Fn-Fn, not a
-  Cmd chord — so it's Windows-only). Don't show a hint for a chord the OS doesn't bind.
-- **Glyph sourcing cheatsheet** (which font actually has a symbol): the APL quad
-  arrows ⍇/⍈ (U+2347/8, used for Win+←/→ snap) are **notdef in NotoSansSymbols/2**
-  and live in **NotoSansMath** (already a `fonts.yaml` source; `_MathHints_` also
-  supplies the dashed word-nav arrows). ⟳ (U+27F3) is notdef in every available
-  Noto face → **draw it** (a composited resident IconsFont glyph). 🎚/🎛 (U+1F39A/B,
-  candidate for Win+Pause) exist in the **mono NotoEmoji** (the pack source) but are
-  notdef in the *color* font — fine, pack bundles use the mono one. Always `--check`
-  lit-pixel count > 0 before committing to a codepoint.
-- **A full `generate_fonts.py` regen needs ALL Noto sources present** — `dl-fonts.sh`
-  fetches them; if it's missing any (it lacked canadian-aboriginal/cherokee until
-  2026-07), `--check` fails partway with `Font load error: 1`. Fetch the missing one
-  and re-run rather than assuming a real drift.
-- **Resident-icon codepoint safety**: never park a custom resident IconsFont glyph at
-  `0xA0+` (printable Latin-1 — IconsFont shadows it). Use C1 `0x80–0x9F` or a PUA. See
-  qmk `CLAUDE.md` "Font pack" (the IconsFont collision / gap-removal notes).
+- ⚠️ **Rewriting one module and `importlib.reload()`-ing it renders STALE icons.**
+  The bytecode cache is keyed by (mtime, size); a same-size edit in the same second
+  (`14` → `12`) re-runs the old code and every variant looks identical. One module
+  name per variant, `python3 -B`. `compare_sheet.py` does this.
+- ⚠️ **"Looks identical on the keyboard" after a retouch usually means the board
+  never got the new bundle**, not that the change was too small: same
+  `content_version`, so no re-flash on connect. Check the flash command was run.
+- **A 1 px change is invisible at 4–5×.** Show 12× with row numbers before asking
+  for a verdict.
+- **Read a direction request twice.** "Remove the px line from the top instead of
+  the bottom" and "move the lines up" were the same request; the first attempt moved
+  the lines down. Restate the target rows ("first line at rows 11–12") before
+  drawing.
+- **Do not hand-edit `hint_icons.h` or the `ICON_HINT_*` block**; both are generated,
+  and `--check` fails on a stale one.
+- **Hardware decides.** Every accepted shape in `HINT_ICONS.md` came from a look at
+  a real keycap; record the new decision there when the maintainer settles one.

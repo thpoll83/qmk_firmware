@@ -19,6 +19,9 @@
 // Boot identification banner — printed to the HID console (`qmk console`) so it
 // shows which board, firmware and role a half is, plus its split-link state.
 void emit_boot_banner(void);
+// Re-emit the banner when a GET_ID arrives after a pause in host probes, i.e. when a
+// host session starts long after boot (see boot_diag.c).
+void boot_banner_on_host_probe(void);
 
 // The configured idle (anti-burn-in) style and the timings driving the idle state
 // machine. Separate from the banner because the style is only known after the

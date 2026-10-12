@@ -37,7 +37,9 @@ void core1_hold(void);
 
 // Drop a hold. When the last one goes, core1 leaves reset and the RLE service
 // is relaunched (bounded). A release with no hold outstanding does nothing.
-void core1_release(void);
+// Returns false only when this release relaunched the service and the launch
+// did not answer; true otherwise (including when other holds remain).
+bool core1_release(void);
 
 // True while any hold is outstanding.
 bool core1_held(void);

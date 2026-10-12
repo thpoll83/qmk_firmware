@@ -147,6 +147,10 @@ void kdisp_write_gfx_vtext(const GFXfont *font, int8_t col_x, const uint32_t *te
 void kdisp_write_base_char(int8_t x, int8_t y, char c);
 
 void kdisp_draw_bitmap(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height);
+// Like kdisp_draw_bitmap, but draws only every other row and every other column of
+// the bitmap (25% of its pixels), counted from the bitmap's own origin. Used for a
+// dimmed overlay icon (cmd 33, v23); a 1-bit panel has no grey, so less ink is dim.
+void kdisp_draw_bitmap_dimmed(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height);
 
 // Clear a dilated "courtyard" behind artwork about to be drawn. ⚠️ The two variants
 // differ ONLY in how they read the source bits — pick the one matching the draw call

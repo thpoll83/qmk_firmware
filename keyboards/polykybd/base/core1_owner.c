@@ -31,16 +31,28 @@ void core1_hold(void) {
 // hold taken on another thread can then land only before the check (seen,
 // nothing released) or after the reset (core1 is forced off again, and the
 // launch that follows times out).
-static bool claim_launch(void) {
+//
+// yield_to_service: a refused claim because of a hold records the service as
+// the tenant, in the same critical section. The hold's last release relaunches
+// the service. Written after the unlock instead, a release and a core1_run()
+// on another thread could land in between, and the write would mark the
+// running engine as the service.
+static bool claim_launch_ex(bool yield_to_service) {
     core1_hw_lock();
     const bool ok = s_holds == 0 && !s_launching;
     if (ok) {
         core1_hw_force_off();
         core1_hw_release();
         s_launching = true;
+    } else if (yield_to_service && s_holds > 0) {
+        s_tenant = CORE1_TENANT_SERVICE;
     }
     core1_hw_unlock();
     return ok;
+}
+
+static bool claim_launch(void) {
+    return claim_launch_ex(false);
 }
 
 // How a claimed launch ended, decided under the lock.
@@ -62,6 +74,8 @@ static launch_end_t end_launch(bool ok, core1_tenant_t tenant) {
     s_relaunch             = false;
     if (ok && end == LAUNCH_CLEAN) {
         s_tenant = tenant;
+    } else if (end == LAUNCH_HELD) {
+        s_tenant = CORE1_TENANT_SERVICE; // what the hold's last release relaunches
     }
     core1_hw_unlock();
     return end;
@@ -154,16 +168,14 @@ bool core1_run(void (*entry)(void), uint32_t *stack_bottom, size_t stack_bytes) 
 
 bool core1_restore_service(void) {
     for (uint8_t attempt = 0; attempt < 3; ++attempt) {
-        if (!claim_launch()) {
+        if (!claim_launch_ex(true)) {
             // Held: the last release relaunches the service. Launching: the
-            // other launcher does.
-            s_tenant = CORE1_TENANT_SERVICE;
+            // other launcher sets the tenant it launched.
             return false;
         }
         const bool         ok  = core1_hw_launch_service();
         const launch_end_t end = end_launch(ok, CORE1_TENANT_SERVICE);
         if (end == LAUNCH_HELD) {
-            s_tenant = CORE1_TENANT_SERVICE;
             return false; // held: the last release relaunches the service
         }
         if (end == LAUNCH_CLEAN && ok) {
@@ -171,6 +183,10 @@ bool core1_restore_service(void) {
         }
     }
     core1_hw_report("restore: RLE service relaunch failed 3 times");
-    s_tenant = CORE1_TENANT_SERVICE;
+    core1_hw_lock();
+    if (!s_launching) {
+        s_tenant = CORE1_TENANT_SERVICE; // the engine is gone either way
+    }
+    core1_hw_unlock();
     return false;
 }

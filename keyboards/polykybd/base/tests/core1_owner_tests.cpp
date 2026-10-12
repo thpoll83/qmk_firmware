@@ -36,6 +36,9 @@ struct FakeCore1 {
     // Runs after a handshake has answered, before the owner looks at the result:
     // the window between the launch returning and end_launch() taking the lock.
     void (*after_launch)(void) = nullptr;
+    // Runs once, right after the next unlock: another thread preempting the
+    // owner between two critical sections.
+    void (*after_unlock)(void) = nullptr;
 };
 FakeCore1 g;
 
@@ -45,7 +48,14 @@ uint32_t  stack_stub[16];
 
 extern "C" {
 void core1_hw_lock(void) { g.locks++; }
-void core1_hw_unlock(void) { g.locks--; }
+void core1_hw_unlock(void) {
+    g.locks--;
+    if (g.after_unlock) {
+        auto f = g.after_unlock;
+        g.after_unlock = nullptr;
+        f();
+    }
+}
 void core1_hw_force_off(void) {
     g.forced_off = true;
     g.running    = false;
@@ -310,3 +320,19 @@ TEST_F(Core1OwnerTest, AReleaseRelaunchCutShortByAHoldLeavesItToThatHoldsRelease
     EXPECT_TRUE(g.running);
 }
 
+
+// revix on #361: restore used to record the service AFTER its refused claim had
+// unlocked. A release and a core1_run() on another thread in that gap launched
+// the engine, and the late write then marked the running engine as the service.
+TEST_F(Core1OwnerTest, RestoreRefusedByAHoldDoesNotOverwriteARunThatLandsAfterIt) {
+    core1_hold();
+    g.after_unlock = [] {
+        core1_release();
+        EXPECT_TRUE(core1_run(entry_stub, stack_stub, sizeof stack_stub));
+    };
+    EXPECT_FALSE(core1_restore_service());
+    EXPECT_EQ(g.custom_runs, 1);
+    EXPECT_EQ(core1_tenant(), CORE1_TENANT_CUSTOM) << "the running engine was marked as the service";
+    EXPECT_TRUE(core1_restore_service());
+    EXPECT_EQ(core1_tenant(), CORE1_TENANT_SERVICE);
+}

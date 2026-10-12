@@ -583,6 +583,21 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
 #endif
 }
 
+// ERASING -> RECEIVING with interrupts off, from the read of s_stage through the
+// store. On the slave, a finalize (an early COMMIT, on the split thread) can
+// preempt housekeeping; between a plain read and the store it would set IDLE, and
+// the stale store would put the stage back to RECEIVING for good. Returns whether
+// this call made the transition, so only that caller drops the core1 hold.
+static bool erase_done_transition(void) {
+    uint32_t   irq  = save_and_disable_interrupts();
+    const bool done = s_stage == FW_STAGE_ERASING;
+    if (done) {
+        s_stage = fw_stage_next(s_stage, FW_EV_ERASE_DONE);
+    }
+    restore_interrupts(irq);
+    return done;
+}
+
 // Erase one staging sector per call.  Must be called repeatedly from
 // housekeeping_task_user() until fw_staging_erase_pending() returns false.
 void fw_staging_process_deferred(void) {
@@ -594,7 +609,7 @@ void fw_staging_process_deferred(void) {
     if (s_stage != FW_STAGE_ERASING) return;
 
     if (s_erase_sector_next >= s_erase_sector_count) {
-        s_stage = fw_stage_next(s_stage, FW_EV_ERASE_DONE);
+        (void)erase_done_transition();
         return;
     }
 
@@ -635,8 +650,7 @@ void fw_staging_process_deferred(void) {
     if (s_process_deferred_advances != UINT16_MAX) s_process_deferred_advances++;
 
     s_erase_sector_next++;
-    if (s_erase_sector_next >= s_erase_sector_count) {
-        s_stage = fw_stage_next(s_stage, FW_EV_ERASE_DONE);
+    if (s_erase_sector_next >= s_erase_sector_count && erase_done_transition()) {
 #ifdef USE_CORE1
         // DIAGNOSTIC PROBE (2026-05-29): restart core1 the instant erase
         // completes, before the first chunk arrives.  Hypothesis: holding

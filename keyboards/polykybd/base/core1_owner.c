@@ -43,19 +43,28 @@ static bool claim_launch(void) {
     return ok;
 }
 
-// End a claimed launch. Returns true when a hold and its release landed during
-// it: core1 was reset under the handshake, so whatever it started is not what
-// runs now. Sets the tenant only for an undisturbed launch that answered.
-static bool end_launch(bool ok, core1_tenant_t tenant) {
+// How a claimed launch ended, decided under the lock.
+typedef enum {
+    LAUNCH_CLEAN,     // nothing touched core1 during it
+    LAUNCH_HELD,      // a hold is outstanding: core1 is in reset whatever answered,
+                      // and that hold's last release relaunches the service
+    LAUNCH_DISTURBED, // a hold and its release both landed: core1 was reset under
+                      // the handshake and the release left the relaunch to us
+} launch_end_t;
+
+// End a claimed launch. Sets the tenant only for a clean launch that answered. A
+// hold that lands after the handshake answered but before this lock still counts:
+// otherwise the launch would read as a success while core1 sits in reset.
+static launch_end_t end_launch(bool ok, core1_tenant_t tenant) {
     core1_hw_lock();
-    const bool disturbed = s_relaunch;
-    s_launching          = false;
-    s_relaunch           = false;
-    if (ok && !disturbed) {
+    const launch_end_t end = s_relaunch ? LAUNCH_DISTURBED : (s_holds > 0 ? LAUNCH_HELD : LAUNCH_CLEAN);
+    s_launching            = false;
+    s_relaunch             = false;
+    if (ok && end == LAUNCH_CLEAN) {
         s_tenant = tenant;
     }
     core1_hw_unlock();
-    return disturbed;
+    return end;
 }
 
 // Launch the service on a launch already claimed. A disturbed launch is redone
@@ -63,8 +72,12 @@ static bool end_launch(bool ok, core1_tenant_t tenant) {
 // release relaunches.
 static bool launch_service_claimed(const char *what) {
     for (uint8_t attempt = 0; attempt < 3; ++attempt) {
-        const bool ok = core1_hw_launch_service();
-        if (!end_launch(ok, CORE1_TENANT_SERVICE)) {
+        const bool         ok  = core1_hw_launch_service();
+        const launch_end_t end = end_launch(ok, CORE1_TENANT_SERVICE);
+        if (end == LAUNCH_HELD) {
+            return true; // that hold's last release relaunches the service
+        }
+        if (end == LAUNCH_CLEAN) {
             if (!ok) {
                 core1_hw_report(what);
             }
@@ -123,10 +136,12 @@ bool core1_run(void (*entry)(void), uint32_t *stack_bottom, size_t stack_bytes) 
     if (!claim_launch()) {
         return false;
     }
-    const bool ok = core1_hw_launch(entry, stack_bottom, stack_bytes);
-    if (end_launch(ok, CORE1_TENANT_CUSTOM)) {
-        // The hold killed the entry and its release left the relaunch to us.
-        core1_hw_report("run: a hold and release landed during the launch");
+    const bool         ok  = core1_hw_launch(entry, stack_bottom, stack_bytes);
+    const launch_end_t end = end_launch(ok, CORE1_TENANT_CUSTOM);
+    if (end != LAUNCH_CLEAN) {
+        // A hold killed the entry. Hand core1 back to the service: restore launches
+        // it now if the hold is already released, or leaves it to the last release.
+        core1_hw_report(end == LAUNCH_HELD ? "run: a hold landed during the launch" : "run: a hold and release landed during the launch");
         (void)core1_restore_service();
         return false;
     }
@@ -145,8 +160,13 @@ bool core1_restore_service(void) {
             s_tenant = CORE1_TENANT_SERVICE;
             return false;
         }
-        const bool ok = core1_hw_launch_service();
-        if (!end_launch(ok, CORE1_TENANT_SERVICE) && ok) {
+        const bool         ok  = core1_hw_launch_service();
+        const launch_end_t end = end_launch(ok, CORE1_TENANT_SERVICE);
+        if (end == LAUNCH_HELD) {
+            s_tenant = CORE1_TENANT_SERVICE;
+            return false; // held: the last release relaunches the service
+        }
+        if (end == LAUNCH_CLEAN && ok) {
             return true;
         }
     }

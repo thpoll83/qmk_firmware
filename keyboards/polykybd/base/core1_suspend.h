@@ -47,3 +47,20 @@ core1_suspend_action_t core1_suspend_step(core1_suspend_t *s, bool eligible, boo
 
 // The wake. True when this suspend holds core1 and the caller must release it.
 bool core1_resume_step(core1_suspend_t *s);
+
+// ---- core1 during an EEPROM write ---------------------------------------------
+// Every EEPROM write runs with core0's interrupts disabled (QMK's RP2040 driver), so
+// no thread can hand core1 new work while the writer waits. core1 finishes what it
+// has (an Eden keycap is ~4.3 ms, a fragment well under 1 ms) and then waits for its
+// FIFO in RAM. Work still owed after CORE1_FLASH_WAIT_US means core1 has stopped
+// inside flash code: it is forced off for the write and relaunched afterwards.
+#define CORE1_FLASH_WAIT_US 50000u
+
+typedef enum {
+    CORE1_FLASH_PROCEED = 0,  // core1 owes nothing: write now
+    CORE1_FLASH_WAIT,         // core1 is finishing work: poll again
+    CORE1_FLASH_FORCE_OFF,    // core1 owed work for the whole budget: stop it
+} core1_flash_action_t;
+
+// `waited_us` is the time since the writer started waiting (unsigned difference).
+core1_flash_action_t core1_flash_wait_step(bool owes, uint32_t waited_us);

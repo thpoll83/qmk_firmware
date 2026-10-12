@@ -20,6 +20,7 @@
 
 #ifdef USE_CORE1
 #include "pico/platform.h"   // __no_inline_not_in_flash_func
+#include "hardware/structs/timer.h"   // timer_hw: a clock that runs with interrupts off
 
 // core1's wait for its next FIFO word, in RAM. Idle core1 spends nearly all its time
 // here, and an EEPROM write (a flash program or erase on core0) flushes the XIP cache
@@ -232,11 +233,11 @@ static struct {
     uint32_t printed_at; // uptime of the last copy printed
     uint8_t  printed;    // copies printed of this recovery
     bool     relaunched; // the bounded relaunch answered
-    bool     at_suspend; // found by the suspend hold (core1_suspend_tick), not the raw-HID gate
+    const char *where;   // "" (the raw-HID gate), " at suspend", " at EEPROM write"
 } s_c1_stall;
 
 // Record what a stalled core1 left behind. Call before the hold clears it.
-static void core1_note_stall(uint32_t stalled_ms, bool at_suspend) {
+static void core1_note_stall(uint32_t stalled_ms, const char *where) {
     s_c1_stall.count++;
     s_c1_stall.stalled_ms = stalled_ms;
     s_c1_stall.last_cmd   = core1_last_cmd;
@@ -246,7 +247,7 @@ static void core1_note_stall(uint32_t stalled_ms, bool at_suspend) {
     s_c1_stall.entered    = g_core1_entered;
     s_c1_stall.at_ms      = timer_read32();
     s_c1_stall.printed    = 0;
-    s_c1_stall.at_suspend = at_suspend;
+    s_c1_stall.where      = where;
     s_c1_stall.relaunched = false;
 }
 
@@ -279,7 +280,7 @@ static void core1_hold_and_drop(void) {
 // core1 owes a fragment and has not answered for CORE1_STALL_MS: reset it, drop the
 // work it lost, and launch the service again.
 static void core1_recover(uint32_t stalled_ms) {
-    core1_note_stall(stalled_ms, false);
+    core1_note_stall(stalled_ms, "");
     core1_hold_and_drop();
     // The relaunch is bounded: a core1 that does not come back must not take core0's
     // main loop with it.
@@ -316,7 +317,7 @@ void core1_suspend_tick(void) {
                 const uint32_t fragment_ms = timer_elapsed32(core1_pushed_at);
                 if (fragment_ms > stalled_ms) stalled_ms = fragment_ms;
             }
-            core1_note_stall(stalled_ms, true);
+            core1_note_stall(stalled_ms, " at suspend");
             s_c1_suspend_stalled = true;
             core1_hold_and_drop();
         } break;
@@ -336,6 +337,56 @@ void core1_resume(void) {
     }
     // A clean hold whose relaunch did not answer is reported by core1_owner, and the
     // raw-HID gate resets that core1 again once a fragment waits on it.
+}
+
+// ---- core1 during an EEPROM write ---------------------------------------------
+// Strong overrides of the weak hooks in platforms/chibios/drivers/wear_leveling/
+// wear_leveling_rp2040_flash.c (UPSTREAM_PATCHES.md), so EVERY EEPROM write is
+// covered, on both halves and from any thread: the suspend flush, HID keymap and
+// macro edits, the slave's keymap writes on its split thread, KC_STORE_EE, RGB keys.
+//
+// The quiesce hook runs with core0's interrupts disabled, so no thread can hand core1
+// new work until the write ends. It waits for the work core1 already has (it then
+// idles in core1_fifo_pop_ram, in RAM). Work still owed after CORE1_FLASH_WAIT_US
+// means core1 stopped inside flash code: it is forced into reset for the write, and
+// the resume hook records the stall and relaunches it through core1_owner. The relaunch
+// also runs on the slave: leaving its core1 off would hang the split thread at its
+// next fragment. DOOM's engine keeps the old behaviour.
+static volatile bool s_c1_forced_off_for_flash;
+static uint32_t      s_c1_flash_waited_us;
+
+void wear_leveling_rp2040_flash_quiesce(void) {
+    if (core1_held() || doom_mode_active() || core1_tenant() != CORE1_TENANT_SERVICE) {
+        return;   // in reset already, or not the service (unchanged)
+    }
+    const uint32_t start = timer_hw->timerawl;
+    for (;;) {
+        const bool     owes   = core1_is_busy() || startup_anim_core1_owes();
+        const uint32_t waited = timer_hw->timerawl - start;
+        switch (core1_flash_wait_step(owes, waited)) {
+            case CORE1_FLASH_PROCEED:
+                return;
+            case CORE1_FLASH_WAIT:
+                break;
+            case CORE1_FLASH_FORCE_OFF:
+                // A raw PSM write, reconciled with core1_owner's count in the resume
+                // hook: core1_hold() there forces it off again and counts the hold.
+                core1_hw_force_off();
+                s_c1_flash_waited_us      = waited;
+                s_c1_forced_off_for_flash = true;
+                return;
+        }
+    }
+}
+
+void wear_leveling_rp2040_flash_resume(void) {
+    if (!s_c1_forced_off_for_flash) {
+        return;
+    }
+    s_c1_forced_off_for_flash = false;
+    core1_note_stall(s_c1_flash_waited_us / 1000u, " at EEPROM write");
+    core1_hold_and_drop();
+    s_c1_stall.relaunched = core1_release();
 }
 
 bool core1_suspend_flush_ready(void) {
@@ -380,12 +431,12 @@ void core1_stall_report(void) {
     }
     s_c1_stall.printed++;
     s_c1_stall.printed_at = timer_read32();
-    // " at suspend" sits before the outcome on purpose: the host's problem scan
+    // `where` (" at suspend" / " at EEPROM write") sits before the outcome on purpose: the host's problem scan
     // (PolyKybdHost problem_scan.py) reads "core1 relaunched (recovery N since boot at
     // M ms" as one unbroken run.
     uprintf("WARNING core1 stalled: no answer for %lu ms%s (last cmd 0x%08lx arg 0x%08lx, "
             "counts %lu/%lu, entered %lu) - %s (recovery %lu since boot at %lu ms, report %u/%u)\n",
-            (unsigned long)s_c1_stall.stalled_ms, s_c1_stall.at_suspend ? " at suspend" : "",
+            (unsigned long)s_c1_stall.stalled_ms, s_c1_stall.where ? s_c1_stall.where : "",
             (unsigned long)s_c1_stall.last_cmd,
             (unsigned long)s_c1_stall.last_arg, (unsigned long)s_c1_stall.c0,
             (unsigned long)s_c1_stall.c1, (unsigned long)s_c1_stall.entered,

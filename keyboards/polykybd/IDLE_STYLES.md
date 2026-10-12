@@ -364,8 +364,12 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
       nothing from flash. Before 2026-10-12 the wait was flash-resident, so even an
       idle core1 could fault on the cache flush (`fw_staging.c`, "Dual-core flash
       safety"). HID cmds 24 and 26 flush through
-      `core1_off_during()`. Not covered yet: the EEPROM writes outside these paths
-      (keymap edits from the host on both halves, macro recording, KC_STORE_EE).
+      `core1_off_during()`. Every other EEPROM write (keymap and macro edits from the
+      host on both halves, macro recording, KC_STORE_EE, RGB keys) is covered in the
+      driver itself: `wear_leveling_rp2040_flash_quiesce()` waits, with interrupts
+      off, until core1 owes no work, and forces it off after 50 ms (recorded as
+      `core1 stalled … at EEPROM write`, then relaunched). DOOM's engine is not
+      covered.
   - ⚠️ **The status panel's idle screen takes turns with the loop only on the core0
     fallback path**, where every 3 ms slice waited behind ~6 ms of its I2C flush.
     `eden_idle_tick()` then starts no frame while a status frame is being sent

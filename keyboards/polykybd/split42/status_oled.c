@@ -242,6 +242,10 @@ void oled_update_buffer_fw_update(void) {
         return;
     }
 
+    // Until the first chunk lands the staging area is being erased; "0%" there
+    // looked like a stalled update. No bar either: it would sit empty.
+    const bool erasing = fw_update_erasing();
+
     if (fonts) {
         // Name the bundle being written (fixed slot) so progress shows bundle-by-bundle.
         const char* bname = fontpack_slot_name(fw_staging_fontpack_slot_off());
@@ -250,8 +254,16 @@ void oled_update_buffer_fw_update(void) {
             ascii_to_u32_string(buffer, sizeof(buffer), bname);
             kdisp_write_gfx_text(smallFont, 1, 44, 10, buffer);
         }
+        if (erasing) {
+            kdisp_write_gfx_text(smallFont, 1, 0, 22, U"Erasing...");
+            return;
+        }
         oled_fw_update_percent(smallFont, 24, 22, pct);
         kdisp_write_gfx_text(smallFont, 1, 24, 22, U"% — do not unplug");
+    } else if (erasing) {
+        kdisp_write_gfx_text(smallFont, 1, 0, 12, U"PolyKybd");
+        kdisp_write_gfx_text(smallFont, 1, 0, 28, U"FW Erasing...");
+        return;
     } else {
         // Firmware, slave half: live progress.
         kdisp_write_gfx_text(smallFont, 1, 0, 10, U"Progress:");

@@ -2233,3 +2233,28 @@ OS. A language item replaces the parked language for its moment; a script item k
 underneath. When `tutorial_active()` drops, the next pass writes the real language back.
 The key tour never selects a language (Lang key, the category tabs, `KC_BASE`), so the
 park cannot overwrite a choice the lesson asked for.
+
+## The first-run intro and tutorial (`anim/tutorial.c`, `base/tutorial_plan.c`)
+
+_Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
+
+
+Eden, then a ten-step lesson that points at real keys (letters, Shift, the board reveal,
+a board-only language preview, the Lang and emoji menus, Fn, Num, the Intl picker).
+**On by default since 1.0.0** (`-e POLYKYBD_BOOT_INTRO=no` opts out; HIL images default
+it off, since a rig never presses a key). Plays once per board (EEPROM marker), again
+after RESET Eden. The design, every hardware round and the traps are
+[`keyboards/polykybd/anim/TUTORIAL.md`](TUTORIAL.md); the phase
+machine is pure and unit-tested (`make test:polykybd_tutorial_plan`). Three rules bind
+code outside it:
+
+- ⚠️ **The tutorial ANNOTATES the normal renderer, it never re-draws the board** — it
+  hides keys (`tutorial_key_visible`) and owns the status panels. Every chapter that
+  re-implemented rendering was a bug.
+- ⚠️ **On the slave, anything the master DREW is known only as what the link carried.**
+  The Intl letter is drawn at random on the master; prose built from the slave's own
+  draw named a different letter than the ring pointed at.
+- ⚠️ **The preview never reaches the host**: `poly_reported_lang()` is what GET_LANG and
+  the settings save read, because the host switches the OS layout to whatever GET_LANG
+  says.
+

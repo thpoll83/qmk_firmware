@@ -55,3 +55,18 @@ VBUS divider on GP24 — is on **both** boards, identically.
   `../../`, and no such file exists beside it. Whether KiCad resolves that from the project
   root or the reference is simply stale was **not** established — don't read it as either.
 
+
+## Notable QMK features enabled
+
+_Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
+
+RGB matrix (72 LEDs, 41 `ENABLE_RGB_MATRIX_*` effects per variant), dynamic keymap (8 host-remappable layers, 0..7), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
+
+⚠️ **VIA is NOT supported and must not be advertised as such.** `VIA_ENABLE` is
+unset on both variants — only `DYNAMIC_KEYMAP_ENABLE` is on, and remapping happens
+through PolyKybdHost's own layout editor over our raw-HID channel. The one residue
+is `poly_keymap.c`'s `#include "quantum/via.h"`, which is where QMK happens to
+define the `id_dynamic_keymap_*` command IDs the dynamic keymap uses; that include
+is a QMK header path, not a VIA feature. Don't reintroduce "VIA-compatible" wording
+in docs, UI strings or comments.
+

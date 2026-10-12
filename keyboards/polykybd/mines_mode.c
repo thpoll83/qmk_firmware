@@ -336,16 +336,18 @@ static void draw_text(const uint32_t *text) {
                          (int8_t)((SCREEN_HEIGHT - (ymax - ymin + 1)) / 2 - ymin), text);
 }
 
-// A hidden cell: a square outline, the same size on every key, filled with a dot grid
-// (one lit pixel in nine) when `dots`. A flagged cell drops the dots for the flag.
+// A hidden cell: a square outline, the same size on every key, filled with staggered
+// dots (one lit pixel in eight) when `dots`. A flagged cell drops the dots for the flag.
 #define MINES_TILE 32
 #define MINES_TILE_X (CX - MINES_TILE / 2)
 #define MINES_TILE_Y ((SCREEN_HEIGHT - MINES_TILE) / 2)
 static void draw_tile(bool dots) {
     kdisp_draw_round_rect(MINES_TILE_X, MINES_TILE_Y, MINES_TILE, MINES_TILE, 3);
     if (!dots) return;
-    for (int y = MINES_TILE_Y + 3; y < MINES_TILE_Y + MINES_TILE - 2; y += 3) {
-        for (int x = MINES_TILE_X + 3; x < MINES_TILE_X + MINES_TILE - 2; x += 3) rect(x, y, 1, 1, true);
+    for (int dy = 2; dy < MINES_TILE - 2; dy += 2) {
+        for (int dx = (dy % 4 == 0) ? 4 : 2; dx < MINES_TILE - 2; dx += 4) {
+            rect(MINES_TILE_X + dx, MINES_TILE_Y + dy, 1, 1, true);
+        }
     }
 }
 

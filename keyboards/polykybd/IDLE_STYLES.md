@@ -366,8 +366,9 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
       safety"). HID cmds 24 and 26 flush through
       `core1_off_during()`. Every other EEPROM write (keymap and macro edits from the
       host on both halves, macro recording, KC_STORE_EE, RGB keys) is covered in the
-      driver itself: `wear_leveling_rp2040_flash_quiesce()` waits, with interrupts
-      off, until core1 owes no work, and forces it off after 50 ms (recorded as
+      driver itself: `wear_leveling_rp2040_flash_quiesce()` sends core1 a PARK word
+      with interrupts off and waits until core1 acknowledges it from its RAM wait
+      loop. Without an acknowledgement within 50 ms it forces core1 off (recorded as
       `core1 stalled … at EEPROM write`, then relaunched). DOOM's engine is not
       covered.
   - ⚠️ **The status panel's idle screen takes turns with the loop only on the core0

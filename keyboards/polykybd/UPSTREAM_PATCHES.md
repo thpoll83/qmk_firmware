@@ -97,9 +97,11 @@ off the flash bus during it:
 Upstream masks only core0's interrupts. A core1 fetching from XIP while the write has
 the QSPI out of XIP mode never completes the fetch: core1 stops for good, or the bus
 stalls and the half resets by watchdog (field 2026-10-12). The strong overrides live in
-`keyboards/polykybd/multicore_exec.c`: the quiesce hook waits for core1's owed work
-(Eden keycap jobs, RLE fragments; core1 then idles in RAM) and forces core1 off if it
-never finishes; the resume hook relaunches it.
+`keyboards/polykybd/multicore_exec.c`: the quiesce hook sends core1 a PARK word and
+waits for core1 to acknowledge it from its RAM wait loop, which it does once its
+earlier work (Eden keycap jobs, RLE fragments) is done. Without an acknowledgement it
+forces core1 off and drops its lost work before interrupts return; the resume hook
+relaunches it.
 
 If upstream restructures these functions, keep the quiesce call inside the
 interrupts-off window, immediately before the flash operation: outside it, a thread

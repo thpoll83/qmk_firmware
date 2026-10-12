@@ -38,8 +38,8 @@ bool core1_resume_step(core1_suspend_t *s) {
     return release;
 }
 
-core1_flash_action_t core1_flash_wait_step(bool owes, uint32_t waited_us) {
-    if (!owes) {
+core1_flash_action_t core1_flash_wait_step(bool pending, uint32_t waited_us) {
+    if (!pending) {
         return CORE1_FLASH_PROCEED;
     }
     return waited_us < CORE1_FLASH_WAIT_US ? CORE1_FLASH_WAIT : CORE1_FLASH_FORCE_OFF;

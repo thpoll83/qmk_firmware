@@ -119,12 +119,44 @@ static bool is_key(uint8_t row, uint8_t col, uint8_t kr, uint8_t kc) {
 
 // ---- transitions ----------------------------------------------------------------
 
-bool mines_try_start(uint16_t keycode, keyrecord_t *record) {
-    if (!record->event.pressed || keycode != KC_HYPR) return false;
-    poly_sync_t *ls = access_local_state();
-    if ((ls->flags & DISP_IDLE) == 0) return false;   // only from a running idle animation
-    if (demo_active() || tutorial_active() || poly_fw_screen() != POLY_FW_SCREEN_NONE) return false;
+static bool start_allowed(void) {
+    if ((get_local_state()->flags & DISP_IDLE) == 0) return false;   // only from a running idle animation
+    return !demo_active() && !tutorial_active() && poly_fw_screen() == POLY_FW_SCREEN_NONE;
+}
 
+// The Hyper press being held towards a start (master only).
+static bool     s_hyper_armed;
+static uint8_t  s_hyper_row;
+static uint8_t  s_hyper_col;
+static uint16_t s_hyper_t;
+
+bool mines_try_start(uint16_t keycode, keyrecord_t *record) {
+    const uint8_t row = record->event.key.row;
+    const uint8_t col = record->event.key.col;
+    if (s_hyper_armed) {
+        if (row == s_hyper_row && col == s_hyper_col) {
+            // Released before MINES_START_HOLD_MS: a plain wake, as any key gives. The
+            // press was swallowed, so the release is swallowed too.
+            if (!record->event.pressed) {
+                s_hyper_armed = false;
+                poly_wake_from_idle();
+            }
+            return true;
+        }
+        // Another key while Hyper is held: no game. That key wakes the board as usual.
+        s_hyper_armed = false;
+        return false;
+    }
+    if (!record->event.pressed || keycode != KC_HYPR || !start_allowed()) return false;
+    s_hyper_armed = true;
+    s_hyper_row   = row;
+    s_hyper_col   = col;
+    s_hyper_t     = timer_read();
+    return true;
+}
+
+static void mines_start(void) {
+    poly_sync_t *ls = access_local_state();
     // Release anything held before swallowing begins (the FW-2 prompt's reason).
     clear_keyboard();
     startup_anim_stop();
@@ -147,7 +179,6 @@ bool mines_try_start(uint16_t keycode, keyrecord_t *record) {
     update_performed();
     request_disp_refresh();
     uprint("mines: start\n");
-    return true;
 }
 
 static bool anim_running(void) {
@@ -225,6 +256,11 @@ void mines_tick(void) {
         } else if (anim_running() && timer_elapsed(s_step_t) >= MINES_REVEAL_STEP_MS) {
             anim_step();
         }
+        return;
+    }
+    if (s_hyper_armed && timer_elapsed(s_hyper_t) >= MINES_START_HOLD_MS) {
+        s_hyper_armed = false;
+        if (start_allowed()) mines_start();   // the idle state may have ended meanwhile
         return;
     }
     if (s_hide_t != 0 && timer_elapsed32(s_hide_t) >= MINES_HIDE_REPAINT_MS) {

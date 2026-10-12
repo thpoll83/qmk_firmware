@@ -70,7 +70,7 @@
 #include "polymod_core1.h"
 #include "anim/tutorial.h"
 #include "anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
-#include "mines_mode.h"                   // the idle-screen mine sweeper (Hyper while idle)
+#include "mines_mode.h"                   // the idle-screen mine sweeper (hold Hyper while idle)
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
@@ -6516,8 +6516,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     }
 
     // The idle-screen mine sweeper IS the board while it runs: every key event is
-    // swallowed and answered there, so nothing reaches the host. Hyper while an idle
-    // animation runs starts it, or resumes the board hidden last (mines_mode.h).
+    // swallowed and answered there, so nothing reaches the host. Holding Hyper for 1 s
+    // while an idle animation runs starts it, or resumes the board hidden last
+    // (mines_mode.h); a shorter tap only wakes the board.
     if (mines_active()) {
         mines_process_record(record);
         return false;

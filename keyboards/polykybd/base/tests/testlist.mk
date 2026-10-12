@@ -26,3 +26,4 @@ TEST_LIST += polykybd_ime_key_plan
 TEST_LIST += polykybd_ime_held_slots
 TEST_LIST += polykybd_core1_owner
 TEST_LIST += polykybd_fw_stage
+TEST_LIST += polykybd_idle_style

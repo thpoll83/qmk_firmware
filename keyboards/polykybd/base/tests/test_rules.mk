@@ -324,3 +324,13 @@ polykybd_fw_stage_SRC := \
 
 polykybd_fw_stage_INC := \
 	$(POLY_BASE_PATH)
+# mines_plan.c is the idle-screen mine sweeper's rules (mines_mode.h). Pure: the board
+# is a plain struct and the seed is passed in, so no timer, keymap or display is linked.
+# The firmware binding is mines_mode.c.
+polykybd_mines_plan_SRC := \
+	$(POLY_BASE_PATH)/mines_plan.c \
+	$(POLY_BASE_PATH)/tests/mines_plan_tests.cpp
+
+polykybd_mines_plan_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

@@ -44,7 +44,9 @@ static volatile uint32_t s_c1_park_acks = 0;
 // nothing queued, which "the job counters match" does not (a job publishes its
 // completion before it returns through core1_entry(), in flash).
 static uint32_t __no_inline_not_in_flash_func(core1_fifo_pop_ram)(void) {
-    for (;;) {
+    // `while (true)`, not `for (;;)`: cppcheck, which cannot expand the RAM-placement
+    // macro, reports the latter as a broken AST (internalAstError) and fails the gate.
+    while (true) {
         while (!(sio_hw->fifo_st & SIO_FIFO_ST_VLD_BITS)) {
             __asm volatile("wfe");
         }

@@ -7915,7 +7915,11 @@ void suspend_power_down_kb(void) {
     // does die with the master's — it simply cannot see that coming from this pin.
     // Without this clause the slave would silently stop flushing at suspend
     // forever, which is a bigger behaviour change than the one being fixed.
-    if (is_keyboard_master() && !usb_vbus_state()) {
+    if (!core1_suspend_flush_ready()) {
+        // core1 may still be running an Eden job from flash; a flash write now wedges
+        // it or the bus (multicore_exec.h). The hold comes within a few ms, or after
+        // 500 ms as a recorded stall, and a later tick of this suspend flushes.
+    } else if (is_keyboard_master() && !usb_vbus_state()) {
         // Seen on resume when a host cuts VBUS to sleep — there the flush was
         // skipped for a rail that was never in danger, and the next one takes it.
         // Unseen when the power really was going, because the console goes with

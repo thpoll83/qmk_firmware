@@ -352,6 +352,14 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
       `WARNING core1 stalled: no answer for N ms at suspend …`. That line means core1
       had died before the host slept. The same line without `at suspend` after a wake
       means it died after the wake.
+    - ⚠️ **No EEPROM write while core1 may be running from flash.** QMK's RP2040
+      wear-levelling driver masks only core0's interrupts, so a flush while an Eden
+      job runs wedges core1 (the stall above) or the whole bus (a watchdog reset in
+      phase 7, USB suspend). Both happened on 2026-10-12, at suspends with Eden on
+      core1, and the suspend flush is the likely cause of the 2026-10-09 stall too.
+      The master's suspend flush waits for the hold (`core1_suspend_flush_ready()`),
+      and HID cmds 24 and 26 flush through `core1_off_during()`. Not covered yet: the
+      slave's suspend flush and the EEPROM writes outside these paths.
   - ⚠️ **The status panel's idle screen takes turns with the loop only on the core0
     fallback path**, where every 3 ms slice waited behind ~6 ms of its I2C flush.
     `eden_idle_tick()` then starts no frame while a status frame is being sent

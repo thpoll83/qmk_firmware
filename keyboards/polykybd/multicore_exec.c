@@ -272,9 +272,14 @@ static void core1_recover(uint32_t stalled_ms) {
 static core1_suspend_t s_c1_suspend;
 static bool            s_c1_suspend_stalled;   // this suspend's hold recorded a stall
 
+// core1 runs the overlay service on this half, and core0 may reset it from the main
+// loop: the master (the slave's split thread pushes its fragments), no DOOM.
+static bool core1_service_ours(void) {
+    return is_keyboard_master() && !doom_mode_active() && core1_tenant() == CORE1_TENANT_SERVICE;
+}
+
 void core1_suspend_tick(void) {
-    const bool eligible = is_keyboard_master() && !doom_mode_active() && !core1_held() &&
-                          core1_tenant() == CORE1_TENANT_SERVICE;
+    const bool eligible = core1_service_ours() && !core1_held();
     const bool owes = eligible && (core1_is_busy() || startup_anim_core1_owes());
     const uint32_t now = timer_read32();
     switch (core1_suspend_step(&s_c1_suspend, eligible, owes, now)) {
@@ -310,6 +315,22 @@ void core1_resume(void) {
     }
     // A clean hold whose relaunch did not answer is reported by core1_owner, and the
     // raw-HID gate resets that core1 again once a fragment waits on it.
+}
+
+bool core1_suspend_flush_ready(void) {
+    return !core1_service_ours() || core1_held();
+}
+
+void core1_off_during(void (*write)(void)) {
+    if (!core1_service_ours() || core1_held()) {
+        write();   // core1 is off already, or not ours to reset (unchanged behaviour)
+        return;
+    }
+    // The HID path takes a command only when core1 owes no fragment (the raw-HID gate),
+    // so what the reset can drop here is Eden keycap jobs, which the hold marks done.
+    core1_hold_and_drop();
+    write();
+    (void)core1_release();   // a relaunch that does not answer is reported by core1_owner
 }
 
 void core1_stall_report(void) {
@@ -483,4 +504,6 @@ bool core1_eden_available(void) { return false; }
 void core1_eden_key(uint32_t arg) { (void)arg; }
 void core1_suspend_tick(void) {}
 void core1_resume(void) {}
+bool core1_suspend_flush_ready(void) { return true; }
+void core1_off_during(void (*write)(void)) { write(); }
 #endif

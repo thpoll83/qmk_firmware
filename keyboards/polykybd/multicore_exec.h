@@ -29,6 +29,20 @@ void core1_stall_report(void);
 void core1_suspend_tick(void);
 void core1_resume(void);
 
+// ⚠️ An EEPROM write is a flash program or erase, and QMK's RP2040 wear-levelling
+// driver only masks core0's interrupts. If core1 fetches code from XIP while the QSPI
+// is out of XIP mode, the fetch never completes: core1 stops for good, or the bus
+// stalls and the flash call never returns, so core0 hangs until the watchdog. Field
+// 2026-10-12: both, at USB suspends with Eden computing keycaps on core1.
+// core1_suspend_flush_ready(): the suspend flush may run now. False on the master
+// until core1_suspend_tick() has taken its hold; true where core1 is not ours to
+// reset (the slave, DOOM), which keeps the old behaviour there.
+bool core1_suspend_flush_ready(void);
+// Run `write` (an EEPROM flush) with core1 in reset, then relaunch it. For the HID
+// path (cmd 24 display off, cmd 26 flush), where core1 owes no fragment. Runs `write`
+// directly where core1 is off already or not ours to reset.
+void core1_off_during(void (*write)(void));
+
 // 1 once core1 has entered core1_entry() (IRQs masked); core0 clears it before launch.
 extern volatile uint32_t g_core1_entered;
 

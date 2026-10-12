@@ -6552,16 +6552,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         return false;
     }
 
-    // The input-method key. Swallowed on BOTH edges: the press sends (or holds) the
-    // stroke, the release lets go of a held one. Never on the release edge alone — on
-    // an OSL() layer that edge fires up to three times, and a toggle fired three
-    // times is a toggle fired once with two stray switches.
-    if (keycode == KC_IME) {
-        ime_key_record(record);
-        display_wakeup(record);
-        return false;
-    }
-
     // Macro keycodes (QK_MACRO_0..QK_MACRO_MAX). Nothing else in the build consumes
     // them -- via.c is the only core dispatcher and VIA_ENABLE is unset -- so they are
     // ours, and they are SWALLOWED here rather than handled on the release edge: an
@@ -6596,6 +6586,18 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // matcher. Inline no-op false unless built with POLYKYBD_DOOM.
     if (doom_process_record(keycode, record->event.pressed,
                             record->event.key.row, record->event.key.col)) {
+        return false;
+    }
+
+    // The input-method key. Swallowed on BOTH edges: the press sends (or holds) the
+    // stroke, the release lets go of a held one. Never on the release edge alone — on
+    // an OSL() layer that edge fires up to three times, and a toggle fired three
+    // times is a toggle fired once with two stray switches. AFTER the Doom hook, so a
+    // game swallows it like any other key instead of sending Right Alt or an IME
+    // shortcut to the host (Greptile on #355).
+    if (keycode == KC_IME) {
+        ime_key_record(record);
+        display_wakeup(record);
         return false;
     }
 

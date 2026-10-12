@@ -336,10 +336,17 @@ static void draw_text(const uint32_t *text) {
                          (int8_t)((SCREEN_HEIGHT - (ymax - ymin + 1)) / 2 - ymin), text);
 }
 
-// A hidden cell: a solid square, the same size on every key.
+// A hidden cell: a square outline, the same size on every key, filled with a dot grid
+// (one lit pixel in nine) when `dots`. A flagged cell drops the dots for the flag.
 #define MINES_TILE 32
-static void draw_tile(void) {
-    kdisp_draw_badge_rect(CX - MINES_TILE / 2, (SCREEN_HEIGHT - MINES_TILE) / 2, MINES_TILE, MINES_TILE, 3, 0);
+#define MINES_TILE_X (CX - MINES_TILE / 2)
+#define MINES_TILE_Y ((SCREEN_HEIGHT - MINES_TILE) / 2)
+static void draw_tile(bool dots) {
+    kdisp_draw_round_rect(MINES_TILE_X, MINES_TILE_Y, MINES_TILE, MINES_TILE, 3);
+    if (!dots) return;
+    for (int y = MINES_TILE_Y + 3; y < MINES_TILE_Y + MINES_TILE - 2; y += 3) {
+        for (int x = MINES_TILE_X + 3; x < MINES_TILE_X + MINES_TILE - 2; x += 3) rect(x, y, 1, 1, true);
+    }
 }
 
 // The mine that was hit: diagonal hatching, a clear ring, the mine in the middle.
@@ -380,11 +387,11 @@ void mines_render_key(uint8_t row, uint8_t col) {
     const enum mines_show show = mines_cell_show(&s_geom, b, cell);
     switch (show) {
         case MINES_SHOW_HIDDEN:
-            draw_tile();
+            draw_tile(true);
             break;
         case MINES_SHOW_FLAG:
-            draw_tile();
-            draw_flag(CX - 8, false);
+            draw_tile(false);
+            draw_flag(CX - 8, true);
             break;
         case MINES_SHOW_WRONG_FLAG:
             draw_flag(CX - 8, true);

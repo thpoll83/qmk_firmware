@@ -30,7 +30,8 @@ bool mines_active(void);
 bool mines_try_start(uint16_t keycode, keyrecord_t *record);
 
 // Master: every key event while mines_active(). Returns true to swallow the event,
-// which is every event except the release of a layer key pressed before the game began.
+// which is every event except the release of a layer key already held when the game
+// started.
 bool mines_process_record(uint16_t keycode, keyrecord_t *record);
 
 // Master, every housekeeping pass: starts the game once Hyper was held long enough,

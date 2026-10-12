@@ -75,6 +75,10 @@ static uint8_t  s_press_row = NO_KEY;   // the press this game saw (its release 
 static uint8_t  s_press_col = NO_KEY;
 static uint16_t s_press_t;
 static bool     s_press_flagged;        // the hold already toggled a flag; the release does nothing
+// Keys already down when the game started (Hyper, and anything else held). Their
+// releases do not belong to the game; a layer key's goes on to QMK (see
+// mines_process_record()).
+static matrix_row_t s_held_at_start[MATRIX_ROWS];
 static uint32_t s_last_input;           // for MINES_INACTIVE_MS
 static uint32_t s_hide_t;               // when the hide began (0 = not hiding)
 static uint32_t s_hide_stamp;           // get_last_update() at the hide
@@ -161,6 +165,7 @@ static void mines_start(void) {
     clear_keyboard();
     startup_anim_stop();
     poly_set_awake_state(ls);
+    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) s_held_at_start[r] = matrix_get_row(r);
     mines_board_t *b = board();
     // A finished board does not resume: a win goes on to the next level, a loss starts
     // again at level 1. An unfinished one resumes as it was.
@@ -292,6 +297,16 @@ bool mines_process_record(uint16_t keycode, keyrecord_t *record) {
     // Act on the RELEASE of a press this game saw: matrix_scan_kb inverts the keycap
     // on press and restores it on release, so acting on the press would redraw a key
     // that is still inverted. The hold time also tells a flag from an open.
+    if (row < MATRIX_ROWS && (s_held_at_start[row] & ((matrix_row_t)1 << col))) {
+        // A key that was down when the game started. Its release is not a move. A
+        // layer key's release goes on to QMK, or its layer would stay on after the game
+        // (clear_keyboard() releases keys and modifiers, not layers).
+        if (!record->event.pressed) {
+            s_held_at_start[row] &= (matrix_row_t)~((matrix_row_t)1 << col);
+            return !is_layer_key(keycode);
+        }
+        s_held_at_start[row] &= (matrix_row_t)~((matrix_row_t)1 << col);   // missed release
+    }
     if (record->event.pressed) {
         s_press_row = row;
         s_press_col = col;
@@ -299,12 +314,9 @@ bool mines_process_record(uint16_t keycode, keyrecord_t *record) {
         s_press_flagged = false;
         return true;
     }
-    if (row != s_press_row || col != s_press_col) {
-        // A release whose press came before the game started. A layer key's release
-        // goes on to QMK, or its layer would stay on after the game (clear_keyboard()
-        // releases keys and modifiers, not layers). Everything else stays swallowed.
-        return !is_layer_key(keycode);
-    }
+    // A release whose press the game saw, but not the latest press: swallowed, like
+    // the press was.
+    if (row != s_press_row || col != s_press_col) return true;
     s_press_row = NO_KEY;
     s_press_col = NO_KEY;
     if (s_press_flagged) return true;   // mines_tick() flagged it while held

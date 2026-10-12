@@ -119,3 +119,14 @@ pass, cross-repo `cmp` clean, `--check` now all-identical).
 - **`flags` uses a pinned high gidx band** (`PACK_EXTRA_GIDX_BASE`), so appending a
   tail font no longer perturbs it — expect `flags` to stay `identical` unless you
   actually regenerated it.
+- ⚠️ **A bundle rebuilt at the SAME `content_version` never reaches a board that
+  already has that version.** The host re-flashes on connect only when the version
+  moves, so re-applying an unshipped bundle at its current number (fine for the
+  repo: nobody else has it) leaves a tester's board on the old bytes, and the
+  retouch reads as "looks identical" on hardware (2026-10-09, the clipboard hint
+  lines). Hand the tester the flash command with the file:
+  `python -m polyhost.cli.polyctl fontpack flash symbol` (the shipped bundle from a
+  host checkout on the branch) or
+  `python -m polyhost.cli.polyctl fontpack flash --file symbol.plyf --bundle-id 0`
+  (a delivered file; `--bundle-id` is the slot index from `bundles.json`). The host
+  must be running; no reboot. Bump the version instead only once a bundle has shipped.

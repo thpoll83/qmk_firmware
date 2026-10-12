@@ -90,6 +90,14 @@ void mark_display_has_overlay(uint16_t overlay_idx);
 // Global variables: display_has_overlay_bits
 bool display_has_overlay(uint16_t overlay_idx);
 
+// Marks a display position's overlay as drawn dimmed, or full (v23, cmd 33 bit 7).
+// Global variables: display_dim_bits
+void set_display_dim(uint16_t overlay_idx, bool dim);
+
+// True when the display position's overlay is drawn dimmed. Cleared with
+// display_has_overlay_bits (clear_display_has_overlay / set_all_display_has_overlay).
+bool display_is_dim(uint16_t overlay_idx);
+
 // Clears all overlay buffer data by setting it to zero.
 // Global variables: overlays
 void reset_overlay_pool(void);

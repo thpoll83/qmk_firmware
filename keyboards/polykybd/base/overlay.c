@@ -13,6 +13,9 @@
 #define OVERLAY_BIT_CAPACITY (SCREEN_WIDTH * SCREEN_HEIGHT)
 
 static volatile uint8_t display_has_overlay_bits[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
+// Display positions whose overlay is drawn dimmed (cmd 33's OVERLAY_MAP_W_DIM, v23).
+// Indexed like display_has_overlay_bits and cleared with it.
+static volatile uint8_t display_dim_bits[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
 // ⚠️ overlay_pool[] IS the doom easter-egg's entire game arena (borrowed as RAM). Its
 // size = NUM_OVERLAY_SLOTS*360 = 216,000 B today. If you SHRINK the pool
 // to reclaim RAM, keep it >= ~205 KB or the doom build won't fit: the engine floor
@@ -165,6 +168,18 @@ bool display_has_overlay(uint16_t overlay_idx) {
     return (display_has_overlay_bits[overlay_idx/8] & (1<<(overlay_idx%8))) != 0;
 }
 
+void set_display_dim(uint16_t overlay_idx, bool dim) {
+    if (dim) {
+        display_dim_bits[overlay_idx/8] |= (uint8_t)(1<<(overlay_idx%8));
+    } else {
+        display_dim_bits[overlay_idx/8] &= (uint8_t)~(1<<(overlay_idx%8));
+    }
+}
+
+bool display_is_dim(uint16_t overlay_idx) {
+    return (display_dim_bits[overlay_idx/8] & (1<<(overlay_idx%8))) != 0;
+}
+
 void reset_overlay_pool(void) {
     memset(overlay_pool, 0, OVERLAY_POOL_SIZE);
 }
@@ -172,12 +187,14 @@ void reset_overlay_pool(void) {
 void clear_display_has_overlay(void) {
     for(int16_t i = 0; i < sizeof(display_has_overlay_bits); ++i) {
         display_has_overlay_bits[i] = 0;
+        display_dim_bits[i] = 0;
     }
 }
 
 void set_all_display_has_overlay(void) {
     for(int16_t i = 0; i < sizeof(display_has_overlay_bits); ++i) {
         display_has_overlay_bits[i] = 0xff;
+        display_dim_bits[i] = 0;
     }
 }
 

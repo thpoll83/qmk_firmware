@@ -153,7 +153,7 @@ OS_DETECTION_ENABLE = yes
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
 # covers emoji/emoji_layer.c and hints/os_hints.c.
-POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c anim/demo_mode.c base/demo_plan.c base/idle_poem_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/font_lookup.c base/crash_record.c base/hand_stamp.c base/core1_owner.c base/core1_owner_hw.c base/fw_stage.c base/prc_record.c base/icon_lib.c slave_data.c oled_i2c.c base/oled_i2c_diag.c
+POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c anim/demo_mode.c base/demo_plan.c base/idle_poem_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c base/crash_record.c base/hand_stamp.c base/core1_owner.c base/core1_owner_hw.c base/fw_stage.c base/prc_record.c base/icon_lib.c slave_data.c oled_i2c.c base/oled_i2c_diag.c
 SRC += $(POLY_SRC)
 
 # emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
@@ -482,6 +482,22 @@ endif
 # would be forgeable by the attacker it is meant to stop. BOOTSEL/UF2 also remains
 # unaffected (it bypasses fw_staging entirely), so this can never brick a board.
 OPT_DEFS += -DFW_REQUIRE_SIGNATURE
+
+# ---------------------------------------------------------------------------
+# Build identity: the git branch, printed in the boot banner beside QMK_GIT_HASH
+# ---------------------------------------------------------------------------
+# FW_VERSION cannot tell test builds apart: every build of one version reports it.
+# The banner prints `build <branch>@<hash> <date>` so a console log names the image
+# that wrote it. CI checks out a detached HEAD, so GitHub's own variables come
+# first: GITHUB_HEAD_REF is the PR's branch, GITHUB_REF_NAME a push's branch or tag.
+# Only path-safe characters survive, so a branch name cannot break the quoting.
+ifdef SKIP_GIT
+    POLY_GIT_BRANCH := NA
+else
+    POLY_GIT_BRANCH := $(or $(GITHUB_HEAD_REF),$(GITHUB_REF_NAME),$(shell git -C $(TOP_DIR) rev-parse --abbrev-ref HEAD 2>/dev/null))
+endif
+POLY_GIT_BRANCH := $(shell printf '%s' '$(subst ',,$(POLY_GIT_BRANCH))' | tr -cd 'A-Za-z0-9._/-')
+OPT_DEFS += -DPOLY_GIT_BRANCH=\"$(or $(POLY_GIT_BRANCH),unknown)\"
 
 # ---------------------------------------------------------------------------
 # Deliberate crashes, for exercising base/crash_record.* on real hardware

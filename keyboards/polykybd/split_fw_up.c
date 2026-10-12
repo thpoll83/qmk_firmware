@@ -515,8 +515,18 @@ uint8_t fw_up_send_slave_reset(poly_reset_sync_t *msg) {
 
 char fw_up_xfer_begin(fw_up_begin_sync_t *msg, bool master_ok, fw_up_xfer_key_t *last,
                       fw_up_xfer_begin_t *out) {
+    // ⚠️ The key alone cannot tell a re-poll from a RETRY. It outlives the attempt it
+    // describes: COMMIT's finalize clears fw_up_active on success and refusal alike,
+    // but leaves the key set. The host's answer to a refused unsigned image is "flash
+    // again and press A", i.e. the SAME size and CRC, so the retry matched the key and
+    // skipped everything below: no poly_prepare_for_flash(), no master erase, and
+    // fw_up_active stayed false for the whole stream. Idle was then free to start Eden
+    // on the master mid-flash, and its keycaps kept redrawing on Shift (field,
+    // 2026-10-09). The slave never had this hole -- it re-erases dirty staging itself.
+    // A re-poll only ever arrives while the master's own transfer is still live.
     out->new_image = (msg->image_size != last->size || msg->image_crc != last->crc ||
-                      msg->bundle != last->bundle);
+                      msg->bundle != last->bundle) ||
+                     !fw_staging_fw_up_active();
     if (out->new_image && master_ok) {
         last->size   = msg->image_size;
         last->crc    = msg->image_crc;

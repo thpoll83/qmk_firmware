@@ -290,7 +290,9 @@ void user_sync_compressed_overlay_data_handler(uint8_t in_len, const void* in_da
     // into adj_idx), so the slave can't tell an off-screen variant from a visible one —
     // pass visible=true (always refresh, still coalesced by note_overlay_activity above).
     // The visibility gate is a master-side optimization (see fill_overlay.c).
-    core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed, true);
+    // The master bridges a first fragment at COMPRESSED_START bytes, a continuation at
+    // COMPRESSED_MAX (fill_overlay.c), so the length says which one this is.
+    core1_decompress_fragment(KC_NO, 0, ov->adj_idx, ov->compressed, true, ov->len == COMPRESSED_START);
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
 }
 
@@ -408,6 +410,20 @@ void dynamic_keymap_reset_poly(void) {
     poly_fl_row_cache_invalidate();
 }
 
+// A keymap reset the master asked for, waiting for the main thread. Written by the
+// split-protocol thread. The reset is 8 layers x 80 wear-levelled EEPROM writes plus
+// the macro clear, far past the handler's response window: run inline, the master
+// timed out, retried, and each retry made this half start the whole reset again
+// (field log 2026-10-09: transport_fail=12 giveup=1 after one reset).
+static volatile bool s_keymap_reset_pending = false;
+
+void split_sync_drain_keymap_reset(void) {
+    if (!s_keymap_reset_pending) return;
+    s_keymap_reset_pending = false;
+    dynamic_keymap_reset_poly();
+    request_disp_refresh();
+}
+
 // Handles dynamic keymap commands on the bridge with CRC32 validation, including keymap resets and key press events.
 void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
     if (in_len >= (sizeof(uint32_t)+1) && in_data != NULL && out_len == sizeof(poly_sync_reply_t) && out_data!= NULL) {
@@ -417,8 +433,10 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
             const uint8_t* command_data = &data->commands[1];
             switch(data->commands[0]) {
                 case id_dynamic_keymap_reset:
-                    dynamic_keymap_reset_poly();
-                    request_disp_refresh();
+                    // Deferred to housekeeping (split_sync_drain_keymap_reset). A
+                    // retried frame only sets the flag again, so it cannot start a
+                    // second reset.
+                    s_keymap_reset_pending = true;
                     break;
                 case id_dynamic_keymap_set_keycode:
                     dynamic_keymap_set_keycode_poly(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
@@ -527,7 +545,9 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
     // Render only if this chunk remapped an on-screen position (the slave has its own
     // displayed-slot set + synced mods); an all-off-screen chunk is shown by the
     // enable-overlays state sync (DISPLAY_OVERLAYS in OVERLAY_SYNCED_STATE_FLAGS).
-    if (set_packed_overlay_mapping(data->mapping, data->bytes, data->width)) {
+    if (set_packed_overlay_mapping(data->mapping, data->bytes,
+                                   (uint8_t)(data->width & OVERLAY_MAP_W_WIDTH_MASK),
+                                   (data->width & OVERLAY_MAP_SYNC_DIM) != 0)) {
         request_disp_refresh();
     }
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;

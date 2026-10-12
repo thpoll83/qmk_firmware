@@ -84,7 +84,7 @@ static bool launch_service_claimed(const char *what) {
     return false;
 }
 
-void core1_release(void) {
+bool core1_release(void) {
     bool launch = false;
     core1_hw_lock();
     if (s_holds > 0 && --s_holds == 0) {
@@ -101,9 +101,10 @@ void core1_release(void) {
         }
     }
     core1_hw_unlock();
-    if (launch) {
-        (void)launch_service_claimed("release: RLE service relaunch timed out");
+    if (!launch) {
+        return true;
     }
+    return launch_service_claimed("release: RLE service relaunch timed out");
 }
 
 bool core1_held(void) {

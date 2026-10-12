@@ -100,8 +100,8 @@ of the dynamic keymap, so the freshly compiled `keymaps[]` is only consulted for
 at or above the cap — or on a board whose EEPROM has never been written. Flash, press the
 key, get the old keycode, and nothing anywhere says why. It is the flip side of this
 section's own correct advice that a CONTENTS change "needs no reset": no reset is needed
-for *correctness*, and none happens, which is exactly what leaves the edit unseen. Two
-recoveries, and they are not equivalent:
+for *correctness*, and none happens, which is exactly what leaves the edit unseen. Three
+recoveries (the third, the host's reset, is below), and they are not equivalent:
 - **Bump `KEYMAP_LAYERS_FL_MERGED`.** Reaches every board automatically at the next boot,
   and **WIPES THE USER'S MACROS** — `dynamic_keymap_reset_poly()` calls
   `poly_macro_reset_all()`. Right for a layer add/remove/reorder, far too blunt for a
@@ -111,10 +111,52 @@ recoveries, and they are not equivalent:
   flags**, and the keycode goes through `int(x, 0)` so `0x2804` works. One invocation per
   changed key.
 
-⚠️ **There is NO keymap-reset and no EEPROM-clear anywhere in PolyKybdHost** — not in
-`polyctl`, not on the control socket, not in the tray. `EE_CLR` appears in the host only
-as a preview legend for `QK_CLEAR_EEPROM` in `res/preview/legends.json`, i.e. a label for
-a key the user presses **on the board**. Do not tell anyone to "reset the keymap from the
-host app"; that route does not exist (asserted three times in one session, 2026-09-10,
-and wrong every time).
+**The host's keymap reset is the third route, and it is not a selective one.** Tray
+Maintenance → "Reset keymap to default…" (and the control-socket method `keymap.reset`;
+there is no `polyctl` command) sends `id_dynamic_keymap_reset`. `legacy_command_kb()` in
+`hid_com.c` answers it with `dynamic_keymap_reset_poly()`, so it rewrites layers 0..7
+from the compiled keymap, restores their encoder bindings from the compiled
+`encoder_map[]` (both default keymaps set `ENCODER_MAP_ENABLE`), **and zeroes the macro
+buffer**, the same as a format-stamp bump on one board. It exists since host commit `a1180727` (2026-02).
+
+⚠️ **This section used to say the host had no keymap reset at all.** That was wrong for
+its whole life: the reset predates the note by seven months, so the advice the note
+recorded as "asserted three times, wrong every time" (2026-09-10) may well have been
+right. It was found on 2026-10-10 by reading `gui/cmd_menu.py`, not by any check. What IS true: the host has no
+EEPROM clear. `ID_EEPROM_RESET` is defined in `command_ids.py` and nothing sends it;
+`EE_CLR` appears only as a preview legend for `QK_CLEAR_EEPROM`, a key the user presses
+on the board.
+
+
+## `poly_keycode_at()` is the ONE resolver for both the render and the key-event path
+
+_Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
+
+
+`display_keycode_at()` (legend) and `keymap_key_to_keycode()` (action) both bottom out
+there, so anything derived inside it **cannot** make a keycap show one thing and type
+another. That makes it the correct — and only correct — seam for a runtime keycode
+derivation. The F-row alignment (`fl_aligned_keycode`, split72's `POLY_FL_ALIGN_FROW`)
+lives there for exactly that reason.
+
+Both callers feed it the **synced** `def_layer` from `get_local_layer()`, not live state
+for one and synced for the other. ⚠️ This is the OPPOSITE of the glyph-size key's
+deliberate asymmetry, and the difference is what changes at human speed: *modifiers*
+change within a single keypress so the action must follow the finger, while `def_layer`
+only moves on a deliberate layout switch — so the one-housekeeping-pass lag is
+irrelevant and two sources could render F6 on a keycap that types F7.
+
+⚠️ **The host layout editor CANNOT see anything derived there — it reads through
+`dynamic_keymap_get_buffer()` (`hid_com.c`), straight out of EEPROM.** So a derivation
+on a host-remappable layer would show one keycode in the editor while the board typed
+another, with nothing on screen to explain it. That constraint, not taste, is why the
+F-row alignment is **all-or-nothing and self-disabling**: it applies only while all 14
+slots still hold exactly what was compiled, and any edit hands the whole row back to the
+stored values. Two options were rejected — deriving unconditionally (fights the editor)
+and moving `_FL` above the write cap (costs remappability entirely). Any future runtime
+derivation on a remappable layer faces the same three-way choice.
+
+⚠️ **The derivation is cached** (`fl_row_is_pristine`, 14 dynamic-keymap reads) because
+`poly_keycode_at()` runs per keycap per render, not just per keypress. See the `_poly`
+wrapper invariant above for how it is invalidated.
 

@@ -278,3 +278,23 @@ polykybd_fw_sig_policy_SRC := \
 
 polykybd_fw_sig_policy_INC := \
 	$(POLY_BASE_PATH)
+
+# ime_key_plan.c decides what KC_IME sends: NUBS without an IME, the Korean toggle, or
+# the Japanese absolute target, per OS. Pure: the binding (poly_keymap.c) passes the
+# language family, the OS and the Shift state, so nothing from QMK is linked.
+polykybd_ime_key_plan_SRC := \
+	$(POLY_BASE_PATH)/ime_key_plan.c \
+	$(POLY_BASE_PATH)/tests/ime_key_plan_tests.cpp
+
+polykybd_ime_key_plan_INC := \
+	$(POLY_BASE_PATH)
+
+# ime_held_slots.c is the KC_IME held-key table: which key position holds which
+# usage, and when a slot is stale. Pure: the matrix, the host report and the
+# register/unregister calls come in through ime_slot_io_t, faked by the tests.
+polykybd_ime_held_slots_SRC := \
+	$(POLY_BASE_PATH)/ime_held_slots.c \
+	$(POLY_BASE_PATH)/tests/ime_held_slots_tests.cpp
+
+polykybd_ime_held_slots_INC := \
+	$(POLY_BASE_PATH)

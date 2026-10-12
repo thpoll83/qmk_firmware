@@ -3731,7 +3731,10 @@ enum {
 };
 // The flags bundle that first carries one glyph per country. An older one is still
 // one glyph per LANGUAGE, and a keyboard keeps it until the host re-flashes the slot
-// on its next connect, so until then the enum index is still the right glyph.
+// on its next connect, so until then the enum index is still the right glyph, except
+// for ja-US: it was added after the per-language bundles and has no glyph of its own
+// there, so it borrows ja-JP's. (In the table it shares Japan's glyph already, because
+// FLAG_ALIAS in gen-lang-fonts.sh files it under JP, its home country.)
 #define LANG_FLAG_PER_COUNTRY_VERSION 6u
 
 static uint8_t lang_flag_glyph(uint8_t idx) {
@@ -3739,7 +3742,8 @@ static uint8_t lang_flag_glyph(uint8_t idx) {
         return 0;
     }
     return fontpack_bundle_version(LANG_FLAG_SLOT_flags) >= LANG_FLAG_PER_COUNTRY_VERSION
-               ? LANG_FLAG_GLYPH[idx] : idx;
+               ? LANG_FLAG_GLYPH[idx]
+               : (idx == LANG_JAUS ? (uint8_t)LANG_JAJP : idx);
 }
 
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {

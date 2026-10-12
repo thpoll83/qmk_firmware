@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
+#include <stdbool.h>
+
 // The stage of an fw_staging stream (firmware image, font-pack bundle, doom WHX or
 // pack), as one explicit state instead of the two flags it used to be
 // (s_fw_up_active + s_erase_pending). The fourth combination of those flags,
@@ -27,3 +29,10 @@ typedef enum {
 } fw_stage_event_t;
 
 fw_stage_t fw_stage_next(fw_stage_t stage, fw_stage_event_t ev);
+
+// Whether fw_staging_write_chunk() may write a chunk. Not while the slot is still
+// being erased, and not after a finalize stopped that erase (erase_cut_short):
+// the stage is IDLE then and s_next_offset is still 0, so chunk 0 would pass the
+// offset checks and land on sectors that were never erased. Only the next BEGIN,
+// which erases again, clears erase_cut_short.
+bool fw_stage_accepts_chunk(fw_stage_t stage, bool erase_cut_short);

@@ -663,8 +663,12 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
         uprintf("fw_staging_write_chunk: not initialized\n");
         return false;
     }
-    if (s_stage == FW_STAGE_ERASING) {
-        uprintf("fw_staging_write_chunk: erase still pending (sector %lu/%lu)\n", s_erase_sector_next, s_erase_sector_count);
+    if (!fw_stage_accepts_chunk(s_stage, s_erase_cut_short)) {
+        if (s_erase_cut_short) {
+            uprintf("fw_staging_write_chunk: erase was cut short at sector %lu/%lu, BEGIN again\n", s_erase_sector_next, s_erase_sector_count);
+        } else {
+            uprintf("fw_staging_write_chunk: erase still pending (sector %lu/%lu)\n", s_erase_sector_next, s_erase_sector_count);
+        }
         return false;
     }
     if (offset < s_next_offset) {

@@ -23,3 +23,7 @@ fw_stage_t fw_stage_next(fw_stage_t stage, fw_stage_event_t ev) {
     }
     return stage;
 }
+
+bool fw_stage_accepts_chunk(fw_stage_t stage, bool erase_cut_short) {
+    return stage != FW_STAGE_ERASING && !erase_cut_short;
+}

@@ -65,3 +65,19 @@ TEST(FwStage, DeferredStreamRoundTrip) {
     s = fw_stage_next(s, FW_EV_FINALIZED);
     EXPECT_EQ(FW_STAGE_IDLE, s);
 }
+
+TEST(FwStage, ChunksWaitForTheErase) {
+    EXPECT_FALSE(fw_stage_accepts_chunk(FW_STAGE_ERASING, false));
+    EXPECT_TRUE(fw_stage_accepts_chunk(FW_STAGE_RECEIVING, false));
+}
+
+// A COMMIT that lands mid-erase stops the erase and ends the stream. The slot is
+// partly erased, so chunks must stay refused until a new BEGIN erases it again.
+TEST(FwStage, ChunksAreRefusedAfterAFinalizeCutTheEraseShort) {
+    fw_stage_t s = fw_stage_next(FW_STAGE_IDLE, FW_EV_BEGIN_DEFERRED);
+    s = fw_stage_next(s, FW_EV_FINALIZED);
+    ASSERT_EQ(FW_STAGE_IDLE, s);
+    EXPECT_FALSE(fw_stage_accepts_chunk(s, true));
+    s = fw_stage_next(s, FW_EV_BEGIN_SYNC);
+    EXPECT_TRUE(fw_stage_accepts_chunk(s, false));
+}

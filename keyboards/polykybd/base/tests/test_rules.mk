@@ -309,6 +309,21 @@ polykybd_core1_owner_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# core1_suspend.c is the suspend hold's decision logic, with no dependencies.
+polykybd_core1_suspend_SRC := \
+	$(POLY_BASE_PATH)/core1_suspend.c \
+	$(POLY_BASE_PATH)/tests/core1_suspend_tests.cpp
+
+polykybd_core1_suspend_INC := \
+	$(POLY_BASE_PATH)
+
+# fw_stage.c is the fw_staging stream's stage machine, with no dependencies.
+polykybd_fw_stage_SRC := \
+	$(POLY_BASE_PATH)/fw_stage.c \
+	$(POLY_BASE_PATH)/tests/fw_stage_tests.cpp
+
+polykybd_fw_stage_INC := \
+	$(POLY_BASE_PATH)
 # mines_plan.c is the idle-screen mine sweeper's rules (mines_mode.h). Pure: the board
 # is a plain struct and the seed is passed in, so no timer, keymap or display is linked.
 # The firmware binding is mines_mode.c.

@@ -71,6 +71,7 @@ void oled_draw_num16_right(const GFXfont *const *font, int8_t right_x, int8_t y,
    draws "%"), so 2-/3-digit numbers grow left instead of overrunning the sign. */
 void oled_fw_update_percent(const GFXfont *const *font, int8_t pct_sign_x, int8_t y, uint8_t pct);
 uint8_t fw_update_percent(void);   /* 0..100 progress of the in-flight flash */
+bool    fw_update_erasing(void);   /* staging erase not done, or no chunk written yet */
 /* Typing-speed dial (11x6), defined in oled_helper.c and drawn by both variants'
    status OLEDs via kdisp_draw_bitmap. */
 extern const uint8_t wpm_gauge_bitmap[];

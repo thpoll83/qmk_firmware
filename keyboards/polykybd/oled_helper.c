@@ -202,6 +202,15 @@ uint8_t fw_update_percent(void) {
     return total ? (uint8_t)(((uint64_t)done * 100) / total) : 0;
 }
 
+// True until the first chunk of the in-flight flash lands: the staging erase is
+// still running, or it finished and the host has not started streaming yet. A
+// percentage there reads "0%" for the 10-20 s erase, as if the update had stalled,
+// and the host shows "Erasing" for the same stretch (its bar starts on the first
+// accepted chunk). Both now switch to a percentage at the same moment.
+bool fw_update_erasing(void) {
+    return fw_staging_erase_pending() || fw_staging_next_offset() == 0;
+}
+
 // Shown on both halves while a font-pack / firmware flash is in progress, so the
 // user knows the keyboard is busy updating (it can't service keys meanwhile) and
 // must not be unplugged. Forced on regardless of the display-off state. The status

@@ -643,6 +643,10 @@ void oled_update_buffer_fw_update(void) {
             kdisp_write_gfx_text(small, 1, 0, 58, U"Upload...");
             return;
         }
+        if (fw_update_erasing()) {
+            kdisp_write_gfx_text(small, 1, 0, 14, U"Erasing...");
+            return;
+        }
         kdisp_write_gfx_text(small, 1, 0, 14, U"Progress:");
         oled_fw_update_percent(small, 70, 36, pct);
         kdisp_write_gfx_text(small, 1, 70, 36, U"%");
@@ -658,6 +662,14 @@ void oled_update_buffer_fw_update(void) {
             kdisp_write_gfx_text(small, 1, 0, 14, U"PolyKybd");
             kdisp_write_gfx_text(small, 1, 0, 36, U"Firmware");
             kdisp_write_gfx_text(small, 1, 0, 58, U"Staging...");
+            return;
+        }
+        // Firmware, slave half. Until the first chunk lands the staging area is
+        // being erased, and "0%" there looked like a stalled update.
+        if (fw_update_erasing()) {
+            kdisp_write_gfx_text(small, 1, 0, 14, U"PolyKybd");
+            kdisp_write_gfx_text(small, 1, 0, 36, U"Firmware");
+            kdisp_write_gfx_text(small, 1, 0, 58, U"Erasing...");
             return;
         }
         kdisp_write_gfx_text(small, 1, 0, 14, U"Progress:");

@@ -390,6 +390,18 @@ in either shape, so "not failed" is never "passed".
     intervention; the queued jobs then ran in order and passed. Between that and
     the 4.5 h case above there is no useful timeout to assume — keep a check-in
     scheduled rather than declaring the rig dead or waiting on it in the loop.
+- ⚠️ **A long queue can also mean a BUSY rig, and a busy rig looks the same from a
+  PR.** List `status: in_progress` runs too: the rig's diagnose panel then reads
+  "online·busy". The rig jobs are long and run one at a time. Measured 2026-10-09:
+  HIL 7 min (all tiers), perf 1.5 min, **DOOM signature 34.5 min**, firmware apply
+  8.5 min. A single all-tier dispatch holds the rig for about an hour, so a few of
+  them queue every PR for hours. Compare a job's elapsed time with these numbers
+  before calling it hung. On 2026-10-12 a DOOM job 30 minutes in was cancelled as
+  "hung" when it was on schedule.
+- **Each rig job has a `timeout-minutes`** (about 3x its normal time, 90 for DOOM).
+  Without one, GitHub's 6-hour default let a single hung flash hold every queued
+  HIL job behind it. Raise a limit when a job's normal time grows; a timeout fails
+  the job red, unlike an outage.
 
 ---
 

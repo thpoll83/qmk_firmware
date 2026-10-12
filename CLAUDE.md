@@ -209,7 +209,7 @@ goes through the `add-gated-hid-command` skill.
 
 Cmd 27 packs each `xx-YY` code as two indices into the frozen, append-only table in
 `lang/iso_lang_country.py`, which is mirrored in host and rig (see polykybd-claude).
-Re-run `cog -r hid_com.c` after changing the list or the table. `NUM_LANG` is 160.
+Re-run `cog -r hid_com.c` after changing the list or the table. `NUM_LANG` is 161.
 Adding a language: the `add-polykybd-language` skill and
 [`lang/FUTURE_LANGUAGES.md`](keyboards/polykybd/lang/FUTURE_LANGUAGES.md).
 
@@ -266,6 +266,11 @@ Twelve custom transaction IDs carry state to the slave with CRC32 and up to 10 r
 
 - **EEPROM writes happen only at suspend/reset/store** (`save_all_dirty()`). Never write
   EEPROM in a split-transaction handler.
+- ⚠️ **An EEPROM write is a flash write, and QMK's driver does not stop core1.** A core1
+  running Eden or an RLE decode from XIP during it stops for good, or the bus wedges and
+  the watchdog resets the half (2026-10-12, both at USB suspend). Flush through
+  `core1_off_during()` or after `core1_suspend_flush_ready()`
+  ([`IDLE_STYLES.md`](keyboards/polykybd/IDLE_STYLES.md), "The idle loop on core1").
 - ⚠️ **An unwritten EEPROM byte reads `0x00`, not `0xFF`**, after wear levelling. Gate a
   new field on the format version, and retire a broken version value rather than reuse
   it.

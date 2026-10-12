@@ -214,6 +214,9 @@ jobs:
       github.event_name != 'workflow_dispatch' ||
       inputs.tier != 'debug'
     runs-on: [self-hosted, polykybd-ctnd]
+    # The rig runs one job at a time, so a hung flash would otherwise hold every
+    # queued HIL job behind it for GitHub's 6 h default. Normal: 7 min.
+    timeout-minutes: 30
     # --- suite tier (OPT-IN extended checks) ---------------------------------
     # Most HIL checks cost a report or two and run on every push. A few are slow
     # by nature — they wait out a 10 s idle fade, a ~14 s animation, a 450-frame
@@ -465,6 +468,9 @@ jobs:
     needs: [build-perf, hil-test]
     if: always() && needs.build-perf.result == 'success'
     runs-on: [self-hosted, polykybd-ctnd]
+    # The rig runs one job at a time, so a hung flash would otherwise hold every
+    # queued HIL job behind it for GitHub's 6 h default. Normal: 1.5 min.
+    timeout-minutes: 15
     permissions:
       contents: read
       actions: read
@@ -776,6 +782,9 @@ jobs:
     needs: [build-doom, hil-test]
     if: always() && needs.build-doom.result == 'success'
     runs-on: [self-hosted, polykybd-ctnd]
+    # The rig runs one job at a time, so a hung flash would otherwise hold every
+    # queued HIL job behind it for GitHub's 6 h default. Normal: 34.5 min.
+    timeout-minutes: 90
     permissions:
       contents: read
       actions: read
@@ -871,6 +880,9 @@ jobs:
       inputs.tier == 'debug' && inputs.probe != '' &&
       needs.build.result == 'success'
     runs-on: [self-hosted, polykybd-ctnd]
+    # The rig runs one job at a time, so a hung flash would otherwise hold every
+    # queued HIL job behind it for GitHub's 6 h default. Normal: depends on the probe.
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -945,6 +957,9 @@ jobs:
     needs: [build-fwapply, hil-test, doom-test]
     if: always() && needs.build-fwapply.result == 'success'
     runs-on: [self-hosted, polykybd-ctnd]
+    # The rig runs one job at a time, so a hung flash would otherwise hold every
+    # queued HIL job behind it for GitHub's 6 h default. Normal: 8.5 min.
+    timeout-minutes: 30
     permissions:
       contents: read
       actions: read

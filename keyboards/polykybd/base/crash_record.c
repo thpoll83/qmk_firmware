@@ -6,7 +6,8 @@
 
 #include "quantum.h"          // FW_VERSION
 #include "print.h"
-#include "fw_staging.h"       // FW_CRASH_LOG_OFFSET, fw_staging_core1_lockout_*()
+#include "fw_staging.h"       // FW_CRASH_LOG_OFFSET
+#include "core1_owner.h"      // core1_hold()/core1_release() around the write
 #include "polymod_crc32.h"
 
 #include "hardware/flash.h"
@@ -244,7 +245,7 @@ static void archive_scan(void) {
     }
 }
 
-// `lockout` = take the fw_staging core1 lockout around the write. Required at
+// `lockout` = take a core1 hold around the write. Required at
 // runtime (core1 serves RLE from XIP and must be parked while the bootrom
 // rewrites flash). MUST be false from crash_record_init(): at pre_init core1 has
 // never been launched -- it is still parked in the bootrom, fetching nothing
@@ -253,7 +254,7 @@ static void archive_scan(void) {
 // multicore_launch_core1() handshake blocked forever.
 static void flash_guarded(bool erase, uint32_t off, const uint8_t *page, bool lockout) {
     uint32_t tag = crash_phase_enter(CRASH_PHASE_FLASH, erase ? 2 : 1);
-    if (lockout) fw_staging_core1_lockout_begin();
+    if (lockout) core1_hold();
     uint32_t irq = save_and_disable_interrupts();
     if (erase) {
         flash_range_erase(off, FLASH_SECTOR_SIZE);
@@ -261,7 +262,7 @@ static void flash_guarded(bool erase, uint32_t off, const uint8_t *page, bool lo
         flash_range_program(off, page, FLASH_PAGE_SIZE);
     }
     restore_interrupts(irq);
-    if (lockout) fw_staging_core1_lockout_end();
+    if (lockout) core1_release();
     crash_phase_leave(tag);
 }
 

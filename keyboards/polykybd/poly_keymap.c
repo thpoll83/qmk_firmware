@@ -2406,6 +2406,7 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
                 U"iu-CA",
                 U"cr-CA",
                 U"ck-US",
+                U"ja-US",
                 //[[[end]]]
             };
             return lang_code[keycode - KCL_ENUS];
@@ -5941,7 +5942,10 @@ _Static_assert((int)IME_OS_WINDOWS == (int)POLY_OS_WINDOWS && (int)IME_OS_MACOS 
 uint8_t poly_ime_family(uint8_t lang) {
     switch (lang) {
         case LANG_KOKR: return IME_FAMILY_KOREAN;
-        case LANG_JAJP: return IME_FAMILY_JAPANESE;
+        // ja-US is ja-JP's keycaps with the US punctuation, for an OS whose
+        // keyboard layout is the 101-key one; the input method is the same.
+        case LANG_JAJP:
+        case LANG_JAUS: return IME_FAMILY_JAPANESE;
         // ANSI English layouts: the OS layout is plain US, where NUBS only repeats
         // the Backslash key, so the key earns more as a right-hand Alt. An explicit
         // list on purpose: a NULL NUBS cell in lang_lut is NOT the signal, because

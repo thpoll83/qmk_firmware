@@ -199,6 +199,7 @@ enum lang_layer {
     LANG_IUCA,
     LANG_CRCA,
     LANG_CKUS,
+    LANG_JAUS,
     //[[[end]]]
     NUM_LANG };
 

@@ -209,7 +209,7 @@ goes through the `add-gated-hid-command` skill.
 
 Cmd 27 packs each `xx-YY` code as two indices into the frozen, append-only table in
 `lang/iso_lang_country.py`, which is mirrored in host and rig (see polykybd-claude).
-Re-run `cog -r hid_com.c` after changing the list or the table. `NUM_LANG` is 160.
+Re-run `cog -r hid_com.c` after changing the list or the table. `NUM_LANG` is 161.
 Adding a language: the `add-polykybd-language` skill and
 [`lang/FUTURE_LANGUAGES.md`](keyboards/polykybd/lang/FUTURE_LANGUAGES.md).
 

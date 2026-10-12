@@ -47,12 +47,15 @@ countries="$("${PYTHON:-python3}" - lang/lang_lut.xlsx <<'PY'
 import sys
 from openpyxl import load_workbook
 sheet = load_workbook(sys.argv[1], read_only=True, data_only=True)["key_lut"]
+# A language whose "YY" names its OS keyboard layout rather than a place draws the
+# flag of the place instead: ja-US is Japanese on a US layout, not a US language.
+FLAG_OVERRIDE = {"ja-US": "JP"}
 i = 0
 while True:
     name = sheet.cell(row=1, column=2 + i * 4).value
     if not name:
         break
-    print(name.split("-")[1].upper())   # es-MX -> MX, th-TH -> TH, ...
+    print(FLAG_OVERRIDE.get(name, name.split("-")[1].upper()))   # es-MX -> MX, th-TH -> TH, ...
     i += 1
 PY
 )" || {

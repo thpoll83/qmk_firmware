@@ -2194,7 +2194,10 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         // reason below: Shift must come from the SYNCED poly_layer_t.mods, or the
         // slave half would never show カナ.
         case KC_IME:
-            if (poly_ime_family(local_state->lang) == IME_FAMILY_JAPANESE) {
+            // Only reached when ime_key_stand_in() gave no plain key: ja-US, and
+            // ja-JP on macOS. Elsewhere ja-JP draws as Caps Lock.
+            if (poly_ime_family(local_state->lang) == IME_FAMILY_JAPANESE ||
+                poly_ime_family(local_state->lang) == IME_FAMILY_JAPANESE_JIS) {
                 return (local_layer->mods & MOD_MASK_SHIFT) != 0 ? ICON_KATAKANA : ICON_EISU_KANA;
             }
             return ICON_HAN_YEONG;
@@ -5942,9 +5945,9 @@ _Static_assert((int)IME_OS_WINDOWS == (int)POLY_OS_WINDOWS && (int)IME_OS_MACOS 
 uint8_t poly_ime_family(uint8_t lang) {
     switch (lang) {
         case LANG_KOKR: return IME_FAMILY_KOREAN;
-        // ja-US is ja-JP's keycaps with the US punctuation, for an OS whose
-        // keyboard layout is the 101-key one; the input method is the same.
-        case LANG_JAJP:
+        // ja-JP assumes the JIS OS layout, whose Caps key is 英数; ja-US, the same
+        // keycaps on the 101-key layout, has no such key and keeps the IME cycle.
+        case LANG_JAJP: return IME_FAMILY_JAPANESE_JIS;
         case LANG_JAUS: return IME_FAMILY_JAPANESE;
         // ANSI English layouts: the OS layout is plain US, where NUBS only repeats
         // the Backslash key, so the key earns more as a right-hand Alt. An explicit

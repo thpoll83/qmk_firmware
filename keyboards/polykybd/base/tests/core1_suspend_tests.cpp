@@ -99,3 +99,19 @@ TEST(Core1Suspend, EverySuspendHoldsAgain) {
         ASSERT_TRUE(core1_resume_step(&s)) << round;
     }
 }
+
+TEST(Core1FlashWait, IdleCoreWritesAtOnce) {
+    EXPECT_EQ(core1_flash_wait_step(false, 0), CORE1_FLASH_PROCEED);
+    EXPECT_EQ(core1_flash_wait_step(false, CORE1_FLASH_WAIT_US * 3), CORE1_FLASH_PROCEED);
+}
+
+TEST(Core1FlashWait, BusyCoreIsWaitedForUpToTheBudget) {
+    EXPECT_EQ(core1_flash_wait_step(true, 0), CORE1_FLASH_WAIT);
+    EXPECT_EQ(core1_flash_wait_step(true, 4300), CORE1_FLASH_WAIT);   // one Eden keycap
+    EXPECT_EQ(core1_flash_wait_step(true, CORE1_FLASH_WAIT_US - 1), CORE1_FLASH_WAIT);
+}
+
+TEST(Core1FlashWait, CoreThatNeverFinishesIsForcedOff) {
+    EXPECT_EQ(core1_flash_wait_step(true, CORE1_FLASH_WAIT_US), CORE1_FLASH_FORCE_OFF);
+    EXPECT_EQ(core1_flash_wait_step(true, UINT32_MAX), CORE1_FLASH_FORCE_OFF);
+}

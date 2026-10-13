@@ -20,18 +20,54 @@
 
 #ifdef USE_CORE1
 #include "pico/platform.h"   // __no_inline_not_in_flash_func
+#include "hardware/structs/timer.h"   // timer_hw: a clock that runs with interrupts off
 
-// core1's wait for its next FIFO word, in RAM. Idle core1 spends nearly all its time
-// here, and an EEPROM write (a flash program or erase on core0) flushes the XIP cache
-// while the QSPI is out of XIP mode: a wait loop in flash then faults or stalls on its
-// next fetch (fw_staging.c, "Dual-core flash safety"). From RAM, an idle core1 cannot
-// touch flash however long the write takes. The work a command starts still runs from
-// flash, so a writer must also wait until core1 owes no work (multicore_exec.h).
+#include "hardware/sync.h"            // save_and_disable_interrupts / restore_interrupts
+#include "wait.h"                     // wait_ms: a recovering hand-over sleeps, never spins
+
+// The word core0 sends with interrupts off before an EEPROM write. core1 answers it from
+// core1_fifo_pop_ram() and stays there; it never reaches core1_entry()'s switch.
+#define CORE1_CMD_PARK 0xcafe0005u
+
+// Incremented by core1, in RAM, each time it takes CORE1_CMD_PARK off the FIFO.
+static volatile uint32_t s_c1_park_acks = 0;
+
+// core1's wait for its next command, in RAM. Idle core1 spends nearly all its time here,
+// and an EEPROM write (a flash program or erase on core0) flushes the XIP cache while
+// the QSPI is out of XIP mode: a wait loop in flash then faults or stalls on its next
+// fetch (fw_staging.c, "Dual-core flash safety"). From RAM, an idle core1 cannot touch
+// flash however long the write takes.
+//
+// It also answers CORE1_CMD_PARK without leaving RAM. FIFO order means core1 has
+// finished every earlier command, returned from its flash code and come back here
+// before it reads PARK. So an acknowledged PARK proves core1 is waiting in RAM with
+// nothing queued, which "the job counters match" does not (a job publishes its
+// completion before it returns through core1_entry(), in flash).
 static uint32_t __no_inline_not_in_flash_func(core1_fifo_pop_ram)(void) {
-    while (!(sio_hw->fifo_st & SIO_FIFO_ST_VLD_BITS)) {
-        __asm volatile("wfe");
+    // `while (true)`, not `for (;;)`: cppcheck, which cannot expand the RAM-placement
+    // macro, reports the latter as a broken AST (internalAstError) and fails the gate.
+    while (true) {
+        while (!(sio_hw->fifo_st & SIO_FIFO_ST_VLD_BITS)) {
+            __asm volatile("wfe");
+        }
+        const uint32_t word = sio_hw->fifo_rd;
+        if (word != CORE1_CMD_PARK) {
+            return word;
+        }
+        s_c1_park_acks = s_c1_park_acks + 1u;
     }
-    return sio_hw->fifo_rd;
+}
+
+// Set from a forced core1 reset during an EEPROM write until the relaunch after it.
+// Every hand-over of work to core1 waits on it (core1_wait_recovered): on the slave a
+// split-thread hand-over could otherwise spin on a core1 in reset while the thread
+// that relaunches it never runs.
+static volatile bool s_c1_recovering = false;
+
+static void core1_wait_recovered(void) {
+    while (s_c1_recovering) {
+        wait_ms(1);
+    }
 }
 
 static volatile uint16_t core1_bit_index = 0;
@@ -96,9 +132,13 @@ void core1_entry(void) {
     // FIFO_ST and doesn't need an IRQ to wake — so masking all IRQs here is safe.
     // See keyboards/polykybd/CLAUDE.md for the full investigation.
     __asm volatile("cpsid i" ::: "memory");
+    multicore_fifo_drain();
+    // Set only after the drain: an EEPROM write waits for an acknowledged PARK only once
+    // this reads 1 (wear_leveling_rp2040_flash_quiesce), and a drain after it could
+    // swallow that PARK and turn a healthy launch into a forced reset.
+    dmb();
     g_core1_entered = 1u;
     dmb();
-    multicore_fifo_drain();
     while (true) {
         uint32_t cmd = core1_fifo_pop_ram();  // blocks if empty; in RAM (see above)
         core1_last_cmd = cmd;
@@ -157,7 +197,9 @@ void core1_entry(void) {
                 // command in the FIFO; the job publishes its own completion. Its stack
                 // path is measured: IDLE_STYLES.md, "The idle loop on core1".
                 {
-                    const uint32_t arg = core1_fifo_pop_ram();
+                    // The argument is pushed in the same interrupts-off section as
+                    // the command (core1_eden_key), so no PARK can sit between them.
+                    const uint32_t arg = multicore_fifo_pop_blocking();
                     core1_last_arg = arg;
                     startup_anim_core1_job(arg);
                 }
@@ -192,12 +234,17 @@ void core1_entry(void) {
 
 bool core1_eden_available(void) {
     dmb();
-    return g_core1_entered != 0u && !doom_mode_active();
+    return g_core1_entered != 0u && !doom_mode_active() && !s_c1_recovering;
 }
 
 void core1_eden_key(uint32_t arg) {
+    core1_wait_recovered();
+    // Both words in one interrupts-off section: an EEPROM write (on the slave's split
+    // thread, say) can then never put its PARK between a command and its argument.
+    const uint32_t irq = save_and_disable_interrupts();
     multicore_fifo_push_blocking(CORE1_CMD_EDEN_KEY);
     multicore_fifo_push_blocking(arg);
+    restore_interrupts(irq);
 }
 
 bool core1_is_busy(void) {
@@ -232,11 +279,11 @@ static struct {
     uint32_t printed_at; // uptime of the last copy printed
     uint8_t  printed;    // copies printed of this recovery
     bool     relaunched; // the bounded relaunch answered
-    bool     at_suspend; // found by the suspend hold (core1_suspend_tick), not the raw-HID gate
+    const char *where;   // "" (the raw-HID gate), " at suspend", " at EEPROM write"
 } s_c1_stall;
 
 // Record what a stalled core1 left behind. Call before the hold clears it.
-static void core1_note_stall(uint32_t stalled_ms, bool at_suspend) {
+static void core1_note_stall(uint32_t stalled_ms, const char *where) {
     s_c1_stall.count++;
     s_c1_stall.stalled_ms = stalled_ms;
     s_c1_stall.last_cmd   = core1_last_cmd;
@@ -246,23 +293,18 @@ static void core1_note_stall(uint32_t stalled_ms, bool at_suspend) {
     s_c1_stall.entered    = g_core1_entered;
     s_c1_stall.at_ms      = timer_read32();
     s_c1_stall.printed    = 0;
-    s_c1_stall.at_suspend = at_suspend;
+    s_c1_stall.where      = where;
     s_c1_stall.relaunched = false;
 }
 
 // Hold core1 in reset and drop the work it held. The caller's core1_release() brings
 // the service back.
-static void core1_hold_and_drop(void) {
-    // A fragment is lost only when core1 still owed one. Otherwise the decode cursor
-    // must survive the hold: an image upload spans several reports, and a hold between
-    // two of them (a suspend, a HID flush) would restart the next one at pixel 0.
-    const bool fragment_lost = core1_is_busy();
-    // Through core1_owner, not a raw PSM write: the hold forces core1 off and waits
-    // for the PSM, and its release relaunches the service (bounded, 100 ms) once no
-    // other holder remains. A second driver of the PSM here would bypass the count.
-    core1_hold();
-    // core1 is held in reset now, so core0 owns every word it shares. A fragment in
-    // flight is lost: its overlay keeps whatever was decoded so far.
+// core1 is in reset: core0 owns every word it shares. Drop the work it held. A fragment
+// is lost only when core1 still owed one (`fragment_lost`, read before the reset).
+// Otherwise the decode cursor must survive: an image upload spans several reports, and
+// a hold between two of them (a suspend, a HID flush) would restart the next at pixel 0.
+static void core1_drop_work(bool fragment_lost) {
+    // A fragment in flight is lost: its overlay keeps whatever was decoded so far.
     if (fragment_lost) {
         core1_bit_index = 0;
     }
@@ -276,10 +318,19 @@ static void core1_hold_and_drop(void) {
     dmb();
 }
 
+static void core1_hold_and_drop(void) {
+    const bool fragment_lost = core1_is_busy();
+    // Through core1_owner, not a raw PSM write: the hold forces core1 off and waits
+    // for the PSM, and its release relaunches the service (bounded, 100 ms) once no
+    // other holder remains. A second driver of the PSM here would bypass the count.
+    core1_hold();
+    core1_drop_work(fragment_lost);
+}
+
 // core1 owes a fragment and has not answered for CORE1_STALL_MS: reset it, drop the
 // work it lost, and launch the service again.
 static void core1_recover(uint32_t stalled_ms) {
-    core1_note_stall(stalled_ms, false);
+    core1_note_stall(stalled_ms, "");
     core1_hold_and_drop();
     // The relaunch is bounded: a core1 that does not come back must not take core0's
     // main loop with it.
@@ -316,7 +367,7 @@ void core1_suspend_tick(void) {
                 const uint32_t fragment_ms = timer_elapsed32(core1_pushed_at);
                 if (fragment_ms > stalled_ms) stalled_ms = fragment_ms;
             }
-            core1_note_stall(stalled_ms, true);
+            core1_note_stall(stalled_ms, " at suspend");
             s_c1_suspend_stalled = true;
             core1_hold_and_drop();
         } break;
@@ -336,6 +387,71 @@ void core1_resume(void) {
     }
     // A clean hold whose relaunch did not answer is reported by core1_owner, and the
     // raw-HID gate resets that core1 again once a fragment waits on it.
+}
+
+// ---- core1 during an EEPROM write ---------------------------------------------
+// Strong overrides of the weak hooks in platforms/chibios/drivers/wear_leveling/
+// wear_leveling_rp2040_flash.c (UPSTREAM_PATCHES.md), so EVERY EEPROM write is
+// covered, on both halves and from any thread: the suspend flush, HID keymap and
+// macro edits, the slave's keymap writes on its split thread, KC_STORE_EE, RGB keys.
+//
+// The quiesce hook runs with core0's interrupts disabled, so no thread can hand core1
+// new work until the write ends. It sends CORE1_CMD_PARK and waits for core1 to
+// acknowledge it from its RAM wait (core1_fifo_pop_ram): then core1 has finished every
+// earlier command and is off the flash bus. No acknowledgement within
+// CORE1_FLASH_WAIT_US means core1 stopped inside flash code: it is forced into reset
+// for the write, and its lost work is dropped in the same interrupts-off window, so no
+// thread can wait on it once interrupts return. Hand-overs then sleep
+// (s_c1_recovering) until the resume hook has recorded the stall and relaunched core1
+// through core1_owner. DOOM's engine keeps the old behaviour, and a core1 that has not
+// yet entered core1_entry() (a launch in progress) is not waited for.
+static volatile bool s_c1_forced_off_for_flash;
+
+void wear_leveling_rp2040_flash_quiesce(void) {
+    if (core1_held() || doom_mode_active() || core1_tenant() != CORE1_TENANT_SERVICE ||
+        g_core1_entered == 0u) {
+        return;   // in reset, not the service, or not in core1_entry() yet (unchanged)
+    }
+    const uint32_t acks   = s_c1_park_acks;
+    const uint32_t start  = timer_hw->timerawl;
+    bool           pushed = false;
+    for (;;) {
+        // Never block on a full FIFO here: a core1 that stopped would hold it full.
+        if (!pushed && multicore_fifo_wready()) {
+            sio_hw->fifo_wr = CORE1_CMD_PARK;
+            __asm volatile("sev");
+            pushed = true;
+        }
+        const bool     parked = pushed && s_c1_park_acks != acks;
+        const uint32_t waited = timer_hw->timerawl - start;
+        switch (core1_flash_wait_step(!parked, waited)) {
+            case CORE1_FLASH_PROCEED:
+                return;
+            case CORE1_FLASH_WAIT:
+                break;
+            case CORE1_FLASH_FORCE_OFF: {
+                const bool fragment_lost = core1_is_busy();
+                // A raw PSM write, reconciled with core1_owner's count in the resume
+                // hook: core1_hold() there forces it off again and counts the hold.
+                core1_hw_force_off();
+                core1_note_stall(waited / 1000u, " at EEPROM write");
+                core1_drop_work(fragment_lost);
+                s_c1_recovering           = true;
+                s_c1_forced_off_for_flash = true;
+                return;
+            }
+        }
+    }
+}
+
+void wear_leveling_rp2040_flash_resume(void) {
+    if (!s_c1_forced_off_for_flash) {
+        return;
+    }
+    s_c1_forced_off_for_flash = false;
+    core1_hold();   // the work was dropped in the quiesce window; this counts the hold
+    s_c1_stall.relaunched = core1_release();
+    s_c1_recovering       = false;
 }
 
 bool core1_suspend_flush_ready(void) {
@@ -380,12 +496,12 @@ void core1_stall_report(void) {
     }
     s_c1_stall.printed++;
     s_c1_stall.printed_at = timer_read32();
-    // " at suspend" sits before the outcome on purpose: the host's problem scan
+    // `where` (" at suspend" / " at EEPROM write") sits before the outcome on purpose: the host's problem scan
     // (PolyKybdHost problem_scan.py) reads "core1 relaunched (recovery N since boot at
     // M ms" as one unbroken run.
     uprintf("WARNING core1 stalled: no answer for %lu ms%s (last cmd 0x%08lx arg 0x%08lx, "
             "counts %lu/%lu, entered %lu) - %s (recovery %lu since boot at %lu ms, report %u/%u)\n",
-            (unsigned long)s_c1_stall.stalled_ms, s_c1_stall.at_suspend ? " at suspend" : "",
+            (unsigned long)s_c1_stall.stalled_ms, s_c1_stall.where ? s_c1_stall.where : "",
             (unsigned long)s_c1_stall.last_cmd,
             (unsigned long)s_c1_stall.last_arg, (unsigned long)s_c1_stall.c0,
             (unsigned long)s_c1_stall.c1, (unsigned long)s_c1_stall.entered,
@@ -435,6 +551,7 @@ void core1_decompress_fragment(uint8_t keycode, uint8_t mod, uint16_t overlay_id
     // split-sync bridge path), spin without the uprintf — the previous wait
     // body was burning core0 cycles in a format-and-sink path that starved
     // matrix scan during back-pressure.
+    core1_wait_recovered();
     dmb();
     // Tagged so a watchdog timeout in this spin reads as "core0 waiting on core1"
     // (the core1-hang class, see CLAUDE.md) rather than as an anonymous hang.
@@ -484,11 +601,13 @@ void core1_roi_start(void) {
     // FIFO ordering guarantees any in-flight DECOMPRESS/ROI_UPDATE completes atomically
     // before this RESET runs, and the immediately-following core1_update_roi() performs
     // its own decomp-count wait before writing buffers.
+    core1_wait_recovered();
     multicore_fifo_push_blocking(CORE1_CMD_RESET_BIT_IDX);
 }
 
 void core1_update_roi(uint8_t keycode, uint8_t mod, uint16_t overlay_idx, const uint8_t* data, const roi_update_data_t* roi, bool visible) {
     // See core1_decompress_fragment for the backpressure rationale.
+    core1_wait_recovered();
     dmb();
     // Tagged so a watchdog timeout in this spin reads as "core0 waiting on core1"
     // (the core1-hang class, see CLAUDE.md) rather than as an anonymous hang.

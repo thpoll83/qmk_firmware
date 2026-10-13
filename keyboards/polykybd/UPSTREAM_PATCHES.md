@@ -36,7 +36,7 @@ that upstream left the files alone —
 `git diff --stat <old-base>..<tag> -- <the five files>` (empty in the 0.33.13
 merge, 2026-08-11) — and finish with a `grep` for one marker per patch
 (`raw_hid_pre_receive_kb`, `ifndef RAW_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`,
-`POLYKYBD_VREG_VSEL`, `oled_render_dirty(true)`).
+`POLYKYBD_VREG_VSEL`, `oled_render_dirty(true)`, `wear_leveling_rp2040_flash_quiesce`).
 
 ## tmk_core/protocol/usb_descriptor.h
 
@@ -82,6 +82,31 @@ The strong override of `raw_hid_pre_receive_kb` lives in
 
 If a future QMK upstream changes the signature or semantics of `raw_hid_task`,
 re-apply by hand: keep the weak hook, keep the `if`-not-`while`.
+
+## platforms/chibios/drivers/wear_leveling/wear_leveling_rp2040_flash.c
+
+Two weak hooks around every flash write of the EEPROM backing store, so core1 is
+off the flash bus during it:
+
+1. `wear_leveling_rp2040_flash_quiesce()`, called right after
+   `save_and_disable_interrupts()` in `backing_store_erase()` and
+   `backing_store_write_bulk()`.
+2. `wear_leveling_rp2040_flash_resume()`, called right after `restore_interrupts()`
+   in the same two functions.
+
+Upstream masks only core0's interrupts. A core1 fetching from XIP while the write has
+the QSPI out of XIP mode never completes the fetch: core1 stops for good, or the bus
+stalls and the half resets by watchdog (field 2026-10-12). The strong overrides live in
+`keyboards/polykybd/multicore_exec.c`: the quiesce hook sends core1 a PARK word and
+waits for core1 to acknowledge it from its RAM wait loop, which it does once its
+earlier work (Eden keycap jobs, RLE fragments) is done. Without an acknowledgement it
+forces core1 off and drops its lost work before interrupts return; the resume hook
+relaunches it.
+
+If upstream restructures these functions, keep the quiesce call inside the
+interrupts-off window, immediately before the flash operation: outside it, a thread
+could hand core1 new work between the check and the write. Marker for the post-merge
+grep: `wear_leveling_rp2040_flash_quiesce`.
 
 ## drivers/oled/oled_driver.c
 

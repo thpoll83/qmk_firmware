@@ -264,8 +264,12 @@ Twelve custom transaction IDs carry state to the slave with CRC32 and up to 10 r
 
 ### Persistence and state
 
-- **EEPROM writes happen only at suspend/reset/store** (`save_all_dirty()`). Never write
-  EEPROM in a split-transaction handler.
+- **`poly_eeconf_t` settings are written only at suspend/reset/store**
+  (`save_all_dirty()`). Many other writes are IMMEDIATE, in normal use: keymap edits
+  (`dynamic_keymap_set_keycode`, `dynamic_keymap_set_buffer_poly`), macros
+  (`poly_macro.c`), RGB settings, and the unicode mode (cmd 20 with persist calls
+  `set_unicode_input_mode()`, which the host sends whenever it detects WinCompose, mid-Eden
+  on 2026-10-13). Never write EEPROM in a split-transaction handler.
 - ⚠️ **An EEPROM write is a flash write, and QMK's driver does not stop core1.** A core1
   running Eden or an RLE decode from XIP during it stops for good, or the bus wedges and
   the watchdog resets the half (2026-10-12, both at USB suspend). The driver's

@@ -12,6 +12,7 @@
 // the encoding is host-testable (make test:polykybd_idle_timeout); re-exported here
 // so every consumer of state.h is unchanged, the same seam as base/sync_ack.h.
 #include "base/idle_timeout.h"
+#include "base/mines_plan.h"   // mines_board_t (poly_sync_t.mines)
 
 // Idle (anti-burn-in) display style, persisted in poly_eeconf_t.idle_style and
 // toggled over HID (cmd 28). PULSE is the legacy contrast-only breathing; JITTER
@@ -272,6 +273,12 @@ typedef struct _poly_sync_t {
     // previewed language changes. A typed KEY is never synced, so typing costs no
     // repaint. Master-authoritative and never persisted: a reboot ends the demo.
     uint8_t  demo[2];
+    // "Mines", the idle-screen mine sweeper (mines_mode.h): the whole board. The master
+    // plays on its copy; the slave draws its half of the board from the synced one, so
+    // the board costs no RAM beyond this field. Bitmasks, not per-cell bytes, to stay
+    // well inside RPC_M2S_BUFFER_SIZE. A multiple of 4 bytes, so the struct stays
+    // padding-free. Master-authoritative and never persisted: a reboot ends the game.
+    mines_board_t mines;
 } poly_sync_t;
 
 // Same reasoning as latin_sync_t's guard: transaction_rpc_exec() refuses a payload

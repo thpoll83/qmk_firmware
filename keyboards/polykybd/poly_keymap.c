@@ -70,6 +70,7 @@
 #include "polymod_core1.h"
 #include "anim/tutorial.h"
 #include "anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
+#include "mines_mode.h"                   // the idle-screen mine sweeper (hold Hyper while idle)
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
@@ -232,6 +233,27 @@ static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 // divergence between the two generators is a build error, not a silent mis-map.
 static_assert((int)LANG_DEDE == (int)(KCL_DEDE - KCL_ENUS), "KCL_/LANG_ enum order drift");
 static_assert((int)LANG_CKUS == (int)(KCL_CKUS - KCL_ENUS), "KCL_/LANG_ enum order drift");
+// Languages past the frozen KCL_ block take their keycode from the tail block after
+// KC_IME (keycode_helper.h), so the identity above holds for the first
+// KCL_FROZEN_COUNT only. These two convert in both directions for every language.
+static_assert((int)LANG_JAUS == KCL_FROZEN_COUNT + (int)(KCL_JAUS - KCL_TAIL_FIRST), "KCL_ tail / LANG_ order drift");
+static_assert((int)(KCL_TAIL_LAST - KCL_TAIL_FIRST) == NUM_LANG - KCL_FROZEN_COUNT - 1, "KCL_ tail length != NUM_LANG");
+
+static uint16_t kcl_for_lang(uint8_t lang) {
+    return lang < KCL_FROZEN_COUNT ? (uint16_t)(KCL_ENUS + lang)
+                                   : (uint16_t)(KCL_TAIL_FIRST + (lang - KCL_FROZEN_COUNT));
+}
+
+// The LANG index of a KCL_ keycode, or -1.
+static int16_t kcl_lang_index(uint16_t keycode) {
+    if (keycode >= KCL_ENUS && keycode < KCL_ENUS + KCL_FROZEN_COUNT) {
+        return (int16_t)(keycode - KCL_ENUS);
+    }
+    if (keycode >= KCL_TAIL_FIRST && keycode <= KCL_TAIL_LAST) {
+        return (int16_t)(KCL_FROZEN_COUNT + (keycode - KCL_TAIL_FIRST));
+    }
+    return -1;
+}
 
 static enum lang_layer g_lang_init = INIT_LANG;
 
@@ -1676,6 +1698,10 @@ void housekeeping_task_user(void) {
         // preview go out this pass, and before the idle block so a non-idle segment's
         // update_performed() lands first.
         demo_tick();
+        // The idle-screen mine sweeper: holds the idle countdown off while it runs and
+        // hands the board back to the idle animation on hide or after 2 min untouched.
+        // Before the idle block for the same reason as the demo.
+        if (is_keyboard_master()) mines_tick();
         // The segment just entered may preview another language or script: write it
         // BEFORE the render below, or each board is first drawn in the previous
         // segment's language and repainted a pass later (the tutorial's lesson, see
@@ -2053,7 +2079,7 @@ layer_state_t get_function_layer(layer_state_t def_layer) {
 const uint32_t* poly_lang_code(uint8_t lang) {
     if(lang >= NUM_LANG) return U"";
     const led_t none = {0};
-    return to_static_text((uint16_t)(KCL_ENUS + lang), none);
+    return to_static_text(kcl_for_lang(lang), none);
 }
 
 // The settings layer opens with only its everyday keys; this names the rest.
@@ -2196,7 +2222,10 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         // reason below: Shift must come from the SYNCED poly_layer_t.mods, or the
         // slave half would never show カナ.
         case KC_IME:
-            if (poly_ime_family(local_state->lang) == IME_FAMILY_JAPANESE) {
+            // Only reached when ime_key_stand_in() gave no plain key: ja-US, and
+            // ja-JP on macOS. Elsewhere ja-JP draws as Caps Lock.
+            if (poly_ime_family(local_state->lang) == IME_FAMILY_JAPANESE ||
+                poly_ime_family(local_state->lang) == IME_FAMILY_JAPANESE_JIS) {
                 return (local_layer->mods & MOD_MASK_SHIFT) != 0 ? ICON_KATAKANA : ICON_EISU_KANA;
             }
             return ICON_HAN_YEONG;
@@ -2240,9 +2269,10 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
                                                                 : MID_TWO_LINE("REC", "macro");
 
         // Language selection keycodes: the tiny "xx-YY" code shown under the flag
-        // (the flag + selection frame are drawn by render_lang_flag_key()). KCL_ENUS..
-        // are contiguous (QK_USER_0-based), so index a cog-generated table by offset.
-        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1: {
+        // (the flag + selection frame are drawn by render_lang_flag_key()). The KCL_
+        // keycodes sit in two blocks (frozen + tail); kcl_lang_index() joins them.
+        case KCL_ENUS ... KCL_ENUS + KCL_FROZEN_COUNT - 1:
+        case KCL_TAIL_FIRST ... KCL_TAIL_LAST: {
             static const uint32_t* const lang_code[NUM_LANG] = {
                 /*[[[cog
                 for lang in languages:
@@ -2408,9 +2438,10 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
                 U"iu-CA",
                 U"cr-CA",
                 U"ck-US",
+                U"ja-US",
                 //[[[end]]]
             };
-            return lang_code[keycode - KCL_ENUS];
+            return lang_code[kcl_lang_index(keycode)];
         }
         default:
             return NULL;
@@ -3729,7 +3760,10 @@ enum {
 };
 // The flags bundle that first carries one glyph per country. An older one is still
 // one glyph per LANGUAGE, and a keyboard keeps it until the host re-flashes the slot
-// on its next connect, so until then the enum index is still the right glyph.
+// on its next connect, so until then the enum index is still the right glyph, except
+// for ja-US: it was added after the per-language bundles and has no glyph of its own
+// there, so it borrows ja-JP's. (In the table it shares Japan's glyph already, because
+// FLAG_ALIAS in gen-lang-fonts.sh files it under JP, its home country.)
 #define LANG_FLAG_PER_COUNTRY_VERSION 6u
 
 static uint8_t lang_flag_glyph(uint8_t idx) {
@@ -3737,7 +3771,8 @@ static uint8_t lang_flag_glyph(uint8_t idx) {
         return 0;
     }
     return fontpack_bundle_version(LANG_FLAG_SLOT_flags) >= LANG_FLAG_PER_COUNTRY_VERSION
-               ? LANG_FLAG_GLYPH[idx] : idx;
+               ? LANG_FLAG_GLYPH[idx]
+               : (idx == LANG_JAUS ? (uint8_t)LANG_JAJP : idx);
 }
 
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
@@ -4292,7 +4327,7 @@ static bool render_menu_key(uint16_t keycode, led_t state, uint8_t current_lang)
     const int16_t lang_idx = lang_index_for_keycode(keycode);
     if (lang_idx >= 0) {
         draw_mru_top_bar(keycode);
-        render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state),
+        render_lang_flag_key((uint8_t)lang_idx, to_static_text(kcl_for_lang((uint8_t)lang_idx), state),
                              current_lang);
         return true;
     }
@@ -5549,6 +5584,13 @@ void update_displays(enum refresh_mode mode) {
                         }
                         kdisp_send_window();
                         doom_handled = true;
+                    } else if (mines_active()) {
+                        // The idle-screen mine sweeper: every key is a cell, a
+                        // control or dark. Drawn from the SYNCED board, so the slave
+                        // draws its half too.
+                        mines_render_key((uint8_t)(r + offset), c);
+                        kdisp_send_window();
+                        doom_handled = true;
                     } else if (tutorial_intro_mode() &&
                                tutorial_is_chrome_key((uint8_t)(r + offset), c)) {
                         // The tutorial's chrome: "Hold to / skip..." on Esc, the chapter
@@ -5943,7 +5985,10 @@ _Static_assert((int)IME_OS_WINDOWS == (int)POLY_OS_WINDOWS && (int)IME_OS_MACOS 
 uint8_t poly_ime_family(uint8_t lang) {
     switch (lang) {
         case LANG_KOKR: return IME_FAMILY_KOREAN;
-        case LANG_JAJP: return IME_FAMILY_JAPANESE;
+        // ja-JP assumes the JIS OS layout, whose Caps key is 英数; ja-US, the same
+        // keycaps on the 101-key layout, has no such key and keeps the IME cycle.
+        case LANG_JAJP: return IME_FAMILY_JAPANESE_JIS;
+        case LANG_JAUS: return IME_FAMILY_JAPANESE;
         // ANSI English layouts: the OS layout is plain US, where NUBS only repeats
         // the Backslash key, so the key earns more as a right-hand Alt. An explicit
         // list on purpose: a NULL NUBS cell in lang_lut is NOT the signal, because
@@ -6366,13 +6411,12 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             }
             break;
         }
-        // Direct per-language selectors on the language layer (KCL_ENUS..last).
-        // The KCL_* and LANG_* enums are both generated from the same ordered
-        // language list, so LANG_xx == (KCL_xx - KCL_ENUS) — the two _Static_asserts
-        // above guard that — and the whole per-language block is one range case.
-        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1:
+        // Direct per-language selectors on the language layer: the frozen KCL_ block
+        // and its tail, mapped to a LANG index by kcl_lang_index().
+        case KCL_ENUS ... KCL_ENUS + KCL_FROZEN_COUNT - 1:
+        case KCL_TAIL_FIRST ... KCL_TAIL_LAST:
             if (!act) break;
-            poly_select_lang(local_state, (uint8_t)(keycode - KCL_ENUS), false);
+            poly_select_lang(local_state, (uint8_t)kcl_lang_index(keycode), false);
             break;
         default:
             handled = false;
@@ -6500,6 +6544,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         } else if (tutorial_is_skip_key(row, col)) {
             s_tut_skip_since = 0;   // released early — the hold has to be continuous
         }
+        return false;
+    }
+
+    // The idle-screen mine sweeper IS the board while it runs: every key event is
+    // swallowed and answered there, so nothing reaches the host. Holding Hyper for 1 s
+    // while an idle animation runs starts it, or resumes the board hidden last
+    // (mines_mode.h); a shorter tap only wakes the board.
+    if (mines_active()) {
+        return !mines_process_record(keycode, record);
+    }
+    if (mines_try_start(keycode, record)) {
         return false;
     }
 
@@ -7836,6 +7891,9 @@ void suspend_power_down_kb(void) {
         return;
     }
     poly_suspend();
+    // After poly_suspend() stopped Eden: no new jobs reach core1, so what it still owes
+    // either finishes within a few ms or is a stall (multicore_exec.h).
+    core1_suspend_tick();
 #ifdef RGB_MATRIX_ENABLE
     rgb_matrix_disable_noeeprom();
 #endif
@@ -7880,7 +7938,12 @@ void suspend_power_down_kb(void) {
     // does die with the master's — it simply cannot see that coming from this pin.
     // Without this clause the slave would silently stop flushing at suspend
     // forever, which is a bigger behaviour change than the one being fixed.
-    if (is_keyboard_master() && !usb_vbus_state()) {
+    if (!core1_suspend_flush_ready()) {
+        // core1 may still be running an Eden job from flash; a flash write now wedges
+        // it or the bus (multicore_exec.h). The master's hold comes within a few ms,
+        // or after 500 ms as a recorded stall; the slave's jobs finish within a few
+        // ms. A later tick of this suspend flushes.
+    } else if (is_keyboard_master() && !usb_vbus_state()) {
         // Seen on resume when a host cuts VBUS to sleep — there the flush was
         // skipped for a rail that was never in danger, and the next one takes it.
         // Unseen when the power really was going, because the console goes with
@@ -7926,6 +7989,9 @@ bool shutdown_user(bool jump_to_bootloader) {
 
 // Resumes keyboard on wakeup: restores display state, brightness, RGB settings, calls housekeeping.
 void suspend_wakeup_init_kb(void) {
+    // First, so the woken board decodes overlays on a fresh core1. A no-op unless the
+    // suspend took the hold (multicore_exec.h).
+    core1_resume();
     poly_sync_t* local_state = access_local_state();
     local_state->flags |= STATUS_DISP_ON;
     local_state->flags &= ~((uint8_t)DISP_IDLE);

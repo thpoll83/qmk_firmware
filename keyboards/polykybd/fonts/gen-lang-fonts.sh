@@ -47,12 +47,16 @@ countries="$("${PYTHON:-python3}" - lang/lang_lut.xlsx <<'PY'
 import sys
 from openpyxl import load_workbook
 sheet = load_workbook(sys.argv[1], read_only=True, data_only=True)["key_lut"]
+# A language whose "YY" names its OS keyboard layout rather than a place is filed
+# under its home language's country: ja-US (Japanese on a US layout) draws Japan's
+# flag, not the US one. Mirrored by LANG_HOME_COUNTRY on the host.
+FLAG_ALIAS = {"ja-US": "ja-JP"}
 i = 0
 while True:
     name = sheet.cell(row=1, column=2 + i * 4).value
     if not name:
         break
-    print(name.split("-")[1].upper())   # es-MX -> MX, th-TH -> TH, ...
+    print(FLAG_ALIAS.get(name, name).split("-")[1].upper())   # es-MX -> MX, ...
     i += 1
 PY
 )" || {

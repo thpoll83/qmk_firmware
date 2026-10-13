@@ -390,6 +390,18 @@ in either shape, so "not failed" is never "passed".
     intervention; the queued jobs then ran in order and passed. Between that and
     the 4.5 h case above there is no useful timeout to assume — keep a check-in
     scheduled rather than declaring the rig dead or waiting on it in the loop.
+- ⚠️ **A long queue can also mean a BUSY rig, and a busy rig looks the same from a
+  PR.** List `status: in_progress` runs too: the rig's diagnose panel then reads
+  "online·busy". The rig jobs are long and run one at a time. Measured 2026-10-09:
+  HIL 7 min (all tiers), perf 1.5 min, **DOOM signature 34.5 min**, firmware apply
+  8.5 min. A single all-tier dispatch holds the rig for about an hour, so a few of
+  them queue every PR for hours. Compare a job's elapsed time with these numbers
+  before calling it hung. On 2026-10-12 a DOOM job 30 minutes in was cancelled as
+  "hung" when it was on schedule.
+- **Each rig job has a `timeout-minutes`** (about 3x its normal time, 90 for DOOM).
+  Without one, GitHub's 6-hour default let a single hung flash hold every queued
+  HIL job behind it. Raise a limit when a job's normal time grows; a timeout fails
+  the job red, unlike an outage.
 
 ---
 
@@ -672,9 +684,14 @@ in either shape, so "not failed" is never "passed".
   ⚠️ It **never fails on a regression** (wall-clock numbers on
   shared hardware — a flaky red check is one people learn to ignore); only a
   *measurement* failure (wrong build flashed, device dead) fails the job. Ordered
-  `needs: [build-perf, hil-test]` + `always()` so the two rig jobs can't interleave
-  flashes, but a red HIL suite still yields a perf number — often exactly what
-  explains a timing-related HIL failure. **Use this instead of asking the user to
+  `needs: [build-perf, hil-test]` + `!cancelled()` so the two rig jobs can't
+  interleave flashes, but a red HIL suite still yields a perf number — often exactly
+  what explains a timing-related HIL failure. ⚠️ **Never `always()` on a rig job**
+  (perf, doom, fwapply, debug): it also survives a cancelled run, so every run
+  cancelled after its build finished still queued its rig job against replaced
+  code (2026-10-12, about seven ~35 min jobs ahead of the current PRs, removable
+  only by force-cancel). `!cancelled()` runs after a failed or skipped need just
+  the same and stops on a cancel. **Use this instead of asking the user to
   flash a build and paste the console log.** See
   `keyboards/polykybd/profiling/README.md` (§ on-demand control, HID cmd 32) and the
   `polykybd-ctnd` CLAUDE.md § Performance measurement.

@@ -11,7 +11,7 @@ from openpyxl import load_workbook
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, "/home/user/PolyKybdHost/polyhost/services")
-from lang_regions import LANG_REGION, LANG_REGION_ORDER, LANG_REGION_OVERRIDE
+from lang_regions import LANG_REGION, LANG_REGION_ORDER, LANG_REGION_OVERRIDE, home_country
 
 sh = load_workbook(os.path.join(HERE, "lang_lut.xlsx"), data_only=True, read_only=True)["key_lut"]
 langs, i = [], 0
@@ -25,11 +25,11 @@ while True:
 def region_of(code):
     if code.replace("-", "") in LANG_REGION_OVERRIDE:
         return LANG_REGION_OVERRIDE[code.replace("-", "")]
-    return LANG_REGION.get(code.split("-")[1].upper(), "Other")
+    return LANG_REGION.get(home_country(code.replace("-", "")), "Other")
 
 buckets = defaultdict(list)
 for idx, code in enumerate(langs):
-    buckets[region_of(code)].append((code.split("-")[1].upper(), idx, code))
+    buckets[region_of(code)].append((home_country(code.replace("-", "")), idx, code))
 
 SHORT = {"Americas": "Americas", "Europe": "Europe",
          "Middle East & Caucasus": "Middle East & Caucasus", "Africa": "Africa",

@@ -10,7 +10,7 @@ and the N largest RAM symbols.
 Why it exists: the v1.9.1 release failed to link the DOOM monolith
 (`POLYKYBD_DOOM=yes`) 40 B over the 256 KB bank, and nothing had shown how
 close it was. PR CI never built that flavour, and local builds use a different
-gcc (13.2 vs CI's 15.2, which needs about 384 B more RAM for the same source),
+gcc (13.2 vs CI's 15.2, which needs 400–500 B more RAM for the same source),
 so the headroom a developer saw was not the headroom CI had. CI now prints this
 for the release-shape builds, so the number is visible on every PR.
 

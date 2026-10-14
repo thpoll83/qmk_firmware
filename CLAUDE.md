@@ -27,7 +27,7 @@ container, so don't claim it is unavailable. Setup, submodule failures, the
 - ⚠️ **A branch-built `.bin` reports a different `FW_VERSION` from CI for the same
   commit.** CI builds the PR merged into its base. Settle it by diffing, not rebuilding.
 - ⚠️ **The DOOM monolith (`POLYKYBD_DOOM=yes`) is the tightest RAM flavour, and local
-  gcc 13.2 shows about 384 B more headroom than CI's gcc 15.2.** The PR job
+  gcc 13.2 shows 400–500 B more headroom than CI's gcc 15.2.** The PR job
   "Build release shape" runs the release's `build_pack.sh` and prints the headroom
   (`tools/ram_report.py`). Trust its number, not a local build (v1.9.1 failed 40 B over).
 - **Docker is not usable** in the remote container (no daemon).

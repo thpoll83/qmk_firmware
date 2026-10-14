@@ -854,8 +854,8 @@ inherited-upstream noise:
   job runs `doom/pack/build_pack.sh` on every PR in the release's own image, and its
   "RAM headroom" step prints each build's free RAM (`tools/ram_report.py`).
   ⚠️ **Read the headroom from that job, not from a local build.** The container's gcc
-  13.2 leaves about 384 B more free than the image's gcc 15.2: v1.9.1 had 344 B free
-  locally and failed in CI. About 14.7 KB of code runs from RAM, so compiler code
+  13.2 leaves 400–500 B more free than the image's gcc 15.2: v1.9.1 had 344 B free
+  locally and failed in CI, and #390 measured 7,832 B locally against 7,336 B in CI. About 14.7 KB of code runs from RAM, so compiler code
   size counts against RAM too.
 
 

@@ -206,7 +206,7 @@ jobs:
   # it. v1.9.1 was the result: merged green, then the release link failed 40 B
   # over main RAM and the release went out with no files. Local builds did not
   # catch it either: they use gcc 13.2, while this image's gcc 15.2 needs about
-  # 384 B more RAM for the same source. Same command and image as the release,
+  # 400-500 B more RAM for the same source. Same command and image as the release,
   # so a PR that would break the release goes red here. Runs beside `build`, so
   # it costs no time on the HIL path.
   build-release-shape:

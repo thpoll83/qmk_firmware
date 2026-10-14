@@ -30,15 +30,22 @@ BANKS = (
 )
 
 
-def _run(tool, elf):
-    return subprocess.run([tool, *(["-h"] if tool.endswith("objdump") else ["-S", "--size-sort"]), elf],
-                          capture_output=True, text=True, check=True).stdout
+_OBJDUMP = ["arm-none-eabi-objdump", "-h"]
+_NM = ["arm-none-eabi-nm", "-S", "--size-sort"]
+
+
+def _run(argv, elf):
+    # Audit: argv is one of the two literal lists above and elf is a path from
+    # this script's own command line (CI passes build_pack.sh's output). The
+    # list form runs with no shell, so the path is one argument whatever it holds.
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+    return subprocess.run([*argv, elf], capture_output=True, text=True, check=True).stdout
 
 
 def sections(elf):
     """[(name, size, vma)] of the sections that occupy RAM."""
     out = []
-    for line in _run("arm-none-eabi-objdump", elf).splitlines():
+    for line in _run(_OBJDUMP, elf).splitlines():
         p = line.split()
         if len(p) >= 4 and p[0].isdigit():
             size, vma = int(p[2], 16), int(p[3], 16)
@@ -50,7 +57,7 @@ def sections(elf):
 def symbols(elf):
     """[(size, type, name)] of the symbols that live in RAM, largest first."""
     out = []
-    for line in _run("arm-none-eabi-nm", elf).splitlines():
+    for line in _run(_NM, elf).splitlines():
         p = line.split()
         if len(p) == 4 and RAM_LO <= int(p[0], 16) < RAM_HI:
             out.append((int(p[1], 16), p[2], p[3]))

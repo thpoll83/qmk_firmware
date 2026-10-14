@@ -845,16 +845,18 @@ inherited-upstream noise:
   is honest about what it covers and silent about what you assumed it covered.
 - The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
   above.
-- ⚠️ **PR CI does NOT build the monolith.** `qmk-test.yml` builds only
-  `POLYKYBD_DOOM_PACK=yes` (+ split42); the **monolithic** `POLYKYBD_DOOM=yes`
-  flavour — whose objects the `.plyx` is harvested from — is built **exclusively by
-  the release workflow**. So a PR can be fully green and still break at *publish*
-  time: that is exactly what #172 did, and why v0.9.81 was never built at all. The
-  monolith is also the tightest RAM flavour (it had **20 bytes** of `.heap` free at
-  v0.9.82), so it is the first to fail on any RAM growth. **Build it locally before
-  merging anything that adds statics:**
-  `qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes`, or run
-  `doom/pack/build_pack.sh`, which builds both flavours.
+- ⚠️ **The monolith broke three releases before PR CI built it.** The **monolithic**
+  `POLYKYBD_DOOM=yes` flavour, whose objects the `.plyx` is harvested from, was built
+  **only by the release workflow**. A green PR could still break at *publish* time:
+  #172 (v0.9.81 never built), v0.9.82 (20 B of `.heap` left), and v1.9.1 (2026-10-13,
+  the link failed 40 B over main RAM and the release went out with **no files**, so
+  every host reported "newer but has no .bin"). Since then the `build-release-shape`
+  job runs `doom/pack/build_pack.sh` on every PR in the release's own image, and its
+  "RAM headroom" step prints each build's free RAM (`tools/ram_report.py`).
+  ⚠️ **Read the headroom from that job, not from a local build.** The container's gcc
+  13.2 leaves about 384 B more free than the image's gcc 15.2: v1.9.1 had 344 B free
+  locally and failed in CI. About 14.7 KB of code runs from RAM, so compiler code
+  size counts against RAM too.
 
 
 ## When GitHub switches Actions off for the fork

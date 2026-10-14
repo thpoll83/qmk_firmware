@@ -11783,7 +11783,7 @@ const uint32_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
     cog.outl(f'_Static_assert(LATIN_EX_VARIATIONS == {max_variation_index},')
     cog.outl(f'               "LATIN_EX_VARIATIONS (lang/lang_lut_ext.h) must equal the widest '
              f'row of latin_sup_ex - currently {max_variation_index}");')
-    cog.outl(f"const uint32_t* latin_ex_map[26*2][LATIN_EX_VARIATIONS] = {{")
+    cog.outl(f"const uint32_t* const latin_ex_map[26*2][LATIN_EX_VARIATIONS] = {{")
     idx = 0
     for k, values in d.items():
         delim = ", "
@@ -11808,7 +11808,7 @@ const uint32_t* translate_keycode(uint8_t used_lang, uint16_t keycode, bool shif
 ]]]*/
 _Static_assert(LATIN_EX_VARIATIONS == 36,
                "LATIN_EX_VARIATIONS (lang/lang_lut_ext.h) must equal the widest row of latin_sup_ex - currently 36");
-const uint32_t* latin_ex_map[26*2][LATIN_EX_VARIATIONS] = {
+const uint32_t* const latin_ex_map[26*2][LATIN_EX_VARIATIONS] = {
   /* [0] 65/A */ { U"\xC0", U"\xC1", U"\xC2", U"\xC3", U"\xC4", U"\xC5", U"\xC6", U"\x100", U"\x102", U"\x104", U"\x200", U"\x202", U"\x1CD", U"\x1DE", U"\x1E0", U"\x1FA", U"\x226", U"\x1E00", U"\x1EA0", U"\x1EA2", U"\x1EA4", U"\x1EA6", U"\x1EA8", U"\x1EAA", U"\x1EAC", U"\x1EAE", U"\x1EB0", U"\x1EB2", U"\x1EB4", U"\x1EB6", NULL, NULL, NULL, NULL, NULL, NULL },
   /* [1] 66/B */ { U"\x1E02", U"\x181", U"\x182", U"\x1E04", U"\x1E06", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   /* [2] 67/C */ { U"\xC7", U"\x106", U"\x108", U"\x10A", U"\x10C", U"\x187", U"\x1E08", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL },

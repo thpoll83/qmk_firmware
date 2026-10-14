@@ -200,6 +200,40 @@ jobs:
             *.bin
           retention-days: 7
 
+  # The release build, run on every PR. release.yml builds through
+  # doom/pack/build_pack.sh, which links the DOOM monolith (POLYKYBD_DOOM=yes)
+  # first; that flavour has the least RAM headroom of all, and no PR job built
+  # it. v1.9.1 was the result: merged green, then the release link failed 40 B
+  # over main RAM and the release went out with no files. Local builds did not
+  # catch it either: they use gcc 13.2, while this image's gcc 15.2 needs about
+  # 400-500 B more RAM for the same source. Same command and image as the release,
+  # so a PR that would break the release goes red here. Runs beside `build`, so
+  # it costs no time on the HIL path.
+  build-release-shape:
+    name: Build release shape (DOOM monolith + pack)
+    if: >-
+      github.event.action != 'labeled' ||
+      github.event.label.name == 'hil-extended'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build as release.yml does (monolith, pack flavour, engine pack)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: bash keyboards/polykybd/doom/pack/build_pack.sh
+
+      # Headroom per build, from the ELFs build_pack.sh keeps. Report only: the
+      # link above is the hard gate.
+      - name: RAM headroom
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: python3 keyboards/polykybd/tools/ram_report.py keyboards/polykybd/doom/pack/build/monolith.elf keyboards/polykybd/doom/pack/build/firmware.elf
+
   hil-test:
     name: HIL test (split72)
     needs: build

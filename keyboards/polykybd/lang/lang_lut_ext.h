@@ -35,7 +35,7 @@
 _Static_assert(LATIN_EX_VARIATIONS <= LATIN_PICK_MAX,
                "latin_sync_t.ex stores the pick in a LATIN_PICK_BITS field — see state.h");
 
-extern const uint32_t* latin_ex_map[26*2][LATIN_EX_VARIATIONS];
+extern const uint32_t* const latin_ex_map[26*2][LATIN_EX_VARIATIONS];
 
 //extern const int8_t poly_settings [4][NUM_LANG * 4];
 

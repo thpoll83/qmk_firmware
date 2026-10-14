@@ -26,8 +26,10 @@ container, so don't claim it is unavailable. Setup, submodule failures, the
   `FW_VERSION`. The `deliver-test-firmware` skill does this.
 - ⚠️ **A branch-built `.bin` reports a different `FW_VERSION` from CI for the same
   commit.** CI builds the PR merged into its base. Settle it by diffing, not rebuilding.
-- ⚠️ **PR CI does not build the monolith** (`POLYKYBD_DOOM=yes`, the tightest RAM
-  flavour). Build it locally before merging anything that adds statics.
+- ⚠️ **The DOOM monolith (`POLYKYBD_DOOM=yes`) is the tightest RAM flavour, and local
+  gcc 13.2 shows 400–500 B more headroom than CI's gcc 15.2.** The PR job
+  "Build release shape" runs the release's `build_pack.sh` and prints the headroom
+  (`tools/ram_report.py`). Trust its number, not a local build (v1.9.1 failed 40 B over).
 - **Docker is not usable** in the remote container (no daemon).
 - ⚠️ **"It booted" is not evidence a flash landed. Make the artifact identify itself.**
   The handedness banner prints `slot=N/M writer=0xNN` for this reason. When a write

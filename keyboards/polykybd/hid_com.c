@@ -44,6 +44,7 @@
 #include "base/crash_record.h"
 #include "multicore_exec.h"   // core1_stall_report
 #include "boot_diag.h"        // boot_banner_on_host_probe
+#include "ltr559_policy.h"    // poly_ltr559_drives_brightness
 
 
 /*[[[cog
@@ -643,8 +644,14 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                             set_brightness_auto_mode(true);
                         }
                         // Daylight/auto update: applied only while auto mode
-                        // is engaged, never persisted.
-                        set_auto_brightness_value(data[HID_DATA_IDX]);
+                        // is engaged, never persisted. Once the light sensor
+                        // drives auto-brightness, the sensor wins: the host's
+                        // level is dropped. Applying it would show it until the
+                        // sensor's next tick (up to 500 ms), a visible dip
+                        // every 10 min (daylight 2 vs sensor 42, 2026-10-16).
+                        if (!poly_ltr559_drives_brightness()) {
+                            set_auto_brightness_value(data[HID_DATA_IDX]);
+                        }
                     } else if (br_flags & BR_FLAG_AUTO_ON) {
                         // Engage auto mode without turning this packet into a
                         // persisted manual write (which would clear auto again).

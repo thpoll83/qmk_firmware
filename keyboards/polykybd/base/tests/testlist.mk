@@ -28,3 +28,4 @@ TEST_LIST += polykybd_core1_owner
 TEST_LIST += polykybd_core1_suspend
 TEST_LIST += polykybd_fw_stage
 TEST_LIST += polykybd_mines_plan
+TEST_LIST += polykybd_fw_stream

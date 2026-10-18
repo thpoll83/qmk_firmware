@@ -35,7 +35,7 @@ conflict whenever upstream didn't touch the same hunks, so "no conflicts" and
 that upstream left the files alone —
 `git diff --stat <old-base>..<tag> -- <the five files>` (empty in the 0.33.13
 merge, 2026-08-11) — and finish with a `grep` for one marker per patch
-(`raw_hid_pre_receive_kb`, `ifndef RAW_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`,
+(`raw_hid_pre_receive_kb`, `ifndef RAW_EPSIZE`, `ifndef CDC_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`,
 `POLYKYBD_VREG_VSEL`, `oled_render_dirty(true)`, `wear_leveling_rp2040_flash_quiesce`).
 
 ## tmk_core/protocol/usb_descriptor.h
@@ -48,6 +48,18 @@ variants.
 -#define RAW_EPSIZE 32
 +#ifndef RAW_EPSIZE
 +#    define RAW_EPSIZE 32
++#endif
+```
+
+The same guard around `CDC_EPSIZE` (2026-10-18, bulk pipe): QMK's virtual-serial
+data endpoints default to 16-byte packets, which caps a bulk transfer at a quarter
+of the full-speed rate. `keyboards/polykybd/config.h` sets 64 under
+`POLYKYBD_BULK_PIPE` (see `BULK_PIPE.md`).
+
+```diff
+-#define CDC_EPSIZE 16
++#ifndef CDC_EPSIZE
++#    define CDC_EPSIZE 16
 +#endif
 ```
 

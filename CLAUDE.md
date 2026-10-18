@@ -202,6 +202,11 @@ goes through the `add-gated-hid-command` skill.
   version. An RLE fragment length must stay below 0x80.
 - ⚠️ **The flat overlay index is the only address an upload has**, so
   `reset_overlay_mapping()`'s identity default is load-bearing for writes.
+- **The bulk pipe** ([`BULK_PIPE.md`](keyboards/polykybd/BULK_PIPE.md)) is a CDC serial
+  interface (`POLYKYBD_BULK_PIPE`, on by default) whose bulk endpoints carry large
+  host→master transfers; raw HID stays the control channel. Prototype: measurement
+  commands only. ⚠️ The split UART (460800 baud) still caps anything relayed to the
+  slave. A handler on the pipe must not write flash inside `virtser_recv()`.
 - **To tell the host the board changed state, bump the `G` state-generation counter in
   the GET_ID reply** (`poly_state_touch()`), which the host polls every second. It goes
   after the `V` font-pack block, which the host finds positionally. Do not add

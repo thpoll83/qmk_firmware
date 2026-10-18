@@ -183,6 +183,19 @@ $(INTERMEDIATE_OUTPUT)/$(patsubst %.c,%.o,$(patsubst ./%,%,$1)): FILE_SPECIFIC_C
 endef
 $(foreach s,$(POLY_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
 
+# Bulk pipe: a CDC-ACM (virtual serial) interface whose bulk endpoints carry
+# large host->keyboard transfers that raw HID (one 64-byte report per 1 ms USB
+# frame) cannot. ON by default; `-e POLYKYBD_BULK_PIPE=no` drops the interface
+# and the parser. Prototype: measurement commands only (keyboards/polykybd/
+# BULK_PIPE.md has the assessment and the numbers). Costs two interfaces, three
+# endpoints and (CDC_IN_CAPACITY + CDC_OUT_CAPACITY) x 64 B of RAM (config.h).
+POLYKYBD_BULK_PIPE ?= yes
+ifeq ($(strip $(POLYKYBD_BULK_PIPE)), yes)
+    VIRTSER_ENABLE = yes
+    OPT_DEFS += -DPOLYKYBD_BULK_PIPE
+    SRC += poly_pipe.c
+endif
+
 # Optional main-loop timing instrumentation (OFF by default). Measures the per-
 # iteration loop time (== the matrix-scan interval), split by overlay vs normal
 # iterations, plus the blocking time spent in send_to_bridge(). Purpose: measure

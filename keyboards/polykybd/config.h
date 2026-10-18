@@ -325,6 +325,20 @@
 //######################################
 #define HID_REPORT_SIZE RAW_EPSIZE // now 64, but might change
 
+// Bulk pipe (POLYKYBD_BULK_PIPE, poly_pipe.h): the CDC data endpoints carry
+// full-size 64-byte bulk packets (QMK's default is 16, which caps the pipe at a
+// quarter of the bus rate; the #ifndef guard is a PolyKybd patch to
+// usb_descriptor.h, see UPSTREAM_PATCHES.md). CDC_OUT_CAPACITY is the number of
+// packets the OUT queue holds between two main-loop drains; virtser_task()
+// drains it once per iteration, so capacity x 64 B per loop iteration is the
+// host->keyboard ceiling (8 x 64 B at ~1 ms per iteration ~ 500 KB/s). RAM cost:
+// (CDC_IN_CAPACITY + CDC_OUT_CAPACITY) x 64 B.
+#ifdef POLYKYBD_BULK_PIPE
+#    define CDC_EPSIZE 64
+#    define CDC_IN_CAPACITY 4
+#    define CDC_OUT_CAPACITY 8
+#endif
+
 // segement * bytes = 360 (=2880/8 => all bits of an overlay)
 #define NUM_SEGMENTS_PER_OVERLAY 6
 #define BYTES_PER_SEGMENT 60

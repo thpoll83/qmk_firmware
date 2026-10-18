@@ -138,9 +138,31 @@ image. A faster host link cannot change that, so the pipe helps with:
 - anything where the per-report ACK round trip, not the bus, is the cost.
 
 For a transfer that is relayed live to the slave, the end-to-end time stays the
-UART's. Raising the UART speed is a separate change (PR #152 went to 460800;
-the PIO driver can go higher, with the signal-integrity caveats in
-`INVESTIGATION_HISTORY.md`).
+UART's. Raising the UART speed is a separate change, and a small one: the
+`SELECT_SOFT_SERIAL_SPEED` table in `serial_usart.h` stops at 460800, but a
+`SERIAL_USART_SPEED` define in `config.h` is honoured instead, and the RP2040
+PIO UART divides `clk_sys` by 8 x baud, so any value up to 25 Mbaud is
+representable. The limit is the 8-entry PIO RX FIFO, drained by a thread that
+the FIFO interrupt wakes (`serial_vendor.c`), so a slow wake loses bytes and
+the CRC32 plus retries have to recover them.
+
+Measured on the rig, 2026-10-18, extended tier (the 450-report cmd-21 soak and
+the firmware's cumulative `Split link:` counter), one run per speed:
+
+| baud | branch / run | soak delta (200 frames) | cumulative at 600 tx | HID staging of 541 KB (relayed to the slave) |
+|---|---|---|---|---|
+| 460800 (today) | `PolyKybd` #1480 | 0 faults | 0 crc_err, 0 transport_fail | 59 s |
+| 921600 | `claude/split-link-921600` #1475 | 0 faults | 0, 0 | 49 s |
+| 1843200 | `claude/split-link-1843200` #1476 | 0 faults | 1 crc_err in the boot burst, 0 transport_fail | 43 s |
+| 3000000 | `claude/split-link-3000000` #1477 | 0 faults | 0, 0 | 48 s |
+
+Every run passed the whole extended suite (boot loop, font-pack flash, reboot
+persistence included). The master's 30 s settle after the power-cycle test, with
+one 5 s probe, appears at 460800 too, so it is not a baud effect. The staging
+time stops improving past 1843200 because the per-report HID round trip, not
+the relay, is what remains. The speed to ship is the maintainer's call; the
+candidates are 921600 (2x, no observation against it) and 1843200 (4x, one
+boot-burst CRC error in one run, recovered by the retry).
 
 ## Before a real payload moves onto the pipe
 

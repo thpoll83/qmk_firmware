@@ -29,6 +29,13 @@
 #define SERIAL_USART_TX_PIN GP5
 #define SERIAL_USART_RX_PIN GP4
 #define SERIAL_USART_FULL_DUPLEX
+// Split-link baud experiment (1843200): SERIAL_USART_SPEED set directly, which
+// serial_usart.h honours over the SELECT_SOFT_SERIAL_SPEED table (its top entry
+// is 460800). The PIO UART divides clk_sys by 8 x baud, so any value up to
+// clk_sys/8 is representable; what limits it is the 8-entry PIO RX FIFO drained
+// by a woken thread (serial_vendor.c receive_impl), so the extended HIL soak's
+// crc_err / transport_fail delta is the verdict, not whether it links.
+#define SERIAL_USART_SPEED 1843200
 #define SERIAL_USART_PIN_SWAP
 // Split-link baud is set per variant via SELECT_SOFT_SERIAL_SPEED in halconf.h
 // (0 = 460800). See platforms/chibios/drivers/serial_usart.h for the mapping.

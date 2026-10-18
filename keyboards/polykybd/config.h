@@ -336,7 +336,7 @@
 #ifdef POLYKYBD_BULK_PIPE
 #    define CDC_EPSIZE 64
 #    define CDC_IN_CAPACITY 4
-#    define CDC_OUT_CAPACITY 8
+#    define CDC_OUT_CAPACITY 16
 #endif
 
 // segement * bytes = 360 (=2880/8 => all bits of an overlay)

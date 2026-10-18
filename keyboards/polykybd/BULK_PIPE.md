@@ -106,9 +106,14 @@ The HID channel's rate on the rig, from the same run's firmware-update staging
 
 Results go in this table. The keyboard-clock number is the one to trust.
 
-| date | host OS | SINK keyboard clock | ECHO round trip | HID GET_ID round trip |
+| date | host | SINK keyboard clock | ECHO round trip | HID GET_ID round trip |
 |---|---|---|---|---|
-| | | | | |
+| 2026-10-18 | rig (RPi4, run #1474, probe `bulk_pipe`) | 1998848 B in 3.347 s = 0.597 MB/s, 0 bad, 0 resync, CRC ok | not measured | HID staging in the same session: 9.2 KB/s |
+
+0.597 MB/s is 512 B per 0.86 ms: the OUT queue (8 packets) is drained once per
+main-loop pass, so the queue depth times the loop period is the ceiling, not the
+bus. The queue-depth experiment branches (`claude/bulk-pipe-outcap16`, `-outcap32`)
+test that.
 
 ## What the pipe can and cannot speed up
 

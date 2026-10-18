@@ -116,11 +116,13 @@ Queue depth (`CDC_OUT_CAPACITY`), same probe on the rig:
 |---|---|---|
 | 8 | #1474 | 0.597 MB/s |
 | 16 | #1478 | 0.670 MB/s |
+| 32 | #1479 | 0.687 MB/s |
 
-Doubling the queue adds 12%, so the once-per-loop drain is not the ceiling on
-the rig; the Pi's USB host stack is (cdc-acm keeps a small number of 64-byte
-write URBs in flight). A PC host (xHCI) is the next measurement: run
-`tools/pipe_bench.py` there and add the row above.
+Quadrupling the queue adds 15%, so the once-per-loop drain is not the ceiling
+on the rig; the Pi's USB host stack is (cdc-acm keeps a small number of 64-byte
+write URBs in flight). The default stays 8 (the DOOM monolith has 5.5 KB of
+headroom on CI's gcc, and depth 32 costs 1.5 KB of it). A PC host (xHCI) is the
+next measurement: run `tools/pipe_bench.py` there and add the row above.
 
 ## What the pipe can and cannot speed up
 

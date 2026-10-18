@@ -154,7 +154,9 @@ the firmware's cumulative `Split link:` counter), one run per speed:
 | 460800 (today) | `PolyKybd` #1480 | 0 faults | 0 crc_err, 0 transport_fail | 59 s |
 | 921600 | `claude/split-link-921600` #1475 | 0 faults | 0, 0 | 49 s |
 | 1843200 | `claude/split-link-1843200` #1476 | 0 faults | 1 crc_err in the boot burst, 0 transport_fail | 43 s |
+| 1843200, 2nd run | #1482 | 0 faults (400 frames) | 0, 0 | 44 s |
 | 3000000 | `claude/split-link-3000000` #1477 | 0 faults | 0, 0 | 48 s |
+| 3000000, 2nd run | #1481 | 0 faults | 0, 0 | 64 s (8 HID read timeouts in the same run: rig USB noise) |
 
 Every run passed the whole extended suite (boot loop, font-pack flash, reboot
 persistence included). The master's 30 s settle after the power-cycle test, with
@@ -162,7 +164,9 @@ one 5 s probe, appears at 460800 too, so it is not a baud effect. The staging
 time stops improving past 1843200 because the per-report HID round trip, not
 the relay, is what remains. The speed to ship is the maintainer's call; the
 candidates are 921600 (2x, no observation against it) and 1843200 (4x, one
-boot-burst CRC error in one run, recovered by the retry).
+boot-burst CRC error in one of two runs, recovered by the retry). The staging
+times vary by 10 to 15 s between runs at the same speed, so read them as a
+trend, not a measurement.
 
 ## Before a real payload moves onto the pipe
 

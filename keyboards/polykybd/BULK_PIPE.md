@@ -110,10 +110,17 @@ Results go in this table. The keyboard-clock number is the one to trust.
 |---|---|---|---|---|
 | 2026-10-18 | rig (RPi4, run #1474, probe `bulk_pipe`) | 1998848 B in 3.347 s = 0.597 MB/s, 0 bad, 0 resync, CRC ok | not measured | HID staging in the same session: 9.2 KB/s |
 
-0.597 MB/s is 512 B per 0.86 ms: the OUT queue (8 packets) is drained once per
-main-loop pass, so the queue depth times the loop period is the ceiling, not the
-bus. The queue-depth experiment branches (`claude/bulk-pipe-outcap16`, `-outcap32`)
-test that.
+Queue depth (`CDC_OUT_CAPACITY`), same probe on the rig:
+
+| depth | run | keyboard clock |
+|---|---|---|
+| 8 | #1474 | 0.597 MB/s |
+| 16 | #1478 | 0.670 MB/s |
+
+Doubling the queue adds 12%, so the once-per-loop drain is not the ceiling on
+the rig; the Pi's USB host stack is (cdc-acm keeps a small number of 64-byte
+write URBs in flight). A PC host (xHCI) is the next measurement: run
+`tools/pipe_bench.py` there and add the row above.
 
 ## What the pipe can and cannot speed up
 

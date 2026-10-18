@@ -83,6 +83,16 @@ Measured with `tools/ram_report.py` on the local gcc 13.2 (CI's gcc 15.2 needs
 The RAM is the two endpoint queues (12 x 64 B), the 512-byte ECHO buffer and
 the endpoint state. Flash: +1364 B of text. Endpoints: 9 of 15 used.
 
+CI's release-shape job (gcc 15.2, run #1473) measured the monolith at 5488 B
+and the pack flavour at 10300 B of headroom with the pipe in.
+
+The HID channel's rate on the rig, from the same run's firmware-update staging
+(56 payload bytes per ACKed report, each chunk relayed to the slave):
+
+| transfer | bytes | time | rate |
+|---|---|---|---|
+| HID firmware staging, run #1473 | 555660 | 59 s | 9.2 KB/s |
+
 ## Measuring it
 
 1. Flash a `POLYKYBD_BULK_PIPE` build. The keyboard shows a new serial port

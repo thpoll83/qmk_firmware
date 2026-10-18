@@ -110,4 +110,40 @@ TEST_F(IdleUpdateTest, RefreshModeRoundTrips) {
     EXPECT_EQ(get_refresh_mode(), START_FIRST_HALF);
 }
 
+// A request that arrives while a render runs (core1 finishing an image, or a
+// user_sync_* handler on the slave's split thread) must survive the end of that
+// render. It used to be erased by set_disp_refresh(DONE_ALL), which left the ESC
+// program mark stale on the slave after a warm app switch.
+TEST_F(IdleUpdateTest, RequestDuringRenderSurvivesItsEnd) {
+    request_disp_refresh();
+    begin_disp_refresh();
+    request_disp_refresh();   // arrives mid-render
+    finish_disp_refresh();
+    EXPECT_EQ(get_refresh_mode(), ALL_AT_ONCE);
+}
+
+TEST_F(IdleUpdateTest, RenderWithoutNewRequestEndsDone) {
+    request_disp_refresh();
+    begin_disp_refresh();
+    finish_disp_refresh();
+    EXPECT_EQ(get_refresh_mode(), DONE_ALL);
+}
+
+TEST_F(IdleUpdateTest, RequestDuringFirstHalfSurvivesTheSecondHalf) {
+    set_disp_refresh(START_FIRST_HALF);
+    begin_disp_refresh();
+    request_disp_refresh();               // during rows 0-2
+    set_disp_refresh(START_SECOND_HALF);  // what the first pass writes when it ends
+    finish_disp_refresh();                // rows 3-4 done
+    EXPECT_EQ(get_refresh_mode(), ALL_AT_ONCE);
+}
+
+TEST_F(IdleUpdateTest, RequestBeforeBeginIsConsumedByThatRender) {
+    request_disp_refresh();
+    request_disp_refresh();
+    begin_disp_refresh();
+    finish_disp_refresh();
+    EXPECT_EQ(get_refresh_mode(), DONE_ALL);
+}
+
 }  // namespace

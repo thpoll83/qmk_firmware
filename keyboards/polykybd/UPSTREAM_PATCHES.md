@@ -184,7 +184,7 @@ region; remove once that writer is found and fixed. split72 (real
 ## platforms/chibios/bootloaders/rp2040.c
 
 `POLYKYBD_VREG_VSEL`: when defined (by `POLYKYBD_SYS_CLK=200`, the default since
-0.10.x — see
+0.11.0 — see
 `keyboards/polykybd/rules.mk`), raise the core-voltage select at the top of
 `__late_init()` — **before** the `clocks_init()` call already there.
 

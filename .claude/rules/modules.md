@@ -12,8 +12,8 @@ a conversion.
 - **Listing a module in `keyboard.json` IS the enable** — the build defines
   `COMMUNITY_MODULE_<NAME>_ENABLE`. No `SRC +=`, no bespoke `-D`; gate consumer code on
   the generated define.
-- ⚠️ **Module hooks run BEFORE `_kb`/`_user`.** That is the whole argument for deleting
-  explicit init/task calls in favour of hooks — verify it before doing so, and don't
+- ⚠️ **Module hooks run BEFORE `_kb`/`_user`.** Deleting explicit init/task calls in
+  favour of hooks depends on this order — verify it before doing so, and don't
   double-probe.
 - ⚠️ **Overriding the non-suffixed hook means calling the `_kb` link yourself**, or the
   keyboard/keymap specialisations are silently dropped.

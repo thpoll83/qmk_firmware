@@ -227,7 +227,10 @@ staging region starts at 2 MB), skips units that already read blank, and waits
 `FW_ERASE_GAP_MS` (20 ms) after each erase (`fw_staging.c`, *Erase units*). A
 545 KB image is 8 blocks and 9 sectors. Measured on the next bundle (firmware
 d628eeb0c7, 2026-10-19): erase 3.3 s, chunks 10.7 s, prompt 2.0 s, apply and
-reconnect 12.8 s; 29 s end to end against 83 s over HID that morning.
+reconnect 12.8 s; 29 s end to end against 83 s over HID that morning. With the
+applier erasing in blocks too (d6ca32e565, same day): erase 3.2 s, chunks 10.8 s,
+prompt 2.0 s, apply and reconnect 6.8 s; 23 s end to end. The boot banner after
+it reported the copy complete and the written image matched the staged source.
 
 ## Before another payload moves onto the pipe
 

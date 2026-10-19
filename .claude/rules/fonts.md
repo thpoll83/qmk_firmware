@@ -12,8 +12,8 @@ reship without `fontconvert`.
 - ⚠️ **Three artifacts are mirrored BYTE-IDENTICALLY into the host repo** —
   `noto-fonts.yaml`, `fontpack_render_settings.json`, `lang_flags.json`. `cmp` them, or
   the host editor pre-fills the wrong controls.
-- **The list order IS the `ALL_FONTS[]` priority** (front-to-back, first match wins);
-  categories only decide which header a font lands in.
+- **The list order IS the `ALL_FONTS[]` priority** (front-to-back, first match is used);
+  categories only decide which header a font is written to.
 - ⚠️ **Adding a whole new RESIDENT font shifts every pack font's gidx** and forces a
   full-pack reship. Extend the resident `IconsFont` for one or two glyphs instead.
 - **Byte-reproducible output requires the pinned `fontconvert` build** (FreeType 2.13.3 /

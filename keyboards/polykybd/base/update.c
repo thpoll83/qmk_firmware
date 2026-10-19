@@ -49,6 +49,10 @@ void request_disp_refresh(void) {
     // flag, so a request that has not set it yet writes ALL_AT_ONCE after that
     // DONE_ALL and survives it.
     g_refresh_requested = true;
+    // volatile orders these two stores for the compiler only. The fences order
+    // them for the other core too (core1 requests, core0 renders); on the M0+
+    // each is one DMB.
+    __atomic_thread_fence(__ATOMIC_SEQ_CST);
     g_refresh = ALL_AT_ONCE;
     //use the following for partial update (during housekeeping)
     // g_refresh = START_FIRST_HALF;
@@ -83,6 +87,7 @@ void begin_disp_refresh(void) {
 
 void finish_disp_refresh(void) {
     g_refresh = DONE_ALL;
+    __atomic_thread_fence(__ATOMIC_SEQ_CST);   // DONE_ALL before the flag read
     if (g_refresh_requested) {
         g_refresh = ALL_AT_ONCE;
     }

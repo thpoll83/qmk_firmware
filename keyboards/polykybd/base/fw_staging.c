@@ -345,6 +345,7 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload);
 // ---------------------------------------------------------------------------
 static uint32_t s_erase_sector_count;  // total sectors to erase (header + data)
 static uint32_t s_erase_sector_next;   // next sector index not yet erased
+static uint32_t s_erase_attempt;       // bumped by every deferred BEGIN; the erase pass checks it
 
 // ---------------------------------------------------------------------------
 // Diagnostic counters (read via fw_staging_get_status)
@@ -617,6 +618,7 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
     // FIRMWARE: index 0 = header sector, 1..N = data. FONTPACK: 0..N-1 = data (no header).
     s_erase_sector_count    = (target_has_header() ? 1u : 0u) + data_sectors;
     s_erase_sector_next     = 0;
+    s_erase_attempt++;
     s_erase_units_done = s_erase_units_skipped = 0;
     s_stage                 = fw_stage_next(s_stage, FW_EV_BEGIN_DEFERRED);
     s_erase_cut_short       = false;
@@ -676,18 +678,21 @@ void fw_staging_process_deferred(void) {
     // stream and release core1. With interrupts off it cannot land between the
     // recheck and the erase, and while the stage reads ERASING the hold is in place.
     // core1 is already halted by fw_staging_begin_deferred(); no halt/restart here.
-    // The cursor is re-read with interrupts off after the blank read, because a
-    // BEGIN for another image (on the slave: the split thread, a re-sent BEGIN or
-    // a new update) resets it to 0 with a new sector count meanwhile. Advancing
-    // the NEW cursor on the OLD unit's result would skip sectors of the new range
-    // that were never checked. Whoever moved the cursor restarts the erase from
-    // the top; this pass just ends.
-    const uint32_t unit   = s_erase_sector_next;
-    const uint32_t offset = erase_unit_offset(unit);
-    const uint32_t bytes  = erase_unit_bytes(unit, s_erase_sector_count);
-    const bool     blank  = flash_range_blank(offset, bytes);
-    uint32_t       irq    = save_and_disable_interrupts();
-    if (s_stage != FW_STAGE_ERASING || s_erase_sector_next != unit) {
+    // The attempt and the cursor are re-read with interrupts off after the blank
+    // read, because a BEGIN for another image (on the slave: the split thread, a
+    // re-sent BEGIN or a new update) resets the cursor to 0 with a new target and
+    // sector count meanwhile. The cursor alone does not tell: both attempts start
+    // at 0, so the old unit's offset and size could erase the OLD target and
+    // advance the NEW cursor past a unit that was never checked. The attempt
+    // number changes on every BEGIN; whoever moved it restarts the erase from
+    // the top, and this pass just ends.
+    const uint32_t attempt = s_erase_attempt;
+    const uint32_t unit    = s_erase_sector_next;
+    const uint32_t offset  = erase_unit_offset(unit);
+    const uint32_t bytes   = erase_unit_bytes(unit, s_erase_sector_count);
+    const bool     blank   = flash_range_blank(offset, bytes);
+    uint32_t       irq     = save_and_disable_interrupts();
+    if (s_stage != FW_STAGE_ERASING || s_erase_attempt != attempt || s_erase_sector_next != unit) {
         restore_interrupts(irq);
         return;
     }

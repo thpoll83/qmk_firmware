@@ -209,6 +209,10 @@ void virtser_recv(const uint8_t c) {
         case ST_MAGIC1:
             if (c == 'B') {
                 s_state = ST_CMD;
+            } else if (c == 'P') {
+                // "PPB": the first 'P' was a stray byte, this one may start the
+                // frame. Stay here, so the magic after it is not lost.
+                s_stats.resync_bytes++;
             } else {
                 s_stats.resync_bytes += 2;
                 s_state = ST_MAGIC0;

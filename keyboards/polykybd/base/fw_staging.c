@@ -414,7 +414,7 @@ static uint32_t s_done_diff_at = 0xFFFFFFFFu;   // offset of the first byte the 
 static uint32_t s_done_diff_got = 0;
 static uint32_t s_done_diff_want = 0;
 static uint32_t s_log_max   = 0;   // highest sector the copy logged as completed
-static uint32_t s_log_min   = 0;   // lowest ditto -- the copy runs top-down, so this is where it stopped
+static uint32_t s_log_min   = 0;   // lowest ditto (the copy logs body sectors ascending, then 1..15, then 0)
 static uint32_t s_log_count = 0;   // how many sectors it logged at all
 static bool     s_log_started = false;   // the copy reached its first sector
 static uint32_t s_mark_stage = 0;        // 0 none, 1 pre-erase, 2 post-erase, 3 post-program
@@ -670,27 +670,36 @@ void fw_staging_process_deferred(void) {
     if (timer_elapsed32(s_last_sector_ms) < FW_ERASE_GAP_MS) return;
 
     // The blank read runs with interrupts on (a few ms per 64 KB; harmless if a
-    // finalize preempts it). The erase itself runs with interrupts off from the
-    // stage recheck through the erase: on the slave a finalize (an early COMMIT, on
-    // the split thread) can preempt this pass after the check at the top, end the
-    // stream and release core1. With interrupts off it cannot land between this
-    // check and the erase, and while the stage reads ERASING the hold is in place.
+    // finalize preempts it). The stage recheck, the cursor advance and the erase
+    // run with interrupts off: on the slave a finalize (an early COMMIT, on the
+    // split thread) can preempt this pass after the check at the top, end the
+    // stream and release core1. With interrupts off it cannot land between the
+    // recheck and the erase, and while the stage reads ERASING the hold is in place.
     // core1 is already halted by fw_staging_begin_deferred(); no halt/restart here.
-    const uint32_t offset = erase_unit_offset(s_erase_sector_next);
-    const uint32_t bytes  = erase_unit_bytes(s_erase_sector_next, s_erase_sector_count);
-    if (flash_range_blank(offset, bytes)) {
+    // The cursor is re-read with interrupts off after the blank read, because a
+    // BEGIN for another image (on the slave: the split thread, a re-sent BEGIN or
+    // a new update) resets it to 0 with a new sector count meanwhile. Advancing
+    // the NEW cursor on the OLD unit's result would skip sectors of the new range
+    // that were never checked. Whoever moved the cursor restarts the erase from
+    // the top; this pass just ends.
+    const uint32_t unit   = s_erase_sector_next;
+    const uint32_t offset = erase_unit_offset(unit);
+    const uint32_t bytes  = erase_unit_bytes(unit, s_erase_sector_count);
+    const bool     blank  = flash_range_blank(offset, bytes);
+    uint32_t       irq    = save_and_disable_interrupts();
+    if (s_stage != FW_STAGE_ERASING || s_erase_sector_next != unit) {
+        restore_interrupts(irq);
+        return;
+    }
+    if (blank) {
         s_erase_units_skipped++;
         s_erase_sector_next += bytes / FLASH_SECTOR_SIZE;
-    } else {
-        uint32_t irq = save_and_disable_interrupts();
-        if (s_stage != FW_STAGE_ERASING) {
-            restore_interrupts(irq);
-            return;
-        }
-        flash_range_erase(offset, bytes);
         restore_interrupts(irq);
+    } else {
+        flash_range_erase(offset, bytes);
         s_erase_units_done++;
         s_erase_sector_next += bytes / FLASH_SECTOR_SIZE;
+        restore_interrupts(irq);
         s_last_sector_ms = timer_read32();
     }
 
@@ -741,6 +750,20 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
         // reply to the host timed out).  The data is already in staging and the
         // running CRC already includes it — ACK again without rewriting, so the
         // retry protocol stays idempotent (NOR flash cannot rewrite anyway).
+        //
+        // A chunk that starts behind the cursor and reaches past it is a retry
+        // with a LONGER chunk than the one that landed (a 56-byte HID chunk whose
+        // ack was lost, re-sent as a 236-byte pipe chunk after the host switched
+        // link, or the host rewinding to a cursor that is not a chunk boundary).
+        // Acking it whole would skip the bytes past the cursor on this half and
+        // leave the two halves' cursors apart for the rest of the stream, so the
+        // part past the cursor is written like a fresh chunk.
+        const uint32_t skip = s_next_offset - offset;
+        if (skip < len) {
+            uprintf("fw_staging_write_chunk: overlap offset=%lu len=%u (next=%lu) — writing the %u bytes past the cursor\n",
+                    offset, len, s_next_offset, (unsigned)(len - skip));
+            return fw_staging_write_chunk(s_next_offset, data + skip, (uint8_t)(len - skip));
+        }
         uprintf("fw_staging_write_chunk: duplicate offset=%lu (next=%lu) — ack\n", offset, s_next_offset);
         return true;
     }

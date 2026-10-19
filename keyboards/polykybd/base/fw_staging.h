@@ -160,8 +160,10 @@ bool fw_staging_last_apply_diff(uint32_t *offset, uint32_t *got, uint32_t *want)
 // into staging. Survives the power cycle a BOOTSEL recovery needs, which the watchdog
 // scratch does not -- and a copy that stops partway leaves no other trace at all.
 // How far the last self-apply's sector copy got, read back from the in-flash progress
-// log. The copy runs top-down (N-1 .. 1, then 0), so *lowest is the sector it stopped
-// at; false means no sector completed at all.
+// log. The copy writes body sectors 16..N-1 in ascending order, then 1..15, then 0
+// (images under 64 KB: N-1 down to 1, then 0), so *lowest and *highest are the
+// extremes of the completed sectors and *count how many completed; false means no
+// sector completed at all.
 bool fw_staging_apply_progress(uint32_t *lowest, uint32_t *highest, uint32_t *count);
 
 // True when the last self-apply erased its log and marked it started, i.e. it reached

@@ -30,6 +30,10 @@
 // the version PING reports; the HID PROTOCOL_VERSION does not cover the pipe.
 #define POLY_PIPE_PROTOCOL 2
 #define POLY_PIPE_MAX_PAYLOAD 512 // buffered commands (ECHO, FW_CHUNK); SINK streams any length
+// A frame whose bytes stop arriving for this long is dropped (a host that died or
+// closed the port mid-frame), so the next frame is parsed from its magic. The
+// bytes of one frame arrive within milliseconds of each other.
+#define POLY_PIPE_FRAME_IDLE_MS 1000
 
 enum poly_pipe_cmd {
     POLY_PIPE_PING     = 0x01, // -> proto u8, max_payload u16, epsize u8, out_capacity u8, FW_VERSION

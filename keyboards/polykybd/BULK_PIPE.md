@@ -1,9 +1,10 @@
 # The bulk pipe: a second USB channel for large transfers
 
-Status: prototype (2026-10-18). The firmware side and a host benchmark tool
-exist; no real payload uses the pipe yet. This page is the feasibility
-assessment, what the prototype does, how to measure it, and what a real payload
-needs before it moves over.
+Status: in use since pipe protocol 2 (2026-10-19): the firmware update's CHUNK
+step runs on the pipe (see *Firmware update over the pipe* below). Font packs,
+the icon library, engine packs and overlays still go over raw HID. This page is
+the feasibility assessment, what the pipe does, how to measure it, and what
+another payload needs before it moves over.
 
 ## Why raw HID is slow, and what a bulk endpoint changes
 

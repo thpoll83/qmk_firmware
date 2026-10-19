@@ -54,7 +54,7 @@ static uint32_t          s_crc_wire;
 static bool              s_stream;   // SINK: payload is not stored
 static bool              s_oversize; // buffered command over MAX_PAYLOAD: drain and count bad
 static uint8_t           s_buf[POLY_PIPE_MAX_PAYLOAD];
-static uint32_t          s_last_byte_ms; // when the byte before this one arrived (frame idle reset)
+static uint32_t          s_rx_bytes;  // bytes seen, for the abandoned-frame check in poly_pipe_task()
 
 // Bytes of the frame being parsed that have arrived so far (for the resync count
 // when an abandoned frame is dropped).
@@ -72,6 +72,29 @@ static uint32_t partial_frame_bytes(void) {
 
 const poly_pipe_stats_t *poly_pipe_stats(void) {
     return &s_stats;
+}
+
+void poly_pipe_task(void) {
+    // A frame the sender never finished (the host process died or closed the
+    // port between the length header and the payload) would swallow the next
+    // s_len bytes, so the PINGs of a host that reopens the port would be read as
+    // that payload. A frame's bytes arrive back to back (one USB write), so no
+    // byte for POLY_PIPE_FRAME_IDLE_MS inside a frame means it was abandoned:
+    // it is dropped and the next byte starts a new one. The dropped bytes count
+    // as resync. Timed from housekeeping, by the byte counter, so the parser
+    // itself reads no clock.
+    static uint32_t s_seen_bytes;
+    static uint32_t s_seen_ms;
+    if (s_state == ST_MAGIC0 || s_rx_bytes != s_seen_bytes) {
+        s_seen_bytes = s_rx_bytes;
+        s_seen_ms    = timer_read32();
+        return;
+    }
+    if (timer_elapsed32(s_seen_ms) > POLY_PIPE_FRAME_IDLE_MS) {
+        s_stats.resync_bytes += partial_frame_bytes();
+        s_state = ST_MAGIC0;
+        s_seen_ms = timer_read32();
+    }
 }
 
 static inline uint32_t crc_byte(uint32_t crc, uint8_t b) {
@@ -169,17 +192,12 @@ static void frame_done(void) {
 }
 
 void virtser_recv(const uint8_t c) {
-    // A frame the sender never finished (the host process died or closed the
-    // port between the length header and the payload) would swallow the next
-    // s_len bytes, so the PINGs of a host that reopens the port would be read as
-    // that payload. A frame's bytes arrive back to back (one USB write), so a
-    // gap of POLY_PIPE_FRAME_IDLE_MS inside a frame means it was abandoned: it
-    // is dropped and this byte starts a new one. The dropped bytes count as resync.
-    if (s_state != ST_MAGIC0 && timer_elapsed32(s_last_byte_ms) > POLY_PIPE_FRAME_IDLE_MS) {
-        s_stats.resync_bytes += partial_frame_bytes();
-        s_state = ST_MAGIC0;
-    }
-    s_last_byte_ms = timer_read32();
+    // One increment per byte and nothing else that is not parsing: a 2 MB SINK
+    // stream runs inside one virtser_task() drain (the main loop stays in it
+    // until the host pauses), so per-byte work here delays the watchdog feed.
+    // Two timer reads per byte took the drain past the 8 s watchdog on the rig
+    // (2026-10-19). The abandoned-frame check runs from housekeeping instead.
+    s_rx_bytes++;
     switch (s_state) {
         case ST_MAGIC0:
             if (c == 'P') {

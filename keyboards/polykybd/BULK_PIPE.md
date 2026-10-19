@@ -240,6 +240,14 @@ it reported the copy complete and the written image matched the staged source.
   (the firmware chunk relays and programs flash there) needs a host that paces
   itself by the replies, as above; otherwise queue the work and drain it from
   housekeeping, as the fontpack path does.
+- `virtser_task()` drains the whole OUT queue in one pass, and the watchdog (8 s,
+  `CRASH_WATCHDOG_MS`) is fed from housekeeping only. A host that streams without
+  waiting for replies (the rig's SINK soak: 2 MB, no reply per frame) keeps the
+  main loop in the drain for the whole stream, so one burst must finish well
+  inside 8 s, and nothing per byte in the parser may get slower: two
+  `timer_read32()` calls per byte took the 2 MB soak past the watchdog on the rig
+  (run 1488, 2026-10-19). The parser does one counter increment per byte; the
+  abandoned-frame check reads the clock from `poly_pipe_task()` in housekeeping.
 - The pipe does not exist on firmware without the build flag, and nothing in the
   HID protocol announces it. A host should detect the port by VID/PID and PING
   it, and fall back to HID. No `PROTOCOL_VERSION` bump is needed for the pipe

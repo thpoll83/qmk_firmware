@@ -51,8 +51,7 @@ def _open_raw(port):
     fd = os.open(port, os.O_RDWR | os.O_NOCTTY)
     attrs = termios.tcgetattr(fd)
     # cfmakeraw equivalent: no line discipline, no echo, no CR/NL mangling.
-    attrs[0] &= ~(termios.IGNBRK | termios.BRKINT | termios.PARMRK | termios.ISTRIP
-                  | termios.INLCR | termios.IGNCR | termios.ICRNL | termios.IXON)
+    attrs[0] &= ~(termios.IGNBRK | termios.BRKINT | termios.PARMRK | termios.ISTRIP | termios.INLCR | termios.IGNCR | termios.ICRNL | termios.IXON)
     attrs[1] &= ~termios.OPOST
     attrs[2] &= ~(termios.CSIZE | termios.PARENB)
     attrs[2] |= termios.CS8 | termios.CLOCAL | termios.CREAD

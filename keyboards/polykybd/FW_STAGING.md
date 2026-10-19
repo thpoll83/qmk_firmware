@@ -479,3 +479,17 @@ it is about 2 s. The erase cannot be moved to idle time without a quiet window o
 the split link: a slave erase with interrupts off makes every master transaction in
 that window fail and count as a link fault, which the extended HIL soak asserts at 0.
 
+## The applier's erase
+
+`fw_staging_do_apply()` erases the running partition in 64 KB blocks where a whole
+block is inside the image and in 4 KB sectors for the tail. The partition starts at
+0, so every block is aligned. Order: the app body (sectors 16..N-1; 1..N-1 for an
+image under 64 KB) is erased, then programmed sector by sector with one log page
+each; then block 0 (the vectors' sector 0 and sectors 1..15) is erased in one
+command, sectors 1..15 are programmed, and sector 0 last, as before. The window
+without a vector table is the block-0 erase plus 15 sectors of programming instead
+of one sector erase plus 16 pages; interrupts are off for the whole copy either
+way, so only a fault would use the table. Before 2026-10-19 the copy erased each
+sector before programming it: 137 sectors x ~60 ms was 8 s of the 12.8 s apply
+phase on that day's bundle; 8 blocks + 9 sectors is about 1.7 s.
+

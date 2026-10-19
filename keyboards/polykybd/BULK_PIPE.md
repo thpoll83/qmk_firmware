@@ -126,9 +126,10 @@ next measurement: run `tools/pipe_bench.py` there and add the row above.
 
 ## What the pipe can and cannot speed up
 
-The split link between the halves is a 460800 baud UART (46 KB/s on the wire,
-about 40 KB/s of payload with the CRC32 and acks). Anything that must reach the
-slave half still crosses it: the slave's overlays, the font pack, the firmware
+The split link between the halves is a UART, 1843200 baud since the firmware
+update moved onto the pipe (460800 before; `SERIAL_USART_SPEED` in `config.h`,
+`-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed). Anything that must reach
+the slave half still crosses it: the slave's overlays, the font pack, the firmware
 image. A faster host link cannot change that, so the pipe helps with:
 
 - host to master data: the master's own overlay set and icon library, resources
@@ -162,18 +163,61 @@ Every run passed the whole extended suite (boot loop, font-pack flash, reboot
 persistence included). The master's 30 s settle after the power-cycle test, with
 one 5 s probe, appears at 460800 too, so it is not a baud effect. The staging
 time stops improving past 1843200 because the per-report HID round trip, not
-the relay, is what remains. The speed to ship is the maintainer's call; the
-candidates are 921600 (2x, no observation against it) and 1843200 (4x, one
-boot-burst CRC error in one of two runs, recovered by the retry). The staging
+the relay, is what remains. The staging
 times vary by 10 to 15 s between runs at the same speed, so read them as a
-trend, not a measurement.
+trend, not a measurement. 1843200 ships (maintainer's decision, 2026-10-19, with
+the 236-byte relay chunk): 4x, two extended runs with 0 link faults, one
+boot-burst CRC error in one of them, recovered by the retry.
 
-## Before a real payload moves onto the pipe
+## Firmware update over the pipe (pipe protocol 2)
+
+The CHUNK step of the firmware update runs on the pipe; BEGIN, SIGNATURE, COMMIT
+and APPLY stay on raw HID (`hid_fw_up.c`). The host sends `FW_CHUNK` (0x10)
+frames: offset (u32 LE) plus 1 to `FW_UP_RELAY_CHUNK_MAX` (236) data bytes. The
+master relays each frame to the slave in ONE split RPC (`fw_up_chunk_sync_t`, a
+16-byte header plus the data, 252 bytes at most) and then writes its own copy,
+through `fw_up_xfer_block()`, the same function the HID chunk commands use with
+56 bytes. The reply is a status byte and the keyboard's cursor: on `.` the
+master's write cursor, on `!` the lower of the two halves' cursors. The host
+continues from the cursor on either channel; the firmware requires the cursor,
+not a chunk boundary, so a transfer may start on the pipe and finish over HID.
+
+Rules the host side must keep:
+
+- **Pace by the replies.** The handler runs inside `virtser_task()`, which drains
+  the whole OUT queue in one main-loop pass. A host that streams without reading
+  replies keeps the main loop inside that drain for the entire transfer. The
+  host and the rig send at most `FW_CHUNK_WINDOW` (4) frames ahead of their
+  replies, so one pass handles a few frames and returns.
+- **A frame with a bad CRC gets no reply.** The host resolves a quiet window with
+  a cursor probe: an empty `FW_CHUNK` (payload shorter than 5 bytes) is always
+  answered `!` with the cursor.
+- **The pipe protocol gates the command.** PING reports 2 or higher; the HID
+  `PROTOCOL_VERSION` does not cover the pipe, and a host on protocol 1 firmware
+  sends the chunks over HID.
+
+What one chunk costs on the two channels, from the rig's numbers (per-report
+HID round trip 3.0 ms median; `transaction_rpc_exec()` is 4 split transactions,
+each with a handshake round trip; a 256-byte page program every page on each
+half):
+
+| channel | bytes per step | per step | 541 KB image |
+|---|---|---|---|
+| HID, 460800 baud (before) | 56 | 3.0 ms HID + 1.9 ms relay + ~1 ms page programs | 59 s measured |
+| pipe, 1843200 baud, 236-byte relay | 236 | ~0.5 ms relay wire + 4 handshakes + ~2 ms page programs | about 13 s estimated |
+
+The page programs are the floor of this design: both halves program 2164 pages
+each, in series on the master's loop. The split link and the HID round trip were
+the rest. Measure a real run with the firmware-apply job's log
+(`stage_and_verify` prints the pipe time and rate) and put the number here.
+
+## Before another payload moves onto the pipe
 
 - Flow control is implicit: when the OUT queue is full the endpoint NAKs and the
-  host's write blocks. A handler that writes flash must therefore not run inside
-  `virtser_recv()`; queue the work and drain it from housekeeping, as the
-  fontpack path does.
+  host's write blocks. A handler that does long work inside `virtser_recv()`
+  (the firmware chunk relays and programs flash there) needs a host that paces
+  itself by the replies, as above; otherwise queue the work and drain it from
+  housekeeping, as the fontpack path does.
 - The pipe does not exist on firmware without the build flag, and nothing in the
   HID protocol announces it. A host should detect the port by VID/PID and PING
   it, and fall back to HID. No `PROTOCOL_VERSION` bump is needed for the pipe

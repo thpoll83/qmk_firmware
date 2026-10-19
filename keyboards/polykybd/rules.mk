@@ -132,6 +132,14 @@ else
             a VCO/postdiv triple AND the core voltage its frequency is certified at)
 endif
 
+# Split-link baud. The default is the SERIAL_USART_SPEED in config.h (1843200);
+# `-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed for an A/B run on the rig
+# (any value the PIO divider can represent is accepted; the extended HIL soak's
+# crc_err / transport_fail counters are the verdict, not whether it links).
+ifneq ($(strip $(POLYKYBD_SPLIT_BAUD)),)
+    OPT_DEFS += -DSERIAL_USART_SPEED=$(strip $(POLYKYBD_SPLIT_BAUD))
+endif
+
 # OS detection (QMK feature): fingerprints the USB enumeration (wLength pattern) to
 # guess the host OS. Used as the AUTO-mode fallback for the active-OS state — the
 # only source on machines where the host app can't run (locked-down) or doesn't

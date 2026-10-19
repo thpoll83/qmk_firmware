@@ -18,6 +18,8 @@
 #    include "virtser.h"
 #    include "timer.h"
 #    include "polymod_crc32.h"
+#    include "split_fw_up.h"      // fw_up_xfer_block()
+#    include "base/fw_staging.h"  // FW_UP_RELAY_CHUNK_MAX, fw_staging_next_offset()
 #    include <string.h>
 
 #    ifndef FW_VERSION
@@ -126,6 +128,25 @@ static void frame_done(void) {
         case POLY_PIPE_ECHO:
             send_frame(POLY_PIPE_ECHO | POLY_PIPE_REPLY, s_buf, s_len);
             break;
+        case POLY_PIPE_FW_CHUNK: {
+            // Payload: offset (u32 LE) + 1..FW_UP_RELAY_CHUNK_MAX data bytes. The
+            // relay and the master's write happen here, synchronously, like the
+            // HID CMD_FW_UP_CHUNK handler does inside raw_hid_receive(): the host
+            // waits for this reply before it sends past its window, so the OUT
+            // queue never holds more than a few frames.
+            uint8_t  reply[POLY_PIPE_FW_CHUNK_REPLY_LEN];
+            bool     ok     = false;
+            uint32_t resume = fw_staging_next_offset();
+            if (s_len >= 5 && s_len - 4 <= FW_UP_RELAY_CHUNK_MAX) {
+                uint32_t offset = (uint32_t)s_buf[0] | ((uint32_t)s_buf[1] << 8) |
+                                  ((uint32_t)s_buf[2] << 16) | ((uint32_t)s_buf[3] << 24);
+                ok = fw_up_xfer_block(offset, &s_buf[4], s_len - 4, &resume, NULL);
+            }
+            reply[0] = ok ? '.' : '!';
+            put_u32(&reply[1], resume);
+            send_frame(POLY_PIPE_FW_CHUNK | POLY_PIPE_REPLY, reply, sizeof(reply));
+            break;
+        }
         default:
             // Unknown command: counted as a good frame (the CRC matched), no reply.
             break;

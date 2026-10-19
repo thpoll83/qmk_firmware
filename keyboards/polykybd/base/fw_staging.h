@@ -68,10 +68,14 @@
 #define FW_UP_MAX_SIZE         0x1F5000UL      // max staged image: staging region, minus the 4 KB header, the apply log, the crash log and the handedness stamp
 #define FW_STAGING_MAGIC       0xD1F1A51BUL
 
-// Bytes per firmware-update chunk (HID and split-RPC payload).
+// Bytes per firmware-update chunk over raw HID.
 // 56 bytes fits in the 64-byte RAW_EPSIZE HID packet (2 bytes framing + 4 bytes offset + 56 data + 2 spare).
-// The split RPC struct is 4 CRC + 4 offset + 56 data = 64 bytes < RPC_M2S_BUFFER_SIZE 72 bytes.
 #define FW_UP_CHUNK_SIZE 56
+// The most data one split RPC relays to the slave. The chunk message is a 16-byte
+// header (crc32, op, offset, len) plus the data, and QMK's RPC length is a uint8_t,
+// so 16 + 236 = 252 = RPC_M2S_BUFFER_SIZE (config.h). The HID path relays its 56
+// bytes through the same message; the bulk pipe (poly_pipe.c) relays up to this.
+#define FW_UP_RELAY_CHUNK_MAX 236
 
 // FW-2 physical-presence confirmation. Under FW_REQUIRE_SIGNATURE an image that
 // is not validly signed is not refused outright: COMMIT raises a prompt ON THE

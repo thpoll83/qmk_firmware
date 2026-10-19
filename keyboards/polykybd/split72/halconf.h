@@ -43,6 +43,9 @@
 // of split-UART traffic — shortening the master->slave bridge window on each app
 // switch. Safe: the full-duplex two-wire link measured zero steady-state errors at
 // 230400 (split-link health counter, bridge_helper.c). Validate err% on hardware.
+// Since 2026-10-19 this table entry is overridden: config.h defines
+// SERIAL_USART_SPEED 1843200 directly (serial_usart.h takes the define over the
+// table), and `-e POLYKYBD_SPLIT_BAUD=<n>` rebuilds another speed.
 #define SELECT_SOFT_SERIAL_SPEED 0
 
 #define PICO_FLASH_SIZE_BYTES (8 * 1024 * 1024)

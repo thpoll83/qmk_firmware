@@ -23,7 +23,7 @@
 // word access.  The single slave-side dispatcher is user_sync_flash_stage_handler.
 enum flash_stage_op {
     FLASH_STAGE_BEGIN  = 0,  // announce size/crc + kick the deferred erase
-    FLASH_STAGE_CHUNK  = 1,  // one FW_UP_CHUNK_SIZE-byte fragment
+    FLASH_STAGE_CHUNK  = 1,  // one fragment of 1..FW_UP_RELAY_CHUNK_MAX bytes
     FLASH_STAGE_COMMIT = 2,  // verify staged CRC + finalize (no reboot)
     FLASH_STAGE_STATUS = 3,  // diagnostic: return fw_staging internal counters
     FLASH_STAGE_VERSIONS = 4, // read-only: the slave's per-bundle content_version (v20)
@@ -43,14 +43,26 @@ typedef struct _fw_up_begin_sync_t {
     uint8_t  bundle;   // FONTPACK target: which bundle slot (fontpack_slot()); 0 for FIRMWARE
 } fw_up_begin_sync_t;
 
-// One chunk of firmware data (FW_UP_CHUNK_SIZE bytes).
-// Total struct = 4+4+4+56 = 68 bytes < RPC_M2S_BUFFER_SIZE (72).
+// One chunk of firmware data: `len` bytes (1..FW_UP_RELAY_CHUNK_MAX), sent as
+// FW_UP_CHUNK_HDR + len bytes, so a 56-byte HID chunk costs a 72-byte transaction
+// and a 236-byte pipe chunk the full 252 (= RPC_M2S_BUFFER_SIZE). The CRC covers
+// op, offset, len and the `len` data bytes that were sent, not the whole array.
+// `len` is a uint32_t, not a byte, so `data` stays 4-byte aligned.
+#define FW_UP_CHUNK_HDR 16
 typedef struct _fw_up_chunk_sync_t {
     uint32_t crc32;
     uint32_t op;         // = FLASH_STAGE_CHUNK
     uint32_t offset;
-    uint8_t  data[FW_UP_CHUNK_SIZE];
+    uint32_t len;        // data bytes in this message
+    uint8_t  data[FW_UP_RELAY_CHUNK_MAX];
 } fw_up_chunk_sync_t;
+static_assert(sizeof(fw_up_chunk_sync_t) == FW_UP_CHUNK_HDR + FW_UP_RELAY_CHUNK_MAX,
+              "fw_up_chunk_sync_t header is not 16 bytes");
+static_assert(sizeof(fw_up_chunk_sync_t) <= RPC_M2S_BUFFER_SIZE,
+              "fw_up_chunk_sync_t exceeds RPC_M2S_BUFFER_SIZE: the relay would be silently rejected");
+static_assert(sizeof(fw_up_chunk_sync_t) <= 255,
+              "QMK's RPC length is a uint8_t: a 256-byte message cannot be sent");
+static_assert(FW_UP_CHUNK_SIZE <= FW_UP_RELAY_CHUNK_MAX, "the HID chunk must fit one relay message");
 
 // COMMIT carries no payload beyond the op selector (the slave finalizes whatever
 // it has staged for the target it remembered from BEGIN).
@@ -154,10 +166,20 @@ typedef struct _poly_reset_sync_t {
     uint8_t  is_left;        // [10]   slave's new handedness when set_handedness != 0 (1 = left)
 } poly_reset_sync_t;
 
-// Master-side: relay one upload chunk (offset + FW_UP_CHUNK_SIZE bytes) to the
-// slave with retries. `log_tag` non-NULL enables per-retry debug logging (pass
+// Master-side: relay one upload chunk (offset + `len` bytes, 1..FW_UP_RELAY_CHUNK_MAX)
+// to the slave with retries. `log_tag` non-NULL enables per-retry debug logging (pass
 // NULL for a quiet relay). Returns true on slave ACK. See split_fw_up.c.
-bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, const char *log_tag);
+bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, uint32_t len, const char *log_tag);
+
+// One block of an upload, from any channel: relays `len` bytes at `offset` to the
+// slave FIRST, then writes the master's copy, so a failed relay leaves both write
+// cursors in lock-step. `*resume` receives the offset the sender should continue
+// from: on success the master's cursor; on failure the lower of the two halves'
+// cursors (both ACK a duplicate chunk, so the sender rewinds there). `*relay_ok`
+// (optional) reports whether the slave took it. Returns true when both halves
+// stored the block. The HID chunk commands and the bulk pipe's firmware chunk
+// (poly_pipe.c) both go through here.
+bool fw_up_xfer_block(uint32_t offset, const uint8_t *data, uint32_t len, uint32_t *resume, bool *relay_ok);
 
 // One slave-side dispatcher for the whole flash-staging stream (BEGIN / CHUNK /
 // COMMIT / STATUS); it reads the `op` word and routes to the per-op logic.

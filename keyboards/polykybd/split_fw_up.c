@@ -30,18 +30,23 @@
 // When `log_tag` is non-NULL and debug is enabled it logs each retry (the
 // firmware-update path passes "FW_UP_CHUNK"); the font-pack path passes NULL
 // for a quiet relay, matching its prior behaviour.
-bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, const char *log_tag) {
+bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, uint32_t len, const char *log_tag) {
+    if (len == 0 || len > FW_UP_RELAY_CHUNK_MAX) return false;
+    // Only the header and `len` data bytes go on the wire (72 bytes for a HID
+    // chunk, 252 for a full pipe chunk), and the CRC covers exactly those.
+    const uint8_t      wire_len = (uint8_t)(FW_UP_CHUNK_HDR + len);
     fw_up_chunk_sync_t chunk_msg;
     chunk_msg.op     = FLASH_STAGE_CHUNK;
     chunk_msg.offset = offset;
-    memcpy(chunk_msg.data, chunk_data, FW_UP_CHUNK_SIZE);
-    chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], sizeof(chunk_msg) - 4, 0);
+    chunk_msg.len    = len;
+    memcpy(chunk_msg.data, chunk_data, len);
+    chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], wire_len - 4, 0);
     uint8_t slave_ack = SYNC_GIVEUP;   // no answer yet
     for (uint8_t retry = 0; retry < 10; ++retry) {
         fw_up_chunk_reply_t reply;
         memset(&reply, 0, sizeof(reply));
         reply.ack = SYNC_GIVEUP;   // sentinel: transaction_rpc_exec may not write it
-        bool ok_rpc = transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(chunk_msg), &chunk_msg,
+        bool ok_rpc = transaction_rpc_exec(USER_SYNC_FLASH_STAGE, wire_len, &chunk_msg,
                                            sizeof(reply), &reply);
         if (ok_rpc && reply.ack == SYNC_ACK && reply.next_offset > offset) {
             slave_ack = SYNC_ACK;
@@ -193,8 +198,12 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
 // cursor) so the master can tell a genuine ACK from a stale previous reply —
 // see the struct comment in split_fw_up.h.
 static void flash_stage_chunk(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len != sizeof(fw_up_chunk_sync_t) || !in_data || out_len != sizeof(fw_up_chunk_reply_t) || !out_data) return;
+    // Variable length: the header plus msg->len data bytes, 1..FW_UP_RELAY_CHUNK_MAX.
+    // A message whose in_len disagrees with its own len field is malformed and gets
+    // no reply, like a wrong-sized message before (the master retries).
+    if (in_len < FW_UP_CHUNK_HDR + 1 || !in_data || out_len != sizeof(fw_up_chunk_reply_t) || !out_data) return;
     const fw_up_chunk_sync_t *msg = (const fw_up_chunk_sync_t *)in_data;
+    if (msg->len == 0 || msg->len > FW_UP_RELAY_CHUNK_MAX || in_len != FW_UP_CHUNK_HDR + msg->len) return;
     fw_up_chunk_reply_t *reply = (fw_up_chunk_reply_t *)out_data;
     memset(reply, 0, sizeof(*reply));
     uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
@@ -224,7 +233,7 @@ static void flash_stage_chunk(uint8_t in_len, const void* in_data, uint8_t out_l
         // See config.h FW_UP_CHUNK_NOOP_PROBE / FW_UP_BASELINE.md (run 4).
         bool ok = true;
 #else
-        bool ok = fw_staging_write_chunk(msg->offset, msg->data, FW_UP_CHUNK_SIZE);
+        bool ok = fw_staging_write_chunk(msg->offset, msg->data, (uint8_t)msg->len);
 #endif
         // A rejected write is a REFUSAL, not a CRC error — the frame checked out
         // above; the stager declined the offset. (The relay still retries, and the
@@ -553,35 +562,45 @@ char fw_up_xfer_begin(fw_up_begin_sync_t *msg, bool master_ok, fw_up_xfer_key_t 
     return (out->slave_ok && out->master_done) ? '.' : '~';
 }
 
-bool fw_up_xfer_chunk(uint8_t *data, uint8_t length, uint8_t cmd, const char *tag, bool *relay_ok) {
-    uint32_t offset;
-    memcpy(&offset, &data[2], 4);
-    const uint8_t *chunk_data = &data[6];
+bool fw_up_xfer_block(uint32_t offset, const uint8_t *data, uint32_t len, uint32_t *resume, bool *relay_ok) {
     // The reply is identity-bound (fw_up_chunk_reply_t), not the bare 1-byte ack: a
     // chunk only counts once the slave's write cursor moved PAST this offset. With
     // the bare ACK a stale reply from the previous chunk desynchronised the cursors
     // (2026-06-10, updates dying at 6% / 83%). A duplicate of an already-staged
     // chunk has next_offset > offset and passes, so re-sends are idempotent.
-    const bool relayed = fw_up_relay_chunk_to_slave(offset, chunk_data, tag);
+    const bool relayed = fw_up_relay_chunk_to_slave(offset, data, len, "FW_UP_BLOCK");
     bool ok = relayed;
     if (ok) {
-        ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
-        if (!ok) uprintf("%s: master staging write FAILED offset=%lu\n", tag, (unsigned long)offset);
+        ok = fw_staging_write_chunk(offset, data, (uint8_t)len);
+        if (!ok) uprintf("FW_UP_BLOCK: master staging write FAILED offset=%lu\n", (unsigned long)offset);
     }
     if (relay_ok) *relay_ok = relayed;
+    uint32_t next = fw_staging_next_offset();
+    if (!ok) {
+        // The lower of the two cursors. If the slave is unreachable its cursor is
+        // unknown, so report the master's (the sender retries the current chunk).
+        fw_staging_status_t st;
+        if (fw_up_query_slave_status(&st) && st.next_offset < next) {
+            next = st.next_offset;
+        }
+        uprintf("FW_UP_BLOCK: NACK offset=%lu len=%lu resume=%lu\n",
+                (unsigned long)offset, (unsigned long)len, (unsigned long)next);
+    }
+    if (resume) *resume = next;
+    return ok;
+}
+
+bool fw_up_xfer_chunk(uint8_t *data, uint8_t length, uint8_t cmd, const char *tag, bool *relay_ok) {
+    uint32_t offset;
+    memcpy(&offset, &data[2], 4);
+    uint32_t   resume = 0;
+    const bool ok     = fw_up_xfer_block(offset, &data[6], FW_UP_CHUNK_SIZE, &resume, relay_ok);
 
     memset(data, 0, length);
     data[0] = 'P';
     data[1] = cmd;
     data[2] = ok ? '.' : '!';
     if (!ok) {
-        // The lower of the two cursors. If the slave is unreachable its cursor is
-        // unknown, so report the master's (the host retries the current chunk).
-        uint32_t            resume = fw_staging_next_offset();
-        fw_staging_status_t st;
-        if (fw_up_query_slave_status(&st) && st.next_offset < resume) {
-            resume = st.next_offset;
-        }
         memcpy(&data[3], &resume, 4);
         uprintf("%s: NACK offset=%lu resume=%lu\n", tag, (unsigned long)offset, (unsigned long)resume);
     }

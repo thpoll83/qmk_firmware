@@ -30,8 +30,18 @@
 #define SERIAL_USART_RX_PIN GP4
 #define SERIAL_USART_FULL_DUPLEX
 #define SERIAL_USART_PIN_SWAP
-// Split-link baud is set per variant via SELECT_SOFT_SERIAL_SPEED in halconf.h
-// (0 = 460800). See platforms/chibios/drivers/serial_usart.h for the mapping.
+// Split-link baud. SERIAL_USART_SPEED takes priority over the SELECT_SOFT_SERIAL_SPEED
+// table in halconf.h (whose top entry is 460800); serial_usart.h honours the define.
+// The RP2040 PIO UART divides clk_sys by 8 x baud, so any value up to clk_sys/8 is
+// representable. What limits the speed is the 8-entry PIO RX FIFO, drained by a
+// thread the FIFO interrupt wakes (serial_vendor.c receive_impl): a late wake loses
+// bytes and the CRC32 plus retries recover them. 1843200 (4x the old 460800) passed
+// two extended HIL runs with 0 link faults (BULK_PIPE.md, split-link table); it cuts
+// the firmware relay to the slave from 13 s to 3.4 s of wire time per 541 KB image.
+// `-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed for an A/B on the rig.
+#ifndef SERIAL_USART_SPEED
+#    define SERIAL_USART_SPEED 1843200
+#endif
 
 #define SPLIT_TRANSPORT_MIRROR
 // #define SPLIT_LAYER_STATE_ENABLE
@@ -125,9 +135,12 @@
 // RAM in split_shared_memory_t and nothing per transaction.  It is also a SILENT
 // ceiling: an oversized payload makes transaction_rpc_exec() `return false` before
 // sending anything, and the bulk send_to_bridge() call sites discard the ack — so the
-// halves just diverge with no log line.  96 fits the largest payload, latin_sync_t
-// (90 B, asserted in state.h); the next largest is the 72 B doom mirror.
-#define RPC_M2S_BUFFER_SIZE 96
+// halves just diverge with no log line.  252 holds the firmware relay chunk
+// (fw_up_chunk_sync_t, 16 B header + FW_UP_RELAY_CHUNK_MAX data, asserted in
+// split_fw_up.h); the next largest payloads are latin_sync_t (90 B, asserted in
+// state.h) and the 72 B doom mirror. The RPC length field is a uint8_t, so 255 is
+// the hard cap. The 160 B over the old 96 come out of split_shared_memory_t.
+#define RPC_M2S_BUFFER_SIZE 252
 // Slave to master: replies are a single ack byte, so this needs no headroom.
 #define RPC_S2M_BUFFER_SIZE 72
 
@@ -324,6 +337,20 @@
 //#          Overlays specific         #
 //######################################
 #define HID_REPORT_SIZE RAW_EPSIZE // now 64, but might change
+
+// Bulk pipe (POLYKYBD_BULK_PIPE, poly_pipe.h): the CDC data endpoints carry
+// full-size 64-byte bulk packets (QMK's default is 16, which caps the pipe at a
+// quarter of the bus rate; the #ifndef guard is a PolyKybd patch to
+// usb_descriptor.h, see UPSTREAM_PATCHES.md). CDC_OUT_CAPACITY is the number of
+// packets the OUT queue holds between two main-loop drains; virtser_task()
+// drains it once per iteration, so capacity x 64 B per loop iteration is the
+// host->keyboard ceiling (8 x 64 B at ~1 ms per iteration ~ 500 KB/s). RAM cost:
+// (CDC_IN_CAPACITY + CDC_OUT_CAPACITY) x 64 B.
+#ifdef POLYKYBD_BULK_PIPE
+#    define CDC_EPSIZE 64
+#    define CDC_IN_CAPACITY 4
+#    define CDC_OUT_CAPACITY 8
+#endif
 
 // segement * bytes = 360 (=2880/8 => all bits of an overlay)
 #define NUM_SEGMENTS_PER_OVERLAY 6

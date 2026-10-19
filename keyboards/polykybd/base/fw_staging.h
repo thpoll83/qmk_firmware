@@ -34,6 +34,10 @@
 #define FW_STAGING_OFFSET      0x200000UL      // staging starts at 2 MB (== linker flash1 length)
 #define FW_STAGING_HEADER_SIZE 0x001000UL      // first 4 KB of staging = header sector
 #define FW_STAGING_DATA_OFFSET (FW_STAGING_OFFSET + FW_STAGING_HEADER_SIZE)
+// Gap between two erase units of the deferred erase (fw_staging_process_deferred),
+// measured from the end of the previous erase: time for the split link (slave) and
+// USB (master) to answer. A 4 KB sector erase is ~60 ms, a 64 KB block ~150 ms.
+#define FW_ERASE_GAP_MS 20
 #define FW_RESOURCE_OFFSET     0x400000UL      // resource/overlay region (== FLASH_TARGET_OFFSET in keymap.c)
 // The self-apply's progress log, at the TOP of the staging region. It has to live
 // somewhere the running firmware is not (it is written while that firmware is being
@@ -68,10 +72,14 @@
 #define FW_UP_MAX_SIZE         0x1F5000UL      // max staged image: staging region, minus the 4 KB header, the apply log, the crash log and the handedness stamp
 #define FW_STAGING_MAGIC       0xD1F1A51BUL
 
-// Bytes per firmware-update chunk (HID and split-RPC payload).
+// Bytes per firmware-update chunk over raw HID.
 // 56 bytes fits in the 64-byte RAW_EPSIZE HID packet (2 bytes framing + 4 bytes offset + 56 data + 2 spare).
-// The split RPC struct is 4 CRC + 4 offset + 56 data = 64 bytes < RPC_M2S_BUFFER_SIZE 72 bytes.
 #define FW_UP_CHUNK_SIZE 56
+// The most data one split RPC relays to the slave. The chunk message is a 16-byte
+// header (crc32, op, offset, len) plus the data, and QMK's RPC length is a uint8_t,
+// so 16 + 236 = 252 = RPC_M2S_BUFFER_SIZE (config.h). The HID path relays its 56
+// bytes through the same message; the bulk pipe (poly_pipe.c) relays up to this.
+#define FW_UP_RELAY_CHUNK_MAX 236
 
 // FW-2 physical-presence confirmation. Under FW_REQUIRE_SIGNATURE an image that
 // is not validly signed is not refused outright: COMMIT raises a prompt ON THE
@@ -152,8 +160,10 @@ bool fw_staging_last_apply_diff(uint32_t *offset, uint32_t *got, uint32_t *want)
 // into staging. Survives the power cycle a BOOTSEL recovery needs, which the watchdog
 // scratch does not -- and a copy that stops partway leaves no other trace at all.
 // How far the last self-apply's sector copy got, read back from the in-flash progress
-// log. The copy runs top-down (N-1 .. 1, then 0), so *lowest is the sector it stopped
-// at; false means no sector completed at all.
+// log. The copy writes body sectors 16..N-1 in ascending order, then 1..15, then 0
+// (images under 64 KB: N-1 down to 1, then 0), so *lowest and *highest are the
+// extremes of the completed sectors and *count how many completed; false means no
+// sector completed at all.
 bool fw_staging_apply_progress(uint32_t *lowest, uint32_t *highest, uint32_t *count);
 
 // True when the last self-apply erased its log and marked it started, i.e. it reached

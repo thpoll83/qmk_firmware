@@ -132,6 +132,14 @@ else
             a VCO/postdiv triple AND the core voltage its frequency is certified at)
 endif
 
+# Split-link baud. The default is the SERIAL_USART_SPEED in config.h (1843200);
+# `-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed for an A/B run on the rig
+# (any value the PIO divider can represent is accepted; the extended HIL soak's
+# crc_err / transport_fail counters are the verdict, not whether it links).
+ifneq ($(strip $(POLYKYBD_SPLIT_BAUD)),)
+    OPT_DEFS += -DSERIAL_USART_SPEED=$(strip $(POLYKYBD_SPLIT_BAUD))
+endif
+
 # OS detection (QMK feature): fingerprints the USB enumeration (wLength pattern) to
 # guess the host OS. Used as the AUTO-mode fallback for the active-OS state — the
 # only source on machines where the host app can't run (locked-down) or doesn't
@@ -182,6 +190,19 @@ define POLY_APPLY_WARN
 $(INTERMEDIATE_OUTPUT)/$(patsubst %.c,%.o,$(patsubst ./%,%,$1)): FILE_SPECIFIC_CFLAGS += $(POLY_WARN_CFLAGS)
 endef
 $(foreach s,$(POLY_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
+
+# Bulk pipe: a CDC-ACM (virtual serial) interface whose bulk endpoints carry
+# large host->keyboard transfers that raw HID (one 64-byte report per 1 ms USB
+# frame) cannot. ON by default; `-e POLYKYBD_BULK_PIPE=no` drops the interface
+# and the parser. Prototype: measurement commands only (keyboards/polykybd/
+# BULK_PIPE.md has the assessment and the numbers). Costs two interfaces, three
+# endpoints and (CDC_IN_CAPACITY + CDC_OUT_CAPACITY) x 64 B of RAM (config.h).
+POLYKYBD_BULK_PIPE ?= yes
+ifeq ($(strip $(POLYKYBD_BULK_PIPE)), yes)
+    VIRTSER_ENABLE = yes
+    OPT_DEFS += -DPOLYKYBD_BULK_PIPE
+    SRC += poly_pipe.c
+endif
 
 # Optional main-loop timing instrumentation (OFF by default). Measures the per-
 # iteration loop time (== the matrix-scan interval), split by overlay vs normal

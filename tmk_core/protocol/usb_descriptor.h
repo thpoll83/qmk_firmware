@@ -308,7 +308,9 @@ enum usb_endpoints {
 #define CONSOLE_EPSIZE 32
 #define MIDI_STREAM_EPSIZE 64
 #define CDC_NOTIFICATION_EPSIZE 8
-#define CDC_EPSIZE 16
+#ifndef CDC_EPSIZE
+#    define CDC_EPSIZE 16
+#endif
 #define JOYSTICK_EPSIZE 8
 #define DIGITIZER_EPSIZE 8
 

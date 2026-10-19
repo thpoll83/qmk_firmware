@@ -40,6 +40,9 @@
 #    include "hardware/structs/timer.h"   // timer_hw->timerawl — raw 1 MHz us counter
 #endif
 #include "split_fw_up.h"
+#ifdef POLYKYBD_BULK_PIPE
+#    include "poly_pipe.h"
+#endif
 #include "base/fw_staging.h"
 #include "base/core1_owner.h"
 #include "uni.h"
@@ -1387,6 +1390,9 @@ void housekeeping_task_user(void) {
     fw_screen_tick();   // ...and keep the status OLED on the matching firmware screen
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
+#ifdef POLYKYBD_BULK_PIPE
+    poly_pipe_task();                  // drop a pipe frame the host abandoned mid-way
+#endif
     slave_data_crash_pull_tick();      // master: fetch + print the slave's crash record once per link-up
 
     // Advance a playing macro by at most one step. Deliberately near the TOP of

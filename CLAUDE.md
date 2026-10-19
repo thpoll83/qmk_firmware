@@ -128,7 +128,7 @@ that matters is the 2 MB firmware partition. `FW_STAGING_OFFSET` equals the link
 staging (apply log, crash archive, handedness stamp) need an alignment assert as well as
 an overlap assert.
 
-Split keyboard (halves over a full-duplex UART), up to 72 per-keycap 72×40 OLEDs plus a
+Split keyboard (halves over a full-duplex UART at 1843200 baud), up to 72 per-keycap 72×40 OLEDs plus a
 128×64 status OLED. The host talks over 64-byte raw HID reports.
 
 ⚠️ **VIA is NOT supported. Don't write "VIA-compatible" anywhere.** Only
@@ -202,6 +202,15 @@ goes through the `add-gated-hid-command` skill.
   version. An RLE fragment length must stay below 0x80.
 - ⚠️ **The flat overlay index is the only address an upload has**, so
   `reset_overlay_mapping()`'s identity default is required for writes.
+- **The bulk pipe** ([`BULK_PIPE.md`](keyboards/polykybd/BULK_PIPE.md)) is a CDC serial
+  interface (`POLYKYBD_BULK_PIPE`, on by default) whose bulk endpoints carry large
+  host→master transfers; raw HID stays the control channel. It carries the
+  measurement commands and, since pipe protocol 2, the firmware-update chunks
+  (`FW_CHUNK`, 236 bytes, relayed to the slave in one split RPC); BEGIN, SIGNATURE,
+  COMMIT and APPLY stay on HID. ⚠️ The split UART (1843200 baud since then, 460800
+  before) still caps anything relayed to the slave. ⚠️ A pipe handler runs inside
+  `virtser_task()`, which drains the whole OUT queue in one pass: a host must pace
+  itself by the replies (a window of 4 frames), or the main loop stays in the drain.
 - **To tell the host the board changed state, increment the `G` state-generation counter in
   the GET_ID reply** (`poly_state_touch()`), which the host polls every second. It goes
   after the `V` font-pack block, which the host finds positionally. Do not add
@@ -248,7 +257,8 @@ Twelve custom transaction IDs send state to the slave with CRC32 and up to 10 re
 
 - ⚠️ **`RPC_M2S_BUFFER_SIZE` is a silent ceiling.** An oversized payload is dropped
   before sending, and bulk call sites discard the ack. Add a `static_assert` for any
-  struct that can grow. The overlay path sits 3 bytes under the old cap.
+  struct that can grow. It is 252 (sized for the firmware relay chunk); QMK's RPC
+  length field is a uint8_t, so 255 is the hard cap.
 - ⚠️ **A `user_sync_*` handler runs on the slave's split-protocol thread**, concurrently
   with its main loop. Record the request and act in housekeeping
   (`split_sync_drain_anim_replay()`); never touch the SPI bus there.

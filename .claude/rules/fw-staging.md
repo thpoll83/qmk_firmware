@@ -21,5 +21,5 @@ Notes: `FW_STAGING.md`.
   synchronously, don't leave it to a periodic task.
 - **Signing gates the firmware image AND the `.plyx` engine pack (FW-9)** — the rest of
   the resource region (`.whx`, `.plyf`) has no signature check at any target.
-- ⚠️ Sectors carved off the TOP of staging need an **alignment** assert as well as an
+- ⚠️ Sectors taken from the TOP of staging need an **alignment** assert as well as an
   overlap one; each is derived by subtraction and can move without any overlap.

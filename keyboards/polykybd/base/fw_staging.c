@@ -245,6 +245,59 @@ static inline uint32_t target_max_size(void) {
     return (s_target != FW_TARGET_FIRMWARE) ? s_fontpack_slot_size : FW_UP_MAX_SIZE;
 }
 
+// ---------------------------------------------------------------------------
+// Erase units. The erase range is contiguous: FIRMWARE is the header sector at
+// FW_STAGING_OFFSET followed by the data (FW_STAGING_DATA_OFFSET is the next
+// sector), the resource targets are data only. Sector index i is the i-th 4 KB
+// sector of that range. A step erases the largest aligned unit: a 64 KB block when
+// the offset is block-aligned and a whole block is still inside the range, else one
+// 4 KB sector. flash_range_erase() sends the block-erase command (0xD8) for a
+// block-aligned 64 KB count, which the part does in ~150 ms (W25Q64JV typical;
+// 2 s datasheet maximum) against ~60 ms per 4 KB sector, so a 545 KB image costs
+// 8 blocks + 9 sectors instead of 134 sectors. A unit that already reads blank is
+// skipped: flash after a UF2 flash, or a slot that was erased before, costs only the
+// read (~3 ms per 64 KB through the uncached XIP alias).
+// ---------------------------------------------------------------------------
+static inline uint32_t erase_unit_offset(uint32_t sector_index) {
+    return (target_has_header() ? FW_STAGING_OFFSET : target_data_offset()) + sector_index * FLASH_SECTOR_SIZE;
+}
+
+static uint32_t erase_unit_bytes(uint32_t sector_index, uint32_t sector_count) {
+    const uint32_t offset = erase_unit_offset(sector_index);
+    const uint32_t left   = (sector_count - sector_index) * FLASH_SECTOR_SIZE;
+    return ((offset & (FLASH_BLOCK_SIZE - 1)) == 0 && left >= FLASH_BLOCK_SIZE) ? FLASH_BLOCK_SIZE
+                                                                                : FLASH_SECTOR_SIZE;
+}
+
+static bool flash_range_blank(uint32_t flash_offs, uint32_t count) {
+    const uint32_t *p = (const uint32_t *)(XIP_NOCACHE_NOALLOC_BASE + flash_offs);
+    for (uint32_t i = 0; i < count / 4; i++) {
+        if (p[i] != 0xFFFFFFFFu) return false;
+    }
+    return true;
+}
+
+static uint16_t s_erase_units_done;     // erases issued since BEGIN (blocks + sectors)
+static uint16_t s_erase_units_skipped;  // units found blank and not erased
+
+// One erase step at sector index `*next` of `count`: skip it when blank, else
+// erase it with interrupts off (the caller holds core1). Advances `*next` by the
+// unit's sectors. Returns whether an erase was issued (so the caller can pace).
+static bool erase_step(uint32_t *next, uint32_t count) {
+    const uint32_t offset = erase_unit_offset(*next);
+    const uint32_t bytes  = erase_unit_bytes(*next, count);
+    *next += bytes / FLASH_SECTOR_SIZE;
+    if (flash_range_blank(offset, bytes)) {
+        s_erase_units_skipped++;
+        return false;
+    }
+    uint32_t irq = save_and_disable_interrupts();
+    flash_range_erase(offset, bytes);
+    restore_interrupts(irq);
+    s_erase_units_done++;
+    return true;
+}
+
 void fw_staging_set_fontpack_slot(uint32_t slot_off, uint32_t slot_size) {
     s_fontpack_slot_off  = slot_off;
     s_fontpack_slot_size = slot_size;
@@ -506,25 +559,19 @@ void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t ta
     // COMMIT retry, which is the exact case the probe exists to get right.
     s_last_commit_ack = 0;
 
-    // Erase the header sector (FIRMWARE only) then each data sector individually.
-    // Re-enabling interrupts between sectors keeps USB/watchdog responsive
-    // during the ~50 ms erase window per sector.
+    // Erase the header sector (FIRMWARE only) and the data, one unit at a time
+    // (erase_step: 64 KB blocks where aligned, blank units skipped). Interrupts are
+    // re-enabled between units so USB and the watchdog stay alive.
     uint32_t data_sectors = (image_size + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
-    uint32_t irq;
+    uint32_t count        = (target_has_header() ? 1u : 0u) + data_sectors;
+    uint32_t next         = 0;
+    s_erase_units_done = s_erase_units_skipped = 0;
 
 #ifdef USE_CORE1
     core1_hold();
 #endif
-    if (target_has_header()) {
-        irq = save_and_disable_interrupts();
-        flash_range_erase(FW_STAGING_OFFSET, FLASH_SECTOR_SIZE);
-        restore_interrupts(irq);
-    }
-
-    for (uint32_t s = 0; s < data_sectors; s++) {
-        irq = save_and_disable_interrupts();
-        flash_range_erase(target_data_offset() + s * FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
-        restore_interrupts(irq);
+    while (next < count) {
+        (void)erase_step(&next, count);
     }
 #ifdef USE_CORE1
     core1_release();
@@ -570,6 +617,7 @@ void fw_staging_begin_deferred_target(uint32_t image_size, uint32_t image_crc, u
     // FIRMWARE: index 0 = header sector, 1..N = data. FONTPACK: 0..N-1 = data (no header).
     s_erase_sector_count    = (target_has_header() ? 1u : 0u) + data_sectors;
     s_erase_sector_next     = 0;
+    s_erase_units_done = s_erase_units_skipped = 0;
     s_stage                 = fw_stage_next(s_stage, FW_EV_BEGIN_DEFERRED);
     s_erase_cut_short       = false;
 #ifdef USE_CORE1
@@ -613,43 +661,43 @@ void fw_staging_process_deferred(void) {
         return;
     }
 
-    // Rate-limit to one sector per 70ms: each sector takes ~50ms (irqs disabled),
-    // leaving ~20ms of UART-responsive time between erasures.  Without this gate
-    // housekeeping fires every ~1ms and the slave spends >98% of the erase period
-    // with interrupts off, making the split link completely unresponsive and
-    // causing every chunk transaction from the master to fail.
+    // Pace the erases so the split link (slave) and USB (master) get time to
+    // answer between them: FW_ERASE_GAP_MS after the previous erase ENDED. This
+    // used to be 70 ms measured from the end of a ~60 ms sector erase, so every
+    // sector cost ~130 ms and a 545 KB image 18 s on the 2026-10-19 bundle; the
+    // intent (the comment said "~20 ms of UART-responsive time") was 20 ms.
     static uint32_t s_last_sector_ms = 0;
-    if (timer_elapsed32(s_last_sector_ms) < 70) return;
+    if (timer_elapsed32(s_last_sector_ms) < FW_ERASE_GAP_MS) return;
 
-    uint32_t offset;
-    if (target_has_header()) {
-        // FIRMWARE: sector 0 = header, sectors 1..N = data.
-        offset = (s_erase_sector_next == 0)
-                     ? FW_STAGING_OFFSET
-                     : target_data_offset() + (s_erase_sector_next - 1) * FLASH_SECTOR_SIZE;
-    } else {
-        // FONTPACK: no header — sectors 0..N-1 are data.
-        offset = target_data_offset() + s_erase_sector_next * FLASH_SECTOR_SIZE;
-    }
-    // core1 is already halted by fw_staging_begin_deferred(); no halt/restart here.
-    uint32_t irq = save_and_disable_interrupts();
-    // Recheck with interrupts off. On the slave a finalize (an early COMMIT, on the
-    // split thread) can preempt this pass after the check at the top, end the
+    // The blank read runs with interrupts on (a few ms per 64 KB; harmless if a
+    // finalize preempts it). The erase itself runs with interrupts off from the
+    // stage recheck through the erase: on the slave a finalize (an early COMMIT, on
+    // the split thread) can preempt this pass after the check at the top, end the
     // stream and release core1. With interrupts off it cannot land between this
     // check and the erase, and while the stage reads ERASING the hold is in place.
-    if (s_stage != FW_STAGE_ERASING) {
+    // core1 is already halted by fw_staging_begin_deferred(); no halt/restart here.
+    const uint32_t offset = erase_unit_offset(s_erase_sector_next);
+    const uint32_t bytes  = erase_unit_bytes(s_erase_sector_next, s_erase_sector_count);
+    if (flash_range_blank(offset, bytes)) {
+        s_erase_units_skipped++;
+        s_erase_sector_next += bytes / FLASH_SECTOR_SIZE;
+    } else {
+        uint32_t irq = save_and_disable_interrupts();
+        if (s_stage != FW_STAGE_ERASING) {
+            restore_interrupts(irq);
+            return;
+        }
+        flash_range_erase(offset, bytes);
         restore_interrupts(irq);
-        return;
+        s_erase_units_done++;
+        s_erase_sector_next += bytes / FLASH_SECTOR_SIZE;
+        s_last_sector_ms = timer_read32();
     }
-    flash_range_erase(offset, FLASH_SECTOR_SIZE);
-    restore_interrupts(irq);
-    s_last_sector_ms = timer_read32();
 
     // Bump the advance counter — proves we actually got back from
     // flash_range_erase (i.e. the bootrom returned, didn't hang in XIP-off).
     if (s_process_deferred_advances != UINT16_MAX) s_process_deferred_advances++;
 
-    s_erase_sector_next++;
     if (s_erase_sector_next >= s_erase_sector_count && erase_done_transition()) {
 #ifdef USE_CORE1
         // DIAGNOSTIC PROBE (2026-05-29): restart core1 the instant erase
@@ -661,9 +709,11 @@ void fw_staging_process_deferred(void) {
         // first page flush (the chunk at offset 224), the per-flush halt/restart
         // cycle is the culprit -> cooperative core1 park.  See CLAUDE.md fw_up.
         stage_hold_drop();
-        uprintf("fw_staging_process_deferred: erase complete (%lu sectors), core1 restarted\n", s_erase_sector_count);
+        uprintf("fw_staging_process_deferred: erase complete (%lu sectors: %u erases, %u blank units skipped), core1 restarted\n",
+                s_erase_sector_count, s_erase_units_done, s_erase_units_skipped);
 #else
-        uprintf("fw_staging_process_deferred: erase complete (%lu sectors)\n", s_erase_sector_count);
+        uprintf("fw_staging_process_deferred: erase complete (%lu sectors: %u erases, %u blank units skipped)\n",
+                s_erase_sector_count, s_erase_units_done, s_erase_units_skipped);
 #endif
     } else {
 #ifdef FW_UP_VERBOSE

@@ -208,8 +208,25 @@ half):
 
 The page programs are the floor of this design: both halves program 2164 pages
 each, in series on the master's loop. The split link and the HID round trip were
-the rest. Measure a real run with the firmware-apply job's log
-(`stage_and_verify` prints the pipe time and rate) and put the number here.
+the rest.
+
+Measured on the maintainer's PC, 2026-10-19 (host log bundle, the same 545 KB
+image staged twice, the second time on firmware 5eb4625d82):
+
+| phase | HID chunks, 460800 baud (firmware 7dab29803f) | pipe, 236-byte relay, 1843200 baud |
+|---|---|---|
+| erase, both halves (4 KB sectors, 70 ms gap after each) | 18.4 s | 18.2 s |
+| chunks | 49.5 s | 10.7 s (51 KB/s) |
+| COMMIT and the unsigned-image prompt | 2.0 s | 3.0 s |
+| APPLY, reboot, reconnect | 12.4 s | 12.4 s |
+
+The erase then became the largest phase. Each sector erase takes about 60 ms and
+the deferred erase waited 70 ms after each one, so a sector cost 130 ms. Since
+then the erase runs in 64 KB blocks where the range is block-aligned (the
+staging region starts at 2 MB), skips units that already read blank, and waits
+`FW_ERASE_GAP_MS` (20 ms) after each erase (`fw_staging.c`, *Erase units*). A
+545 KB image is 8 blocks and 9 sectors, about 2 s. Put the measured number here
+from the next bundle.
 
 ## Before another payload moves onto the pipe
 

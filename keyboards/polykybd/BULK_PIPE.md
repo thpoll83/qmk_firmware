@@ -225,8 +225,9 @@ the deferred erase waited 70 ms after each one, so a sector cost 130 ms. Since
 then the erase runs in 64 KB blocks where the range is block-aligned (the
 staging region starts at 2 MB), skips units that already read blank, and waits
 `FW_ERASE_GAP_MS` (20 ms) after each erase (`fw_staging.c`, *Erase units*). A
-545 KB image is 8 blocks and 9 sectors, about 2 s. Put the measured number here
-from the next bundle.
+545 KB image is 8 blocks and 9 sectors. Measured on the next bundle (firmware
+d628eeb0c7, 2026-10-19): erase 3.3 s, chunks 10.7 s, prompt 2.0 s, apply and
+reconnect 12.8 s; 29 s end to end against 83 s over HID that morning.
 
 ## Before another payload moves onto the pipe
 

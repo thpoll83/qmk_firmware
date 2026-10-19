@@ -48,10 +48,12 @@ void request_disp_refresh(void) {
     // The flag first: finish_disp_refresh() writes DONE_ALL and then reads the
     // flag, so a request that has not set it yet writes ALL_AT_ONCE after that
     // DONE_ALL and survives it.
-    g_refresh_requested = true;
-    // volatile orders these two stores for the compiler only. The fences order
+    // volatile orders these accesses for the compiler only. The fences order
     // them for the other core too (core1 requests, core0 renders); on the M0+
-    // each is one DMB.
+    // each is one DMB. The first one publishes the caller's state (an image
+    // core1 just decoded, say) before the flag, so callers need no fence.
+    __atomic_thread_fence(__ATOMIC_SEQ_CST);
+    g_refresh_requested = true;
     __atomic_thread_fence(__ATOMIC_SEQ_CST);
     g_refresh = ALL_AT_ONCE;
     //use the following for partial update (during housekeeping)
@@ -83,6 +85,7 @@ void begin_disp_refresh(void) {
     // A request that set the flag before this store published its state before
     // the render reads it, so this render covers it.
     g_refresh_requested = false;
+    __atomic_thread_fence(__ATOMIC_SEQ_CST);   // the clear before the render reads state
 }
 
 void finish_disp_refresh(void) {

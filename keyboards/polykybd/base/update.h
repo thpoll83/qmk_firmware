@@ -77,7 +77,7 @@ void     clear_overlay_pending(void);
 // starts and finish_disp_refresh() instead of set_disp_refresh(DONE_ALL) when it
 // ends. finish_disp_refresh() leaves ALL_AT_ONCE pending if a request came in
 // after begin_disp_refresh().
-// Globals: g_refresh, g_refresh_seq, g_refresh_seen
+// Globals: g_refresh, g_refresh_requested
 void begin_disp_refresh(void);
 void finish_disp_refresh(void);
 

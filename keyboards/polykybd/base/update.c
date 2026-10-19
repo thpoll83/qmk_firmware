@@ -12,10 +12,11 @@ static volatile enum refresh_mode g_refresh = DONE_ALL;
 // note_overlay_activity() in update.h for the coalescing rationale.
 static volatile uint32_t g_last_overlay    = 0;
 static volatile uint16_t g_overlay_pending = 0;
-// Bumped by every request_disp_refresh(), and the value it had when the running
-// render started. See begin_disp_refresh() in update.h.
-static volatile uint32_t g_refresh_seq  = 0;
-static volatile uint32_t g_refresh_seen = 0;
+// Set by every request_disp_refresh(), cleared when a render starts. See
+// begin_disp_refresh() in update.h. Plain stores only: a counter's ++ is a
+// read-modify-write, and two requesters (core1 and the split thread) could
+// write back the value the render had already taken as its start.
+static volatile bool g_refresh_requested = false;
 
 void update_performed(void) {
     last_update   = timer_read32();
@@ -44,10 +45,10 @@ uint32_t get_time_since_last_update(void) {
 }
 
 void request_disp_refresh(void) {
-    // The counter first: finish_disp_refresh() writes DONE_ALL and then reads the
-    // counter, so a request that has not bumped it yet writes ALL_AT_ONCE after
-    // that DONE_ALL and survives it.
-    g_refresh_seq++;
+    // The flag first: finish_disp_refresh() writes DONE_ALL and then reads the
+    // flag, so a request that has not set it yet writes ALL_AT_ONCE after that
+    // DONE_ALL and survives it.
+    g_refresh_requested = true;
     g_refresh = ALL_AT_ONCE;
     //use the following for partial update (during housekeeping)
     // g_refresh = START_FIRST_HALF;
@@ -75,12 +76,14 @@ void clear_overlay_pending(void) {
 }
 
 void begin_disp_refresh(void) {
-    g_refresh_seen = g_refresh_seq;
+    // A request that set the flag before this store published its state before
+    // the render reads it, so this render covers it.
+    g_refresh_requested = false;
 }
 
 void finish_disp_refresh(void) {
     g_refresh = DONE_ALL;
-    if (g_refresh_seq != g_refresh_seen) {
+    if (g_refresh_requested) {
         g_refresh = ALL_AT_ONCE;
     }
 }

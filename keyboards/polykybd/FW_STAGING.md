@@ -476,9 +476,22 @@ housekeeping pass, `FW_ERASE_GAP_MS` (20 ms) after the previous erase ended:
   and on a forced reflash while the user may be typing. A 2026-10-20 field
   reflash of the nine bundles felt like stalls; the rig's perf harness (the
   resource transfer workload's `erase` window) measured one block erase as a
-  268 ms main-loop pass. A sector step is about a quarter of that, at the cost of
-  a longer erase in total (a 221 KB bundle is 54 sector steps instead of 24 mixed
-  ones), which the host's BEGIN polling absorbs;
+  238 to 268 ms main-loop pass and a sector step as 71 to 96 ms (runs 1493 and
+  1495), at the cost of a longer erase in total (a 221 KB bundle is 54 sector
+  steps instead of 24 mixed ones), which the host's BEGIN polling absorbs. The
+  sector step is as short as this design gets: 4 KB is the smallest erase unit
+  on both flash parts, and running housekeeping more often between steps changes
+  how frequent the holes are, not how long each one is. The maintainer typed
+  through a forced reflash of the nine bundles with sector steps on 2026-10-20,
+  over HID (63 s) and over the fast link (33 s, twice), and felt no stall, so
+  nothing shorter is built. If a later change needs a shorter hole, the one
+  route is erase suspend/resume: both parts support it (BY25Q64ES on rev 3.3,
+  W25Q64JV on earlier boards: Suspend 75h, Resume 7Ah, SUS at Status Register-2
+  bit 7; suspend latency tESL 30 µs and tSUS 20 µs; sector erase 35/300 ms and
+  45/400 ms typ/max), the loop that polls WIP must be RAM-resident, core1 stays
+  held, and the slice length is a new limit to agree with the maintainer. Core1
+  cannot take the erase over: both cores fetch from XIP, so no code runs from
+  flash while the chip erases;
 - a unit that already reads blank (through the uncached XIP alias) is skipped,
   which is what a slot erased before or a fresh flash after a UF2 gets.
 

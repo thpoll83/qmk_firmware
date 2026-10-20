@@ -36,7 +36,9 @@
 #define FW_STAGING_DATA_OFFSET (FW_STAGING_OFFSET + FW_STAGING_HEADER_SIZE)
 // Gap between two erase units of the deferred erase (fw_staging_process_deferred),
 // measured from the end of the previous erase: time for the split link (slave) and
-// USB (master) to answer. A 4 KB sector erase is ~60 ms, a 64 KB block ~150 ms.
+// USB (master) to answer. A 4 KB sector erase is ~60 ms, a 64 KB block ~150 ms
+// (240-270 ms measured on the rig). The firmware image erases in blocks, a
+// resource slot in sectors, because the user may be typing during the latter.
 #define FW_ERASE_GAP_MS 20
 #define FW_RESOURCE_OFFSET     0x400000UL      // resource/overlay region (== FLASH_TARGET_OFFSET in keymap.c)
 // The self-apply's progress log, at the TOP of the staging region. It has to live

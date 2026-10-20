@@ -249,20 +249,35 @@ static inline uint32_t target_max_size(void) {
 // Erase units. The erase range is contiguous: FIRMWARE is the header sector at
 // FW_STAGING_OFFSET followed by the data (FW_STAGING_DATA_OFFSET is the next
 // sector), the resource targets are data only. Sector index i is the i-th 4 KB
-// sector of that range. A step erases the largest aligned unit: a 64 KB block when
-// the offset is block-aligned and a whole block is still inside the range, else one
-// 4 KB sector. flash_range_erase() sends the block-erase command (0xD8) for a
-// block-aligned 64 KB count, which the part does in ~150 ms (W25Q64JV typical;
-// 2 s datasheet maximum) against ~60 ms per 4 KB sector, so a 545 KB image costs
-// 8 blocks + 9 sectors instead of 134 sectors. A unit that already reads blank is
-// skipped: flash after a UF2 flash, or a slot that was erased before, costs only the
-// read (~3 ms per 64 KB through the uncached XIP alias).
+// sector of that range. Each step runs with interrupts off, so for its duration
+// there is no matrix scan and no USB; the step's length is the hole a typist feels.
+//
+// FIRMWARE erases the largest aligned unit: a 64 KB block when the offset is
+// block-aligned and a whole block is still inside the range, else one 4 KB sector.
+// flash_range_erase() sends the block-erase command (0xD8) for a block-aligned
+// 64 KB count, which the part does in ~150 ms (W25Q64JV typical; 2 s datasheet
+// maximum; 240-270 ms measured on the rig, 2026-10-20) against ~60 ms per 4 KB
+// sector, so a 545 KB image costs 8 blocks + 9 sectors instead of 134 sectors.
+// Nobody types during a firmware update, so the speed is worth the long steps.
+//
+// The resource targets (font-pack bundles, the icon library, the game data, the
+// engine pack) erase one 4 KB sector per step. The host flashes them at connect
+// and on a forced reflash, while the user may be typing: a 2026-10-20 field
+// reflash of the nine bundles over HID felt like stalls, and the rig's erase
+// window put one block erase at a 268 ms main-loop pass. A sector step is a
+// quarter of that. The erase takes longer in total (a 221 KB bundle is 54 sector
+// steps instead of 24 mixed ones), which the host's BEGIN polling absorbs.
+//
+// A unit that already reads blank is skipped: flash after a UF2 flash, or a slot
+// that was erased before, costs only the read (~3 ms per 64 KB through the
+// uncached XIP alias).
 // ---------------------------------------------------------------------------
 static inline uint32_t erase_unit_offset(uint32_t sector_index) {
     return (target_has_header() ? FW_STAGING_OFFSET : target_data_offset()) + sector_index * FLASH_SECTOR_SIZE;
 }
 
 static uint32_t erase_unit_bytes(uint32_t sector_index, uint32_t sector_count) {
+    if (!target_has_header()) return FLASH_SECTOR_SIZE; // resource slot: short steps
     const uint32_t offset = erase_unit_offset(sector_index);
     const uint32_t left   = (sector_count - sector_index) * FLASH_SECTOR_SIZE;
     return ((offset & (FLASH_BLOCK_SIZE - 1)) == 0 && left >= FLASH_BLOCK_SIZE) ? FLASH_BLOCK_SIZE

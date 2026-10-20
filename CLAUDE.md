@@ -121,7 +121,9 @@ byte-identical to the pre-200 MHz builds. Peripherals derive their dividers from
 live `clk_sys`, except XIP flash (`clk_sys/PICO_FLASH_SPI_CLKDIV` = 4); re-check that if
 another clock is added. The boot banner prints `clk: sys=…Hz vreg_vsel=0x…`.
 
-**8 MB external QSPI flash**, partitioned (authoritative map: `base/fw_staging.h`):
+**8 MB external QSPI flash** (BY25Q64ES on rev 3.3 boards, W25Q64JV on earlier
+revisions; both erase 4 KB sectors and 64 KB blocks and support erase suspend/resume,
+figures in `FW_STAGING.md`), partitioned (authoritative map: `base/fw_staging.h`):
 0–2 MB running firmware, 2–4 MB update staging, 4–8 MB resources/overlays. The budget
 that matters is the 2 MB firmware partition. `FW_STAGING_OFFSET` equals the linker
 `flash1` length, so an oversized image fails to link. ⚠️ Sectors taken from the top of

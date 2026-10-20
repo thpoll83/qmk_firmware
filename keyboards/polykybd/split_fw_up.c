@@ -545,7 +545,8 @@ char fw_up_xfer_begin(fw_up_begin_sync_t *msg, bool master_ok, fw_up_xfer_key_t 
         poly_prepare_for_flash();
         // The master stages its OWN copy with the deferred erase -- the same path as
         // the slave -- so its USB stays alive: housekeeping drives
-        // fw_staging_process_deferred() one sector per 70 ms. This also halts the
+        // fw_staging_process_deferred() one erase unit per pass, FW_ERASE_GAP_MS
+        // apart (a 4 KB sector for a resource slot). This also halts the
         // master's core1 and sets fw_up_active.
         fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
         // Fire-and-forget: kicks the slave's deferred erase so both halves erase in

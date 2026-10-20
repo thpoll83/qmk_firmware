@@ -465,10 +465,20 @@ previous image in the slot has to go. The deferred erase (`fw_staging_process_de
 both halves since the master moved to the deferred path) takes one unit per
 housekeeping pass, `FW_ERASE_GAP_MS` (20 ms) after the previous erase ended:
 
-- a 64 KB block (one erase command, ~150 ms typical, 2 s datasheet maximum) when
-  the offset is block-aligned and a whole block is inside the range, else one 4 KB
-  sector (~60 ms). The staging region starts at 2 MB, so the header and the data
-  share the first block;
+- for the firmware image, a 64 KB block (one erase command, ~150 ms typical, 2 s
+  datasheet maximum, 240-270 ms measured on the rig) when the offset is
+  block-aligned and a whole block is inside the range, else one 4 KB sector
+  (~60 ms). The staging region starts at 2 MB, so the header and the data share
+  the first block;
+- for a resource slot (a font-pack bundle, the icon library, the game data, the
+  engine pack) always one 4 KB sector. Each erase step runs with interrupts off,
+  so it is a hole in the matrix scan, and the host flashes these slots at connect
+  and on a forced reflash while the user may be typing. A 2026-10-20 field
+  reflash of the nine bundles felt like stalls; the rig's perf harness (the
+  resource transfer workload's `erase` window) measured one block erase as a
+  268 ms main-loop pass. A sector step is about a quarter of that, at the cost of
+  a longer erase in total (a 221 KB bundle is 54 sector steps instead of 24 mixed
+  ones), which the host's BEGIN polling absorbs;
 - a unit that already reads blank (through the uncached XIP alias) is skipped,
   which is what a slot erased before or a fresh flash after a UF2 gets.
 

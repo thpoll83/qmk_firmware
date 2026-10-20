@@ -12,4 +12,4 @@
 - **A firmware update takes about 23 s end to end** instead of about a minute, and the font-pack bundles about half their previous time.
 - **The link between the halves runs at 1843200 baud** (460800 before). ⚠️ Both halves must run 1.9.4 or newer to talk to each other. A normal update flashes both; if one half was flashed by hand, flash the other too.
 - **Erasing the update area is faster**: 64 KB blocks where aligned, and blank areas are skipped.
-- ⚠️ **Linux:** the app's udev rule needs its serial-port lines; PolyKybdHost 1.17.30 offers the install under Updates. ⚠️ **Windows:** if no COM port appears on a computer that had the keyboard before, remove the device in Device Manager and plug it in again.
+- ⚠️ **Linux:** the app's udev rule needs its serial-port lines; PolyKybdHost 1.17.31 offers the install under Updates. ⚠️ **Windows:** if no COM port appears on a computer that had the keyboard before, remove the device in Device Manager and plug it in again.

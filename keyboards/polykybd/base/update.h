@@ -65,6 +65,22 @@ uint32_t overlay_activity_elapsed(void);
 uint16_t overlay_pending_count(void);
 void     clear_overlay_pending(void);
 
+// A render takes 50-107 ms, and a refresh can be requested while it runs: by
+// core1 when it finishes decoding an image, and on the SLAVE by every
+// user_sync_* handler, which runs on the split-protocol thread. Writing DONE_ALL
+// at the end of the render used to erase such a request, so what arrived during
+// the render was not drawn until something else asked for a refresh. On the
+// slave this hit the ESC program mark: a warm app switch's reset starts a render,
+// row 0 is drawn before the mapping chunk arrives, and the mapping's own request
+// was lost (only with the master on the right, where ESC is on the slave).
+// Call begin_disp_refresh() when a fresh render (ALL_AT_ONCE, START_FIRST_HALF)
+// starts and finish_disp_refresh() instead of set_disp_refresh(DONE_ALL) when it
+// ends. finish_disp_refresh() leaves ALL_AT_ONCE pending if a request came in
+// after begin_disp_refresh().
+// Globals: g_refresh, g_refresh_requested
+void begin_disp_refresh(void);
+void finish_disp_refresh(void);
+
 void set_disp_refresh(enum refresh_mode mode);
 
 enum refresh_mode get_refresh_mode(void) ;

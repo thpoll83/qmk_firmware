@@ -1115,6 +1115,9 @@ void sync_and_refresh_displays(void) {
         // overlays so the next FLUSH_COUNT is counted from here (chunked progress).
         s_holding = false;
         clear_overlay_pending();
+        // A request from here on (core1, or the split thread on the slave) must
+        // survive the end of this render. See begin_disp_refresh() in update.h.
+        begin_disp_refresh();
     }
 
     if (refresh == START_FIRST_HALF) {
@@ -1135,7 +1138,7 @@ void sync_and_refresh_displays(void) {
 #ifdef POLYKYBD_LOOP_PROFILE
         loop_profile_add_render_us(timer_hw->timerawl - _lp_r0);
 #endif
-        set_disp_refresh(DONE_ALL);
+        finish_disp_refresh();
     }
 }
 

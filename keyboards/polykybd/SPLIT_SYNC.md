@@ -86,3 +86,12 @@ the handler collided with the slave's own boot render and froze it at "100%" wit
 render sub-steps — the boot hang that kept the first-run intro off for months (fixed
 2026-09-25).
 
+⚠️ **The same thread can call `request_disp_refresh()` while the slave renders.** The end
+of a render must not erase that request. `sync_and_refresh_displays()` calls
+`begin_disp_refresh()` when a fresh render starts and `finish_disp_refresh()` when it
+ends, which keeps a request that arrived in between pending. Before this, the render
+ended with `set_disp_refresh(DONE_ALL)` and dropped it. With the master on the right, a
+warm app switch's reset started a slave render, ESC (row 0) was drawn before the mapping
+chunk arrived, and the ESC program mark stayed stale until the next refresh (fixed
+2026-10-18).
+

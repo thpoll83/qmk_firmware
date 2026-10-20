@@ -257,7 +257,7 @@ static inline uint32_t target_max_size(void) {
 // flash_range_erase() sends the block-erase command (0xD8) for a block-aligned
 // 64 KB count, which the part does in ~150 ms (W25Q64JV typical; 2 s datasheet
 // maximum; 240-270 ms measured on the rig, 2026-10-20) against ~60 ms per 4 KB
-// sector, so a 545 KB image costs 8 blocks + 9 sectors instead of 134 sectors.
+// sector, so a 547 KB image costs 8 blocks + 9 sectors instead of 137 sectors.
 // Nobody types during a firmware update, so the speed is worth the long steps.
 //
 // The resource targets (font-pack bundles, the icon library, the game data, the
@@ -537,10 +537,12 @@ void fw_staging_init(void) {
     s_last_commit_ack      = 0;
 }
 
-// Synchronous begin: erases staging sector-by-sector with interrupts briefly
-// re-enabled between sectors so USB and watchdog stay alive.  Use this on the
-// master (USB side); the host app timeout must cover the full erase duration
-// (~50 ms × ceil(image_size/4096) sectors).
+// Synchronous begin: erases the whole staging range before returning, one erase
+// unit at a time (erase_unit_bytes(): 64 KB blocks for the firmware image, 4 KB
+// sectors for a resource slot), with interrupts re-enabled between units so USB
+// and the watchdog stay alive. Both halves stage over the deferred path today
+// (fw_staging_begin_deferred_target(), driven from housekeeping); this entry
+// blocks its caller for the full erase, so a host timeout must cover it.
 void fw_staging_begin(uint32_t image_size, uint32_t image_crc) {
     fw_staging_begin_target(image_size, image_crc, FW_TARGET_FIRMWARE);
 }

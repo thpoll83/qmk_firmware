@@ -244,9 +244,10 @@ typedef enum {
 #define FONTPACK_BUNDLE_DOOMWAD  0x7Fu
 #define FONTPACK_BUNDLE_DOOMPACK 0x7Eu
 
-// Synchronous begin (master / USB side): erases staging flash sector-by-sector
-// with interrupts briefly re-enabled between sectors.  Blocks for ~50 ms per
-// sector (ceil(image_size/4096) + 1 sectors total).
+// Synchronous begin: erases the whole staging range before returning, one erase
+// unit at a time (64 KB blocks for the firmware image, 4 KB sectors for a
+// resource slot) with interrupts re-enabled between units. Blocks the caller for
+// the full erase; both halves use the deferred begin below instead.
 void fw_staging_begin(uint32_t image_size, uint32_t image_crc);              // FIRMWARE target
 void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t target);
 

@@ -1,5 +1,5 @@
 # PolyKybd v1.9.6 Fast link, typing during font-pack updates
-**Protocol stays at 23.** PolyKybdHost 1.17.0 or later works with this firmware, and the two can be updated independently. The fast link is used by PolyKybdHost 1.17.28 or newer (1.17.30 for font packs and the Linux udev rule); an older app updates this firmware over HID as before.
+**Protocol stays at 23.** PolyKybdHost 1.17.0 or later works with this firmware, and the two can be updated independently. The fast link is used by PolyKybdHost 1.17.28 or newer (1.17.31 for font packs and the Linux udev rule); an older app updates this firmware over HID as before.
 
 ## 1.9.6: ESC mark on the right half 🔧
 - **With the master on the right, the ESC keycap now shows the new application's mark as soon as you switch apps.** Before, it changed only at the next keycap refresh, such as a modifier press.

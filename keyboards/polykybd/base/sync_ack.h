@@ -103,3 +103,18 @@ static inline bool sync_succeeded(uint8_t ack) {
 static inline bool sync_is_link_fault(bool got_reply, uint8_t ack) {
     return !got_reply || ack == SYNC_CRC32_ERR;
 }
+
+// Can sending the same request again change this answer? send_to_bridge() asks
+// it after every delivered reply that is not an ACK.
+//
+// A refusal is the slave's verdict on what is in its own flash or on a request
+// it understood, and repeating the request cannot change either (see the
+// vocabulary above): the PRC record that does not describe an image, the icon
+// fill the slave's library cannot apply, the bundle id it does not know, the
+// chunk offset it already passed, the staged image that is not valid. Retrying
+// one cost max_retries relays (10 for an icon fill, about 6 ms) before the same
+// refusal came back. Everything else may change: a corrupt frame, SYNC_BUSY, and
+// any value this header does not know yet, so the default stays "retry".
+static inline bool sync_retry_may_help(uint8_t ack) {
+    return ack != SYNC_NACK_REFUSED;
+}

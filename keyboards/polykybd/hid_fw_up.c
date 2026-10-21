@@ -1,6 +1,7 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "hid_fw_up.h"
+#include "hid_com.h"   // raw_hid_send_before_reset
 
 #include QMK_KEYBOARD_H
 #include "raw_hid.h"
@@ -234,7 +235,12 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             bool ok = fw_staging_has_valid_staged_image();
             memset(data, 0, length);
             memcpy(data, ok ? "P\x44." : "P\x44!", 3);
-            raw_hid_send(data, length);
+            // The apply reboots this half; the host must have the verdict first.
+            if (ok) {
+                raw_hid_send_before_reset(data, length);
+            } else {
+                raw_hid_send(data, length);
+            }
             uprintf("FW_UP_APPLY: master self-apply %s\n",
                     ok ? "armed (rebooting…)" : "REJECTED (no valid staged image)");
             if (ok) {

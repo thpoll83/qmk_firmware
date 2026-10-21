@@ -12,6 +12,10 @@ so the number is the fill alone. Four kinds of report, interleaved:
 * ``27 same``: 27 pairs of one typical icon (warm flash cache).
 * ``27 distinct``: 27 different icons per report, a new set each time, like a
   real switch.
+* ``slave refuses``: pair 0 good, pair 1 a pool slot past the pool. The master
+  draws one icon and relays the report; the slave refuses it. Before the
+  relay stopped retrying a refusal this cost 10 relays (10.27 ms on the first
+  run, 2026-10-21).
 
 So ``27 tiny - refused`` is the relay and fixed cost of a fill report, and
 ``27 distinct - 27 tiny`` is drawing 27 typical icons on each half. A pair
@@ -180,6 +184,8 @@ def probe(raw, log):
                         (".", 0xFF)),
             "27 same": (same, (".", 0xFF)),
             "27 distinct": (distinct, (".", 0xFF)),
+            "slave refuses": (lambda: H._icon_fill_report([(0, 0), (H.NUM_OVERLAY_SLOTS + 100, 0)], 10),
+                              ("!", 0)),
         }
         times = {name: [] for name in cases}
         for _ in range(REPEATS):
@@ -198,7 +204,7 @@ def probe(raw, log):
         for name, ts in times.items():
             ts.sort()
             med[name] = statistics.median(ts)
-            log(f"[probe] {name:12s} median {med[name]:6.2f} ms  min {ts[0]:6.2f}  "
+            log(f"[probe] {name:13s} median {med[name]:6.2f} ms  min {ts[0]:6.2f}  "
                 f"p90 {ts[int(0.9 * (len(ts) - 1))]:6.2f}  max {ts[-1]:6.2f}  (n={len(ts)})")
         fixed = med["27 tiny"] - med["refused"]
         draw_same = med["27 same"] - med["27 tiny"]

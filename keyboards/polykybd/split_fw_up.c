@@ -133,10 +133,11 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
     if (!same_image) {
         // ⚠️ Resolve and VALIDATE the slot before recording this identity. Caching
         // s_begun_* first meant a refused bundle was remembered as "begun", so an
-        // identical retry — and send_to_bridge does retry a non-ACK — took the
-        // same_image path below, skipped this validation entirely, found no erase
-        // pending and could ACK a bundle we had just refused, against whatever slot
-        // was last set. Pre-existing; found in review of the refusal relabel.
+        // identical retry (send_to_bridge then retried a refusal; a host BEGIN
+        // retry still repeats it) took the same_image path below, skipped this
+        // validation entirely, found no erase pending and could ACK a bundle we
+        // had just refused, against whatever slot was last set. Pre-existing;
+        // found in review of the refusal relabel.
         if (msg->target == FW_TARGET_FONTPACK) {
             uint32_t slot_off = 0, slot_size = 0;
             if (!fontpack_slot(msg->bundle, &slot_off, &slot_size)) {
@@ -236,8 +237,9 @@ static void flash_stage_chunk(uint8_t in_len, const void* in_data, uint8_t out_l
         bool ok = fw_staging_write_chunk(msg->offset, msg->data, (uint8_t)msg->len);
 #endif
         // A rejected write is a REFUSAL, not a CRC error — the frame checked out
-        // above; the stager declined the offset. (The relay still retries, and the
-        // next_offset invariant still guards a stale reply.)
+        // above; the stager declined the offset. (A refusal ends the relay's
+        // retries, sync_ack.h; the next_offset invariant still guards a stale
+        // reply.)
         ack = ok ? SYNC_ACK : SYNC_NACK_REFUSED;
     }
     fw_staging_note_chunk_call(msg->offset, ack);

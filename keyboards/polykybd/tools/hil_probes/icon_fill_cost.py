@@ -7,14 +7,15 @@ reports one at a time on an idle keyboard and times the round trip on the rig,
 so the number is the fill alone. Four kinds of report, interleaved:
 
 * ``refused``: width 7, refused before any pair is read. The round-trip floor.
-* ``1+bad``: pair 0 good, pair 1 names a pool slot past the pool. The master
-  draws one icon, relays the report, and the slave draws one and refuses.
-* ``27 same``: 27 pairs of one icon (warm flash cache) on both halves.
+* ``27 tiny``: 27 pairs of a 6x6 icon on both halves. The relay and the
+  per-pair work with almost nothing to draw.
+* ``27 same``: 27 pairs of one typical icon (warm flash cache).
 * ``27 distinct``: 27 different icons per report, a new set each time, like a
   real switch.
 
-So ``27 same - 1+bad`` is 26 icons drawn on each half, and ``1+bad - refused``
-is the relay plus one icon per half.
+So ``27 tiny - refused`` is the relay and fixed cost of a fill report, and
+``27 distinct - 27 tiny`` is drawing 27 typical icons on each half. A pair
+the other half refuses is no baseline: that path has costs of its own.
 
 The rig holds no icon library (the HIL test logs "absent (v0)"), so the probe
 flashes a synthetic one into slot 8 first: 512 icons whose sizes and offsets
@@ -158,7 +159,8 @@ def probe(raw, log):
 
         cases = {
             "refused": (lambda: H._icon_fill_report([(0, 0)], 7), ("!", 0)),
-            "1+bad": (lambda: H._icon_fill_report([(0, 0), (H.NUM_OVERLAY_SLOTS + 100, 0)], 10), ("!", 0)),
+            "27 tiny": (lambda: H._icon_fill_report([(slot, 0) for slot in range(PAIRS)], WIDTH),
+                        (".", 0xFF)),
             "27 same": (same, (".", 0xFF)),
             "27 distinct": (distinct, (".", 0xFF)),
         }
@@ -181,14 +183,13 @@ def probe(raw, log):
             med[name] = statistics.median(ts)
             log(f"[probe] {name:12s} median {med[name]:6.2f} ms  min {ts[0]:6.2f}  "
                 f"p90 {ts[int(0.9 * (len(ts) - 1))]:6.2f}  max {ts[-1]:6.2f}  (n={len(ts)})")
-        per_icon = (med["27 same"] - med["1+bad"]) / (PAIRS - 1)
-        per_icon_d = (med["27 distinct"] - med["1+bad"]) / (PAIRS - 1)
-        fixed = med["1+bad"] - med["refused"] - per_icon
-        log(f"[probe] per icon, both halves: {per_icon:.3f} ms (same icon), "
-            f"{per_icon_d:.3f} ms (distinct icons)")
-        log(f"[probe] relay and fixed cost of a fill report: {fixed:.2f} ms; "
-            f"a full report of 27 distinct icons: {med['27 distinct'] - med['refused']:.2f} ms "
-            f"above the {med['refused']:.2f} ms round trip")
+        fixed = med["27 tiny"] - med["refused"]
+        draw_same = med["27 same"] - med["27 tiny"]
+        draw_distinct = med["27 distinct"] - med["27 tiny"]
+        log(f"[probe] relay and fixed cost of a fill report: {fixed:.2f} ms above the "
+            f"{med['refused']:.2f} ms round trip")
+        log(f"[probe] drawing 27 typical icons on each half: {draw_same:.2f} ms (one icon), "
+            f"{draw_distinct:.2f} ms (distinct icons)")
         measured = True
     finally:
         reply = link.xfer(bytes([H.POLY_CHANNEL, H.CMD_OVERLAY_FLAGS_ON, H.ICON_FILL_CLEANUP_BITS]), 2000)

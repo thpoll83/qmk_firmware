@@ -24,6 +24,13 @@ average, 34% ink). Pixel content does not change the cost of a draw except
 through the ink share. Afterwards slot 8 gets an empty library (version 0), which
 the keyboard and the HIL test treat like the erased slot it was.
 
+It runs only when GET_ID reports slot 8 as empty (v0) or as its own leftover.
+⚠️ That version is the LOWER of the two halves (since protocol v20), so a half
+holding a real library beside an empty one also reads v0 and would be erased.
+Only an interrupted flash of a real library leaves a rig in that state, and
+nothing on the rig flashes one; checking each half needs a command GET_ID does
+not have.
+
 Run it with::
 
     tier: debug   probe: icon_fill_cost
@@ -196,7 +203,7 @@ def probe(raw, log):
         fixed = med["27 tiny"] - med["refused"]
         draw_same = med["27 same"] - med["27 tiny"]
         draw_distinct = med["27 distinct"] - med["27 tiny"]
-        log(f"[probe] relay and fixed cost of a fill report: {fixed:.2f} ms above the "
+        log(f"[probe] relay and per-pair work of a fill report: {fixed:.2f} ms above the "
             f"{med['refused']:.2f} ms round trip")
         log(f"[probe] drawing 27 typical icons on each half: {draw_same:.2f} ms (one icon), "
             f"{draw_distinct:.2f} ms (distinct icons)")

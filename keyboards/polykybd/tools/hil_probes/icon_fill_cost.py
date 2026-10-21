@@ -131,9 +131,11 @@ def probe(raw, log):
         library = _library(N_ICONS, CONTENT_VERSION)
         log(f"[probe] flashing a synthetic icon library: {N_ICONS} icons, {len(library)} bytes")
         t0 = time.perf_counter()
+        # Set before the flash: a COMMIT that applied but whose reply was lost
+        # would otherwise leave the whole synthetic library on the rig.
+        flashed = True
         if not _flash(link, H, library, log):
             return False
-        flashed = True
         log(f"[probe] flashed in {time.perf_counter() - t0:.1f} s")
 
         ok = False

@@ -81,3 +81,17 @@ TEST(FwStage, ChunksAreRefusedAfterAFinalizeCutTheEraseShort) {
     s = fw_stage_next(s, FW_EV_BEGIN_SYNC);
     EXPECT_TRUE(fw_stage_accepts_chunk(s, false));
 }
+
+// The name is all a field log shows of a slave's refusal, so each reason must print
+// its own name, and a value from a newer build reads "unknown" rather than a wrong
+// reason.
+TEST(FwStage, EveryChunkRefusalPrintsItsOwnName) {
+    EXPECT_STREQ("none", fw_chunk_refusal_name(FW_CHUNK_REFUSAL_NONE));
+    EXPECT_STREQ("not-initialized", fw_chunk_refusal_name(FW_CHUNK_REFUSAL_NOT_INITIALIZED));
+    EXPECT_STREQ("erase-cut-short", fw_chunk_refusal_name(FW_CHUNK_REFUSAL_ERASE_CUT_SHORT));
+    EXPECT_STREQ("erase-pending", fw_chunk_refusal_name(FW_CHUNK_REFUSAL_ERASE_PENDING));
+    EXPECT_STREQ("offset-mismatch", fw_chunk_refusal_name(FW_CHUNK_REFUSAL_OFFSET_MISMATCH));
+    EXPECT_STREQ("past-end", fw_chunk_refusal_name(FW_CHUNK_REFUSAL_PAST_END));
+    EXPECT_STREQ("unknown", fw_chunk_refusal_name(FW_CHUNK_REFUSAL_PAST_END + 1));
+    EXPECT_STREQ("unknown", fw_chunk_refusal_name(0xFF));
+}

@@ -5,6 +5,7 @@
 
 #include "fw_staging.h"
 #include "fw_stage.h"         // IDLE / ERASING / RECEIVING transitions (pure)
+#include "sync_ack.h"         // SYNC_NACK_REFUSED: which chunk calls carry a refusal reason
 #include "fontpack.h"        // FONTPACK target: fontpack_reload()/present + max size
 #include "polymod_crc32.h"
 #include "monocypher-ed25519.h"   // FW-2: Ed25519 image signature verify (polymod_monocypher)
@@ -373,6 +374,10 @@ static uint16_t s_process_deferred_advances;  // every actual sector erase
 static uint32_t s_last_chunk_offset;
 static uint8_t  s_last_chunk_ack;
 static uint8_t  s_last_commit_ack;   // ack the slave's COMMIT handler last returned
+// Set by fw_staging_write_chunk() on a refusal; fw_staging_note_chunk_call() turns
+// it into the reported s_last_chunk_refusal for that chunk.
+static uint8_t  s_write_refusal;
+static uint8_t  s_last_chunk_refusal;
 
 // ---------------------------------------------------------------------------
 // flash_range_program wrapped in the IRQ-disable + core1 hold the bootrom flash ops
@@ -535,6 +540,7 @@ void fw_staging_init(void) {
     s_last_chunk_offset    = 0;
     s_last_chunk_ack       = 0;
     s_last_commit_ack      = 0;
+    s_last_chunk_refusal   = FW_CHUNK_REFUSAL_NONE;
 }
 
 // Synchronous begin: erases the whole staging range before returning, one erase
@@ -754,15 +760,19 @@ void fw_staging_process_deferred(void) {
 }
 
 bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
+    s_write_refusal = FW_CHUNK_REFUSAL_NONE;
     if (!s_initialized) {
         uprintf("fw_staging_write_chunk: not initialized\n");
+        s_write_refusal = FW_CHUNK_REFUSAL_NOT_INITIALIZED;
         return false;
     }
     if (!fw_stage_accepts_chunk(s_stage, s_erase_cut_short)) {
         if (s_erase_cut_short) {
             uprintf("fw_staging_write_chunk: erase was cut short at sector %lu/%lu, BEGIN again\n", s_erase_sector_next, s_erase_sector_count);
+            s_write_refusal = FW_CHUNK_REFUSAL_ERASE_CUT_SHORT;
         } else {
             uprintf("fw_staging_write_chunk: erase still pending (sector %lu/%lu)\n", s_erase_sector_next, s_erase_sector_count);
+            s_write_refusal = FW_CHUNK_REFUSAL_ERASE_PENDING;
         }
         return false;
     }
@@ -791,10 +801,12 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
     }
     if (offset != s_next_offset) {
         uprintf("fw_staging_write_chunk: offset mismatch got=%lu expected=%lu\n", offset, s_next_offset);
+        s_write_refusal = FW_CHUNK_REFUSAL_OFFSET_MISMATCH;
         return false;
     }
     if (offset >= s_image_size) {
         uprintf("fw_staging_write_chunk: offset=%lu >= image_size=%lu\n", offset, s_image_size);
+        s_write_refusal = FW_CHUNK_REFUSAL_PAST_END;
         return false;
     }
 
@@ -1165,7 +1177,7 @@ void fw_staging_get_status(fw_staging_status_t *out) {
     out->chunk_handler_errors      = s_chunk_handler_errors;
     out->process_deferred_calls    = s_process_deferred_calls;
     out->process_deferred_advances = s_process_deferred_advances;
-    out->pad                       = 0;
+    out->last_chunk_refusal        = s_last_chunk_refusal;
 }
 
 void fw_staging_note_begin_call(void) {
@@ -1176,6 +1188,9 @@ void fw_staging_note_chunk_call(uint32_t offset, uint8_t ack) {
     if (s_chunk_handler_calls != UINT16_MAX) s_chunk_handler_calls++;
     s_last_chunk_offset = offset;
     s_last_chunk_ack    = ack;
+    // A CRC error never reaches the stager, so only a refusal carries a reason.
+    s_last_chunk_refusal = (ack == SYNC_NACK_REFUSED) ? s_write_refusal : FW_CHUNK_REFUSAL_NONE;
+    s_write_refusal      = FW_CHUNK_REFUSAL_NONE;
     // Treat anything other than SYNC_ACK as an "error" from the chunk path,
     // so a stuck slave that always returns CRC_ERR shows up clearly.
     if (ack != 0xCA /* SYNC_ACK */) {

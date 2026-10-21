@@ -228,7 +228,9 @@ uint8_t fw_up_xfer_commit_slave(void);
 
 // Master-side helpers over the read-only FLASH_STAGE_STATUS op.
 bool fw_up_query_slave_status(fw_staging_status_t *out);
-void fw_up_log_slave_status(const char *tag);
+// Prints the slave's status on one console line (also when its CRC is bad, marked
+// as such). Returns true and fills `out` (may be NULL) when the status is valid.
+bool fw_up_log_slave_status(const char *tag, fw_staging_status_t *out);
 // True when a non-ACK COMMIT means the slave REFUSED (re-flash) rather than the
 // link dropping the answer (retry). `tag` prefixes the diagnostic line.
 bool fw_up_slave_refused_commit(uint8_t slave_ack, const char *tag);

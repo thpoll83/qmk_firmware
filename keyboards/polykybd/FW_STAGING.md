@@ -457,6 +457,29 @@ are derived from the stage, so the wire format is unchanged.
   marks the slot dirty (`fw_staging_written()`), so an identical BEGIN retry
   re-erases instead of being told a half-erased slot is ready.
 
+### Reading a chunk NACK
+
+A chunk is relayed to the slave first (10 attempts) and written to the master's
+copy second. When every relay attempt fails, the master prints, without debug on:
+
+```
+FW_UP_BLOCK relay FAILED offset=69148 len=236 after 10 attempts: rpc_fail=0 refused=10 crc_err=0 stale_ack=0 other=0 (last ack=0xb2 slave_next=69148)
+slave status (chunk-fail): … next_off=69148 … last_chunk_off=69148 last_ack=0xb2 refusal=offset-mismatch …
+FW_UP_BLOCK: NACK offset=69148 len=236 resume=69148
+```
+
+(The numbers are an example, not a measurement.) The first line counts what the
+10 attempts got back: `rpc_fail` is a transport failure (no reply), `refused` a
+slave stager refusal, `crc_err` a frame corrupted on the way, `stale_ack` an ACK
+whose cursor is not past this chunk (a reply to an earlier one). The status line
+is printed once per failure burst, for HID, font-pack and fast-link chunks alike.
+Its `refusal` is why the slave's stager refused the last chunk
+(`fw_chunk_refusal_t`: `not-initialized`, `erase-cut-short`, `erase-pending`,
+`offset-mismatch`, `past-end`, or `none` when it was written or never reached the
+stager). It uses the former pad byte of the STATUS block, so the wire size is
+unchanged. A master-side refusal prints its own `fw_staging_write_chunk:` line
+instead, because the master has a console.
+
 ## The staging erase
 
 BEGIN erases the header sector and the image's data sectors before any chunk is

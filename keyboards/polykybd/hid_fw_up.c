@@ -72,7 +72,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             static bool s_logged_ready_status = false;
             if (slave_ok && master_done && !s_logged_ready_status) {
                 s_logged_ready_status = true;
-                fw_up_log_slave_status("begin-ready");
+                fw_up_log_slave_status("begin-ready", NULL);
             }
             // Also log slave state periodically while waiting for erase: every
             // ~16 polls of CRC_ERR (≈ 4 s at the host's 250 ms poll cadence) we
@@ -89,7 +89,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             static uint16_t s_pending_poll_count = 0;
             if (!slave_ok && (slave_ack == SYNC_BUSY || slave_ack == SYNC_CRC32_ERR)) {
                 if ((++s_pending_poll_count & 0x0F) == 0) {
-                    fw_up_log_slave_status("begin-pending");
+                    fw_up_log_slave_status("begin-pending", NULL);
                 }
             } else {
                 s_pending_poll_count = 0;
@@ -120,7 +120,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             //   small FAIL           -> slave already hung post-erase, before any chunk
             // See FW_UP_BASELINE.md (run 3).
             if (offset == 0) {
-                fw_up_log_slave_status("pre-chunk");
+                fw_up_log_slave_status("pre-chunk", NULL);
                 uint8_t              big_req[64];
                 fw_up_status_reply_t big_reply;
                 memset(big_req, 0xA5, sizeof(big_req));
@@ -137,20 +137,9 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // Relay first, then the master's own write, NACK with the resume point:
             // fw_up_xfer_chunk(), shared with the font-pack transfer.
             bool relay_ok = false;
+            // A chunk that does not reach the slave logs the slave's status once
+            // per failure burst, in fw_up_xfer_block(), for every chunk path.
             const bool ok = fw_up_xfer_chunk(data, length, CMD_FW_UP_CHUNK, "FW_UP_CHUNK", &relay_ok);
-            // First-failure diagnostic: when a chunk doesn't reach the slave,
-            // immediately query the slave's internal state so we can tell from
-            // the master serial log whether the slave is fully hung (status RPC
-            // also fails) or just rejecting the chunk (status RPC works and
-            // shows the counters).  Gated to once per failure burst so we don't
-            // spam if every chunk is failing.
-            static bool s_logged_failure_status = false;
-            if (!relay_ok && !s_logged_failure_status) {
-                s_logged_failure_status = true;
-                fw_up_log_slave_status("chunk-fail");
-            } else if (relay_ok) {
-                s_logged_failure_status = false;  // re-arm after recovery
-            }
 #ifdef FW_UP_VERBOSE
             uprintf("FW_UP_CHUNK: slave_ack=0x%02x master_write_ok=%d\n", relay_ok ? SYNC_ACK : SYNC_GIVEUP, ok);
 #else

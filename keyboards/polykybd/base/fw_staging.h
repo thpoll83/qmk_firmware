@@ -415,7 +415,10 @@ typedef struct _fw_staging_status_t {
     // Consumes half the old pad, so the struct size — and therefore the RPC reply
     // size — is unchanged.
     uint8_t  last_commit_ack;
-    uint8_t  pad;
+    // Why the stager refused the most recent chunk (fw_chunk_refusal_t, 0 when it
+    // was written or never reached the stager). Was the pad byte, so the struct
+    // size and the RPC reply size are unchanged; an older slave sends 0.
+    uint8_t  last_chunk_refusal;
 } fw_staging_status_t;
 
 // Fill `out` with the current internal state.  Safe to call from anywhere.

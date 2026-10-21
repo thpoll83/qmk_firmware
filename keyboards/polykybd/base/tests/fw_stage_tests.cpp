@@ -6,6 +6,9 @@
 // behaviour on purpose.
 #include "gtest/gtest.h"
 
+#include <set>
+#include <string>
+
 extern "C" {
 #include "fw_stage.h"
 }
@@ -80,4 +83,21 @@ TEST(FwStage, ChunksAreRefusedAfterAFinalizeCutTheEraseShort) {
     EXPECT_FALSE(fw_stage_accepts_chunk(s, true));
     s = fw_stage_next(s, FW_EV_BEGIN_SYNC);
     EXPECT_TRUE(fw_stage_accepts_chunk(s, false));
+}
+
+// The name is all a field log shows of a slave's refusal, so every reason has its
+// own, and a value from a newer build reads "unknown" rather than a wrong reason.
+TEST(FwStage, EveryChunkRefusalHasItsOwnName) {
+    const uint8_t reasons[] = {FW_CHUNK_REFUSAL_NONE, FW_CHUNK_REFUSAL_NOT_INITIALIZED,
+                               FW_CHUNK_REFUSAL_ERASE_CUT_SHORT, FW_CHUNK_REFUSAL_ERASE_PENDING,
+                               FW_CHUNK_REFUSAL_OFFSET_MISMATCH, FW_CHUNK_REFUSAL_PAST_END};
+    std::set<std::string> names;
+    for (uint8_t r : reasons) {
+        const std::string name = fw_chunk_refusal_name(r);
+        EXPECT_NE("unknown", name) << "reason " << unsigned(r);
+        names.insert(name);
+    }
+    EXPECT_EQ(sizeof(reasons), names.size());
+    EXPECT_STREQ("unknown", fw_chunk_refusal_name(FW_CHUNK_REFUSAL_PAST_END + 1));
+    EXPECT_STREQ("unknown", fw_chunk_refusal_name(0xFF));
 }

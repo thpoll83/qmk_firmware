@@ -5,6 +5,7 @@
 #include "quantum.h"
 #include "polymod_crc32.h"
 #include "base/fw_staging.h"   // fw_staging_set_fontpack_slot
+#include "base/fw_stage.h"     // fw_chunk_refusal_name for the slave status line
 #include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
 #include "base/fw_up_verdict.h"  // pure COMMIT-failure classification (unit-tested)
 #include "base/hand_stamp.h"     // handedness change: record here, write from the main loop
@@ -42,7 +43,13 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, uint
     memcpy(chunk_msg.data, chunk_data, len);
     chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], wire_len - 4, 0);
     uint8_t slave_ack = SYNC_GIVEUP;   // no answer yet
-    for (uint8_t retry = 0; retry < 10; ++retry) {
+    // What each failed attempt got back, for the line printed when all of them fail.
+    // stale_ack: an ACK whose cursor is not past this chunk (a reply to an earlier one).
+    uint8_t  n_rpc_fail = 0, n_refused = 0, n_crc_err = 0, n_stale_ack = 0, n_other = 0;
+    uint8_t  last_ack  = SYNC_GIVEUP;
+    uint32_t last_next = 0;
+    const uint8_t attempts = 10;
+    for (uint8_t retry = 0; retry < attempts; ++retry) {
         fw_up_chunk_reply_t reply;
         memset(&reply, 0, sizeof(reply));
         reply.ack = SYNC_GIVEUP;   // sentinel: transaction_rpc_exec may not write it
@@ -56,10 +63,33 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, uint
             }
             break;
         }
+        if (!ok_rpc) {
+            n_rpc_fail++;
+        } else if (reply.ack == SYNC_ACK) {
+            n_stale_ack++;
+        } else if (reply.ack == SYNC_NACK_REFUSED) {
+            n_refused++;
+        } else if (reply.ack == SYNC_CRC32_ERR) {
+            n_crc_err++;
+        } else {
+            n_other++;
+        }
+        last_ack  = reply.ack;
+        last_next = reply.next_offset;
         if (log_tag && debug_enable) {
             uprintf("%s relay retry %u (offset=%lu success=%d ack=0x%02x slave_next=%lu)\n",
                     log_tag, retry, offset, (int)ok_rpc, reply.ack, reply.next_offset);
         }
+    }
+    // Printed without debug_enable: a field log has only this to say why a chunk
+    // was NACKed (2026-10-21: three NACKs in a font-pack flash and no reason).
+    if (slave_ack != SYNC_ACK && log_tag) {
+        uprintf("%s relay FAILED offset=%lu len=%lu after %u attempts: rpc_fail=%u refused=%u "
+                "crc_err=%u stale_ack=%u other=%u (last ack=0x%02x slave_next=%lu)\n",
+                log_tag, (unsigned long)offset, (unsigned long)len, (unsigned)attempts,
+                (unsigned)n_rpc_fail, (unsigned)n_refused, (unsigned)n_crc_err,
+                (unsigned)n_stale_ack, (unsigned)n_other, (unsigned)last_ack,
+                (unsigned long)last_next);
     }
     return slave_ack == SYNC_ACK;
 }
@@ -237,9 +267,8 @@ static void flash_stage_chunk(uint8_t in_len, const void* in_data, uint8_t out_l
         bool ok = fw_staging_write_chunk(msg->offset, msg->data, (uint8_t)msg->len);
 #endif
         // A rejected write is a REFUSAL, not a CRC error — the frame checked out
-        // above; the stager declined the offset. (A refusal ends the relay's
-        // retries, sync_ack.h; the next_offset invariant still guards a stale
-        // reply.)
+        // above; the stager declined the offset. (The relay still retries, and the
+        // next_offset invariant still guards a stale reply.)
         ack = ok ? SYNC_ACK : SYNC_NACK_REFUSED;
     }
     fw_staging_note_chunk_call(msg->offset, ack);
@@ -304,18 +333,18 @@ bool fw_up_query_slave_status(fw_staging_status_t *out) {
     return true;
 }
 
-void fw_up_log_slave_status(const char *tag) {
+bool fw_up_log_slave_status(const char *tag, fw_staging_status_t *out) {
     fw_up_status_reply_t reply;
     if (!fetch_slave_status(&reply)) {
         uprintf("slave status (%s): RPC FAILED — slave unresponsive\n", tag);
-        return;
+        return false;
     }
     // Printed either way; the tag says whether to trust the numbers.
     const char *suspect = slave_status_crc_ok(&reply) ? "" : " [CRC BAD — values suspect]";
     const fw_staging_status_t s = reply.status;
     uprintf("slave status (%s): init=%u active=%u erase_pending=%u erase=%u/%u "
             "next_off=%lu begin_calls=%u chunk_calls=%u chunk_errs=%u "
-            "last_chunk_off=%lu last_ack=0x%02x last_commit_ack=0x%02x "
+            "last_chunk_off=%lu last_ack=0x%02x refusal=%s last_commit_ack=0x%02x "
             "pd_calls=%u pd_advances=%u%s\n",
             tag,
             (unsigned)s.initialized, (unsigned)s.fw_up_active, (unsigned)s.erase_pending,
@@ -324,8 +353,11 @@ void fw_up_log_slave_status(const char *tag) {
             (unsigned)s.begin_handler_calls, (unsigned)s.chunk_handler_calls,
             (unsigned)s.chunk_handler_errors,
             (unsigned long)s.last_chunk_offset, (unsigned)s.last_chunk_ack,
-            (unsigned)s.last_commit_ack,
+            fw_chunk_refusal_name(s.last_chunk_refusal), (unsigned)s.last_commit_ack,
             (unsigned)s.process_deferred_calls, (unsigned)s.process_deferred_advances, suspect);
+    if (!slave_status_crc_ok(&reply)) return false;
+    if (out) *out = s;
+    return true;
 }
 
 // Classify a non-ACK COMMIT ack, asking the slave directly when the ack itself is
@@ -579,16 +611,28 @@ bool fw_up_xfer_block(uint32_t offset, const uint8_t *data, uint32_t len, uint32
     }
     if (relay_ok) *relay_ok = relayed;
     uint32_t next = fw_staging_next_offset();
+    // The first relay failure of a burst logs the slave's whole status (its cursor,
+    // the last chunk it saw and why it refused it); the rest of the burst only reads
+    // the cursor, so a link that fails every chunk does not flood the console.
+    static bool s_relay_fail_logged = false;
     if (!ok) {
         // The lower of the two cursors. If the slave is unreachable its cursor is
         // unknown, so report the master's (the sender retries the current chunk).
         fw_staging_status_t st;
-        if (fw_up_query_slave_status(&st) && st.next_offset < next) {
+        bool                have_st;
+        if (!relayed && !s_relay_fail_logged) {
+            s_relay_fail_logged = true;
+            have_st             = fw_up_log_slave_status("chunk-fail", &st);
+        } else {
+            have_st = fw_up_query_slave_status(&st);
+        }
+        if (have_st && st.next_offset < next) {
             next = st.next_offset;
         }
         uprintf("FW_UP_BLOCK: NACK offset=%lu len=%lu resume=%lu\n",
                 (unsigned long)offset, (unsigned long)len, (unsigned long)next);
     }
+    if (relayed) s_relay_fail_logged = false;
     if (resume) *resume = next;
     return ok;
 }

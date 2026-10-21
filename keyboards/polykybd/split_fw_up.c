@@ -556,6 +556,13 @@ uint8_t fw_up_send_slave_reset(poly_reset_sync_t *msg) {
     return ack;
 }
 
+// The first relay failure of a burst logs the slave's whole status (its cursor, the
+// last chunk it saw and why it refused it); the rest of the burst only reads the
+// cursor, so a link that fails every chunk does not flood the console. A relayed
+// chunk ends the burst, and so does a new BEGIN: a stream that ended on a failure
+// must not silence the next stream's first one.
+static bool s_relay_fail_logged = false;
+
 char fw_up_xfer_begin(fw_up_begin_sync_t *msg, bool master_ok, fw_up_xfer_key_t *last,
                       fw_up_xfer_begin_t *out) {
     // ⚠️ The key alone cannot tell a re-poll from a RETRY. It outlives the attempt it
@@ -574,6 +581,7 @@ char fw_up_xfer_begin(fw_up_begin_sync_t *msg, bool master_ok, fw_up_xfer_key_t 
         last->size   = msg->image_size;
         last->crc    = msg->image_crc;
         last->bundle = msg->bundle;
+        s_relay_fail_logged = false;
         // Drop to the base layer + refresh before the flash holds the main loop, so
         // the user can still type plain characters meanwhile.
         poly_prepare_for_flash();
@@ -611,10 +619,6 @@ bool fw_up_xfer_block(uint32_t offset, const uint8_t *data, uint32_t len, uint32
     }
     if (relay_ok) *relay_ok = relayed;
     uint32_t next = fw_staging_next_offset();
-    // The first relay failure of a burst logs the slave's whole status (its cursor,
-    // the last chunk it saw and why it refused it); the rest of the burst only reads
-    // the cursor, so a link that fails every chunk does not flood the console.
-    static bool s_relay_fail_logged = false;
     if (!ok) {
         // The lower of the two cursors. If the slave is unreachable its cursor is
         // unknown, so report the master's (the sender retries the current chunk).

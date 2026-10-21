@@ -43,6 +43,18 @@ def _classify(resp):
 def probe(raw, log):
     from station import hil_tests as H
 
+    # Baseline: an ordinary request/reply on this rig, same call shape.
+    base = []
+    for _ in range(20):
+        t0 = time.monotonic()
+        resp = raw.send(bytes([POLY_CHANNEL, 0x06]), timeout_ms=READ_TIMEOUT_MS, attempts=1)
+        if resp:
+            base.append((time.monotonic() - t0) * 1000.0)
+    base.sort()
+    if base:
+        log(f"[probe] GET_ID baseline: {len(base)}/20 replies, {base[0]:.1f} .. {base[-1]:.1f} ms, "
+            f"median {base[len(base) // 2]:.1f} ms")
+
     counts = {"ok": 0, "none": 0, "bad": 0}
     ok_ms = []
     states = {}

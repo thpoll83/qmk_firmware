@@ -265,6 +265,15 @@ reading before you change either one.
     QK_REBOOT key's hardened handoff (20 retries, the whole round re-fired once).
     `shutdown_user()` flushes only dirty state and disarms the watchdog, so a
     deliberate reboot is never archived as a crash.
+  - ⚠️ **"ACK before the reset" means the host has the ACK, not that it was
+    queued.** A reply waits in the USB endpoint until the host fetches it, 71..103 ms
+    after the request on the HIL rig. A reset before that loses it, and a reset
+    during the transfer delivers a cut-off report whose last byte is garbage (the
+    boot loop's `0xee` and `0xfe` status bytes, 2026-10-21). Every reply followed by
+    a deliberate reset (cmds `23`, `25`, `43`, and `FW_UP_APPLY`) goes through
+    `raw_hid_send_before_reset()`, which waits up to 200 ms for the endpoint to
+    finish. Probe `reboot_ack` (100 reboots on the rig): 60 full replies, 37 lost
+    and 3 cut off before, 96 full and 4 lost after.
   - Older firmware NACKs an unknown command; the host gates it on v22.
   **v23** adds cmd `33`'s **DIM** flag (width byte bit 7, `OVERLAY_MAP_W_DIM`): every
   pair in that report is drawn dimmed. On a website the host layers the site's

@@ -118,17 +118,24 @@ static inline uint16_t hid_payload_avail(uint8_t length, uint8_t header) {
     return length > header ? (uint16_t)(length - header) : 0;
 }
 
-// EXPERIMENT (reboot_ack probe): wait until the raw HID IN endpoint has sent
-// everything queued on it, or until timeout_ms. Returns the milliseconds waited.
-static uint32_t raw_hid_wait_sent(uint32_t timeout_ms) {
+// A reply sent right before a deliberate reset waits in the USB endpoint until the
+// host fetches it, 71..103 ms after the request on the HIL rig. A reset before that
+// loses the reply, and a reset during the transfer delivers a cut-off report whose
+// last byte is garbage: the boot loop's 0xee and 0xfe status bytes (2026-10-21).
+// Probe reboot_ack, 100 reboots: 37 lost and 3 cut-off replies without a wait,
+// 11 lost and 0 cut-off with a 100 ms wait. So wait until the endpoint has sent
+// everything queued on it, at most RAW_HID_REPLY_BEFORE_RESET_MS (maintainer's
+// choice); the wait ends early once the host has the reply.
+#define RAW_HID_REPLY_BEFORE_RESET_MS 200
+void raw_hid_send_before_reset(uint8_t *data, uint8_t length) {
+    raw_hid_send(data, length);
     const uint32_t t0 = timer_read32();
-    while (timer_elapsed32(t0) < timeout_ms) {
+    while (timer_elapsed32(t0) < RAW_HID_REPLY_BEFORE_RESET_MS) {
         osalSysLock();
-        const bool busy = usbGetTransmitStatusI(&USB_DRIVER, RAW_IN_EPNUM);
+        const bool sending = usbGetTransmitStatusI(&USB_DRIVER, RAW_IN_EPNUM);
         osalSysUnlock();
-        if (!busy) break;
+        if (!sending) return;
     }
-    return timer_elapsed32(t0);
 }
 
 bool legacy_command_kb(uint8_t *data, uint8_t length) {
@@ -990,7 +997,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 poly_announce_bootloader();
                 memset(data, 0, length);
                 hid_reply(data, 0x17, true);
-                raw_hid_send(data, length);
+                raw_hid_send_before_reset(data, length);
                 reset_keyboard();
                 break;
             case 43: //reboot both halves (protocol v22+)
@@ -1010,8 +1017,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // of boot problem the caller is looking for, not one to cause.
                     memset(data, 0, length);
                     hid_reply(data, 0x2b, true);
-                    raw_hid_send(data, length);
-                    (void)raw_hid_wait_sent(100);
+                    raw_hid_send_before_reset(data, length);
                     poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
                                               .action = RESET_ACTION_REBOOT };
                     uint8_t ack = fw_up_send_slave_reset(&msg);
@@ -1044,7 +1050,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // handoff below can take a couple of seconds on a bad link.
                     memset(data, 0, length);
                     hid_reply(data, 0x19, true);
-                    raw_hid_send(data, length);
+                    raw_hid_send_before_reset(data, length);
                     // Hardened handoff, same as cmd 43 and the reset key. A dropped
                     // frame here does double damage: the master reboots alone and
                     // hangs on the boot splash, AND the slave never records its new

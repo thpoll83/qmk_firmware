@@ -128,6 +128,14 @@ def probe(raw, log):
     measured = False
     flashed = False
     try:
+        # The cleanup writes an EMPTY library back, so run only on a slot 8 that
+        # holds nothing worth keeping: empty (v0) or this probe's own leftover.
+        versions = H.parse_fontpack_versions(link.xfer(bytes([H.POLY_CHANNEL, H.CMD_GET_ID]), 2000) or b"")
+        held = (versions or {}).get(ICONS_SLOT)
+        if held not in (0, CONTENT_VERSION):
+            log(f"  slot {ICONS_SLOT} holds version {held!r}, not an empty library: refusing to "
+                "overwrite it (the cleanup cannot restore it)")
+            return False
         library = _library(N_ICONS, CONTENT_VERSION)
         log(f"[probe] flashing a synthetic icon library: {N_ICONS} icons, {len(library)} bytes")
         t0 = time.perf_counter()
@@ -195,7 +203,9 @@ def probe(raw, log):
         measured = True
     finally:
         reply = link.xfer(bytes([H.POLY_CHANNEL, H.CMD_OVERLAY_FLAGS_ON, H.ICON_FILL_CLEANUP_BITS]), 2000)
+        reset_ok = bool(reply) and len(reply) >= 3 and reply[2] == ord(".")
         log(f"[probe] reset pool, mapping and usage bits: {reply[:3] if reply else reply!r}")
+        measured = measured and reset_ok
         if flashed:
             ok = _flash(link, H, _library(0, 0), log)
             log("[probe] slot 8 restored to an empty library (v0): " + ("ok" if ok else "FAILED"))

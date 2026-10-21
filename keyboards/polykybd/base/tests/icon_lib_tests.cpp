@@ -21,6 +21,9 @@ extern "C" {
 #include <cstring>
 #include <vector>
 
+#include <sys/mman.h>
+#include <unistd.h>
+
 namespace {
 
 struct Icon {
@@ -136,6 +139,63 @@ TEST_F(IconLibTest, OddWidthRowsPackContinuously) {
     EXPECT_TRUE(pixel(frame, 52, 12));
     EXPECT_TRUE(pixel(frame, 56, 12));
     EXPECT_FALSE(pixel(frame, 56, 11));
+}
+
+TEST_F(IconLibTest, EveryWidthAtEveryColumnMatchesThePixels) {
+    // The blit copies up to 8 bits per step, so every combination of source bit
+    // phase and destination bit phase must land each pixel where the per-pixel
+    // model says. Width 1..72 at every column it fits, 3 rows of seeded random
+    // pixels, so rows start at different source phases too.
+    uint32_t seed = 12345u;
+    auto rnd = [&seed]() { seed = seed * 1103515245u + 12345u; return (seed >> 16) & 1u; };
+    for (int w = 1; w <= 72; ++w) {
+        for (int x = 0; x + w <= 72; ++x) {
+            Icon ic{(int8_t)x, 5, (int8_t)w, 3, std::vector<bool>((size_t)w * 3, false)};
+            for (size_t k = 0; k < ic.px.size(); ++k) ic.px[k] = rnd() != 0;
+            auto b = build({ic});
+            ASSERT_TRUE(iconlib_load_at(b.data(), 0, nullptr));
+            uint8_t frame[360];
+            memset(frame, 0xFF, sizeof(frame));
+            ASSERT_TRUE(iconlib_blit(0, frame));
+            for (int yy = 0; yy < 40; ++yy)
+                for (int xx = 0; xx < 72; ++xx) {
+                    bool want = xx >= x && xx < x + w && yy >= 5 && yy < 8
+                                && ic.px[(size_t)(yy - 5) * w + (xx - x)];
+                    ASSERT_EQ(pixel(frame, xx, yy), want) << "w=" << w << " x=" << x
+                                                          << " at " << xx << "," << yy;
+                }
+            iconlib_unload();
+        }
+    }
+}
+
+TEST_F(IconLibTest, TheCopyNeverReadsPastTheLastBitmapByte) {
+    // The last icon's bitmap ends at the end of the bundle, and the bundle ends
+    // at a page the process may not read. A copy that reads one byte too far
+    // faults here; masking the extra bits away would hide it from a pixel check.
+    // 9x3 = 27 bits: the last byte holds 3 bits, at every source bit phase.
+    for (int x = 0; x + 9 <= 72; ++x) {
+        Icon ic{(int8_t)x, 0, 9, 3, std::vector<bool>(27, true)};
+        auto b = build({ic});
+        const long page = sysconf(_SC_PAGESIZE);
+        ASSERT_LE((long)b.size(), page);
+        void* mem = mmap(nullptr, (size_t)(2 * page), PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        ASSERT_NE(mem, MAP_FAILED);
+        uint8_t* guard = static_cast<uint8_t*>(mem) + page;
+        ASSERT_EQ(mprotect(guard, (size_t)page, PROT_NONE), 0);
+        uint8_t* at = guard - b.size();
+        memcpy(at, b.data(), b.size());
+        ASSERT_TRUE(iconlib_load_at(at, 0, nullptr));
+        uint8_t frame[360];
+        ASSERT_TRUE(iconlib_blit(0, frame));
+        int set = 0;
+        for (int yy = 0; yy < 40; ++yy)
+            for (int xx = 0; xx < 72; ++xx) set += pixel(frame, xx, yy);
+        EXPECT_EQ(set, 27) << "x=" << x;
+        iconlib_unload();
+        munmap(mem, (size_t)(2 * page));
+    }
 }
 
 TEST_F(IconLibTest, IdsSpanSeveralRecords) {

@@ -138,7 +138,10 @@ const char *crash_reset_cause_name(uint8_t reason);
 
 // One banner line naming why THIS boot happened, with or without a crash record:
 //   reset: cause=power-on reason=0x01 ram=lost record=no
-// ram=lost means SRAM did not survive, i.e. the chip lost power.
+// ram=lost means the crash block's magic did not survive: usually a power loss,
+// but also the first boot of an image that moved the block, or a block something
+// overwrote. record=yes means THIS boot captured a crash record (a later cmd 39
+// clear does not change it).
 void crash_record_emit_reset_line(void);
 
 // True when THIS boot followed a crash (a record was captured by init).

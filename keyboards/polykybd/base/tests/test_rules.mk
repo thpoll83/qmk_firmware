@@ -334,3 +334,12 @@ polykybd_mines_plan_SRC := \
 polykybd_mines_plan_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# The idle style table is pure (no quantum.h), so it links with just the tests.
+polykybd_idle_style_SRC := \
+	$(POLY_BASE_PATH)/idle_style.c \
+	$(POLY_BASE_PATH)/tests/idle_style_tests.cpp
+
+polykybd_idle_style_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

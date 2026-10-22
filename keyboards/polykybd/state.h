@@ -13,6 +13,7 @@
 // so every consumer of state.h is unchanged, the same seam as base/sync_ack.h.
 #include "base/idle_timeout.h"
 #include "base/mines_plan.h"   // mines_board_t (poly_sync_t.mines)
+#include "base/idle_style.h"
 
 // Idle (anti-burn-in) display style, persisted in poly_eeconf_t.idle_style and
 // toggled over HID (cmd 28). PULSE is the legacy contrast-only breathing; JITTER
@@ -33,14 +34,7 @@
 // early-returns while DISP_IDLE. So the legends simply FREEZE, dim and unmoving,
 // until the TURN_OFF suspend. That is why POLY_DEFAULT_IDLE_STYLE below is
 // board-gated — do not hand split42 an EDEN default.
-// Values are append-only (persisted + on the wire in poly_sync_t.idle_style).
-enum poly_idle_style {
-    IDLE_STYLE_PULSE  = 0,
-    IDLE_STYLE_JITTER = 1,
-    IDLE_STYLE_IDDQD  = 2,   // doom attract-demo screensaver (host: IdleStyle.IDDQD)
-    IDLE_STYLE_EDEN   = 3,   // looping "Eden" boot animation screensaver (host: IdleStyle.EDEN)
-    IDLE_STYLE_COUNT
-};
+// The enum and each style's behaviour live in base/idle_style.h (pure, unit-tested).
 
 // The idle style a board comes up with when nothing has been chosen. EDEN wherever
 // the animation exists, because a screensaver that repaints the whole keycap is

@@ -26,6 +26,7 @@
 // have external linkage and may be included by exactly one TU (poly_keymap.c).
 #include "hardware/clocks.h"                          // clock_get_hz()
 #include "hardware/structs/vreg_and_chip_reset.h"     // core-voltage select
+#include "hardware/structs/timer.h"                    // timer_hw (boot_timing_mark)
 
 #include "boot_diag.h"
 #include "multicore_exec.h"    // g_core1_entered (boot_paint_mark)
@@ -173,6 +174,11 @@ void emit_boot_banner(void) {
             (unsigned long)clock_get_hz(clk_sys),
             (unsigned int)((vreg_and_chip_reset_hw->vreg & VREG_AND_CHIP_RESET_VREG_VSEL_BITS) >> VREG_AND_CHIP_RESET_VREG_VSEL_LSB));
     emit_intl_picker_line();
+    // Why this boot happened. Printed every boot, not only beside a crash record,
+    // because the resets that leave no record (power loss, brownout, RUN pin, a
+    // deliberate mcu_reset()) are the ones a log could not tell apart (field,
+    // 2026-10-22: the master rebooted with no record on either half).
+    crash_record_emit_reset_line();
 }
 
 // The configured idle (anti-burn-in) style + the timings that drive the idle
@@ -393,8 +399,15 @@ static uint32_t s_boot_last = 0;
 // Record the gap since the previous milestone. Saturates rather than wrapping: a
 // span longer than a minute is already the answer, and a wrapped uint16 would read
 // as a short one.
+// ⚠️ The clock is the RP2040 hardware timer, NOT timer_read32(). Step 1 is stamped in
+// keyboard_pre_init_user(), and QMK's keyboard_init() then calls timer_init(), which
+// moves timer_read32()'s zero to "now". Span 2 subtracted a pre-init reading from a
+// post-init one taken on a different zero: it read 29 ms on the rig and the 65535
+// saturation sentinel in the field (2026-10-22, a board back on USB in under 5 s),
+// and was never a measurement either way. timerawl counts microseconds from reset
+// and nothing rewinds it (it wraps after ~71 minutes, long after boot ends).
 static void boot_timing_mark(uint16_t tag) {
-    const uint32_t now = timer_read32();
+    const uint32_t now = timer_hw->timerawl / 1000u;
     if (s_boot_n < BOOT_TIMING_MAX) {
         const uint32_t d = s_boot_n ? (now - s_boot_last) : 0u;
         s_boot_tag[s_boot_n] = tag;

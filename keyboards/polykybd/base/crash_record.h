@@ -132,6 +132,15 @@ void     crash_phase_leave(uint32_t prev);
 // that launch; never move it into post_init.
 void crash_record_init(void);
 
+// Short name of the reset cause in a CRASH_RESET_* bit set ("power-on",
+// "run-pin", "wd-forced", "wd-timer", "debugger", "unknown").
+const char *crash_reset_cause_name(uint8_t reason);
+
+// One banner line naming why THIS boot happened, with or without a crash record:
+//   reset: cause=power-on reason=0x01 ram=lost record=no
+// ram=lost means SRAM did not survive, i.e. the chip lost power.
+void crash_record_emit_reset_line(void);
+
 // True when THIS boot followed a crash (a record was captured by init).
 bool crash_record_fresh(void);
 

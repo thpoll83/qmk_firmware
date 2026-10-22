@@ -41,8 +41,9 @@ container, so don't claim it is unavailable. Setup, submodule failures, the
   is silently dropped, so power-cycle between them. One brick after the fix remains
   unreproduced, so the release ships no stamp UF2. `POLYKYBD_FORCE_HAND=left|right` is
   the provisioning route that works.
-- ⚠️ **`boot: spans ms … 2=65535` is a saturation sentinel** (`boot_timing_mark()`
-  clamps at `0xFFFF`), not 65 s measured.
+- ⚠️ **`boot: spans ms … 2=…` from firmware built before 2026-10-22 is not a
+  measurement**: step 1 and step 2 were read against two different `timer_read32()`
+  zeros (`timer_init()` runs between them). A `65535` there is that bug, not 65 s.
 
 The stamp UF2 history and the brick's confounders: `BUILD_ENVIRONMENT.md` → *Hand-built
 UF2s* and `keyboards/polykybd/readme.md` → *The stamp UF2*.

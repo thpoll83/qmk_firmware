@@ -703,7 +703,14 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 // a keystroke-injection primitive. It's a demo/dev feature, so gate it on
                 // debug_enable (off by default; unlock with the DB_TOGG key, which needs
                 // physical access). When debug is off, NACK instead of injecting.
+                // PROBE BRANCH ONLY (probe/eden-wake-burst), never for merge: the HIL
+                // images take injected keys without DB_TOGG, so the rig can wake the
+                // board from Eden with a real keypress.
+#if defined(POLYKYBD_HIL)
+                if (true) {
+#else
                 if (debug_enable) {
+#endif
                     uint16_t keycode = ((uint16_t)data[HID_DATA_IDX])<<8 | data[HID_DATA_IDX+1];
                     uint8_t r = 0, c = 0;
                     enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(local_layer->layer), &r, &c, is_left_side());

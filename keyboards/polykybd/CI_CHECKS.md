@@ -390,6 +390,18 @@ in either shape, so "not failed" is never "passed".
     intervention; the queued jobs then ran in order and passed. Between that and
     the 4.5 h case above there is no useful timeout to assume — keep a check-in
     scheduled rather than declaring the rig dead or waiting on it in the loop.
+- ⚠️ **A long queue can also mean a BUSY rig, and a busy rig looks the same from a
+  PR.** List `status: in_progress` runs too: the rig's diagnose panel then reads
+  "online·busy". The rig jobs are long and run one at a time. Measured 2026-10-09:
+  HIL 7 min (all tiers), perf 1.5 min, **DOOM signature 34.5 min**, firmware apply
+  8.5 min. A single all-tier dispatch holds the rig for about an hour, so a few of
+  them queue every PR for hours. Compare a job's elapsed time with these numbers
+  before calling it hung. On 2026-10-12 a DOOM job 30 minutes in was cancelled as
+  "hung" when it was on schedule.
+- **Each rig job has a `timeout-minutes`** (about 3x its normal time, 90 for DOOM).
+  Without one, GitHub's 6-hour default let a single hung flash hold every queued
+  HIL job behind it. Raise a limit when a job's normal time grows; a timeout fails
+  the job red, unlike an outage.
 
 ---
 
@@ -672,9 +684,14 @@ in either shape, so "not failed" is never "passed".
   ⚠️ It **never fails on a regression** (wall-clock numbers on
   shared hardware — a flaky red check is one people learn to ignore); only a
   *measurement* failure (wrong build flashed, device dead) fails the job. Ordered
-  `needs: [build-perf, hil-test]` + `always()` so the two rig jobs can't interleave
-  flashes, but a red HIL suite still yields a perf number — often exactly what
-  explains a timing-related HIL failure. **Use this instead of asking the user to
+  `needs: [build-perf, hil-test]` + `!cancelled()` so the two rig jobs can't
+  interleave flashes, but a red HIL suite still yields a perf number — often exactly
+  what explains a timing-related HIL failure. ⚠️ **Never `always()` on a rig job**
+  (perf, doom, fwapply, debug): it also survives a cancelled run, so every run
+  cancelled after its build finished still queued its rig job against replaced
+  code (2026-10-12, about seven ~35 min jobs ahead of the current PRs, removable
+  only by force-cancel). `!cancelled()` runs after a failed or skipped need just
+  the same and stops on a cancel. **Use this instead of asking the user to
   flash a build and paste the console log.** See
   `keyboards/polykybd/profiling/README.md` (§ on-demand control, HID cmd 32) and the
   `polykybd-ctnd` CLAUDE.md § Performance measurement.
@@ -828,16 +845,18 @@ inherited-upstream noise:
   is honest about what it covers and silent about what you assumed it covered.
 - The CodeRabbit **Docstring-Coverage** check is ignored per "Code review conventions"
   above.
-- ⚠️ **PR CI does NOT build the monolith.** `qmk-test.yml` builds only
-  `POLYKYBD_DOOM_PACK=yes` (+ split42); the **monolithic** `POLYKYBD_DOOM=yes`
-  flavour — whose objects the `.plyx` is harvested from — is built **exclusively by
-  the release workflow**. So a PR can be fully green and still break at *publish*
-  time: that is exactly what #172 did, and why v0.9.81 was never built at all. The
-  monolith is also the tightest RAM flavour (it had **20 bytes** of `.heap` free at
-  v0.9.82), so it is the first to fail on any RAM growth. **Build it locally before
-  merging anything that adds statics:**
-  `qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM=yes`, or run
-  `doom/pack/build_pack.sh`, which builds both flavours.
+- ⚠️ **The monolith broke three releases before PR CI built it.** The **monolithic**
+  `POLYKYBD_DOOM=yes` flavour, whose objects the `.plyx` is harvested from, was built
+  **only by the release workflow**. A green PR could still break at *publish* time:
+  #172 (v0.9.81 never built), v0.9.82 (20 B of `.heap` left), and v1.9.1 (2026-10-13,
+  the link failed 40 B over main RAM and the release went out with **no files**, so
+  every host reported "newer but has no .bin"). Since then the `build-release-shape`
+  job runs `doom/pack/build_pack.sh` on every PR in the release's own image, and its
+  "RAM headroom" step prints each build's free RAM (`tools/ram_report.py`).
+  ⚠️ **Read the headroom from that job, not from a local build.** The container's gcc
+  13.2 leaves 400–500 B more free than the image's gcc 15.2: v1.9.1 had 344 B free
+  locally and failed in CI, and #390 measured 7,832 B locally against 7,336 B in CI. About 14.7 KB of code runs from RAM, so compiler code
+  size counts against RAM too.
 
 
 ## When GitHub switches Actions off for the fork

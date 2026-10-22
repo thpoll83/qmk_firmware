@@ -27,3 +27,15 @@ fw_stage_t fw_stage_next(fw_stage_t stage, fw_stage_event_t ev) {
 bool fw_stage_accepts_chunk(fw_stage_t stage, bool erase_cut_short) {
     return stage != FW_STAGE_ERASING && !erase_cut_short;
 }
+
+const char *fw_chunk_refusal_name(uint8_t refusal) {
+    switch (refusal) {
+        case FW_CHUNK_REFUSAL_NONE:            return "none";
+        case FW_CHUNK_REFUSAL_NOT_INITIALIZED: return "not-initialized";
+        case FW_CHUNK_REFUSAL_ERASE_CUT_SHORT: return "erase-cut-short";
+        case FW_CHUNK_REFUSAL_ERASE_PENDING:   return "erase-pending";
+        case FW_CHUNK_REFUSAL_OFFSET_MISMATCH: return "offset-mismatch";
+        case FW_CHUNK_REFUSAL_PAST_END:        return "past-end";
+    }
+    return "unknown";
+}

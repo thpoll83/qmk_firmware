@@ -3,6 +3,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 
 // The stage of an fw_staging stream (firmware image, font-pack bundle, doom WHX or
 // pack), as one explicit state instead of the two flags it used to be
@@ -36,3 +37,18 @@ fw_stage_t fw_stage_next(fw_stage_t stage, fw_stage_event_t ev);
 // offset checks and land on sectors that were never erased. Only the next BEGIN,
 // which erases again, clears erase_cut_short.
 bool fw_stage_accepts_chunk(fw_stage_t stage, bool erase_cut_short);
+
+// Why fw_staging_write_chunk() refused the most recent chunk. The slave has no
+// console, so its uprintf of the reason is lost; this code reaches the master in
+// the STATUS reply (fw_staging_status_t.last_chunk_refusal) instead.
+typedef enum {
+    FW_CHUNK_REFUSAL_NONE = 0,     // written, or never reached the stager (see last_chunk_ack)
+    FW_CHUNK_REFUSAL_NOT_INITIALIZED,
+    FW_CHUNK_REFUSAL_ERASE_CUT_SHORT,
+    FW_CHUNK_REFUSAL_ERASE_PENDING,
+    FW_CHUNK_REFUSAL_OFFSET_MISMATCH, // ahead of the cursor: an earlier chunk is missing
+    FW_CHUNK_REFUSAL_PAST_END,
+} fw_chunk_refusal_t;
+
+// Short name for the console line; "unknown" for a value this build does not know.
+const char *fw_chunk_refusal_name(uint8_t refusal);

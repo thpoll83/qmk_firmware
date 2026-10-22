@@ -5,6 +5,7 @@
 #include "quantum.h"
 #include "polymod_crc32.h"
 #include "base/fw_staging.h"   // fw_staging_set_fontpack_slot
+#include "base/fw_stage.h"     // fw_chunk_refusal_name for the slave status line
 #include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
 #include "base/fw_up_verdict.h"  // pure COMMIT-failure classification (unit-tested)
 #include "base/hand_stamp.h"     // handedness change: record here, write from the main loop
@@ -30,18 +31,29 @@
 // When `log_tag` is non-NULL and debug is enabled it logs each retry (the
 // firmware-update path passes "FW_UP_CHUNK"); the font-pack path passes NULL
 // for a quiet relay, matching its prior behaviour.
-bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, const char *log_tag) {
+bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, uint32_t len, const char *log_tag) {
+    if (len == 0 || len > FW_UP_RELAY_CHUNK_MAX) return false;
+    // Only the header and `len` data bytes go on the wire (72 bytes for a HID
+    // chunk, 252 for a full pipe chunk), and the CRC covers exactly those.
+    const uint8_t      wire_len = (uint8_t)(FW_UP_CHUNK_HDR + len);
     fw_up_chunk_sync_t chunk_msg;
     chunk_msg.op     = FLASH_STAGE_CHUNK;
     chunk_msg.offset = offset;
-    memcpy(chunk_msg.data, chunk_data, FW_UP_CHUNK_SIZE);
-    chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], sizeof(chunk_msg) - 4, 0);
+    chunk_msg.len    = len;
+    memcpy(chunk_msg.data, chunk_data, len);
+    chunk_msg.crc32 = crc32_1byte(&((const uint8_t *)&chunk_msg)[4], wire_len - 4, 0);
     uint8_t slave_ack = SYNC_GIVEUP;   // no answer yet
-    for (uint8_t retry = 0; retry < 10; ++retry) {
+    // What each failed attempt got back, for the line printed when all of them fail.
+    // stale_ack: an ACK whose cursor is not past this chunk (a reply to an earlier one).
+    uint8_t  n_rpc_fail = 0, n_refused = 0, n_crc_err = 0, n_stale_ack = 0, n_other = 0;
+    uint8_t  last_ack  = SYNC_GIVEUP;
+    uint32_t last_next = 0;
+    const uint8_t attempts = 10;
+    for (uint8_t retry = 0; retry < attempts; ++retry) {
         fw_up_chunk_reply_t reply;
         memset(&reply, 0, sizeof(reply));
         reply.ack = SYNC_GIVEUP;   // sentinel: transaction_rpc_exec may not write it
-        bool ok_rpc = transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(chunk_msg), &chunk_msg,
+        bool ok_rpc = transaction_rpc_exec(USER_SYNC_FLASH_STAGE, wire_len, &chunk_msg,
                                            sizeof(reply), &reply);
         if (ok_rpc && reply.ack == SYNC_ACK && reply.next_offset > offset) {
             slave_ack = SYNC_ACK;
@@ -51,10 +63,33 @@ bool fw_up_relay_chunk_to_slave(uint32_t offset, const uint8_t *chunk_data, cons
             }
             break;
         }
+        if (!ok_rpc) {
+            n_rpc_fail++;
+        } else if (reply.ack == SYNC_ACK) {
+            n_stale_ack++;
+        } else if (reply.ack == SYNC_NACK_REFUSED) {
+            n_refused++;
+        } else if (reply.ack == SYNC_CRC32_ERR) {
+            n_crc_err++;
+        } else {
+            n_other++;
+        }
+        last_ack  = reply.ack;
+        last_next = reply.next_offset;
         if (log_tag && debug_enable) {
             uprintf("%s relay retry %u (offset=%lu success=%d ack=0x%02x slave_next=%lu)\n",
                     log_tag, retry, offset, (int)ok_rpc, reply.ack, reply.next_offset);
         }
+    }
+    // Printed without debug_enable: a field log has only this to say why a chunk
+    // was NACKed (2026-10-21: three NACKs in a font-pack flash and no reason).
+    if (slave_ack != SYNC_ACK && log_tag) {
+        uprintf("%s relay FAILED offset=%lu len=%lu after %u attempts: rpc_fail=%u refused=%u "
+                "crc_err=%u stale_ack=%u other=%u (last ack=0x%02x slave_next=%lu)\n",
+                log_tag, (unsigned long)offset, (unsigned long)len, (unsigned)attempts,
+                (unsigned)n_rpc_fail, (unsigned)n_refused, (unsigned)n_crc_err,
+                (unsigned)n_stale_ack, (unsigned)n_other, (unsigned)last_ack,
+                (unsigned long)last_next);
     }
     return slave_ack == SYNC_ACK;
 }
@@ -128,10 +163,11 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
     if (!same_image) {
         // ⚠️ Resolve and VALIDATE the slot before recording this identity. Caching
         // s_begun_* first meant a refused bundle was remembered as "begun", so an
-        // identical retry — and send_to_bridge does retry a non-ACK — took the
-        // same_image path below, skipped this validation entirely, found no erase
-        // pending and could ACK a bundle we had just refused, against whatever slot
-        // was last set. Pre-existing; found in review of the refusal relabel.
+        // identical retry (send_to_bridge then retried a refusal; a host BEGIN
+        // retry still repeats it) took the same_image path below, skipped this
+        // validation entirely, found no erase pending and could ACK a bundle we
+        // had just refused, against whatever slot was last set. Pre-existing;
+        // found in review of the refusal relabel.
         if (msg->target == FW_TARGET_FONTPACK) {
             uint32_t slot_off = 0, slot_size = 0;
             if (!fontpack_slot(msg->bundle, &slot_off, &slot_size)) {
@@ -193,8 +229,12 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
 // cursor) so the master can tell a genuine ACK from a stale previous reply —
 // see the struct comment in split_fw_up.h.
 static void flash_stage_chunk(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
-    if (in_len != sizeof(fw_up_chunk_sync_t) || !in_data || out_len != sizeof(fw_up_chunk_reply_t) || !out_data) return;
+    // Variable length: the header plus msg->len data bytes, 1..FW_UP_RELAY_CHUNK_MAX.
+    // A message whose in_len disagrees with its own len field is malformed and gets
+    // no reply, like a wrong-sized message before (the master retries).
+    if (in_len < FW_UP_CHUNK_HDR + 1 || !in_data || out_len != sizeof(fw_up_chunk_reply_t) || !out_data) return;
     const fw_up_chunk_sync_t *msg = (const fw_up_chunk_sync_t *)in_data;
+    if (msg->len == 0 || msg->len > FW_UP_RELAY_CHUNK_MAX || in_len != FW_UP_CHUNK_HDR + msg->len) return;
     fw_up_chunk_reply_t *reply = (fw_up_chunk_reply_t *)out_data;
     memset(reply, 0, sizeof(*reply));
     uint32_t crc32 = crc32_1byte(&((const uint8_t *)in_data)[4], in_len - 4, 0);
@@ -224,7 +264,7 @@ static void flash_stage_chunk(uint8_t in_len, const void* in_data, uint8_t out_l
         // See config.h FW_UP_CHUNK_NOOP_PROBE / FW_UP_BASELINE.md (run 4).
         bool ok = true;
 #else
-        bool ok = fw_staging_write_chunk(msg->offset, msg->data, FW_UP_CHUNK_SIZE);
+        bool ok = fw_staging_write_chunk(msg->offset, msg->data, (uint8_t)msg->len);
 #endif
         // A rejected write is a REFUSAL, not a CRC error — the frame checked out
         // above; the stager declined the offset. (The relay still retries, and the
@@ -293,18 +333,18 @@ bool fw_up_query_slave_status(fw_staging_status_t *out) {
     return true;
 }
 
-void fw_up_log_slave_status(const char *tag) {
+bool fw_up_log_slave_status(const char *tag, fw_staging_status_t *out) {
     fw_up_status_reply_t reply;
     if (!fetch_slave_status(&reply)) {
         uprintf("slave status (%s): RPC FAILED — slave unresponsive\n", tag);
-        return;
+        return false;
     }
     // Printed either way; the tag says whether to trust the numbers.
     const char *suspect = slave_status_crc_ok(&reply) ? "" : " [CRC BAD — values suspect]";
     const fw_staging_status_t s = reply.status;
     uprintf("slave status (%s): init=%u active=%u erase_pending=%u erase=%u/%u "
             "next_off=%lu begin_calls=%u chunk_calls=%u chunk_errs=%u "
-            "last_chunk_off=%lu last_ack=0x%02x last_commit_ack=0x%02x "
+            "last_chunk_off=%lu last_ack=0x%02x refusal=%s last_commit_ack=0x%02x "
             "pd_calls=%u pd_advances=%u%s\n",
             tag,
             (unsigned)s.initialized, (unsigned)s.fw_up_active, (unsigned)s.erase_pending,
@@ -313,8 +353,11 @@ void fw_up_log_slave_status(const char *tag) {
             (unsigned)s.begin_handler_calls, (unsigned)s.chunk_handler_calls,
             (unsigned)s.chunk_handler_errors,
             (unsigned long)s.last_chunk_offset, (unsigned)s.last_chunk_ack,
-            (unsigned)s.last_commit_ack,
+            fw_chunk_refusal_name(s.last_chunk_refusal), (unsigned)s.last_commit_ack,
             (unsigned)s.process_deferred_calls, (unsigned)s.process_deferred_advances, suspect);
+    if (!slave_status_crc_ok(&reply)) return false;
+    if (out) *out = s;
+    return true;
 }
 
 // Classify a non-ACK COMMIT ack, asking the slave directly when the ack itself is
@@ -513,6 +556,13 @@ uint8_t fw_up_send_slave_reset(poly_reset_sync_t *msg) {
     return ack;
 }
 
+// The first relay failure of a burst logs the slave's whole status (its cursor, the
+// last chunk it saw and why it refused it); the rest of the burst only reads the
+// cursor, so a link that fails every chunk does not flood the console. A relayed
+// chunk ends the burst, and so does a new BEGIN: a stream that ended on a failure
+// must not silence the next stream's first one.
+static bool s_relay_fail_logged = false;
+
 char fw_up_xfer_begin(fw_up_begin_sync_t *msg, bool master_ok, fw_up_xfer_key_t *last,
                       fw_up_xfer_begin_t *out) {
     // ⚠️ The key alone cannot tell a re-poll from a RETRY. It outlives the attempt it
@@ -531,12 +581,14 @@ char fw_up_xfer_begin(fw_up_begin_sync_t *msg, bool master_ok, fw_up_xfer_key_t 
         last->size   = msg->image_size;
         last->crc    = msg->image_crc;
         last->bundle = msg->bundle;
+        s_relay_fail_logged = false;
         // Drop to the base layer + refresh before the flash holds the main loop, so
         // the user can still type plain characters meanwhile.
         poly_prepare_for_flash();
         // The master stages its OWN copy with the deferred erase -- the same path as
         // the slave -- so its USB stays alive: housekeeping drives
-        // fw_staging_process_deferred() one sector per 70 ms. This also halts the
+        // fw_staging_process_deferred() one erase unit per pass, FW_ERASE_GAP_MS
+        // apart (a 4 KB sector for a resource slot). This also halts the
         // master's core1 and sets fw_up_active.
         fw_staging_begin_deferred_target(msg->image_size, msg->image_crc, msg->target);
         // Fire-and-forget: kicks the slave's deferred erase so both halves erase in
@@ -553,35 +605,53 @@ char fw_up_xfer_begin(fw_up_begin_sync_t *msg, bool master_ok, fw_up_xfer_key_t 
     return (out->slave_ok && out->master_done) ? '.' : '~';
 }
 
-bool fw_up_xfer_chunk(uint8_t *data, uint8_t length, uint8_t cmd, const char *tag, bool *relay_ok) {
-    uint32_t offset;
-    memcpy(&offset, &data[2], 4);
-    const uint8_t *chunk_data = &data[6];
+bool fw_up_xfer_block(uint32_t offset, const uint8_t *data, uint32_t len, uint32_t *resume, bool *relay_ok) {
     // The reply is identity-bound (fw_up_chunk_reply_t), not the bare 1-byte ack: a
     // chunk only counts once the slave's write cursor moved PAST this offset. With
     // the bare ACK a stale reply from the previous chunk desynchronised the cursors
     // (2026-06-10, updates dying at 6% / 83%). A duplicate of an already-staged
     // chunk has next_offset > offset and passes, so re-sends are idempotent.
-    const bool relayed = fw_up_relay_chunk_to_slave(offset, chunk_data, tag);
+    const bool relayed = fw_up_relay_chunk_to_slave(offset, data, len, "FW_UP_BLOCK");
     bool ok = relayed;
     if (ok) {
-        ok = fw_staging_write_chunk(offset, chunk_data, FW_UP_CHUNK_SIZE);
-        if (!ok) uprintf("%s: master staging write FAILED offset=%lu\n", tag, (unsigned long)offset);
+        ok = fw_staging_write_chunk(offset, data, (uint8_t)len);
+        if (!ok) uprintf("FW_UP_BLOCK: master staging write FAILED offset=%lu\n", (unsigned long)offset);
     }
     if (relay_ok) *relay_ok = relayed;
+    uint32_t next = fw_staging_next_offset();
+    if (!ok) {
+        // The lower of the two cursors. If the slave is unreachable its cursor is
+        // unknown, so report the master's (the sender retries the current chunk).
+        fw_staging_status_t st;
+        bool                have_st;
+        if (!relayed && !s_relay_fail_logged) {
+            s_relay_fail_logged = true;
+            have_st             = fw_up_log_slave_status("chunk-fail", &st);
+        } else {
+            have_st = fw_up_query_slave_status(&st);
+        }
+        if (have_st && st.next_offset < next) {
+            next = st.next_offset;
+        }
+        uprintf("FW_UP_BLOCK: NACK offset=%lu len=%lu resume=%lu\n",
+                (unsigned long)offset, (unsigned long)len, (unsigned long)next);
+    }
+    if (relayed) s_relay_fail_logged = false;
+    if (resume) *resume = next;
+    return ok;
+}
+
+bool fw_up_xfer_chunk(uint8_t *data, uint8_t length, uint8_t cmd, const char *tag, bool *relay_ok) {
+    uint32_t offset;
+    memcpy(&offset, &data[2], 4);
+    uint32_t   resume = 0;
+    const bool ok     = fw_up_xfer_block(offset, &data[6], FW_UP_CHUNK_SIZE, &resume, relay_ok);
 
     memset(data, 0, length);
     data[0] = 'P';
     data[1] = cmd;
     data[2] = ok ? '.' : '!';
     if (!ok) {
-        // The lower of the two cursors. If the slave is unreachable its cursor is
-        // unknown, so report the master's (the host retries the current chunk).
-        uint32_t            resume = fw_staging_next_offset();
-        fw_staging_status_t st;
-        if (fw_up_query_slave_status(&st) && st.next_offset < resume) {
-            resume = st.next_offset;
-        }
         memcpy(&data[3], &resume, 4);
         uprintf("%s: NACK offset=%lu resume=%lu\n", tag, (unsigned long)offset, (unsigned long)resume);
     }

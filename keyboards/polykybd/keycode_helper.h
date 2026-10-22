@@ -161,10 +161,16 @@ enum my_keycodes {
     // for the same no-renumbering reason as KC_DAUTO/KC_IDDQD/KC_LAT*.
     KC_GLYPH_SIZE_DOWN,
     KC_GLYPH_SIZE_UP,
+    // ⚠️ FROZEN at the first 160 languages (KCL_FROZEN_COUNT). Every keycode after
+    // this block is a value a keyboard may have stored in EEPROM (KC_OS_*, KC_IME,
+    // the emoji and language layers), so growing the block would repoint them all.
+    // A language added after the 160th gets its keycode in the tail block after
+    // KC_IME instead; kcl_for_lang() / kcl_lang_index() in poly_keymap.c join the two.
     /*[[[cog
         # Joined for the same reason as the KC_LAT block above — no trailing space.
+        KCL_FROZEN = 160
         cog.out(", ".join("KCL_ENUS = QK_USER_0" if lang == "ENUS" else f"KCL_{lang}"
-                          for lang in languages) + ",")
+                          for lang in languages[:KCL_FROZEN]) + ",")
     ]]]*/
     KCL_ENUS = QK_USER_0, KCL_DEDE, KCL_FRFR, KCL_ESES, KCL_PTPT, KCL_ITIT, KCL_TRTR, KCL_KOKR, KCL_JAJP, KCL_ARSA, KCL_ELGR, KCL_UKUA, KCL_RURU, KCL_BEBY, KCL_KKKZ, KCL_BGBG, KCL_PLPL, KCL_RORO, KCL_ZHCN, KCL_NLNL, KCL_HEIL, KCL_SVSE, KCL_FIFI, KCL_NNNO, KCL_DADK, KCL_HUHU, KCL_CSCZ, KCL_HRHR, KCL_SKSK, KCL_LTLT, KCL_LVLV, KCL_ETEE, KCL_PTBR, KCL_SRRS, KCL_MKMK, KCL_FAIR, KCL_HIIN, KCL_MRIN, KCL_NENP, KCL_MNMN, KCL_URPK, KCL_ENGB, KCL_ESMX, KCL_DECH, KCL_FRBE, KCL_FRCA, KCL_THTH, KCL_BNIN, KCL_TEIN, KCL_TAIN, KCL_ZHTW, KCL_KAGE, KCL_HYAM, KCL_IDID, KCL_AZAZ, KCL_ISIS, KCL_VIVN, KCL_ZHHK, KCL_ENAU, KCL_ENNZ, KCL_MINZ, KCL_SMWS, KCL_FJFJ, KCL_TLPH, KCL_HWUS, KCL_ENZA, KCL_AFZA, KCL_AREG, KCL_SWKE, KCL_AMET, KCL_YONG, KCL_ENNG, KCL_ARMA, KCL_ARIQ, KCL_KUIQ, KCL_MSMY, KCL_UZUZ, KCL_ENCA, KCL_ESAR, KCL_ENPG, KCL_TYPF, KCL_ESCO, KCL_ESPE, KCL_ESVE, KCL_ESCL, KCL_ESEC, KCL_ESGT, KCL_ESDO, KCL_ESBO, KCL_ESPY, KCL_ESCR, KCL_ESSV, KCL_ESHN, KCL_ESPA, KCL_ESUY, KCL_ESNI, KCL_DEAT, KCL_NLBE, KCL_CAES, KCL_ENIE, KCL_BSBA, KCL_FRCH, KCL_SLSI, KCL_FOFO, KCL_ARAE, KCL_ARSY, KCL_ARJO, KCL_ARLB, KCL_ARYE, KCL_ARKW, KCL_AROM, KCL_ARPS, KCL_ARQA, KCL_ARBH, KCL_ARDZ, KCL_ARSD, KCL_ARTN, KCL_ARLY, KCL_FRCD, KCL_FRCI, KCL_FRCM, KCL_FRSN, KCL_FRMG, KCL_ENGH, KCL_ENUG, KCL_ENZM, KCL_SWTZ, KCL_PTAO, KCL_PTMZ, KCL_BNBD, KCL_ENIN, KCL_ENPK, KCL_ENPH, KCL_ENSG, KCL_ENLK, KCL_KYKG, KCL_TGTJ, KCL_ENGU, KCL_ENSB, KCL_ENVU, KCL_ENFM, KCL_FRNC, KCL_TOTO, KCL_EUES, KCL_GLES, KCL_RMCH, KCL_CYGB, KCL_GAIE, KCL_MTMT, KCL_LBLU, KCL_SENO, KCL_GNPY, KCL_QUPE, KCL_AYBO, KCL_NVUS, KCL_NHMX, KCL_PSAF, KCL_IUCA, KCL_CRCA, KCL_CKUS,
     //[[[end]]]
@@ -320,7 +326,29 @@ enum my_keycodes {
     // sends something. Appended at the very end for the same no-renumbering
     // reason as KC_EDEN.
     KC_IME,
+
+    // Language keycodes past the frozen block above, appended so nothing before them
+    // moves. Generated from the same language list: entry n is LANG index
+    // KCL_FROZEN_COUNT + n. No initialiser, so the host's positional enum parser
+    // (keycap_preview.parse_custom_keycodes) still names every member.
+    /*[[[cog
+        cog.out(", ".join(f"KCL_{lang}" for lang in languages[160:]) + ",")
+    ]]]*/
+    KCL_JAUS,
+    //[[[end]]]
 };
+#define KCL_FROZEN_COUNT 160
+/*[[[cog
+    cog.outl(f"#define KCL_TAIL_FIRST KCL_{languages[160]}")
+    cog.outl(f"#define KCL_TAIL_LAST  KCL_{languages[-1]}")
+]]]*/
+#define KCL_TAIL_FIRST KCL_JAUS
+#define KCL_TAIL_LAST  KCL_JAUS
+//[[[end]]]
+// Pin the values a stored keymap carries, so a new language that lands in the
+// frozen block by mistake is a build error instead of a silent repoint.
+static_assert((int)LBL_TEXT == (int)QK_USER_0 + KCL_FROZEN_COUNT, "frozen KCL_ block moved LBL_TEXT");
+static_assert((int)KC_IME == 0x7FA8, "KC_IME moved: stored keymaps and the docs use 0x7FA8");
 static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // ⚠️ Anchor the range guards on the LAST keyboard-range keycode, not on KC_DAUTO —
 // it stopped being last the moment KC_IDDQD and the four latin-picker keycodes were
@@ -334,10 +362,10 @@ static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_M
 // ⚠️ Same re-anchoring rule as the QK_KB guards above, and the same way it goes
 // stale: the two asserts directly above name KC_LANG_END / KC_OS_SET_END, but
 // KC_EDEN, KC_IDLE_STYLE, KC_GLYPH_SCRIPT, KC_SETTINGS_MORE, KC_MACRO_REC,
-// KC_IDLE_TIMEOUT, KC_DEMO, KC_DEMO_KEYS and KC_IME are appended AFTER them, so neither
+// KC_IDLE_TIMEOUT, KC_DEMO, KC_DEMO_KEYS, KC_IME and the KCL_ tail are appended AFTER them, so neither
 // covers the tail of the QK_USER_0 block any more. Anchor on the LAST member and
 // re-anchor whenever something is appended.
-static_assert((int)KC_IME <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
+static_assert((int)KCL_TAIL_LAST <= 0x7FFF, "QK_USER keycodes exceed QK_USER_MAX");
 
 // Convenience macros for the emoji category layer keymap entries.
 #define KC_EMJ_CAT(n)  ((uint16_t)((uint16_t)KC_EMJ_CAT_BASE  + (uint16_t)(n)))

@@ -132,6 +132,14 @@ else
             a VCO/postdiv triple AND the core voltage its frequency is certified at)
 endif
 
+# Split-link baud. The default is the SERIAL_USART_SPEED in config.h (1843200);
+# `-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed for an A/B run on the rig
+# (any value the PIO divider can represent is accepted; the extended HIL soak's
+# crc_err / transport_fail counters are the verdict, not whether it links).
+ifneq ($(strip $(POLYKYBD_SPLIT_BAUD)),)
+    OPT_DEFS += -DSERIAL_USART_SPEED=$(strip $(POLYKYBD_SPLIT_BAUD))
+endif
+
 # OS detection (QMK feature): fingerprints the USB enumeration (wLength pattern) to
 # guess the host OS. Used as the AUTO-mode fallback for the active-OS state — the
 # only source on machines where the host app can't run (locked-down) or doesn't
@@ -153,7 +161,7 @@ OS_DETECTION_ENABLE = yes
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
 # covers emoji/emoji_layer.c and hints/os_hints.c.
-POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c anim/demo_mode.c base/demo_plan.c base/idle_poem_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c base/crash_record.c base/hand_stamp.c base/idle_style.c base/core1_owner.c base/core1_owner_hw.c base/fw_stage.c base/prc_record.c base/icon_lib.c slave_data.c oled_i2c.c base/oled_i2c_diag.c
+POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c anim/demo_mode.c base/demo_plan.c mines_mode.c base/mines_plan.c base/idle_poem_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c base/crash_record.c base/hand_stamp.c base/core1_owner.c base/core1_owner_hw.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c slave_data.c oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
 SRC += $(POLY_SRC)
 
 # emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
@@ -182,6 +190,19 @@ define POLY_APPLY_WARN
 $(INTERMEDIATE_OUTPUT)/$(patsubst %.c,%.o,$(patsubst ./%,%,$1)): FILE_SPECIFIC_CFLAGS += $(POLY_WARN_CFLAGS)
 endef
 $(foreach s,$(POLY_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
+
+# Bulk pipe: a CDC-ACM (virtual serial) interface whose bulk endpoints carry
+# large host->keyboard transfers that raw HID (one 64-byte report per 1 ms USB
+# frame) cannot. ON by default; `-e POLYKYBD_BULK_PIPE=no` drops the interface
+# and the parser. Prototype: measurement commands only (keyboards/polykybd/
+# BULK_PIPE.md has the assessment and the numbers). Costs two interfaces, three
+# endpoints and (CDC_IN_CAPACITY + CDC_OUT_CAPACITY) x 64 B of RAM (config.h).
+POLYKYBD_BULK_PIPE ?= yes
+ifeq ($(strip $(POLYKYBD_BULK_PIPE)), yes)
+    VIRTSER_ENABLE = yes
+    OPT_DEFS += -DPOLYKYBD_BULK_PIPE
+    SRC += poly_pipe.c
+endif
 
 # Optional main-loop timing instrumentation (OFF by default). Measures the per-
 # iteration loop time (== the matrix-scan interval), split by overlay vs normal

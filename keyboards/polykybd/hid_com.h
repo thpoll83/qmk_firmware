@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #define HID_CMD_IDX 1
 #define HID_DATA_IDX 2
 // LANG_TO_UI32 / LANG_TO_UI32_ARR moved to lang/lang_lut.h — they are the
@@ -41,3 +43,7 @@ enum legacy_command_id {
 // overlay arena as game RAM and hands it back blank on exit), so the host — which
 // otherwise only re-pushes on an app switch / reconnect — learns to resend.
 void poly_mark_fresh_boot(void);
+
+// raw_hid_send(), then wait (at most 200 ms) until the USB endpoint has sent the
+// reply. For a reply followed by a deliberate reset, which would otherwise cut it off.
+void raw_hid_send_before_reset(uint8_t *data, uint8_t length);

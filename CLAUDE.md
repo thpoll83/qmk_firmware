@@ -14,24 +14,26 @@ matching file.
 
 `qmk compile -kb polykybd/split72 -km default`. The ARM toolchain installs in the remote
 container, so don't claim it is unavailable. Setup, submodule failures, the
-`-Wcast-align` guard and the DOOM `-Werror` collateral:
+`-Wcast-align` guard and the DOOM `-Werror` side effects:
 [`BUILD_ENVIRONMENT.md`](keyboards/polykybd/BUILD_ENVIRONMENT.md).
 
 - ⚠️ **`qmk` is at `/root/.qmk_venv/bin/qmk`, not on `PATH`.**
   `export QMK_HOME=$PWD && export PATH="/root/.qmk_venv/bin:$PATH"`.
 - ⚠️ **Never run two `qmk compile` at once.** All flavours share `.build/`, and the
-  collision presents as an `undefined reference`.
+  collision appears as an `undefined reference`.
 - **The test deliverable is the `.bin`, not the `.uf2`** (the user flashes over HID),
   with the commit sha in the filename, since every test build reports the same
   `FW_VERSION`. The `deliver-test-firmware` skill does this.
 - ⚠️ **A branch-built `.bin` reports a different `FW_VERSION` from CI for the same
-  commit.** CI builds the PR merged into its base. Settle it by diffing, not rebuilding.
-- ⚠️ **PR CI does not build the monolith** (`POLYKYBD_DOOM=yes`, the tightest RAM
-  flavour). Build it locally before merging anything that adds statics.
+  commit.** CI builds the PR merged into its base. Resolve it by diffing, not rebuilding.
+- ⚠️ **The DOOM monolith (`POLYKYBD_DOOM=yes`) is the tightest RAM flavour, and local
+  gcc 13.2 shows 400–500 B more headroom than CI's gcc 15.2.** The PR job
+  "Build release shape" runs the release's `build_pack.sh` and prints the headroom
+  (`tools/ram_report.py`). Trust its number, not a local build (v1.9.1 failed 40 B over).
 - **Docker is not usable** in the remote container (no daemon).
-- ⚠️ **"It booted" is not evidence a flash landed. Make the artifact identify itself.**
-  The handedness banner prints `slot=N/M writer=0xNN` for this reason. When a write
-  breaks a boot, redo the same write by another path before debugging what reads it.
+- ⚠️ **"It booted" is not evidence a flash was written. Make the artifact identify
+  itself.** The handedness banner prints `slot=N/M writer=0xNN` for this reason. When a
+  write breaks a boot, redo the same write by another path before debugging what reads it.
 - ⚠️ **A hand-built UF2 must declare `payloadSize` 256 on every block.** The bootrom
   drops any other block, the download never completes, and the half sits in BOOTSEL.
   Three releases shipped such stamp UF2s. A round-trip verifier proves
@@ -60,16 +62,16 @@ red rig check; `debug-firmware-on-rig` runs a one-off probe.
   own name and read the `SKIP` lines. #298 merged on a green extended run that skipped
   all four doom tests.
 - ⚠️ **A rig test from an unmerged `polykybd-ctnd` PR never runs.** CI force-syncs the
-  rig to ctnd `main`. Land the ctnd PR first, then re-run HIL.
+  rig to ctnd `main`. Merge the ctnd PR first, then re-run HIL.
 - ⚠️ **A HIL job that never starts is not red, and alerts nobody.** An offline rig
   leaves it `queued`. Read `status` before `conclusion`, and don't re-run.
 - ⚠️ **GitHub can switch Actions off for this fork, and nothing on a PR says so.** The
-  tell is NO run at all (a queued job means the rig). Re-enabling replays nothing.
-  `bump-version.yml` has no `workflow_dispatch`, so a missed bump is a one-line
+  sign is NO run at all (a queued job means the rig). Re-enabling replays nothing.
+  `bump-version.yml` has no `workflow_dispatch`, so a missed version increase is a one-line
   `FW_VERSION` PR labelled `bump:none` (#367).
 - **`cppcheck` gates and is the only non-LLM reviewer.** A bare `#` line in
   `.cppcheck-suppressions` kills the run before it checks anything. Every suppression
-  carries a written reason.
+  has a written reason.
 - ⚠️ **Applying N labels in one API call fires N workflow runs.**
 - ⚠️ **A `check_suite.completed` wake can name a superseded head.** Compare its
   `head_sha` with the PR head.
@@ -77,10 +79,10 @@ red rig check; `debug-firmware-on-rig` runs a one-off probe.
 ## Upstream files and security findings
 
 This is a fork of a 30k-commit project, so most of what a scanner flags under `.github/`
-or `lib/` is upstream's. Two checks settle it: `diff` the path against upstream's raw
+or `lib/` is upstream's. Two checks decide it: `diff` the path against upstream's raw
 file (identical is conclusive; a difference is not proof we own it, so check
 [`UPSTREAM_PATCHES.md`](keyboards/polykybd/UPSTREAM_PATCHES.md)), and read the triggers
-(`workflow_call`-only and `github.repository == 'qmk/qmk_firmware'` gates are dead here).
+(`workflow_call`-only and `github.repository == 'qmk/qmk_firmware'` gates never run here).
 For a workflow, a 404 from upstream means ours: 5 of the 24 are (`bump-version.yml`,
 `cppcheck.yml`, `polykybd-unit-test.yml`, `qmk-test.yml`, `release.yml`).
 
@@ -103,7 +105,7 @@ rules are in polykybd-claude. Mechanics, the `release-notes` branch and the gate
 - ⚠️ **Publishing is gated on a green firmware-APPLY run for the released commit**
   (`tools/require_fwapply_run.py`). The HID-apply brick shipped because no release
   artifact had ever been applied on hardware. The gate accepts a delta to the release
-  commit of only the auto-bump and files the build never reads (replayed from
+  commit of only the auto-bump and files the build never reads (copied from
   `qmk-test.yml`'s `paths:` filter).
 - ⚠️ **Publishing within ~11 min of a firmware merge races that merge's own apply run.**
   On a refusal, look up the newest firmware merge's runs BY `head_sha` first. If its
@@ -113,20 +115,22 @@ rules are in polykybd-claude. Mechanics, the `release-notes` branch and the gate
 
 ## Firmware overview
 
-RP2040 (dual M0+) at **200 MHz** (since 0.10.x; 125 MHz before), with the core voltage
+RP2040 (dual M0+) at **200 MHz** (since 0.11.0; 125 MHz before), with the core voltage
 raised to 1.15 V by `POLYKYBD_VREG_VSEL`. `-e POLYKYBD_SYS_CLK=125` builds an image
 byte-identical to the pre-200 MHz builds. Peripherals derive their dividers from the
 live `clk_sys`, except XIP flash (`clk_sys/PICO_FLASH_SPI_CLKDIV` = 4); re-check that if
 another clock is added. The boot banner prints `clk: sys=…Hz vreg_vsel=0x…`.
 
-**8 MB external QSPI flash**, partitioned (authoritative map: `base/fw_staging.h`):
+**8 MB external QSPI flash** (BY25Q64ES on rev 3.3 boards, W25Q64JV on earlier
+revisions; both erase 4 KB sectors and 64 KB blocks and support erase suspend/resume,
+figures in `FW_STAGING.md`), partitioned (authoritative map: `base/fw_staging.h`):
 0–2 MB running firmware, 2–4 MB update staging, 4–8 MB resources/overlays. The budget
 that matters is the 2 MB firmware partition. `FW_STAGING_OFFSET` equals the linker
-`flash1` length, so an oversized image fails to link. ⚠️ Sectors carved off the top of
+`flash1` length, so an oversized image fails to link. ⚠️ Sectors taken from the top of
 staging (apply log, crash archive, handedness stamp) need an alignment assert as well as
 an overlap assert.
 
-Split keyboard (halves over a full-duplex UART), up to 72 per-keycap 72×40 OLEDs plus a
+Split keyboard (halves over a full-duplex UART at 1843200 baud), up to 72 per-keycap 72×40 OLEDs plus a
 128×64 status OLED. The host talks over 64-byte raw HID reports.
 
 ⚠️ **VIA is NOT supported. Don't write "VIA-compatible" anywhere.** Only
@@ -145,15 +149,15 @@ per-variant logic. [`VARIANTS.md`](keyboards/polykybd/VARIANTS.md).
 
 ### The dynamic keymap
 
-`DYNAMIC_KEYMAP_LAYER_COUNT` is 12, but only layers 0..7 live in EEPROM
+`DYNAMIC_KEYMAP_LAYER_COUNT` is 12, but only layers 0..7 are stored in EEPROM
 (`DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT` = 8); `_SL` and up come from flash.
 [`KEYMAP_STORAGE.md`](keyboards/polykybd/KEYMAP_STORAGE.md).
 
-- ⚠️ **The stored keymap is indexed by layer number, unversioned.** Bump
+- ⚠️ **The stored keymap is indexed by layer number, unversioned.** Increase
   `KEYMAP_LAYERS_FL_MERGED` when a layer is added, removed or reordered, never when its
   contents change.
 - ⚠️ **A keymap edit below the write cap is invisible on any board that stored a
-  keymap.** Bumping the format stamp reaches every board and wipes the user's macros;
+  keymap.** Increasing the format stamp reaches every board and wipes the user's macros;
   `polyctl keymap set <layer> <row> <col> <keycode>` is non-destructive.
 - ⚠️ **The host's keymap reset also wipes every macro.** Tray Maintenance → "Reset keymap
   to default…" (control method `keymap.reset`, no `polyctl`) sends
@@ -183,8 +187,8 @@ Byte 0 report ID, byte 1 command ID, byte 2+ payload; replies `"P\xNN."` (ACK) o
 command; several were shaped by a contrast the wire format does not show. A new command
 goes through the `add-gated-hid-command` skill.
 
-- **Bump `FW_VERSION`, `PROTOCOL_VERSION` and the host's `__protocol__` together.** The
-  connect gate is a range, so a missed bump silently leaves the feature disabled.
+- **Increase `FW_VERSION`, `PROTOCOL_VERSION` and the host's `__protocol__` together.** The
+  connect gate is a range, so a missed increase silently leaves the feature disabled.
 - ⚠️ **Cmd 30 (glyph script) accepts any index; cmd 34 (glyph size) is a closed range.**
   This is deliberate, and the two HIL tests assert opposite things on purpose.
 - ⚠️ **A QMK `*_set_user` hook is a notification, never a setter.** Calling one to change
@@ -193,14 +197,23 @@ goes through the `add-gated-hid-command` skill.
   normal build is the capability signal.
 - ⚠️ **On the split transaction, `width` bit 7 is `OVERLAY_MAP_ICON_FILL` (0x80).** No
   real mapping width may set it. Cmd 33's own flags (0x40 prepare, 0x20 enable, 0x80 dim)
-  are masked to 0x1F before the decoder or the slave; dim crosses as
-  `OVERLAY_MAP_SYNC_DIM` (0x40).
+  are masked to 0x1F before the decoder or the slave; dim is sent to the
+  slave as `OVERLAY_MAP_SYNC_DIM` (0x40).
 - ⚠️ **PRC overlays (cmd 41) decode against a frozen table** compiled into both ends
   (`prc_table_v1.h` ↔ host `res/prc_table_v1.bin`). A retrained table is a new protocol
   version. An RLE fragment length must stay below 0x80.
 - ⚠️ **The flat overlay index is the only address an upload has**, so
-  `reset_overlay_mapping()`'s identity default is load-bearing for writes.
-- **To tell the host the board changed state, bump the `G` state-generation counter in
+  `reset_overlay_mapping()`'s identity default is required for writes.
+- **The bulk pipe** ([`BULK_PIPE.md`](keyboards/polykybd/BULK_PIPE.md)) is a CDC serial
+  interface (`POLYKYBD_BULK_PIPE`, on by default) whose bulk endpoints carry large
+  host→master transfers; raw HID stays the control channel. It carries the
+  measurement commands and, since pipe protocol 2, the firmware-update chunks
+  (`FW_CHUNK`, 236 bytes, relayed to the slave in one split RPC); BEGIN, SIGNATURE,
+  COMMIT and APPLY stay on HID. ⚠️ The split UART (1843200 baud since then, 460800
+  before) still caps anything relayed to the slave. ⚠️ A pipe handler runs inside
+  `virtser_task()`, which drains the whole OUT queue in one pass: a host must pace
+  itself by the replies (a window of 4 frames), or the main loop stays in the drain.
+- **To tell the host the board changed state, increment the `G` state-generation counter in
   the GET_ID reply** (`poly_state_touch()`), which the host polls every second. It goes
   after the `V` font-pack block, which the host finds positionally. Do not add
   unsolicited raw HID.
@@ -209,7 +222,7 @@ goes through the `add-gated-hid-command` skill.
 
 Cmd 27 packs each `xx-YY` code as two indices into the frozen, append-only table in
 `lang/iso_lang_country.py`, which is mirrored in host and rig (see polykybd-claude).
-Re-run `cog -r hid_com.c` after changing the list or the table. `NUM_LANG` is 160.
+Re-run `cog -r hid_com.c` after changing the list or the table. `NUM_LANG` is 161.
 Adding a language: the `add-polykybd-language` skill and
 [`lang/FUTURE_LANGUAGES.md`](keyboards/polykybd/lang/FUTURE_LANGUAGES.md).
 
@@ -235,18 +248,19 @@ placement: [`LEGEND_LAYOUT.md`](keyboards/polykybd/LEGEND_LAYOUT.md); status OLE
 - ⚠️ **Gate key→display mapping on `key_has_display(r,c)`** (74 keys, 72 OLEDs). Matrix
   and display indices differ on split72's right half; `key_display_index()` is the one
   fold and `tools/check_disp_index.py` checks it (manual, not in CI). A bug on one half
-  only is the tell of a wrong panel index.
+  only is a sign of a wrong panel index.
 - ⚠️ **A gate that scans source must strip comments first**, or it matches its own
   documentation. This binds every `tools/check_*.py`.
 
 ### Split synchronisation
 
-Twelve custom transaction IDs carry state to the slave with CRC32 and up to 10 retries.
+Twelve custom transaction IDs send state to the slave with CRC32 and up to 10 retries.
 [`SPLIT_SYNC.md`](keyboards/polykybd/SPLIT_SYNC.md).
 
 - ⚠️ **`RPC_M2S_BUFFER_SIZE` is a silent ceiling.** An oversized payload is dropped
   before sending, and bulk call sites discard the ack. Add a `static_assert` for any
-  struct that can grow. The overlay path sits 3 bytes under the old cap.
+  struct that can grow. It is 252 (sized for the firmware relay chunk); QMK's RPC
+  length field is a uint8_t, so 255 is the hard cap.
 - ⚠️ **A `user_sync_*` handler runs on the slave's split-protocol thread**, concurrently
   with its main loop. Record the request and act in housekeeping
   (`split_sync_drain_anim_replay()`); never touch the SPI bus there.
@@ -256,7 +270,7 @@ Twelve custom transaction IDs carry state to the slave with CRC32 and up to 10 r
   CRC32 is the only one. Keep it.
 - **Ack bytes are Hamming-spaced (distance 4)** and `sync_succeeded()` is a whitelist.
   `sync_is_link_fault()` is a complement, not a list.
-- **An overlay mapping chunk is one-shot.** A lost chunk arms a repair drained from
+- **An overlay mapping chunk is one-shot.** A lost chunk schedules a repair drained from
   housekeeping. Every mapping-apply site pairs `set_packed_overlay_mapping()` with
   `request_disp_refresh()` on both halves.
 - ⚠️ **split42 needs `POLY_SPLIT_SHMEM_RPC_GUARD`.** Don't remove it; the writer it
@@ -264,8 +278,18 @@ Twelve custom transaction IDs carry state to the slave with CRC32 and up to 10 r
 
 ### Persistence and state
 
-- **EEPROM writes happen only at suspend/reset/store** (`save_all_dirty()`). Never write
-  EEPROM in a split-transaction handler.
+- **`poly_eeconf_t` settings are written only at suspend/reset/store**
+  (`save_all_dirty()`). Many other writes are IMMEDIATE, in normal use: keymap edits
+  (`dynamic_keymap_set_keycode`, `dynamic_keymap_set_buffer_poly`), macros
+  (`poly_macro.c`), RGB settings, and the unicode mode (cmd 20 with persist calls
+  `set_unicode_input_mode()`, which the host sends whenever it detects WinCompose, mid-Eden
+  on 2026-10-13). Never write EEPROM in a split-transaction handler.
+- ⚠️ **An EEPROM write is a flash write, and QMK's driver does not stop core1.** A core1
+  running Eden or an RLE decode from XIP during it stops permanently, or the bus wedges and
+  the watchdog resets the half (2026-10-12, both at USB suspend). The driver's
+  `wear_leveling_rp2040_flash_quiesce()` hook now waits for core1 before every write
+  ([`UPSTREAM_PATCHES.md`](keyboards/polykybd/UPSTREAM_PATCHES.md)). A raw
+  `flash_range_*` call outside the EEPROM driver still needs `core1_hold()`.
 - ⚠️ **An unwritten EEPROM byte reads `0x00`, not `0xFF`**, after wear levelling. Gate a
   new field on the format version, and retire a broken version value rather than reuse
   it.
@@ -308,7 +332,8 @@ Each has a doc; the rules below bind code outside it.
   Nothing may overlay this layer.
 - **Glyph script, cmd 30** ([`GLYPH_SCRIPT.md`](keyboards/polykybd/GLYPH_SCRIPT.md),
   skill `add-glyph-script`): the index is open-ended, so a new face needs no protocol
-  bump. Don't add a range NACK. Codepoints are relocated into private blocks 0x40 apart.
+  version increase. Don't add a range NACK. Codepoints are relocated into private
+  blocks 0x40 apart.
 - **Layer names, cmd 35** ([`LAYER_NAMES.md`](keyboards/polykybd/LAYER_NAMES.md)): the
   count is `DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT`, not `DYNAMIC_KEYMAP_LAYER_COUNT`.
 - **RGB settings row** ([`RGB_SETTINGS_ROW.md`](keyboards/polykybd/RGB_SETTINGS_ROW.md)):
@@ -347,7 +372,8 @@ Generated by `fontconvert` (`../Adafruit-GFX-Library/`) from
 - ⚠️ **`tools/check_glyph_coverage.py` must pass**: every codepoint a legend draws must
   be in a font. A gap once HardFaulted the master (#329).
 - ⚠️ **No heavy work in a split-transaction handler**, and FONTPACK writes in place, so a
-  slot is valid when its last chunk lands. Reship with the `reship-fontpack-bundle` skill.
+  slot is valid when its last chunk is written. Reship with the
+  `reship-fontpack-bundle` skill.
 
 ## Crashes, hangs and investigations
 
@@ -365,9 +391,9 @@ skill. Closed investigations and the evidence behind the rules here:
 - **Reproduce a boot hang with `polyctl bootloop --rounds N`.** Ruling out a 1-in-N hang
   at ~95% takes about 3·N clean rounds.
 - ⚠️ **The RP2040 USB driver is a vendored copy** (`chibios_overrides/`). Diff it after
-  every `lib/chibios-contrib` bump.
-- **core1 runs with interrupts masked.** Don't remove it on the strength of a theory.
-- **When a bug resists clever theories, do the mechanical, auditable thing:** one change
-  per commit, facts from the authoritative source (the KiCad schematic, not an old
-  header), suspect what is absent or disabled, actually redo a step you claim to have
-  redone, and let the hardware decide.
+  every `lib/chibios-contrib` update.
+- **core1 runs with interrupts masked.** Don't remove it because of a theory alone.
+- **When clever theories do not explain a bug, do the mechanical, auditable thing:**
+  one change per commit, facts from the authoritative source (the KiCad schematic, not
+  an old header), suspect what is absent or disabled, actually redo a step you claim to
+  have redone, and test the result on the hardware.

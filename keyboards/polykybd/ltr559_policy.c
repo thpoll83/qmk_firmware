@@ -105,6 +105,15 @@ static void poly_force_wake(void) {
     }
 }
 
+// Set once the first real reading engaged auto-brightness. Never cleared: a
+// manual set turns auto mode off, and the sensor's per-tick push then no-ops
+// until auto mode is engaged again.
+static bool s_engaged = false;
+
+bool poly_ltr559_drives_brightness(void) {
+    return s_engaged;
+}
+
 static uint32_t isqrt32(uint32_t x) {
     uint32_t r = 0, b = 1UL << 30;
     while (b > x) b >>= 2;
@@ -134,7 +143,6 @@ static uint8_t lux_to_contrast(uint16_t lux) {
 
 void poly_ltr559_drive(void) {
     static uint32_t last        = 0;
-    static bool     engaged     = false;
     static uint8_t  last_logged = 0xFF;   // last brightness announced to the console
     if (!is_usb_host_side()) {
         return;   // decisions are master-only (the slave just serves reads)
@@ -173,12 +181,12 @@ void poly_ltr559_drive(void) {
     // brightness until the first non-zero average, then engage. Once engaged we
     // keep applying — a genuine dark-room 0 is floored by lux_to_contrast (never
     // off), so a momentary 0 can't blank the keys.
-    if (!engaged) {
+    if (!s_engaged) {
         if (lux == 0) {
             return;
         }
         set_brightness_auto_mode(true);
-        engaged = true;
+        s_engaged = true;
         uprintf("LTR-559: auto-brightness engaged (avg lux %u)\n", lux);
     }
 

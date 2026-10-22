@@ -120,7 +120,8 @@ TEST(ImeKeyJapanese, WindowsUsesCapsLockModeKeys) {
 }
 
 TEST(ImeKeyJapanese, NoOtherStrokeDropsShift) {
-    for (uint8_t fam : {IME_FAMILY_NONE, IME_FAMILY_KOREAN, IME_FAMILY_JAPANESE, IME_FAMILY_RALT}) {
+    for (uint8_t fam : {IME_FAMILY_NONE, IME_FAMILY_KOREAN, IME_FAMILY_JAPANESE, IME_FAMILY_RALT,
+                        IME_FAMILY_JAPANESE_JIS}) {
         for (uint8_t os : kAllOs) {
             for (bool shift : {false, true}) {
                 if (fam == IME_FAMILY_JAPANESE && os == IME_OS_WINDOWS && shift) continue;
@@ -189,6 +190,40 @@ TEST(ImeKeyRalt, HeldRightAltOnEveryOs) {
     }
 }
 
+// ---- Japanese on a JIS OS layout (ja-JP) ---------------------------------------------
+
+TEST(ImeKeyJapaneseJis, IsCapsLockOffMac) {
+    // On a JIS layout Caps is the 英数 key and Shift+Caps is Caps Lock, so the key is
+    // a plain, HELD Caps that leaves the user's Shift alone and never moves the belief.
+    for (uint8_t os : kAllOs) {
+        if (os == IME_OS_MACOS) continue;
+        for (bool shift : {false, true}) {
+            SCOPED_TRACE(::testing::Message() << int(os) << "/" << shift);
+            uint8_t mode = IME_JA_HIRAGANA;
+            const ime_stroke_t s = Press(IME_FAMILY_JAPANESE_JIS, os, shift, &mode);
+            EXPECT_EQ(ime_key_stand_in(IME_FAMILY_JAPANESE_JIS, os), IME_HID_CAPS);
+            EXPECT_EQ(s.usage, IME_HID_CAPS);
+            EXPECT_EQ(s.mods, 0);
+            EXPECT_TRUE(s.hold);
+            EXPECT_FALSE(s.drop_shift);
+            EXPECT_EQ(mode, IME_JA_HIRAGANA);
+        }
+    }
+}
+
+TEST(ImeKeyJapaneseJis, CyclesLikeJaUsOnMac) {
+    // macOS gives Caps no JIS meaning, so ja-JP keeps the 英数/かな cycle there.
+    EXPECT_EQ(ime_key_stand_in(IME_FAMILY_JAPANESE_JIS, IME_OS_MACOS), 0);
+    uint8_t jis = IME_JA_OFF, us = IME_JA_OFF;
+    for (bool shift : {false, false, true, false, false}) {
+        const ime_stroke_t a = Press(IME_FAMILY_JAPANESE_JIS, IME_OS_MACOS, shift, &jis);
+        const ime_stroke_t b = Press(IME_FAMILY_JAPANESE, IME_OS_MACOS, shift, &us);
+        EXPECT_EQ(a.usage, b.usage);
+        EXPECT_EQ(a.mods, b.mods);
+        EXPECT_EQ(jis, us);
+    }
+}
+
 TEST(ImeKeyRalt, StandsInForTheGuiKeyOnMac) {
     // KC_RGUI is what draws ⌥ on macOS and what the swap sends as Right Alt there.
     EXPECT_EQ(ime_key_stand_in(IME_FAMILY_RALT, IME_OS_MACOS), IME_HID_RGUI);
@@ -206,7 +241,8 @@ uint8_t SentAs(uint8_t usage, uint8_t os) {
 }
 
 TEST(ImeKeyStandIn, NamesWhatTheKeySends) {
-    for (uint8_t fam : {IME_FAMILY_NONE, IME_FAMILY_KOREAN, IME_FAMILY_JAPANESE, IME_FAMILY_RALT}) {
+    for (uint8_t fam : {IME_FAMILY_NONE, IME_FAMILY_KOREAN, IME_FAMILY_JAPANESE, IME_FAMILY_RALT,
+                        IME_FAMILY_JAPANESE_JIS}) {
         for (uint8_t os : kAllOs) {
             for (bool shift : {false, true}) {
                 SCOPED_TRACE(::testing::Message() << int(fam) << "/" << int(os) << "/" << shift);

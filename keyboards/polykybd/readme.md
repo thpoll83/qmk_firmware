@@ -228,6 +228,9 @@ half once, plugged in alone, and the master is then the half that enumerates on 
 `polyctl handedness left --split-vbus on` (on the left half), then
 `polyctl handedness right --split-vbus on` (on the right half)
 
+The tray app has the same step under Maintenance → Fix Left/Right Side →
+"Mark connected half as a Rev.2 board (2023)…".
+
 The flag is stored in the handedness stamp (protocol 24, `base/hand_stamp.h`), and the
 boot banner shows it on the `board:` line. It replaces the old `revision2` keymap.
 

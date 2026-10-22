@@ -1040,11 +1040,22 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
             case 25: //set handedness (which half is left / which is right)
                 {
                     bool master_is_left = (data[HID_DATA_IDX] == 0);
+                    // v24: board-flag op for THIS half's stamp (poly_board_op_t). 0
+                    // keeps the stored flags, which is what an older host sends. An
+                    // unknown op is refused before anything is written or reset.
+                    uint8_t board_op = data[HID_DATA_IDX + 1];
+                    if (board_op >= POLY_BOARD_OP_COUNT) {
+                        memset(data, 0, length);
+                        hid_reply(data, 0x19, false);
+                        raw_hid_send(data, length);
+                        break;
+                    }
                     // Records the change; poly_hand_flush_pending() below writes
                     // both the EEPROM byte and the flash stamp. The stamp is what
                     // survives a wear-levelling wipe -- without it this setting is
                     // one torn EEPROM write away from silently reverting.
                     poly_hand_set_pending(master_is_left);
+                    poly_hand_set_pending_board_op(board_op);
                     poly_hand_flush_pending();   // main loop, so the sector write is safe inline here
                     // ACK first, like cmd 43: the reset never returns, and the hardened
                     // handoff below can take a couple of seconds on a bad link.

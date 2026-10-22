@@ -297,6 +297,20 @@ reading before you change either one.
     and the mapping repair replays plain pairs, then dimmed ones.
   - v21/v22 firmware masks the width with 0x1F and draws those icons at full
     strength; the host sets the bit only at v23.
+  **v24** adds a **board-flag byte** to cmd `25` (`data[HID_DATA_IDX+1]`,
+  `poly_board_op_t`): `0` keeps the stored flags, `1` clears and `2` sets
+  `POLY_HAND_FLAG_SPLIT_VBUS` in this half's handedness stamp (`pad[1]`). The flag
+  marks a Rev.2 board, which passes VBUS over the split cable, so GP24 reads high on
+  both halves; with it set, `is_keyboard_master_impl()` picks the half that
+  enumerates on USB (2 s timeout) instead. Rev3 boards are unchanged.
+  - **0 means keep**, so an older host, which zero-pads the report, cannot clear the
+    flag by setting the side. A value of `3` or more is NACKed before anything is
+    written.
+  - **This half only.** The flag describes the PCB the master runs on; it is not sent
+    to the slave (`poly_reset_sync_t` is unchanged). A Rev.2 pair cannot link before
+    the flag is set anyway, so each half is set on its own, plugged in alone.
+  - v23 and older firmware ignore the byte and set only the side; the host sends a
+    non-zero op only at v24. The boot banner reports the flags on a `board:` line.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload

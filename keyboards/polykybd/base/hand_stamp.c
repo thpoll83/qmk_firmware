@@ -28,6 +28,8 @@ static bool   s_pending_is_left = false;
 static uint8_t s_slot   = 0xFFu;  // page the answer came from; 0xFF = no record
 static uint8_t s_count  = 0;      // valid records in the sector
 static uint8_t s_writer = 0;      // pad[0] of that record (see hand_stamp.h)
+static uint8_t s_flags  = 0;      // pad[1] of that record, masked to POLY_HAND_FLAGS_KNOWN
+static uint8_t s_pending_op = POLY_BOARD_OP_KEEP;
 
 static void resolve(bool may_migrate);  // defined below; the accessors resolve on demand
 
@@ -49,6 +51,7 @@ static bool stamp_read(bool *is_left) {
     s_slot  = 0xFFu;
     s_count = 0;
     s_writer = 0;
+    s_flags  = 0;
     for (uint32_t i = 0; i < STAMP_PAGES; i++) {
         const poly_hand_stamp_t *p = stamp_page(i);
         if (p->magic == 0xFFFFFFFFu) break;   // erased: nothing beyond this
@@ -57,6 +60,7 @@ static bool stamp_read(bool *is_left) {
             found    = true;
             s_slot   = (uint8_t)i;      // the LAST valid page wins, so keep overwriting
             s_writer = p->pad[0];
+            s_flags  = (uint8_t)(p->pad[1] & POLY_HAND_FLAGS_KNOWN);
             s_count++;
         }
     }
@@ -76,6 +80,11 @@ uint8_t poly_hand_stamp_count(void) {
 uint8_t poly_hand_stamp_writer(void) {
     if (s_resolved < 0) resolve(/*may_migrate=*/false);
     return s_writer;
+}
+
+uint8_t poly_hand_board_flags(void) {
+    if (s_resolved < 0) resolve(/*may_migrate=*/false);
+    return s_flags;
 }
 
 // `lockout` = park core1 around the write (it serves RLE from XIP, so it must not
@@ -98,7 +107,8 @@ static void stamp_flash(bool erase, uint32_t off, const uint8_t *page, bool lock
     crash_phase_leave(tag);
 }
 
-static void stamp_write(bool is_left, bool lockout) {
+// Writes `flags` as the record's board flags; callers pass s_flags to keep them.
+static void stamp_write(bool is_left, uint8_t flags, bool lockout) {
     uint32_t slot = STAMP_PAGES;
     for (uint32_t i = 0; i < STAMP_PAGES; i++) {
         if (stamp_page(i)->magic == 0xFFFFFFFFu) { slot = i; break; }
@@ -114,6 +124,7 @@ static void stamp_write(bool is_left, bool lockout) {
     memset(&rec, 0, sizeof(rec));
     rec.magic   = POLY_HAND_STAMP_MAGIC;
     rec.is_left = is_left ? 1 : 0;
+    rec.pad[1]  = (uint8_t)(flags & POLY_HAND_FLAGS_KNOWN);
     rec.crc     = crc32_1byte(&rec, (uint16_t)offsetof(poly_hand_stamp_t, crc), 0);
 
     uint8_t page[FLASH_PAGE_SIZE];
@@ -136,7 +147,7 @@ static void resolve(bool may_migrate) {
     if (have) {
         s_source = POLY_HAND_SRC_STAMP;
     } else if (d.migrate && may_migrate) {
-        stamp_write(d.is_left, /*lockout=*/false);
+        stamp_write(d.is_left, s_flags, /*lockout=*/false);
         // Re-scan so slot/count/writer describe the record that is NOW in flash.
         // stamp_read() above ran BEFORE the write and left them at "no record"
         // (0xFF / 0), so without this the banner reports slot=255/0 on the one
@@ -172,7 +183,7 @@ void poly_hand_force_stamp(bool is_left) {
     bool cur  = false;
     bool have = stamp_read(&cur);
     if (have && cur == is_left) return;   // already this side; no page burned
-    stamp_write(is_left, /*lockout=*/false);
+    stamp_write(is_left, s_flags, /*lockout=*/false);
 }
 
 bool poly_hand_is_left(void) {
@@ -195,10 +206,19 @@ void poly_hand_set_pending(bool is_left) {
     s_pending_is_left = is_left;
 }
 
+void poly_hand_set_pending_board_op(uint8_t op) {
+    s_pending_op = op;
+}
+
 void poly_hand_flush_pending(void) {
     if (!s_pending) return;
     s_pending = false;
+    // s_flags is the stored record's; resolve first so a change of side alone keeps it.
+    if (s_resolved < 0) resolve(/*may_migrate=*/false);
+    uint8_t flags = poly_hand_apply_board_op(s_flags, s_pending_op);
+    s_pending_op  = POLY_BOARD_OP_KEEP;
     eeconfig_update_handedness(s_pending_is_left);
-    stamp_write(s_pending_is_left, /*lockout=*/true);
+    stamp_write(s_pending_is_left, flags, /*lockout=*/true);
     s_resolved = s_pending_is_left ? 1 : 0;
+    s_flags    = flags;
 }

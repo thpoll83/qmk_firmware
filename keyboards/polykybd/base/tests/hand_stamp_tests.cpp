@@ -140,3 +140,46 @@ TEST(HandStampTest, TheWireLayoutIsPinnedForTheUf2Tool) {
     EXPECT_EQ(offsetof(poly_hand_stamp_t, crc), 8u);
     EXPECT_EQ(POLY_HAND_STAMP_MAGIC, 0x48414E44UL) << "'HAND'";
 }
+
+// --- board flags (pad[1]) ---------------------------------------------------
+
+// The record keeps pad[1] at offset 6, inside the CRC span. make_hand_uf2.py writes
+// it as 0 ("<IBB2x"), which is the rev3 default.
+TEST(HandStampTest, TheBoardFlagsSitInsideTheCrcSpan) {
+    EXPECT_EQ(offsetof(poly_hand_stamp_t, pad) + 1u, 6u);
+    EXPECT_LT(offsetof(poly_hand_stamp_t, pad) + 1u, offsetof(poly_hand_stamp_t, crc));
+}
+
+// An older host zero-pads cmd 25, so op 0 must leave a Rev.2 flag alone: otherwise
+// setting the side with that host would turn a working Rev.2 pair into two masters.
+TEST(HandStampTest, BoardOpZeroKeepsTheFlags) {
+    EXPECT_EQ(poly_hand_apply_board_op(POLY_HAND_FLAG_SPLIT_VBUS, POLY_BOARD_OP_KEEP), POLY_HAND_FLAG_SPLIT_VBUS);
+    EXPECT_EQ(poly_hand_apply_board_op(0, POLY_BOARD_OP_KEEP), 0);
+}
+
+TEST(HandStampTest, BoardOpsSetAndClearOnlyTheSplitVbusBit) {
+    EXPECT_EQ(poly_hand_apply_board_op(0, POLY_BOARD_OP_SET_SPLIT_VBUS), POLY_HAND_FLAG_SPLIT_VBUS);
+    EXPECT_EQ(poly_hand_apply_board_op(POLY_HAND_FLAG_SPLIT_VBUS, POLY_BOARD_OP_SET_SPLIT_VBUS), POLY_HAND_FLAG_SPLIT_VBUS);
+    EXPECT_EQ(poly_hand_apply_board_op(POLY_HAND_FLAG_SPLIT_VBUS, POLY_BOARD_OP_CLEAR_SPLIT_VBUS), 0);
+    EXPECT_EQ(poly_hand_apply_board_op(0x80, POLY_BOARD_OP_CLEAR_SPLIT_VBUS), 0x80) << "an unrelated bit was cleared";
+}
+
+// The wire values are what the host sends; pin them.
+TEST(HandStampTest, TheBoardOpWireValuesArePinned) {
+    EXPECT_EQ(POLY_BOARD_OP_KEEP, 0);
+    EXPECT_EQ(POLY_BOARD_OP_CLEAR_SPLIT_VBUS, 1);
+    EXPECT_EQ(POLY_BOARD_OP_SET_SPLIT_VBUS, 2);
+    EXPECT_EQ(POLY_BOARD_OP_COUNT, 3);
+}
+
+// Rev3: GP24 alone decides, and enumeration is not consulted (no boot wait).
+TEST(HandStampTest, AnUnflaggedBoardUsesVbus) {
+    EXPECT_TRUE(poly_master_decide(false, /*vbus=*/true, /*enumerated=*/false));
+    EXPECT_FALSE(poly_master_decide(false, /*vbus=*/false, /*enumerated=*/true));
+}
+
+// Rev.2: GP24 reads high on both halves, so it must not decide.
+TEST(HandStampTest, AFlaggedBoardUsesEnumerationNotVbus) {
+    EXPECT_FALSE(poly_master_decide(true, /*vbus=*/true, /*enumerated=*/false)) << "the split-cable half became master";
+    EXPECT_TRUE(poly_master_decide(true, /*vbus=*/true, /*enumerated=*/true));
+}

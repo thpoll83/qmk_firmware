@@ -109,9 +109,9 @@ class RealTreeTest(unittest.TestCase):
     def test_the_whole_table_parses(self):
         cells = list(cgc.lut_cells(str(pathlib.Path(cgc.KB) / "lang" / "lang_lut.c")))
         langs = {lang for _, lang, _, _ in cells}
-        self.assertEqual(len(langs), 160)
+        self.assertEqual(len(langs), 161)   # NUM_LANG: update when a language is added
         self.assertEqual(len(cells) % 4, 0)
-        self.assertGreater(len(cells), 160 * 4 * 40)
+        self.assertGreater(len(cells), 161 * 4 * 40)
 
     def test_every_legend_codepoint_is_in_a_font(self):
         gaps, _ = cgc.find_gaps()

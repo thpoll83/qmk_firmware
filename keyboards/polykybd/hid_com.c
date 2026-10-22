@@ -33,6 +33,11 @@
 #include "poly_util.h"
 
 #include <print.h>
+#include "hal.h"
+#ifndef USB_DRIVER
+#    define USB_DRIVER USBD1   // usb_main.h's default; that header fails -Werror here
+#endif
+#include "usb_descriptor.h"  // RAW_IN_EPNUM
 #include <transactions.h>
 #include <dynamic_keymap.h>
 
@@ -44,6 +49,7 @@
 #include "base/crash_record.h"
 #include "multicore_exec.h"   // core1_stall_report
 #include "boot_diag.h"        // boot_banner_on_host_probe
+#include "ltr559_policy.h"    // poly_ltr559_drives_brightness
 
 
 /*[[[cog
@@ -110,6 +116,26 @@ static inline void hid_reply(uint8_t *data, uint8_t cmd, bool ok) {
 // bounds checks below can't drift into off-by-ones (SECURITY: FW-3 / FW-5 / FW-7).
 static inline uint16_t hid_payload_avail(uint8_t length, uint8_t header) {
     return length > header ? (uint16_t)(length - header) : 0;
+}
+
+// A reply sent right before a deliberate reset waits in the USB endpoint until the
+// host fetches it, 71..103 ms after the request on the HIL rig. A reset before that
+// loses the reply, and a reset during the transfer delivers a cut-off report whose
+// last byte is garbage: the boot loop's 0xee and 0xfe status bytes (2026-10-21).
+// Probe reboot_ack, 100 reboots: 37 lost and 3 cut-off replies without a wait,
+// 11 lost and 0 cut-off with a 100 ms wait. So wait until the endpoint has sent
+// everything queued on it, at most RAW_HID_REPLY_BEFORE_RESET_MS (maintainer's
+// choice); the wait ends early once the host has the reply.
+#define RAW_HID_REPLY_BEFORE_RESET_MS 200
+void raw_hid_send_before_reset(uint8_t *data, uint8_t length) {
+    raw_hid_send(data, length);
+    const uint32_t t0 = timer_read32();
+    while (timer_elapsed32(t0) < RAW_HID_REPLY_BEFORE_RESET_MS) {
+        osalSysLock();
+        const bool sending = usbGetTransmitStatusI(&USB_DRIVER, RAW_IN_EPNUM);
+        osalSysUnlock();
+        if (!sending) return;
+    }
 }
 
 bool legacy_command_kb(uint8_t *data, uint8_t length) {
@@ -490,6 +516,7 @@ static void hid_cmd_7(uint8_t *data, uint8_t length, const poly_layer_t *local_l
         case LANG_IUCA: memcpy(data, "P\x07.iuCA", 7); break;
         case LANG_CRCA: memcpy(data, "P\x07.crCA", 7); break;
         case LANG_CKUS: memcpy(data, "P\x07.ckUS", 7); break;
+        case LANG_JAUS: memcpy(data, "P\x07.jaUS", 7); break;
         //[[[end]]]
         default:
             hid_reply(data, 0x07, false);
@@ -626,8 +653,14 @@ static void hid_cmd_13(uint8_t *data, uint8_t length, const poly_layer_t *local_
                 set_brightness_auto_mode(true);
             }
             // Daylight/auto update: applied only while auto mode
-            // is engaged, never persisted.
-            set_auto_brightness_value(data[HID_DATA_IDX]);
+            // is engaged, never persisted. Once the light sensor
+            // drives auto-brightness, the sensor wins: the host's
+            // level is dropped. Applying it would show it until the
+            // sensor's next tick (up to 500 ms), a visible dip
+            // every 10 min (daylight 2 vs sensor 42, 2026-10-16).
+            if (!poly_ltr559_drives_brightness()) {
+                set_auto_brightness_value(data[HID_DATA_IDX]);
+            }
         } else if (br_flags & BR_FLAG_AUTO_ON) {
             // Engage auto mode without turning this packet into a
             // persisted manual write (which would clear auto again).
@@ -978,7 +1011,7 @@ static void hid_cmd_23(uint8_t *data, uint8_t length, const poly_layer_t *local_
     poly_announce_bootloader();
     memset(data, 0, length);
     hid_reply(data, 0x17, true);
-    raw_hid_send(data, length);
+    raw_hid_send_before_reset(data, length);
     reset_keyboard();
     return;
 }
@@ -1000,7 +1033,7 @@ static void hid_cmd_43(uint8_t *data, uint8_t length, const poly_layer_t *local_
         // of boot problem the caller is looking for, not one to cause.
         memset(data, 0, length);
         hid_reply(data, 0x2b, true);
-        raw_hid_send(data, length);
+        raw_hid_send_before_reset(data, length);
         poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
                                   .action = RESET_ACTION_REBOOT };
         uint8_t ack = fw_up_send_slave_reset(&msg);
@@ -1015,7 +1048,8 @@ static void hid_cmd_24(uint8_t *data, uint8_t length, const poly_layer_t *local_
     sync_and_refresh_displays();
     // Treat host display-off (e.g. system going to sleep) as a cue to
     // flush all dirty user state to EEPROM (dirty-gated, so cheap).
-    save_all_dirty();
+    // With core1 off the flash bus: Eden may have left a job in flight.
+    core1_off_during(save_all_dirty);
     disable_idle_tracking();
     memset(data, 0, length);
     hid_reply(data, 0x18, true);
@@ -1036,7 +1070,7 @@ static void hid_cmd_25(uint8_t *data, uint8_t length, const poly_layer_t *local_
         // handoff below can take a couple of seconds on a bad link.
         memset(data, 0, length);
         hid_reply(data, 0x19, true);
-        raw_hid_send(data, length);
+        raw_hid_send_before_reset(data, length);
         // Hardened handoff, same as cmd 43 and the reset key. A dropped
         // frame here does double damage: the master reboots alone and
         // hangs on the boot splash, AND the slave never records its new
@@ -1049,14 +1083,16 @@ static void hid_cmd_25(uint8_t *data, uint8_t length, const poly_layer_t *local_
         soft_reset_keyboard();
     }
     return;
+}
+
 // Flush all dirty user state to EEPROM (host shutdown/suspend signal).
 // Master-only: HID commands run on the USB half. The slave flushes
 // independently via its own suspend hook. (Distinct from KC_STORE_EE,
 // which sets SAVE_EEPROM and syncs that flag to the slave — see base/com.h.)
-}
-
 static void hid_cmd_26(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) {
-    save_all_dirty();
+    // Sent while the board may sit in Eden, so core1 can be computing a
+    // keycap from flash: keep it off the bus for the write.
+    core1_off_during(save_all_dirty);
     memset(data, 0, length);
     hid_reply(data, 0x1A, true);
     raw_hid_send(data, length);
@@ -1084,7 +1120,7 @@ static void hid_cmd_27(uint8_t *data, uint8_t length, const poly_layer_t *local_
         if off + CHUNK < len(packed):
             cog.outl('memset(data, 0, length);')
     ]]]*/
-    memcpy(data, "\x50\x1b\x2e\xa0\x25\xe8\x20\x38\x2f\x4a\x27\x43\x82\xb7\x48\x6d\xa4\xe0\x54\x79\x4a\x71\x07\xc0\x24\x58\xaa\xe5\x87\xbe\x0d\x23\x50\x7c\x0e\x15\x80\xb2\x86\xbc\xb6\x2f\x73\xa5\x38\x66\x99\xc4\x2c\x45\x74\xa6\x1f\x3a\x3d\x63\x1b\x37\x3b\x61\x8f\xc9\x61\x84", 64);
+    memcpy(data, "\x50\x1b\x2e\xa1\x25\xe8\x20\x38\x2f\x4a\x27\x43\x82\xb7\x48\x6d\xa4\xe0\x54\x79\x4a\x71\x07\xc0\x24\x58\xaa\xe5\x87\xbe\x0d\x23\x50\x7c\x0e\x15\x80\xb2\x86\xbc\xb6\x2f\x73\xa5\x38\x66\x99\xc4\x2c\x45\x74\xa6\x1f\x3a\x3d\x63\x1b\x37\x3b\x61\x8f\xc9\x61\x84", 64);
     raw_hid_send(data, length);
     memset(data, 0, length);
     memcpy(data, "\x50\x1b\x2e\x63\x86\x28\x3f\x82\x1e\x95\xbd\x67\x8f\x2a\x6b\x39\x68\x6a\x68\x71\xa7\x69\x92\xab\xb1\x25\x4c\x27\x9c\x20\x2a\x2f\x13\x2f\x25\x9e\xd9\x12\x68\x9c\x68\x9b\x68\xb6\xe3\x4c\x4e\x3e\x06\x41\x64\x0b\x0f\x47\x6c\xae\xf0\xb6\x5e\x25\x0c\x25\xaa\x66", 64);
@@ -1099,7 +1135,7 @@ static void hid_cmd_27(uint8_t *data, uint8_t length, const poly_layer_t *local_
     memcpy(data, "\x50\x1b\x2e\xcc\x2f\x8d\x25\x51\x25\xe6\x25\xf7\x9a\xe4\x82\x07\x82\x9e\x12\x12\x25\x68\x25\xb1\x25\xb0\x25\xc5\x25\x81\x5a\x73\x9d\xda\x25\x5b\x25\xc1\x25\xf1\x25\x48\x2f\xa0\xa3\xdf\x29\x43\x33\x43\x84\x2a\x1e\x4c\x31\x65\x6c\x98\x5c\x85\x8c\xa6\x34\xb9", 64);
     raw_hid_send(data, length);
     memset(data, 0, length);
-    memcpy(data, "\x50\x1b\x2e\x83\xad\x0a\x1c\x77\xe8\xb9\x9c\x81\x02\x49\x25\x1a\x25\xba\xe8", 19);
+    memcpy(data, "\x50\x1b\x2e\x83\xad\x0a\x1c\x77\xe8\xb9\x9c\x81\x02\x49\x25\x1a\x25\xba\xe8\x4a\xe8", 21);
     raw_hid_send(data, length);
     //[[[end]]]
     return;

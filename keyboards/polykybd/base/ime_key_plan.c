@@ -67,6 +67,15 @@ static ime_stroke_t japanese_stroke(uint8_t os, uint8_t mode) {
     }
 }
 
+// One press of the Japanese mode cycle: advance the belief, send its absolute key.
+static ime_stroke_t japanese_cycle(uint8_t os, bool shift, uint8_t* ja_mode) {
+    const uint8_t next = ime_ja_next(ja_mode ? *ja_mode : IME_JA_OFF, shift);
+    if (ja_mode) {
+        *ja_mode = next;
+    }
+    return japanese_stroke(os, next);
+}
+
 uint8_t ime_key_stand_in(uint8_t family, uint8_t os) {
     switch (family) {
         case IME_FAMILY_KOREAN:
@@ -77,6 +86,8 @@ uint8_t ime_key_stand_in(uint8_t family, uint8_t os) {
         // which macOS gives no meaning of its own; Option is the key that types
         // characters (⌥E, ⌥2), the same job Right Alt does as AltGr or Compose.
         case IME_FAMILY_RALT:     return os == IME_OS_MACOS ? IME_HID_RGUI : IME_HID_RALT;
+        // Caps Lock IS the 英数 key on a JIS layout; macOS keeps the Japanese cycle.
+        case IME_FAMILY_JAPANESE_JIS: return os == IME_OS_MACOS ? 0 : IME_HID_CAPS;
         default:                  return IME_HID_NUBS;
     }
 }
@@ -85,13 +96,13 @@ ime_stroke_t ime_key_stroke(uint8_t family, uint8_t os, bool shift, uint8_t* ja_
     switch (family) {
         case IME_FAMILY_KOREAN:
             return korean_stroke(os);
-        case IME_FAMILY_JAPANESE: {
-            const uint8_t next = ime_ja_next(ja_mode ? *ja_mode : IME_JA_OFF, shift);
-            if (ja_mode) {
-                *ja_mode = next;
-            }
-            return japanese_stroke(os, next);
-        }
+        case IME_FAMILY_JAPANESE_JIS:
+            // HELD, like a real Caps key: the user's own Shift makes it Caps Lock.
+            // macOS has no JIS meaning for Caps, so there it cycles like ja-US.
+            return os == IME_OS_MACOS ? japanese_cycle(os, shift, ja_mode)
+                                      : stroke(IME_HID_CAPS, 0, true);
+        case IME_FAMILY_JAPANESE:
+            return japanese_cycle(os, shift, ja_mode);
         case IME_FAMILY_RALT:
             // Right Alt on EVERY OS. macOS reads it as Right Option, which is what
             // the stand-in KC_RGUI sends through the swap there (ime_key_stand_in).

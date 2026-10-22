@@ -717,6 +717,11 @@ void startup_anim_core1_lost(void) {
     s_c1_done = s_c1_seq;   // core1 is held in reset: core0 owns this word now
 }
 
+bool startup_anim_core1_owes(void) {
+    dmb();
+    return s_c1_done != s_c1_seq;
+}
+
 // The next keycap with a panel, from `from` on; SA_NUM_KEYS when there is none.
 static uint8_t sa_next_key(uint8_t from) {
     const sa_key_geom_t *T = is_left_side() ? SA_GEOM_LEFT : SA_GEOM_RIGHT;
@@ -1010,6 +1015,7 @@ bool startup_anim_is_loop(void) { return false; }
 bool startup_anim_idle_on_core1(void) { return false; }
 void startup_anim_core1_job(uint32_t arg) { (void)arg; }
 void startup_anim_core1_lost(void) {}
+bool startup_anim_core1_owes(void) { return false; }
 bool startup_anim_frame_busy(void) { return false; }
 void startup_anim_tick(void) {}
 bool startup_anim_active(void) { return false; }

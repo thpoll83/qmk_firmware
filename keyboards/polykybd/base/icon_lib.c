@@ -80,6 +80,29 @@ bool iconlib_load_at(const uint8_t *base, uint32_t cap, uint16_t *out_ver) {
     return true;
 }
 
+// OR `n` bits from bit offset `s` of `src` into bit offset `d` of `dst`, both
+// MSB-first. Up to 8 bits per step: each step fills the rest of one destination
+// byte, from a 16-bit window of the source. A step reads the second source byte
+// only when its bits reach into it, so the copy never reads past the last byte
+// that holds one of the `n` bits (the bitmap may end at the end of the bundle).
+// The caller cleared `dst`; this only sets bits. One step per destination byte
+// touched, instead of one per pixel: a 27-pixel row is 4 or 5 steps.
+static void or_bits(uint8_t *dst, uint32_t d, const uint8_t *src, uint32_t s, uint32_t n) {
+    while (n) {
+        const uint32_t dbit = d & 7u;
+        const uint32_t sbit = s & 7u;
+        uint32_t k = 8u - dbit;
+        if (k > n) k = n;
+        uint32_t win = (uint32_t)src[s >> 3] << 8;
+        if (sbit + k > 8u) win |= src[(s >> 3) + 1u];
+        const uint32_t v = (win >> (16u - sbit - k)) & ((1u << k) - 1u);
+        dst[d >> 3] |= (uint8_t)(v << (8u - dbit - k));
+        s += k;
+        d += k;
+        n -= k;
+    }
+}
+
 bool iconlib_blit(uint16_t id, uint8_t *frame) {
     if (!s_base || !frame) return false;
     const fontpack_font_t *r = NULL;
@@ -106,13 +129,8 @@ bool iconlib_blit(uint16_t id, uint8_t *frame) {
     const uint8_t *bits = s_base + start;
     memset(frame, 0, ICONLIB_FRAME_BYTES);
     uint32_t src = 0;
-    for (uint32_t y = 0; y < hgt; ++y) {
-        uint32_t dst = (y0 + y) * ICONLIB_FRAME_W + x0;
-        for (uint32_t x = 0; x < w; ++x, ++src, ++dst) {
-            if (bits[src >> 3] & (0x80u >> (src & 7u))) {
-                frame[dst >> 3] |= (uint8_t)(0x80u >> (dst & 7u));
-            }
-        }
+    for (uint32_t y = 0; y < hgt; ++y, src += w) {
+        or_bits(frame, (y0 + y) * ICONLIB_FRAME_W + x0, bits, src, w);
     }
     return true;
 }

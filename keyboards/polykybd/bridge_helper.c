@@ -172,6 +172,11 @@ static uint8_t send_to_bridge_impl(int8_t tid, void* buffer_with4crc_bytes, cons
         } else {
             ls_nack++;
         }
+        // A refusal is final: the same request gets the same refusal, so stop
+        // here instead of spending the remaining retries on it (sync_ack.h).
+        if(sync_success && !sync_retry_may_help(reply.ack)) {
+            break;
+        }
         if(debug_enable) {
             uprintf("Bridge sync retry %d (tid: %s, success: %d, ack: %d, bytes: %d)\n", retry, tid_to_str(tid), sync_success, reply.ack, num_bytes);
         }

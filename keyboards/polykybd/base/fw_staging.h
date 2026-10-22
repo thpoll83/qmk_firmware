@@ -34,6 +34,12 @@
 #define FW_STAGING_OFFSET      0x200000UL      // staging starts at 2 MB (== linker flash1 length)
 #define FW_STAGING_HEADER_SIZE 0x001000UL      // first 4 KB of staging = header sector
 #define FW_STAGING_DATA_OFFSET (FW_STAGING_OFFSET + FW_STAGING_HEADER_SIZE)
+// Gap between two erase units of the deferred erase (fw_staging_process_deferred),
+// measured from the end of the previous erase: time for the split link (slave) and
+// USB (master) to answer. A 4 KB sector erase is ~60 ms, a 64 KB block ~150 ms
+// (240-270 ms measured on the rig). The firmware image erases in blocks, a
+// resource slot in sectors, because the user may be typing during the latter.
+#define FW_ERASE_GAP_MS 20
 #define FW_RESOURCE_OFFSET     0x400000UL      // resource/overlay region (== FLASH_TARGET_OFFSET in keymap.c)
 // The self-apply's progress log, at the TOP of the staging region. It has to live
 // somewhere the running firmware is not (it is written while that firmware is being
@@ -68,10 +74,14 @@
 #define FW_UP_MAX_SIZE         0x1F5000UL      // max staged image: staging region, minus the 4 KB header, the apply log, the crash log and the handedness stamp
 #define FW_STAGING_MAGIC       0xD1F1A51BUL
 
-// Bytes per firmware-update chunk (HID and split-RPC payload).
+// Bytes per firmware-update chunk over raw HID.
 // 56 bytes fits in the 64-byte RAW_EPSIZE HID packet (2 bytes framing + 4 bytes offset + 56 data + 2 spare).
-// The split RPC struct is 4 CRC + 4 offset + 56 data = 64 bytes < RPC_M2S_BUFFER_SIZE 72 bytes.
 #define FW_UP_CHUNK_SIZE 56
+// The most data one split RPC relays to the slave. The chunk message is a 16-byte
+// header (crc32, op, offset, len) plus the data, and QMK's RPC length is a uint8_t,
+// so 16 + 236 = 252 = RPC_M2S_BUFFER_SIZE (config.h). The HID path relays its 56
+// bytes through the same message; the bulk pipe (poly_pipe.c) relays up to this.
+#define FW_UP_RELAY_CHUNK_MAX 236
 
 // FW-2 physical-presence confirmation. Under FW_REQUIRE_SIGNATURE an image that
 // is not validly signed is not refused outright: COMMIT raises a prompt ON THE
@@ -108,17 +118,9 @@ bool fw_staging_refused_unsigned(void);
 
 // Must be called once before any other fw_staging_* function.
 
-// Hold core1 out of flash for a caller doing its own flash work (EEPROM flush).
-// See the comment on the definition: QMK's wear-levelling backing store erases with
-// core1 running, which is only survivable while the window stays small.
-void fw_staging_core1_lockout_begin(void);
-void fw_staging_core1_lockout_end(void);
-
-// True while fw_staging holds core1 in PSM reset (a deferred erase, a page write, the
-// lockout above). Anything that would release or relaunch core1 in that window must
-// leave it alone: the erase turns XIP off, and a core1 fetching from flash then
-// HardFaults. fw_staging relaunches the RLE service itself when it lets core1 go.
-bool fw_staging_core1_held(void);
+// core1 holds for a caller doing its own flash work (an EEPROM flush, a crash
+// record, the hand stamp) are core1_hold()/core1_release() in core1_owner.h. They
+// nest with fw_staging's own hold, so none of them can release core1 mid-erase.
 
 // Why an apply was refused. The two failures are genuinely different events and the
 // user can act on the difference: NO_IMAGE means nothing ever reached the staging
@@ -160,8 +162,10 @@ bool fw_staging_last_apply_diff(uint32_t *offset, uint32_t *got, uint32_t *want)
 // into staging. Survives the power cycle a BOOTSEL recovery needs, which the watchdog
 // scratch does not -- and a copy that stops partway leaves no other trace at all.
 // How far the last self-apply's sector copy got, read back from the in-flash progress
-// log. The copy runs top-down (N-1 .. 1, then 0), so *lowest is the sector it stopped
-// at; false means no sector completed at all.
+// log. The copy writes body sectors 16..N-1 in ascending order, then 1..15, then 0
+// (images under 64 KB: N-1 down to 1, then 0), so *lowest and *highest are the
+// extremes of the completed sectors and *count how many completed; false means no
+// sector completed at all.
 bool fw_staging_apply_progress(uint32_t *lowest, uint32_t *highest, uint32_t *count);
 
 // True when the last self-apply erased its log and marked it started, i.e. it reached
@@ -240,9 +244,10 @@ typedef enum {
 #define FONTPACK_BUNDLE_DOOMWAD  0x7Fu
 #define FONTPACK_BUNDLE_DOOMPACK 0x7Eu
 
-// Synchronous begin (master / USB side): erases staging flash sector-by-sector
-// with interrupts briefly re-enabled between sectors.  Blocks for ~50 ms per
-// sector (ceil(image_size/4096) + 1 sectors total).
+// Synchronous begin: erases the whole staging range before returning, one erase
+// unit at a time (64 KB blocks for the firmware image, 4 KB sectors for a
+// resource slot) with interrupts re-enabled between units. Blocks the caller for
+// the full erase; both halves use the deferred begin below instead.
 void fw_staging_begin(uint32_t image_size, uint32_t image_crc);              // FIRMWARE target
 void fw_staging_begin_target(uint32_t image_size, uint32_t image_crc, uint8_t target);
 
@@ -307,7 +312,8 @@ uint32_t fw_staging_next_offset(void);
 
 // True if any chunk data has been written to staging since the last fw_staging_begin/fw_staging_begin_deferred.
 // Used by the slave handler to detect partial writes from a previous failed attempt
-// that require re-erasing staging before accepting new chunks.
+// that require re-erasing staging before accepting new chunks. Also true when a
+// finalize cut a deferred erase short: the slot is then partly erased.
 bool fw_staging_written(void);
 
 // True after a successful fw_staging_finalize(); cleared after fw_staging_apply_and_reboot() is called.
@@ -409,7 +415,10 @@ typedef struct _fw_staging_status_t {
     // Consumes half the old pad, so the struct size — and therefore the RPC reply
     // size — is unchanged.
     uint8_t  last_commit_ack;
-    uint8_t  pad;
+    // Why the stager refused the most recent chunk (fw_chunk_refusal_t, 0 when it
+    // was written or never reached the stager). Was the pad byte, so the struct
+    // size and the RPC reply size are unchanged; an older slave sends 0.
+    uint8_t  last_chunk_refusal;
 } fw_staging_status_t;
 
 // Fill `out` with the current internal state.  Safe to call from anywhere.
@@ -421,12 +430,3 @@ void fw_staging_note_chunk_call(uint32_t offset, uint8_t ack);
 // Record the ack the slave's COMMIT handler is about to return, so a later STATUS
 // probe can report the verdict even if that reply never reached the master.
 void fw_staging_note_commit_ack(uint8_t ack);
-
-// Diagnostic helper used while bisecting the fw_up slave-hang bug
-// (see FW_UP_DEBUG_NOTES.md): set the s_fw_up_active flag without
-// performing the staging erase / core1 halt.  Lets the master act as a
-// pure relay (master never touches its own staging) so we can isolate
-// whether the failure is in the staging code or in the split transport.
-// Must be paired with a `false` call to clear when the relay-only flow
-// ends.
-void fw_staging_set_fw_up_active(bool active);

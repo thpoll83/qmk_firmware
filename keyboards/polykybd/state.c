@@ -442,15 +442,9 @@ void note_idle_timeout(uint8_t value) {
     g_idle_timeout = (value < IDLE_TIMEOUT_COUNT) ? value : (uint8_t)POLY_DEFAULT_IDLE_TIMEOUT;
 }
 
-// Console-log name for an idle style. Keep in sync with enum poly_idle_style.
+// Console-log name for an idle style, from the style table (base/idle_style.c).
 const char* idle_style_name(uint8_t style) {
-    switch (style) {
-        case IDLE_STYLE_PULSE:  return "pulse";
-        case IDLE_STYLE_JITTER: return "jitter";
-        case IDLE_STYLE_IDDQD:  return "iddqd";
-        case IDLE_STYLE_EDEN:   return "eden";
-        default:                return "?";
-    }
+    return style < IDLE_STYLE_COUNT ? idle_style_desc(style)->name : "?";
 }
 
 // The active glyph-script override (GLYPH_STD = normal language legends).

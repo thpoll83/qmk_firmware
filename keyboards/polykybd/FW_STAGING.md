@@ -102,7 +102,7 @@ hole.** Reported from hardware after the overpaint fix: "for a very brief moment
 the status screen between the percent update / accept-reject / apply screens". Three
 separate conditions used to select these screens, and nothing owned the gaps:
 
-- **transfer → prompt.** `fw_staging_finalize()` clears `s_fw_up_active` when it raises
+- **transfer → prompt.** `fw_staging_finalize()` returns the stream stage to IDLE when it raises
   the prompt, but the synced `poly_sync_t.fw_confirm` is only set from housekeeping a
   pass later — and on the slave, a split sync later still. `fw_screen_live()` now tests
   `fw_staging_awaiting_confirm()` as well, which is true from the moment COMMIT raises
@@ -406,4 +406,136 @@ user-facing story are
   the loop that scans the matrix, so it **raises the prompt and returns false**; `doom_tick()` re-enters once the
   answer lands. Blocking there would guarantee the keypress is never seen — the same trap
   `FW_UP_COMMIT` avoids.
+
+## Who may stop and start core1 (`base/core1_owner.c`)
+
+Anything that rewrites flash keeps core1 in PSM reset, because a core1 fetch from XIP
+while the QSPI is out of XIP mode stalls the bus for good. **One module owns that
+decision**: `core1_hold()` / `core1_release()` nest through a count, core1 leaves reset
+only when the last hold goes (and the RLE service is relaunched then, bounded), and
+`core1_run()` / `core1_restore_service()` refuse to launch anything while a hold is
+outstanding. The check and the reset share one critical section.
+
+- fw_staging's long hold (BEGIN until the erase completes or the stream is finalized)
+  is a flag over one `core1_hold()`, because BEGIN can arrive twice for the same image.
+  The flag is tested and changed under core1_owner's lock, and the drop is skipped
+  while an erase is pending: on the slave a re-sent BEGIN (split thread) can preempt
+  the erase-complete drop (main thread), which used to leave the new erase unheld.
+- One launch handshake at a time. A launch runs outside the lock, so the split thread
+  can do a whole hold and release during one; that release marks the running launch
+  disturbed instead of starting a second handshake, and the launcher redoes it.
+- The EEPROM flush, the crash record and the hand stamp take their own nested holds.
+  Before this module their "lockout" restarted core1 whenever it was halted, so one of
+  them finishing during a flash erase would have released core1 mid-erase.
+- Not covered on purpose: the boot launch in post_init, and `fw_staging_do_apply()`,
+  which runs from RAM, never returns and must not call into flash or take a lock.
+- The logic is pure behind a `core1_hw_*` seam; `make test:polykybd_core1_owner` covers
+  the three bug shapes of 2026-10-07 (engine start mid-erase, engine stop mid-erase, a
+  hold landing during a launch handshake) plus the nested-release case.
+
+## The stream stage (`base/fw_stage.c`)
+
+A stream is in one of three stages: IDLE, ERASING (a deferred BEGIN is erasing the
+slot, one sector per housekeeping pass) or RECEIVING (chunks are accepted until
+finalize). It used to be two flags, `s_fw_up_active` and `s_erase_pending`. Every
+assignment now goes through `fw_stage_next()`, a pure function covered by
+`make test:polykybd_fw_stage`; `fw_up_active` and `erase_pending` in the STATUS block
+are derived from the stage, so the wire format is unchanged.
+
+- ⚠️ **A refused BEGIN (size 0 or past the slot) does NOT end a stream in progress.**
+  It stops a pending erase and leaves the stage RECEIVING, with fw_staging's core1
+  hold still taken. This is the two flags' old behaviour, kept on purpose; the test
+  pins it, so changing it is a decision, not an accident.
+- ⚠️ **Nothing cancels a stream.** A host that stops mid-stream leaves the stage
+  RECEIVING and the core1 hold taken until the next BEGIN and finalize, or a reboot.
+- One combination the flags allowed is gone: finalize during an erase used to clear
+  `s_fw_up_active` and leave `s_erase_pending` set, so housekeeping kept erasing
+  sectors after finalize had released core1. Finalize now returns to IDLE, which
+  stops the erase. Two details make that safe. `process_deferred` rechecks the
+  stage with interrupts off before each sector, so a finalize on the split thread
+  cannot land between the check and the erase. An erase that finalize cut short
+  marks the slot dirty (`fw_staging_written()`), so an identical BEGIN retry
+  re-erases instead of being told a half-erased slot is ready.
+
+### Reading a chunk NACK
+
+A chunk is relayed to the slave first (10 attempts) and written to the master's
+copy second. When every relay attempt fails, the master prints, without debug on:
+
+```
+FW_UP_BLOCK relay FAILED offset=69148 len=236 after 10 attempts: rpc_fail=0 refused=10 crc_err=0 stale_ack=0 other=0 (last ack=0xb2 slave_next=69148)
+slave status (chunk-fail): … next_off=69148 … last_chunk_off=69148 last_ack=0xb2 refusal=offset-mismatch …
+FW_UP_BLOCK: NACK offset=69148 len=236 resume=69148
+```
+
+(The numbers are an example, not a measurement.) The first line counts what the
+10 attempts got back: `rpc_fail` is a transport failure (no reply), `refused` a
+slave stager refusal, `crc_err` a frame corrupted on the way, `stale_ack` an ACK
+whose cursor is not past this chunk (a reply to an earlier one). The status line
+is printed once per failure burst, for HID, font-pack and fast-link chunks alike.
+Its `refusal` is why the slave's stager refused the last chunk
+(`fw_chunk_refusal_t`: `not-initialized`, `erase-cut-short`, `erase-pending`,
+`offset-mismatch`, `past-end`, or `none` when it was written or never reached the
+stager). It uses the former pad byte of the STATUS block, so the wire size is
+unchanged. A master-side refusal prints its own `fw_staging_write_chunk:` line
+instead, because the master has a console.
+
+## The staging erase
+
+BEGIN erases the header sector and the image's data sectors before any chunk is
+accepted; NOR flash cannot be overwritten (a program only clears bits), so the
+previous image in the slot has to go. The deferred erase (`fw_staging_process_deferred`,
+both halves since the master moved to the deferred path) takes one unit per
+housekeeping pass, `FW_ERASE_GAP_MS` (20 ms) after the previous erase ended:
+
+- for the firmware image, a 64 KB block (one erase command, ~150 ms typical, 2 s
+  datasheet maximum, 240-270 ms measured on the rig) when the offset is
+  block-aligned and a whole block is inside the range, else one 4 KB sector
+  (~60 ms). The staging region starts at 2 MB, so the header and the data share
+  the first block;
+- for a resource slot (a font-pack bundle, the icon library, the game data, the
+  engine pack) always one 4 KB sector. Each erase step runs with interrupts off,
+  so it is a hole in the matrix scan, and the host flashes these slots at connect
+  and on a forced reflash while the user may be typing. A 2026-10-20 field
+  reflash of the nine bundles felt like stalls; the rig's perf harness (the
+  resource transfer workload's `erase` window) measured one block erase as a
+  238 to 268 ms main-loop pass and a sector step as 71 to 96 ms (runs 1493 and
+  1495), at the cost of a longer erase in total (a 221 KB bundle is 54 sector
+  steps instead of 24 mixed ones), which the host's BEGIN polling absorbs. The
+  sector step is as short as this design gets: 4 KB is the smallest erase unit
+  on both flash parts, and running housekeeping more often between steps changes
+  how frequent the holes are, not how long each one is. The maintainer typed
+  through a forced reflash of the nine bundles with sector steps on 2026-10-20,
+  over HID (63 s) and over the fast link (33 s, twice), and felt no stall, so
+  nothing shorter is built. If a later change needs a shorter hole, the one
+  route is erase suspend/resume: both parts support it (BY25Q64ES on rev 3.3,
+  W25Q64JV on earlier boards: Suspend 75h, Resume 7Ah, SUS at Status Register-2
+  bit 7; suspend latency tESL 30 µs and tSUS 20 µs; sector erase 35/300 ms and
+  45/400 ms typ/max), the loop that polls WIP must be RAM-resident, core1 stays
+  held, and the slice length is a new limit to agree with the maintainer. Core1
+  cannot take the erase over: both cores fetch from XIP, so no code runs from
+  flash while the chip erases;
+- a unit that already reads blank (through the uncached XIP alias) is skipped,
+  which is what a slot erased before or a fresh flash after a UF2 gets.
+
+The console reports `erase complete (N sectors: E erases, S blank units skipped)`.
+Before 2026-10-19 the erase was 4 KB sectors with a 70 ms gap measured after each
+erase, so a 545 KB image cost 18 s on both halves (bundle of that day); with blocks
+it is about 2 s. The erase cannot be moved to idle time without a quiet window on
+the split link: a slave erase with interrupts off makes every master transaction in
+that window fail and count as a link fault, which the extended HIL soak asserts at 0.
+
+## The applier's erase
+
+`fw_staging_do_apply()` erases the running partition in 64 KB blocks where a whole
+block is inside the image and in 4 KB sectors for the tail. The partition starts at
+0, so every block is aligned. Order: the app body (sectors 16..N-1; 1..N-1 for an
+image under 64 KB) is erased, then programmed sector by sector with one log page
+each; then block 0 (the vectors' sector 0 and sectors 1..15) is erased in one
+command, sectors 1..15 are programmed, and sector 0 last, as before. The window
+without a vector table is the block-0 erase plus 15 sectors of programming instead
+of one sector erase plus 16 pages; interrupts are off for the whole copy either
+way, so only a fault would use the table. Before 2026-10-19 the copy erased each
+sector before programming it: 137 sectors x ~60 ms was 8 s of the 12.8 s apply
+phase on that day's bundle; 8 blocks + 9 sectors is about 1.7 s.
 

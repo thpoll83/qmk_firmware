@@ -49,6 +49,13 @@ field.** The 72 was sized for exactly these, all derived from `HID_REPORT_SIZE` 
 `HID_REPORT_SIZE` bump, and an app switch would hit the silent rejection above and
 present as missing keycap images. At 96 that path has 27 B of headroom.
 
+Raised 96 → 252 on 2026-10-19 for the firmware relay chunk (`fw_up_chunk_sync_t`:
+16-byte header + `FW_UP_RELAY_CHUNK_MAX` 236 data bytes, asserted in `split_fw_up.h`),
+so the bulk pipe's 236-byte frames cross the link in one RPC instead of five. 255 is
+the hard cap: `transaction_rpc_exec()` takes the length as a `uint8_t`, and
+`rpc_sync_info_t.m2s_length` is one byte. The chunk message is sent at its real
+length (header + `len`), so a 56-byte HID chunk still costs a 72-byte transaction.
+
 
 ## Split synchronisation
 
@@ -78,4 +85,13 @@ housekeeping act (`split_sync_drain_anim_replay()` is the pattern). Starting Ede
 the handler collided with the slave's own boot render and froze it at "100%" with no
 render sub-steps — the boot hang that kept the first-run intro off for months (fixed
 2026-09-25).
+
+⚠️ **The same thread can call `request_disp_refresh()` while the slave renders.** The end
+of a render must not erase that request. `sync_and_refresh_displays()` calls
+`begin_disp_refresh()` when a fresh render starts and `finish_disp_refresh()` when it
+ends, which keeps a request that arrived in between pending. Before this, the render
+ended with `set_disp_refresh(DONE_ALL)` and dropped it. With the master on the right, a
+warm app switch's reset started a slave render, ESC (row 0) was drawn before the mapping
+chunk arrived, and the ESC program mark stayed stale until the next refresh (fixed
+2026-10-18).
 

@@ -53,8 +53,10 @@ who solders the part gets it and nobody else pays more than ~30 s of cheap probe
   real reading); a **manual** change (preset keys / host explicit set) turns auto OFF
   and the sensor **backs off** (its per-tick push no-ops while auto is off and the
   `engaged` static never re-engages) — **manual always wins** until auto is re-enabled
-  or reboot. Refreshing ~0.5 s vs the host's ~10-min daylight, it overrides host
-  daylight values while auto is on.
+  or reboot. Once engaged, the sensor wins over the host's daylight value: cmd 13
+  drops a VOLATILE level (`poly_ltr559_drives_brightness()`) and still honours
+  AUTO_ON, AUTO_OFF and an explicit set. Before this, the host's 10-min value was
+  applied and showed until the next sensor tick (up to 500 ms, a visible dip).
 - **Boot dark-screen guards** (learned the hard way) — `ltr559_avg_lux()` is a
   **growing-window** average (0 only until the first VALID sample). Two guards keep it
   off the near-off floor: (1) `poly_ltr559_drive()` doesn't engage while `avg == 0`

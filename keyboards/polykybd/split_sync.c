@@ -129,8 +129,10 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     // Explicit rather than left to housekeeping's state-diff refresh so the new
     // size lands on the sync itself instead of a pass later.
     bool glyph_size_changed = incoming->glyph_size != current->glyph_size;
+    // A move in the idle-screen mine sweeper -> redraw this half's cells.
+    bool mines_changed = memcmp(&incoming->mines, &current->mines, sizeof(incoming->mines)) != 0;
     copy_local_state(incoming);
-    if (doom_ctl_changed || fw_confirm_changed || glyph_size_changed) {
+    if (doom_ctl_changed || fw_confirm_changed || glyph_size_changed || mines_changed) {
         request_disp_refresh();
     }
     // ⚠️ RECORD, never start, here. This handler runs on the slave's split-protocol

@@ -139,6 +139,22 @@ TEST(SyncAckTest, AnUnknownReplyValueIsNotMistakenForALinkFault) {
     }
 }
 
+// send_to_bridge() stops retrying on a refusal and on nothing else that was
+// delivered. A corrupt frame and SYNC_BUSY can change on the next attempt, and an
+// unknown value must keep the old behaviour (retry), so the test sweeps every byte.
+TEST(SyncAckTest, OnlyARefusalEndsTheRetries) {
+    EXPECT_FALSE(sync_retry_may_help(SYNC_NACK_REFUSED));
+    EXPECT_TRUE(sync_retry_may_help(SYNC_CRC32_ERR));
+    EXPECT_TRUE(sync_retry_may_help(SYNC_BUSY));
+    EXPECT_TRUE(sync_retry_may_help(SYNC_GIVEUP));
+    for (int b = 0; b <= 0xFF; ++b) {
+        const uint8_t ack = static_cast<uint8_t>(b);
+        if (ack == SYNC_NACK_REFUSED) continue;
+        EXPECT_TRUE(sync_retry_may_help(ack))
+            << "0x" << std::hex << b << " would end the retries";
+    }
+}
+
 // ---------------------------------------------------------------------------
 // The COMMIT-failure classification (base/fw_up_verdict.c)
 // ---------------------------------------------------------------------------

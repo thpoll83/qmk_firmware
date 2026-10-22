@@ -142,7 +142,7 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
                     // (erase_sector_next/count), and is still ticking process_deferred.
                     // Change-triggered like the line above, so one snapshot per state,
                     // no re-poll flood. Read-only: adds a probe path, changes nothing.
-                    fw_up_log_slave_status("begin-not-ready");
+                    fw_up_log_slave_status("begin-not-ready", NULL);
                 }
             }
 

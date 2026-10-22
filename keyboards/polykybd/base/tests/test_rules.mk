@@ -298,3 +298,48 @@ polykybd_ime_held_slots_SRC := \
 
 polykybd_ime_held_slots_INC := \
 	$(POLY_BASE_PATH)
+
+# core1_owner.c is pure: the RP2040/ChibiOS calls sit behind the core1_hw_* seam,
+# which the suite fakes, so it links with just the tests.
+polykybd_core1_owner_SRC := \
+	$(POLY_BASE_PATH)/core1_owner.c \
+	$(POLY_BASE_PATH)/tests/core1_owner_tests.cpp
+
+polykybd_core1_owner_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
+# core1_suspend.c is the suspend hold's decision logic, with no dependencies.
+polykybd_core1_suspend_SRC := \
+	$(POLY_BASE_PATH)/core1_suspend.c \
+	$(POLY_BASE_PATH)/tests/core1_suspend_tests.cpp
+
+polykybd_core1_suspend_INC := \
+	$(POLY_BASE_PATH)
+
+# fw_stage.c is the fw_staging stream's stage machine, with no dependencies.
+polykybd_fw_stage_SRC := \
+	$(POLY_BASE_PATH)/fw_stage.c \
+	$(POLY_BASE_PATH)/tests/fw_stage_tests.cpp
+
+polykybd_fw_stage_INC := \
+	$(POLY_BASE_PATH)
+# mines_plan.c is the idle-screen mine sweeper's rules (mines_mode.h). Pure: the board
+# is a plain struct and the seed is passed in, so no timer, keymap or display is linked.
+# The firmware binding is mines_mode.c.
+polykybd_mines_plan_SRC := \
+	$(POLY_BASE_PATH)/mines_plan.c \
+	$(POLY_BASE_PATH)/tests/mines_plan_tests.cpp
+
+polykybd_mines_plan_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
+# The idle style table is pure (no quantum.h), so it links with just the tests.
+polykybd_idle_style_SRC := \
+	$(POLY_BASE_PATH)/idle_style.c \
+	$(POLY_BASE_PATH)/tests/idle_style_tests.cpp
+
+polykybd_idle_style_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd

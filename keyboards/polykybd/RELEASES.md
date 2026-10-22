@@ -155,6 +155,18 @@ that cost real debugging to learn (2026-07):
   - **Recovery when it refuses**: dispatch *Build and HIL Test* on that commit
     with `tier: fwapply`, wait for green, re-run the release job. The error names
     every commit it checked and why each failed.
+    ⚠️ **First read why the apply run went red.** The apply job runs the whole
+    extended suite before the apply, and any red test there skips it
+    (`[runner] skipping the firmware apply round-trip — the suite already has a
+    failure`). A `tier: fwapply` dispatch then fails the same way. Fix that test's
+    cause, re-run the failed jobs of the merge commit's own run
+    (`rerun_failed_jobs`), and once that is green, re-run the release run itself.
+    The re-run attaches the files to the release that is already published.
+    Don't delete it or publish again. On 2026-10-14, v1.9.2 was published with
+    notes and no files: the rig lacked the sudo grant for the USB-suspend check
+    (ctnd#114), and the check failed on every extended run. ctnd#116 made the
+    check SKIP, and the two re-runs gave 1.9.2 its four files. v1.9.1 had also
+    gone out with no files, for a different reason.
 - **A pushed tag does NOT create a release.** Release tags land on the auto-bump
   `chore: … [skip ci]` commit (`bump-version.yml`), and `[skip ci]` **suppresses the
   tag-push workflow trigger** — so `release.yml` runs on **`release: published`** (every

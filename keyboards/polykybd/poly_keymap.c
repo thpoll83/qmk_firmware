@@ -40,7 +40,11 @@
 #    include "hardware/structs/timer.h"   // timer_hw->timerawl — raw 1 MHz us counter
 #endif
 #include "split_fw_up.h"
+#ifdef POLYKYBD_BULK_PIPE
+#    include "poly_pipe.h"
+#endif
 #include "base/fw_staging.h"
+#include "base/core1_owner.h"
 #include "uni.h"
 #include "side.h"
 #include "fill_overlay.h"
@@ -61,7 +65,7 @@
 #include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
 #include "base/ime_key_plan.h"           // what KC_IME sends, per language and OS
 #include "base/ime_held_slots.h"         // which KC_IME key holds which usage
-// Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+idx)
+// Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+glyph)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
 #include "base/fonts/nano_font.h"          // 10px label font under the flags
@@ -69,6 +73,7 @@
 #include "polymod_core1.h"
 #include "anim/tutorial.h"
 #include "anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
+#include "mines_mode.h"                   // the idle-screen mine sweeper (hold Hyper while idle)
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
@@ -231,6 +236,27 @@ static_assert(FLASH_PAGE_SIZE==256, "Flash page size changed");
 // divergence between the two generators is a build error, not a silent mis-map.
 static_assert((int)LANG_DEDE == (int)(KCL_DEDE - KCL_ENUS), "KCL_/LANG_ enum order drift");
 static_assert((int)LANG_CKUS == (int)(KCL_CKUS - KCL_ENUS), "KCL_/LANG_ enum order drift");
+// Languages past the frozen KCL_ block take their keycode from the tail block after
+// KC_IME (keycode_helper.h), so the identity above holds for the first
+// KCL_FROZEN_COUNT only. These two convert in both directions for every language.
+static_assert((int)LANG_JAUS == KCL_FROZEN_COUNT + (int)(KCL_JAUS - KCL_TAIL_FIRST), "KCL_ tail / LANG_ order drift");
+static_assert((int)(KCL_TAIL_LAST - KCL_TAIL_FIRST) == NUM_LANG - KCL_FROZEN_COUNT - 1, "KCL_ tail length != NUM_LANG");
+
+static uint16_t kcl_for_lang(uint8_t lang) {
+    return lang < KCL_FROZEN_COUNT ? (uint16_t)(KCL_ENUS + lang)
+                                   : (uint16_t)(KCL_TAIL_FIRST + (lang - KCL_FROZEN_COUNT));
+}
+
+// The LANG index of a KCL_ keycode, or -1.
+static int16_t kcl_lang_index(uint16_t keycode) {
+    if (keycode >= KCL_ENUS && keycode < KCL_ENUS + KCL_FROZEN_COUNT) {
+        return (int16_t)(keycode - KCL_ENUS);
+    }
+    if (keycode >= KCL_TAIL_FIRST && keycode <= KCL_TAIL_LAST) {
+        return (int16_t)(KCL_FROZEN_COUNT + (keycode - KCL_TAIL_FIRST));
+    }
+    return -1;
+}
 
 static enum lang_layer g_lang_init = INIT_LANG;
 
@@ -827,9 +853,9 @@ static void poly_tutorial_finish_if_done(void) {
             // The overlay decompressor is free to be anywhere in flash, and the
             // refresh just requested above is exactly what puts it there. Same
             // lockout the fw-apply flush takes, and for the same hazard.
-            fw_staging_core1_lockout_begin();
+            core1_hold();
             mark_boot_intro_done();
-            fw_staging_core1_lockout_end();
+            core1_release();
             uprintf("Tutorial %s; displays handed back\n", was_skipped ? "skipped" : "done");
         }
 }
@@ -1089,6 +1115,9 @@ void sync_and_refresh_displays(void) {
         // overlays so the next FLUSH_COUNT is counted from here (chunked progress).
         s_holding = false;
         clear_overlay_pending();
+        // A request from here on (core1, or the split thread on the slave) must
+        // survive the end of this render. See begin_disp_refresh() in update.h.
+        begin_disp_refresh();
     }
 
     if (refresh == START_FIRST_HALF) {
@@ -1109,7 +1138,7 @@ void sync_and_refresh_displays(void) {
 #ifdef POLYKYBD_LOOP_PROFILE
         loop_profile_add_render_us(timer_hw->timerawl - _lp_r0);
 #endif
-        set_disp_refresh(DONE_ALL);
+        finish_disp_refresh();
     }
 }
 
@@ -1250,10 +1279,7 @@ static void user_sync_dummy_handler(uint8_t in_len, const void* in_data, uint8_t
 }
 #endif
 
-// Eden idle screensaver runs DIM (anti-burn-in + it's a sleeping-keyboard ambience,
-// not a legend you need to read). This is the OLED contrast register value, not a
-// brightness level — a small number is a faint glow.
-#define EDEN_IDLE_BRIGHTNESS 4
+// EDEN_IDLE_BRIGHTNESS lives in base/idle_style.h with the rest of the style table.
 
 // Idle "Eden" screensaver driver (IDLE_STYLE_EDEN), run every housekeeping pass on
 // BOTH halves (like doom_tick). It renders the looping boot animation while the
@@ -1364,6 +1390,9 @@ void housekeeping_task_user(void) {
     fw_screen_tick();   // ...and keep the status OLED on the matching firmware screen
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
+#ifdef POLYKYBD_BULK_PIPE
+    poly_pipe_task();                  // drop a pipe frame the host abandoned mid-way
+#endif
     slave_data_crash_pull_tick();      // master: fetch + print the slave's crash record once per link-up
 
     // Advance a playing macro by at most one step. Deliberately near the TOP of
@@ -1445,9 +1474,9 @@ void housekeeping_task_user(void) {
                 // it, so core0 would hang before the apply could even start. The
                 // window is a pass or two; the failure is permanent. Holding it here
                 // bought nothing either: fw_staging_do_apply() halts core1 itself.
-                fw_staging_core1_lockout_begin();
+                core1_hold();
                 save_all_dirty();
-                fw_staging_core1_lockout_end();
+                core1_release();
                 uprintf("APPLY 2/4: EEPROM flushed with core1 held off\n");
                 apply_step = 2;
                 return;
@@ -1512,10 +1541,11 @@ void housekeeping_task_user(void) {
                 // Only reached when the apply was refused (no valid staged image /
                 // failed flash CRC); it disarms itself there and the board keeps
                 // running. Stage 2 already handed core1 back, and the refusal checks
-                // sit above the PSM halt inside do_apply, so this is a no-op today --
-                // kept because it is the one path where a future halt-then-refuse
-                // would otherwise leave the RLE service down for good.
-                fw_staging_core1_lockout_end();
+                // sit above the PSM halt inside do_apply, so this relaunches a service
+                // that is already running today -- kept because it is the one path
+                // where a future halt-then-refuse would otherwise leave the RLE
+                // service down for good. It respects any outstanding hold.
+                (void)core1_restore_service();
                 // ...and it is now also the path that has to take the screen back. The
                 // board is alive and the panel is showing a restart that is not coming,
                 // with the keycaps still blanked from stage 0.
@@ -1674,6 +1704,10 @@ void housekeeping_task_user(void) {
         // preview go out this pass, and before the idle block so a non-idle segment's
         // update_performed() lands first.
         demo_tick();
+        // The idle-screen mine sweeper: holds the idle countdown off while it runs and
+        // hands the board back to the idle animation on hide or after 2 min untouched.
+        // Before the idle block for the same reason as the demo.
+        if (is_keyboard_master()) mines_tick();
         // The segment just entered may preview another language or script: write it
         // BEFORE the render below, or each board is first drawn in the previous
         // segment's language and repainted a pass later (the tutorial's lesson, see
@@ -1747,9 +1781,9 @@ void housekeeping_task_user(void) {
                     tutorial_start(timer_read32());
                     poly_tutorial_publish_active();
                     if (!tutorial_active()) {                        // nothing to teach
-                        fw_staging_core1_lockout_begin();            // see the teardown
+                        core1_hold();            // see the teardown
                         mark_boot_intro_done();
-                        fw_staging_core1_lockout_end();
+                        core1_release();
                     }
                 }
                 // Eden ran at full brightness; restore the user's normal
@@ -1902,39 +1936,38 @@ void housekeeping_task_user(void) {
                     // styles land in the pulse branch below (pulse, jitter, and an
                     // iddqd that could not start its demo), so an unnamed
                     // "Transition to pulsing" cannot tell you which one is active.
-                    const uint8_t style = get_idle_style();
-                    if (style == IDLE_STYLE_IDDQD && doom_screensaver_start()) {
+                    const uint8_t            style = get_idle_style();
+                    const idle_style_desc_t *desc  = idle_style_desc(style);
+                    if (desc->enter == IDLE_ENTER_DOOM && doom_screensaver_start()) {
                         // Doom attract screensaver instead of the pulse: the demo
                         // owns the keycaps at the user brightness — no DISP_IDLE,
                         // and IDLE_TRANSITION stays dropped (cleared above), which
                         // fires the back_from_idle_transition brightness restore.
                         // doom_tick() holds last_update while the demo runs and
                         // hands over to the normal TURN_OFF suspend at its own
-                        // deadline. Falls through to the pulse whenever the demo
-                        // can't start (non-doom build, fw staging active).
+                        // deadline.
                         contrast = get_active_brightness();
-                        uprint("Transition to idle [style=iddqd] - doom screensaver\n");
-                    } else if (style == IDLE_STYLE_EDEN) {
-                        // Eden screensaver: enter DISP_IDLE like the pulse (so the
-                        // wake-on-key and TURN_OFF suspend paths work unchanged and
-                        // the flag+idle_style tell the slave to loop too), but hold
-                        // contrast DIM and steady — eden_idle_tick() owns the pixels
-                        // every pass and the loop migrates them itself, so there is no
-                        // burn-in and no per-pass pulse contrast to fight.
-                        contrast = EDEN_IDLE_BRIGHTNESS;
+                        uprintf("Transition to idle [style=%s] - doom screensaver\n", desc->name);
+                    } else if (desc->enter == IDLE_ENTER_STEADY) {
+                        // A style that draws the keycaps itself (Eden): enter DISP_IDLE
+                        // like the pulse, so wake-on-key, the TURN_OFF suspend and the
+                        // slave's copy of the flag work unchanged, but hold contrast DIM
+                        // and steady. Its renderer owns the pixels every pass and
+                        // migrates them itself, so there is no burn-in and no per-pass
+                        // pulse contrast to fight.
+                        contrast = desc->steady_contrast;
                         flags |= DISP_IDLE;
-                        uprint("Transition to idle [style=eden] - eden screensaver\n");
+                        uprintf("Transition to idle [style=%s] - %s screensaver\n", desc->name, desc->name);
                     } else {
                         contrast = DISP_OFF;
                         flags |= DISP_IDLE;
                         flags |= IDLE_TRANSITION;
-                        // An IDDQD here means doom_screensaver_start() refused (no
-                        // doom build / fw staging active) and we silently degraded
-                        // to the legacy pulse — say so rather than reporting a plain
+                        // A DOOM style here means doom_screensaver_start() refused (no
+                        // doom build / fw staging active) and we silently degraded to
+                        // the legacy pulse — say so rather than reporting a plain
                         // "pulsing" the user never selected.
-                        uprintf("Transition to idle [style=%s] - pulsing%s\n",
-                                idle_style_name(style),
-                                style == IDLE_STYLE_IDDQD ? " (doom unavailable)" : "");
+                        uprintf("Transition to idle [style=%s] - pulsing%s\n", desc->name,
+                                desc->enter == IDLE_ENTER_DOOM ? " (doom unavailable)" : "");
                     }
                 } else if(brightness>FULL_BRIGHT) {
                     contrast = FULL_BRIGHT;
@@ -1951,11 +1984,12 @@ void housekeeping_task_user(void) {
                 contrast = local_state->contrast;
                 flags = local_state->flags;
             } else if((flags & DISP_IDLE)!=0) {
-                if (get_idle_style() == IDLE_STYLE_EDEN) {
-                    // Eden owns the visuals via eden_idle_tick(); keep the panel DIM and
-                    // steady and DON'T compute a pulse contrast (a per-pass contrast diff
-                    // would call kdisp_idle() and fight the animation).
-                    contrast = EDEN_IDLE_BRIGHTNESS;
+                const idle_style_desc_t *desc = idle_style_desc(get_idle_style());
+                if (desc->enter == IDLE_ENTER_STEADY) {
+                    // The style's renderer owns the visuals (Eden: eden_idle_tick());
+                    // keep the panel DIM and steady and DON'T compute a pulse contrast
+                    // (a per-pass contrast diff would call kdisp_idle() and fight it).
+                    contrast = desc->steady_contrast;
                 } else {
                     int32_t time_after = PK_MAX(elapsed_time_since_update - idle_after_ms - FADE_TRANSITION_TIME, 0)/300;
                     contrast = time_after%50;
@@ -2051,7 +2085,7 @@ layer_state_t get_function_layer(layer_state_t def_layer) {
 const uint32_t* poly_lang_code(uint8_t lang) {
     if(lang >= NUM_LANG) return U"";
     const led_t none = {0};
-    return to_static_text((uint16_t)(KCL_ENUS + lang), none);
+    return to_static_text(kcl_for_lang(lang), none);
 }
 
 // The settings layer opens with only its everyday keys; this names the rest.
@@ -2194,7 +2228,10 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
         // reason below: Shift must come from the SYNCED poly_layer_t.mods, or the
         // slave half would never show カナ.
         case KC_IME:
-            if (poly_ime_family(local_state->lang) == IME_FAMILY_JAPANESE) {
+            // Only reached when ime_key_stand_in() gave no plain key: ja-US, and
+            // ja-JP on macOS. Elsewhere ja-JP draws as Caps Lock.
+            if (poly_ime_family(local_state->lang) == IME_FAMILY_JAPANESE ||
+                poly_ime_family(local_state->lang) == IME_FAMILY_JAPANESE_JIS) {
                 return (local_layer->mods & MOD_MASK_SHIFT) != 0 ? ICON_KATAKANA : ICON_EISU_KANA;
             }
             return ICON_HAN_YEONG;
@@ -2238,9 +2275,10 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
                                                                 : MID_TWO_LINE("REC", "macro");
 
         // Language selection keycodes: the tiny "xx-YY" code shown under the flag
-        // (the flag + selection frame are drawn by render_lang_flag_key()). KCL_ENUS..
-        // are contiguous (QK_USER_0-based), so index a cog-generated table by offset.
-        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1: {
+        // (the flag + selection frame are drawn by render_lang_flag_key()). The KCL_
+        // keycodes sit in two blocks (frozen + tail); kcl_lang_index() joins them.
+        case KCL_ENUS ... KCL_ENUS + KCL_FROZEN_COUNT - 1:
+        case KCL_TAIL_FIRST ... KCL_TAIL_LAST: {
             static const uint32_t* const lang_code[NUM_LANG] = {
                 /*[[[cog
                 for lang in languages:
@@ -2406,9 +2444,10 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
                 U"iu-CA",
                 U"cr-CA",
                 U"ck-US",
+                U"ja-US",
                 //[[[end]]]
             };
-            return lang_code[keycode - KCL_ENUS];
+            return lang_code[kcl_lang_index(keycode)];
         }
         default:
             return NULL;
@@ -3367,7 +3406,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // vertically up the right side in a tiny font.  The currently-selected language's
 // code is drawn as dark text on a filled bar (see kdisp_write_gfx_vtext) rather
 // than with a frame.  Flag glyphs live in flag_fonts.h at codepoints
-// FLAG_CP_BASE + LANG_* (see fonts/gen-lang-fonts.sh); the label uses the tiny
+// FLAG_CP_BASE + LANG_FLAG_GLYPH[LANG_*] (see fonts/gen-lang-fonts.sh); the label uses the tiny
 // NotoSans font.
 #define FLAG_CP_BASE   0xE000u
 #define FLAG_LEFT_X    (BUFFER_X - 2)    // flag glyph left (keeps the left border on-screen)
@@ -3377,7 +3416,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
 // and clipped so the flag content fills the keycap height), language code running
 // vertically up the right side (inverted bar when it is the active language).
 //
-// The flag glyphs (FLAG_CP_BASE + idx) live in the external-flash font pack, so
+// The flag glyphs (FLAG_CP_BASE + glyph) live in the external-flash font pack, so
 // they resolve through g_all_fonts only when a pack is present. With no pack the
 // flag is simply omitted — the xx-YY code label below it still identifies the
 // language (graceful fallback). The tiny label font stays resident.
@@ -3711,10 +3750,42 @@ static void render_macro_key(uint8_t id) {
     }
 }
 
+// One flag glyph per COUNTRY (fonts/gen-lang-fonts.sh): the six Indian languages,
+// the four US ones and so on share theirs, so a language's glyph is looked up rather
+// than being its enum index.
+#include "base/fonts/generated/lang_flag_glyph.h"
+#include "base/fonts/generated/fontpack_layout.h"
+_Static_assert(sizeof(LANG_FLAG_GLYPH) == NUM_LANG,
+               "lang_flag_glyph.h is stale: re-run fonts/gen-lang-fonts.sh");
+
+// The flags bundle's slot index, from the generated layout table.
+enum {
+#define X(id, index, offset, size) LANG_FLAG_SLOT_##id = (index),
+    FONTPACK_BUNDLE_LIST
+#undef X
+};
+// The flags bundle that first carries one glyph per country. An older one is still
+// one glyph per LANGUAGE, and a keyboard keeps it until the host re-flashes the slot
+// on its next connect, so until then the enum index is still the right glyph, except
+// for ja-US: it was added after the per-language bundles and has no glyph of its own
+// there, so it borrows ja-JP's. (In the table it shares Japan's glyph already, because
+// FLAG_ALIAS in gen-lang-fonts.sh files it under JP, its home country.)
+#define LANG_FLAG_PER_COUNTRY_VERSION 6u
+
+static uint8_t lang_flag_glyph(uint8_t idx) {
+    if (idx >= NUM_LANG) {
+        return 0;
+    }
+    return fontpack_bundle_version(LANG_FLAG_SLOT_flags) >= LANG_FLAG_PER_COUNTRY_VERSION
+               ? LANG_FLAG_GLYPH[idx]
+               : (idx == LANG_JAUS ? (uint8_t)LANG_JAJP : idx);
+}
+
 static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang) {
+    const uint32_t flag_cp = FLAG_CP_BASE + lang_flag_glyph(idx);
     const GFXfont* flag_font = NULL;
     const GFXglyph* g = kdisp_gfx_glyph_font(g_all_fonts, g_all_font_count,
-                                             FLAG_CP_BASE + idx, &flag_font);
+                                             flag_cp, &flag_font);
     if (g) {
         // The glyph is taller than the keycap, so centre it vertically — the
         // empty top/bottom margins clip off and the flag content fills the height.
@@ -3736,7 +3807,7 @@ static void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t cur
         const int8_t fxo = (int8_t)pgm_read_byte(&g->xOffset);
         kdisp_write_gfx_char(flag_only, 1, (int8_t)(FLAG_LEFT_X - fxo),
                              (int8_t)((SCREEN_HEIGHT - fh) / 2 - fyo),
-                             FLAG_CP_BASE + idx, 1);   // flags: tight 1px courtyard
+                             flag_cp, 1);   // flags: tight 1px courtyard
         // Language code: vertical, up the right side; inverted bar when selected.
         kdisp_write_gfx_vtext(&NotoSans_Regular_Nano_10px7b, LABEL_COL_X, label,
                               current_lang == idx);
@@ -4262,7 +4333,7 @@ static bool render_menu_key(uint16_t keycode, led_t state, uint8_t current_lang)
     const int16_t lang_idx = lang_index_for_keycode(keycode);
     if (lang_idx >= 0) {
         draw_mru_top_bar(keycode);
-        render_lang_flag_key((uint8_t)lang_idx, to_static_text((uint16_t)(KCL_ENUS + lang_idx), state),
+        render_lang_flag_key((uint8_t)lang_idx, to_static_text(kcl_for_lang((uint8_t)lang_idx), state),
                              current_lang);
         return true;
     }
@@ -5519,6 +5590,13 @@ void update_displays(enum refresh_mode mode) {
                         }
                         kdisp_send_window();
                         doom_handled = true;
+                    } else if (mines_active()) {
+                        // The idle-screen mine sweeper: every key is a cell, a
+                        // control or dark. Drawn from the SYNCED board, so the slave
+                        // draws its half too.
+                        mines_render_key((uint8_t)(r + offset), c);
+                        kdisp_send_window();
+                        doom_handled = true;
                     } else if (tutorial_intro_mode() &&
                                tutorial_is_chrome_key((uint8_t)(r + offset), c)) {
                         // The tutorial's chrome: "Hold to / skip..." on Esc, the chapter
@@ -5810,14 +5888,15 @@ void kdisp_idle(uint8_t contrast) {
     // do NOT pulse/blank them here. Returning also leaves the panels enabled at the
     // brightness Eden's own start set, so the transition-pass set_displays(idle=true)
     // can't flash a black/pulse frame over the animation.
-    if (get_local_state()->idle_style == IDLE_STYLE_EDEN) {
+    const idle_style_desc_t *style = idle_style_desc(get_local_state()->idle_style);
+    if (style->owns_keycaps) {
         return;
     }
     uint8_t offset = is_left_side() ? 0 : MATRIX_ROWS_PER_SIDE;
 #if !defined(POLY_DISP_SELECT_BY_TABLE)
     uint8_t skip = 0;
 #endif
-    const bool jitter = get_local_state()->idle_style == IDLE_STYLE_JITTER;
+    const bool jitter = style->jitter;
     const poly_layer_t* local_layer = get_local_layer();
     const led_t led_state = local_layer->led_state;
     POLY_DISP_SEED(disp_row_0.bitmask);
@@ -5913,7 +5992,10 @@ _Static_assert((int)IME_OS_WINDOWS == (int)POLY_OS_WINDOWS && (int)IME_OS_MACOS 
 uint8_t poly_ime_family(uint8_t lang) {
     switch (lang) {
         case LANG_KOKR: return IME_FAMILY_KOREAN;
-        case LANG_JAJP: return IME_FAMILY_JAPANESE;
+        // ja-JP assumes the JIS OS layout, whose Caps key is 英数; ja-US, the same
+        // keycaps on the 101-key layout, has no such key and keeps the IME cycle.
+        case LANG_JAJP: return IME_FAMILY_JAPANESE_JIS;
+        case LANG_JAUS: return IME_FAMILY_JAPANESE;
         // ANSI English layouts: the OS layout is plain US, where NUBS only repeats
         // the Backslash key, so the key earns more as a right-hand Alt. An explicit
         // list on purpose: a NULL NUBS cell in lang_lut is NOT the signal, because
@@ -6242,9 +6324,9 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             // anim_nonce when it starts the intro, and that replays Eden on a slave whose
             // own marker is already consumed (split_sync.c, the anim_replay guard).
             // ⚠️ EEPROM writes run with the QSPI out of XIP; halt core1 across it.
-            fw_staging_core1_lockout_begin();
+            core1_hold();
             rearm_boot_intro();
-            fw_staging_core1_lockout_end();
+            core1_release();
             arm_tutorial_after_intro();
             // Trigger the startup ("Eden") animation NOW on this (master) half and bump
             // the synced nonce so the slave plays in lockstep (the nonce is delivered by
@@ -6270,15 +6352,11 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
         // master-authoritative sync behaviour is identical however the change arrives.
         case KC_IDLE_STYLE: {
             if (!act) break;
-            // Skip IDLE_STYLE_IDDQD: that one is the doom easter egg and has its own
+            // IDDQD is not in the cycle: it is the doom easter egg and has its own
             // way in (typing IDDQD arms the utilities-layer key, doom_mode.c). A
-            // settings key that cycled into it would hand it to anyone who pressed
-            // this key twice. A board already ON that style still cycles out of it.
-            uint8_t style = get_idle_style();
-            do {
-                style = (uint8_t)((style + 1u) % IDLE_STYLE_COUNT);
-            } while (style == IDLE_STYLE_IDDQD);
-            set_idle_style(style);
+            // board already ON that style still cycles out of it. idle_style.c's
+            // in_key_cycle column decides; the unit test pins it.
+            set_idle_style(idle_style_next_in_cycle(get_idle_style()));
             request_disp_refresh();
             break;
         }
@@ -6336,13 +6414,12 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             }
             break;
         }
-        // Direct per-language selectors on the language layer (KCL_ENUS..last).
-        // The KCL_* and LANG_* enums are both generated from the same ordered
-        // language list, so LANG_xx == (KCL_xx - KCL_ENUS) — the two _Static_asserts
-        // above guard that — and the whole per-language block is one range case.
-        case KCL_ENUS ... KCL_ENUS + NUM_LANG - 1:
+        // Direct per-language selectors on the language layer: the frozen KCL_ block
+        // and its tail, mapped to a LANG index by kcl_lang_index().
+        case KCL_ENUS ... KCL_ENUS + KCL_FROZEN_COUNT - 1:
+        case KCL_TAIL_FIRST ... KCL_TAIL_LAST:
             if (!act) break;
-            poly_select_lang(local_state, (uint8_t)(keycode - KCL_ENUS), false);
+            poly_select_lang(local_state, (uint8_t)kcl_lang_index(keycode), false);
             break;
         default:
             handled = false;
@@ -6470,6 +6547,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         } else if (tutorial_is_skip_key(row, col)) {
             s_tut_skip_since = 0;   // released early — the hold has to be continuous
         }
+        return false;
+    }
+
+    // The idle-screen mine sweeper IS the board while it runs: every key event is
+    // swallowed and answered there, so nothing reaches the host. Holding Hyper for 1 s
+    // while an idle animation runs starts it, or resumes the board hidden last
+    // (mines_mode.h); a shorter tap only wakes the board.
+    if (mines_active()) {
+        return !mines_process_record(keycode, record);
+    }
+    if (mines_try_start(keycode, record)) {
         return false;
     }
 
@@ -7806,6 +7894,9 @@ void suspend_power_down_kb(void) {
         return;
     }
     poly_suspend();
+    // After poly_suspend() stopped Eden: no new jobs reach core1, so what it still owes
+    // either finishes within a few ms or is a stall (multicore_exec.h).
+    core1_suspend_tick();
 #ifdef RGB_MATRIX_ENABLE
     rgb_matrix_disable_noeeprom();
 #endif
@@ -7850,7 +7941,12 @@ void suspend_power_down_kb(void) {
     // does die with the master's — it simply cannot see that coming from this pin.
     // Without this clause the slave would silently stop flushing at suspend
     // forever, which is a bigger behaviour change than the one being fixed.
-    if (is_keyboard_master() && !usb_vbus_state()) {
+    if (!core1_suspend_flush_ready()) {
+        // core1 may still be running an Eden job from flash; a flash write now wedges
+        // it or the bus (multicore_exec.h). The master's hold comes within a few ms,
+        // or after 500 ms as a recorded stall; the slave's jobs finish within a few
+        // ms. A later tick of this suspend flushes.
+    } else if (is_keyboard_master() && !usb_vbus_state()) {
         // Seen on resume when a host cuts VBUS to sleep — there the flush was
         // skipped for a rail that was never in danger, and the next one takes it.
         // Unseen when the power really was going, because the console goes with
@@ -7896,6 +7992,9 @@ bool shutdown_user(bool jump_to_bootloader) {
 
 // Resumes keyboard on wakeup: restores display state, brightness, RGB settings, calls housekeeping.
 void suspend_wakeup_init_kb(void) {
+    // First, so the woken board decodes overlays on a fresh core1. A no-op unless the
+    // suspend took the hold (multicore_exec.h).
+    core1_resume();
     poly_sync_t* local_state = access_local_state();
     local_state->flags |= STATUS_DISP_ON;
     local_state->flags &= ~((uint8_t)DISP_IDLE);

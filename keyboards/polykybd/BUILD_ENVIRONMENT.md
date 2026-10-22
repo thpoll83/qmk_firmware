@@ -330,11 +330,13 @@ _Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer.
   transfer. Every stamp file has `num_blocks=1`, so a second one hits
   `"Ignore duplicate write"`, writes nothing, and does not even reboot. Power-cycle
   between such drags, or a multi-block firmware `.uf2` in between resets it.
-- ⚠️ **`boot: spans ms … 2=65535` is a SATURATION sentinel, not 65 seconds measured.**
-  `boot_timing_mark()` clamps at `0xFFFF`, so span 2 — the whole of QMK's
-  `keyboard_init()` — took *at least* 65.5 s. Seen on two boots with
-  `transport_connected=1` and `err=0.0%`, so it is NOT a master waiting on an absent
-  partner. Unexplained; do not read a 65535 as a measurement.
+- ⚠️ **On firmware built before 2026-10-22, `boot: spans ms … 2=…` is not a measurement,
+  whatever it reads.** Step 1 was stamped in `keyboard_pre_init_user()` with `timer_read32()`, and QMK's
+  `keyboard_init()` then calls `timer_init()`, which moves that clock's zero. Span 2
+  subtracted readings taken against two different zeros: 29 ms on the rig, and the `65535`
+  saturation sentinel in the field from a board that was back on USB in under 5 s
+  (2026-10-22). `boot_timing_mark()` now reads the RP2040 hardware timer, which nothing
+  rewinds.
 
 
 ## Clock, core voltage and the flash map

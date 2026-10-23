@@ -164,6 +164,10 @@ void emit_boot_banner(void) {
                 src[poly_hand_source()], (unsigned)poly_hand_stamp_slot(),
                 (unsigned)poly_hand_stamp_count(), (unsigned)poly_hand_stamp_writer(),
                 poly_hand_ee_repaired() ? " [EEPROM byte repaired from the stamp]" : "");
+        // A line of its own: the rig parses the hand line with an anchored regex.
+        uint8_t flags = poly_hand_board_flags();
+        uprintf("   board: flags=0x%02X%s\n", (unsigned)flags,
+                (flags & POLY_HAND_FLAG_SPLIT_VBUS) ? " split_vbus (Rev.2: master by USB enumeration)" : "");
     }
     // Read the clock back from the hardware rather than printing SYS_CLK_KHZ:
     // the define is what we ASKED for, this is what the PLL actually landed on.

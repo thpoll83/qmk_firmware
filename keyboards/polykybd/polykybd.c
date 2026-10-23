@@ -62,4 +62,34 @@ bool is_keyboard_master_impl(void) {
     return true;
 #    endif
 }
+#else
+#    include "usb_util.h"
+
+// Normal builds. A rev3+ board keeps the stock rule (USB_VBUS_PIN, GP24): the half
+// that sees VBUS is the master. A Rev.2 board passes VBUS over the split cable, so
+// GP24 reads high on both halves and both would be master; its stamp carries
+// POLY_HAND_FLAG_SPLIT_VBUS (hand_stamp.h), and then the half that ENUMERATES is the
+// master. That is QMK's SPLIT_USB_DETECT loop, with its default 2 s timeout, so on a
+// Rev.2 board the slave waits 2 s at boot before it gives up. Rev3 boards never wait.
+#    define POLY_SPLIT_USB_TIMEOUT_MS 2000
+#    define POLY_SPLIT_USB_POLL_MS 10
+
+static bool usb_enumerated_within_timeout(void) {
+    for (uint16_t i = 0; i < (POLY_SPLIT_USB_TIMEOUT_MS / POLY_SPLIT_USB_POLL_MS); i++) {
+        if (usb_connected_state()) return true;
+        wait_ms(POLY_SPLIT_USB_POLL_MS);
+    }
+    return false;
+}
+
+bool is_keyboard_master_impl(void) {
+    bool split_vbus = (poly_hand_board_flags() & POLY_HAND_FLAG_SPLIT_VBUS) != 0;
+    bool is_master  = split_vbus ? poly_master_decide(true, false, usb_enumerated_within_timeout())
+                                 : poly_master_decide(false, usb_vbus_state(), false);
+    // Same as the stock body: the detection can leave USB enabled on the slave.
+    if (!is_master) {
+        usb_disconnect();
+    }
+    return is_master;
+}
 #endif // POLYKYBD_HIL

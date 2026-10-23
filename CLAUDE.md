@@ -147,6 +147,10 @@ per-variant logic. [`VARIANTS.md`](keyboards/polykybd/VARIANTS.md).
 - ⚠️ **The two variants share the MCU schematic.** `variations/poly_corne/` (in the
   PolyKybd hardware repo) has no processor, so an MCU grep there finds nothing. An
   empty grep is evidence only once you have shown it covered the thing you asked about.
+- ⚠️ **Rev.2 boards (2023) pass VBUS over the split cable**, so GP24 reads high on both
+  halves. Bit 0 of the handedness stamp's `pad[1]` (`POLY_HAND_FLAG_SPLIT_VBUS`, set by
+  cmd 25 at v24) makes the half that enumerates the master. Anything that writes a
+  stamp record must carry `pad[1]` over; `stamp_write()` takes the flags for that.
 
 ### The dynamic keymap
 
@@ -183,7 +187,7 @@ keycodes stay on the release edge. [`KEYCODE_HANDLING.md`](keyboards/polykybd/KE
 ### HID protocol
 
 Byte 0 report ID, byte 1 command ID, byte 2+ payload; replies `"P\xNN."` (ACK) or
-`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (23, `config.h`) gates host features. Read
+`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (24, `config.h`) gates host features. Read
 [`PROTOCOL_HISTORY.md`](keyboards/polykybd/PROTOCOL_HISTORY.md) before changing any
 command; several were shaped by a contrast the wire format does not show. A new command
 goes through the `add-gated-hid-command` skill.

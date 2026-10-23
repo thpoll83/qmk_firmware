@@ -274,7 +274,11 @@
 //      DIMMED: the overlay icon through a 25% pattern, the legend untouched. The host
 //      sets it for a browser's icons under a website's overlay. Older firmware masks
 //      the width with 0x1F and draws those icons at full strength.
-#define PROTOCOL_VERSION 23
+//  v24 cmd 25 (set handedness) gains a board-flag byte (data[HID_DATA_IDX+1]): 0 keep,
+//      1 clear, 2 set POLY_HAND_FLAG_SPLIT_VBUS in this half's stamp (Rev.2 boards:
+//      master by USB enumeration). Older firmware ignores the byte and sets only the
+//      side, so the host sends a non-zero op only at v24+.
+#define PROTOCOL_VERSION 24
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

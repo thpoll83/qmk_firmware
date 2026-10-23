@@ -219,10 +219,20 @@ one of those was written first, so the record lands corrupt.
 
 ### Keymaps
 
-There is a `default` keymap, also for the slightly older revision 2: `revision2`:
+There is one keymap, `default`, for every board revision.
 
-`make polykybd/split72:revision2:uf2`
-`qmk compile -kb polykybd/split72 -km revision2`
+A Rev.2 board (left "Rev 2 04/2023", right "Rev.2 03/2023") passes VBUS over the
+split cable, so both halves read 5 V on GP24 and both would become master. Mark each
+half once, plugged in alone, and the master is then the half that enumerates on USB:
+
+`polyctl handedness left --split-vbus on` (on the left half), then
+`polyctl handedness right --split-vbus on` (on the right half)
+
+The tray app has the same step under Maintenance → Fix Left/Right Side →
+"Mark connected half as a Rev.2 board (2023)…".
+
+The flag is stored in the handedness stamp (protocol 24, `base/hand_stamp.h`), and the
+boot banner shows it on the `board:` line. It replaces the old `revision2` keymap.
 
 
 ## After merging master into branch update dependencies with

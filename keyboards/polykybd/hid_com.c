@@ -347,7 +347,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         const poly_layer_t* local_layer = get_local_layer();
         poly_sync_t* local_state = access_local_state();
         // Bulk overlay/mapping commands: plain (10), flags on/off (11/12), compressed
-        // (16/17), ROI (18/19), mapping (21/33), PRC-coded (41). Two markers:
+        // (16/17), ROI (18/19), mapping (21/33/44), PRC-coded (41). Two markers:
         //  - note_overlay_activity() timestamps the burst so sync_and_refresh_displays()
         //    can coalesce the many per-report renders of a program switch into one.
         //  - loop_profile_note_overlay_cmd() tags the iteration for the timing profiler

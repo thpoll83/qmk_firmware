@@ -382,8 +382,15 @@ bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t w
             from = to;
         } else {
             if(from < OVERLAY_MAP_IDX_CNT) {
+                // v25: a `to` of NUM_OVERLAY_SLOTS..2*NUM_OVERLAY_SLOTS-1 is pool slot
+                // `to - NUM_OVERLAY_SLOTS`, drawn without the key legend
+                // (OVERLAY_MAP_NO_LEGEND_OFFSET in config.h).
+                bool no_legend;
+                to = map_codec_split_to(to, OVERLAY_MAP_NO_LEGEND_OFFSET, &no_legend);
                 if(to < NUM_OVERLAY_SLOTS) {
                     set_display_pool_slot(from, to);
+                    // After set_display_pool_slot, which clears the bit (overlay.h).
+                    set_display_no_legend(from, no_legend);
                     // display_has_overlay_bits[] is from-indexed: a display position is
                     // "in use" iff it has an overlay assigned. Establishing
                     // the mapping is exactly that act, so set the bit here.
@@ -429,6 +436,10 @@ bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t w
     }
     return any_visible;
 }
+
+// The repair packs a no-legend `to` with its offset at OVERLAY_MAP_REPAIR_WIDTH.
+_Static_assert(OVERLAY_MAP_NO_LEGEND_OFFSET + NUM_OVERLAY_SLOTS - 1 < (1u << OVERLAY_MAP_REPAIR_WIDTH),
+               "a no-legend mapping value must fit the repair width");
 
 // --- Slave overlay-mapping repair ---------------------------------------
 // See the contract in fill_overlay.h. Latched by the cmd-21 bridge check in
@@ -520,7 +531,9 @@ void overlay_map_repair_tick(void) {
             if (display_has_overlay(s_repair_from) &&
                 display_is_dim(s_repair_from) == s_repair_dim_pass) {
                 last_from = s_repair_from;
-                last_to   = get_display_pool_slot(s_repair_from);
+                last_to   = map_codec_to_value(get_display_pool_slot(s_repair_from),
+                                               display_is_no_legend(s_repair_from),
+                                               OVERLAY_MAP_NO_LEGEND_OFFSET);   // fits OVERLAY_MAP_REPAIR_WIDTH
                 pack_map_value(msg.mapping, slot++, last_from, width);
                 pack_map_value(msg.mapping, slot++, last_to,   width);
                 ++s_repair_pairs;

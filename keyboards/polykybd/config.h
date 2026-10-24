@@ -278,7 +278,12 @@
 //      1 clear, 2 set POLY_HAND_FLAG_SPLIT_VBUS in this half's stamp (Rev.2 boards:
 //      master by USB enumeration). Older firmware ignores the byte and sets only the
 //      side, so the host sends a non-zero op only at v24+.
-#define PROTOCOL_VERSION 24
+//  v25 a mapping pair's `to` of NUM_OVERLAY_SLOTS..2*NUM_OVERLAY_SLOTS-1 (cmd 21/33)
+//      is pool slot `to - NUM_OVERLAY_SLOTS`, drawn WITHOUT the key legend: the whole
+//      72x40 cell is cleared before the icon is drawn. The host sets it for keys
+//      whose overlay replaces the keycap (a game's ESC mark). Older firmware rejects
+//      such a pair (to out of pool), so the host sends the offset only at v25+.
+#define PROTOCOL_VERSION 25
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -438,6 +443,10 @@
 // as 0x80 (that is OVERLAY_MAP_ICON_FILL there); the handler forwards it as
 // OVERLAY_MAP_SYNC_DIM instead.
 #define OVERLAY_MAP_W_DIM        0x80u
+// v25: a mapping `to` value offset by this is drawn without the key legend. A
+// no-legend value stays below 2*NUM_OVERLAY_SLOTS (1200), so the repair width (11)
+// holds it, and a slot below 424 still fits in 10 bits.
+#define OVERLAY_MAP_NO_LEGEND_OFFSET NUM_OVERLAY_SLOTS
 // Values a stream of `bytes` bytes holds at `width` bits — the ONE definition
 // host and firmware must agree on, since there is no count field: the host fills
 // every value (padding by repeating the last pair, which is idempotent) so a

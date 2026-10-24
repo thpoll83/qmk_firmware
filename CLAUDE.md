@@ -203,9 +203,9 @@ goes through the `add-gated-hid-command` skill.
 - ⚠️ **On the split transaction, `width` bit 7 is `OVERLAY_MAP_ICON_FILL` (0x80).** No
   real mapping width may set it. Cmd 33's own flags (0x40 prepare, 0x20 enable, 0x80 dim)
   are masked to 0x1F before the decoder or the slave; dim is sent to the
-  slave as `OVERLAY_MAP_SYNC_DIM` (0x40). Cmd 44 (v25) is cmd 33 plus a flag byte
-  whose bit 0 draws the pairs without the legend; it is stored in bit 15 of
-  `display_to_pool[]` and sent to the slave as `OVERLAY_MAP_SYNC_NO_LEGEND` (0x20).
+  slave as `OVERLAY_MAP_SYNC_DIM` (0x40). Since v25 a mapping `to` of 600..1199
+  is slot `to - 600` drawn without the legend (`OVERLAY_MAP_NO_LEGEND_OFFSET`),
+  stored in bit 15 of `display_to_pool[]`.
 - ⚠️ **PRC overlays (cmd 41) decode against a frozen table** compiled into both ends
   (`prc_table_v1.h` ↔ host `res/prc_table_v1.bin`). A retrained table is a new protocol
   version. An RLE fragment length must stay below 0x80.

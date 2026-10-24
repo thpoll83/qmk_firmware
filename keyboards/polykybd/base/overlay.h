@@ -98,8 +98,8 @@ void set_display_dim(uint16_t overlay_idx, bool dim);
 // display_has_overlay_bits (clear_display_has_overlay / set_all_display_has_overlay).
 bool display_is_dim(uint16_t overlay_idx);
 
-// Marks a display position's overlay as drawn without the key legend (v25, cmd 44
-// flag OVERLAY_MAP_W2_NO_LEGEND). Stored in display_to_pool[]'s bit 15, so call it
+// Marks a display position's overlay as drawn without the key legend (v25, a mapping
+// `to` offset by OVERLAY_MAP_NO_LEGEND_OFFSET). Stored in display_to_pool[]'s bit 15, so call it
 // AFTER set_display_pool_slot(), which clears the bit.
 // Global variables: display_to_pool
 void set_display_no_legend(uint16_t overlay_idx, bool no_legend);

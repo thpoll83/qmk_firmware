@@ -50,7 +50,7 @@ static /*volatile*/ uint8_t overlay_pool [NUM_OVERLAY_SLOTS][72*40/8]; // ResX*R
 #endif
 static uint16_t display_to_pool [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
 // v25: bit 15 of a display_to_pool[] entry marks a position whose overlay is drawn
-// without the key legend (cmd 44). A pool slot needs 10 bits and the identity
+// without the key legend (v25, OVERLAY_MAP_NO_LEGEND_OFFSET). A pool slot needs 10 bits and the identity
 // default 11, so the bit is free, and the flag costs no RAM. Every plain write
 // (set_display_pool_slot, the resets) clears it.
 #define DISPLAY_POOL_NO_LEGEND 0x8000u

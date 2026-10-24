@@ -3390,7 +3390,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     // The courtyard is cut from the FULL icon even when it is drawn dimmed, so the
     // legend keeps the same clearance either way.
     if (no_legend) {
-        // v25 (cmd 44 OVERLAY_MAP_W2_NO_LEGEND): the icon replaces the keycap, so
+        // v25 (a mapping `to` offset by OVERLAY_MAP_NO_LEGEND_OFFSET): the icon replaces the keycap, so
         // nothing of the legend drawn before this call may remain.
         kdisp_clear_rect(BUFFER_X, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     } else {

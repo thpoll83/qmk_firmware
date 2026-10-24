@@ -67,9 +67,6 @@ typedef struct _dynamic_keymap_sync_t {
 // dimmed. The host's own bit for it is OVERLAY_MAP_W_DIM (0x80), which this
 // transaction already uses for the icon fill, so the master translates it.
 #define OVERLAY_MAP_SYNC_DIM  0x40u
-// Flag in overlay_map_sync_t.width (protocol v25): every pair in this chunk is drawn
-// without the key legend (cmd 44's OVERLAY_MAP_W2_NO_LEGEND). Width needs bits 0..4.
-#define OVERLAY_MAP_SYNC_NO_LEGEND 0x20u
 
 typedef struct _overlay_map_sync_t {
     uint32_t crc32;

@@ -358,9 +358,7 @@ uint8_t receive_prc_overlay_report(const uint8_t* data, uint8_t avail) {
 // Returns true if any mapping in this chunk lands on a currently-displayed position
 // (see overlay_from_index_visible) — the caller renders only then; an all-off-screen
 // chunk is staged silently and shown by the eventual layer/modifier/enable refresh.
-// `dim` (v23) and `no_legend` (v25) apply to every pair of the chunk.
-bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t width, bool dim,
-                                bool no_legend) {
+bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t width, bool dim) {
     bool any_visible = false;
     uint16_t from = UNSET_OVERLAY_MAPPING;
     if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
@@ -384,8 +382,18 @@ bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t w
             from = to;
         } else {
             if(from < OVERLAY_MAP_IDX_CNT) {
+                // v25: a `to` of NUM_OVERLAY_SLOTS..2*NUM_OVERLAY_SLOTS-1 is pool slot
+                // `to - NUM_OVERLAY_SLOTS`, drawn without the key legend
+                // (OVERLAY_MAP_NO_LEGEND_OFFSET in config.h).
+                const bool no_legend = to >= OVERLAY_MAP_NO_LEGEND_OFFSET &&
+                                       to < OVERLAY_MAP_NO_LEGEND_OFFSET + NUM_OVERLAY_SLOTS;
+                if (no_legend) {
+                    to -= OVERLAY_MAP_NO_LEGEND_OFFSET;
+                }
                 if(to < NUM_OVERLAY_SLOTS) {
                     set_display_pool_slot(from, to);
+                    // After set_display_pool_slot, which clears the bit (overlay.h).
+                    set_display_no_legend(from, no_legend);
                     // display_has_overlay_bits[] is from-indexed: a display position is
                     // "in use" iff it has an overlay assigned. Establishing
                     // the mapping is exactly that act, so set the bit here.
@@ -393,8 +401,6 @@ bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t w
                     // Every pair sets the dim bit either way, so a position that
                     // moves from a dimmed report to a plain one is drawn full again.
                     set_display_dim(from, dim);
-                    // After set_display_pool_slot, which clears the bit (overlay.h).
-                    set_display_no_legend(from, no_legend);
                     if (overlay_from_index_visible(from)) {
                         any_visible = true;
                     }
@@ -434,6 +440,10 @@ bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t w
     return any_visible;
 }
 
+// The repair packs a no-legend `to` with its offset at OVERLAY_MAP_REPAIR_WIDTH.
+_Static_assert(OVERLAY_MAP_NO_LEGEND_OFFSET + NUM_OVERLAY_SLOTS - 1 < (1u << OVERLAY_MAP_REPAIR_WIDTH),
+               "a no-legend mapping value must fit the repair width");
+
 // --- Slave overlay-mapping repair ---------------------------------------
 // See the contract in fill_overlay.h. Latched by the cmd-21 bridge check in
 // hid_com.c, drained at enable_overlays.
@@ -461,13 +471,9 @@ static void pack_map_value(uint8_t *buf, uint16_t idx, uint16_t v, uint8_t width
 static bool     s_repair_active = false;
 static bool     s_repair_reset_pending = false;
 static uint16_t s_repair_from   = 0;
-// The replay walks the index space once per combination of the two per-report
-// flags: bit 0 of the pass is dim (v23), bit 1 is no-legend (v25). A flag belongs
-// to a whole report, not to a pair.
-#define MAP_REPAIR_PASS_DIM       0x01u
-#define MAP_REPAIR_PASS_NO_LEGEND 0x02u
-#define MAP_REPAIR_PASSES         4u
-static uint8_t  s_repair_pass   = 0;
+// The replay walks the index space twice: plain pairs, then dimmed ones (v23),
+// because the dim flag belongs to a whole report, not to a pair.
+static bool     s_repair_dim_pass = false;
 static uint16_t s_repair_pairs  = 0;
 static uint8_t  s_repair_reports = 0;
 
@@ -479,7 +485,7 @@ void arm_overlay_map_repair(void) {
     s_repair_active  = true;
     s_repair_reset_pending = true;
     s_repair_from    = 0;
-    s_repair_pass    = 0;
+    s_repair_dim_pass = false;
     s_repair_pairs   = 0;
     s_repair_reports = 0;
 }
@@ -521,27 +527,26 @@ void overlay_map_repair_tick(void) {
         uint16_t slot = 0;      // value slot in this report (from,to,from,to,...)
         uint16_t last_from = 0, last_to = 0;
         memset(msg.mapping, 0, sizeof(msg.mapping));
-        const bool pass_dim       = (s_repair_pass & MAP_REPAIR_PASS_DIM) != 0;
-        const bool pass_no_legend = (s_repair_pass & MAP_REPAIR_PASS_NO_LEGEND) != 0;
-        msg.width = (uint8_t)(width | (pass_dim ? OVERLAY_MAP_SYNC_DIM : 0u)
-                                    | (pass_no_legend ? OVERLAY_MAP_SYNC_NO_LEGEND : 0u));
+        msg.width = (uint8_t)(width | (s_repair_dim_pass ? OVERLAY_MAP_SYNC_DIM : 0u));
         msg.bytes = (uint8_t)sizeof(msg.mapping);
         // Collect up to one report's worth of used entries from the cursor.
         while (s_repair_from < OVERLAY_MAP_IDX_CNT && slot + 1 < values) {
             if (display_has_overlay(s_repair_from) &&
-                display_is_dim(s_repair_from) == pass_dim &&
-                display_is_no_legend(s_repair_from) == pass_no_legend) {
+                display_is_dim(s_repair_from) == s_repair_dim_pass) {
                 last_from = s_repair_from;
                 last_to   = get_display_pool_slot(s_repair_from);
+                if (display_is_no_legend(s_repair_from)) {
+                    last_to += OVERLAY_MAP_NO_LEGEND_OFFSET;   // fits OVERLAY_MAP_REPAIR_WIDTH
+                }
                 pack_map_value(msg.mapping, slot++, last_from, width);
                 pack_map_value(msg.mapping, slot++, last_to,   width);
                 ++s_repair_pairs;
             }
             ++s_repair_from;
         }
-        if (slot == 0 && s_repair_pass + 1u < MAP_REPAIR_PASSES) {   // this pass done -> next one
-            ++s_repair_pass;
-            s_repair_from = 0;
+        if (slot == 0 && !s_repair_dim_pass) {   // plain pairs done -> dimmed ones
+            s_repair_dim_pass = true;
+            s_repair_from     = 0;
             continue;
         }
         if (slot == 0) {        // cursor ran out with nothing pending -> done

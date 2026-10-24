@@ -260,49 +260,6 @@ static void overlay_flags_on(poly_sync_t *local_state, uint8_t new_flags) {
     }
 }
 
-// Cmd 33 and cmd 44: apply one report of overlay mapping pairs. data[2] is the
-// width byte with the v21/v23 flags; the pairs start at `hdr` (3 for cmd 33, 4 for
-// cmd 44, whose data[3] is the second flag byte the caller decoded into
-// `no_legend`).
-static void receive_overlay_mapping_w(uint8_t* data, uint8_t hdr, bool no_legend,
-                                      poly_sync_t* local_state) {
-    const uint8_t flags = data[HID_DATA_IDX];
-    const uint8_t width = flags & OVERLAY_MAP_W_WIDTH_MASK;
-    const bool    dim   = (flags & OVERLAY_MAP_W_DIM) != 0;
-    const uint8_t bytes = (uint8_t)(HID_REPORT_SIZE - hdr);
-    // Refuse a bad width BEFORE either flag runs: otherwise the
-    // reset and the enable would apply around pairs the decoder
-    // then drops, leaving overlays on with a stale mapping.
-    if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
-        uprintf("REJECTED overlay mapping report: bad width %u\n", (unsigned)width);
-        return;
-    }
-    if (flags & OVERLAY_MAP_W_RESET) {
-        overlay_flags_on(local_state, MIRROR_OVERLAYS | USAGE_RESET | MAPPING_RESET);
-    }
-    overlay_map_sync_t map_sync;
-    map_sync.width = (uint8_t)(width | (dim ? OVERLAY_MAP_SYNC_DIM : 0u)
-                                     | (no_legend ? OVERLAY_MAP_SYNC_NO_LEGEND : 0u));
-    map_sync.bytes = bytes;
-    memset(map_sync.mapping, 0, sizeof(map_sync.mapping));
-    memcpy(map_sync.mapping, &data[hdr], bytes);
-    if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync,
-                                       sizeof(overlay_map_sync_t), 10))) {
-        note_overlay_map_sync_lost();
-        uprint("Warning: overlay mapping chunk did not reach the slave; repairing at enable.\n");
-    }
-    if (set_packed_overlay_mapping(&data[hdr], bytes, width, dim, no_legend)) {
-        request_disp_refresh();
-    }
-    if (debug_enable) {
-        uprintf("Overlay mapping data received (%u-bit%s).\n", (unsigned)width,
-                no_legend ? ", no legend" : "");
-    }
-    if (flags & OVERLAY_MAP_W_SHOW) {
-        overlay_flags_on(local_state, DISPLAY_OVERLAYS);
-    }
-}
-
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     // Board name in the GET_ID reply — each variant header (QMK_KEYBOARD_H) may
     // define POLY_KB_NAME; default to "Split72" so split72 (which doesn't define
@@ -347,13 +304,13 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         const poly_layer_t* local_layer = get_local_layer();
         poly_sync_t* local_state = access_local_state();
         // Bulk overlay/mapping commands: plain (10), flags on/off (11/12), compressed
-        // (16/17), ROI (18/19), mapping (21/33/44), PRC-coded (41). Two markers:
+        // (16/17), ROI (18/19), mapping (21/33), PRC-coded (41). Two markers:
         //  - note_overlay_activity() timestamps the burst so sync_and_refresh_displays()
         //    can coalesce the many per-report renders of a program switch into one.
         //  - loop_profile_note_overlay_cmd() tags the iteration for the timing profiler
         //    (no-op unless POLYKYBD_LOOP_PROFILE).
         switch (data[1]) {
-            case 10: case 11: case 12: case 16: case 17: case 18: case 19: case 21: case 33: case 41: case 42: case 44:
+            case 10: case 11: case 12: case 16: case 17: case 18: case 19: case 21: case 33: case 41: case 42:
                 note_overlay_activity();
                 loop_profile_note_overlay_cmd();
                 break;
@@ -972,7 +929,7 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                     // an all-off-screen chunk (non-held variants, off-layer keys) is
                     // staged silently and shown by the enable-overlays refresh.
                     if (set_packed_overlay_mapping(&data[HID_DATA_IDX], HID_DATA_MAX,
-                                                   OVERLAY_MAP_IDX_BITS, false, false)) {
+                                                   OVERLAY_MAP_IDX_BITS, false)) {
                         request_disp_refresh();
                     }
                     // Routine per-chunk chatter — set_packed_overlay_mapping already
@@ -983,32 +940,51 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
                 }
                 break;
             case 33: // receive overlay mapping, host-chosen value width (v12+)
-                // Same stream as cmd 21, but data[2] carries the WIDTH so the host
-                // can send each group of pairs at the narrowest width it fits in:
-                // 8 bits = 30 pairs/report, 9 = 27, 10 = 24, 11 = 22. Pairs are
-                // order-independent (each is a standalone assignment), so the host
-                // partitions them by required width rather than by index order —
-                // variants 0..10 keep riding the dense 10-bit form and only the
-                // high GUI combos pay for 11. Silent, like cmd 21.
-                // v21: bits 5/6 of the width byte are the prepare / enable
-                // flags; only the masked width reaches the decoder and the slave.
-                // v23: bit 7 dims every pair in the report. The slave gets it as
-                // OVERLAY_MAP_SYNC_DIM, never as bit 7 (the icon-fill flag there).
-                receive_overlay_mapping_w(data, OVERLAY_MAP_W_HDR, false, local_state);
-                break;
-            case 44: // cmd 33 with a second flag byte (v25)
-                // data[3] is OVERLAY_MAP_W2_*: bit 0 draws every pair of the report
-                // without the key legend. The pairs start one byte later, so a
-                // report holds one byte less. Unknown bits are refused, so a later
-                // flag cannot be silently ignored by this firmware.
-                if (data[HID_DATA_IDX + 1] & (uint8_t)~OVERLAY_MAP_W2_KNOWN) {
-                    uprintf("REJECTED overlay mapping report: unknown flags 0x%02x\n",
-                            (unsigned)data[HID_DATA_IDX + 1]);
-                    break;
+                {
+                    // Same stream as cmd 21, but data[2] carries the WIDTH so the host
+                    // can send each group of pairs at the narrowest width it fits in:
+                    // 8 bits = 30 pairs/report, 9 = 27, 10 = 24, 11 = 22. Pairs are
+                    // order-independent (each is a standalone assignment), so the host
+                    // partitions them by required width rather than by index order —
+                    // variants 0..10 keep riding the dense 10-bit form and only the
+                    // high GUI combos pay for 11. Silent, like cmd 21.
+                    // v21: bits 5/6 of the width byte are the prepare / enable
+                    // flags; only the masked width reaches the decoder and the slave.
+                    // v23: bit 7 dims every pair in the report. The slave gets it as
+                    // OVERLAY_MAP_SYNC_DIM, never as bit 7 (the icon-fill flag there).
+                    const uint8_t flags = data[HID_DATA_IDX];
+                    const uint8_t width = flags & OVERLAY_MAP_W_WIDTH_MASK;
+                    const bool    dim   = (flags & OVERLAY_MAP_W_DIM) != 0;
+                    // Refuse a bad width BEFORE either flag runs: otherwise the
+                    // reset and the enable would apply around pairs the decoder
+                    // then drops, leaving overlays on with a stale mapping.
+                    if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
+                        uprintf("REJECTED overlay mapping report: bad width %u\n", (unsigned)width);
+                        break;
+                    }
+                    if (flags & OVERLAY_MAP_W_RESET) {
+                        overlay_flags_on(local_state, MIRROR_OVERLAYS | USAGE_RESET | MAPPING_RESET);
+                    }
+                    overlay_map_sync_t map_sync;
+                    map_sync.width = (uint8_t)(width | (dim ? OVERLAY_MAP_SYNC_DIM : 0u));
+                    map_sync.bytes = OVERLAY_MAP_W_BYTES;
+                    memcpy(map_sync.mapping, &data[OVERLAY_MAP_W_HDR], OVERLAY_MAP_W_BYTES);
+                    if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync,
+                                                       sizeof(overlay_map_sync_t), 10))) {
+                        note_overlay_map_sync_lost();
+                        uprint("Warning: overlay mapping chunk did not reach the slave; repairing at enable.\n");
+                    }
+                    if (set_packed_overlay_mapping(&data[OVERLAY_MAP_W_HDR],
+                                                   OVERLAY_MAP_W_BYTES, width, dim)) {
+                        request_disp_refresh();
+                    }
+                    if (debug_enable) {
+                        uprintf("Overlay mapping data received (%u-bit).\n", (unsigned)width);
+                    }
+                    if (flags & OVERLAY_MAP_W_SHOW) {
+                        overlay_flags_on(local_state, DISPLAY_OVERLAYS);
+                    }
                 }
-                receive_overlay_mapping_w(data, OVERLAY_MAP_W2_HDR,
-                                          (data[HID_DATA_IDX + 1] & OVERLAY_MAP_W2_NO_LEGEND) != 0,
-                                          local_state);
                 break;
             case 22: // get default layer
                 memset(data, 0, length);

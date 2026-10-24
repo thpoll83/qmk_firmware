@@ -549,8 +549,7 @@ void user_sync_overlay_map_data_handler(uint8_t in_len, const void* in_data, uin
     // enable-overlays state sync (DISPLAY_OVERLAYS in OVERLAY_SYNCED_STATE_FLAGS).
     if (set_packed_overlay_mapping(data->mapping, data->bytes,
                                    (uint8_t)(data->width & OVERLAY_MAP_W_WIDTH_MASK),
-                                   (data->width & OVERLAY_MAP_SYNC_DIM) != 0,
-                                   (data->width & OVERLAY_MAP_SYNC_NO_LEGEND) != 0)) {
+                                   (data->width & OVERLAY_MAP_SYNC_DIM) != 0)) {
         request_disp_refresh();
     }
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;

@@ -187,7 +187,7 @@ keycodes stay on the release edge. [`KEYCODE_HANDLING.md`](keyboards/polykybd/KE
 ### HID protocol
 
 Byte 0 report ID, byte 1 command ID, byte 2+ payload; replies `"P\xNN."` (ACK) or
-`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (24, `config.h`) gates host features. Read
+`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (25, `config.h`) gates host features. Read
 [`PROTOCOL_HISTORY.md`](keyboards/polykybd/PROTOCOL_HISTORY.md) before changing any
 command; several were shaped by a contrast the wire format does not show. A new command
 goes through the `add-gated-hid-command` skill.
@@ -203,7 +203,9 @@ goes through the `add-gated-hid-command` skill.
 - ⚠️ **On the split transaction, `width` bit 7 is `OVERLAY_MAP_ICON_FILL` (0x80).** No
   real mapping width may set it. Cmd 33's own flags (0x40 prepare, 0x20 enable, 0x80 dim)
   are masked to 0x1F before the decoder or the slave; dim is sent to the
-  slave as `OVERLAY_MAP_SYNC_DIM` (0x40).
+  slave as `OVERLAY_MAP_SYNC_DIM` (0x40). Cmd 44 (v25) is cmd 33 plus a flag byte
+  whose bit 0 draws the pairs without the legend; it is stored in bit 15 of
+  `display_to_pool[]` and sent to the slave as `OVERLAY_MAP_SYNC_NO_LEGEND` (0x20).
 - ⚠️ **PRC overlays (cmd 41) decode against a frozen table** compiled into both ends
   (`prc_table_v1.h` ↔ host `res/prc_table_v1.bin`). A retrained table is a new protocol
   version. An RLE fragment length must stay below 0x80.

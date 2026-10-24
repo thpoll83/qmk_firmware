@@ -3379,6 +3379,7 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
         return false;
     }
     const bool dim = display_is_dim(idx);
+    const bool no_legend = display_is_no_legend(idx);
     idx = get_display_pool_slot(idx);
 
     // Overlay images are ROW-MAJOR MSB-first (host: np.packbits over the 40x72 mask),
@@ -3388,7 +3389,13 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     // rectangle through the legend underneath (field, 2026-08-01).
     // The courtyard is cut from the FULL icon even when it is drawn dimmed, so the
     // legend keeps the same clearance either way.
-    kdisp_clear_rowmajor_courtyard(28, 0, get_overlay(idx), 72, 40, KDISP_CY_DEFAULT);
+    if (no_legend) {
+        // v25 (cmd 44 OVERLAY_MAP_W2_NO_LEGEND): the icon replaces the keycap, so
+        // nothing of the legend drawn before this call may remain.
+        kdisp_clear_rect(BUFFER_X, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    } else {
+        kdisp_clear_rowmajor_courtyard(28, 0, get_overlay(idx), 72, 40, KDISP_CY_DEFAULT);
+    }
     if (dim) {
         // v23: a browser's icon under a website's overlay (cmd 33 OVERLAY_MAP_W_DIM).
         kdisp_draw_bitmap_dimmed(28, 0, get_overlay(idx), 72, 40);

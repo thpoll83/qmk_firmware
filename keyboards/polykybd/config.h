@@ -278,7 +278,12 @@
 //      1 clear, 2 set POLY_HAND_FLAG_SPLIT_VBUS in this half's stamp (Rev.2 boards:
 //      master by USB enumeration). Older firmware ignores the byte and sets only the
 //      side, so the host sends a non-zero op only at v24+.
-#define PROTOCOL_VERSION 24
+//  v25 cmd 44 (SEND_OVERLAY_MAPPING_W2) is cmd 33 with a second flag byte at
+//      data[3]. OVERLAY_MAP_W2_NO_LEGEND draws every pair of the report WITHOUT the
+//      key legend: the whole 72x40 cell is cleared before the icon is drawn. The host
+//      sets it for keys whose overlay replaces the keycap (a game's ESC mark). Older
+//      firmware NACKs cmd 44, so the host sends those pairs over cmd 33 below v25.
+#define PROTOCOL_VERSION 25
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1
@@ -438,6 +443,10 @@
 // as 0x80 (that is OVERLAY_MAP_ICON_FILL there); the handler forwards it as
 // OVERLAY_MAP_SYNC_DIM instead.
 #define OVERLAY_MAP_W_DIM        0x80u
+// v25: cmd 44 = cmd 33 plus a second flag byte, so the pairs start one byte later.
+#define OVERLAY_MAP_W2_HDR       4u     // report id + cmd + width + flags2
+#define OVERLAY_MAP_W2_NO_LEGEND 0x01u  // draw the pairs without the key legend
+#define OVERLAY_MAP_W2_KNOWN     (OVERLAY_MAP_W2_NO_LEGEND)
 // Values a stream of `bytes` bytes holds at `width` bits — the ONE definition
 // host and firmware must agree on, since there is no count field: the host fills
 // every value (padding by repeating the last pair, which is idempotent) so a

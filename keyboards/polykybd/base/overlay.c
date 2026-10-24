@@ -49,6 +49,13 @@ static /*volatile*/ uint8_t overlay_pool [NUM_OVERLAY_SLOTS][72*40/8]; // ResX*R
 #define OVERLAY_POOL_SIZE sizeof(overlay_pool)
 #endif
 static uint16_t display_to_pool [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
+// v25: bit 15 of a display_to_pool[] entry marks a position whose overlay is drawn
+// without the key legend (cmd 44). A pool slot needs 10 bits and the identity
+// default 11, so the bit is free, and the flag costs no RAM. Every plain write
+// (set_display_pool_slot, the resets) clears it.
+#define DISPLAY_POOL_NO_LEGEND 0x8000u
+_Static_assert(OVERLAY_MAP_IDX_CNT <= DISPLAY_POOL_NO_LEGEND,
+               "display_to_pool values must stay below the no-legend bit");
 
 static overlay_fragment_context_t g_fragment_context = {0};
 
@@ -153,7 +160,7 @@ uint8_t* get_overlay(uint16_t overlay_idx) {
 }
 
 uint16_t get_display_pool_slot(uint16_t overlay_idx) {
-    return display_to_pool[overlay_idx];
+    return (uint16_t)(display_to_pool[overlay_idx] & ~DISPLAY_POOL_NO_LEGEND);
 }
 
 void set_display_pool_slot(uint16_t overlay_idx, uint16_t val) {
@@ -178,6 +185,18 @@ void set_display_dim(uint16_t overlay_idx, bool dim) {
 
 bool display_is_dim(uint16_t overlay_idx) {
     return (display_dim_bits[overlay_idx/8] & (1<<(overlay_idx%8))) != 0;
+}
+
+void set_display_no_legend(uint16_t overlay_idx, bool no_legend) {
+    if (no_legend) {
+        display_to_pool[overlay_idx] |= DISPLAY_POOL_NO_LEGEND;
+    } else {
+        display_to_pool[overlay_idx] &= (uint16_t)~DISPLAY_POOL_NO_LEGEND;
+    }
+}
+
+bool display_is_no_legend(uint16_t overlay_idx) {
+    return (display_to_pool[overlay_idx] & DISPLAY_POOL_NO_LEGEND) != 0;
 }
 
 void reset_overlay_pool(void) {

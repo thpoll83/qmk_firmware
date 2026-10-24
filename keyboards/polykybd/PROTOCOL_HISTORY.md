@@ -311,6 +311,27 @@ reading before you change either one.
     the flag is set anyway, so each half is set on its own, plugged in alone.
   - v23 and older firmware ignore the byte and set only the side; the host sends a
     non-zero op only at v24. The boot banner reports the flags on a `board:` line.
+  **v25** adds cmd `44` (SEND_OVERLAY_MAPPING_W2): cmd `33` with a second flag byte
+  at `data[3]`, so the pairs start at byte 4 and a report holds 60 bytes of pairs.
+  Bit 0 (`OVERLAY_MAP_W2_NO_LEGEND`) draws every pair of the report WITHOUT the key
+  legend: `copy_overlay_to_buffer()` clears the whole 72x40 cell instead of the 3 px
+  courtyard, then draws the icon. The host sets it for keys whose overlay replaces
+  the keycap, such as a game's ESC mark. It restores per key what the global
+  `CLEAR_*` overlay flags did before ea8c0ccef1 (2026-05-07) removed them.
+  - **A new command, not a cmd 33 flag.** All three spare bits of cmd 33's width
+    byte are in use (0x20 enable, 0x40 prepare, 0x80 dim), and so are all eight
+    bits of the cmd 12 overlay flags.
+  - **No RAM.** The flag is bit 15 of the position's `display_to_pool[]` entry: a
+    pool slot needs 10 bits and the identity default 11. `get_display_pool_slot()`
+    masks it, and every plain write and reset clears it, so `set_display_no_legend()`
+    must run after `set_display_pool_slot()`.
+  - **Per report, like dim.** Every pair writes the bit either way. The slave gets
+    it as `OVERLAY_MAP_SYNC_NO_LEGEND` (0x20 in the split mapping width byte), and
+    the mapping repair replays four passes, one per combination of dim and no-legend.
+  - **Unknown bits in `data[3]` are refused** before any flag runs, so a later flag
+    cannot be ignored by this firmware.
+  - Older firmware NACKs cmd 44; below v25 the host sends those pairs over cmd 33
+    and the legend shows around the icon.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
@@ -338,6 +359,7 @@ reading before you change either one.
   | 15 | `36`/`37`/`38` | macros: info / body window / label, behind ONE host feature gate |
   | 16 | `39` | crash record read + clear |
   | 17 | `20` SET_UNICODE_MODE | VOLATILE flag in `data[3]` — apply in RAM, leave EEPROM alone |
+  | 25 | `44` SEND_OVERLAY_MAPPING_W2 | cmd 33 plus a flag byte in `data[3]`; bit 0 draws the pairs without the legend |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs

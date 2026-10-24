@@ -385,11 +385,8 @@ bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t w
                 // v25: a `to` of NUM_OVERLAY_SLOTS..2*NUM_OVERLAY_SLOTS-1 is pool slot
                 // `to - NUM_OVERLAY_SLOTS`, drawn without the key legend
                 // (OVERLAY_MAP_NO_LEGEND_OFFSET in config.h).
-                const bool no_legend = to >= OVERLAY_MAP_NO_LEGEND_OFFSET &&
-                                       to < OVERLAY_MAP_NO_LEGEND_OFFSET + NUM_OVERLAY_SLOTS;
-                if (no_legend) {
-                    to -= OVERLAY_MAP_NO_LEGEND_OFFSET;
-                }
+                bool no_legend;
+                to = map_codec_split_to(to, OVERLAY_MAP_NO_LEGEND_OFFSET, &no_legend);
                 if(to < NUM_OVERLAY_SLOTS) {
                     set_display_pool_slot(from, to);
                     // After set_display_pool_slot, which clears the bit (overlay.h).
@@ -534,10 +531,9 @@ void overlay_map_repair_tick(void) {
             if (display_has_overlay(s_repair_from) &&
                 display_is_dim(s_repair_from) == s_repair_dim_pass) {
                 last_from = s_repair_from;
-                last_to   = get_display_pool_slot(s_repair_from);
-                if (display_is_no_legend(s_repair_from)) {
-                    last_to += OVERLAY_MAP_NO_LEGEND_OFFSET;   // fits OVERLAY_MAP_REPAIR_WIDTH
-                }
+                last_to   = map_codec_to_value(get_display_pool_slot(s_repair_from),
+                                               display_is_no_legend(s_repair_from),
+                                               OVERLAY_MAP_NO_LEGEND_OFFSET);   // fits OVERLAY_MAP_REPAIR_WIDTH
                 pack_map_value(msg.mapping, slot++, last_from, width);
                 pack_map_value(msg.mapping, slot++, last_to,   width);
                 ++s_repair_pairs;

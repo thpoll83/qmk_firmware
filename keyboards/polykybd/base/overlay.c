@@ -3,6 +3,7 @@
 
 #include "disp_array.h"
 #include "polymod_rle.h"
+#include "map_codec.h"
 
 #include <print.h>
 #include <string.h>
@@ -49,12 +50,10 @@ static /*volatile*/ uint8_t overlay_pool [NUM_OVERLAY_SLOTS][72*40/8]; // ResX*R
 #define OVERLAY_POOL_SIZE sizeof(overlay_pool)
 #endif
 static uint16_t display_to_pool [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
-// v25: bit 15 of a display_to_pool[] entry marks a position whose overlay is drawn
-// without the key legend (v25, OVERLAY_MAP_NO_LEGEND_OFFSET). A pool slot needs 10 bits and the identity
-// default 11, so the bit is free, and the flag costs no RAM. Every plain write
-// (set_display_pool_slot, the resets) clears it.
-#define DISPLAY_POOL_NO_LEGEND 0x8000u
-_Static_assert(OVERLAY_MAP_IDX_CNT <= DISPLAY_POOL_NO_LEGEND,
+// v25: bit 15 of a display_to_pool[] entry (MAP_CODEC_ENTRY_NO_LEGEND) marks a
+// position whose overlay is drawn without the key legend. The flag costs no RAM.
+// Every plain write (set_display_pool_slot, the resets) clears it.
+_Static_assert(OVERLAY_MAP_IDX_CNT <= MAP_CODEC_ENTRY_NO_LEGEND,
                "display_to_pool values must stay below the no-legend bit");
 
 static overlay_fragment_context_t g_fragment_context = {0};
@@ -160,7 +159,7 @@ uint8_t* get_overlay(uint16_t overlay_idx) {
 }
 
 uint16_t get_display_pool_slot(uint16_t overlay_idx) {
-    return (uint16_t)(display_to_pool[overlay_idx] & ~DISPLAY_POOL_NO_LEGEND);
+    return map_codec_entry_slot(display_to_pool[overlay_idx]);
 }
 
 void set_display_pool_slot(uint16_t overlay_idx, uint16_t val) {
@@ -188,15 +187,11 @@ bool display_is_dim(uint16_t overlay_idx) {
 }
 
 void set_display_no_legend(uint16_t overlay_idx, bool no_legend) {
-    if (no_legend) {
-        display_to_pool[overlay_idx] |= DISPLAY_POOL_NO_LEGEND;
-    } else {
-        display_to_pool[overlay_idx] &= (uint16_t)~DISPLAY_POOL_NO_LEGEND;
-    }
+    display_to_pool[overlay_idx] = map_codec_entry_with_no_legend(display_to_pool[overlay_idx], no_legend);
 }
 
 bool display_is_no_legend(uint16_t overlay_idx) {
-    return (display_to_pool[overlay_idx] & DISPLAY_POOL_NO_LEGEND) != 0;
+    return map_codec_entry_no_legend(display_to_pool[overlay_idx]);
 }
 
 void reset_overlay_pool(void) {

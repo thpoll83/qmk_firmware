@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 // Pure bit codec for the packed overlay-mapping format (HID cmd 21 fixed 10-bit,
@@ -59,4 +60,42 @@ static inline void map_codec_write(uint8_t* buf, uint16_t idx, uint16_t v, uint8
     if (s + width > 16) {
         buf[start_byte + 2] |= (uint8_t)((shifted >> 16) & 0xff);
     }
+}
+
+// --- No-legend pairs (protocol v25) -------------------------------------------
+//
+// A mapping `to` of `slots`..2*slots-1 is pool slot `to - slots`, drawn without
+// the key legend (`slots` = NUM_OVERLAY_SLOTS). The decoder and the slave-repair
+// packer both go through these two, so they cannot disagree.
+
+// The wire value for pool slot `slot`.
+static inline uint16_t map_codec_to_value(uint16_t slot, bool no_legend, uint16_t slots) {
+    return no_legend ? (uint16_t)(slot + slots) : slot;
+}
+
+// Splits a decoded `to` into the pool slot (returned) and the no-legend flag.
+// A value at or past 2*slots comes back unchanged and unflagged, so the caller's
+// out-of-pool check still rejects it.
+static inline uint16_t map_codec_split_to(uint16_t to, uint16_t slots, bool* no_legend) {
+    *no_legend = to >= slots && to < (uint16_t)(2u * slots);
+    return *no_legend ? (uint16_t)(to - slots) : to;
+}
+
+// --- display_to_pool[] entries (protocol v25) ---------------------------------
+//
+// Bit 15 of an entry is the no-legend flag. A pool slot needs 10 bits and the
+// identity default 11, so the bit is free.
+#define MAP_CODEC_ENTRY_NO_LEGEND 0x8000u
+
+static inline uint16_t map_codec_entry_slot(uint16_t entry) {
+    return (uint16_t)(entry & ~MAP_CODEC_ENTRY_NO_LEGEND);
+}
+
+static inline bool map_codec_entry_no_legend(uint16_t entry) {
+    return (entry & MAP_CODEC_ENTRY_NO_LEGEND) != 0;
+}
+
+static inline uint16_t map_codec_entry_with_no_legend(uint16_t entry, bool no_legend) {
+    return no_legend ? (uint16_t)(entry | MAP_CODEC_ENTRY_NO_LEGEND)
+                     : map_codec_entry_slot(entry);
 }

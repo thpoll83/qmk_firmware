@@ -1,10 +1,19 @@
 # The bulk pipe: a second USB channel for large transfers
 
-Status: in use since pipe protocol 2 (2026-10-19): the firmware update's CHUNK
-step runs on the pipe (see *Firmware update over the pipe* below). Font packs,
-the icon library, engine packs and overlays still go over raw HID. This page is
-the feasibility assessment, what the pipe does, how to measure it, and what
-another payload needs before it moves over.
+Status: in use since pipe protocol 2 (2026-10-19): the CHUNK step of the
+firmware update runs on the pipe (see *Firmware update over the pipe* below).
+So does the CHUNK step of every resource that rides the font-pack transport
+(font packs, the icon library, game data, engine packs): `FW_CHUNK` writes
+through `fw_up_xfer_block()` into whatever target the preceding HID BEGIN
+selected, and the host streams those chunks the same way. Overlays still go
+over raw HID. This page is the feasibility assessment, what the pipe does, how
+to measure it, and what another payload needs before it moves over.
+
+The first firmware with the pipe is 1.9.3 (`PROTOCOL_VERSION` 23). Pipe
+protocols 1 and 2 shipped together, in the squash merge of #395, so no released
+firmware reports pipe protocol 1. The HID protocol does not announce the pipe;
+a host that needs to know whether a keyboard of a given protocol can have one
+(the host's mock keyboard, `PIPE_MIN_PROTOCOL`) uses this version.
 
 ## Why raw HID is slow, and what a bulk endpoint changes
 

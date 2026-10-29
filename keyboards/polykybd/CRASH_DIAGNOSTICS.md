@@ -397,7 +397,9 @@ run on it (`test_no_crash_record`). What is worth knowing:
 
 ## A reset with no record: the `reset:` banner line (fw 1.9.11+, #402)
 
-**An empty `polyctl crash show` after a reset rules out exactly two causes**: a
+**An empty `polyctl crash show` after a reset rules out exactly two causes**, as long
+as nobody cleared the record since (`polyctl crash clear`, the host dialog's Clear;
+the banner's `record=` below survives a clear): a
 HardFault on either core (the handler writes the record before it reboots) and a
 timeout of the watchdog `crash_watchdog_start()` armed (the next boot builds a
 `kind=watchdog` record from the breadcrumb). What is left is a power loss, a

@@ -76,8 +76,11 @@ Open the PR when the investigation is done.
 - ⚠️ **A boot banner in the console is not a reboot.** The firmware re-prints its
   banner when a host talks to it after 5 s of silence (`BANNER_HOST_GAP_MS`,
   `boot_diag.c`), and a probe that waits in idle does exactly that. Read a reboot
-  off the GET_ID status byte instead: `*` (the fresh-boot marker) is set only by a
-  boot. `eden_wake_burst` v1 reported a RESET that was this re-print (2026-10-22).
+  off the GET_ID status byte instead: `*` is the fresh-boot marker. A boot sets it,
+  and so does leaving DOOM (`doom_mode.c` calls `poly_mark_fresh_boot()` so the host
+  drops its overlay cache), so a probe that runs DOOM must not count that `*` as a
+  reset. `eden_wake_burst` v1 reported a RESET that was the banner re-print
+  (2026-10-22).
 - **The rig cannot press a key.** cmd 14 injects keys only with `debug_enable` on,
   which takes the physical DB_TOGG key. cmd 15 with payload `1` starts idle at once
   (no short timeout needed) and payload `0` is the host's wake. When a probe needs a

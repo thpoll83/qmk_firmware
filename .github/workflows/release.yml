@@ -55,8 +55,11 @@ jobs:
       # since publishing is what started the run. What the refusal buys is that
       # nobody can download a mislabelled image — the empty release left behind is
       # the v0.27.1 state, and deleting it is step one of the recovery below. The
-      # host's copy of this gate cannot even buy that much, because its workflow
-      # uploads nothing (PolyKybdHost#349).
+      # host's copy of this gate has no asset to withhold at all, because its
+      # workflow uploads nothing, so it WITHDRAWS the release instead — marks it a
+      # prerelease, which drops it out of the `releases/latest` its updater reads
+      # (PolyKybdHost#349, then #354). Worth considering here if a firmware release
+      # ever starts carrying something the board can install without the workflow.
       #
       # ⚠️ config.h is the authority here, unlike wincompose, which reads the
       # number back off the built exe because iscc names the installer from its

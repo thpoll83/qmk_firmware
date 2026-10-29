@@ -403,7 +403,9 @@ dialog's Clear; the banner's `record=` below survives a clear): a HardFault on e
 of its cores (the handler writes the record before it reboots) and a timeout of the
 watchdog `crash_watchdog_start()` armed (the next boot builds a `kind=watchdog` record
 from the breadcrumb). The slave keeps its own record: rule it out with
-`polyctl crash show --slave` too. What is left is a power loss, a brownout, the RUN
+`polyctl crash show --slave` too. That command returns the master's copy, pulled once
+per link-up, so an empty answer means something only after the link has come up since
+the slave's last boot (the console prints `crash: side=slave …` when a pull finds one). What is left is a power loss, a brownout, the RUN
 pin, a debugger reset, the bootrom's own reboot after a UF2 copy, or a deliberate
 `mcu_reset()` (QK_REBOOT, cmd 23/43, the staging reboot). Before #402 the firmware
 read the reset cause and printed it only beside a record, so these looked identical

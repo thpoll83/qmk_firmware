@@ -395,6 +395,34 @@ run on it (`test_no_crash_record`). What is worth knowing:
     (and is the qmk#271 discriminator working); leading with POR reads as a power
     cycle and would send a real diagnosis the wrong way.
 
+## A reset with no record: the `reset:` banner line (fw 1.9.11+, #402)
+
+**An empty `polyctl crash show` after a reset rules out exactly two causes**: a
+HardFault on either core (the handler writes the record before it reboots) and a
+timeout of the watchdog `crash_watchdog_start()` armed (the next boot builds a
+`kind=watchdog` record from the breadcrumb). What is left is a power loss, a
+brownout, the RUN pin, or a deliberate `mcu_reset()` (QK_REBOOT, cmd 23/43, the
+staging reboot). Before #402 the firmware read the reset cause and printed it only
+beside a record, so those four looked identical in a log (field, 2026-10-22: a master
+reset 5 s after waking from Eden, no record on either half). Every banner now carries:
+
+```
+   reset: cause=wd-forced reason=0x22 ram=kept record=no
+```
+
+- `cause` comes from `WATCHDOG.REASON` when it is non-zero (`wd-timer`, `wd-forced`),
+  otherwise from `CHIP_RESET` (`run-pin`, `debugger`, `power-on`). `CHIP_RESET` is
+  sticky across watchdog reboots, which is why it decides second.
+- `ram=lost` means the NOLOAD block's magic did not survive: usually a power loss, but
+  also the first boot of an image that moved the block. A lead, not proof.
+- `record=yes` is THIS boot's fact; a later cmd 39 clear does not change it.
+- **Expected values:** the first boot after a UF2 copy reads `cause=wd-timer
+  reason=0x12` (the bootrom's delayed reboot, rig 2026-10-22); the boot after a HID
+  self-apply reads `cause=wd-forced reason=0x22 ram=kept` (field, 2026-10-22).
+- ⚠️ **`polyctl crash show --slave` can print an old record.** The slave's archive
+  survives until cleared, so check its `fw=` before reading it as today's: the
+  2026-10-22 triage turned up a `fw=0.26.0` HardFault marked "archived (older)".
+
 ## Sub-step paint breadcrumbs (0xSS80..0xSSBF, 0x1S80..0x1SBF)
 
 A master wedged at "63%, 4 / 4" with the "4" half drawn left `phase=1:0x0504`: the

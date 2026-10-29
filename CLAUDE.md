@@ -41,8 +41,9 @@ container, so don't claim it is unavailable. Setup, submodule failures, the
   is silently dropped, so power-cycle between them. One brick after the fix remains
   unreproduced, so the release ships no stamp UF2. `POLYKYBD_FORCE_HAND=left|right` is
   the provisioning route that works.
-- ⚠️ **`boot: spans ms … 2=65535` is a saturation sentinel** (`boot_timing_mark()`
-  clamps at `0xFFFF`), not 65 s measured.
+- ⚠️ **`boot: spans ms … 2=…` from firmware built before 2026-10-22 is not a
+  measurement**: step 1 and step 2 were read against two different `timer_read32()`
+  zeros (`timer_init()` runs between them). A `65535` there is that bug, not 65 s.
 
 The stamp UF2 history and the brick's confounders: `BUILD_ENVIRONMENT.md` → *Hand-built
 UF2s* and `keyboards/polykybd/readme.md` → *The stamp UF2*.
@@ -146,6 +147,10 @@ per-variant logic. [`VARIANTS.md`](keyboards/polykybd/VARIANTS.md).
 - ⚠️ **The two variants share the MCU schematic.** `variations/poly_corne/` (in the
   PolyKybd hardware repo) has no processor, so an MCU grep there finds nothing. An
   empty grep is evidence only once you have shown it covered the thing you asked about.
+- ⚠️ **Rev.2 boards (2023) pass VBUS over the split cable**, so GP24 reads high on both
+  halves. Bit 0 of the handedness stamp's `pad[1]` (`POLY_HAND_FLAG_SPLIT_VBUS`, set by
+  cmd 25 at v24) makes the half that enumerates the master. Anything that writes a
+  stamp record must carry `pad[1]` over; `stamp_write()` takes the flags for that.
 
 ### The dynamic keymap
 
@@ -182,7 +187,7 @@ keycodes stay on the release edge. [`KEYCODE_HANDLING.md`](keyboards/polykybd/KE
 ### HID protocol
 
 Byte 0 report ID, byte 1 command ID, byte 2+ payload; replies `"P\xNN."` (ACK) or
-`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (23, `config.h`) gates host features. Read
+`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (25, `config.h`) gates host features. Read
 [`PROTOCOL_HISTORY.md`](keyboards/polykybd/PROTOCOL_HISTORY.md) before changing any
 command; several were shaped by a contrast the wire format does not show. A new command
 goes through the `add-gated-hid-command` skill.
@@ -198,7 +203,9 @@ goes through the `add-gated-hid-command` skill.
 - ⚠️ **On the split transaction, `width` bit 7 is `OVERLAY_MAP_ICON_FILL` (0x80).** No
   real mapping width may set it. Cmd 33's own flags (0x40 prepare, 0x20 enable, 0x80 dim)
   are masked to 0x1F before the decoder or the slave; dim is sent to the
-  slave as `OVERLAY_MAP_SYNC_DIM` (0x40).
+  slave as `OVERLAY_MAP_SYNC_DIM` (0x40). Since v25 a mapping `to` of 600..1199
+  is slot `to - 600` drawn without the legend (`OVERLAY_MAP_NO_LEGEND_OFFSET`),
+  stored in bit 15 of `display_to_pool[]`.
 - ⚠️ **PRC overlays (cmd 41) decode against a frozen table** compiled into both ends
   (`prc_table_v1.h` ↔ host `res/prc_table_v1.bin`). A retrained table is a new protocol
   version. An RLE fragment length must stay below 0x80.

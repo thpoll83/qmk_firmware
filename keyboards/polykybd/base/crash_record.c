@@ -53,6 +53,13 @@ static poly_crash_record_t  s_archive;                 // last archived record (
 static bool                 s_have_slave   = false;
 static bool                 s_slave_fresh  = false;
 static poly_crash_record_t  s_slave;                   // last record pulled from the slave
+// Why THIS boot happened, kept for the boot banner whether or not a crash record
+// came with it. A reset that leaves no record (power loss, a brownout, the RUN
+// pin, a deliberate mcu_reset()) used to print nothing at all.
+static uint8_t              s_boot_reason  = 0;       // CRASH_RESET_* bits
+static bool                 s_ram_lost     = false;   // the NOLOAD block held no magic
+static bool                 s_boot_record  = false;   // THIS boot captured a record; unlike
+                                                      // s_fresh, cmd 39's clear does not reset it
 // The slave-record acknowledgement (crash_ack.h). Slave side: which of its own
 // records the host has seen. Master side: an ack the host's cmd 39 read queued.
 static crash_ack_t          s_ack;
@@ -300,6 +307,8 @@ static uint8_t read_reset_reason(void) {
 
 void crash_record_init(void) {
     const uint8_t reason = read_reset_reason();
+    s_boot_reason = reason;
+    s_ram_lost    = s_ram.magic != CRASH_RAM_MAGIC;
     // Zeroed at declaration: only the `have` branches fill it, and cppcheck
     // cannot see that guard (uninitStructMember).
     poly_crash_record_t captured;
@@ -341,6 +350,7 @@ void crash_record_init(void) {
         captured.crc          = rec_crc(&captured);
         s_ram.consecutive     = captured.consecutive;
         s_fresh               = true;
+        s_boot_record         = true;
     } else {
         s_ram.consecutive = 0;
     }
@@ -367,6 +377,31 @@ void crash_record_init(void) {
             s_have_archive = true;
         }
     }
+}
+
+// WATCHDOG.REASON is zero after any hardware reset, so a non-zero value names a
+// watchdog reboot. CHIP_RESET is sticky across watchdog reboots (a crash record
+// reads "POR, watchdog forced"), so it decides only when REASON is zero. Its HAD_*
+// bits are read-only and rewritten by every chip-level reset, so they cannot be
+// consumed; the one reset that would leave them stale without touching REASON is a
+// core-only SYSRESETREQ, and nothing here issues one (mcu_reset() is a watchdog
+// reboot, see poly_util.c).
+// ram= reports whether the NOLOAD block's magic survived. Missing magic is USUALLY a
+// power loss, but it is also the first boot of an image that moved the block, or a
+// block something overwrote; ram=lost is a lead to check, not proof of power loss.
+const char *crash_reset_cause_name(uint8_t reason) {
+    if (reason & CRASH_RESET_WD_TIMER) return "wd-timer";   // hang, or the bootrom's reboot after a UF2 copy
+    if (reason & CRASH_RESET_WD_FORCE) return "wd-forced";  // mcu_reset(), the fault handler, the self-apply
+    if (reason & CRASH_RESET_HAD_RUN)  return "run-pin";
+    if (reason & CRASH_RESET_HAD_PSM)  return "debugger";
+    if (reason & CRASH_RESET_HAD_POR)  return "power-on";   // POR or brownout
+    return "unknown";
+}
+
+void crash_record_emit_reset_line(void) {
+    uprintf("   reset: cause=%s reason=0x%02x ram=%s record=%s\n",
+            crash_reset_cause_name(s_boot_reason), (unsigned)s_boot_reason,
+            s_ram_lost ? "lost" : "kept", s_boot_record ? "yes" : "no");
 }
 
 bool crash_record_fresh(void) {

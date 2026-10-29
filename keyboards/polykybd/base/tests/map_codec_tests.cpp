@@ -231,4 +231,69 @@ TEST(MapCodecTest, TenBitPairsMatchTheCmd21Layout) {
     EXPECT_EQ(map_codec_read(buf, 1, 10), 0x2AA);
 }
 
+// --- v25 no-legend pairs and display_to_pool entries --------------------------
+
+constexpr uint16_t kSlots = 600;   // NUM_OVERLAY_SLOTS (config.h)
+
+TEST(MapCodecNoLegendTest, EveryPoolSlotRoundTripsWithAndWithoutTheFlag) {
+    for (uint16_t slot = 0; slot < kSlots; ++slot) {
+        for (bool flag : {false, true}) {
+            bool got = !flag;
+            EXPECT_EQ(map_codec_split_to(map_codec_to_value(slot, flag, kSlots), kSlots, &got), slot);
+            EXPECT_EQ(got, flag);
+        }
+    }
+}
+
+TEST(MapCodecNoLegendTest, TheRangeEdges) {
+    bool flag = true;
+    EXPECT_EQ(map_codec_split_to(kSlots - 1, kSlots, &flag), kSlots - 1);
+    EXPECT_FALSE(flag);
+    EXPECT_EQ(map_codec_split_to(kSlots, kSlots, &flag), 0);
+    EXPECT_TRUE(flag);
+    EXPECT_EQ(map_codec_split_to(2 * kSlots - 1, kSlots, &flag), kSlots - 1);
+    EXPECT_TRUE(flag);
+    // Past the offset range: unchanged and unflagged, so the out-of-pool check
+    // in set_packed_overlay_mapping still rejects it.
+    EXPECT_EQ(map_codec_split_to(2 * kSlots, kSlots, &flag), 2 * kSlots);
+    EXPECT_FALSE(flag);
+    EXPECT_EQ(map_codec_split_to(0x7FF, kSlots, &flag), 0x7FF);
+    EXPECT_FALSE(flag);
+}
+
+TEST(MapCodecNoLegendTest, AFlaggedValueFitsTheRepairWidth) {
+    // The slave repair packs at width 11 (OVERLAY_MAP_REPAIR_WIDTH).
+    EXPECT_LT(map_codec_to_value(kSlots - 1, true, kSlots), 1u << 11);
+    uint8_t buf[4] = {0};
+    map_codec_write(buf, 1, map_codec_to_value(423, true, kSlots), 11);
+    bool flag = false;
+    EXPECT_EQ(map_codec_split_to(map_codec_read(buf, 1, 11), kSlots, &flag), 423);
+    EXPECT_TRUE(flag);
+}
+
+TEST(MapCodecNoLegendTest, LowSlotsStillFitTenBits) {
+    // The host keeps a flagged slot below 424 in the dense 10-bit form.
+    EXPECT_LT(map_codec_to_value(423, true, kSlots), 1u << 10);
+    EXPECT_GE(map_codec_to_value(424, true, kSlots), 1u << 10);
+}
+
+TEST(MapCodecEntryTest, TheFlagNeverChangesTheSlot) {
+    // Every value display_to_pool[] holds: pool slots and the identity default
+    // up to OVERLAY_MAP_IDX_CNT - 1 (1439).
+    for (uint16_t v = 0; v < 1440; ++v) {
+        uint16_t e = map_codec_entry_with_no_legend(v, true);
+        EXPECT_EQ(map_codec_entry_slot(e), v);
+        EXPECT_TRUE(map_codec_entry_no_legend(e));
+        e = map_codec_entry_with_no_legend(e, false);
+        EXPECT_EQ(e, v);
+        EXPECT_FALSE(map_codec_entry_no_legend(e));
+    }
+}
+
+TEST(MapCodecEntryTest, APlainEntryHasNoFlag) {
+    EXPECT_FALSE(map_codec_entry_no_legend(0));
+    EXPECT_FALSE(map_codec_entry_no_legend(1439));
+    EXPECT_EQ(map_codec_entry_slot(599), 599);
+}
+
 }  // namespace

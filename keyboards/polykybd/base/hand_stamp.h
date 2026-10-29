@@ -49,11 +49,52 @@
 typedef struct __attribute__((packed)) {
     uint32_t magic;    // POLY_HAND_STAMP_MAGIC
     uint8_t  is_left;  // 1 = this half is the left one
-    uint8_t  pad[3];   // 0 -- keeps `crc` word-aligned and the layout explicit
+    uint8_t  pad[3];   // [0] writer, [1] board flags, [2] 0 -- keeps `crc` word-aligned
     uint32_t crc;      // crc32 over the bytes before it
 } poly_hand_stamp_t;
 
 #define POLY_HAND_STAMP_MAGIC 0x48414E44UL  // 'HAND'
+
+// --- board flags (pad[1]) ---------------------------------------------------
+// Facts about the PCB that the firmware cannot read from the hardware. They are
+// stored with the handedness because both are per half, set once, and must survive
+// an EEPROM wipe. Every record written before this field existed has pad[1] = 0,
+// which means "rev3 or later", so existing boards keep their behaviour.
+//
+// SPLIT_VBUS: a Rev.2 board (left "Rev 2 04/2023", right "Rev.2 03/2023"). It passes
+// VBUS over the split cable, and its GP24 divider taps VSYS, so GP24 reads high on
+// BOTH halves. With the flag set, is_keyboard_master_impl() (polykybd.c) picks the
+// master by USB enumeration instead of GP24. Rev3 (09/2023) removed VBUS from the
+// split port. Set it on each half on its own, plugged in alone: HID cmd 25 with
+// data[HID_DATA_IDX+1] = POLY_BOARD_OP_SET_SPLIT_VBUS (protocol 24).
+#define POLY_HAND_FLAG_SPLIT_VBUS 0x01u
+#define POLY_HAND_FLAGS_KNOWN     (POLY_HAND_FLAG_SPLIT_VBUS)
+
+// The board-flag byte of cmd 25. 0 keeps the stored flags, so a host that predates
+// it (and zero-pads the report) cannot clear a flag by setting the side.
+typedef enum {
+    POLY_BOARD_OP_KEEP             = 0,
+    POLY_BOARD_OP_CLEAR_SPLIT_VBUS = 1,
+    POLY_BOARD_OP_SET_SPLIT_VBUS   = 2,
+    POLY_BOARD_OP_COUNT
+} poly_board_op_t;
+
+// Pure: the flags a record gets after `op`. `op` must be < POLY_BOARD_OP_COUNT
+// (cmd 25 NACKs anything else before it changes anything).
+static inline uint8_t poly_hand_apply_board_op(uint8_t flags, uint8_t op) {
+    switch (op) {
+        case POLY_BOARD_OP_CLEAR_SPLIT_VBUS: return (uint8_t)(flags & ~POLY_HAND_FLAG_SPLIT_VBUS);
+        case POLY_BOARD_OP_SET_SPLIT_VBUS:   return (uint8_t)(flags | POLY_HAND_FLAG_SPLIT_VBUS);
+        default:                             return flags;
+    }
+}
+
+// Pure: is this half the master? `split_vbus` is the flag above, `vbus` the GP24
+// reading, `enumerated` whether USB enumerated within the timeout. Only a flagged
+// board waits for enumeration; on every other board this is the stock GP24 rule.
+static inline bool poly_master_decide(bool split_vbus, bool vbus, bool enumerated) {
+    return split_vbus ? enumerated : vbus;
+}
 
 // --- the decision -----------------------------------------------------------
 // Pure, so the ordering can be tested without a flash part (the same seam as
@@ -125,6 +166,10 @@ uint8_t poly_hand_stamp_slot(void);
 uint8_t poly_hand_stamp_count(void);
 uint8_t poly_hand_stamp_writer(void);
 
+// The board flags of the record that answered (0 when there is none). Resolves on
+// first use like poly_hand_is_left(), so it is valid in split_pre_init().
+uint8_t poly_hand_board_flags(void);
+
 // --- I/O --------------------------------------------------------------------
 // Resolve + migrate. Call once from keyboard_pre_init_user(), which is the last
 // hook before keyboard_init() -> quantum_init() can run eeconfig_init() and erase
@@ -167,6 +212,11 @@ void poly_hand_force_stamp(bool is_left);
 // split-transaction handler with a ~20 ms budget. poly_hand_flush_pending() does
 // the writing.
 void poly_hand_set_pending(bool is_left);
+
+// Record a board-flag change (cmd 25's second payload byte) to go with the pending
+// handedness. Master only: the flags describe this half's PCB and are not sent to
+// the slave. Call after poly_hand_set_pending(); POLY_BOARD_OP_KEEP is a no-op.
+void poly_hand_set_pending_board_op(uint8_t op);
 
 // Write a pending handedness change to the EEPROM byte and the stamp. Call from
 // the main loop, before the reboot that adopts it. No-op when nothing is pending.

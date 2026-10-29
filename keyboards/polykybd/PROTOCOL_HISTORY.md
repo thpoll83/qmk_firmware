@@ -297,6 +297,37 @@ reading before you change either one.
     and the mapping repair replays plain pairs, then dimmed ones.
   - v21/v22 firmware masks the width with 0x1F and draws those icons at full
     strength; the host sets the bit only at v23.
+  **v24** adds a **board-flag byte** to cmd `25` (`data[HID_DATA_IDX+1]`,
+  `poly_board_op_t`): `0` keeps the stored flags, `1` clears and `2` sets
+  `POLY_HAND_FLAG_SPLIT_VBUS` in this half's handedness stamp (`pad[1]`). The flag
+  marks a Rev.2 board, which passes VBUS over the split cable, so GP24 reads high on
+  both halves; with it set, `is_keyboard_master_impl()` picks the half that
+  enumerates on USB (2 s timeout) instead. Rev3 boards are unchanged.
+  - **0 means keep**, so an older host, which zero-pads the report, cannot clear the
+    flag by setting the side. A value of `3` or more is NACKed before anything is
+    written.
+  - **This half only.** The flag describes the PCB the master runs on; it is not sent
+    to the slave (`poly_reset_sync_t` is unchanged). A Rev.2 pair cannot link before
+    the flag is set anyway, so each half is set on its own, plugged in alone.
+  - v23 and older firmware ignore the byte and set only the side; the host sends a
+    non-zero op only at v24. The boot banner reports the flags on a `board:` line.
+  **v25** reads a mapping pair's `to` value of `NUM_OVERLAY_SLOTS` to
+  `2*NUM_OVERLAY_SLOTS-1` (600..1199) as pool slot `to - 600`, drawn WITHOUT the
+  key legend (`OVERLAY_MAP_NO_LEGEND_OFFSET`, cmd 21 and 33):
+  `copy_overlay_to_buffer()` clears the whole 72x40 cell instead of the 3 px
+  courtyard, then draws the icon. The host sets it for keys whose overlay replaces
+  the keycap, such as a game's ESC mark. It restores per key what the global
+  `CLEAR_*` overlay flags did before ea8c0ccef1 (2026-05-07) removed them.
+  - **Per pair, in the value itself.** No new command and no flag byte, so flagged
+    and plain pairs share reports. A slot below 424 still fits in 10 bits; the
+    rest need 11, which the host's width planner already handles.
+  - **No RAM.** The flag is bit 15 of the position's `display_to_pool[]` entry: a
+    pool slot needs 10 bits and the identity default 11. `get_display_pool_slot()`
+    masks it, and every plain write and reset clears it, so `set_display_no_legend()`
+    must run after `set_display_pool_slot()`. The slave decodes the same stream,
+    and the mapping repair packs the offset back in at width 11.
+  - Older firmware rejects such a pair (`to out of pool`) and the key stays blank,
+    so the host adds the offset only at v25.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
@@ -324,6 +355,7 @@ reading before you change either one.
   | 15 | `36`/`37`/`38` | macros: info / body window / label, behind ONE host feature gate |
   | 16 | `39` | crash record read + clear |
   | 17 | `20` SET_UNICODE_MODE | VOLATILE flag in `data[3]` — apply in RAM, leave EEPROM alone |
+  | 25 | `33` SEND_OVERLAY_MAPPING_W | a `to` of 600..1199 is slot `to - 600` drawn without the legend |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs

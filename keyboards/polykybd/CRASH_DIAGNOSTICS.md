@@ -397,15 +397,17 @@ run on it (`test_no_crash_record`). What is worth knowing:
 
 ## A reset with no record: the `reset:` banner line (fw 1.9.11+, #402)
 
-**An empty `polyctl crash show` after a reset rules out exactly two causes**, as long
-as nobody cleared the record since (`polyctl crash clear`, the host dialog's Clear;
-the banner's `record=` below survives a clear): a
-HardFault on either core (the handler writes the record before it reboots) and a
-timeout of the watchdog `crash_watchdog_start()` armed (the next boot builds a
-`kind=watchdog` record from the breadcrumb). What is left is a power loss, a
-brownout, the RUN pin, or a deliberate `mcu_reset()` (QK_REBOOT, cmd 23/43, the
-staging reboot). Before #402 the firmware read the reset cause and printed it only
-beside a record, so those four looked identical in a log (field, 2026-10-22: a master
+**An empty `polyctl crash show` after a reset rules out exactly two causes on the
+MASTER**, as long as nobody cleared the record since (`polyctl crash clear`, the host
+dialog's Clear; the banner's `record=` below survives a clear): a HardFault on either
+of its cores (the handler writes the record before it reboots) and a timeout of the
+watchdog `crash_watchdog_start()` armed (the next boot builds a `kind=watchdog` record
+from the breadcrumb). The slave keeps its own record: rule it out with
+`polyctl crash show --slave` too. What is left is a power loss, a brownout, the RUN
+pin, a debugger reset, the bootrom's own reboot after a UF2 copy, or a deliberate
+`mcu_reset()` (QK_REBOOT, cmd 23/43, the staging reboot). Before #402 the firmware
+read the reset cause and printed it only beside a record, so these looked identical
+in a log (field, 2026-10-22: a master
 reset 5 s after waking from Eden, no record on either half). Every banner now carries:
 
 ```

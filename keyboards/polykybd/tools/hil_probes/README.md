@@ -73,6 +73,20 @@ Open the PR when the investigation is done.
   `Bridge sync retry` and `Failed to sync …` never appear on the rig; the
   `Split link:` summary is deliberately ungated. Check the gate in the firmware
   before designing a probe around a console line.
+- ⚠️ **A boot banner in the console is not a reboot.** The firmware re-prints its
+  banner when a host talks to it after 5 s of silence (`BANNER_HOST_GAP_MS`,
+  `boot_diag.c`), and a probe that waits in idle does exactly that. Read a reboot
+  off the GET_ID status byte instead: `*` is the fresh-boot marker. A boot sets it,
+  and so does leaving DOOM (`doom_mode.c` calls `poly_mark_fresh_boot()` so the host
+  drops its overlay cache), so a probe that runs DOOM must not count that `*` as a
+  reset. `eden_wake_burst` v1 reported a RESET that was the banner re-print
+  (2026-10-22).
+- **The rig cannot press a key.** cmd 14 injects keys only with `debug_enable` on,
+  which takes the physical DB_TOGG key. cmd 15 with payload `1` starts idle at once
+  (no short timeout needed) and payload `0` is the host's wake. When a probe needs a
+  real keypress, open the cmd 14 gate under `#if defined(POLYKYBD_HIL)` on the probe
+  branch only, and never merge it (`eden_wake_burst` v2 did this: 49 key wakes
+  through `display_wakeup()`).
 - **A probe is disposable.** Delete it when the bug is closed, or promote it to a
   real HIL test (`station/hil_tests.py`) if the question is worth asking forever.
 

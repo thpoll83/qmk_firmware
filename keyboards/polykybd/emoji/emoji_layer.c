@@ -82,15 +82,24 @@ static const uint32_t *make_slot_str(uint32_t cp) {
     const uint32_t glyph[2] = {cp, 0};
     int8_t xmin, xmax, ymin, ymax;
     kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, glyph, &xmin, &xmax, &ymin, &ymax);
-    const int16_t top    = 23 + ymin;   // first and last ink row at the default baseline
-    const int16_t bottom = 23 + ymax;
-    int16_t       dy     = 0;           // rows to move down
+    // Latin-1 (¹ ½ £ ®) is drawn from _SupAndExtA_, whose line height is 44. Greek
+    // and U+2000-218F (punctuation, super/subscripts, currency, letterlike,
+    // fractions: ⁴ ⅓ € ™) come from _Greek_ and _CurrencySigns_ at 37. The draw
+    // shifts each glyph by its font's line height, so the second set came out 7
+    // rows higher, and ¹ sat below ⁴ and £ below €. Moving the 37 set down 8 rows
+    // (whole 2 px steps) puts the tab on one line, within 1 row. Done here and not
+    // in the fonts: a line height of 44 there would also move the € ₽ — … and Greek
+    // legends that the language layouts have tuned.
+    const int16_t lift   = ((cp >= 0x0370 && cp <= 0x03FF) || (cp >= 0x2000 && cp <= 0x218F)) ? 8 : 0;
+    const int16_t top    = 23 + ymin + lift;   // first and last ink row at the default baseline
+    const int16_t bottom = 23 + ymax + lift;
+    int16_t       dy     = lift;               // rows to move down
     if (bottom - top > SCREEN_HEIGHT - 1) {
-        dy = (SCREEN_HEIGHT - 1 - top - bottom) / 2;
+        dy += (SCREEN_HEIGHT - 1 - top - bottom) / 2;
     } else if (top < 0) {
-        dy = -top;
+        dy += -top;
     } else if (bottom > SCREEN_HEIGHT - 1) {
-        dy = (SCREEN_HEIGHT - 1) - bottom;
+        dy += (SCREEN_HEIGHT - 1) - bottom;
     }
     // Round away from zero to whole 2 px steps, so a clamped glyph never ends 1 row off.
     int8_t  steps = (int8_t)((dy > 0) ? (dy + 1) / 2 : (dy - 1) / 2);

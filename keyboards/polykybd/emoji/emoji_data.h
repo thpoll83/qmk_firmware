@@ -465,12 +465,19 @@ static const uint32_t emj_cat10[] = {  // Symbols & Marks
     0x2078, 0x2079,  // ⁸ ⁹
     0x207A, 0x207B, 0x207C, 0x207D, 0x207E, 0x207F, 0x2071,  // ⁺ ⁻ ⁼ ⁽ ⁾ ⁿ ⁱ  superscript signs
     // The most used symbols (the rest of page 1 on split72). Left out of Latin-1:
-    // ¤ ¨ ¯ ´ ¸ (no use typed on their own) and the soft hyphen 0xAD (invisible).
+    // ¨ ¯ ´ ¸ (no use typed on their own) and the soft hyphen 0xAD (invisible).
     0x00B0, 0x00B1, 0x00D7, 0x00F7, 0x00B5,  // ° ± × ÷ µ  degree, plus-minus, times, divide, micro
     0x00A9, 0x00AE, 0x2122, 0x00A7, 0x00B6,  // © ® ™ § ¶  marks
     0x00B7, 0x2022, 0x2013, 0x2026,  // · • – …  middle dot, bullet, en dash, ellipsis
     0x00AB, 0x00BB,  // « »  guillemets
-    0x20AC, 0x00A3, 0x00A5, 0x00A2, 0x2030,  // € £ ¥ ¢ ‰  currency, per mille
+    0x2030,  // ‰  per mille
+    // Currency signs: today's first, then the historical ones, then the generic ¤.
+    0x20AC, 0x00A3, 0x00A5, 0x00A2, 0x20B9, 0x20BD, 0x20A9, 0x20BA,  // € £ ¥ ¢ ₹ ₽ ₩ ₺  in use
+    0x20BF, 0x20AA, 0x20AB, 0x20B1, 0x20BC, 0x20B4, 0x20A6, 0x20A1,  // ₿ ₪ ₫ ₱ ₼ ₴ ₦ ₡
+    0x20B2, 0x20B5, 0x20B8, 0x20BE, 0x20AE, 0x20AD, 0x20C0, 0x20A8,  // ₲ ₵ ₸ ₾ ₮ ₭ ⃀ ₨
+    0x20A3, 0x20A4, 0x20A7, 0x20A0, 0x20AF, 0x20B0, 0x20B3, 0x20A2,  // ₣ ₤ ₧ ₠ ₯ ₰ ₳ ₢  historical
+    0x20A5, 0x20B6, 0x20B7, 0x20BB,  // ₥ ₶ ₷ ₻
+    0x00A4,  // ¤  generic currency sign
     // More punctuation
     0x2039, 0x203A, 0x201E, 0x201C, 0x201D, 0x2018, 0x2019,  // ‹ › „ “ ” ‘ ’  single guillemets, quotation marks
     0x00A1, 0x00BF, 0x2020, 0x2021,  // ¡ ¿ † ‡  inverted marks, daggers
@@ -485,10 +492,9 @@ static const uint32_t emj_cat10[] = {  // Symbols & Marks
     0x2080, 0x2081, 0x2082, 0x2083, 0x2084, 0x2085, 0x2086, 0x2087,  // ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇  subscript digits
     0x2088, 0x2089,  // ₈ ₉
     0x208A, 0x208B, 0x208C, 0x208D, 0x208E,  // ₊ ₋ ₌ ₍ ₎  subscript signs
-    // Primes, rarer Latin-1, currency and letterlike symbols
+    // Primes, rarer Latin-1 and letterlike symbols
     0x2032, 0x2033, 0x201A,  // ′ ″ ‚  prime, double prime, low quote
     0x00AA, 0x00BA, 0x00AC, 0x00A6,  // ª º ¬ ¦  ordinals, not, broken bar
-    0x20A9, 0x20B9, 0x20BA, 0x20BF,  // ₩ ₹ ₺ ₿  won, rupee, lira, bitcoin
     0x2103, 0x2109, 0x2113, 0x2116, 0x2117, 0x2120, 0x212E,  // ℃ ℉ ℓ № ℗ ℠ ℮  letterlike
     // Greek letters used as symbols (resident _Greek_)
     0x03B1, 0x03B2, 0x03B3, 0x03B4, 0x03B5, 0x03B8, 0x03BB, 0x03BC,  // α β γ δ ε θ λ μ  lowercase

@@ -472,9 +472,12 @@ static const uint32_t emj_cat10[] = {  // Symbols & Marks
     0x00AB, 0x00BB,  // « »  guillemets
     0x2030,  // ‰  per mille
     // Currency signs: today's first, then the historical ones, then the generic ¤.
+    // ֏ ৳ ௹ ฿ come from the Armenian, Bengali, Tamil and Thai fonts in the
+    // font pack, so without a pack those keys are blank.
     0x20AC, 0x00A3, 0x00A5, 0x00A2, 0x20B9, 0x20BD, 0x20A9, 0x20BA,  // € £ ¥ ¢ ₹ ₽ ₩ ₺  in use
     0x20BF, 0x20AA, 0x20AB, 0x20B1, 0x20BC, 0x20B4, 0x20A6, 0x20A1,  // ₿ ₪ ₫ ₱ ₼ ₴ ₦ ₡
     0x20B2, 0x20B5, 0x20B8, 0x20BE, 0x20AE, 0x20AD, 0x20C0, 0x20A8,  // ₲ ₵ ₸ ₾ ₮ ₭ ⃀ ₨
+    0x0024, 0x058F, 0x09F3, 0x0BF9, 0x0E3F,  // $ ֏ ৳ ௹ ฿  dollar, dram, taka, Tamil rupee, baht
     0x20A3, 0x20A4, 0x20A7, 0x20A0, 0x20AF, 0x20B0, 0x20B3, 0x20A2,  // ₣ ₤ ₧ ₠ ₯ ₰ ₳ ₢  historical
     0x20A5, 0x20B6, 0x20B7, 0x20BB,  // ₥ ₶ ₷ ₻
     0x00A4,  // ¤  generic currency sign

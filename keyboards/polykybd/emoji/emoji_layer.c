@@ -70,6 +70,18 @@ static const uint32_t *make_emoji_str(uint32_t cp) {
     return s_disp_buf;
 }
 
+// Rows to move a picker glyph down so it shares the Latin-1 line (see
+// make_slot_str). These are the Symbols tab glyphs whose fonts have a smaller line
+// height than _SupAndExtA_: ASCII $ (_Base_), Greek, U+2000-218F (_CurrencySigns_)
+// and the script currency signs ֏ ৳ ௹ ฿ from the Armenian, Bengali, Tamil and
+// Thai fonts. Every other glyph, emoji included, stays where the draw puts it.
+static int16_t slot_lift(uint32_t cp) {
+    if (cp == 0x0024 || cp == 0x058F || cp == 0x09F3 || cp == 0x0BF9 || cp == 0x0E3F) return 8;
+    if (cp >= 0x0370 && cp <= 0x03FF) return 8;
+    if (cp >= 0x2000 && cp <= 0x218F) return 8;
+    return 0;
+}
+
 // The legend for an emoji slot or a recent: the glyph moved up or down just far
 // enough to keep its ink on the 40-row panel. The draw puts the baseline at row
 // 23, which suits a full-height emoji but puts a superscript (⁴) above the top
@@ -89,21 +101,24 @@ static const uint32_t *make_slot_str(uint32_t cp) {
     // rows higher, and ¹ sat below ⁴ and £ below €. Moving the 37 set down 8 rows
     // (whole 2 px steps) puts the tab on one line, within 1 row. Done here and not
     // in the fonts: a line height of 44 there would also move the € ₽ — … and Greek
-    // legends that the language layouts have tuned.
-    const int16_t lift   = ((cp >= 0x0370 && cp <= 0x03FF) || (cp >= 0x2000 && cp <= 0x218F)) ? 8 : 0;
+    // legends that the language layouts have tuned. slot_lift() lists the set.
+    const int16_t lift   = slot_lift(cp);
     const int16_t top    = 23 + ymin + lift;   // first and last ink row at the default baseline
     const int16_t bottom = 23 + ymax + lift;
     int16_t       dy     = lift;               // rows to move down
+    bool          round_up = true;             // which way an odd dy rounds to 2 px steps
     if (bottom - top > SCREEN_HEIGHT - 1) {
         dy += (SCREEN_HEIGHT - 1 - top - bottom) / 2;
     } else if (top < 0) {
-        dy += -top;
+        dy += -top;                            // clamped down: round down further
     } else if (bottom > SCREEN_HEIGHT - 1) {
-        dy += (SCREEN_HEIGHT - 1) - bottom;
+        dy += (SCREEN_HEIGHT - 1) - bottom;    // clamped up: round up further
+        round_up = false;
     }
-    // Round away from zero to whole 2 px steps, so a clamped glyph never ends 1 row off.
-    int8_t  steps = (int8_t)((dy > 0) ? (dy + 1) / 2 : (dy - 1) / 2);
-    if (dy == 0) steps = 0;
+    // Whole 2 px steps, rounded away from the edge the clamp moved the glyph off,
+    // so a clamped glyph never ends 1 row past it.
+    const int16_t floor_half = (dy >= 0) ? dy / 2 : -((1 - dy) / 2);
+    int8_t        steps      = (int8_t)((round_up && (dy & 1)) ? floor_half + 1 : floor_half);
     uint8_t n     = 0;
     s_disp_buf[n++] = ' ';
     s_disp_buf[n++] = ' ';

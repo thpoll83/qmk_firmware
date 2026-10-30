@@ -2970,15 +2970,21 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
         return false;
     }
     if(keycode==KC_LAT_PAGE_PREV || keycode==KC_LAT_PAGE_NEXT) {
-        // Blank unless this letter actually pages — same rule (and glyphs) as the
-        // language layer's arrows, so a row that fits on one page shows nothing
-        // rather than a control that does nothing.
-        if(picker_open &&
-           latin_page_count(latin_picker_row(local_last_latin_keycode, shift || state.caps_lock)) > 1) {
-            kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23,
-                                 keycode==KC_LAT_PAGE_PREV ? (const uint32_t*)(U"  " ICON_LEFT)
-                                                           : (const uint32_t*)(U"  " ICON_RIGHT));
-            return true;
+        // Blank unless this letter actually pages — same rule (and legend: arrow plus
+        // "page/pages") as the language and emoji layers' page keys, so a row that
+        // fits on one page shows nothing rather than a control that does nothing.
+        if(picker_open) {
+            const uint8_t pages = latin_page_count(latin_picker_row(local_last_latin_keycode, shift || state.caps_lock));
+            if(pages > 1) {
+                // Same clamp as latin_picker_index(): the case may have changed since
+                // the page was set, and the page shown must be the one the slots show.
+                const uint8_t page = (local_layer->picker_page < pages) ? local_layer->picker_page
+                                                                        : (uint8_t)(pages - 1);
+                kdisp_write_gfx_text(g_all_fonts, g_all_font_count, BUFFER_X, 23,
+                                     kdisp_page_key_legend(keycode==KC_LAT_PAGE_PREV ? ICON_LEFT[0] : ICON_RIGHT[0],
+                                                           page, pages));
+                return true;
+            }
         }
         return false;
     }

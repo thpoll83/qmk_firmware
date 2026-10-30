@@ -230,8 +230,8 @@ void kdisp_draw_tab_frame(void);
 void kdisp_draw_tab_underline(void);
 
 // Legend for a picker's page key: the arrow glyph, then "page/pages" (1-based) in
-// the HINT_MID face, e.g. "▶ 3/9". Laid out for the widest case, "14/14" (split42's
-// Latin tab), which keeps 2 px clear of both keycap edges. Returns "" when pages <= 1,
+// the HINT_MID face, e.g. "▶ 3/9". Measured for every label up to 19 pages (split42's
+// Latin tab): the widest is "14/14", which keeps 2 px clear of both keycap edges. Returns "" when pages <= 1,
 // so a one-page tab shows no page control. The pointer is valid until the next call.
 const uint32_t *kdisp_page_key_legend(uint32_t arrow, uint8_t page, uint8_t pages);
 

@@ -7,6 +7,7 @@
 #include "mru.h"
 #include "base/update.h"
 #include "base/disp_array.h"
+#include "base/fontpack.h"
 #include "lang/named_glyphs.h"
 
 #include "quantum/unicode/unicode.h"
@@ -59,13 +60,48 @@ static uint32_t codepoint_for_slot(uint8_t slot) {
 // (SMP included) is keyed on its real codepoint, so the emoji codepoint goes into
 // the string verbatim — no Private-Use-Area shift.
 
-static uint32_t s_disp_buf[4];  // space x 2 + glyph + NUL
+static uint32_t s_disp_buf[16];  // space x 2 + up to 12 vertical nudges + glyph + NUL
 
 static const uint32_t *make_emoji_str(uint32_t cp) {
     s_disp_buf[0] = ' ';
     s_disp_buf[1] = ' ';
     s_disp_buf[2] = cp;
     s_disp_buf[3] = 0;
+    return s_disp_buf;
+}
+
+// The legend for an emoji slot or a recent: the glyph moved up or down just far
+// enough to keep its ink on the 40-row panel. The draw puts the baseline at row
+// 23, which suits a full-height emoji but puts a superscript (⁴) above the top
+// edge and pushes a tall operator (∑) past the bottom one. A clamp and not a
+// centre, so ⁴ still sits high and ₄ low, and „ low and “ high. Moves in 2 px
+// steps (\x05 down, \f up), so a glyph exactly 40 rows tall at an odd offset (↕)
+// loses 1 row. A glyph taller than the panel (√ and ∛ 41 rows, ∫ 44) is centred
+// and loses its outer rows.
+static const uint32_t *make_slot_str(uint32_t cp) {
+    const uint32_t glyph[2] = {cp, 0};
+    int8_t xmin, xmax, ymin, ymax;
+    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, glyph, &xmin, &xmax, &ymin, &ymax);
+    const int16_t top    = 23 + ymin;   // first and last ink row at the default baseline
+    const int16_t bottom = 23 + ymax;
+    int16_t       dy     = 0;           // rows to move down
+    if (bottom - top > SCREEN_HEIGHT - 1) {
+        dy = (SCREEN_HEIGHT - 1 - top - bottom) / 2;
+    } else if (top < 0) {
+        dy = -top;
+    } else if (bottom > SCREEN_HEIGHT - 1) {
+        dy = (SCREEN_HEIGHT - 1) - bottom;
+    }
+    // Round away from zero to whole 2 px steps, so a clamped glyph never ends 1 row off.
+    int8_t  steps = (int8_t)((dy > 0) ? (dy + 1) / 2 : (dy - 1) / 2);
+    if (dy == 0) steps = 0;
+    uint8_t n     = 0;
+    s_disp_buf[n++] = ' ';
+    s_disp_buf[n++] = ' ';
+    for (; steps > 0 && n < 14; --steps) s_disp_buf[n++] = U'\x05';
+    for (; steps < 0 && n < 14; ++steps) s_disp_buf[n++] = U'\f';
+    s_disp_buf[n++] = cp;
+    s_disp_buf[n]   = 0;
     return s_disp_buf;
 }
 
@@ -147,7 +183,7 @@ const uint32_t *emj_display_text(uint16_t keycode) {
     // ── MRU recents row — most-recently-used emoji, or blank when empty ──
     if (keycode >= KC_EMJ_MRU_BASE && keycode < KC_EMJ_MRU_BASE + MRU_CAP) {
         uint32_t cp = emj_decode(mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE)));
-        return (cp == 0) ? (const uint32_t *)U"" : make_emoji_str(cp);
+        return (cp == 0) ? (const uint32_t *)U"" : make_slot_str(cp);
     }
 
     // ── Category tab — hardwired icon, falling back to first codepoint ──
@@ -164,7 +200,7 @@ const uint32_t *emj_display_text(uint16_t keycode) {
         uint8_t slot = (uint8_t)(keycode - KC_EMJ_SLOT_BASE);
         uint32_t cp  = codepoint_for_slot(slot);
         if (cp == 0) return (const uint32_t *)U"";
-        return make_emoji_str(cp);
+        return make_slot_str(cp);
     }
 
     return NULL;

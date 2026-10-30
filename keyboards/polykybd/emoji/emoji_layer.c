@@ -28,7 +28,7 @@ static const uint32_t emj_tab_icons[] = {
     0x26F5,   // cat  7: ⛵ Travel & Places
     0x1F3C0,  // cat  8: 🏀 Sports & Entertainment
     0x1F4CE,  // cat  9: 📎 Tools & Objects
-    0x2714,   // cat 10: ✔ Symbols & Marks (checks, brackets, arrows…)
+    0x2714,   // cat 10: ✔ Symbols & Marks (¹ ° ± ©…, checks, brackets, arrows…)
     0x0100,   // cat 11: Ā  Latin Extended-A & B (BMP — font index == codepoint)
 };
 
@@ -136,12 +136,12 @@ void emj_init(void) {
 }
 
 const uint32_t *emj_display_text(uint16_t keycode) {
-    // ── Page arrows — always live because paging wraps in both directions ──
+    // ── Page arrows with "page/pages" — always live because paging wraps ──
     if (keycode == KC_EMJ_PAGE_PREV) {
-        return (page_count(s_category) > 1) ? (const uint32_t *)(U"  " ICON_LEFT) : (const uint32_t *)U"";
+        return kdisp_page_key_legend(ICON_LEFT[0], s_page, page_count(s_category));
     }
     if (keycode == KC_EMJ_PAGE_NEXT) {
-        return (page_count(s_category) > 1) ? (const uint32_t *)(U"  " ICON_RIGHT) : (const uint32_t *)U"";
+        return kdisp_page_key_legend(ICON_RIGHT[0], s_page, page_count(s_category));
     }
 
     // ── MRU recents row — most-recently-used emoji, or blank when empty ──

@@ -229,6 +229,12 @@ void kdisp_draw_badge_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8
 void kdisp_draw_tab_frame(void);
 void kdisp_draw_tab_underline(void);
 
+// Legend for a picker's page key: the arrow glyph, then "page/pages" (1-based) in
+// the HINT_MID face, e.g. "▶ 3/9". Laid out for the widest case, "14/14" (split42's
+// Latin tab), which keeps 2 px clear of both keycap edges. Returns "" when pages <= 1,
+// so a one-page tab shows no page control. The pointer is valid until the next call.
+const uint32_t *kdisp_page_key_legend(uint32_t arrow, uint8_t page, uint8_t pages);
+
 // Saturating narrow to int8_t. Buffer coordinates, the jitter offset and the
 // per-layout legend offsets are all int8_t, and their sum can leave the range —
 // where a silent wrap draws the art at a WRONG place instead of letting the panel

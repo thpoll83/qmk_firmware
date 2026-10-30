@@ -447,10 +447,24 @@ static const uint32_t emj_cat11[] = {  // Latin Extended-A & B
 };
 
 // ── Category 10: Symbols & Marks ─────────────────────────────────────────────
-// Abstract marks, ornaments and arrows. Dingbats come from SymBmp1/SymBmp4; the
-// key-action arrows 0x2B6F-0x2BA0 come from the _Arrows_ font (also used as keycap
-// legends in the normal key-render UI).
+// Common typographic symbols first, then abstract marks, ornaments and arrows.
+// The Latin-1 symbols come from the resident _SupAndExtA_ font (0xA1-0x17E);
+// dingbats come from SymBmp1/SymBmp4; the key-action arrows 0x2B6F-0x2BA0 come
+// from the _Arrows_ font (also used as keycap legends in the normal key-render UI).
+//
+// ⚠️ An MRU recent stores (category, offset). Inserting entries here shifts the
+// offset of everything after them, so a recent saved from this tab by older
+// firmware shows a different symbol once. Append when that matters.
 static const uint32_t emj_cat10[] = {  // Symbols & Marks
+    // Common Latin-1 symbols, most used first. Left out: ¤ ¨ ¯ ´ ¸ (no use
+    // typed on their own) and the soft hyphen 0xAD (invisible).
+    0x00B9, 0x00B2, 0x00B3,                 // ¹ ² ³ superscript digits
+    0x00B0, 0x00B1, 0x00D7, 0x00F7, 0x00B5, // ° ± × ÷ µ
+    0x00BD, 0x00BC, 0x00BE,                 // ½ ¼ ¾
+    0x00A9, 0x00AE, 0x00A7, 0x00B6, 0x00B7, // © ® § ¶ ·
+    0x00AB, 0x00BB, 0x00A1, 0x00BF,         // « » ¡ ¿
+    0x00A2, 0x00A3, 0x00A5,                 // ¢ £ ¥
+    0x00AA, 0x00BA, 0x00AC, 0x00A6,         // ª º ¬ ¦
     // Check / cross / ballot marks
     0x2610, 0x2612,                         // ☐ ☒ ballot box (empty / with X)
     0x2713, 0x2714, 0x2717, 0x2718,         // ✓ ✔ ✗ ✘ check / ballot X
@@ -497,7 +511,7 @@ static const emj_category_t EMJ_CATEGORIES[] = {
     EMJ_CAT_ENTRY(emj_cat7),   // 7: Travel & Places        ✈
     EMJ_CAT_ENTRY(emj_cat8),   // 8: Sports & Entertainment ⚽
     EMJ_CAT_ENTRY(emj_cat9),   // 9: Tools & Objects        🔧
-    EMJ_CAT_ENTRY(emj_cat10),  // 10: Symbols & Marks       ✔  (checks, brackets, arrows…)
+    EMJ_CAT_ENTRY(emj_cat10),  // 10: Symbols & Marks       ✔  (¹ ° ± ©…, checks, brackets, arrows…)
     EMJ_CAT_ENTRY(emj_cat11),  // 11: Latin Extended-A & B  Ā
 };
 

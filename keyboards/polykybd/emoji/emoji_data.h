@@ -460,7 +460,7 @@ static const uint32_t emj_cat11[] = {  // Latin Extended-A & B
 // offset of everything after them, so a recent saved from this tab by older
 // firmware shows a different symbol once. Append when that matters.
 static const uint32_t emj_cat10[] = {  // Symbols & Marks
-    // Superscripts first, as one run: ¹ is the first slot of the tab.
+    // Superscripts first, as one run starting at ⁰, so ¹ is the second slot of the tab.
     0x2070, 0x00B9, 0x00B2, 0x00B3, 0x2074, 0x2075, 0x2076, 0x2077,  // ⁰ ¹ ² ³ ⁴ ⁵ ⁶ ⁷  superscript digits
     0x2078, 0x2079,  // ⁸ ⁹
     0x207A, 0x207B, 0x207C, 0x207D, 0x207E, 0x207F, 0x2071,  // ⁺ ⁻ ⁼ ⁽ ⁾ ⁿ ⁱ  superscript signs

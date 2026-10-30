@@ -145,12 +145,12 @@ int16_t lang_index_for_keycode(uint16_t keycode) {
 }
 
 const uint32_t* lang_display_text(uint16_t keycode) {
-    // Page arrows — blank when the active region fits on a single page.
+    // Page arrows with "page/pages" — blank when the active region fits on a single page.
     if (keycode == KC_LANG_PAGE_PREV) {
-        return (lang_region_page_count(s_region) > 1) ? (const uint32_t *)(U"  " ICON_LEFT) : (const uint32_t *)U"";
+        return kdisp_page_key_legend(ICON_LEFT[0], s_page, lang_region_page_count(s_region));
     }
     if (keycode == KC_LANG_PAGE_NEXT) {
-        return (lang_region_page_count(s_region) > 1) ? (const uint32_t *)(U"  " ICON_RIGHT) : (const uint32_t *)U"";
+        return kdisp_page_key_legend(ICON_RIGHT[0], s_page, lang_region_page_count(s_region));
     }
     return NULL;
 }

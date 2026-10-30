@@ -380,6 +380,34 @@ void kdisp_draw_tab_underline(void) {
     }
 }
 
+// Display-list ops (named in lang/named_glyphs.h, which this file does not include):
+// \x06 nudges the cursor 2 px right, \x16 is HINT_MID.
+const uint32_t *kdisp_page_key_legend(uint32_t arrow, uint8_t page, uint8_t pages) {
+    // nudge, arrow, MID, 3 nudges, up to "255/255", NUL
+    static uint32_t buf[1 + 1 + 1 + 3 + 7 + 1];
+    if (pages <= 1) {
+        buf[0] = 0;
+        return buf;
+    }
+    uint8_t n = 0;
+    buf[n++] = U'\x06';
+    buf[n++] = arrow;
+    buf[n++] = U'\x16';
+    buf[n++] = U'\x06';
+    buf[n++] = U'\x06';
+    buf[n++] = U'\x06';
+    const uint8_t vals[2] = {(uint8_t)(page + 1), pages};
+    for (uint8_t k = 0; k < 2; ++k) {
+        if (k) buf[n++] = U'/';
+        const uint8_t v = vals[k];
+        if (v >= 100) buf[n++] = U'0' + v / 100;
+        if (v >= 10) buf[n++] = U'0' + (v / 10) % 10;
+        buf[n++] = U'0' + v % 10;
+    }
+    buf[n] = 0;
+    return buf;
+}
+
 // Shrink what is in the keycap window to half size about its centre: each output
 // pixel is the OR of a 2x2 block, so a 1px stroke survives. Used by the menu cascade's
 // zoom-in (anim/menu_cascade.c): draw the real legend, shrink it, send.

@@ -7,6 +7,7 @@
 #include "mru.h"
 #include "base/update.h"
 #include "base/disp_array.h"
+#include "base/fontpack.h"
 #include "lang/named_glyphs.h"
 
 #include "quantum/unicode/unicode.h"
@@ -28,7 +29,7 @@ static const uint32_t emj_tab_icons[] = {
     0x26F5,   // cat  7: ⛵ Travel & Places
     0x1F3C0,  // cat  8: 🏀 Sports & Entertainment
     0x1F4CE,  // cat  9: 📎 Tools & Objects
-    0x2714,   // cat 10: ✔ Symbols & Marks (checks, brackets, arrows…)
+    0x2714,   // cat 10: ✔ Symbols & Marks (¹ ° ± ©…, checks, brackets, arrows…)
     0x0100,   // cat 11: Ā  Latin Extended-A & B (BMP — font index == codepoint)
 };
 
@@ -59,13 +60,88 @@ static uint32_t codepoint_for_slot(uint8_t slot) {
 // (SMP included) is keyed on its real codepoint, so the emoji codepoint goes into
 // the string verbatim — no Private-Use-Area shift.
 
-static uint32_t s_disp_buf[4];  // space x 2 + glyph + NUL
+static uint32_t s_disp_buf[16];  // space x 2 + up to 12 vertical nudges + glyph + NUL
 
 static const uint32_t *make_emoji_str(uint32_t cp) {
     s_disp_buf[0] = ' ';
     s_disp_buf[1] = ' ';
     s_disp_buf[2] = cp;
     s_disp_buf[3] = 0;
+    return s_disp_buf;
+}
+
+// Rows to move a picker glyph down so it shares the Latin-1 line (see
+// make_slot_str). These are the Symbols tab glyphs whose fonts have a smaller line
+// height than _SupAndExtA_: ASCII $ (_Base_), Greek, U+2000-218F (_CurrencySigns_)
+// and the script currency signs ֏ ৳ ௹ ฿ from the Armenian, Bengali, Tamil and
+// Thai fonts. Every other glyph, emoji included, stays where the draw puts it.
+static int16_t slot_lift(uint32_t cp) {
+    if (cp == 0x0024 || cp == 0x058F || cp == 0x09F3 || cp == 0x0BF9 || cp == 0x0E3F) return 8;
+    if (cp >= 0x0370 && cp <= 0x03FF) return 8;
+    if (cp >= 0x2000 && cp <= 0x218F) return 8;
+    return 0;
+}
+
+// The legend for an emoji slot or a recent: the glyph moved up or down just far
+// enough to keep its ink on the 40-row panel. The draw puts the baseline at row
+// 23, which suits a full-height emoji but puts a superscript (⁴) above the top
+// edge and pushes a tall operator (∑) past the bottom one. A clamp and not a
+// centre, so ⁴ still sits high and ₄ low, and „ low and “ high. Moves in 2 px
+// steps (\x05 down, \f up), so a glyph exactly 40 rows tall at an odd offset (↕)
+// loses 1 row. A glyph taller than the panel (√ and ∛ 41 rows, ∫ 44) is centred
+// and loses its outer rows.
+// Drawn in place of a glyph no loaded font covers: a pack glyph (every emoji, the
+// Symbols tab's math and arrows) on a board with no font pack flashed. The draw's
+// own fallback is a lone '!', which reads as a fault, and a blank key looks like an
+// empty slot. Half-scale base font, which is always resident. Placed from the
+// rendered ink: rows 5..34, "Glyph" x 17..54, "missing!" x 9..63 of the 72x40 panel.
+// The nudges are separate literals because \x06 followed by a hex digit would be
+// read as one escape.
+static const uint32_t s_missing_glyph[] =
+    HINT_SMALL UP_2PX UP_4PX U"\x06\x06\x06\x06\x06\x06\x06\x06" U"Glyph"
+    U"\r\v" U"\x06\x06\x06\x06" U"missing!";
+
+static const uint32_t *make_slot_str(uint32_t cp) {
+    if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) == NULL) return s_missing_glyph;
+    const uint32_t glyph[2] = {cp, 0};
+    int8_t xmin, xmax, ymin, ymax;
+    kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, glyph, &xmin, &xmax, &ymin, &ymax);
+    // Latin-1 (¹ ½ £ ®) is drawn from _SupAndExtA_, whose line height is 44. Greek
+    // and U+2000-218F (punctuation, super/subscripts, currency, letterlike,
+    // fractions: ⁴ ⅓ € ™) come from _Greek_ and _CurrencySigns_ at 37. The draw
+    // shifts each glyph by its font's line height, so the second set came out 7
+    // rows higher, and ¹ sat below ⁴ and £ below €. Moving the 37 set down 8 rows
+    // (whole 2 px steps) puts the tab on one line, within 1 row. Done here and not
+    // in the fonts: a line height of 44 there would also move the € ₽ — … and Greek
+    // legends that the language layouts have tuned. slot_lift() lists the set.
+    const int16_t lift   = slot_lift(cp);
+    const int16_t top    = 23 + ymin + lift;   // first and last ink row at the default baseline
+    const int16_t bottom = 23 + ymax + lift;
+    int16_t       dy     = lift;               // rows to move down
+    bool          round_up = true;             // which way an odd dy rounds to 2 px steps
+    if (bottom - top > SCREEN_HEIGHT - 1) {
+        dy += (SCREEN_HEIGHT - 1 - top - bottom) / 2;
+    } else if (top < 0) {
+        // Clamped down: an odd dy rounds up, so the glyph moves further down and
+        // its top stays on the panel.
+        dy += -top;
+    } else if (bottom > SCREEN_HEIGHT - 1) {
+        // Clamped up: an odd dy rounds down, so the glyph moves further up and
+        // its bottom stays on the panel.
+        dy += (SCREEN_HEIGHT - 1) - bottom;
+        round_up = false;
+    }
+    // Whole 2 px steps, rounded away from the edge the clamp moved the glyph off,
+    // so a clamped glyph never ends 1 row past it.
+    const int16_t floor_half = (dy >= 0) ? dy / 2 : -((1 - dy) / 2);
+    int8_t        steps      = (int8_t)((round_up && (dy & 1)) ? floor_half + 1 : floor_half);
+    uint8_t n     = 0;
+    s_disp_buf[n++] = ' ';
+    s_disp_buf[n++] = ' ';
+    for (; steps > 0 && n < 14; --steps) s_disp_buf[n++] = U'\x05';
+    for (; steps < 0 && n < 14; ++steps) s_disp_buf[n++] = U'\f';
+    s_disp_buf[n++] = cp;
+    s_disp_buf[n]   = 0;
     return s_disp_buf;
 }
 
@@ -136,18 +212,18 @@ void emj_init(void) {
 }
 
 const uint32_t *emj_display_text(uint16_t keycode) {
-    // ── Page arrows — always live because paging wraps in both directions ──
+    // ── Page arrows with "page/pages" — always live because paging wraps ──
     if (keycode == KC_EMJ_PAGE_PREV) {
-        return (page_count(s_category) > 1) ? (const uint32_t *)(U"  " ICON_LEFT) : (const uint32_t *)U"";
+        return kdisp_page_key_legend(ICON_LEFT[0], s_page, page_count(s_category));
     }
     if (keycode == KC_EMJ_PAGE_NEXT) {
-        return (page_count(s_category) > 1) ? (const uint32_t *)(U"  " ICON_RIGHT) : (const uint32_t *)U"";
+        return kdisp_page_key_legend(ICON_RIGHT[0], s_page, page_count(s_category));
     }
 
     // ── MRU recents row — most-recently-used emoji, or blank when empty ──
     if (keycode >= KC_EMJ_MRU_BASE && keycode < KC_EMJ_MRU_BASE + MRU_CAP) {
         uint32_t cp = emj_decode(mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE)));
-        return (cp == 0) ? (const uint32_t *)U"" : make_emoji_str(cp);
+        return (cp == 0) ? (const uint32_t *)U"" : make_slot_str(cp);
     }
 
     // ── Category tab — hardwired icon, falling back to first codepoint ──
@@ -164,7 +240,7 @@ const uint32_t *emj_display_text(uint16_t keycode) {
         uint8_t slot = (uint8_t)(keycode - KC_EMJ_SLOT_BASE);
         uint32_t cp  = codepoint_for_slot(slot);
         if (cp == 0) return (const uint32_t *)U"";
-        return make_emoji_str(cp);
+        return make_slot_str(cp);
     }
 
     return NULL;

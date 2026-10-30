@@ -113,9 +113,13 @@ static const uint32_t *make_slot_str(uint32_t cp) {
     if (bottom - top > SCREEN_HEIGHT - 1) {
         dy += (SCREEN_HEIGHT - 1 - top - bottom) / 2;
     } else if (top < 0) {
-        dy += -top;                            // clamped down: round down further
+        // Clamped down: an odd dy rounds up, so the glyph moves further down and
+        // its top stays on the panel.
+        dy += -top;
     } else if (bottom > SCREEN_HEIGHT - 1) {
-        dy += (SCREEN_HEIGHT - 1) - bottom;    // clamped up: round up further
+        // Clamped up: an odd dy rounds down, so the glyph moves further up and
+        // its bottom stays on the panel.
+        dy += (SCREEN_HEIGHT - 1) - bottom;
         round_up = false;
     }
     // Whole 2 px steps, rounded away from the edge the clamp moved the glyph off,

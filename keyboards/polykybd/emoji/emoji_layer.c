@@ -90,10 +90,19 @@ static int16_t slot_lift(uint32_t cp) {
 // steps (\x05 down, \f up), so a glyph exactly 40 rows tall at an odd offset (↕)
 // loses 1 row. A glyph taller than the panel (√ and ∛ 41 rows, ∫ 44) is centred
 // and loses its outer rows.
+// Drawn in place of a glyph no loaded font covers: a pack glyph (every emoji, the
+// Symbols tab's math and arrows) on a board with no font pack flashed. The draw's
+// own fallback is a lone '!', which reads as a fault, and a blank key looks like an
+// empty slot. Half-scale base font, which is always resident. Placed from the
+// rendered ink: rows 5..34, "Glyph" x 17..54, "missing!" x 9..63 of the 72x40 panel.
+// The nudges are separate literals because \x06 followed by a hex digit would be
+// read as one escape.
+static const uint32_t s_missing_glyph[] =
+    HINT_SMALL UP_2PX UP_4PX U"\x06\x06\x06\x06\x06\x06\x06\x06" U"Glyph"
+    U"\r\v" U"\x06\x06\x06\x06" U"missing!";
+
 static const uint32_t *make_slot_str(uint32_t cp) {
-    // A glyph no loaded font covers (a pack glyph with no font pack flashed) is
-    // left blank. The draw would substitute '!', and a row of '!' reads as a fault.
-    if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) == NULL) return (const uint32_t *)U"";
+    if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) == NULL) return s_missing_glyph;
     const uint32_t glyph[2] = {cp, 0};
     int8_t xmin, xmax, ymin, ymax;
     kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, glyph, &xmin, &xmax, &ymin, &ymax);

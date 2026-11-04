@@ -1,6 +1,6 @@
 # PolyKybd v1.9.16 New Symbols & Math tab, arrows in every direction
 
-Update PolyKybdHost to 1.17.86 first. It ships the font pack with the new symbols and arrows; with an older app those keys show *Glyph missing!*.
+Update PolyKybdHost to 1.17.87 first. It ships the font pack with the new symbols and arrows; with an older app those keys show *Glyph missing!*.
 
 ## 1.9.16: New Symbols & Math tab, arrows in every direction 🔣
 - **New tab Symbols & Math (±):** the superscripts and subscripts, most used symbols, currency signs, fractions, Greek letters, math operators and the arrows used in mathematics, which 1.9.15 had at the front of the Symbols tab, plus many more arrows.

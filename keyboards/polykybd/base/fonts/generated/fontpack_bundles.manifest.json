@@ -11,8 +11,8 @@
       "index": 0,
       "slot_offset": 4096,
       "slot_size": 98304,
-      "total_size": 66748,
-      "font_count": 17,
+      "total_size": 89632,
+      "font_count": 19,
       "fonts": [
         {
           "all_fonts_index": 19,
@@ -109,6 +109,18 @@
           "symbol": "NotoSansMath_Regular_MathTaller_17pt16b",
           "first": 8661,
           "last": 8694
+        },
+        {
+          "all_fonts_index": 188,
+          "symbol": "NotoSansSymbols2_Regular_ArrowsC_20pt16b",
+          "first": 129024,
+          "last": 129201
+        },
+        {
+          "all_fonts_index": 189,
+          "symbol": "NotoSansSymbols2_Regular_ArrowsB_20pt16b",
+          "first": 11008,
+          "last": 11193
         },
         {
           "all_fonts_index": 61441,

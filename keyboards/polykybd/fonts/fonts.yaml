@@ -613,3 +613,10 @@ fonts:
   # the symbol bundle.
   - {category: symbols, variant: _MathTall_, source: noto-sans-math, size: 18, ranges: [[0x2195, 0x2195], [0x21a8, 0x21a8], [0x221a, 0x221b], [0x222b, 0x222b]]}
   - {category: symbols, variant: _MathTaller_, source: noto-sans-math, size: 17, ranges: [[0x21d5, 0x21d5], [0x21f6, 0x21f6]]}
+
+  # Arrows in every direction for the emoji picker's Marks & Icons tab (2026-11-04):
+  # the Dingbats arrows exist only pointing right. Noto Sans Symbols 2, the size the
+  # tab's other symbols use. Last in the list (see the _Mayan_ note), so no other
+  # font's index moves. Bumps the symbol bundle.
+  - {category: symbols, variant: _ArrowsC_, bits: 32, ranges: [[0x1f800, 0x1f80b], [0x1f810, 0x1f847], [0x1f850, 0x1f859], [0x1f860, 0x1f887], [0x1f890, 0x1f89b], [0x1f8a0, 0x1f8ab], [0x1f8b0, 0x1f8b1]]}
+  - {category: symbols, variant: _ArrowsB_, ranges: [[0x2b00, 0x2b0d], [0x2b4d, 0x2b4d], [0x2b60, 0x2b6e], [0x2b76, 0x2b7d], [0x2b7f, 0x2b8b], [0x2b8d, 0x2b8d], [0x2b8f, 0x2b95], [0x2b98, 0x2b9f], [0x2ba1, 0x2bb9]]}

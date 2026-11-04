@@ -1707,6 +1707,23 @@
       "render_height": 50,
       "source": "noto-sans-math",
       "source_file": "NotoSansMath-Regular.ttf"
+    },
+    "188": {
+      "size": 20,
+      "hinting": "auto",
+      "variant": "_ArrowsC_",
+      "render_height": 50,
+      "bits": 32,
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
+    },
+    "189": {
+      "size": 20,
+      "hinting": "auto",
+      "variant": "_ArrowsB_",
+      "render_height": 50,
+      "source": "noto-sans-symbols2",
+      "source_file": "NotoSansSymbols2-Regular.ttf"
     }
   }
 }

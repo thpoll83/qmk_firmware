@@ -216,7 +216,11 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   `--check` on the unmodified tree first, and after a full regen `git checkout` every
   file you did not mean to change. `--only <category>` regenerates one header and
   touches nothing else, but writes no manifest, so a pack font's new range still needs
-  the full run (then keep only the manifest lines for your font).
+  the full run. Then keep your font's `first`/`last` lines in `fontpack.manifest.json`;
+  its `total_size` covers the whole pack, so the regenerated value also carries the
+  unrelated drift above, and since it was already stale on `PolyKybd` there is no
+  clean value to keep. `fontpack_bundles.manifest.json`, which the bundles are checked
+  against, is rebuilt in full by `reship_bundles.py --apply`.
   The history: it had failed on every header for a long
   time, which was a **formatting** drift, not a rendering one: the committed headers
   were emitted during the column-native (PolyColGfx) work by a fontconvert built from

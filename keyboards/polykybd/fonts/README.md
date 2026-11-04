@@ -216,11 +216,11 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   `--check` on the unmodified tree first, and after a full regen `git checkout` every
   file you did not mean to change. `--only <category>` regenerates one header and
   touches nothing else, but writes no manifest, so a pack font's new range still needs
-  the full run. Then keep your font's `first`/`last` lines in `fontpack.manifest.json`;
-  its `total_size` covers the whole pack, so the regenerated value also carries the
-  unrelated drift above, and since it was already stale on `PolyKybd` there is no
-  clean value to keep. `fontpack_bundles.manifest.json`, which the bundles are checked
-  against, is rebuilt in full by `reship_bundles.py --apply`.
+  the full run. After restoring the unrelated headers, rebuild the manifest from the
+  headers you will commit: `python3 fontpack.py build --out /tmp/fontpack.bin
+  --manifest ../base/fonts/generated/fontpack.manifest.json`. Its `total_size` covers
+  the whole pack, so a value taken from the full run would include the unrelated drift.
+  `fontpack_bundles.manifest.json` is rebuilt by `reship_bundles.py --apply`.
   The history: it had failed on every header for a long
   time, which was a **formatting** drift, not a rendering one: the committed headers
   were emitted during the column-native (PolyColGfx) work by a fontconvert built from
@@ -260,7 +260,8 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
     committing.
   - **In a fresh cloud container, build the pinned fontconvert yourself.** The
     `Adafruit-GFX-Library` repo is public: clone it to `/home/user/Adafruit-GFX-Library`,
-    build per `fontconvert/README.md` (`cmake -DCMAKE_BUILD_TYPE=Release ..` then
+    check out the commit that reproduced the committed headers
+    (`git checkout 3659f73203cb`, 2026-10-30), build per `fontconvert/README.md` (`cmake -DCMAKE_BUILD_TYPE=Release ..` then
     `cmake --build .`; it fetches FreeType and HarfBuzz itself), and copy the binary to
     `/tmp/fontconvert_pinned`. `dl-fonts.sh` ran through. Before changing a font, prove
     the build: `--only latin --check` printed "match", and re-running one font's

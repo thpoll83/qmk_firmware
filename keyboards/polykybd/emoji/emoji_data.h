@@ -160,8 +160,8 @@ static const uint32_t emj_cat2[] = {
 };
 
 // ── Category 3: Symbols & Math ────────────────────────────────────────────────
-// Superscripts first, then common typographic symbols, currency, fractions,
-// subscripts, letterlike symbols, Greek, math operators and arrows. Latin-1 comes from
+// Superscripts and subscripts first, then common typographic symbols, currency,
+// fractions, letterlike symbols, Greek, math operators and arrows. Latin-1 comes from
 // the resident _SupAndExtA_ font (0xA1-0x17E), General Punctuation,
 // super/subscripts, currency, letterlike symbols, fractions and ⁄ from the resident
 // _CurrencySigns_, Greek from the resident _Greek_. The math operators and arrows
@@ -173,9 +173,14 @@ static const uint32_t emj_cat2[] = {
 // shows a symbol from this one. Inserting entries here shifts every later offset.
 static const uint32_t emj_cat3[] = {  // Symbols & Math
     // Superscripts first, as one run starting at ⁰, so ¹ is the second slot of the tab.
+    // The subscripts follow in the same order.
     0x2070, 0x00B9, 0x00B2, 0x00B3, 0x2074, 0x2075, 0x2076, 0x2077,  // ⁰ ¹ ² ³ ⁴ ⁵ ⁶ ⁷  superscript digits
     0x2078, 0x2079,  // ⁸ ⁹
     0x207A, 0x207B, 0x207C, 0x207D, 0x207E, 0x207F, 0x2071,  // ⁺ ⁻ ⁼ ⁽ ⁾ ⁿ ⁱ  superscript signs
+    // Subscripts directly after them (_CurrencySigns_)
+    0x2080, 0x2081, 0x2082, 0x2083, 0x2084, 0x2085, 0x2086, 0x2087,  // ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇  subscript digits
+    0x2088, 0x2089,  // ₈ ₉
+    0x208A, 0x208B, 0x208C, 0x208D, 0x208E,  // ₊ ₋ ₌ ₍ ₎  subscript signs
     // The most used symbols (the rest of page 1 on split72). Left out of Latin-1:
     // ¨ ¯ ´ ¸ (no use typed on their own) and the soft hyphen 0xAD (invisible).
     0x00B0, 0x00B1, 0x00D7, 0x00F7, 0x00B5,  // ° ± × ÷ µ  degree, plus-minus, times, divide, micro
@@ -203,10 +208,6 @@ static const uint32_t emj_cat3[] = {  // Symbols & Math
     0x2150, 0x215B, 0x215C, 0x215D, 0x215E, 0x2151, 0x2152, 0x2189,  // ⅐ ⅛ ⅜ ⅝ ⅞ ⅑ ⅒ ↉  sevenths to tenths, 0/3, 1/x
     0x215F,  // ⅟
     0x2044,  // ⁄  fraction slash
-    // Subscripts (_CurrencySigns_)
-    0x2080, 0x2081, 0x2082, 0x2083, 0x2084, 0x2085, 0x2086, 0x2087,  // ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇  subscript digits
-    0x2088, 0x2089,  // ₈ ₉
-    0x208A, 0x208B, 0x208C, 0x208D, 0x208E,  // ₊ ₋ ₌ ₍ ₎  subscript signs
     // Primes, rarer Latin-1 and letterlike symbols
     0x2032, 0x2033, 0x201A,  // ′ ″ ‚  prime, double prime, low quote
     0x00AA, 0x00BA, 0x00AC, 0x00A6,  // ª º ¬ ¦  ordinals, not, broken bar
@@ -224,9 +225,18 @@ static const uint32_t emj_cat3[] = {  // Symbols & Math
     0x2283, 0x2286, 0x2287, 0x2227, 0x2228,  // ⊃ ⊆ ⊇ ∧ ∨
     0x2295, 0x2297, 0x22A5, 0x2220, 0x2234, 0x2235, 0x2218, 0x2219,  // ⊕ ⊗ ⊥ ∠ ∴ ∵ ∘ ∙  misc
     0x22C5, 0x2215, 0x2300,  // ⋅ ∕ ⌀
-    // Arrows (_MathHints_)
-    0x2190, 0x2191, 0x2192, 0x2193, 0x2194, 0x2195, 0x21B5, 0x21D0,  // ← ↑ → ↓ ↔ ↕ ↵ ⇐  arrows
-    0x21D2, 0x21D4,  // ⇒ ⇔
+    // Arrows (_MathHints_). Each style in every direction: left, up, right, down,
+    // the four diagonals, then the two-way arrows.
+    0x2190, 0x2191, 0x2192, 0x2193, 0x2196, 0x2197, 0x2198, 0x2199,  // ← ↑ → ↓ ↖ ↗ ↘ ↙  single
+    0x2194, 0x2195,  // ↔ ↕
+    0x21D0, 0x21D1, 0x21D2, 0x21D3, 0x21D6, 0x21D7, 0x21D8, 0x21D9,  // ⇐ ⇑ ⇒ ⇓ ⇖ ⇗ ⇘ ⇙  double
+    0x21D4, 0x21D5,  // ⇔ ⇕
+    0x21E6, 0x21E7, 0x21E8, 0x21E9,  // ⇦ ⇧ ⇨ ⇩  outline
+    0x21E0, 0x21E1, 0x21E2, 0x21E3,  // ⇠ ⇡ ⇢ ⇣  dashed
+    0x21A4, 0x21A5, 0x21A6, 0x21A7, 0x21E4, 0x21E5,  // ↤ ↥ ↦ ↧ ⇤ ⇥  from a bar, to a bar
+    0x21C4, 0x21C6, 0x21C5, 0x21F5, 0x21CB, 0x21CC,  // ⇄ ⇆ ⇅ ⇵ ⇋ ⇌  paired, harpoons
+    0x21A9, 0x21AA, 0x21B0, 0x21B1, 0x21B2, 0x21B3, 0x21B4, 0x21B5,  // ↩ ↪ ↰ ↱ ↲ ↳ ↴ ↵  hook and corner
+    0x21B6, 0x21B7, 0x21BA, 0x21BB,  // ↶ ↷ ↺ ↻  curved, circle
 };
 
 // ── Category 4: Animals ──────────────────────────────────────────────────────

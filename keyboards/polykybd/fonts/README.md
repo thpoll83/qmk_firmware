@@ -218,8 +218,10 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   touches nothing else, but writes no manifest, so a pack font's new range still needs
   the full run. After restoring the unrelated headers, rebuild the manifest from the
   headers you will commit: `python3 fontpack.py build --out /tmp/fontpack.bin
-  --manifest ../base/fonts/generated/fontpack.manifest.json`. Its `total_size` covers
-  the whole pack, so a value taken from the full run would include the unrelated drift.
+  --manifest ../base/fonts/generated/fontpack.manifest.json`. It prunes shadowed
+  glyphs like the generator (before 2026-11-04 it did not, and wrote a `total_size`
+  about 14 KB too large). Its `total_size` covers the whole pack, so a value taken
+  from the full run would include the unrelated drift.
   `fontpack_bundles.manifest.json` is rebuilt by `reship_bundles.py --apply`.
   The history: it had failed on every header for a long
   time, which was a **formatting** drift, not a rendering one: the committed headers

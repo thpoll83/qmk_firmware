@@ -150,6 +150,30 @@ just under a convenient category.
    `variant`, `ranges`/`sequence`, and any overrides.
 3. `python3 generate_fonts.py` and rebuild the firmware.
 
+### Drawing a few glyphs from a different font or size
+
+To give some codepoints another size without moving any other font's index (the
+emoji picker's tall symbols, 2026-11-04: `_MathTall_` at size 18 and `_MathTaller_`
+at size 17 for √ ∛ ∫ ↕ ↨ ⇕ ⇶):
+
+1. Take the codepoints out of the existing font's `ranges` (split the range around
+   them). Inside that font's first..last span they become empty gap glyphs (0x0,
+   advance 0), and the lookup skips those (`disp_array.c`, `font_lookup.c`,
+   `oled_preview.py`), so a later font draws them.
+2. Append the new font at the very END of `fonts.yaml` (see the `_Mayan_` note). A
+   pack font appended there takes the highest index and moves no other font. Use
+   `bits: 32` for codepoints above U+FFFF.
+3. Run the FULL `generate_fonts.py`. `--only <category>` does not rewrite
+   `all_fonts_order.json` or `fontpack_render_settings.json`, so `oled_preview.py`
+   and the host find no glyph for the new font. Then `git checkout` the files the full
+   run changed without reason (`devanagari_fonts.h`, `emoji_fig_fonts.h`,
+   `lang_flag_glyph.h`, `fontpack_bundles.manifest.json`), rebuild the pack manifest
+   with `fontpack.py build`, and reship the bundle (`reship-fontpack-bundle`). Copy
+   `fontpack_render_settings.json` to the host; it is a mirrored file.
+4. Run the generator with `/usr/bin/python3` or the host venv. The qmk venv
+   (`/root/.qmk_venv`, first on `PATH` after the build setup) has no PyYAML, and the
+   script stops with "PyYAML is required".
+
 ## Font generation
 
 Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from the [`AdafruitGFX/`](../../../../Adafruit-GFX-Library/CLAUDE.md) repo. Generation is **config-driven** via `keyboards/polykybd/fonts/` — full docs in [`fonts/README.md`](README.md).

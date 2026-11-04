@@ -103,6 +103,21 @@ Send the PNG. One row of labelled keycaps beats a paragraph, and it is what the
 user asked for when they said "give me previews instead of another hardware
 round". The same renders are docs-quality — the mod-tap page's images are these.
 
+### Emoji-picker tabs: `tab_sheet.py`
+
+For the emoji picker's slots (a tab, a page, or single codepoints), use the script
+beside this file. It mirrors `make_slot_str()`: the x before a superscript or
+subscript, `slot_lift()`, the box clamp in 2 px steps and the centring of a symbol
+too wide for the two leading spaces. It prints every slot that loses pixels at the
+panel edge or shows "Glyph missing!".
+
+```bash
+python3 tab_sheet.py emj_cat3 emj_cat10 -o /tmp/deliver   # one PNG per tab, by page
+python3 tab_sheet.py 0x2211 0x1F891 --cut-only            # report only
+```
+
+Change it together with `make_slot_str()`; nothing checks that they agree.
+
 ## 4. Generate the firmware constants from the SAME source
 
 If the placement becomes `#define`d positions (`HINT_MOVE` coords, an `MTB_*`
@@ -121,6 +136,12 @@ badge to two codepoints; nothing crashed, the marks just silently vanished.
 
 ## Pitfalls
 
+- ⚠️ **A harness must not share names with the model it runs.** A tab sheet that
+  ran the clamp model with `exec()` in its own namespace set `H` to the sheet
+  height (3,598 px). The model reads `H` as the 40-row panel, so it stopped moving
+  tall glyphs, and the sheet showed ∑ cut at the bottom while the firmware draws it
+  whole (2026-11-04; the maintainer asked "maybe just the preview?"). Before you
+  report a cut from a sheet, render that glyph alone and compare.
 - **Don't eyeball the sheet.** Every defect this skill exists for was invisible
   in the render and obvious in `collision()`.
 - **Don't test only en-US letters.** That is the one case with no shift preview.

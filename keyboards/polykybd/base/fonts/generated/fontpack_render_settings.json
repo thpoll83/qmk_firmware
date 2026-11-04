@@ -1691,6 +1691,22 @@
       "render_height": 50,
       "source": "noto-sans-math",
       "source_file": "NotoSansMath-Regular.ttf"
+    },
+    "186": {
+      "size": 18,
+      "hinting": "auto",
+      "variant": "_MathTall_",
+      "render_height": 50,
+      "source": "noto-sans-math",
+      "source_file": "NotoSansMath-Regular.ttf"
+    },
+    "187": {
+      "size": 17,
+      "hinting": "auto",
+      "variant": "_MathTaller_",
+      "render_height": 50,
+      "source": "noto-sans-math",
+      "source_file": "NotoSansMath-Regular.ttf"
     }
   }
 }

@@ -1,7 +1,7 @@
 {
   "abi_version": 2,
-  "font_count": 164,
-  "total_size": 693072,
+  "font_count": 166,
+  "total_size": 694348,
   "fonts": [
     {
       "all_fonts_index": 2,
@@ -977,12 +977,24 @@
     },
     {
       "all_fonts_index": 186,
+      "symbol": "NotoSansMath_Regular_MathTall_18pt16b",
+      "first": 8597,
+      "last": 8747
+    },
+    {
+      "all_fonts_index": 187,
+      "symbol": "NotoSansMath_Regular_MathTaller_17pt16b",
+      "first": 8661,
+      "last": 8694
+    },
+    {
+      "all_fonts_index": 188,
       "symbol": "NotoColorEmoji_Regular_LangFlags_20pt7b",
       "first": 57344,
       "last": 57473
     },
     {
-      "all_fonts_index": 187,
+      "all_fonts_index": 189,
       "symbol": "PolyHintIcons",
       "first": 1048832,
       "last": 1048882

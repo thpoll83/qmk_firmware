@@ -485,10 +485,11 @@ fonts:
   # (The 0x21E0..0x22A0 span emits ~190 empty placeholder glyphs between the three
   # real ones, like _Util_ does — negligible in the 96 KB symbol slot.)
   # Since 2026-10-30 it also draws the emoji picker's arrows (since 2026-11-04 the
-  # whole Arrows block U+2190..21FF) and
-  # math operators (∀ ∂ ∃ ∅ ∆ ∇ ∈ ∉ ∏ ∑ − ∓ √ ∞ ≈ ≠ ≤ ≥ ⊂ ⊃ …, Symbols tab, cat 10).
-  # NotoSans has none of them. The span now starts at 0x2190.
-  - {category: symbols, variant: _MathHints_, source: noto-sans-math, ranges: [[0x2190, 0x21ff], [0x2200, 0x2200], [0x2202, 0x2203], [0x2205, 0x2209], [0x220f, 0x220f], [0x2211, 0x2213], [0x2215, 0x2215], [0x2218, 0x221b], [0x221d, 0x221e], [0x2220, 0x2220], [0x2227, 0x222b], [0x2234, 0x2235], [0x2248, 0x2248], [0x2260, 0x2261], [0x2264, 0x2265], [0x226a, 0x226b], [0x2282, 0x2283], [0x2286, 0x2287], [0x2295, 0x2295], [0x2297, 0x2297], [0x22a0, 0x22a0], [0x22a5, 0x22a5], [0x22c5, 0x22c5], [0x2300, 0x2300], [0x2347, 0x2348]]}
+  # whole Arrows block U+2190..21FF) and math operators (∀ ∂ ∃ ∅ ∆ ∇ ∈ ∉ ∏ ∑ − ∓ √
+  # ∞ ≈ ≠ ≤ ≥ ⊂ ⊃ …), all on the Symbols & Math tab (cat 3).
+  # NotoSans has none of them. The span now starts at 0x2190. ↕ ↨ ⇕ ⇶ √ ∛ ∫ are left
+  # out: at this size they are 40 to 46 rows tall; _MathTall_ draws them smaller.
+  - {category: symbols, variant: _MathHints_, source: noto-sans-math, ranges: [[0x2190, 0x2194], [0x2196, 0x21a7], [0x21a9, 0x21d4], [0x21d6, 0x21f5], [0x21f7, 0x21ff], [0x2200, 0x2200], [0x2202, 0x2203], [0x2205, 0x2209], [0x220f, 0x220f], [0x2211, 0x2213], [0x2215, 0x2215], [0x2218, 0x2219], [0x221d, 0x221e], [0x2220, 0x2220], [0x2227, 0x222a], [0x2234, 0x2235], [0x2248, 0x2248], [0x2260, 0x2261], [0x2264, 0x2265], [0x226a, 0x226b], [0x2282, 0x2283], [0x2286, 0x2287], [0x2295, 0x2295], [0x2297, 0x2297], [0x22a0, 0x22a0], [0x22a5, 0x22a5], [0x22c5, 0x22c5], [0x2300, 0x2300], [0x2347, 0x2348]]}
   # Wave-C: 🗣 dictation (U+1F5E3, ICON_DICTATION) for the Windows-only Win+H hint.
   # NotoSansSymbols2 has no glyph at 1F5E3 (notdef), so it is sourced from
   # NotoEmoji-Medium (mono) like the Tools/alchemical SymBmp glyphs above. Singleton
@@ -603,3 +604,12 @@ fonts:
   # Last in the list (see the _Mayan_ note), so no other font's index moves.
   # Bumps the symbol bundle content_version.
   - {category: symbols, variant: _LongArrows_, source: noto-sans-math, ranges: [[0x27f0, 0x27ff]]}
+
+  # ↕ ↨ √ ∛ ∫ (size 18) and ⇕ ⇶ (size 17) for the emoji picker's Symbols & Math tab
+  # (2026-11-04). At the _MathHints_ size they are 40 to 46 rows tall and the key has
+  # 40; at these sizes they are 36 to 40 and 38. _MathHints_ leaves them out of its
+  # ranges, and the lookup skips its empty gap glyphs, so these last fonts draw them.
+  # Last in the list (see the _Mayan_ note), so no other font's index moves. Bumps
+  # the symbol bundle.
+  - {category: symbols, variant: _MathTall_, source: noto-sans-math, size: 18, ranges: [[0x2195, 0x2195], [0x21a8, 0x21a8], [0x221a, 0x221b], [0x222b, 0x222b]]}
+  - {category: symbols, variant: _MathTaller_, source: noto-sans-math, size: 17, ranges: [[0x21d5, 0x21d5], [0x21f6, 0x21f6]]}

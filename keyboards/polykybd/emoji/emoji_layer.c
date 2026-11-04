@@ -82,14 +82,6 @@ static int16_t slot_lift(uint32_t cp) {
     return 0;
 }
 
-// The legend for an emoji slot or a recent: the glyph moved up or down just far
-// enough to keep its ink on the 40-row panel. The draw puts the baseline at row
-// 23, which suits a full-height emoji but puts a superscript (⁴) above the top
-// edge and pushes a tall operator (∑) past the bottom one. A clamp and not a
-// centre, so ⁴ still sits high and ₄ low, and „ low and “ high. Moves in 2 px
-// steps (\x05 down, \f up), so a glyph exactly 40 rows tall at an odd offset (↕)
-// loses 1 row. A glyph taller than the panel (√ and ∛ 41 rows, ∫ 44) is centred
-// and loses its outer rows.
 // Drawn in place of a glyph no loaded font covers: a pack glyph (every emoji, the
 // Symbols tab's math and arrows) on a board with no font pack flashed. The draw's
 // own fallback is a lone '!', which reads as a fault, and a blank key looks like an
@@ -101,6 +93,25 @@ static const uint32_t s_missing_glyph[] =
     HINT_SMALL UP_2PX UP_4PX U"\x06\x06\x06\x06\x06\x06\x06\x06" U"Glyph"
     U"\r\v" U"\x06\x06\x06\x06" U"missing!";
 
+// Rows of a glyph box that fall outside the 40-row panel.
+static int16_t box_overshoot(int16_t top, int16_t bottom) {
+    return (int16_t)((top < 0 ? -top : 0) + (bottom > SCREEN_HEIGHT - 1 ? bottom - (SCREEN_HEIGHT - 1) : 0));
+}
+
+// The legend for an emoji slot or a recent: the glyph moved up or down so it stays
+// on the 40-row panel. The draw puts the baseline at row 23, which suits a
+// full-height emoji but puts a superscript (⁴) above the top edge and pushes a tall
+// operator (∑) past the bottom one. A clamp and not a centre, so ⁴ still sits high
+// and ₄ low, and „ low and “ high.
+//
+// ⚠️ The clamp measures the glyph's BOX (kdisp_gfx_text_bbox), not its ink, and a
+// dithered emoji often has empty rows at its edges: 👍's box ends on row 40 while
+// its ink ends on 39. It moves in whole 2 px steps (\x05 down, \f up), so pushing
+// that box up 2 rows cut 👍's top ink row. Hence two rules, checked over all 1,768
+// picker glyphs against the unmoved draw (none loses ink, 23 lose less):
+// - a box taller than the panel (√ ∛ ∫, many emoji) keeps the default baseline;
+// - of the two 2 px positions around the exact clamp, take the one with fewer box
+//   rows off the panel, and do not move at all unless that is fewer than unmoved.
 static const uint32_t *make_slot_str(uint32_t cp) {
     if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) == NULL) return s_missing_glyph;
     const uint32_t glyph[2] = {cp, 0};
@@ -114,27 +125,27 @@ static const uint32_t *make_slot_str(uint32_t cp) {
     // (whole 2 px steps) puts the tab on one line, within 1 row. Done here and not
     // in the fonts: a line height of 44 there would also move the € ₽ — … and Greek
     // legends that the language layouts have tuned. slot_lift() lists the set.
-    const int16_t lift   = slot_lift(cp);
-    const int16_t top    = 23 + ymin + lift;   // first and last ink row at the default baseline
-    const int16_t bottom = 23 + ymax + lift;
-    int16_t       dy     = lift;               // rows to move down
-    bool          round_up = true;             // which way an odd dy rounds to 2 px steps
-    if (bottom - top > SCREEN_HEIGHT - 1) {
-        dy += (SCREEN_HEIGHT - 1 - top - bottom) / 2;
-    } else if (top < 0) {
-        // Clamped down: an odd dy rounds up, so the glyph moves further down and
-        // its top stays on the panel.
-        dy += -top;
-    } else if (bottom > SCREEN_HEIGHT - 1) {
-        // Clamped up: an odd dy rounds down, so the glyph moves further up and
-        // its bottom stays on the panel.
-        dy += (SCREEN_HEIGHT - 1) - bottom;
-        round_up = false;
+    const int16_t lift   = slot_lift(cp);       // even
+    const int16_t top    = 23 + ymin;           // box rows at the default baseline
+    const int16_t bottom = 23 + ymax;
+    int16_t       move   = lift;                // rows to move down, always even
+    if (bottom - top + 1 <= SCREEN_HEIGHT) {
+        const int16_t t    = top + lift;
+        const int16_t b    = bottom + lift;
+        const int16_t need = (t < 0) ? (int16_t)-t : (b > SCREEN_HEIGHT - 1) ? (int16_t)((SCREEN_HEIGHT - 1) - b) : 0;
+        if (need != 0) {
+            const int16_t d  = lift + need;
+            const int16_t lo = (d >= 0) ? (int16_t)((d / 2) * 2) : (int16_t)-(((1 - d) / 2) * 2);
+            const int16_t hi = (int16_t)(lo + ((d & 1) ? 2 : 0));
+            const int16_t ol = box_overshoot(top + lo, bottom + lo);
+            const int16_t oh = box_overshoot(top + hi, bottom + hi);
+            const int16_t dl = (int16_t)(lo > lift ? lo - lift : lift - lo);
+            const int16_t dh = (int16_t)(hi > lift ? hi - lift : lift - hi);
+            const int16_t best = (ol < oh || (ol == oh && dl <= dh)) ? lo : hi;
+            if (box_overshoot(top + best, bottom + best) < box_overshoot(t, b)) move = best;
+        }
     }
-    // Whole 2 px steps, rounded away from the edge the clamp moved the glyph off,
-    // so a clamped glyph never ends 1 row past it.
-    const int16_t floor_half = (dy >= 0) ? dy / 2 : -((1 - dy) / 2);
-    int8_t        steps      = (int8_t)((round_up && (dy & 1)) ? floor_half + 1 : floor_half);
+    int8_t  steps = (int8_t)(move / 2);
     uint8_t n     = 0;
     s_disp_buf[n++] = ' ';
     s_disp_buf[n++] = ' ';

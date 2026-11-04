@@ -56,8 +56,10 @@ static const uint32_t emj_cat0[] = {
     0x1F525, 0x1F52E,                    // 🔥🔮
 };
 
-// ── Category 1: Gestures & Body ─────────────────────────────────────────────
-static const uint32_t emj_cat1[] = {
+// ── Category 1: Gestures, Body & Love ───────────────────────────────────────
+// Gestures & Body, then Love & Celebrations (category 3 up to 1.9.12) appended, so
+// recents saved from Gestures & Body keep their offsets.
+static const uint32_t emj_cat1[] = {  // Gestures, Body & Love
     // Eyes, sensory & gestures (EmjGestures 0x1F440-0x1F450)
     0x1F440, 0x1F441, 0x1F442, 0x1F443, 0x1F444, 0x1F445,
     0x1F446, 0x1F447, 0x1F448, 0x1F449, 0x1F44A, 0x1F44B,
@@ -90,6 +92,36 @@ static const uint32_t emj_cat1[] = {
     0x1FAF0, 0x1FAF1, 0x1FAF2, 0x1FAF3, 0x1FAF4, 0x1FAF5, 0x1FAF6, 0x1FAF7, 0x1FAF8,
     // Manicule / pointing-hand variants (NotoSansSymbols2 BMP — SymBmp1)
     0x261A, 0x261B, 0x261C, 0x261E, 0x261F, // ☚☛☜☞☟ (☝ 0x261D above)
+    // ── Love & Celebrations (category 3 up to 1.9.12). 0x2764 is BMP — font file
+    //    generated without -n (see create_fonts.sh) ──
+    0x2764,  // ❤ (BMP — font index = 0x2764, no offset)
+    // Celebrations (🎁🎉🎊 moved to cat0; EmjCelebrate)
+    0x1F380, // 🎀 ribbon
+    0x1F382, 0x1F383, 0x1F384, 0x1F386,
+    0x1F387, 0x1F388, // 🎇🎈 sparkler, balloon
+    0x1F9E7, 0x1F9E8, // 🧧🧨 red envelope, firecracker
+    0x1F38B, 0x1F38C, 0x1F38D, 0x1F38E, 0x1F38F,
+    0x1F390, 0x1F391, 0x1F393, // 🎐🎑🎓
+    // Cosmetics
+    0x1F484, 0x1F485, // 💄💅 lipstick, nail polish
+    // Hearts & love (EmjLove)
+    0x1F48B, 0x1F48C, 0x1F48D, 0x1F48E, 0x1F48F, 0x1F490,
+    0x1F491, 0x1F492, 0x1F493, 0x1F494, 0x1F495, 0x1F496,
+    0x1F497, 0x1F498, 0x1F499, 0x1F49A, 0x1F49B, 0x1F49C,
+    0x1F49D, 0x1F49E, 0x1F49F,
+    // Unicode 12+ hearts (EmjHearts)
+    0x1F90D, 0x1F90E, // 🤍🤎 white heart, brown heart
+    // Orange heart (EmjClothing2)
+    0x1F9E1, // 🧡
+    // Colored hearts (EmjClothing range)
+    0x1FA75, 0x1FA76, 0x1FA77, // 🩵🩶🩷
+    // Stars, sparkles & heart-mark (NotoSansSymbols2 BMP — SymBmp1/SymBmp4)
+    0x2605, 0x2606, 0x2726, 0x2727, 0x2763, // ★ ☆ ✦ ✧ ❣
+    // Decorative stars, asterisks, sparkles, snowflakes & floral hearts (Dingbats — SymBmp4)
+    0x2722, 0x2723, 0x2724, 0x2725, 0x2729, 0x272A, 0x272B, 0x272C,
+    0x272D, 0x272E, 0x272F, 0x2730, 0x2731, 0x2732, 0x2733, 0x2734,
+    0x2735, 0x2736, 0x2737, 0x2738, 0x2739, 0x273A, 0x2742, 0x2743,
+    0x2745, 0x2746, 0x2747, 0x2748, 0x2765, 0x2766, 0x2767,
 };
 
 // ── Category 2: People & Jobs ───────────────────────────────────────────────
@@ -127,37 +159,74 @@ static const uint32_t emj_cat2[] = {
     0x1FAC2, 0x1FAC3, 0x1FAC4, // 🫂🫃🫄  (🫅 removed — covered elsewhere)
 };
 
-// ── Category 3: Love & Celebrations ─────────────────────────────────────────
-// 0x2764 is BMP — font file generated without -n (see create_fonts.sh)
-static const uint32_t emj_cat3[] = {
-    0x2764,  // ❤ (BMP — font index = 0x2764, no offset)
-    // Celebrations (🎁🎉🎊 moved to cat0; EmjCelebrate)
-    0x1F380, // 🎀 ribbon
-    0x1F382, 0x1F383, 0x1F384, 0x1F386,
-    0x1F387, 0x1F388, // 🎇🎈 sparkler, balloon
-    0x1F9E7, 0x1F9E8, // 🧧🧨 red envelope, firecracker
-    0x1F38B, 0x1F38C, 0x1F38D, 0x1F38E, 0x1F38F,
-    0x1F390, 0x1F391, 0x1F393, // 🎐🎑🎓
-    // Cosmetics
-    0x1F484, 0x1F485, // 💄💅 lipstick, nail polish
-    // Hearts & love (EmjLove)
-    0x1F48B, 0x1F48C, 0x1F48D, 0x1F48E, 0x1F48F, 0x1F490,
-    0x1F491, 0x1F492, 0x1F493, 0x1F494, 0x1F495, 0x1F496,
-    0x1F497, 0x1F498, 0x1F499, 0x1F49A, 0x1F49B, 0x1F49C,
-    0x1F49D, 0x1F49E, 0x1F49F,
-    // Unicode 12+ hearts (EmjHearts)
-    0x1F90D, 0x1F90E, // 🤍🤎 white heart, brown heart
-    // Orange heart (EmjClothing2)
-    0x1F9E1, // 🧡
-    // Colored hearts (EmjClothing range)
-    0x1FA75, 0x1FA76, 0x1FA77, // 🩵🩶🩷
-    // Stars, sparkles & heart-mark (NotoSansSymbols2 BMP — SymBmp1/SymBmp4)
-    0x2605, 0x2606, 0x2726, 0x2727, 0x2763, // ★ ☆ ✦ ✧ ❣
-    // Decorative stars, asterisks, sparkles, snowflakes & floral hearts (Dingbats — SymBmp4)
-    0x2722, 0x2723, 0x2724, 0x2725, 0x2729, 0x272A, 0x272B, 0x272C,
-    0x272D, 0x272E, 0x272F, 0x2730, 0x2731, 0x2732, 0x2733, 0x2734,
-    0x2735, 0x2736, 0x2737, 0x2738, 0x2739, 0x273A, 0x2742, 0x2743,
-    0x2745, 0x2746, 0x2747, 0x2748, 0x2765, 0x2766, 0x2767,
+// ── Category 3: Symbols & Math ────────────────────────────────────────────────
+// Superscripts first, then common typographic symbols, currency, fractions,
+// subscripts, letterlike symbols, Greek, math operators and arrows. Latin-1 comes from
+// the resident _SupAndExtA_ font (0xA1-0x17E), General Punctuation,
+// super/subscripts, currency, letterlike symbols, fractions and ⁄ from the resident
+// _CurrencySigns_, Greek from the resident _Greek_. The math operators and arrows
+// come from _MathHints_ in the symbol font pack, and ֏ ৳ ௹ ฿ from the Armenian,
+// Bengali, Tamil and Thai pack fonts, so like the emoji they need a pack.
+//
+// ⚠️ An MRU recent stores (category, offset). Index 3 held Love & Celebrations up
+// to 1.9.12 (now appended to cat 1), so a recent saved from that tab by 1.9.12
+// shows a symbol from this one. Inserting entries here shifts every later offset.
+static const uint32_t emj_cat3[] = {  // Symbols & Math
+    // Superscripts first, as one run starting at ⁰, so ¹ is the second slot of the tab.
+    0x2070, 0x00B9, 0x00B2, 0x00B3, 0x2074, 0x2075, 0x2076, 0x2077,  // ⁰ ¹ ² ³ ⁴ ⁵ ⁶ ⁷  superscript digits
+    0x2078, 0x2079,  // ⁸ ⁹
+    0x207A, 0x207B, 0x207C, 0x207D, 0x207E, 0x207F, 0x2071,  // ⁺ ⁻ ⁼ ⁽ ⁾ ⁿ ⁱ  superscript signs
+    // The most used symbols (the rest of page 1 on split72). Left out of Latin-1:
+    // ¨ ¯ ´ ¸ (no use typed on their own) and the soft hyphen 0xAD (invisible).
+    0x00B0, 0x00B1, 0x00D7, 0x00F7, 0x00B5,  // ° ± × ÷ µ  degree, plus-minus, times, divide, micro
+    0x00A9, 0x00AE, 0x2122, 0x00A7, 0x00B6,  // © ® ™ § ¶  marks
+    0x00B7, 0x2022, 0x2013, 0x2026,  // · • – …  middle dot, bullet, en dash, ellipsis
+    0x00AB, 0x00BB,  // « »  guillemets
+    0x2030,  // ‰  per mille
+    // Currency signs: today's first, then the historical ones, then the generic ¤.
+    // ֏ ৳ ௹ ฿ come from the Armenian, Bengali, Tamil and Thai fonts in the
+    // font pack, so without a pack those keys are blank.
+    0x20AC, 0x00A3, 0x00A5, 0x00A2, 0x20B9, 0x20BD, 0x20A9, 0x20BA,  // € £ ¥ ¢ ₹ ₽ ₩ ₺  in use
+    0x20BF, 0x20AA, 0x20AB, 0x20B1, 0x20BC, 0x20B4, 0x20A6, 0x20A1,  // ₿ ₪ ₫ ₱ ₼ ₴ ₦ ₡
+    0x20B2, 0x20B5, 0x20B8, 0x20BE, 0x20AE, 0x20AD, 0x20C0, 0x20A8,  // ₲ ₵ ₸ ₾ ₮ ₭ ⃀ ₨
+    0x0024, 0x058F, 0x09F3, 0x0BF9, 0x0E3F,  // $ ֏ ৳ ௹ ฿  dollar, dram, taka, Tamil rupee, baht
+    0x20A3, 0x20A4, 0x20A7, 0x20A0, 0x20AF, 0x20B0, 0x20B3, 0x20A2,  // ₣ ₤ ₧ ₠ ₯ ₰ ₳ ₢  historical
+    0x20A5, 0x20B6, 0x20B7, 0x20BB,  // ₥ ₶ ₷ ₻
+    0x00A4,  // ¤  generic currency sign
+    // More punctuation
+    0x2039, 0x203A, 0x201E, 0x201C, 0x201D, 0x2018, 0x2019,  // ‹ › „ “ ” ‘ ’  single guillemets, quotation marks
+    0x00A1, 0x00BF, 0x2020, 0x2021,  // ¡ ¿ † ‡  inverted marks, daggers
+    // Fractions, every one Unicode has, by denominator, then the fraction slash for
+    // any other (³⁄₇ with the super/subscripts)
+    0x00BD, 0x2153, 0x2154, 0x00BC, 0x00BE, 0x2155, 0x2156, 0x2157,  // ½ ⅓ ⅔ ¼ ¾ ⅕ ⅖ ⅗  halves to sixths
+    0x2158, 0x2159, 0x215A,  // ⅘ ⅙ ⅚
+    0x2150, 0x215B, 0x215C, 0x215D, 0x215E, 0x2151, 0x2152, 0x2189,  // ⅐ ⅛ ⅜ ⅝ ⅞ ⅑ ⅒ ↉  sevenths to tenths, 0/3, 1/x
+    0x215F,  // ⅟
+    0x2044,  // ⁄  fraction slash
+    // Subscripts (_CurrencySigns_)
+    0x2080, 0x2081, 0x2082, 0x2083, 0x2084, 0x2085, 0x2086, 0x2087,  // ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇  subscript digits
+    0x2088, 0x2089,  // ₈ ₉
+    0x208A, 0x208B, 0x208C, 0x208D, 0x208E,  // ₊ ₋ ₌ ₍ ₎  subscript signs
+    // Primes, rarer Latin-1 and letterlike symbols
+    0x2032, 0x2033, 0x201A,  // ′ ″ ‚  prime, double prime, low quote
+    0x00AA, 0x00BA, 0x00AC, 0x00A6,  // ª º ¬ ¦  ordinals, not, broken bar
+    0x2103, 0x2109, 0x2113, 0x2116, 0x2117, 0x2120, 0x212E,  // ℃ ℉ ℓ № ℗ ℠ ℮  letterlike
+    // Greek letters used as symbols (resident _Greek_)
+    0x03B1, 0x03B2, 0x03B3, 0x03B4, 0x03B5, 0x03B8, 0x03BB, 0x03BC,  // α β γ δ ε θ λ μ  lowercase
+    0x03C0, 0x03C3, 0x03C4, 0x03C6, 0x03C9,  // π σ τ φ ω
+    0x0394, 0x03A3, 0x03A6, 0x03A9,  // Δ Σ Φ Ω  uppercase
+    // Math operators (_MathHints_, symbol font pack)
+    0x2212, 0x2213, 0x2248, 0x2260, 0x2261, 0x2264, 0x2265, 0x226A,  // − ∓ ≈ ≠ ≡ ≤ ≥ ≪  minus, comparison
+    0x226B,  // ≫
+    0x221E, 0x221A, 0x221B, 0x221D, 0x2211, 0x220F, 0x222B, 0x2202,  // ∞ √ ∛ ∝ ∑ ∏ ∫ ∂  analysis
+    0x2206, 0x2207,  // ∆ ∇
+    0x2200, 0x2203, 0x2205, 0x2208, 0x2209, 0x2229, 0x222A, 0x2282,  // ∀ ∃ ∅ ∈ ∉ ∩ ∪ ⊂  logic and sets
+    0x2283, 0x2286, 0x2287, 0x2227, 0x2228,  // ⊃ ⊆ ⊇ ∧ ∨
+    0x2295, 0x2297, 0x22A5, 0x2220, 0x2234, 0x2235, 0x2218, 0x2219,  // ⊕ ⊗ ⊥ ∠ ∴ ∵ ∘ ∙  misc
+    0x22C5, 0x2215, 0x2300,  // ⋅ ∕ ⌀
+    // Arrows (_MathHints_)
+    0x2190, 0x2191, 0x2192, 0x2193, 0x2194, 0x2195, 0x21B5, 0x21D0,  // ← ↑ → ↓ ↔ ↕ ↵ ⇐  arrows
+    0x21D2, 0x21D4,  // ⇒ ⇔
 };
 
 // ── Category 4: Animals ──────────────────────────────────────────────────────
@@ -380,7 +449,7 @@ static const uint32_t emj_cat9[] = {  // Tools & Objects (was cat10)
     0x1FA99, 0x1FA9A, 0x1FA9B, 0x1FA9C, 0x1FA9D,
     0x1FA9E, 0x1FA9F, // 🪑🪒🪓🪔🪖🪙🪚🪛🪜🪝🪞🪟
     // Symbols, tools & office (BMP — SymBmp1/3/5/6; ⚒-⚜ from NotoEmoji ToolsBMP).
-    // Abstract marks / brackets / arrows live in Category 11 "Symbols".
+    // Abstract marks / brackets / arrows are in Category 10 "Marks & Icons".
     0x260E,                                 // ☎ telephone
     0x2620, 0x2622, 0x2623,                 // ☠ skull, ☢ radioactive, ☣ biohazard
     0x267F,                                 // ♿ wheelchair
@@ -446,75 +515,13 @@ static const uint32_t emj_cat11[] = {  // Latin Extended-A & B
     0x0248, 0x0249, 0x024A, 0x024B, 0x024C, 0x024D, 0x024E, 0x024F,
 };
 
-// ── Category 10: Symbols & Marks ─────────────────────────────────────────────
-// Superscripts first, then common typographic symbols, fractions, subscripts, Greek, math
-// operators and arrows, then abstract marks and ornaments. Latin-1 comes from the
-// resident _SupAndExtA_ font (0xA1-0x17E), General Punctuation, super/subscripts,
-// letterlike symbols, fractions and ⁄ from the resident _CurrencySigns_, Greek from the
-// resident _Greek_. The math operators and arrows come from _MathHints_ in the
-// symbol font pack, so like the emoji they are blank without a pack. Dingbats come
-// from SymBmp1/SymBmp4; the key-action arrows 0x2B6F-0x2BA0 come from the
+// ── Category 10: Marks & Icons ───────────────────────────────────────────────
+// Abstract marks, ornaments and arrows, in the order 1.9.12 shipped as "Symbols &
+// Marks", so recents saved from that tab still decode to the same mark. Dingbats
+// come from SymBmp1/SymBmp4; the key-action arrows 0x2B6F-0x2BA0 come from the
 // _Arrows_ font (also used as keycap legends in the normal key-render UI).
-//
-// ⚠️ An MRU recent stores (category, offset). Inserting entries here shifts the
-// offset of everything after them, so a recent saved from this tab by older
-// firmware shows a different symbol once. Append when that matters.
-static const uint32_t emj_cat10[] = {  // Symbols & Marks
-    // Superscripts first, as one run starting at ⁰, so ¹ is the second slot of the tab.
-    0x2070, 0x00B9, 0x00B2, 0x00B3, 0x2074, 0x2075, 0x2076, 0x2077,  // ⁰ ¹ ² ³ ⁴ ⁵ ⁶ ⁷  superscript digits
-    0x2078, 0x2079,  // ⁸ ⁹
-    0x207A, 0x207B, 0x207C, 0x207D, 0x207E, 0x207F, 0x2071,  // ⁺ ⁻ ⁼ ⁽ ⁾ ⁿ ⁱ  superscript signs
-    // The most used symbols (the rest of page 1 on split72). Left out of Latin-1:
-    // ¨ ¯ ´ ¸ (no use typed on their own) and the soft hyphen 0xAD (invisible).
-    0x00B0, 0x00B1, 0x00D7, 0x00F7, 0x00B5,  // ° ± × ÷ µ  degree, plus-minus, times, divide, micro
-    0x00A9, 0x00AE, 0x2122, 0x00A7, 0x00B6,  // © ® ™ § ¶  marks
-    0x00B7, 0x2022, 0x2013, 0x2026,  // · • – …  middle dot, bullet, en dash, ellipsis
-    0x00AB, 0x00BB,  // « »  guillemets
-    0x2030,  // ‰  per mille
-    // Currency signs: today's first, then the historical ones, then the generic ¤.
-    // ֏ ৳ ௹ ฿ come from the Armenian, Bengali, Tamil and Thai fonts in the
-    // font pack, so without a pack those keys are blank.
-    0x20AC, 0x00A3, 0x00A5, 0x00A2, 0x20B9, 0x20BD, 0x20A9, 0x20BA,  // € £ ¥ ¢ ₹ ₽ ₩ ₺  in use
-    0x20BF, 0x20AA, 0x20AB, 0x20B1, 0x20BC, 0x20B4, 0x20A6, 0x20A1,  // ₿ ₪ ₫ ₱ ₼ ₴ ₦ ₡
-    0x20B2, 0x20B5, 0x20B8, 0x20BE, 0x20AE, 0x20AD, 0x20C0, 0x20A8,  // ₲ ₵ ₸ ₾ ₮ ₭ ⃀ ₨
-    0x0024, 0x058F, 0x09F3, 0x0BF9, 0x0E3F,  // $ ֏ ৳ ௹ ฿  dollar, dram, taka, Tamil rupee, baht
-    0x20A3, 0x20A4, 0x20A7, 0x20A0, 0x20AF, 0x20B0, 0x20B3, 0x20A2,  // ₣ ₤ ₧ ₠ ₯ ₰ ₳ ₢  historical
-    0x20A5, 0x20B6, 0x20B7, 0x20BB,  // ₥ ₶ ₷ ₻
-    0x00A4,  // ¤  generic currency sign
-    // More punctuation
-    0x2039, 0x203A, 0x201E, 0x201C, 0x201D, 0x2018, 0x2019,  // ‹ › „ “ ” ‘ ’  single guillemets, quotation marks
-    0x00A1, 0x00BF, 0x2020, 0x2021,  // ¡ ¿ † ‡  inverted marks, daggers
-    // Fractions, every one Unicode has, by denominator, then the fraction slash for
-    // any other (³⁄₇ with the super/subscripts)
-    0x00BD, 0x2153, 0x2154, 0x00BC, 0x00BE, 0x2155, 0x2156, 0x2157,  // ½ ⅓ ⅔ ¼ ¾ ⅕ ⅖ ⅗  halves to sixths
-    0x2158, 0x2159, 0x215A,  // ⅘ ⅙ ⅚
-    0x2150, 0x215B, 0x215C, 0x215D, 0x215E, 0x2151, 0x2152, 0x2189,  // ⅐ ⅛ ⅜ ⅝ ⅞ ⅑ ⅒ ↉  sevenths to tenths, 0/3, 1/x
-    0x215F,  // ⅟
-    0x2044,  // ⁄  fraction slash
-    // Subscripts (_CurrencySigns_)
-    0x2080, 0x2081, 0x2082, 0x2083, 0x2084, 0x2085, 0x2086, 0x2087,  // ₀ ₁ ₂ ₃ ₄ ₅ ₆ ₇  subscript digits
-    0x2088, 0x2089,  // ₈ ₉
-    0x208A, 0x208B, 0x208C, 0x208D, 0x208E,  // ₊ ₋ ₌ ₍ ₎  subscript signs
-    // Primes, rarer Latin-1 and letterlike symbols
-    0x2032, 0x2033, 0x201A,  // ′ ″ ‚  prime, double prime, low quote
-    0x00AA, 0x00BA, 0x00AC, 0x00A6,  // ª º ¬ ¦  ordinals, not, broken bar
-    0x2103, 0x2109, 0x2113, 0x2116, 0x2117, 0x2120, 0x212E,  // ℃ ℉ ℓ № ℗ ℠ ℮  letterlike
-    // Greek letters used as symbols (resident _Greek_)
-    0x03B1, 0x03B2, 0x03B3, 0x03B4, 0x03B5, 0x03B8, 0x03BB, 0x03BC,  // α β γ δ ε θ λ μ  lowercase
-    0x03C0, 0x03C3, 0x03C4, 0x03C6, 0x03C9,  // π σ τ φ ω
-    0x0394, 0x03A3, 0x03A6, 0x03A9,  // Δ Σ Φ Ω  uppercase
-    // Math operators (_MathHints_, symbol font pack)
-    0x2212, 0x2213, 0x2248, 0x2260, 0x2261, 0x2264, 0x2265, 0x226A,  // − ∓ ≈ ≠ ≡ ≤ ≥ ≪  minus, comparison
-    0x226B,  // ≫
-    0x221E, 0x221A, 0x221B, 0x221D, 0x2211, 0x220F, 0x222B, 0x2202,  // ∞ √ ∛ ∝ ∑ ∏ ∫ ∂  analysis
-    0x2206, 0x2207,  // ∆ ∇
-    0x2200, 0x2203, 0x2205, 0x2208, 0x2209, 0x2229, 0x222A, 0x2282,  // ∀ ∃ ∅ ∈ ∉ ∩ ∪ ⊂  logic and sets
-    0x2283, 0x2286, 0x2287, 0x2227, 0x2228,  // ⊃ ⊆ ⊇ ∧ ∨
-    0x2295, 0x2297, 0x22A5, 0x2220, 0x2234, 0x2235, 0x2218, 0x2219,  // ⊕ ⊗ ⊥ ∠ ∴ ∵ ∘ ∙  misc
-    0x22C5, 0x2215, 0x2300,  // ⋅ ∕ ⌀
-    // Arrows (_MathHints_)
-    0x2190, 0x2191, 0x2192, 0x2193, 0x2194, 0x2195, 0x21B5, 0x21D0,  // ← ↑ → ↓ ↔ ↕ ↵ ⇐  arrows
-    0x21D2, 0x21D4,  // ⇒ ⇔
+// ⚠️ Append only: an insertion shifts the offset of every recent after it.
+static const uint32_t emj_cat10[] = {  // Marks & Icons
     // Check / cross / ballot marks
     0x2610, 0x2612,                         // ☐ ☒ ballot box (empty / with X)
     0x2713, 0x2714, 0x2717, 0x2718,         // ✓ ✔ ✗ ✘ check / ballot X
@@ -552,16 +559,16 @@ static const uint32_t emj_cat10[] = {  // Symbols & Marks
 
 static const emj_category_t EMJ_CATEGORIES[] = {
     EMJ_CAT_ENTRY(emj_cat0),   // 0: Smileys & Faces        😀
-    EMJ_CAT_ENTRY(emj_cat1),   // 1: Gestures & Body        👋
+    EMJ_CAT_ENTRY(emj_cat1),   // 1: Gestures, Body & Love  🙏  (Love & Celebrations appended)
     EMJ_CAT_ENTRY(emj_cat2),   // 2: People & Jobs          🏠
-    EMJ_CAT_ENTRY(emj_cat3),   // 3: Love & Celebrations    ❤
+    EMJ_CAT_ENTRY(emj_cat3),   // 3: Symbols & Math         ±  (super/subscripts, currency, fractions, Greek, math, arrows)
     EMJ_CAT_ENTRY(emj_cat4),   // 4: Animals                🐶
     EMJ_CAT_ENTRY(emj_cat5),   // 5: Nature, Plants & Food  🍉  (Food merged in)
     EMJ_CAT_ENTRY(emj_cat6),   // 6: Weather & Sky          ☀
     EMJ_CAT_ENTRY(emj_cat7),   // 7: Travel & Places        ✈
     EMJ_CAT_ENTRY(emj_cat8),   // 8: Sports & Entertainment ⚽
     EMJ_CAT_ENTRY(emj_cat9),   // 9: Tools & Objects        🔧
-    EMJ_CAT_ENTRY(emj_cat10),  // 10: Symbols & Marks       ✔  (¹ ° ± ©…, checks, brackets, arrows…)
+    EMJ_CAT_ENTRY(emj_cat10),  // 10: Marks & Icons         ✔  (checks, crosses, ornaments, dingbat arrows)
     EMJ_CAT_ENTRY(emj_cat11),  // 11: Latin Extended-A & B  Ā
 };
 

@@ -230,8 +230,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // bottom-left row (top-bar marked); right half: the current tab's 18 slots
     // (3 rows). Paging on the right thumbs; Clear on the right thumb; left thumb exits.
     [_EMJ] = POLY_LAYOUT(
-        KC_EMJ_CAT(0),  KC_EMJ_CAT(1),  KC_EMJ_CAT(2),  KC_EMJ_CAT(3),  KC_EMJ_CAT(4),  KC_EMJ_CAT(5),
-        KC_EMJ_CAT(6),  KC_EMJ_CAT(7),  KC_EMJ_CAT(8),  KC_EMJ_CAT(9),  KC_EMJ_CAT(10), KC_EMJ_CAT(11),
+        KC_EMJ_CAT(0),  KC_EMJ_CAT(1),  KC_EMJ_CAT(2),  KC_EMJ_CAT(4),  KC_EMJ_CAT(5),  KC_EMJ_CAT(6),
+        KC_EMJ_CAT(7),  KC_EMJ_CAT(8),  KC_EMJ_CAT(9),  KC_EMJ_CAT(10), KC_EMJ_CAT(3),  KC_EMJ_CAT(11),
         EMRU(0),        EMRU(1),        EMRU(2),        EMRU(3),        EMRU(4),        EMRU(5),
         TO(_BL),        KC_NO,          KC_NO,
         ESLOT(0),       ESLOT(1),       ESLOT(2),       ESLOT(3),       ESLOT(4),       ESLOT(5),

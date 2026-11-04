@@ -20,16 +20,16 @@ static uint8_t s_page     = 0;
 // Hardwired tab icons from PR description; 0 = fall back to first codepoint of category.
 static const uint32_t emj_tab_icons[] = {
     0x1F973,  // cat  0: 🥳 Smileys & Faces
-    0x1F64F,  // cat  1: 🙏 Gestures & Body
+    0x1F64F,  // cat  1: 🙏 Gestures, Body & Love
     0x1F46A,  // cat  2: 👪 People & Jobs
-    0x1F495,  // cat  3: 💕 Love & Celebrations
+    0x00B1,   // cat  3: ±  Symbols & Math (resident _SupAndExtA_, so it shows without a pack)
     0x1F404,  // cat  4: 🐄 Animals
     0x1F349,  // cat  5: 🍉 Nature, Plants & Food
     0x26C5,   // cat  6: ⛅ Weather & Sky
     0x26F5,   // cat  7: ⛵ Travel & Places
     0x1F3C0,  // cat  8: 🏀 Sports & Entertainment
     0x1F4CE,  // cat  9: 📎 Tools & Objects
-    0x2714,   // cat 10: ✔ Symbols & Marks (¹ ° ± ©…, checks, brackets, arrows…)
+    0x2714,   // cat 10: ✔ Marks & Icons (checks, crosses, ornaments, dingbat arrows)
     0x0100,   // cat 11: Ā  Latin Extended-A & B (BMP — font index == codepoint)
 };
 
@@ -60,7 +60,7 @@ static uint32_t codepoint_for_slot(uint8_t slot) {
 // (SMP included) is keyed on its real codepoint, so the emoji codepoint goes into
 // the string verbatim — no Private-Use-Area shift.
 
-static uint32_t s_disp_buf[16];  // space x 2 + up to 12 vertical nudges + glyph + NUL
+static uint32_t s_disp_buf[24];  // space x 2 + vertical nudges + up to 6 glyph codepoints + NUL
 
 static const uint32_t *make_emoji_str(uint32_t cp) {
     s_disp_buf[0] = ' ';
@@ -93,6 +93,13 @@ static const uint32_t s_missing_glyph[] =
     HINT_SMALL UP_2PX UP_4PX U"\x06\x06\x06\x06\x06\x06\x06\x06" U"Glyph"
     U"\r\v" U"\x06\x06\x06\x06" U"missing!";
 
+// Superscripts and subscripts (¹ ² ³ and U+2070-209F). Alone on a key they differ
+// only in height, so ⁶ and ₆ read the same; make_slot_str() draws a full-size x in
+// front of them (x⁶, x₆) to show where they sit.
+static bool slot_is_sup_or_sub(uint32_t cp) {
+    return cp == 0x00B9 || cp == 0x00B2 || cp == 0x00B3 || (cp >= 0x2070 && cp <= 0x209F);
+}
+
 // Rows of a glyph box that fall outside the 40-row panel.
 static int16_t box_overshoot(int16_t top, int16_t bottom) {
     return (int16_t)((top < 0 ? -top : 0) + (bottom > SCREEN_HEIGHT - 1 ? bottom - (SCREEN_HEIGHT - 1) : 0));
@@ -114,7 +121,23 @@ static int16_t box_overshoot(int16_t top, int16_t bottom) {
 //   rows off the panel, and do not move at all unless that is fewer than unmoved.
 static const uint32_t *make_slot_str(uint32_t cp) {
     if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) == NULL) return s_missing_glyph;
-    const uint32_t glyph[2] = {cp, 0};
+    // What is drawn: the glyph alone, or for a superscript or subscript, a base-font x
+    // and then the glyph. ¹ ² ³ come from _SupAndExtA_ (line height 44), so they are
+    // lifted 8 rows (4 \f) to sit as high as ⁴ beside the same x. The pair is then
+    // clamped as one box, with no slot_lift(): the x already fixes the height.
+    uint32_t glyph[7];
+    uint8_t  g    = 0;
+    int16_t  lift = 0;
+    if (slot_is_sup_or_sub(cp)) {
+        glyph[g++] = U'x';
+        if (cp < 0x2070) {
+            for (uint8_t k = 0; k < 4; ++k) glyph[g++] = U'\f';
+        }
+    } else {
+        lift = slot_lift(cp);
+    }
+    glyph[g++] = cp;
+    glyph[g]   = 0;
     int8_t xmin, xmax, ymin, ymax;
     kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, glyph, &xmin, &xmax, &ymin, &ymax);
     // Latin-1 (¹ ½ £ ®) is drawn from _SupAndExtA_, whose line height is 44. Greek
@@ -125,7 +148,6 @@ static const uint32_t *make_slot_str(uint32_t cp) {
     // (whole 2 px steps) puts the tab on one line, within 1 row. Done here and not
     // in the fonts: a line height of 44 there would also move the € ₽ — … and Greek
     // legends that the language layouts have tuned. slot_lift() lists the set.
-    const int16_t lift   = slot_lift(cp);       // even
     const int16_t top    = 23 + ymin;           // box rows at the default baseline
     const int16_t bottom = 23 + ymax;
     int16_t       move   = lift;                // rows to move down, always even
@@ -149,10 +171,11 @@ static const uint32_t *make_slot_str(uint32_t cp) {
     uint8_t n     = 0;
     s_disp_buf[n++] = ' ';
     s_disp_buf[n++] = ' ';
-    for (; steps > 0 && n < 14; --steps) s_disp_buf[n++] = U'\x05';
-    for (; steps < 0 && n < 14; ++steps) s_disp_buf[n++] = U'\f';
-    s_disp_buf[n++] = cp;
-    s_disp_buf[n]   = 0;
+    const uint8_t room = (uint8_t)(ARRAY_SIZE(s_disp_buf) - 1 - g);
+    for (; steps > 0 && n < room; --steps) s_disp_buf[n++] = U'\x05';
+    for (; steps < 0 && n < room; ++steps) s_disp_buf[n++] = U'\f';
+    for (uint8_t k = 0; k < g; ++k) s_disp_buf[n++] = glyph[k];
+    s_disp_buf[n] = 0;
     return s_disp_buf;
 }
 

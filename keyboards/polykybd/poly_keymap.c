@@ -4606,8 +4606,8 @@ typedef enum {
 // in preference order; the ACTIVE category is skipped (pressing the tab that is already
 // open changes nothing on screen — "we should not ask to press the first tab which is
 // active by default", hardware), so each half has a spare.
-static const uint8_t s_tut_emj_left[]  = {0, 4, 5};    // smileys, animals, food (cats 0-5)
-static const uint8_t s_tut_emj_right[] = {7, 8, 9};    // travel, sports, tools  (cats 6-11)
+static const uint8_t s_tut_emj_left[]  = {0, 4, 5};    // smileys, animals, food (left-half tabs)
+static const uint8_t s_tut_emj_right[] = {7, 8, 9};    // travel, sports, tools  (right-half tabs)
 #define TUT_EMJ_TABS_PER_HALF 2u
 
 // Progress keycap per section (base/tutorial_plan.c has the first five).

@@ -48,11 +48,15 @@ Repos (auto-discovered; override with `--qmk` / `--host`):
    drift* (metadata `first`/`last`/`yAdvance` match, only bitmap dims differ) from a
    structural change.
 
-2. **Pick the version bumps.** Bump **only** the bundles that changed, **minimally**
-   (+1 over the shipped value — check `bundles.json`; no bundle has ever been
-   deployed so any increment >shipped works, keep it monotonic and small). Leave all
-   others alone — the helper preserves their current shipped version automatically
-   (this is the fix for the `--bundle-version` defaults-to-0 reset trap).
+2. **Pick the version bumps.** Bump **only** the bundles that changed, to **+1 over
+   the version in the last PUBLISHED host release** (check `bundles.json` at that
+   release's tag), and leave it there for every later rebuild before the release
+   (maintainer's rule, 2026-11-04: "we do not need to increase the fontpack every
+   iteration if there was no release"; one session went v12 → v16 on test builds).
+   For a test round, hand over the file and `polyctl fontpack flash --file` (see
+   Pitfalls) instead of increasing the number. Leave all others alone — the helper
+   preserves their current shipped version automatically (this is the fix for the
+   `--bundle-version` defaults-to-0 reset trap).
 
 3. **Apply the reship** (write mode). Name every changed bundle with its new version:
    ```bash

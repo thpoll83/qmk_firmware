@@ -207,8 +207,23 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   corrects both. If `--check` is ever wired into CI, fix the manifest/prune ordering
   rather than hand-editing the committed value.
 - **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain.
-- ✅ **`generate_fonts.py --check` PASSES on a clean checkout (2026-08-11) — if it
-  drifts, something is genuinely wrong.** It had failed on every header for a long
+- ⚠️ **`generate_fonts.py --check` no longer passes on a clean checkout** (it did on
+  2026-08-11). On 2026-10-30 an unmodified `PolyKybd` reported `DRIFT` for
+  `devanagari_fonts.h` and `emoji_fig_fonts.h` (their source fonts changed upstream),
+  `DRIFT` for `fontpack.manifest.json` (its `total_size` and the LangFlags `last` were
+  already stale), and `STALE` for `lang_flag_glyph.h`, which `gen-lang-fonts.sh` writes
+  and the stale sweep of a full run DELETES. So a DRIFT is not proof of your change: run
+  `--check` on the unmodified tree first, and after a full regen `git checkout` every
+  file you did not mean to change. `--only <category>` regenerates one header and
+  touches nothing else, but writes no manifest, so a pack font's new range still needs
+  the full run. After restoring the unrelated headers, rebuild the manifest from the
+  headers you will commit: `python3 fontpack.py build --out /tmp/fontpack.bin
+  --manifest ../base/fonts/generated/fontpack.manifest.json`. It prunes shadowed
+  glyphs like the generator (before 2026-11-04 it did not, and wrote a `total_size`
+  about 14 KB too large). Its `total_size` covers the whole pack, so a value taken
+  from the full run would include the unrelated drift.
+  `fontpack_bundles.manifest.json` is rebuilt by `reship_bundles.py --apply`.
+  The history: it had failed on every header for a long
   time, which was a **formatting** drift, not a rendering one: the committed headers
   were emitted during the column-native (PolyColGfx) work by a fontconvert built from
   a work-in-progress tree, so the current emitter wrote the same bytes differently
@@ -245,6 +260,15 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
     header comment while the glyph data is byte-identical, and `--check` reports
     DRIFT. Rewrite the path back to `/home/user/qmk_firmware/` before comparing or
     committing.
+  - **In a fresh cloud container, build the pinned fontconvert yourself.** The
+    `Adafruit-GFX-Library` repo is public: clone it to `/home/user/Adafruit-GFX-Library`,
+    check out the commit that reproduced the committed headers
+    (`git checkout 3659f73203cb`, 2026-10-30), build per `fontconvert/README.md` (`cmake -DCMAKE_BUILD_TYPE=Release ..` then
+    `cmake --build .`; it fetches FreeType and HarfBuzz itself), and copy the binary to
+    `/tmp/fontconvert_pinned`. `dl-fonts.sh` ran through. Before changing a font, prove
+    the build: `--only latin --check` printed "match", and re-running one font's
+    provenance command and comparing its block with the committed header showed it
+    identical (2026-10-30, `_CurrencySigns_` and `_MathHints_`).
 - **Adding codepoints to an existing `latin` font is the cheap case, and the cheapest
   sub-case is filling a GAP.** `latin` is `resident: true` and in no bundle, so the
   change is confined to the firmware image: **no `.plyf` reship, no `content_version`

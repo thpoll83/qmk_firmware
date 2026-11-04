@@ -479,14 +479,20 @@ def extra_pack_symbols(cfg: dict) -> list[str]:
     return [e["symbol"] for e in cfg.get("index", {}).get("pack_extra_fonts", [])]
 
 
-def build_pack_from_tree(fonts_dir: Path, cfg: dict, content_version: int = 0):
-    """build_pack() sourced from the committed headers on disk."""
+def build_pack_from_tree(fonts_dir: Path, cfg: dict, content_version: int = 0,
+                         dedupe: bool = True):
+    """build_pack() sourced from the committed headers on disk.
+
+    Prunes shadowed glyphs like manifest_from_texts() and the bundle path, so
+    `fontpack.py build --manifest` writes the same total_size as generate_fonts.py."""
     order = all_fonts_order(fonts_dir)
     resident = resident_symbols(cfg, fonts_dir)
     parsed: dict[str, ParsedFont] = {}
     for hdr in (fonts_dir / "generated").glob("*.h"):
         parsed.update(parse_gfx_header(hdr.read_text()))
     parsed.update(extra_pack_fonts(cfg, fonts_dir))
+    if dedupe:
+        prune_shadowed_glyphs(order, resident, parsed)
     return build_pack(order, resident, parsed, content_version)
 
 

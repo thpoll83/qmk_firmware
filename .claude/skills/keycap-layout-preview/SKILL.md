@@ -134,6 +134,17 @@ badge to two codepoints; nothing crashed, the marks just silently vanished.
 - If the change alters something visible on a keycap, say **which pixel** tells
   two builds apart — that is a check the user can run with no tooling.
 
+- ⚠️ **A bbox is the glyph's BOX, not its ink**, in the firmware
+  (`kdisp_gfx_text_bbox`) and in `oled_preview.Renderer.bbox()` alike. A dithered
+  emoji can have empty rows at its edges: 👍's box ends 1 row below the 40-row panel
+  while its ink ends on row 39. A clamp written against the box therefore moves
+  glyphs that already fit, and validating it with INK rows (the natural way to
+  measure a render) hides that. That is how the emoji-slot clamp of qmk#407 shipped
+  cutting 1-5 rows off 115 emoji (2026-10-30). Simulate a clamp with the SAME
+  bbox the firmware calls, then count ink pixels lost against the unclamped draw,
+  over every glyph it can see. Also: `Renderer.draw()` drops pixels outside
+  `OVERSHOOT` (2), so set `oled_preview.OVERSHOOT` high before counting clipped ink.
+
 ### Harness fidelity — four ways a preview validates the wrong thing
 
 All four cost a round on 2026-08-26, and three of them report SUCCESS while wrong.

@@ -167,10 +167,24 @@ static const uint32_t *make_slot_str(uint32_t cp) {
             if (box_overshoot(top + best, bottom + best) < box_overshoot(t, b)) move = best;
         }
     }
+    // Two spaces put every symbol at the same column. A symbol too wide for that
+    // (the long arrows ⟷ ⟺, 62 px of the 72) is centred with 2 px \x06 steps instead.
+    const GFXglyph *space = kdisp_gfx_glyph(g_all_fonts, g_all_font_count, U' ');
+    const int16_t   lead  = space ? (int16_t)(2 * pgm_read_byte(&space->xAdvance)) : 14;
+    const bool      wide  = lead + xmax > SCREEN_WIDTH - 1;
+    uint8_t         nudge = 0;
+    if (wide) {
+        const int16_t off = (int16_t)((SCREEN_WIDTH - (xmax - xmin + 1)) / 2 - xmin);
+        nudge             = (uint8_t)(off > 0 ? off / 2 : 0);
+    }
     int8_t  steps = (int8_t)(move / 2);
     uint8_t n     = 0;
-    s_disp_buf[n++] = ' ';
-    s_disp_buf[n++] = ' ';
+    if (wide) {
+        for (; nudge > 0 && n < 8; --nudge) s_disp_buf[n++] = U'\x06';
+    } else {
+        s_disp_buf[n++] = ' ';
+        s_disp_buf[n++] = ' ';
+    }
     const uint8_t room = (uint8_t)(ARRAY_SIZE(s_disp_buf) - 1 - g);
     for (; steps > 0 && n < room; --steps) s_disp_buf[n++] = U'\x05';
     for (; steps < 0 && n < room; ++steps) s_disp_buf[n++] = U'\f';

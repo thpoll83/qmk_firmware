@@ -1683,6 +1683,14 @@
       "sequence": "E170, E17F, E17C, E16C, E171, E17B, E165, E174, E162, E175, E161, E176, E167, E16A, E179, E16F, E16B, E172, E16E, E163, E178, E17E, E173, E17D, E177, E16D, E141, E142, E143, E144, E145, E146, E147, E148, E149, E14A, E14B, E14C, E14D, E14E, E14F, E150, E151, E152, E153, E154, E155, E156, E157, E158, E159, E15A",
       "seq_first": 60160,
       "source_file": "C64Keyboard-Regular.ttf"
+    },
+    "185": {
+      "size": 20,
+      "hinting": "auto",
+      "variant": "_LongArrows_",
+      "render_height": 50,
+      "source": "noto-sans-math",
+      "source_file": "NotoSansMath-Regular.ttf"
     }
   }
 }

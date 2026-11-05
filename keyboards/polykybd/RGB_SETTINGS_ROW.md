@@ -61,6 +61,16 @@ same split with the halves reversed).
     is an `OSL()` layer, which re-dispatches a release-edge action up to three times
     (§ *A release-edge action fires up to THREE times*), i.e. the macro plays twice
     or three times over.
+- ⚠️ **A settings legend that shows a VALUE must read it from `poly_sync_t`, not
+  from the setting's getter.** The getters (`get_idle_style()`,
+  `get_idle_timeout()`, `get_glyph_script()`) return this half's own global, and on
+  the slave that global is set once at boot from its own EEPROM and never changes.
+  On split72 all three keys sit on the left half, so with the right half as master
+  they showed the boot value whatever was chosen (field, 2026-11-05). The master
+  copies each value into `poly_sync_t` every housekeeping pass; the slave
+  re-renders on the synced diff. `idle_timeout` was added to the struct for this.
+  A toggle that reads `poly_sync_t.flags` (`KC_TOGTEXT`, `DB_TOGG`) never had the
+  problem.
 - ⚠️ **A settings key whose legend comes from a HELPER CALL renders as its raw
   keycode name in the HOST's layout editor until the helper is registered there.**
   `keycode_to_static_text()` may `return idle_style_legend();`, but the host parses

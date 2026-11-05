@@ -190,6 +190,12 @@ typedef struct _poly_sync_t {
     // independently as they pulse dark (see kdisp_idle); there is no shared offset
     // to sync — only the style bit (and the pulse `contrast`) cross the link.
     uint8_t  idle_style;
+    // Active idle TIMEOUT preset (enum poly_idle_timeout). Synced only so the slave
+    // can draw the KC_IDLE_TIMEOUT legend: the idle countdown itself runs on the
+    // master, which drives the slave through `flags` and `contrast`. Before this the
+    // legend read the slave's own boot-time value, so a key on the slave half never
+    // showed a change made on the master.
+    uint8_t  idle_timeout;
     // Active host-OS identity (enum poly_os). Resolved on the master from the
     // manual pin / host push / USB detection (get_active_os) and synced here so the
     // slave's keycaps render the same legends and its semantic action keys emit the

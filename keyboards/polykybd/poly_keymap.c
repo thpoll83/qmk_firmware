@@ -2031,6 +2031,15 @@ void housekeeping_task_user(void) {
             access_local_state()->glyph_size = get_glyph_size();
             request_disp_refresh();   // size changed -> re-render every main legend
         }
+        // Idle style and timeout, every pass, so the KC_IDLE_STYLE / KC_IDLE_TIMEOUT
+        // legends on the SLAVE half follow a change made here. The idle block below
+        // also writes idle_style, but only while idle tracking runs.
+        if (access_local_state()->idle_style != get_idle_style() ||
+            access_local_state()->idle_timeout != get_idle_timeout()) {
+            access_local_state()->idle_style   = get_idle_style();
+            access_local_state()->idle_timeout = get_idle_timeout();
+            request_disp_refresh();   // re-render the two setting legends
+        }
         // Doom game mode: synced so the SLAVE strips its legends down to the
         // game controls (the split_sync poly handler refreshes on the diff).
         // No master-side refresh — its keycaps are owned by the game blitter
@@ -7530,6 +7539,8 @@ void keyboard_post_init_user(void) {
     local_state->active_os = (uint8_t)(get_active_os() | (get_os_auto_mode() ? POLY_OS_AUTO_FLAG : 0));
     // Seed the glyph-script override so the first render reflects the persisted script.
     local_state->glyph_script = get_glyph_script();
+    local_state->idle_style   = get_idle_style();
+    local_state->idle_timeout = get_idle_timeout();
     // Same for the legend size, so the first render is already at the chosen size.
     local_state->glyph_size = get_glyph_size();
 #ifdef RGB_MATRIX_ENABLE

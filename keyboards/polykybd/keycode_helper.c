@@ -108,7 +108,10 @@ static const uint32_t* idle_style_legend(void) {
                                              SETTING_LBL("IDLE:", "Jittr"),
                                              SETTING_LBL("IDLE:", "IDDQD"),
                                              SETTING_LBL("IDLE:", "Eden") };
-    const uint8_t v = get_idle_style();
+    // The SYNCED value, not get_idle_style(): that global is set from the master's
+    // EEPROM and its key presses, and on the slave it never changes after boot, so a
+    // key on the slave half showed a stale style. Same for the two legends below.
+    const uint8_t v = get_local_state()->idle_style;
     return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("IDLE:", "?");
 }
 
@@ -142,7 +145,7 @@ static const uint32_t* idle_timeout_legend(void) {
                                              IDLE_TIMEOUT_LBL("1min"),
                                              IDLE_TIMEOUT_LBL("2min"),
                                              IDLE_TIMEOUT_LBL("5min") };
-    const uint8_t v = get_idle_timeout();
+    const uint8_t v = get_local_state()->idle_timeout;
     return (v < ARRAY_SIZE(names)) ? names[v] : IDLE_TIMEOUT_LBL("?");
 }
 
@@ -160,7 +163,7 @@ static const uint32_t* glyph_script_legend(void) {
                                              SETTING_LBL("SCRIPT:", "Brail"),
                                              SETTING_LBL("SCRIPT:", "C64K") };   // C64 keycap lettering
     _Static_assert(ARRAY_SIZE(names) == GLYPH_SCRIPT_COUNT, "a glyph script has no settings-key label");
-    const uint8_t v = get_glyph_script();
+    const uint8_t v = get_local_state()->glyph_script;
     return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("SCRIPT:", "?");
 }
 

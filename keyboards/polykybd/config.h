@@ -283,7 +283,11 @@
 //      72x40 cell is cleared before the icon is drawn. The host sets it for keys
 //      whose overlay replaces the keycap (a game's ESC mark). Older firmware rejects
 //      such a pair (to out of pool), so the host sends the offset only at v25+.
-#define PROTOCOL_VERSION 25
+//  v26 cmd 30 (glyph script) gains a placement op byte (data[HID_DATA_IDX+1]): 0 keep,
+//      1 centre, 2 top-left; a script byte of 0xFF changes the placement only. The
+//      reply adds the placement in data[4]. Older firmware ignores the op byte and
+//      always centres, so the host sends a non-zero op only at v26+.
+#define PROTOCOL_VERSION 26
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

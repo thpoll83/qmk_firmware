@@ -187,7 +187,7 @@ keycodes stay on the release edge. [`KEYCODE_HANDLING.md`](keyboards/polykybd/KE
 ### HID protocol
 
 Byte 0 report ID, byte 1 command ID, byte 2+ payload; replies `"P\xNN."` (ACK) or
-`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (25, `config.h`) gates host features. Read
+`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (26, `config.h`) gates host features. Read
 [`PROTOCOL_HISTORY.md`](keyboards/polykybd/PROTOCOL_HISTORY.md) before changing any
 command; several were shaped by a contrast the wire format does not show. A new command
 goes through the `add-gated-hid-command` skill.
@@ -340,7 +340,8 @@ Each has a doc; the rules below bind code outside it.
 - **Glyph script, cmd 30** ([`GLYPH_SCRIPT.md`](keyboards/polykybd/GLYPH_SCRIPT.md),
   skill `add-glyph-script`): the index is open-ended, so a new face needs no protocol
   version increase. Don't add a range NACK. Codepoints are relocated into private
-  blocks 0x40 apart.
+  blocks 0x40 apart. Since v26 a second byte sets the placement (0 keep, 1 centre,
+  2 top-left); unlike the index it is a closed range, NACKed past 2.
 - **Layer names, cmd 35** ([`LAYER_NAMES.md`](keyboards/polykybd/LAYER_NAMES.md)): the
   count is `DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT`, not `DYNAMIC_KEYMAP_LAYER_COUNT`.
 - **RGB settings row** ([`RGB_SETTINGS_ROW.md`](keyboards/polykybd/RGB_SETTINGS_ROW.md)):

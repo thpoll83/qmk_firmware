@@ -93,6 +93,18 @@ enum poly_glyph_size {
     GLYPH_SIZE_COUNT
 };
 
+// Where a glyph-script letter or digit sits on its keycap (HID cmd 30's second byte,
+// protocol v26). CENTRE is the original placement and the default; TOP_LEFT puts the
+// glyph's ink at x 1, y 1, so an overlay icon on the right half of the keycap leaves
+// it whole. Persisted in poly_eeconf_t.glyph_place and synced in
+// poly_sync_t.glyph_place. A CLOSED range, like glyph_size: an unknown value would
+// name a placement render_key does not know, so cmd 30 refuses it.
+enum poly_glyph_place {
+    GLYPH_PLACE_CENTRE   = 0,
+    GLYPH_PLACE_TOP_LEFT = 1,
+    GLYPH_PLACE_COUNT
+};
+
 // Active host-OS identity — a FIRST-CLASS state, deliberately DECOUPLED from
 // unicode_mode (which stays a "how do I type codepoints" concern, host cmd 20).
 // active_os drives the modifier-legend swap (Cmd/Opt vs Ctrl/Alt), the OS icon,
@@ -208,6 +220,9 @@ typedef struct _poly_sync_t {
     // synced for the same reason as glyph_script: the slave draws its own keys and
     // only ever sees this struct. See render_key / glyph_size_remap.
     uint8_t  glyph_size;
+    // Glyph-script placement (enum poly_glyph_place). Master-authoritative and synced
+    // for the same reason as glyph_script: the slave draws its own keys.
+    uint8_t  glyph_place;
     // Doom game mode active on the master (0/1). Synced so the SLAVE half turns
     // itself into a control pad: update_displays blanks every key that is not a
     // game control (doom_key_is_control). The master's keycaps are driven by the
@@ -544,6 +559,11 @@ typedef struct _poly_eeconf_t {
     // idle_timeout_unpack() in base/idle_timeout.h, which is also where the reason
     // it is a bias rather than a second sentinel byte is written down.
     uint8_t  idle_timeout;
+    // Persisted glyph-script placement (enum poly_glyph_place, HID cmd 30 v26).
+    // Appended at the tail, so earlier offsets are unchanged. No sentinel is needed:
+    // an EEPROM written before this field reads 0 here (wear levelling returns cleared
+    // bytes as zero), and 0 is GLYPH_PLACE_CENTRE, the placement those boards had.
+    uint8_t  glyph_place;
 } poly_eeconf_t;
 
 #define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
@@ -655,6 +675,7 @@ poly_eeconf_t load_user_eeconf(void);
 void save_user_os(void);
 void save_user_glyph_script(void);
 void save_user_glyph_size(void);
+void save_user_glyph_place(void);
 void save_user_boot_flags(void);
 
 // Increments brightness by BRIGHT_STEP with clamping to FULL_BRIGHT (deferred EEPROM write).
@@ -787,6 +808,19 @@ void set_glyph_size(uint8_t size);
 // Records the legend size without marking dirty (boot-time EEPROM load); an
 // out-of-range value falls back to GLYPH_SIZE_S.
 void note_glyph_size(uint8_t size);
+
+// ---- Glyph-script placement (enum poly_glyph_place, HID cmd 30 v26). ----
+
+// The active placement of glyph-script letters and digits (GLYPH_PLACE_CENTRE default).
+uint8_t get_glyph_place(void);
+
+// Sets the placement and marks it dirty (deferred EEPROM write). Out-of-range values
+// are ignored; cmd 30 refuses them before calling this.
+void set_glyph_place(uint8_t place);
+
+// Records the placement without marking dirty (boot-time EEPROM load); an
+// out-of-range value falls back to GLYPH_PLACE_CENTRE.
+void note_glyph_place(uint8_t place);
 
 // Steps the legend size one tier (delta +1/-1), CLAMPED at small and large — the
 // KC_GLYPH_SIZE_UP / _DOWN keys. WRAPPING, not clamping. That is a consequence of

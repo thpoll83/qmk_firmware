@@ -2031,6 +2031,11 @@ void housekeeping_task_user(void) {
             access_local_state()->glyph_size = get_glyph_size();
             request_disp_refresh();   // size changed -> re-render every main legend
         }
+        // Glyph-script placement (cmd 30 v26), adopted + re-rendered the same way.
+        if (access_local_state()->glyph_place != get_glyph_place()) {
+            access_local_state()->glyph_place = get_glyph_place();
+            request_disp_refresh();
+        }
         // Idle style and timeout, every pass, so the KC_IDLE_STYLE / KC_IDLE_TIMEOUT
         // legends on the SLAVE half follow a change made here. The idle block below
         // also writes idle_style, but only while idle tracking runs.
@@ -2535,6 +2540,13 @@ static uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode) {
 #define C64KEYS_CELL_TOP     25   // 14 px cells: y 25..38, 2 px under the letter
 #define C64KEYS_CELL_LEFT_CX  (SCREEN_WIDTH / 2 - 12)
 #define C64KEYS_CELL_RIGHT_CX (SCREEN_WIDTH / 2 + 12)
+// GLYPH_PLACE_TOP_LEFT: the same three glyphs packed against the left edge. The two
+// 14 px cells sit at x 1..14 and 17..30 (centres 8 and 24, 2 px apart), and the letter
+// is centred over them, so the whole key uses x 1..30 and leaves the right half free
+// for an overlay icon.
+#define C64KEYS_TL_CELL_LEFT_CX   8
+#define C64KEYS_TL_CELL_RIGHT_CX  24
+#define C64KEYS_TL_LETTER_CX      16
 
 // Draws one glyph with its ink centred on column `cx` and its top on row `top`.
 static void c64keys_glyph_at(uint32_t cp, int8_t cx, int8_t top, int8_t cy_radius) {
@@ -2548,7 +2560,7 @@ static void c64keys_glyph_at(uint32_t cp, int8_t cx, int8_t top, int8_t cy_radiu
 
 // Returns false, drawing nothing, when any of the three glyphs is missing (a fantasy
 // bundle from before these fonts): the caller then draws the plain large letter.
-static bool render_c64_keycap(uint16_t keycode) {
+static bool render_c64_keycap(uint16_t keycode, uint8_t place) {
     if (keycode < KC_A || keycode > KC_Z) return false;
     const uint32_t i      = (uint32_t)(keycode - KC_A);
     const uint32_t letter = C64KEYS_LETTER_BASE + i;
@@ -2559,11 +2571,13 @@ static bool render_c64_keycap(uint16_t keycode) {
         kdisp_gfx_glyph(g_all_fonts, g_all_font_count, shift) == NULL) {
         return false;
     }
-    c64keys_glyph_at(letter, SCREEN_WIDTH / 2, C64KEYS_LETTER_TOP, KDISP_CY_DEFAULT);
+    const bool tl = place == GLYPH_PLACE_TOP_LEFT;
+    c64keys_glyph_at(letter, tl ? C64KEYS_TL_LETTER_CX : SCREEN_WIDTH / 2, C64KEYS_LETTER_TOP,
+                     KDISP_CY_DEFAULT);
     // Courtyard 0 for the cells: they sit 2 px under the letter, and the default 3 px
     // courtyard would erase the letter's bottom row.
-    c64keys_glyph_at(cbm,   C64KEYS_CELL_LEFT_CX,  C64KEYS_CELL_TOP, 0);
-    c64keys_glyph_at(shift, C64KEYS_CELL_RIGHT_CX, C64KEYS_CELL_TOP, 0);
+    c64keys_glyph_at(cbm,   tl ? C64KEYS_TL_CELL_LEFT_CX  : C64KEYS_CELL_LEFT_CX,  C64KEYS_CELL_TOP, 0);
+    c64keys_glyph_at(shift, tl ? C64KEYS_TL_CELL_RIGHT_CX : C64KEYS_CELL_RIGHT_CX, C64KEYS_CELL_TOP, 0);
     return true;
 }
 
@@ -3010,7 +3024,8 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
     // the override is only for the resting/base letter legend, and the AltGr output
     // is a genuinely different character, not a cased form of the same letter.
     if (local_state->glyph_script != GLYPH_STD && !add_lang && !(mods & MOD_RALT)) {
-        if (local_state->glyph_script == GLYPH_C64KEYS && render_c64_keycap(keycode)) {
+        const uint8_t place = local_state->glyph_place;
+        if (local_state->glyph_script == GLYPH_C64KEYS && render_c64_keycap(keycode, place)) {
             return true;
         }
         uint32_t cp = glyph_script_codepoint(local_state->glyph_script, keycode);
@@ -3027,6 +3042,12 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
             kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, s, &xmin, &xmax, &ymin, &ymax);
             int8_t gx = (int8_t)(BUFFER_X + (SCREEN_WIDTH  - (xmax - xmin + 1)) / 2 - xmin);
             int8_t gy = (int8_t)(         (SCREEN_HEIGHT - (ymax - ymin + 1)) / 2 - ymin);
+            if (place == GLYPH_PLACE_TOP_LEFT) {
+                // cmd 30 v26: the ink's top-left corner at (1, 1), leaving the right of
+                // the keycap free for an overlay icon and its 3 px courtyard.
+                gx = (int8_t)(BUFFER_X + 1 - xmin);
+                gy = (int8_t)(1 - ymin);
+            }
             kdisp_write_gfx_text(g_all_fonts, g_all_font_count, gx, gy, s);
             return true;
         }
@@ -7499,6 +7520,7 @@ void keyboard_post_init_user(void) {
     emit_idle_config();   // the style is only known here — the banner tick re-emits it
     note_glyph_script(ee.glyph_script);
     note_glyph_size(ee.glyph_size);
+    note_glyph_place(ee.glyph_place);
     // The dynamic keymap is stored BY LAYER INDEX and QMK does not version it, so a
     // build whose layer enum has shifted would read the previous occupant of every
     // slot above the change. Discard it once, then stamp the revision so the next
@@ -7543,6 +7565,7 @@ void keyboard_post_init_user(void) {
     local_state->idle_timeout = get_idle_timeout();
     // Same for the legend size, so the first render is already at the chosen size.
     local_state->glyph_size = get_glyph_size();
+    local_state->glyph_place = get_glyph_place();
 #ifdef RGB_MATRIX_ENABLE
     local_state->flags = set_flag(STATUS_DISP_ON, RGB_ON, rgb_matrix_is_enabled());
 #else

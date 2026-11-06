@@ -181,6 +181,13 @@ void save_user_glyph_size(void) {
                                    sizeof(size));
 }
 
+// Writes the glyph-script placement tail byte (HID cmd 30 v26).
+void save_user_glyph_place(void) {
+    const uint8_t place = get_glyph_place();
+    eeconfig_update_user_datablock(&place, offsetof(poly_eeconf_t, glyph_place),
+                                   sizeof(place));
+}
+
 // Writes just the boot-intro marker tail byte (like glyph_script, it sits at the
 // tail of poly_eeconf_t, not in the contiguous settings block).
 void save_user_boot_flags(void) {

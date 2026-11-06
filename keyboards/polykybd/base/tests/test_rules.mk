@@ -86,6 +86,13 @@ polykybd_mode_byte_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# glyph_place_op.h is header-only: the placement op byte of HID cmd 30 (v26).
+polykybd_glyph_place_op_SRC := \
+	$(POLY_BASE_PATH)/tests/glyph_place_op_tests.cpp
+
+polykybd_glyph_place_op_INC := \
+	$(POLY_BASE_PATH)
+
 # base/update.c depends only on the timer, so it links standalone against the
 # mock clock — platforms/common.mk puts the timer into SRC, which only the
 # full-keyboard harness consumes, hence both timer files listed here (the same

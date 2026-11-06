@@ -328,6 +328,22 @@ reading before you change either one.
     and the mapping repair packs the offset back in at width 11.
   - Older firmware rejects such a pair (`to out of pool`) and the key stays blank,
     so the host adds the offset only at v25.
+  **v26** adds a **placement op byte** to cmd `30` (glyph script,
+  `data[HID_DATA_IDX+1]`, `base/glyph_place_op.h`): `0` keeps the stored placement,
+  `1` centres the glyph-script letters and digits, `2` puts their ink at x 1, y 1
+  (top-left), so an overlay icon on the right of the keycap leaves them whole. The
+  reply adds the placement (`enum poly_glyph_place`, 0 centre, 1 top-left) in
+  `data[4]`. It is persisted in `poly_eeconf_t.glyph_place` and synced in
+  `poly_sync_t.glyph_place`; the C64 keycap face packs its letter and two cells into
+  x 1..30 in top-left mode.
+  - **0 means keep**, the cmd 25 v24 pattern: an older host zero-pads the report, so
+    setting a script cannot reset a placement chosen with a newer host.
+  - **Script `0xFF` with a non-zero op changes the placement only.** `0xFF` was already
+    the read request, so an older host's read is unchanged.
+  - **A closed range.** An op of `3` or more is NACKed before the script or the
+    placement changes.
+  - v25 and older firmware ignore the byte and always centre, so the host sends a
+    non-zero op only at v26.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload

@@ -83,6 +83,14 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`, then
   settings dialog; `polyctl glyph-script [standard|tengwar|runes|…|braille]`. Rig:
   `test_glyph_script_round_trip` (`min_protocol: 9`) + `test_glyph_script_expansion`
   (`min_protocol: 10`, walks values 2/6/10 + out-of-range NACK).
+- **Placement (protocol v26).** `enum poly_glyph_place`: `GLYPH_PLACE_CENTRE` (the
+  original, and the default) or `GLYPH_PLACE_TOP_LEFT`, which puts the glyph's ink at
+  x 1, y 1 so an overlay icon on the right of the keycap does not cut it. The C64
+  keycap face packs its letter and two PETSCII cells into x 1..30 instead. Set with
+  cmd 30's second byte (0 keep, 1 centre, 2 top-left, see PROTOCOL_HISTORY.md),
+  persisted in `poly_eeconf_t.glyph_place` (an older EEPROM reads 0 = centre) and
+  synced in `poly_sync_t.glyph_place`. Host: `PolyKybd.get/set_glyph_placement`, the
+  tray "Glyph Script" submenu, `polyctl glyph-script --placement`.
 
 
 ## Braille is synthesized, not rendered (hardware round 45)

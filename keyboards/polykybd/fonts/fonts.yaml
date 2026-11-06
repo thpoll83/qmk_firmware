@@ -125,7 +125,7 @@ index:
 # pack_extra symbol for the standalone flags); generate_fonts.py fails the build
 # if a bundle overflows its slot. Slot sizes are KB, multiples of 4 (sector).
 bundles:
-  layout_version: 2
+  layout_version: 3
   region_kb: 2048          # 2 MB fontpack window (FW_RESOURCE_OFFSET .. +2 MB)
   dir_sectors: 1           # 4 KB directory sector at the region base
   # NB: the `latin` category is resident: true (compiled into the firmware, the
@@ -143,7 +143,7 @@ bundles:
     # takes the tail, so emoji gets a fixed, generous slot (768 KB ≈ 3.4× its
     # current ~222 KB — ample headroom) and its slot_offset is unchanged, so a
     # deployed emoji.plyf stays valid and is NOT reshipped (content unchanged).
-    - {id: emoji,    slot_kb: 768,  categories: [emoji, emoji_fig]}
+    - {id: emoji,    slot_kb: 512,  categories: [emoji, emoji_fig]}
     # "fantasy" glyph-script bundle (Tengwar + the 2026-07 expansion of 9 more
     # scripts; HID cmd 30). content_version bumped when the gscript fonts were
     # added. It used to be the trailing `rest` bundle; `latinbig` now takes the

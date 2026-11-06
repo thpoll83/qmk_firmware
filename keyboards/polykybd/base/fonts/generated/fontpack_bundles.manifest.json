@@ -1,6 +1,6 @@
 {
   "abi_version": 2,
-  "layout_version": 2,
+  "layout_version": 3,
   "region_size": 2097152,
   "dir_offset": 0,
   "dir_size": 4096,
@@ -384,7 +384,7 @@
       "id": "emoji",
       "index": 5,
       "slot_offset": 561152,
-      "slot_size": 786432,
+      "slot_size": 524288,
       "total_size": 220628,
       "font_count": 77,
       "fonts": [
@@ -855,7 +855,7 @@
     {
       "id": "fantasy",
       "index": 6,
-      "slot_offset": 1347584,
+      "slot_offset": 1085440,
       "slot_size": 131072,
       "total_size": 32564,
       "font_count": 13,
@@ -943,7 +943,7 @@
     {
       "id": "latinbig",
       "index": 7,
-      "slot_offset": 1478656,
+      "slot_offset": 1216512,
       "slot_size": 356352,
       "total_size": 162528,
       "font_count": 24,
@@ -1100,8 +1100,8 @@
       "id": "icons",
       "index": 8,
       "kind": "icons",
-      "slot_offset": 1835008,
-      "slot_size": 262144
+      "slot_offset": 1572864,
+      "slot_size": 524288
     }
   ]
 }

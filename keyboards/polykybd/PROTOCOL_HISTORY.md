@@ -344,6 +344,28 @@ reading before you change either one.
     placement changes.
   - v25 and older firmware ignore the byte and always centre, so the host sends a
     non-zero op only at v26.
+  **v27** is font-pack **layout v3** (`fontpack_layout.h`, from `fonts.yaml`
+  `bundles:`). No command changes.
+
+  | slot | v2 offset, size | v3 offset, size |
+  |---|---|---|
+  | emoji | 0x089000, 768 KB | 0x089000, 512 KB |
+  | fantasy | 0x149000, 128 KB | 0x109000, 128 KB |
+  | latinbig | 0x169000, 348 KB | 0x129000, 348 KB |
+  | icons | 0x1C0000, 256 KB | 0x180000, 512 KB |
+
+  - The icon library outgrew 256 KB once every eligible overlay icon is in it
+    (448,416 B). Emoji used 220,628 B of its 768 KB.
+  - Symbol to emoji keep their start, so their stored bundles stay valid. Fantasy,
+    latinbig and icons move: no new slot start equals an old one, so the loader
+    (magic, CRC, size) finds no valid header there, reports them missing, and the
+    host flashes them once (about 645 KB).
+  - BEGIN carries a bundle id, never an offset, so no command changes.
+  - The emoji slot limit is now 512 KB. The shipped bundle is 220,628 B; a hand-built
+    emoji bundle over 512 KB (developer font-pack tools) fails the v3 loader's size
+    check, reads as missing, and the host flashes the shipped bundle in its place.
+  - v26 and older firmware have a 256 KB icon slot and refuse a larger library at
+    BEGIN, so the host sends a library over 256 KB only at v27.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload

@@ -151,15 +151,14 @@ What this means:
 
 ### 2.1 Selection rule
 
-An icon is in the bundle when it is:
+An icon is in the bundle when its **rendered 72×40 bitmap** is used by two or
+more apps (`sublime` and `sublime_mac` count as one app) and it is a Fluent or
+Material Symbols icon, a cell of the shared concept renderer, or a custom
+drawing. Since layout v3 (protocol v27) the Fluent and Material icons follow the
+same two-app rule: an icon one app draws gains nothing from the library, because
+that app uploads it either way (1,488 such icons, 38 % of an unfiltered library).
 
-- a Fluent or Material Symbols icon used by any shipped template or the generic
-  shortcut path, or
-- drawn by the shared concept renderer, or
-- a custom drawing whose **rendered 72×40 bitmap** is used by two or more apps.
-  `sublime` and `sublime_mac` count as one app.
-
-App-only custom drawings stay bitmap uploads. When a second app uses the same
+Single-app icons stay bitmap uploads. When a second app uses the same
 concept, the drawing is unified (one wins, the other app's template changes) and
 the glyph joins the bundle.
 

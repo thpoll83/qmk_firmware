@@ -361,6 +361,9 @@ reading before you change either one.
     (magic, CRC, size) finds no valid header there, reports them missing, and the
     host flashes them once (about 645 KB).
   - BEGIN carries a bundle id, never an offset, so no command changes.
+  - The emoji slot limit is now 512 KB. The shipped bundle is 220,628 B; a hand-built
+    emoji bundle over 512 KB (developer font-pack tools) fails the v3 loader's size
+    check, reads as missing, and the host flashes the shipped bundle in its place.
   - v26 and older firmware have a 256 KB icon slot and refuse a larger library at
     BEGIN, so the host sends a library over 256 KB only at v27.
 

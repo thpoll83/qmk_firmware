@@ -287,7 +287,11 @@
 //      1 centre, 2 top-left; a script byte of 0xFF changes the placement only. The
 //      reply adds the placement in data[4]. Older firmware ignores the op byte and
 //      always centres, so the host sends a non-zero op only at v26+.
-#define PROTOCOL_VERSION 26
+//  v27 font-pack layout v3 (fontpack_layout.h): emoji 768 -> 512 KB, the icon library
+//      slot 256 -> 512 KB at 0x180000; fantasy and latinbig move down. No command
+//      changes. Older firmware has a 256 KB icon slot and refuses a larger library
+//      at BEGIN, so the host sends a library over 256 KB only at v27+.
+#define PROTOCOL_VERSION 27
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

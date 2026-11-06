@@ -2,7 +2,7 @@
 // Font-pack bundle flash layout (slots are relative to FW_RESOURCE_OFFSET).
 #pragma once
 
-#define FONTPACK_LAYOUT_VERSION 2u
+#define FONTPACK_LAYOUT_VERSION 3u
 #define FONTPACK_REGION_SIZE    0x200000UL
 #define FONTPACK_DIR_OFFSET     0x0UL
 #define FONTPACK_DIR_SIZE       0x1000UL
@@ -20,8 +20,8 @@
     X(syllabic, 2, 0x31000UL, 0x18000UL) \
     X(asia, 3, 0x49000UL, 0x20000UL) \
     X(flags, 4, 0x69000UL, 0x20000UL) \
-    X(emoji, 5, 0x89000UL, 0xC0000UL) \
-    X(fantasy, 6, 0x149000UL, 0x20000UL) \
-    X(latinbig, 7, 0x169000UL, 0x57000UL) \
-    X(icons, 8, 0x1C0000UL, 0x40000UL)
+    X(emoji, 5, 0x89000UL, 0x80000UL) \
+    X(fantasy, 6, 0x109000UL, 0x20000UL) \
+    X(latinbig, 7, 0x129000UL, 0x57000UL) \
+    X(icons, 8, 0x180000UL, 0x80000UL)
 

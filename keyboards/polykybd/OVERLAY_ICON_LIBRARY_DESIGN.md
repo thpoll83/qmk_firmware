@@ -221,6 +221,9 @@ by re-rendering source art:
 
 ### 2.5 Flash layout (font-pack layout v2)
 
+> **Superseded by layout v3 (protocol v27):** emoji 512 KB, icons 512 KB at
+> 0x180000, fantasy and latinbig moved down. See `PROTOCOL_HISTORY.md` → v27.
+
 Take a **256 KB** icon slot from the tail of `latinbig`, which uses 162,528 B of
 its 0x97000 (618,496 B) slot:
 

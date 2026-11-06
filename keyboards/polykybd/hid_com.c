@@ -25,6 +25,7 @@
 #include "base/com.h"
 #include "base/overlay.h"
 #include "base/hand_stamp.h"
+#include "base/glyph_place_op.h"   // cmd 30 placement op byte (protocol v26)
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "base/fontpack.h"
 #include "base/icon_lib.h"   // cmd 42 fills (protocol v20)
@@ -1235,17 +1236,36 @@ static void hid_cmd_30(uint8_t *data, uint8_t length, const poly_layer_t *local_
         // of NACKing. The override replaces the language-layer letter/digit
         // legends only and is persisted at the next EEPROM flush (suspend /
         // store key). The awake re-render + slave sync run from housekeeping.
-        uint8_t arg = data[HID_DATA_IDX];
+        //
+        // v26: data[HID_DATA_IDX+1] is the PLACEMENT op: 0 keep, 1 centre, 2 top-left
+        // (enum poly_glyph_place + 1). Zero keeps the stored placement, so an older
+        // host, whose reports are zero-padded, never resets it when it sets a script.
+        // A script byte of 0xFF with a non-zero op changes the placement only. Any
+        // other op is refused before anything is changed. The reply carries the
+        // script in data[3] and the placement (enum value, not op) in data[4];
+        // older firmware ignores the op byte, so the host sends one only at v26+.
+        uint8_t arg   = data[HID_DATA_IDX];
+        uint8_t place = data[HID_DATA_IDX + 1];
         memset(data, 0, length);
-        if (arg == 0xFF) {
-            hid_reply(data, 0x1e, true);
-            data[3] = get_glyph_script();
-        } else {
+        uint8_t new_place = 0;
+        const glyph_place_op_kind_t op = glyph_place_op_decode(place, GLYPH_PLACE_COUNT, &new_place);
+        if (op == GLYPH_PLACE_OP_IS_INVALID) {
+            hid_reply(data, 0x1e, false);
+            raw_hid_send(data, length);
+            return;
+        }
+        if (arg != 0xFF) {
             set_glyph_script(arg);
-            hid_reply(data, 0x1e, true);
-            data[3] = arg;
             uprintf("Set glyph script to %u.\n", arg);
         }
+        if (op == GLYPH_PLACE_OP_IS_SET) {
+            set_glyph_place(new_place);
+            uprintf("Set glyph script placement to %s.\n",
+                    new_place == GLYPH_PLACE_TOP_LEFT ? "top-left" : "centre");
+        }
+        hid_reply(data, 0x1e, true);
+        data[3] = get_glyph_script();
+        data[4] = get_glyph_place();
         raw_hid_send(data, length);
     }
     return;

@@ -5,6 +5,7 @@ TEST_LIST += polykybd_map_codec
 TEST_LIST += polykybd_bitset
 TEST_LIST += polykybd_prc_record
 TEST_LIST += polykybd_mode_byte
+TEST_LIST += polykybd_glyph_place_op
 TEST_LIST += polykybd_idle_update
 TEST_LIST += polykybd_idle_timeout
 TEST_LIST += polykybd_layer_names

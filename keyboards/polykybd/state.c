@@ -35,6 +35,10 @@ static bool    g_glyph_dirty  = false;
 // poly_eeconf_t (its own byte, like glyph_script) and flushed via g_gsize_dirty.
 static uint8_t g_glyph_size  = GLYPH_SIZE_S;
 static bool    g_gsize_dirty = false;
+// Glyph-script placement (enum poly_glyph_place). Its own tail byte in poly_eeconf_t,
+// flushed via g_gplace_dirty.
+static uint8_t g_glyph_place  = GLYPH_PLACE_CENTRE;
+static bool    g_gplace_dirty = false;
 // First-boot startup-animation marker (poly_eeconf_t.boot_flags). 0xFF/0 (fresh
 // EEPROM) => intro pending; BOOT_INTRO_DONE => already played.
 static uint8_t g_boot_flags = 0xFF;
@@ -498,6 +502,28 @@ void note_glyph_size(uint8_t size) {
     g_glyph_size = (size < GLYPH_SIZE_COUNT) ? size : GLYPH_SIZE_S;
 }
 
+// The active glyph-script placement (GLYPH_PLACE_CENTRE = the original).
+uint8_t get_glyph_place(void) {
+    return g_glyph_place;
+}
+
+// Sets the placement and marks it dirty (flushed at next suspend/store). A closed
+// range like set_glyph_size. The awake re-render is driven from housekeeping (the
+// master syncs glyph_place and calls request_disp_refresh on change).
+void set_glyph_place(uint8_t place) {
+    if (place >= GLYPH_PLACE_COUNT || place == g_glyph_place) {
+        return;   // out of range or no-op: don't mark dirty / churn the split sync
+    }
+    g_glyph_place  = place;
+    g_gplace_dirty = true;
+    poly_state_touch();
+}
+
+// Records the placement without marking dirty (boot-time EEPROM load).
+void note_glyph_place(uint8_t place) {
+    g_glyph_place = (place < GLYPH_PLACE_COUNT) ? place : GLYPH_PLACE_CENTRE;
+}
+
 // One tier up or down, WRAPPING at the ends — the KC_GLYPH_SIZE_UP / _DOWN keys.
 // One key drives both directions (Shift reverses it), so an end tier must still
 // lead somewhere: clamping would make the key look dead at 1 and at 3.
@@ -695,6 +721,7 @@ void save_all_dirty(void) {
     if (g_os_dirty)         { save_user_os();       g_os_dirty = false; }
     if (g_glyph_dirty)      { save_user_glyph_script(); g_glyph_dirty = false; }
     if (g_gsize_dirty)      { save_user_glyph_size();   g_gsize_dirty = false; }
+    if (g_gplace_dirty)     { save_user_glyph_place();  g_gplace_dirty = false; }
     if (g_boot_dirty)       { save_user_boot_flags(); g_boot_dirty = false; }
     if (g_latin_dirty)      { save_user_latin();    g_latin_dirty = false; }
     if (g_def_layer_dirty)  { eeconfig_update_default_layer(g_def_layer_pending); g_def_layer_dirty = false; }

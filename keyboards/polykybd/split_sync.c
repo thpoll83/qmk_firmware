@@ -128,7 +128,8 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     // The master changed the keycap legend SIZE -> re-render this half's legends.
     // Explicit rather than left to housekeeping's state-diff refresh so the new
     // size lands on the sync itself instead of a pass later.
-    bool glyph_size_changed = incoming->glyph_size != current->glyph_size;
+    bool glyph_size_changed = incoming->glyph_size != current->glyph_size ||
+                              incoming->glyph_place != current->glyph_place;
     // A move in the idle-screen mine sweeper -> redraw this half's cells.
     bool mines_changed = memcmp(&incoming->mines, &current->mines, sizeof(incoming->mines)) != 0;
     copy_local_state(incoming);

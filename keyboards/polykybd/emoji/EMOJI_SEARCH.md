@@ -28,17 +28,22 @@ dingbats, arrows and superscripts.
 
 The binary layout is in the module docstring. In short: a PlyF header with
 `flags = FLAG_DATA (0x0001)` and `font_count = 0`, then an `EmjD` header with the
-language index (`iso_lang_country.LANG_CODES`), the alphabet, the codepoint table,
-sorted word records (two u16 each), u16 postings and the folded word strings. Bit
-15 of a posting marks a word from the emoji's name, which ranks above a keyword.
+language index (`iso_lang_country.LANG_CODES`), the alphabet, the fold table, the
+stop words, the codepoint table, sorted word records (two u16 each), u16 postings
+and the word strings. Bit 15 of a posting marks a word from the emoji's name, which
+ranks above a keyword.
 
-Words are lowercase, with Latin, Greek and Cyrillic diacritics removed
-(`fold()`). The firmware must fold the typed query the same way.
+Every letter folds to exactly one base letter (`fold_letter()`): ä, á, â → a,
+ß → s, ı → i, Œ → o, й → и, ё → е, ά → α, ς → σ. A wrong extra match costs
+nothing, because the user picks the emoji from the results. Letters of other
+scripts are only lowercased, since the Indic vowel signs are separate letters.
 
 Words are stored one byte per letter in every script. The alphabet table lists the
 letters of the dictionary in codepoint order, and letter k is stored as byte k+1.
-The firmware maps each typed letter through that table before it searches. A
-letter outside the table becomes 0xFF and matches only through the typo pass.
+The fold table maps every letter a user can type, upper and lower case, to the
+byte of its base letter: 352 entries (1.4 KB) for German. The firmware maps each
+typed letter through it with a binary search and needs no Unicode data of its own.
+A letter outside the table becomes 0xFF and matches only through the typo pass.
 Russian uses 57 codes: 32 Cyrillic letters after folding plus the Latin letters
 of the English fallback text. `build` refuses a dictionary with more than 254
 letters, which rules out CJK.
@@ -47,12 +52,12 @@ Measured sizes (128 KB slot):
 
 | lang | bytes | slot |
 |---|---|---|
-| en | 66 KB | 51% |
-| de | 81 KB | 62% |
-| fr, fi, hu, pl | 69–81 KB | 53–62% |
-| el | 80 KB | 62% |
-| ru | 82 KB | 64% |
-| ta | 37 KB | 29% |
+| en | 67 KB | 52% |
+| de | 82 KB | 64% |
+| fr, pl | 74–82 KB | 58–64% |
+| el | 81 KB | 63% |
+| ru | 84 KB | 65% |
+| ta | 39 KB | 30% |
 
 `build` refuses a bundle larger than the slot, and a word table or posting list
 past the 16-bit record fields.
@@ -61,12 +66,16 @@ past the 16-bit record fields.
 
 `Dict.search()` is the reference the firmware follows:
 
-1. Split the query into words. Every word must match (AND).
+1. Split the query at spaces and map each letter through the fold table. Drop the
+   stop words listed in the bundle ("with", "mit"), since the index has none.
+   The last word stays, because the user is still typing it ("a" starts "apple").
 2. A word matches every dictionary word it is a prefix of: binary search for the
    first word not below the query, then walk forward.
 3. Only when a query word has no prefix match, compare it against every dictionary
    word with edit distance 1 (insert, delete, substitute, swap).
-4. Rank: exact word in the name, exact keyword, prefix in the name, prefix
+4. Every query word must match (AND). A word with no match at all, or one that
+   would leave no result, is ignored.
+5. Rank: exact word in the name, exact keyword, prefix in the name, prefix
    keyword. Inside a rank, picker order. The firmware can produce this order in four
    passes over the postings with one 2122-bit "already shown" bitmap (266 B), so a
    result page needs no sorted result list in RAM.

@@ -23,8 +23,15 @@ Bundle layout (little-endian, every block 4-byte aligned)::
     dict header, 32 B   "EmjD", format u16, lang u16 (LANG_CODES index),
                         cp_count u16, word_count u16, cps_off u32,
                         words_off u32, strings_off u32, alpha_count u16,
-                        reserved u16, alpha_off u32  (offsets from bundle start)
+                        fold_count u16, alpha_off u32, fold_off u32,
+                        stop_count u16, reserved u16, stop_off u32
+                        (offsets from bundle start)
     alphabet            u32[alpha_count]: the letter for byte code 1, 2, ...
+    fold table          u32[fold_count]: (code << 24) | codepoint, sorted by
+                        codepoint: every letter a user can type, upper and lower
+                        case, and the byte code of its base letter
+    stop words          stop_count coded words, each NUL-terminated: the query
+                        drops these, as the index never contains them
     cps                 u32[cp_count]: the codepoints, in picker order
     words               u16[2 * (word_count + 1)]: per word {str_off, first posting}
     postings            u16[]: per word, the cps[] indices it names
@@ -33,10 +40,11 @@ Bundle layout (little-endian, every block 4-byte aligned)::
 
 Words are stored one byte per letter in every script. The alphabet lists the
 letters the dictionary uses, in codepoint order; letter k is stored as byte k+1,
-and 0 ends a word. Russian needs 33 codes plus the Latin letters of the English
-fallback text. The firmware maps each typed letter through the same table; a
-letter the table does not list becomes 0xFF, which no word contains, so it
-matches only through the typo pass. Byte order equals codepoint order, so the
+and 0 ends a word. Russian needs 32 codes plus the Latin letters of the English
+fallback text. The firmware maps each typed letter through the fold table with a
+binary search, so Ä, ä and a give the same byte and the keyboard needs no Unicode
+data of its own. A letter the table does not list becomes 0xFF, which no word
+contains, so it matches only through the typo pass. Byte order equals codepoint order, so the
 word table stays sorted for the binary search.
 
 A word record is two u16: the string offset (from strings_off) and the index of
@@ -72,8 +80,8 @@ FLAG_DATA = 0x0001            # data-only bundle: no fonts, payload after the he
 
 DICT_MAGIC = b"EmjD"
 DICT_FORMAT = 1
-DICT_HEADER_FMT = "<4sHHHHIIIHHI"
-DICT_HEADER_SIZE = 32
+DICT_HEADER_FMT = "<4sHHHHIIIHHIIHHI"
+DICT_HEADER_SIZE = 44
 ALPHA_MAX = 254               # byte codes 1..254; 0 ends a word, 0xFF = not in the alphabet
 CODE_UNKNOWN = 0xFF
 
@@ -88,25 +96,45 @@ STOPWORDS = {
            "einen", "einer", "im", "in", "mit", "mit", "oder", "und", "von", "vom", "zum", "zur"},
 }
 
-_FOLD_EXTRA = {"ß": "ss", "æ": "ae", "ø": "o", "œ": "oe", "ł": "l", "đ": "d", "þ": "th"}
+# Letters with no Unicode decomposition, and their base letter.
+_FOLD_BASE = {"ß": "s", "æ": "a", "œ": "o", "ø": "o", "ł": "l", "đ": "d", "ð": "d",
+              "þ": "t", "ı": "i", "ħ": "h", "ŧ": "t", "ŋ": "n", "ĸ": "k", "ſ": "s",
+              "ς": "σ"}
+
+FOLD_SCRIPT_END = 0x0530      # Latin, Greek, Cyrillic: the scripts whose letters fold
+
+
+def fold_letter(ch: str) -> str:
+    """The base letter of one letter, always exactly one character: ä, á, â -> a,
+    ß -> s, й -> и, ά -> α. Two typed letters are two stored letters, so the
+    firmware folds a query letter by letter with the bundle's fold table.
+    Letters of other scripts are only lowercased: in the Indic scripts the vowel
+    signs are separate letters and stay. A wrong extra match costs nothing, since
+    the user picks the emoji from the results."""
+    low = ch.lower()
+    if len(low) != 1:                 # İ lowercases to i + combining dot
+        low = low[0]
+    if ord(low) >= FOLD_SCRIPT_END:
+        return low
+    if low in _FOLD_BASE:
+        return _FOLD_BASE[low]
+    base = unicodedata.normalize("NFKD", low)[:1] or low
+    return _FOLD_BASE.get(base, base)
 
 
 def fold(text: str) -> str:
-    """Lowercase and remove Latin, Greek and Cyrillic diacritics, so "Lächeln" and
-    "lacheln" are one word.
-    The firmware folds the typed query the same way before it searches."""
-    text = text.lower()
-    text = "".join(_FOLD_EXTRA.get(ch, ch) for ch in text)
-    text = unicodedata.normalize("NFKD", text)
-    out = []
-    for ch in text:
-        # A mark is a diacritic only on a Latin, Greek or Cyrillic letter. In the
-        # Indic scripts the same Unicode class holds the vowel signs, which are
-        # part of the word.
-        if unicodedata.combining(ch) and out and ord(out[-1]) < 0x0530:
-            continue
-        out.append(ch)
-    return unicodedata.normalize("NFC", "".join(out))
+    """Fold every letter of `text` to its base letter (see fold_letter())."""
+    text = unicodedata.normalize("NFC", text)
+    return "".join(fold_letter(ch) for ch in text if not 0x0300 <= ord(ch) <= 0x036F)
+
+
+def fold_table(code: dict[str, int]) -> list[tuple[int, int]]:
+    """(codepoint, byte code) for every letter that folds into the alphabet: the
+    alphabet itself, its upper case, and every Latin, Greek or Cyrillic letter
+    whose base letter is in it. Sorted by codepoint."""
+    cands = {ord(ch) for ch in code} | {ord(ch.upper()) for ch in code if len(ch.upper()) == 1}
+    cands |= {c for c in range(0x41, FOLD_SCRIPT_END) if chr(c).isalpha()}
+    return sorted((c, code[fold_letter(chr(c))]) for c in cands if fold_letter(chr(c)) in code)
 
 
 def tokens(text: str, lang: str) -> list[str]:
@@ -242,9 +270,19 @@ def build(lang: str, revision: int) -> bytes:
         raise SystemExit(f"{lang}: {len(strings)} B of words or {len(postings)} postings "
                          "do not fit the 16-bit word record")
     lang_idx = iso_lang_country.LANG_CODES.index(lang)
+    folds = fold_table(code)
     body = bytearray(DICT_HEADER_SIZE)
     alpha_off = PLYF_HEADER_SIZE + len(body)
     body += struct.pack(f"<{len(alphabet)}I", *(ord(ch) for ch in alphabet))
+    fold_off = PLYF_HEADER_SIZE + len(body)
+    body += struct.pack(f"<{len(folds)}I", *((c << 24) | cp for cp, c in folds))
+    stops = sorted({fold(w) for w in STOPWORDS.get(lang, set())} |
+                   ({fold(w) for w in STOPWORDS["en"]} if lang != "en" else set()))
+    stops = [w for w in stops if all(ch in code for ch in w)]
+    stop_off = PLYF_HEADER_SIZE + len(body)
+    for w in stops:
+        body += bytes(code[ch] for ch in w) + b"\0"
+    _align4(body)
     cps_off = PLYF_HEADER_SIZE + len(body)
     body += struct.pack(f"<{len(cps)}I", *cps)
     _align4(body)
@@ -258,7 +296,8 @@ def build(lang: str, revision: int) -> bytes:
     _align4(body)
     body[:DICT_HEADER_SIZE] = struct.pack(DICT_HEADER_FMT, DICT_MAGIC, DICT_FORMAT, lang_idx,
                                           len(cps), len(words), cps_off, words_off, strings_off,
-                                          len(alphabet), 0, alpha_off)
+                                          len(alphabet), len(folds), alpha_off, fold_off,
+                                          len(stops), 0, stop_off)
     total = PLYF_HEADER_SIZE + len(body)
     if total > SLOT_SIZE:
         raise SystemExit(f"{lang}: {total} B does not fit the {SLOT_SIZE} B emojidict slot")
@@ -288,16 +327,25 @@ class Dict:
         if total != len(blob) or zlib.crc32(blob[PLYF_HEADER_SIZE:]) & 0xFFFFFFFF != crc:
             raise ValueError("size or CRC mismatch")
         (dm, fmt, self.lang_idx, ncp, nword, cps_off, words_off, strings_off,
-         nalpha, _res, alpha_off) = struct.unpack_from(DICT_HEADER_FMT, blob, PLYF_HEADER_SIZE)
+         nalpha, nfold, alpha_off, fold_off, nstop, _res,
+         stop_off) = struct.unpack_from(DICT_HEADER_FMT, blob, PLYF_HEADER_SIZE)
         if dm != DICT_MAGIC or fmt != DICT_FORMAT:
             raise ValueError("not an EmjD dictionary")
         self.lang = iso_lang_country.LANG_CODES[self.lang_idx]
         self.alphabet = [chr(c) for c in struct.unpack_from(f"<{nalpha}I", blob, alpha_off)]
-        self.code = {ch: i + 1 for i, ch in enumerate(self.alphabet)}
+        self.fold_map = {e & 0xFFFFFF: e >> 24
+                         for e in struct.unpack_from(f"<{nfold}I", blob, fold_off)}
+        self.stops = set()
+        o = stop_off
+        for _ in range(nstop):
+            end = blob.index(b"\0", o)
+            self.stops.add(blob[o:end])
+            o = end + 1
         self.cps = struct.unpack_from(f"<{ncp}I", blob, cps_off)
         recs = struct.unpack_from(f"<{2 * (nword + 1)}H", blob, words_off)
         post_off = words_off + 4 * (nword + 1)
         self.sizes = {"header": PLYF_HEADER_SIZE + DICT_HEADER_SIZE, "alphabet": 4 * nalpha,
+                      "fold": 4 * nfold,
                       "cps": 4 * ncp,
                       "words": 4 * (nword + 1), "postings": 2 * recs[-1],
                       "strings": len(blob) - strings_off, "total": len(blob)}
@@ -309,8 +357,9 @@ class Dict:
             self.posts.append(struct.unpack_from(f"<{recs[2 * i + 3] - ps}H", blob, post_off + 2 * ps))
 
     def encode(self, word: str) -> bytes:
-        """A folded query word in the dictionary's byte codes."""
-        return bytes(self.code.get(ch, CODE_UNKNOWN) for ch in word)
+        """Typed letters in the dictionary's byte codes, through the fold table,
+        the way the firmware maps them."""
+        return bytes(self.fold_map.get(ord(ch), CODE_UNKNOWN) for ch in word)
 
     def decode(self, codes: bytes) -> str:
         return "".join(self.alphabet[c - 1] for c in codes)
@@ -344,22 +393,35 @@ class Dict:
 
     def search(self, query: str) -> tuple[list[int], bool]:
         """Codepoints for `query`, best first, and whether the typo pass ran.
-        Each query token must match (AND); a token matches a word it is a prefix of.
+        Words are split at spaces. Each word must match (AND), and a word matches
+        every dictionary word it is a prefix of. A query word with no match at all,
+        even in the typo pass, is left out of the AND, and so is a word that would
+        leave no result ("with" is a stop word and only typo-matches "witch").
         Rank: exact word in the name, exact keyword, prefix in the name, prefix
         keyword; picker order inside each rank. The firmware produces the same
         order in four passes over the postings with one 'already shown' bitmap."""
-        toks = [self.encode(t) for t in tokens(query, self.lang) or [fold(query)]]
+        # Drop stop words, except the last word: the user is still typing it, and
+        # "a" is how "apple" starts.
+        coded = [self.encode(w) for w in query.split()]
+        toks = [t for t in coded[:-1] if t not in self.stops] + coded[-1:]
         typo = False
         per_tok = []
         for t in toks:
             hits = self._prefix_words(t)
             if not hits:
                 hits, typo = self._typo_words(t), True
-            per_tok.append((t, hits))
+            if hits:
+                per_tok.append((t, hits))
+        if not per_tok:
+            return [], typo
         allowed = None
         for _t, hits in per_tok[1:]:
             s = {p & POST_INDEX_MASK for wi in hits for p in self.posts[wi]}
-            allowed = s if allowed is None else allowed & s
+            if allowed is not None:
+                s &= allowed
+            first_set = {p & POST_INDEX_MASK for wi in per_tok[0][1] for p in self.posts[wi]}
+            if s & first_set:                 # a word that would empty the result is ignored
+                allowed = s
         first, hits = per_tok[0]
         best: dict[int, int] = {}
         for wi in hits:

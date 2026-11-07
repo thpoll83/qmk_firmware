@@ -20,9 +20,16 @@ import emoji_dict as ed  # noqa: E402
 class FoldTest(unittest.TestCase):
     def test_latin_greek_cyrillic_lose_diacritics(self):
         self.assertEqual(ed.fold("Lächeln"), "lacheln")
-        self.assertEqual(ed.fold("Straße"), "strasse")
+        self.assertEqual(ed.fold("Straße"), "strase")
+        self.assertEqual(ed.fold("İstanbul ŀl ŒUF"), "istanbul ll ouf")
+        self.assertEqual(ed.fold("e\u0301"), "e")          # decomposed é
         self.assertEqual(ed.fold("ёжик"), "ежик")
         self.assertEqual(ed.fold("καρδιά"), "καρδια")
+
+    def test_one_letter_stays_one_letter(self):
+        for c in range(0x41, ed.FOLD_SCRIPT_END):
+            if chr(c).isalpha():
+                self.assertEqual(len(ed.fold_letter(chr(c))), 1, hex(c))
 
     def test_indic_vowel_signs_stay(self):
         self.assertEqual(ed.fold("புன்னகை"), "புன்னகை")
@@ -78,6 +85,26 @@ class BundleTest(unittest.TestCase):
             self.assertEqual(d.encode(d.decode(w)), w)
         # byte order of the coded words is the order the binary search relies on
         self.assertEqual([d.decode(w) for w in d.words], sorted(d.decode(w) for w in d.words))
+
+    def test_fold_table_matches_fold(self):
+        for d in self.dicts.values():
+            self.assertEqual(sorted(d.fold_map), list(d.fold_map))
+            for cp, code in d.fold_map.items():
+                self.assertEqual(ed.fold_letter(chr(cp)), d.alphabet[code - 1], hex(cp))
+            for ch in d.alphabet:
+                self.assertIn(ord(ch.upper()) if len(ch.upper()) == 1 else ord(ch), d.fold_map)
+
+    def test_typed_accents_and_case_match_the_base_word(self):
+        d = self.dicts["de"]
+        for q in ("lächeln", "LÄCHELN", "lacheln", "läçhèln"):
+            self.assertIn(ord("😊"), d.search(q)[0], q)
+
+    def test_stop_word_in_query_is_ignored(self):
+        self.assertEqual(self._first("en", "face with tears", 1), self._first("en", "face tears", 1))
+
+    def test_stop_word_being_typed_still_searches(self):
+        self.assertTrue(self.dicts["en"].search("a")[0])
+        self.assertIn(ord("🍎"), self.dicts["en"].search("red a")[0])
 
     def test_letter_outside_the_alphabet(self):
         d = self.dicts["en"]

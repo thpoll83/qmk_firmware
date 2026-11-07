@@ -28,22 +28,31 @@ dingbats, arrows and superscripts.
 
 The binary layout is in the module docstring. In short: a PlyF header with
 `flags = FLAG_DATA (0x0001)` and `font_count = 0`, then an `EmjD` header with the
-language index (`iso_lang_country.LANG_CODES`), the codepoint table, sorted word
-records (two u16 each), u16 postings and the folded word strings. Bit 15 of a
-posting marks a word from the emoji's name, which ranks above a keyword.
+language index (`iso_lang_country.LANG_CODES`), the alphabet, the codepoint table,
+sorted word records (two u16 each), u16 postings and the folded word strings. Bit
+15 of a posting marks a word from the emoji's name, which ranks above a keyword.
 
 Words are lowercase, with Latin, Greek and Cyrillic diacritics removed
 (`fold()`). The firmware must fold the typed query the same way.
+
+Words are stored one byte per letter in every script. The alphabet table lists the
+letters of the dictionary in codepoint order, and letter k is stored as byte k+1.
+The firmware maps each typed letter through that table before it searches. A
+letter outside the table becomes 0xFF and matches only through the typo pass.
+Russian uses 57 codes: 32 Cyrillic letters after folding plus the Latin letters
+of the English fallback text. `build` refuses a dictionary with more than 254
+letters, which rules out CJK.
 
 Measured sizes (128 KB slot):
 
 | lang | bytes | slot |
 |---|---|---|
-| en | 65 KB | 51% |
+| en | 66 KB | 51% |
 | de | 81 KB | 62% |
-| fr, fi, hu, pl | 69–80 KB | 53–62% |
-| el | 105 KB | 82% |
-| ru | 109 KB | 85% |
+| fr, fi, hu, pl | 69–81 KB | 53–62% |
+| el | 80 KB | 62% |
+| ru | 82 KB | 64% |
+| ta | 37 KB | 29% |
 
 `build` refuses a bundle larger than the slot, and a word table or posting list
 past the 16-bit record fields.

@@ -20,13 +20,24 @@ Bundle layout (little-endian, every block 4-byte aligned)::
     PlyF header, 32 B   magic "PlyF", abi 2, flags FLAG_DATA, content_version =
                         dictionary revision, font_count 0, font_table_off 32,
                         total_size, crc32 over everything after the header
-    dict header, 24 B   "EmjD", format u16, lang u16 (LANG_CODES index),
+    dict header, 32 B   "EmjD", format u16, lang u16 (LANG_CODES index),
                         cp_count u16, word_count u16, cps_off u32,
-                        words_off u32, strings_off u32  (offsets from bundle start)
+                        words_off u32, strings_off u32, alpha_count u16,
+                        reserved u16, alpha_off u32  (offsets from bundle start)
+    alphabet            u32[alpha_count]: the letter for byte code 1, 2, ...
     cps                 u32[cp_count]: the codepoints, in picker order
     words               u16[2 * (word_count + 1)]: per word {str_off, first posting}
     postings            u16[]: per word, the cps[] indices it names
-    strings             the words, folded (see fold()), NUL-terminated, sorted
+    strings             the words, folded (see fold()), one byte per letter,
+                        NUL-terminated, sorted
+
+Words are stored one byte per letter in every script. The alphabet lists the
+letters the dictionary uses, in codepoint order; letter k is stored as byte k+1,
+and 0 ends a word. Russian needs 33 codes plus the Latin letters of the English
+fallback text. The firmware maps each typed letter through the same table; a
+letter the table does not list becomes 0xFF, which no word contains, so it
+matches only through the typo pass. Byte order equals codepoint order, so the
+word table stays sorted for the binary search.
 
 A word record is two u16: the string offset (from strings_off) and the index of
 its first posting; word i's postings end where word i+1's begin (a sentinel
@@ -61,8 +72,10 @@ FLAG_DATA = 0x0001            # data-only bundle: no fonts, payload after the he
 
 DICT_MAGIC = b"EmjD"
 DICT_FORMAT = 1
-DICT_HEADER_FMT = "<4sHHHHIII"
-DICT_HEADER_SIZE = 24
+DICT_HEADER_FMT = "<4sHHHHIIIHHI"
+DICT_HEADER_SIZE = 32
+ALPHA_MAX = 254               # byte codes 1..254; 0 ends a word, 0xFF = not in the alphabet
+CODE_UNKNOWN = 0xFF
 
 POST_NAME_BIT = 0x8000
 POST_INDEX_MASK = 0x0FFF      # 4096 picker codepoints at most
@@ -205,12 +218,16 @@ def build(lang: str, revision: int) -> bytes:
             flag = POST_NAME_BIT if tok in name_toks else 0
             posts.setdefault(tok, {})[idx] = posts.get(tok, {}).get(idx, 0) | flag
 
-    words = sorted(posts, key=lambda w: w.encode("utf-8"))
+    alphabet = sorted({ch for w in posts for ch in w})
+    if len(alphabet) > ALPHA_MAX:
+        raise SystemExit(f"{lang}: {len(alphabet)} letters do not fit one byte per letter")
+    code = {ch: i + 1 for i, ch in enumerate(alphabet)}
+    words = sorted(posts)                  # codepoint order == byte-code order
     strings = bytearray()
     str_offs = []
     for w in words:
         str_offs.append(len(strings))
-        strings += w.encode("utf-8") + b"\0"
+        strings += bytes(code[ch] for ch in w) + b"\0"
     postings: list[int] = []
     post_starts = []
     for w in words:
@@ -226,6 +243,8 @@ def build(lang: str, revision: int) -> bytes:
                          "do not fit the 16-bit word record")
     lang_idx = iso_lang_country.LANG_CODES.index(lang)
     body = bytearray(DICT_HEADER_SIZE)
+    alpha_off = PLYF_HEADER_SIZE + len(body)
+    body += struct.pack(f"<{len(alphabet)}I", *(ord(ch) for ch in alphabet))
     cps_off = PLYF_HEADER_SIZE + len(body)
     body += struct.pack(f"<{len(cps)}I", *cps)
     _align4(body)
@@ -238,7 +257,8 @@ def build(lang: str, revision: int) -> bytes:
     body += strings
     _align4(body)
     body[:DICT_HEADER_SIZE] = struct.pack(DICT_HEADER_FMT, DICT_MAGIC, DICT_FORMAT, lang_idx,
-                                          len(cps), len(words), cps_off, words_off, strings_off)
+                                          len(cps), len(words), cps_off, words_off, strings_off,
+                                          len(alphabet), 0, alpha_off)
     total = PLYF_HEADER_SIZE + len(body)
     if total > SLOT_SIZE:
         raise SystemExit(f"{lang}: {total} B does not fit the {SLOT_SIZE} B emojidict slot")
@@ -267,15 +287,18 @@ class Dict:
             raise ValueError("not a data-only PlyF bundle")
         if total != len(blob) or zlib.crc32(blob[PLYF_HEADER_SIZE:]) & 0xFFFFFFFF != crc:
             raise ValueError("size or CRC mismatch")
-        (dm, fmt, self.lang_idx, ncp, nword, cps_off, words_off,
-         strings_off) = struct.unpack_from(DICT_HEADER_FMT, blob, PLYF_HEADER_SIZE)
+        (dm, fmt, self.lang_idx, ncp, nword, cps_off, words_off, strings_off,
+         nalpha, _res, alpha_off) = struct.unpack_from(DICT_HEADER_FMT, blob, PLYF_HEADER_SIZE)
         if dm != DICT_MAGIC or fmt != DICT_FORMAT:
             raise ValueError("not an EmjD dictionary")
         self.lang = iso_lang_country.LANG_CODES[self.lang_idx]
+        self.alphabet = [chr(c) for c in struct.unpack_from(f"<{nalpha}I", blob, alpha_off)]
+        self.code = {ch: i + 1 for i, ch in enumerate(self.alphabet)}
         self.cps = struct.unpack_from(f"<{ncp}I", blob, cps_off)
         recs = struct.unpack_from(f"<{2 * (nword + 1)}H", blob, words_off)
         post_off = words_off + 4 * (nword + 1)
-        self.sizes = {"header": PLYF_HEADER_SIZE + DICT_HEADER_SIZE, "cps": 4 * ncp,
+        self.sizes = {"header": PLYF_HEADER_SIZE + DICT_HEADER_SIZE, "alphabet": 4 * nalpha,
+                      "cps": 4 * ncp,
                       "words": 4 * (nword + 1), "postings": 2 * recs[-1],
                       "strings": len(blob) - strings_off, "total": len(blob)}
         self.words, self.posts = [], []
@@ -284,6 +307,13 @@ class Dict:
             end = blob.index(b"\0", strings_off + so)
             self.words.append(blob[strings_off + so:end])
             self.posts.append(struct.unpack_from(f"<{recs[2 * i + 3] - ps}H", blob, post_off + 2 * ps))
+
+    def encode(self, word: str) -> bytes:
+        """A folded query word in the dictionary's byte codes."""
+        return bytes(self.code.get(ch, CODE_UNKNOWN) for ch in word)
+
+    def decode(self, codes: bytes) -> str:
+        return "".join(self.alphabet[c - 1] for c in codes)
 
     def _lower_bound(self, key: bytes) -> int:
         lo, hi = 0, len(self.words)
@@ -318,7 +348,7 @@ class Dict:
         Rank: exact word in the name, exact keyword, prefix in the name, prefix
         keyword; picker order inside each rank. The firmware produces the same
         order in four passes over the postings with one 'already shown' bitmap."""
-        toks = [t.encode("utf-8") for t in tokens(query, self.lang)] or [fold(query).encode()]
+        toks = [self.encode(t) for t in tokens(query, self.lang) or [fold(query)]]
         typo = False
         per_tok = []
         for t in toks:
@@ -363,7 +393,7 @@ def _within_one(a: bytes, b: bytes) -> bool:
 def cmd_dump(args: argparse.Namespace) -> int:
     d = Dict(Path(args.file).read_bytes())
     print(f"lang {d.lang} (index {d.lang_idx}), revision {d.revision}, "
-          f"{len(d.cps)} codepoints, {len(d.words)} words")
+          f"{len(d.cps)} codepoints, {len(d.words)} words, {len(d.alphabet)} letters")
     for k, v in d.sizes.items():
         print(f"  {k:9} {v:7} B")
     print(f"  slot use {d.sizes['total'] * 100 / SLOT_SIZE:.0f}% of {SLOT_SIZE // 1024} KB")

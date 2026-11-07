@@ -69,6 +69,23 @@ class BundleTest(unittest.TestCase):
         for d in self.dicts.values():
             self.assertEqual(list(d.cps), picker)
 
+    def test_one_byte_per_letter(self):
+        d = self.dicts["de"]
+        self.assertEqual(d.alphabet, sorted(set(d.alphabet)))
+        self.assertLessEqual(len(d.alphabet), ed.ALPHA_MAX)
+        for w in d.words[:200]:
+            self.assertEqual(len(w), len(d.decode(w)))
+            self.assertEqual(d.encode(d.decode(w)), w)
+        # byte order of the coded words is the order the binary search relies on
+        self.assertEqual([d.decode(w) for w in d.words], sorted(d.decode(w) for w in d.words))
+
+    def test_letter_outside_the_alphabet(self):
+        d = self.dicts["en"]
+        self.assertEqual(d.encode("rαcket")[1], ed.CODE_UNKNOWN)
+        cps, typo = d.search("rαcket")
+        self.assertTrue(typo)
+        self.assertIn(ord("🚀"), cps)
+
     def test_corrupt_bundle_is_refused(self):
         blob = bytearray(self.blobs["en"])
         blob[100] ^= 1

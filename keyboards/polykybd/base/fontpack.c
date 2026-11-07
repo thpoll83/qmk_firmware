@@ -19,6 +19,7 @@
 
 #include "fontpack.h"
 #include "icon_lib.h"
+#include "emoji_dict.h"
 #include "polymod_crc32.h"
 #include <string.h>
 
@@ -273,6 +274,15 @@ bool fontpack_load(void) {
         // legend lookup next to ASCII (base/icon_lib.h).
         if (s_slots[i].id == FONTPACK_ICONS_BUNDLE_ID) {
             bool ok = iconlib_load_at(base, s_slots[i].size, &ver);
+            s_slot_present[i] = ok;
+            s_slot_ver[i]     = ver;
+            continue;
+        }
+#    endif
+#    ifdef FONTPACK_EMOJIDICT_BUNDLE_ID
+        // The emoji search dictionary: data, no fonts (base/emoji_dict.h).
+        if (s_slots[i].id == FONTPACK_EMOJIDICT_BUNDLE_ID) {
+            bool ok = emjdict_load_at(base, s_slots[i].size, &ver);
             s_slot_present[i] = ok;
             s_slot_ver[i]     = ver;
             continue;

@@ -2,16 +2,20 @@
 // Font-pack bundle flash layout (slots are relative to FW_RESOURCE_OFFSET).
 #pragma once
 
-#define FONTPACK_LAYOUT_VERSION 3u
+#define FONTPACK_LAYOUT_VERSION 4u
 #define FONTPACK_REGION_SIZE    0x200000UL
 #define FONTPACK_DIR_OFFSET     0x0UL
 #define FONTPACK_DIR_SIZE       0x1000UL
 #define FONTPACK_SECTOR_SIZE    0x1000UL
-#define FONTPACK_BUNDLE_COUNT   9u
+#define FONTPACK_BUNDLE_COUNT   10u
 
 // The PlyI overlay icon library (HID cmd 42): validated by its own loader,
 // never by the font loader.
 #define FONTPACK_ICONS_BUNDLE_ID 8u
+
+// The emoji search dictionary (emoji/emoji_dict.py): validated by its own
+// loader, never by the font loader.
+#define FONTPACK_EMOJIDICT_BUNDLE_ID 9u
 
 // X(id, index, slot_offset, slot_size)
 #define FONTPACK_BUNDLE_LIST \
@@ -20,8 +24,9 @@
     X(syllabic, 2, 0x31000UL, 0x18000UL) \
     X(asia, 3, 0x49000UL, 0x20000UL) \
     X(flags, 4, 0x69000UL, 0x20000UL) \
-    X(emoji, 5, 0x89000UL, 0x80000UL) \
+    X(emoji, 5, 0x89000UL, 0x60000UL) \
     X(fantasy, 6, 0x109000UL, 0x20000UL) \
     X(latinbig, 7, 0x129000UL, 0x57000UL) \
-    X(icons, 8, 0x180000UL, 0x80000UL)
+    X(icons, 8, 0x180000UL, 0x80000UL) \
+    X(emojidict, 9, 0xE9000UL, 0x20000UL)
 

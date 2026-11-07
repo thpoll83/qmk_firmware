@@ -125,7 +125,7 @@ index:
 # pack_extra symbol for the standalone flags); generate_fonts.py fails the build
 # if a bundle overflows its slot. Slot sizes are KB, multiples of 4 (sector).
 bundles:
-  layout_version: 3
+  layout_version: 4
   region_kb: 2048          # 2 MB fontpack window (FW_RESOURCE_OFFSET .. +2 MB)
   dir_sectors: 1           # 4 KB directory sector at the region base
   # NB: the `latin` category is resident: true (compiled into the firmware, the
@@ -143,7 +143,10 @@ bundles:
     # takes the tail, so emoji gets a fixed, generous slot (768 KB ≈ 3.4× its
     # current ~222 KB — ample headroom) and its slot_offset is unchanged, so a
     # deployed emoji.plyf stays valid and is NOT reshipped (content unchanged).
-    - {id: emoji,    slot_kb: 512,  categories: [emoji, emoji_fig]}
+    # Layout v4: the emoji slot is 384 KB (the bundle is ~220 KB) but still
+    # advances 512 KB, so no later slot moves; emojidict (id 9) uses the 128 KB
+    # between them.
+    - {id: emoji,    slot_kb: 384,  reserve_kb: 512, categories: [emoji, emoji_fig]}
     # "fantasy" glyph-script bundle (Tengwar + the 2026-07 expansion of 9 more
     # scripts; HID cmd 30). content_version bumped when the gscript fonts were
     # added. It used to be the trailing `rest` bundle; `latinbig` now takes the
@@ -166,6 +169,9 @@ bundles:
     # carries no fonts, so this build emits no .plyf for it: the entry only
     # reserves the slot and gives it bundle id 8 in the GET_ID version block.
     - {id: icons,    slot_kb: rest, kind: icons}
+    # Emoji search dictionary (emoji/EMOJI_SEARCH.md): a data-only PlyF the host
+    # builds with emoji/emoji_dict.py. Placed inside emoji's 512 KB reserve.
+    - {id: emojidict, slot_kb: 128, offset_kb: 932, kind: emojidict}
 
 # Each category -> one generated header, with defaults inherited by its fonts.
 categories:

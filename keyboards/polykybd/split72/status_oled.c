@@ -33,6 +33,8 @@ extern const GFXfont NotoSans_Regular_Nano_10px7b;
 #include "base/fontpack.h"
 #include "base/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
 #include "../poly_keymap.h"
+#include "../emoji/emoji_layer.h"
+#include "../layers.h"
 
 // Top-row role icons (usb_status_bitmap / link_status_bitmap) are shared with
 // split42 and live in oled_helper.c.
@@ -464,6 +466,36 @@ void oled_update_buffer(void) {
     const GFXfont* displayFont[] = { &NotoSans_Regular_Mid_19px7b };
     const GFXfont* smallFont[] = { &NotoSans_Regular_Small_15px7b };
     const GFXfont* tinyFont[]  = { &NotoSans_Regular_Nano_10px7b };   // language index only
+
+    // Emoji search mode: both halves show the query (with a cursor) and the result
+    // count. The query uses the keycap fonts so non-Latin letters draw; when it is
+    // wider than the panel its oldest letters scroll out on the left.
+    if (emj_search_active() && get_highest_layer(global_layer->layer) == _EMJ) {
+        kdisp_write_gfx_text(smallFont, 1, 0, 13, U"Emoji search");
+        uint32_t q[24];
+        uint8_t  n = emj_search_query(q, 22);
+        q[n++]     = U'_';
+        q[n]       = 0;
+        uint8_t first = 0;
+        for (; first + 1u < n; ++first) {
+            int8_t xmin, xmax, ymin, ymax;
+            kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, q + first, &xmin, &xmax, &ymin, &ymax);
+            if (xmax < 126) break;
+        }
+        kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 44, q + first);
+        if (n > 1) {
+            uint16_t t = emj_search_total();
+            uint8_t k  = 0;
+            char    num[8];
+            snprintf(num, sizeof(num), "%u", (unsigned)t);
+            for (const char* c = num; *c && k < 8; ++c) buffer[k++] = (uint32_t)*c;
+            const uint32_t* tail = (t == 1) ? U" result" : U" results";
+            while (*tail && k < 30) buffer[k++] = *tail++;
+            buffer[k] = 0;
+            kdisp_write_gfx_text(smallFont, 1, 0, 62, buffer);
+        }
+        return;
+    }
 
     // Each half's indicator column sits on its INNER edge, so on an assembled
     // keyboard the two columns face each other across the gap: the layout panel keeps

@@ -895,6 +895,10 @@ void sync_and_refresh_displays(void) {
 
         access_local_state()->emj_category = emj_active_category();
         access_local_state()->emj_page     = emj_active_page();
+        {
+            poly_sync_t *ls = access_local_state();
+            emj_search_export(&ls->emj_search[0], &ls->emj_search[1], &ls->emj_search[2], ls->emj_query);
+        }
         access_local_state()->lang_page    = lang_pack_state();
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
@@ -3918,7 +3922,7 @@ static void render_lang_region_tab(uint16_t keycode) {
 static void draw_mru_top_bar(uint16_t keycode) {
     bool is_mru = (keycode >= KC_EMJ_MRU_BASE  && keycode < KC_EMJ_MRU_BASE  + MRU_CAP) ||
                   (keycode >= KC_LANG_MRU_BASE && keycode < KC_LANG_MRU_BASE + MRU_CAP);
-    if (is_mru) kdisp_fill_rect(BUFFER_X, 0, SCREEN_WIDTH, 3);
+    if (is_mru && !emj_search_mru_is_function(keycode)) kdisp_fill_rect(BUFFER_X, 0, SCREEN_WIDTH, 3);
 }
 
 #if defined(POLY_FL_ALIGN_FROW)

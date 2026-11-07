@@ -1,7 +1,15 @@
 # Emoji search by keyword
 
-Status: the dictionary builder is done (`emoji_dict.py`) and the search-mode layout
-is agreed. Firmware and host are not started. This note records the agreed design and the remaining steps.
+Status: prototype on split72. The dictionary builder (`emoji_dict.py`), the
+firmware loader and search (`base/emoji_dict.c`, suite `polykybd_emoji_dict`), font-pack
+layout v4 with the `emojidict` slot, and the search mode on `_EMJ` are in place. Not
+done: the protocol version, the host's default bundle and language setting, split42's
+two-step search. Until the host ships the bundle, flash it by hand:
+
+```bash
+python3 keyboards/polykybd/emoji/emoji_dict.py build en -o en.plyd
+polyctl fontpack flash --file en.plyd --bundle-id 9
+```
 
 The user types a word on the emoji layer ("grin") and the result keys show the
 matching emoji. The keyword index is a data-only font-pack bundle, `emojidict`. The
@@ -114,23 +122,35 @@ free thumb keys. Search is two steps there: type the query, press Enter, and the
 letter keys show the results as the emoji slots do today, with the page keys for
 paging. The mode key or Backspace returns to typing.
 
+## Firmware (prototype)
+
+- Layout v4 (`fonts/fonts.yaml`): emoji is a 384 KB slot that still advances 512 KB
+  (`reserve_kb`), and `emojidict` (id 9, `kind: emojidict`) is placed at `0xE9000`
+  with `offset_kb`. No other slot moves; `compute_bundle_layout()` refuses an
+  overlap. `tools/tests/fontpack_layout_test.py` pins it.
+- `fontpack_load()` hands slot 9 to `emjdict_load_at()`, like the icon library: a
+  PlyF with `FLAG_DATA` and no fonts, or the wipe sentinel. COMMIT's slot-present
+  gate therefore works unchanged, and the slot's version is in the GET_ID `V` block
+  (10 entries now).
+- Search RAM: 864 B of scratch (candidate bitmap + 2-bit ranks) and about 300 B of
+  search state. The DOOM monolith links with 3968 B of headroom locally.
+- Search state is synced in `poly_sync_t` (`emj_query[16]`, `emj_search[4]`). The
+  slave runs the same search on its own dictionary copy, and its sync handler only
+  marks the letter map stale; the map is rebuilt from the main loop.
+- The letter keys type the legend `translate_keycode()` gives the base layer's key
+  at the same position, in the active language. A key types only when the
+  dictionary's fold table lists that letter.
+
 ## Remaining steps
 
 Firmware:
-- Slot table: split the 512 KB emoji slot into emoji `0x89000`, `0x60000`
-  (384 KB, the bundle is 220 KB) and `emojidict` id 9 at `0xE9000`, `0x20000`. This
-  changes `FONTPACK_LAYOUT_VERSION`. Check first that the table, `bundles.json` and
-  the loader accept a slot whose id is out of offset order.
-- Loader: accept a PlyF with `FLAG_DATA`. Check bounds and CRC, record the base
-  pointer, append no fonts. The header-only wipe sentinel keeps its meaning.
 - GET_ID: report the dictionary's language index and revision in a new block
   after `G`, never before `V`.
-- Search mode as above. Letters are appended to the query on the press edge and
-  never sent to the host. Hidden keys are blank and inert. The mode key is hidden
-  while no dictionary is loaded. The query length (16 letters proposed) is a limit
-  to agree with the maintainer first.
-- Split: send the slave the result indices in `poly_sync_t`, not the query, so both
-  halves show the same results when their bundles differ.
+- `PROTOCOL_VERSION` increase, once the host flashes the bundle itself.
+- split42: the two-step search and a mode key on a free thumb key.
+- The query length (16 characters) is a limit to agree with the maintainer.
+- The slave searches its own copy, so two halves with different dictionary versions
+  show different results. Syncing the result indices instead costs 48 B more.
 
 Host:
 - Ship `en.plyd` as the default `emojidict` bundle and build it in CI from

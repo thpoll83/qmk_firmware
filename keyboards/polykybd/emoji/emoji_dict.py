@@ -89,6 +89,8 @@ POST_NAME_BIT = 0x8000
 POST_INDEX_MASK = 0x0FFF      # 4096 picker codepoints at most
 
 SLOT_SIZE = 0x20000           # 128 KB emojidict slot
+QUERY_MAX = 16                # typed characters the firmware keeps (EMJDICT_QUERY_MAX)
+MAX_WORDS = 4                 # query words the firmware searches (EMJDICT_MAX_WORDS)
 
 STOPWORDS = {
     "en": {"a", "an", "and", "at", "for", "in", "of", "on", "or", "the", "to", "with"},
@@ -402,7 +404,7 @@ class Dict:
         order in four passes over the postings with one 'already shown' bitmap."""
         # Drop stop words, except the last word: the user is still typing it, and
         # "a" is how "apple" starts.
-        coded = [self.encode(w) for w in query.split()]
+        coded = [self.encode(w) for w in query[:QUERY_MAX].split()][:MAX_WORDS]
         toks = [t for t in coded[:-1] if t not in self.stops] + coded[-1:]
         typo = False
         per_tok = []
@@ -472,6 +474,29 @@ def cmd_query(args: argparse.Namespace) -> int:
     return 0
 
 
+# Queries the firmware suite (base/tests/emoji_dict_tests.cpp) compares against
+# this reference: prefixes, exact words, typos, AND, stop words, accents, case.
+VECTOR_QUERIES = {
+    "en": ["grin", "smil", "smiel", "heart", "red heart", "RED HEART", "face with tears",
+           "a", "red a", "rokcet", "cat", "tear", "thumbs", "café", "zzzz", "arrow",
+           "flag", "o", "  red   heart ", "rαcket", "face with with with tears",
+           "rocket heart"],
+    "de": ["lachen", "Lächeln", "LÄCHELN", "lacheln", "rotes herz", "herz mit pfeil",
+           "gesicht mit tränen", "Straße", "strasse", "katze", "star", "pfeil", "ö", "rakete herz"],
+}
+
+
+def cmd_vectors(args: argparse.Namespace) -> int:
+    """One line per query: query codepoints, typo flag, every result codepoint
+    (all hex, comma-separated). Read by the firmware suite."""
+    d = Dict(Path(args.file).read_bytes())
+    for q in args.query or VECTOR_QUERIES.get(d.lang, []):
+        cps, typo = d.search(q)
+        print(",".join(f"{ord(c):X}" for c in q), int(typo),
+              ",".join(f"{c:X}" for c in cps), sep="\t")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -493,6 +518,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("query", nargs="+")
     p.add_argument("--limit", type=int, default=24)
     p.set_defaults(fn=cmd_query)
+    p = sub.add_parser("vectors", help="reference results for the firmware suite")
+    p.add_argument("file")
+    p.add_argument("query", nargs="*")
+    p.set_defaults(fn=cmd_vectors)
     args = ap.parse_args(argv)
     return args.fn(args)
 

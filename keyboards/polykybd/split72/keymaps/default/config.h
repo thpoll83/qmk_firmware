@@ -11,6 +11,12 @@
 
 // Emoji picker: 38 slots/page (rows 2-4; the top row is the MRU, row 1 the tabs).
 #define EMJ_SLOTS_PER_PAGE 38
+// Emoji search mode (emoji/EMOJI_SEARCH.md). Result index of each category tab, by
+// category: the number row holds cats 0 1 2 4 5 6 | 7 8 9 10 3 11 left to right.
+#define EMJ_SEARCH_RESULT_OF_CAT { 0, 1, 2, 10, 3, 4, 5, 6, 7, 8, 9, 11 }
+// Recents row in search mode: both Space keys (recents 3 and 8) type a space and
+// Del (recents 4) clears the query; the other nine show the nine latest recents.
+#define EMJ_SEARCH_MRU_ROLES { 0, 1, 2, EMJ_SR_SPACE, EMJ_SR_CLEAR, 3, 4, 5, EMJ_SR_SPACE, 6, 7, 8 }
 // Language picker: 38 slots/page (rows 1-3 + thumbs; top row = region tabs +
 // unicode-mode keys, bottom row = MRU). Mirrors the emoji slot layout.
 #define LANG_SLOTS_PER_PAGE 38

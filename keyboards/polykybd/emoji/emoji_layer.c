@@ -9,8 +9,13 @@
 #include "base/disp_array.h"
 #include "base/fontpack.h"
 #include "lang/named_glyphs.h"
+#include "lang/lang_lut.h"
+#include "base/emoji_dict.h"
+#include "layers.h"
+#include "state.h"
 
 #include "quantum/unicode/unicode.h"
+#include <string.h>
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -247,6 +252,237 @@ static void emj_mru_preset(void) {
     mru_emoji_set_all(codes);
 }
 
+// ── Search mode ──────────────────────────────────────────────────────────────
+// State is master-authoritative and synced (emj_search_export/apply); the slave
+// runs the same search on its own dictionary copy. Results are computed lazily,
+// on the first draw or press after the query or page changed.
+
+static bool     s_search;                        // search mode chosen
+static uint16_t s_query[EMJDICT_QUERY_MAX];      // typed codepoints (BMP), spaces included
+static uint8_t  s_qlen;
+static uint8_t  s_rpage;                         // result page
+static uint32_t s_res[EMJ_SEARCH_PAGE];          // results on that page
+static uint16_t s_rtotal;
+static bool     s_res_dirty = true;
+
+static const uint8_t s_result_of_cat[] = EMJ_SEARCH_RESULT_OF_CAT;
+static const uint8_t s_mru_role[]      = EMJ_SEARCH_MRU_ROLES;
+_Static_assert(sizeof(s_mru_role) == MRU_CAP, "EMJ_SEARCH_MRU_ROLES needs one role per recents key");
+
+// The letter each emoji slot types in search mode: the base layer's key at the
+// slot's matrix position, in the active language. 0 = no letter (blank, inert).
+static uint32_t s_slot_letter[EMJ_SLOTS_PER_PAGE];
+// Rebuilt lazily from the main loop: the slave's sync handler runs on the split
+// protocol thread and only marks it stale.
+static bool     s_letters_dirty = true;
+
+_Static_assert(sizeof(((poly_sync_t *)0)->emj_query) == EMJDICT_QUERY_MAX * sizeof(uint16_t),
+               "poly_sync_t.emj_query must hold EMJDICT_QUERY_MAX codepoints");
+
+bool emj_search_active(void) { return s_search && emjdict_present(); }
+
+static void search_changed(void) {
+    s_res_dirty = true;
+    request_disp_refresh();
+}
+
+static void build_slot_letters(void) {
+    if (!s_letters_dirty) return;
+    s_letters_dirty = false;
+    memset(s_slot_letter, 0, sizeof(s_slot_letter));
+    const uint8_t base = (uint8_t)get_local_layer()->def_layer;
+    const uint8_t lang = get_local_state()->lang;
+    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            keypos_t pos = {.row = r, .col = c};
+            uint16_t kc  = keymap_key_to_keycode(_EMJ, pos);
+            if (kc < KC_EMJ_SLOT_BASE || kc >= KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) continue;
+            uint16_t        bkc = poly_mt_tap(keymap_key_to_keycode(base, pos));
+            const uint32_t *t   = translate_keycode(lang, bkc, false, false);
+            if (!t) continue;
+            while (*t && *t < 0x20u) ++t;   // skip the legend's position nudges
+            if (*t && *t <= 0xFFFFu && emjdict_maps_letter(*t)) s_slot_letter[kc - KC_EMJ_SLOT_BASE] = *t;
+        }
+    }
+}
+
+static void refresh_results(void) {
+    if (!s_res_dirty) return;
+    s_res_dirty = false;
+    memset(s_res, 0, sizeof(s_res));
+    s_rtotal = 0;
+    if (s_qlen == 0) return;
+    uint32_t q[EMJDICT_QUERY_MAX];
+    for (uint8_t i = 0; i < s_qlen; ++i) q[i] = s_query[i];
+    s_rtotal = emjdict_search(q, s_qlen, (uint16_t)s_rpage * EMJ_SEARCH_PAGE, s_res, EMJ_SEARCH_PAGE, NULL);
+    // A page past the end (the result count shrank): back to the first page.
+    if (s_rtotal > 0 && (uint16_t)s_rpage * EMJ_SEARCH_PAGE >= s_rtotal) {
+        s_rpage = 0;
+        s_rtotal = emjdict_search(q, s_qlen, 0, s_res, EMJ_SEARCH_PAGE, NULL);
+    }
+}
+
+static uint8_t result_pages(void) {
+    refresh_results();
+    uint16_t p = (uint16_t)((s_rtotal + EMJ_SEARCH_PAGE - 1) / EMJ_SEARCH_PAGE);
+    return (uint8_t)(p == 0 ? 1 : (p > 255 ? 255 : p));
+}
+
+uint16_t emj_search_total(void) {
+    refresh_results();
+    return s_rtotal;
+}
+
+uint8_t emj_search_query(uint32_t *out, uint8_t max) {
+    uint8_t n = s_qlen < max ? s_qlen : max;
+    for (uint8_t i = 0; i < n; ++i) out[i] = s_query[i];
+    return n;
+}
+
+static void query_append(uint32_t cp) {
+    if (s_qlen >= EMJDICT_QUERY_MAX) return;
+    if (cp == U' ' && (s_qlen == 0 || s_query[s_qlen - 1] == U' ')) return;
+    s_query[s_qlen++] = (uint16_t)cp;
+    s_rpage           = 0;
+    search_changed();
+}
+
+static uint16_t emj_find_code(uint32_t cp);   // below, with the MRU preset
+
+static void send_emoji(uint32_t cp) {
+    if (cp == 0) return;
+    register_unicode(cp);
+    uint16_t code = emj_find_code(cp);
+    if (code != MRU_EMOJI_EMPTY) mru_emoji_push(code);
+    request_disp_refresh();
+}
+
+static bool is_cat_key(uint16_t kc) { return kc >= KC_EMJ_CAT_BASE && kc < KC_EMJ_PAGE_PREV; }
+static bool is_mru_key(uint16_t kc) { return kc >= KC_EMJ_MRU_BASE && kc < KC_EMJ_MRU_BASE + MRU_CAP; }
+static bool is_slot_key(uint16_t kc) { return kc >= KC_EMJ_SLOT_BASE && kc < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE; }
+
+static uint32_t result_for_cat(uint8_t cat) {
+    if (cat >= sizeof(s_result_of_cat)) return 0;
+    refresh_results();
+    return s_res[s_result_of_cat[cat] % EMJ_SEARCH_PAGE];
+}
+
+static const uint32_t *search_display_text(uint16_t keycode) {
+    if (keycode == KC_EMJ_PAGE_PREV) return kdisp_page_key_legend(ICON_LEFT[0], s_rpage, result_pages());
+    if (keycode == KC_EMJ_S_NEXT) return kdisp_page_key_legend(ICON_RIGHT[0], s_rpage, result_pages());
+    if (keycode == KC_EMJ_PAGE_NEXT) return TECHNICAL_ERASELEFT;
+    if (keycode == KC_EMJ_S_ENTER) return ARROWS_RETURN;
+    if (is_cat_key(keycode)) {
+        uint32_t cp = result_for_cat((uint8_t)(keycode - KC_EMJ_CAT_BASE));
+        return cp ? make_slot_str(cp) : (const uint32_t *)U"";
+    }
+    if (is_mru_key(keycode)) {
+        uint8_t role = s_mru_role[keycode - KC_EMJ_MRU_BASE];
+        if (role == EMJ_SR_SPACE) return ICON_SPACE;
+        if (role == EMJ_SR_CLEAR) return TECHNICAL_ERASERIGHT;
+        uint32_t cp = (role < MRU_CAP) ? emj_decode(mru_emoji_get(role)) : 0;
+        return cp ? make_slot_str(cp) : (const uint32_t *)U"";
+    }
+    if (is_slot_key(keycode)) {
+        build_slot_letters();
+        uint32_t cp = s_slot_letter[keycode - KC_EMJ_SLOT_BASE];
+        if (cp == 0) return (const uint32_t *)U"";
+        s_disp_buf[0] = ' ';
+        s_disp_buf[1] = ' ';
+        s_disp_buf[2] = cp;
+        s_disp_buf[3] = 0;
+        return s_disp_buf;
+    }
+    return NULL;
+}
+
+static bool search_process(uint16_t keycode) {
+    if (keycode == KC_EMJ_PAGE_PREV) {
+        uint8_t pages = result_pages();
+        s_rpage       = (uint8_t)((s_rpage + pages - 1) % pages);
+        search_changed();
+        return true;
+    }
+    if (keycode == KC_EMJ_S_NEXT) {
+        uint8_t pages = result_pages();
+        s_rpage       = (uint8_t)((s_rpage + 1) % pages);
+        search_changed();
+        return true;
+    }
+    if (keycode == KC_EMJ_PAGE_NEXT) {   // Backspace
+        if (s_qlen > 0) {
+            --s_qlen;
+            s_rpage = 0;
+            search_changed();
+        }
+        return true;
+    }
+    if (keycode == KC_EMJ_S_ENTER) {
+        refresh_results();
+        send_emoji(s_res[0]);
+        return true;
+    }
+    if (is_cat_key(keycode)) {
+        send_emoji(result_for_cat((uint8_t)(keycode - KC_EMJ_CAT_BASE)));
+        return true;
+    }
+    if (is_mru_key(keycode)) {
+        uint8_t role = s_mru_role[keycode - KC_EMJ_MRU_BASE];
+        if (role == EMJ_SR_SPACE) {
+            query_append(U' ');
+        } else if (role == EMJ_SR_CLEAR) {
+            if (s_qlen > 0) {
+                s_qlen  = 0;
+                s_rpage = 0;
+                search_changed();
+            }
+        } else if (role < MRU_CAP) {
+            uint16_t code = mru_emoji_get(role);
+            uint32_t cp   = emj_decode(code);
+            if (cp != 0) {
+                register_unicode(cp);
+                mru_emoji_push(code);
+                request_disp_refresh();
+            }
+        }
+        return true;
+    }
+    if (is_slot_key(keycode)) {
+        build_slot_letters();
+        uint32_t cp = s_slot_letter[keycode - KC_EMJ_SLOT_BASE];
+        if (cp != 0) query_append(cp);
+        return true;
+    }
+    return false;
+}
+
+bool emj_search_mru_is_function(uint16_t keycode) {
+    if (!emj_search_active() || !is_mru_key(keycode)) return false;
+    return s_mru_role[keycode - KC_EMJ_MRU_BASE] >= MRU_CAP;
+}
+
+void emj_search_export(uint8_t *flags, uint8_t *page, uint8_t *qlen, uint16_t *query) {
+    *flags = s_search ? 1u : 0u;
+    *page  = s_rpage;
+    *qlen  = s_qlen;
+    memset(query, 0, EMJDICT_QUERY_MAX * sizeof(uint16_t));
+    memcpy(query, s_query, (size_t)s_qlen * sizeof(uint16_t));
+}
+
+void emj_search_apply(uint8_t flags, uint8_t page, uint8_t qlen, const uint16_t *query) {
+    if (qlen > EMJDICT_QUERY_MAX) qlen = EMJDICT_QUERY_MAX;
+    bool mode = (flags & 1u) != 0;
+    bool same = mode == s_search && page == s_rpage && qlen == s_qlen &&
+                memcmp(query, s_query, (size_t)qlen * sizeof(uint16_t)) == 0;
+    if (same) return;
+    if (mode && !s_search) s_letters_dirty = true;
+    s_search = mode;
+    s_rpage  = page;
+    s_qlen   = qlen;
+    memcpy(s_query, query, (size_t)qlen * sizeof(uint16_t));
+    search_changed();
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 uint8_t emj_page_count(uint8_t cat) {
@@ -260,6 +496,17 @@ void emj_init(void) {
 }
 
 const uint32_t *emj_display_text(uint16_t keycode) {
+    // ── Mode key: 🔍 in tab mode, the smileys tab icon in search mode ──
+    if (keycode == KC_EMJ_MODE) {
+        if (!emjdict_present()) return (const uint32_t *)U"";
+        return make_slot_str(s_search ? emj_tab_icons[0] : 0x1F50D);
+    }
+    if (emj_search_active()) {
+        const uint32_t *t = search_display_text(keycode);
+        if (t) return t;
+    } else if (keycode == KC_EMJ_S_NEXT || keycode == KC_EMJ_S_ENTER) {
+        return (const uint32_t *)U"";   // search-only keys: blank in tab mode
+    }
     // ── Page arrows with "page/pages" — always live because paging wraps ──
     if (keycode == KC_EMJ_PAGE_PREV) {
         return kdisp_page_key_legend(ICON_LEFT[0], s_page, page_count(s_category));
@@ -295,6 +542,20 @@ const uint32_t *emj_display_text(uint16_t keycode) {
 }
 
 bool emj_process_keycode(uint16_t keycode, bool pressed) {
+    if (keycode == KC_EMJ_MODE || keycode == KC_EMJ_S_NEXT || keycode == KC_EMJ_S_ENTER) {
+        if (!pressed) return true;
+        update_performed();
+        if (keycode == KC_EMJ_MODE) {
+            if (emjdict_present()) {
+                s_search = !s_search;
+                s_letters_dirty = true;   // the base layer or language may have changed
+                search_changed();
+            }
+            return true;
+        }
+        if (emj_search_active()) search_process(keycode);
+        return true;
+    }
     if (!pressed) {
         // Only act on key-down; still consume key-up for handled keycodes.
         if (keycode == KC_EMJ_PAGE_PREV || keycode == KC_EMJ_PAGE_NEXT) return true;
@@ -307,6 +568,8 @@ bool emj_process_keycode(uint16_t keycode, bool pressed) {
 
     // Reset idle timer on any emoji keydown so display stays on while typing emojis.
     update_performed();
+
+    if (emj_search_active() && search_process(keycode)) return true;
 
     // ── Category tab ──
     if (keycode >= KC_EMJ_CAT_BASE && keycode < KC_EMJ_PAGE_PREV) {
@@ -378,12 +641,14 @@ uint8_t emj_active_category(void) { return s_category; }
 uint8_t emj_active_page(void)     { return s_page; }
 
 void emj_draw_tab_indicator(uint16_t keycode) {
+    if (emj_search_active()) return;   // the tabs show results, none is "active"
     if (keycode < KC_EMJ_CAT_BASE || keycode >= KC_EMJ_PAGE_PREV) return;
     if ((uint8_t)(keycode - KC_EMJ_CAT_BASE) != s_category) return;
     kdisp_draw_tab_frame();
 }
 
 void emj_draw_tab_bottom(uint16_t keycode) {
+    if (emj_search_active()) return;
     if (keycode < KC_EMJ_CAT_BASE || keycode > KC_EMJ_PAGE_NEXT) return;
     if ((uint8_t)(keycode - KC_EMJ_CAT_BASE) == s_category) return;
     kdisp_draw_tab_underline();

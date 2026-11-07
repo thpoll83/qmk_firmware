@@ -874,4 +874,15 @@ _Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer.
   Re-enabling replays nothing. `bump-version.yml` has no `workflow_dispatch`, so a
   missed bump is a one-line `FW_VERSION` PR labelled `bump:none` (#367); dispatch
   `qmk-test.yml` for the HIL.
+- **It happened again on 2026-11-06** (no run after 23:23 UTC; the v1.10.2 release
+  published the next morning got no run). The fix since 2026-11-07: **"Automatic
+  Approve" (`auto_approve.yml`) and "Close stale issues and PRs" (`stale.yml`) are
+  disabled per workflow** in the Actions tab (API state `disabled_manually`). That
+  setting is stored by GitHub, not in the files, so an upstream merge does not undo it.
+  Don't re-enable them. GitHub does not document its rule, so this is not a guarantee.
+- ⚠️ **A "re-run failed jobs" requested while Actions are off stays `queued` with no
+  jobs, and cannot be cancelled** ("Cannot cancel a workflow re-run that has not yet
+  queued"). After re-enabling, it eventually runs, but don't wait on it: dispatch
+  `qmk-test.yml` with the tier you need (`tier: fwapply` for the release gate) on the
+  commit instead.
 

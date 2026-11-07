@@ -75,9 +75,17 @@ that cost real debugging to learn (2026-07):
       already live WITH assets, do not move it at all — cut the next patch version
       instead. (Nothing in the repo enforces this: there is no tag ruleset and no tag
       protection, so the force-push will simply succeed.)
-    A `workflow_dispatch` recovery is the wrong tool in either case: `workflow_dispatch`
-    carries no tag input here, so it builds the dispatch ref and leaves the tag pointing
-    at a tree that declares the previous version.
+    A `workflow_dispatch` from `PolyKybd` is the wrong tool in either case: it builds the
+    branch as a smoke test, and the tag still points at a tree that declares the previous
+    version.
+- **A published release that got NO `release.yml` run at all** (Actions were off when it
+  was published, so there is no run to re-run) gets its files from a dispatch whose ref
+  IS the tag: Actions → Release → Run workflow, "Use workflow from" = `PolyKybd-fw-vX.Y.Z`
+  (API: `actions/workflows/release.yml/dispatches` with `ref=<tag>`). The upload step
+  runs when `github.ref_type == 'tag'` and attaches to the existing release with
+  `--clobber`. It still passes the apply gate first. v1.10.2 got its four files this
+  way on 2026-11-07. Only do this when the tag already points at the commit that
+  declares the version.
 
 - ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being
   released** (`tools/require_fwapply_run.py`, an early step of `release.yml`,

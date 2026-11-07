@@ -92,8 +92,22 @@ jobs:
                       return pr
               return None
 
-          anchor = git("log", "--first-parent", "-1", "--format=%H",
-                       "-G", r"#define FW_VERSION", "--", path).strip()
+          def fw_version(rev):
+              """FW_VERSION in config.h at `rev`, or None if unreadable."""
+              res = subprocess.run(["git", "show", f"{rev}:{path}"],
+                                   capture_output=True, text=True)
+              m = re.search(r'#define FW_VERSION "([^"]+)"', res.stdout)
+              return m.group(1) if res.returncode == 0 and m else None
+
+          # The anchor is the newest first-parent commit whose FW_VERSION VALUE
+          # differs from its parent's. `git log -G` alone would also match a
+          # commit that only reformats the line or edits a comment on it.
+          anchor = ""
+          for sha in git("log", "--first-parent", "--format=%H", "--", path).split():
+              now, before = fw_version(sha), fw_version(f"{sha}^1")
+              if now is not None and before is not None and now != before:
+                  anchor = sha
+                  break
           if not anchor:
               sys.exit("No commit in the fetched history changed FW_VERSION, so "
                        "the PRs to count are unknown. Set the version by hand in a "

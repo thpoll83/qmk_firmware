@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   bump:
@@ -24,100 +25,138 @@ jobs:
           # bypass list. GITHUB_TOKEN cannot push to PolyKybd because the
           # ruleset requires changes go through a pull request (GH013).
           token: ${{ secrets.BUMP_PAT }}
+          # Enough history to reach the last commit that changed FW_VERSION.
+          fetch-depth: 200
 
-      - name: Determine bump type from PR labels
-        id: bump_type
-        # Label names reach the script through the ENVIRONMENT, never by being
-        # interpolated into its text. A GitHub label may contain a single
-        # quote, which in the old `LABELS='${{ ... }}'` form closed the shell
-        # string and let the rest of the name run as commands. Applying a label
-        # needs write access, which already allows more than this would buy, so
-        # this is defence in depth rather than a closed hole -- but the safe
-        # form costs nothing.
+      # GitHub keeps one running and ONE pending job per concurrency group: a
+      # third merge while a bump runs replaces the pending job, and that PR's
+      # increase was lost. So a run does not bump for its own PR alone. It
+      # applies the increase of EVERY PR merged into PolyKybd since the version
+      # last changed, in merge order. A dropped run is covered by the next one.
+      # Same fix as PolyKybdHost#718.
+      #
+      # The anchor is the newest first-parent commit that changed the
+      # FW_VERSION line: this workflow's own bump commit, or a hand-made
+      # version PR such as #367. Nothing below it is counted again. A PR that
+      # merges while this job runs makes the push below fail (the branch
+      # moved), and the next run counts it.
+      #
+      # `bump:none` is tested FIRST and wins over every other label. A PR
+      # carrying both it and a real bump label is contradictory, and the safe
+      # reading of a contradiction is "do not move the version". A change that
+      # cannot alter the firmware image should not move FW_VERSION: every bump
+      # commit widens the delta that keyboards/polykybd/tools/
+      # require_fwapply_run.py has to prove harmless before a release may
+      # publish.
+      - name: Bump version for every PR merged since the version last changed
+        id: bump
+        # Values reach the script through the environment, never by being
+        # pasted into its text (qmk_firmware#251, HIL-10 in
+        # polykybd-ctnd/docs/SECURITY_AUDIT.md).
         env:
-          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
-        run: |
-          # ⚠️ `bump:none` is tested FIRST and wins over every other label. A PR
-          # carrying both it and a real bump label is contradictory, and the
-          # safe reading of a contradiction is "do not move the version": a
-          # version that did not move can be bumped by the next merge, while one
-          # that moved when it should not have is already published history.
-          if echo "$LABELS" | grep -q '"bump:none"'; then
-            echo "type=none" >> "$GITHUB_OUTPUT"
-          elif echo "$LABELS" | grep -q '"bump:major"'; then
-            echo "type=major" >> "$GITHUB_OUTPUT"
-          elif echo "$LABELS" | grep -q '"bump:minor"'; then
-            echo "type=minor" >> "$GITHUB_OUTPUT"
-          elif echo "$LABELS" | grep -q '"bump:protocol"'; then
-            echo "type=protocol" >> "$GITHUB_OUTPUT"
-          else
-            echo "type=patch" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Bump version in config.h
-        # `bump:none` — a change that cannot alter the firmware image should not
-        # move FW_VERSION. It is not only cosmetic: every bump commit, and the
-        # merge commit beside it, widens the delta that
-        # keyboards/polykybd/tools/require_fwapply_run.py has to prove is
-        # harmless before a release may publish, so a docs-only merge otherwise
-        # costs the next release a fresh rig round-trip.
-        if: steps.bump_type.outputs.type != 'none'
-        # Same rule as above: the bump type is read from the environment rather
-        # than pasted into the Python source. It can only be one of four
-        # literals this workflow itself wrote, so nothing is exploitable here --
-        # but with this there is no `${{ }}` left inside any `run:` body, which
-        # makes the file safe by inspection instead of by tracing each value.
-        env:
-          BUMP_TYPE: ${{ steps.bump_type.outputs.type }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           python3 - <<'PYEOF'
+          import json
           import os
           import re
+          import subprocess
+          import sys
+          import time
 
+          repo = os.environ["REPO"]
           path = "keyboards/polykybd/config.h"
+
+          def git(*args):
+              return subprocess.run(["git", *args], check=True,
+                                    capture_output=True, text=True).stdout
+
+          def api(endpoint, attempts=3):
+              """GET through gh, retrying a transient failure with backoff."""
+              for i in range(attempts):
+                  res = subprocess.run(["gh", "api", endpoint],
+                                       capture_output=True, text=True)
+                  if res.returncode == 0:
+                      return json.loads(res.stdout)
+                  print(f"gh api {endpoint} failed (attempt {i + 1}/{attempts}): "
+                        f"{res.stderr.strip()}")
+                  if i + 1 < attempts:
+                      time.sleep(5 * 2 ** i)
+              sys.exit(f"gh api {endpoint} kept failing; re-run this job.")
+
+          def merged_pr(sha):
+              """The PR merged into PolyKybd that produced this commit, or None."""
+              for pr in api(f"repos/{repo}/commits/{sha}/pulls"):
+                  if pr.get("merged_at") and pr["base"]["ref"] == "PolyKybd":
+                      return pr
+              return None
+
+          anchor = git("log", "--first-parent", "-1", "--format=%H",
+                       "-G", r"#define FW_VERSION", "--", path).strip()
+          if not anchor:
+              sys.exit("No commit in the fetched history changed FW_VERSION, so "
+                       "the PRs to count are unknown. Set the version by hand in a "
+                       "PR labelled bump:none, then re-run this job.")
+          shas = git("rev-list", "--first-parent", f"{anchor}..HEAD").split()
+
+          pending, seen = [], set()
+          for sha in shas:
+              pr = merged_pr(sha)
+              if pr is not None and pr["number"] not in seen:
+                  seen.add(pr["number"])
+                  pending.append(pr)
+          pending.reverse()  # merge order
+          print(f"Anchor {anchor[:10]}; {len(pending)} merged PR(s) since.")
+
           with open(path) as f:
               content = f.read()
-
           m = re.search(r'#define FW_VERSION "(\d+)\.(\d+)\.(\d+)"', content)
           major, minor, patch = int(m.group(1)), int(m.group(2)), int(m.group(3))
-
           m_proto = re.search(r'#define PROTOCOL_VERSION (\d+)', content)
           proto = int(m_proto.group(1)) if m_proto else 1
 
-          bump = os.environ["BUMP_TYPE"]
-          if bump == "major":
-              major += 1; minor = 0; patch = 0
-          elif bump == "minor":
-              minor += 1; patch = 0
-          elif bump == "protocol":
-              proto += 1
-          else:
-              patch += 1
+          applied = []
+          for pr in pending:
+              labels = {lab["name"] for lab in pr.get("labels", [])}
+              if "bump:none" in labels:
+                  kind = "none"
+              elif "bump:major" in labels:
+                  major += 1; minor = 0; patch = 0; kind = "major"
+              elif "bump:minor" in labels:
+                  minor += 1; patch = 0; kind = "minor"
+              elif "bump:protocol" in labels:
+                  proto += 1; kind = "protocol"
+              else:
+                  patch += 1; kind = "patch"
+              applied.append(f"#{pr['number']} ({kind})")
+              print(f"#{pr['number']}: {kind} -> {major}.{minor}.{patch} (protocol {proto})")
 
-          content = re.sub(
-              r'#define FW_VERSION "\d+\.\d+\.\d+"',
-              f'#define FW_VERSION "{major}.{minor}.{patch}"',
-              content
-          )
+          content = re.sub(r'#define FW_VERSION "\d+\.\d+\.\d+"',
+                           f'#define FW_VERSION "{major}.{minor}.{patch}"', content)
           if m_proto:
-              content = re.sub(
-                  r'#define PROTOCOL_VERSION \d+',
-                  f'#define PROTOCOL_VERSION {proto}',
-                  content
-              )
-
+              content = re.sub(r'#define PROTOCOL_VERSION \d+',
+                               f'#define PROTOCOL_VERSION {proto}', content)
           with open(path, "w") as f:
               f.write(content)
 
-          print(f"Firmware bumped to {major}.{minor}.{patch} (protocol {proto})")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"prs={', '.join(applied) or 'none'}\n")
+          print(f"Firmware at {major}.{minor}.{patch} (protocol {proto})")
           PYEOF
 
       - name: Commit and push
-        if: steps.bump_type.outputs.type != 'none'
+        env:
+          BUMPED_PRS: ${{ steps.bump.outputs.prs }}
         run: |
           VERSION=$(sed -n 's/^#define FW_VERSION "\([^"]*\)".*/\1/p' keyboards/polykybd/config.h)
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add keyboards/polykybd/config.h
-          git diff --cached --quiet || git commit -m "chore: bump firmware version to ${VERSION} [skip ci]"
+          if git diff --cached --quiet; then
+            echo "Nothing to bump."
+            exit 0
+          fi
+          git commit -m "chore: bump firmware version to ${VERSION} [skip ci]" \
+                     -m "For ${BUMPED_PRS}."
           git push

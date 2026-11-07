@@ -99,6 +99,12 @@ class BundleTest(unittest.TestCase):
         for q in ("lächeln", "LÄCHELN", "lacheln", "läçhèln"):
             self.assertIn(ord("😊"), d.search(q)[0], q)
 
+    def test_german_finds_common_english_words(self):
+        for q, want in (("smile", "😀"), ("happy", "😀"), ("love", "😍"), ("cat", "😸")):
+            self.assertIn(ord(want), self.dicts["de"].search(q)[0], q)
+        # The language's own name words still rank first.
+        self.assertEqual(self._first("de", "katze", 1), ["😸"])
+
     def test_stop_word_in_query_is_ignored(self):
         self.assertEqual(self._first("en", "face with tears", 1), self._first("en", "face tears", 1))
 

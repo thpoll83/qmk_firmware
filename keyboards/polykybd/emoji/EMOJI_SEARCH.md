@@ -34,6 +34,12 @@ after duplicates are removed) are indexed. A localized dictionary uses the Engli
 text for codepoints its CLDR file does not cover. German lacks 865 of them, mostly
 dingbats, arrows and superscripts.
 
+A localized dictionary also indexes English words, so a German speaker can type
+"smile": every English name word, and every English keyword that names at least 3
+emoji (`EN_KEYWORD_MIN_EMOJI`: "smile", "happy", "love", not one-off words). They
+have no name bit, so the language's own name words rank above them. All English
+keywords would not fit: Russian was 133.5 KB.
+
 The binary layout is in the module docstring. In short: a PlyF header with
 `flags = FLAG_DATA (0x0001)` and `font_count = 0`, then an `EmjD` header with the
 language index (`iso_lang_country.LANG_CODES`), the alphabet, the fold table, the
@@ -61,11 +67,10 @@ Measured sizes (128 KB slot):
 | lang | bytes | slot |
 |---|---|---|
 | en | 67 KB | 52% |
-| de | 82 KB | 64% |
-| fr, pl | 74–82 KB | 58–64% |
-| el | 81 KB | 63% |
-| ru | 84 KB | 65% |
-| ta | 39 KB | 30% |
+| de | 104 KB | 81% |
+| pl | 105 KB | 82% |
+| el | 106 KB | 82% |
+| ru | 109 KB | 85% |
 
 `build` refuses a bundle larger than the slot, and a word table or posting list
 past the 16-bit record fields.

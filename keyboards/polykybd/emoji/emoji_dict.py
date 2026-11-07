@@ -13,7 +13,9 @@ without a firmware change. The firmware lookup mirrors `Dict.search()` below.
 
 Only codepoints of the emoji picker (emoji_data.h) are indexed, since a search
 result must be a key the picker can send. A localized dictionary uses the English
-text for every codepoint its CLDR file does not cover (dingbats, superscripts).
+text for every codepoint its CLDR file does not cover (dingbats, superscripts), and
+also indexes every codepoint's English words as keywords, so "smile" works in a
+German dictionary; the language's own name words still rank first.
 
 Bundle layout (little-endian, every block 4-byte aligned)::
 
@@ -89,6 +91,10 @@ POST_NAME_BIT = 0x8000
 POST_INDEX_MASK = 0x0FFF      # 4096 picker codepoints at most
 
 SLOT_SIZE = 0x20000           # 128 KB emojidict slot
+# A localized dictionary indexes every English name word, and the English
+# keywords that name at least this many emoji ("smile", "happy", "love"); the
+# rarer keywords would not fit the slot for every language.
+EN_KEYWORD_MIN_EMOJI = 3
 QUERY_MAX = 16                # typed characters the firmware keeps (EMJDICT_QUERY_MAX)
 MAX_WORDS = 4                 # query words the firmware searches (EMJDICT_MAX_WORDS)
 
@@ -242,11 +248,28 @@ def build(lang: str, revision: int) -> bytes:
         raise SystemExit(f"{len(cps)} codepoints do not fit the 12-bit posting index")
 
     posts: dict[str, dict[int, int]] = {}
+
+    def add(tok: str, idx: int, flag: int) -> None:
+        posts.setdefault(tok, {})[idx] = posts.get(tok, {}).get(idx, 0) | flag
+
     for idx, (_cp, name, kws) in enumerate(entries):
         name_toks = set(tokens(name, lang))
         for tok in name_toks | {t for k in kws for t in tokens(k, lang)}:
-            flag = POST_NAME_BIT if tok in name_toks else 0
-            posts.setdefault(tok, {})[idx] = posts.get(tok, {}).get(idx, 0) | flag
+            add(tok, idx, POST_NAME_BIT if tok in name_toks else 0)
+    if lang != "en":
+        # The English words too, as keywords: a German speaker may type "smile".
+        # Without the name bit, so the language's own name words rank above them.
+        en = _read_tsv(SRC_DIR / "en.tsv")
+        kw_count: dict[str, int] = {}
+        for _n, kws in en.values():
+            for tok in {t for k in kws for t in tokens(k, "en")}:
+                kw_count[tok] = kw_count.get(tok, 0) + 1
+        for idx, (cp, _name, _kws) in enumerate(entries):
+            en_name, en_kws = en.get(cp, ("", []))
+            common = {t for k in en_kws for t in tokens(k, "en")
+                      if kw_count[t] >= EN_KEYWORD_MIN_EMOJI}
+            for tok in set(tokens(en_name, "en")) | common:
+                add(tok, idx, 0)
 
     alphabet = sorted({ch for w in posts for ch in w})
     if len(alphabet) > ALPHA_MAX:
@@ -482,7 +505,8 @@ VECTOR_QUERIES = {
            "flag", "o", "  red   heart ", "rαcket", "face with with with tears",
            "rocket heart"],
     "de": ["lachen", "Lächeln", "LÄCHELN", "lacheln", "rotes herz", "herz mit pfeil",
-           "gesicht mit tränen", "Straße", "strasse", "katze", "star", "pfeil", "ö", "rakete herz"],
+           "gesicht mit tränen", "Straße", "strasse", "katze", "star", "pfeil", "ö", "rakete herz",
+           "smile", "happy", "red heart", "cat"],
 }
 
 

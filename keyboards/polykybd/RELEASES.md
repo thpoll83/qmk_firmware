@@ -80,7 +80,8 @@ that cost real debugging to learn (2026-07):
     version.
 - **A published release that got NO `release.yml` run at all** (Actions were off when it
   was published, so there is no run to re-run) gets its files from a dispatch whose ref
-  IS the tag: Actions → Release → Run workflow, "Use workflow from" = `PolyKybd-fw-vX.Y.Z`
+  IS the tag, once Actions run again ([`CI_CHECKS.md`](CI_CHECKS.md#when-github-switches-actions-off-for-the-fork)
+  → *When GitHub switches Actions off for the fork*): Actions → Release → Run workflow, "Use workflow from" = `PolyKybd-fw-vX.Y.Z`
   (API: `actions/workflows/release.yml/dispatches` with `ref=<tag>`). The upload step
   runs when `github.ref_type == 'tag'` and attaches to the existing release with
   `--clobber`. It still passes the apply gate first. v1.10.2 got its four files this

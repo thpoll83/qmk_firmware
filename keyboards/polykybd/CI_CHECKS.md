@@ -884,5 +884,7 @@ _Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer.
   jobs, and cannot be cancelled** ("Cannot cancel a workflow re-run that has not yet
   queued"). After re-enabling, it eventually runs, but don't wait on it: dispatch
   `qmk-test.yml` with the tier you need (`tier: fwapply` for the release gate) on the
-  commit instead.
+  commit instead. A dispatch builds the branch head, not the PR merged into its base,
+  and does not report on the PR. So it covers a commit on `PolyKybd` (the release
+  gate), but a PR still needs its own `pull_request` run: push to the PR.
 

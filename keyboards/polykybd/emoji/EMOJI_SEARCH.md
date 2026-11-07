@@ -1,7 +1,7 @@
 # Emoji search by keyword
 
-Status: the dictionary builder is done (`emoji_dict.py`). Firmware and host are not
-started. This note records the agreed design and the remaining steps.
+Status: the dictionary builder is done (`emoji_dict.py`) and the search-mode layout
+is agreed. Firmware and host are not started. This note records the agreed design and the remaining steps.
 
 The user types a word on the emoji layer ("grin") and the result keys show the
 matching emoji. The keyword index is a data-only font-pack bundle, `emojidict`. The
@@ -80,6 +80,40 @@ past the 16-bit record fields.
    passes over the postings with one 2122-bit "already shown" bitmap (266 B), so a
    result page needs no sorted result list in RAM.
 
+## Search mode on the emoji layer
+
+A mode key switches `_EMJ` between tab mode (the category tabs and emoji slots of
+today) and search mode. The keys keep their base-layer positions, so typing a query
+feels like normal typing.
+
+split72, search mode:
+
+| position | tab mode | search mode |
+|---|---|---|
+| Tab (`KC_NO` today) | mode key | mode key |
+| letter keys | emoji slots | letters of the active language layout; other keys there blank and inert |
+| top row, 12 number keys | category tabs | results 1–12, best match first |
+| Esc | previous page | previous result page |
+| Backspace | next page | delete the last letter |
+| `\` (`KC_NO` today) | – | next result page |
+| Ret, right half (`KC_NO` today) | – | send the first result |
+| both Space keys | recents | space between query words |
+| Del | recent | clear the query |
+| rest of the bottom row | recents | recents 1–9, most recent first |
+
+The recents shrink from 12 to 9 in search mode, since Space, Space and Del take
+three of their keys; the 9 remaining keys show the 9 most recent emoji in order.
+Tab mode keeps all 12. The query shows on the status OLED. A result key sends the
+emoji and pushes it to the recents, as an emoji slot does. Switching modes keeps
+the query. The layer opens in the mode it was last in, kept in RAM until power-off.
+The base key still leaves the layer.
+
+split42 has no free Tab key (category tab 0 is there) and no room for a results
+row while typing: 36 letter keys and 6 thumbs. The mode key goes on one of the two
+free thumb keys. Search is two steps there: type the query, press Enter, and the
+letter keys show the results as the emoji slots do today, with the page keys for
+paging. The mode key or Backspace returns to typing.
+
 ## Remaining steps
 
 Firmware:
@@ -91,11 +125,10 @@ Firmware:
   pointer, append no fonts. The header-only wipe sentinel keeps its meaning.
 - GET_ID: report the dictionary's language index and revision in a new block
   after `G`, never before `V`.
-- Search mode on `_EMJ`: a search key, letters from the active layout appended to
-  the query on the press edge and never sent to the host, results on the 12
-  category-tab and 12 MRU keys, the query on the status OLED, Backspace, Enter
-  (first result) and Esc. The result count and the query length are limits to
-  agree with the maintainer first.
+- Search mode as above. Letters are appended to the query on the press edge and
+  never sent to the host. Hidden keys are blank and inert. The mode key is hidden
+  while no dictionary is loaded. The query length (16 letters proposed) is a limit
+  to agree with the maintainer first.
 - Split: send the slave the result indices in `poly_sync_t`, not the query, so both
   halves show the same results when their bundles differ.
 

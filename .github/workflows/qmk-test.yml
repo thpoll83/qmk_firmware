@@ -141,7 +141,7 @@ jobs:
       split72_hil_right: ${{ steps.names.outputs.split72_hil_right }}
       split42: ${{ steps.names.outputs.split42 }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -192,7 +192,7 @@ jobs:
           echo "split72_hil_right=$(ls polykybd_split72_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
           echo "split42=$(ls polykybd_split42_default*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: firmware
           path: |
@@ -218,7 +218,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -349,7 +349,7 @@ jobs:
             echo "WARNING: could not sync $dir to origin/main — running the installed station as-is" >&2
           fi
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: firmware
           path: ${{ steps.ctnd.outputs.dir }}/firmware
@@ -419,7 +419,7 @@ jobs:
       # lets consumers find the latest diagnostics programmatically.
       - name: Post diagnostics as PR comment
         if: failure() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
@@ -469,7 +469,7 @@ jobs:
       hil_left: ${{ steps.names.outputs.hil_left }}
       hil_right: ${{ steps.names.outputs.hil_right }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -493,7 +493,7 @@ jobs:
           echo "hil_left=$(ls polykybd_split72_perf_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
           echo "hil_right=$(ls polykybd_split72_perf_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: firmware-perf
           path: "*_perf_hil_*.uf2"
@@ -549,7 +549,7 @@ jobs:
             && echo "station synced to $(git -C "$dir" rev-parse --short HEAD)" \
             || echo "WARNING: could not sync $dir to origin/main" >&2
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: firmware-perf
           path: ${{ steps.ctnd.outputs.dir }}/firmware
@@ -571,7 +571,7 @@ jobs:
       # (an auto-updating baseline ratchets a slow regression in silently).
       - name: Upload perf report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: perf-report
           path: |
@@ -582,7 +582,7 @@ jobs:
 
       - name: Post perf report as PR comment
         if: always() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
@@ -637,7 +637,7 @@ jobs:
       hil_right: ${{ steps.names.outputs.hil_right }}
       plyx: ${{ steps.names.outputs.plyx }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -698,7 +698,7 @@ jobs:
           echo "hil_right=$(ls polykybd_split72_doom_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
           echo "plyx=$(ls doom_pack_signed_v*.plyx 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: firmware-doom
           path: |
@@ -736,7 +736,7 @@ jobs:
       hil_right: ${{ steps.names.outputs.hil_right }}
       apply_bin: ${{ steps.names.outputs.apply_bin }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -805,7 +805,7 @@ jobs:
           echo "hil_right=$(ls polykybd_split72_fwapply_*_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
           echo "apply_bin=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_left.bin" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: firmware-fwapply
           path: |
@@ -863,7 +863,7 @@ jobs:
             && echo "station synced to $(git -C "$dir" rev-parse --short HEAD)" \
             || echo "WARNING: could not sync $dir to origin/main" >&2
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: firmware-doom
           path: ${{ steps.ctnd.outputs.dir }}/firmware
@@ -928,7 +928,7 @@ jobs:
     steps:
       # The probe lives in THIS repo, so unlike the other rig jobs this one needs
       # the sources, not just the built artifact.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Locate station directory
         id: ctnd
@@ -963,7 +963,7 @@ jobs:
             && echo "station synced to $(git -C "$dir" rev-parse --short HEAD)" \
             || echo "WARNING: could not sync $dir to origin/main" >&2
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: firmware
           path: ${{ steps.ctnd.outputs.dir }}/firmware
@@ -1037,7 +1037,7 @@ jobs:
             && echo "station synced to $(git -C "$dir" rev-parse --short HEAD)" \
             || echo "WARNING: could not sync $dir to origin/main" >&2
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: firmware-fwapply
           path: ${{ steps.ctnd.outputs.dir }}/firmware

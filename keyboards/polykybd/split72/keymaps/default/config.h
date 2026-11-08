@@ -14,6 +14,8 @@
 // Emoji search mode (emoji/EMOJI_SEARCH.md). Result index of each category tab, by
 // category: the number row holds cats 0 1 2 4 5 6 | 7 8 9 10 3 11 left to right.
 #define EMJ_SEARCH_RESULT_OF_CAT { 0, 1, 2, 10, 3, 4, 5, 6, 7, 8, 9, 11 }
+// Space in search mode: the two innermost thumb keys (recents 5 and 6).
+#define EMJ_SEARCH_SPACE_MRU { 5, 6 }
 // Language picker: 38 slots/page (rows 1-3 + thumbs; top row = region tabs +
 // unicode-mode keys, bottom row = MRU). Mirrors the emoji slot layout.
 #define LANG_SLOTS_PER_PAGE 38

@@ -267,10 +267,13 @@ static bool     s_res_dirty = true;
 
 static const uint8_t s_result_of_cat[] = EMJ_SEARCH_RESULT_OF_CAT;
 
-// In search mode a key takes its role from the base layout's key at the same
-// matrix position, so Space, Backspace and the arrows are where that layout has
-// them (Qwerty's Backspace is top right, the other layouts' on the right thumb).
+// Search-mode roles. The page keys (top left, top right) always page. Space is
+// on the two innermost thumb keys (EMJ_SEARCH_SPACE_MRU). Backspace depends on
+// the base layout: where it has Backspace in a top corner (Qwerty), Backspace
+// moves one row down to KC_EMJ_S_BKSP; otherwise the base layout's Space keys
+// become Backspace.
 enum { ROLE_NONE = 0, ROLE_SPACE, ROLE_BKSP, ROLE_PREV, ROLE_NEXT };
+static const uint8_t s_space_mru[] = EMJ_SEARCH_SPACE_MRU;
 
 // The letter each emoji slot types in search mode: the base layer's key at the
 // slot's matrix position, in the active language. 0 = no letter (blank, inert).
@@ -279,9 +282,8 @@ static uint32_t s_slot_letter[EMJ_SLOTS_PER_PAGE];
 // the remaining keys show the latest recents without gaps).
 static uint8_t  s_mru_role[MRU_CAP];
 static uint8_t  s_mru_recent[MRU_CAP];
-// Roles of the two page keys and the recents Clear key (ROLE_NONE = keep paging
-// for the page keys, inert for Clear).
-static uint8_t  s_pprev_role, s_pnext_role, s_eclear_role;
+// KC_EMJ_S_BKSP is Backspace (the base layout has Backspace in a top corner).
+static bool     s_bksp_below;
 // Rebuilt lazily from the main loop: the slave's sync handler runs on the split
 // protocol thread and only marks it stale.
 static bool     s_letters_dirty = true;
@@ -296,38 +298,24 @@ static void search_changed(void) {
     request_disp_refresh();
 }
 
-static uint8_t role_of_base(uint16_t bkc) {
-    switch (bkc) {
-        case KC_SPACE:     return ROLE_SPACE;
-        case KC_BACKSPACE: return ROLE_BKSP;
-        case KC_LEFT:      return ROLE_PREV;
-        case KC_RIGHT:     return ROLE_NEXT;
-        default:           return ROLE_NONE;
-    }
-}
-
 static void build_slot_letters(void) {
     if (!s_letters_dirty) return;
     s_letters_dirty = false;
     memset(s_slot_letter, 0, sizeof(s_slot_letter));
     memset(s_mru_role, ROLE_NONE, sizeof(s_mru_role));
-    s_pprev_role = s_pnext_role = s_eclear_role = ROLE_NONE;
+    bool base_space[MRU_CAP] = {false};   // recents keys over a base-layout Space
+    s_bksp_below = false;
     const uint8_t base = (uint8_t)get_local_layer()->def_layer;
     const uint8_t lang = get_local_state()->lang;
     for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
-            keypos_t pos  = {.row = r, .col = c};
-            uint16_t kc   = keymap_key_to_keycode(_EMJ, pos);
-            uint16_t bkc  = poly_mt_tap(keymap_key_to_keycode(base, pos));
-            uint8_t  role = role_of_base(bkc);
+            keypos_t pos = {.row = r, .col = c};
+            uint16_t kc  = keymap_key_to_keycode(_EMJ, pos);
+            uint16_t bkc = poly_mt_tap(keymap_key_to_keycode(base, pos));
             if (kc >= KC_EMJ_MRU_BASE && kc < KC_EMJ_MRU_BASE + MRU_CAP) {
-                s_mru_role[kc - KC_EMJ_MRU_BASE] = role;
-            } else if (kc == KC_EMJ_PAGE_PREV) {
-                s_pprev_role = role;
-            } else if (kc == KC_EMJ_PAGE_NEXT) {
-                s_pnext_role = role;
-            } else if (kc == KC_EMJ_CLEAR) {
-                s_eclear_role = role;
+                base_space[kc - KC_EMJ_MRU_BASE] = (bkc == KC_SPACE);
+            } else if (kc == KC_EMJ_PAGE_PREV || kc == KC_EMJ_PAGE_NEXT) {
+                if (bkc == KC_BACKSPACE) s_bksp_below = true;
             } else if (kc >= KC_EMJ_SLOT_BASE && kc < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) {
                 const uint32_t *t = translate_keycode(lang, bkc, false, false);
                 if (!t) continue;
@@ -336,11 +324,16 @@ static void build_slot_letters(void) {
             }
         }
     }
+    for (uint8_t i = 0; i < sizeof(s_space_mru); ++i) {
+        if (s_space_mru[i] < MRU_CAP) s_mru_role[s_space_mru[i]] = ROLE_SPACE;
+    }
+    if (!s_bksp_below) {
+        for (uint8_t i = 0; i < MRU_CAP; ++i) {
+            if (base_space[i] && s_mru_role[i] == ROLE_NONE) s_mru_role[i] = ROLE_BKSP;
+        }
+    }
     uint8_t next = 0;
     for (uint8_t i = 0; i < MRU_CAP; ++i) s_mru_recent[i] = (s_mru_role[i] == ROLE_NONE) ? next++ : 0xFFu;
-    // The page keys page unless the base layout put an editing key there.
-    if (s_pprev_role == ROLE_NONE) s_pprev_role = ROLE_PREV;
-    if (s_pnext_role == ROLE_NONE) s_pnext_role = ROLE_NEXT;
 }
 
 // Role of an emoji-layer key in search mode (ROLE_NONE for letters, results, and
@@ -348,9 +341,9 @@ static void build_slot_letters(void) {
 static uint8_t search_role(uint16_t kc) {
     build_slot_letters();
     if (kc >= KC_EMJ_MRU_BASE && kc < KC_EMJ_MRU_BASE + MRU_CAP) return s_mru_role[kc - KC_EMJ_MRU_BASE];
-    if (kc == KC_EMJ_PAGE_PREV) return s_pprev_role;
-    if (kc == KC_EMJ_PAGE_NEXT) return s_pnext_role;
-    if (kc == KC_EMJ_CLEAR) return s_eclear_role;
+    if (kc == KC_EMJ_PAGE_PREV) return ROLE_PREV;
+    if (kc == KC_EMJ_PAGE_NEXT) return ROLE_NEXT;
+    if (kc == KC_EMJ_S_BKSP) return s_bksp_below ? ROLE_BKSP : ROLE_NONE;
     return ROLE_NONE;
 }
 
@@ -431,7 +424,7 @@ static const uint32_t *search_display_text(uint16_t keycode) {
         case ROLE_NEXT:  return kdisp_page_key_legend(ICON_RIGHT[0], s_rpage, result_pages());
         default:         break;
     }
-    if (keycode == KC_EMJ_CLEAR) return NULL;   // no role here: the recents Clear key as usual
+    if (keycode == KC_EMJ_S_BKSP) return (const uint32_t *)U"";   // not this layout's Backspace
     if (is_cat_key(keycode)) {
         uint32_t cp = result_for_cat((uint8_t)(keycode - KC_EMJ_CAT_BASE));
         return cp ? make_slot_str(cp) : (const uint32_t *)U"";
@@ -508,7 +501,8 @@ static bool search_process(uint16_t keycode) {
         if (cp != 0) query_append(cp);
         return true;
     }
-    return false;   // the recents Clear key without a role: handled as in tab mode
+    if (keycode == KC_EMJ_S_BKSP) return true;   // blank and inert on this layout
+    return false;
 }
 
 void emj_search_on_layer_exit(void) {
@@ -564,8 +558,8 @@ const uint32_t *emj_display_text(uint16_t keycode) {
     if (emj_search_active()) {
         const uint32_t *t = search_display_text(keycode);
         if (t) return t;
-    } else if (keycode == KC_EMJ_S_CLEAR) {
-        return (const uint32_t *)U"";   // search-only key: blank in tab mode
+    } else if (keycode == KC_EMJ_S_CLEAR || keycode == KC_EMJ_S_BKSP) {
+        return (const uint32_t *)U"";   // search-only keys: blank in tab mode
     }
     // ── Page arrows with "page/pages" — always live because paging wraps ──
     if (keycode == KC_EMJ_PAGE_PREV) {
@@ -602,7 +596,7 @@ const uint32_t *emj_display_text(uint16_t keycode) {
 }
 
 bool emj_process_keycode(uint16_t keycode, bool pressed) {
-    if (keycode == KC_EMJ_MODE || keycode == KC_EMJ_S_CLEAR) {
+    if (keycode == KC_EMJ_MODE || keycode == KC_EMJ_S_CLEAR || keycode == KC_EMJ_S_BKSP) {
         if (!pressed) return true;
         update_performed();
         if (keycode == KC_EMJ_MODE) {

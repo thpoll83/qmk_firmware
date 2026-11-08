@@ -70,7 +70,8 @@ void emj_draw_tab_bottom(uint16_t keycode);
 // KC_EMJ_MODE switches the layer between the category tabs and a keyword search
 // through the emojidict bundle (base/emoji_dict.h). In search mode the emoji
 // slots type the letters of the base layer in the active language, the category
-// tabs show the results, and the page keys (top left, top right) page them.
+// tabs show the results, and the page keys (top left, top right) and the keys
+// over the base layout's Left and Right arrows page them.
 // Space is on the two innermost thumb keys. Backspace is KC_EMJ_S_BKSP, one row
 // below the corner, when the base layout has Backspace in a top corner (Qwerty),
 // and otherwise the base layout's Space keys. KC_EMJ_S_CLEAR clears the query,

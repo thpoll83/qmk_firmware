@@ -267,7 +267,8 @@ static bool     s_res_dirty = true;
 
 static const uint8_t s_result_of_cat[] = EMJ_SEARCH_RESULT_OF_CAT;
 
-// Search-mode roles. The page keys (top left, top right) always page. Space is
+// Search-mode roles. The page keys (top left, top right) always page, and so do
+// the keys over the base layout's Left and Right arrows. Space is
 // on the two innermost thumb keys (EMJ_SEARCH_SPACE_MRU). Backspace depends on
 // the base layout: where it has Backspace in a top corner (Qwerty), Backspace
 // moves one row down to KC_EMJ_S_BKSP; otherwise the base layout's Space keys
@@ -284,6 +285,9 @@ static uint8_t  s_mru_role[MRU_CAP];
 static uint8_t  s_mru_recent[MRU_CAP];
 // KC_EMJ_S_BKSP is Backspace (the base layout has Backspace in a top corner).
 static bool     s_bksp_below;
+// Role of the recents Clear key: paging when it sits over a base-layout arrow
+// (it is on the Right arrow), so it cannot empty the recents mid-search.
+static uint8_t  s_eclear_role;
 // Rebuilt lazily from the main loop: the slave's sync handler runs on the split
 // protocol thread and only marks it stale.
 static bool     s_letters_dirty = true;
@@ -304,7 +308,8 @@ static void build_slot_letters(void) {
     memset(s_slot_letter, 0, sizeof(s_slot_letter));
     memset(s_mru_role, ROLE_NONE, sizeof(s_mru_role));
     bool base_space[MRU_CAP] = {false};   // recents keys over a base-layout Space
-    s_bksp_below = false;
+    s_bksp_below  = false;
+    s_eclear_role = ROLE_NONE;
     const uint8_t base = (uint8_t)get_local_layer()->def_layer;
     const uint8_t lang = get_local_state()->lang;
     for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
@@ -312,8 +317,12 @@ static void build_slot_letters(void) {
             keypos_t pos = {.row = r, .col = c};
             uint16_t kc  = keymap_key_to_keycode(_EMJ, pos);
             uint16_t bkc = poly_mt_tap(keymap_key_to_keycode(base, pos));
+            const uint8_t arrow = (bkc == KC_LEFT) ? ROLE_PREV : (bkc == KC_RIGHT) ? ROLE_NEXT : ROLE_NONE;
             if (kc >= KC_EMJ_MRU_BASE && kc < KC_EMJ_MRU_BASE + MRU_CAP) {
                 base_space[kc - KC_EMJ_MRU_BASE] = (bkc == KC_SPACE);
+                if (arrow != ROLE_NONE) s_mru_role[kc - KC_EMJ_MRU_BASE] = arrow;
+            } else if (kc == KC_EMJ_CLEAR) {
+                s_eclear_role = arrow;
             } else if (kc == KC_EMJ_PAGE_PREV || kc == KC_EMJ_PAGE_NEXT) {
                 if (bkc == KC_BACKSPACE) s_bksp_below = true;
             } else if (kc >= KC_EMJ_SLOT_BASE && kc < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) {
@@ -344,6 +353,7 @@ static uint8_t search_role(uint16_t kc) {
     if (kc == KC_EMJ_PAGE_PREV) return ROLE_PREV;
     if (kc == KC_EMJ_PAGE_NEXT) return ROLE_NEXT;
     if (kc == KC_EMJ_S_BKSP) return s_bksp_below ? ROLE_BKSP : ROLE_NONE;
+    if (kc == KC_EMJ_CLEAR) return s_eclear_role;
     return ROLE_NONE;
 }
 

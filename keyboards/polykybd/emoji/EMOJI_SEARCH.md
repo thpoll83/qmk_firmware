@@ -110,6 +110,7 @@ split72, search mode:
 | Esc (top left) | previous page | previous result page, always |
 | top right | next page | next result page, always |
 | `\` (`KC_NO` before) | – | Backspace, when the base layout has Backspace in a top corner |
+| over the base layout's ← and → | a recent, and Clear recents | previous / next result page |
 | two innermost thumb keys | recents | Space |
 | base layout's Space keys | recents | Backspace, when the base layout has Backspace elsewhere |
 | rest of the bottom row | recents | the latest recents |
@@ -119,8 +120,8 @@ remapped layout is followed too:
 
 | base layout | Space | Backspace | recents left |
 |---|---|---|---|
-| Qwerty | inner thumbs (base: Enter, Lang) | `\`, below the top-right Backspace | 10 |
-| Stag!, Colemak DH, Neo, Workman | inner thumbs (base: Enter, Enter) | both base Space keys | 8 |
+| Qwerty | inner thumbs (base: Enter, Lang) | `\`, below the top-right Backspace | 9 |
+| Stag!, Colemak DH, Neo, Workman | inner thumbs (base: Enter, Enter) | both base Space keys | 7 |
 
 There is no Enter or Delete: a result key sends its emoji. Tab mode keeps all 12
 recents. The query shows on the status OLED. Switching modes keeps the query, and

@@ -70,22 +70,16 @@ void emj_draw_tab_bottom(uint16_t keycode);
 // KC_EMJ_MODE switches the layer between the category tabs and a keyword search
 // through the emojidict bundle (base/emoji_dict.h). In search mode the emoji
 // slots type the letters of the base layer in the active language, the category
-// tabs show the results, and the page keys page them. The mode key is blank and
-// inert while no dictionary is loaded.
-
-// Roles of the recents keys in search mode (EMJ_SEARCH_MRU_ROLES): a number is
-// the recent it shows; these two give the key a search function instead.
-#define EMJ_SR_SPACE 0xFE   // space between query words
-#define EMJ_SR_CLEAR 0xFD   // clear the query
+// tabs show the results, and the page keys page them. A key whose base-layout
+// key is Space, Backspace, Left or Right takes that role (space, delete a letter,
+// previous / next page), so those keys are where the active layout has them.
+// KC_EMJ_S_CLEAR clears the query, and leaving the layer clears it too. The mode
+// key is blank and inert while no dictionary is loaded.
 
 // Result index of each category tab key, by category: the left-to-right order of
 // the tabs on the keymap. Identity unless the keymap's config.h says otherwise.
 #ifndef EMJ_SEARCH_RESULT_OF_CAT
 #  define EMJ_SEARCH_RESULT_OF_CAT { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }
-#endif
-// Role of each recents key in search mode, by recents index (see EMJ_SR_*).
-#ifndef EMJ_SEARCH_MRU_ROLES
-#  define EMJ_SEARCH_MRU_ROLES { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }
 #endif
 
 #define EMJ_SEARCH_PAGE 12  // results per page: the category tab keys
@@ -97,9 +91,12 @@ uint8_t  emj_search_query(uint32_t *out, uint8_t max);
 // Results for the query (0 while the query is empty).
 uint16_t emj_search_total(void);
 
-// A recents key that has a search function (Space, clear) in search mode, so it
-// does not get the recents row's top bar.
+// A recents key that has a search role (Space, Backspace, paging) in search mode,
+// so it does not get the recents row's top bar.
 bool emj_search_mru_is_function(uint16_t keycode);
+
+// Called when the emoji layer turns off: clears the query (the mode stays).
+void emj_search_on_layer_exit(void);
 
 // Split sync: the master exports its search state, the slave applies it and runs
 // the same search on its own copy of the dictionary.

@@ -103,23 +103,27 @@ split72, search mode:
 
 | position | tab mode | search mode |
 |---|---|---|
-| Tab (`KC_NO` today) | mode key | mode key |
+| Tab (`KC_NO` before) | mode key | mode key |
+| Fn, below Tab (`KC_NO` before) | blank, inert | Clear: empty the query |
 | letter keys | emoji slots | letters of the active language layout; other keys there blank and inert |
 | top row, 12 number keys | category tabs | results 1–12, best match first |
 | Esc | previous page | previous result page |
-| Backspace | next page | delete the last letter |
-| `\` (`KC_NO` today) | – | next result page |
-| Ret, right half (`KC_NO` today) | – | send the first result |
-| both Space keys | recents | space between query words |
-| Del | recent | clear the query |
-| rest of the bottom row | recents | recents 1–9, most recent first |
+| top right | next page | next result page, or Backspace on Qwerty |
+| bottom row | recents | Space, Backspace, ← (previous page), → (next page) where the base layout has them; the rest show the latest recents |
 
-The recents shrink from 12 to 9 in search mode, since Space, Space and Del take
-three of their keys; the 9 remaining keys show the 9 most recent emoji in order.
-Tab mode keeps all 12. The query shows on the status OLED. A result key sends the
-emoji and pushes it to the recents, as an emoji slot does. Switching modes keeps
-the query. The layer opens in the mode it was last in, kept in RAM until power-off.
-The base key still leaves the layer.
+A key takes the role of the base-layout key at the same matrix position: Space,
+Backspace, Left or Right (`role_of_base()`). The base layout is read when search
+mode starts, from the stored keymap, so a remapped layout is followed too:
+
+| base layout | Backspace | recents left |
+|---|---|---|
+| Qwerty | top right | 9 |
+| Stag!, Colemak DH, Neo, Workman | right thumb | 8 |
+
+Both Space keys type a space in all five. There is no Enter or Delete: a result
+key sends its emoji. Tab mode keeps all 12 recents. The query shows on the status
+OLED. Switching modes keeps the query, and leaving the layer clears it (the mode
+stays).
 
 split42 has no free Tab key (category tab 0 is there) and no room for a results
 row while typing: 36 letter keys and 6 thumbs. The mode key goes on one of the two

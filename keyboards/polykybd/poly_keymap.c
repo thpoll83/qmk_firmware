@@ -1182,6 +1182,11 @@ layer_state_t layer_state_set_user(layer_state_t state) {
         // That is the whole safety argument for putting QK_BOOT behind the gate.
         access_local_state()->settings_more = 0;
     }
+    if(get_highest_layer(state) != _EMJ) {
+        // Leaving the emoji layer drops the search query, so the next visit starts
+        // with an empty search (the chosen mode stays).
+        emj_search_on_layer_exit();
+    }
     if(get_highest_layer(state) != _ADDLANG1) {
         // Leaving Intl closes the picker. Without this the latched Ctrl would stay
         // registered with the layer gone, so every following keystroke reaches the

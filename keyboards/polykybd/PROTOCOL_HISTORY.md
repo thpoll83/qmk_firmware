@@ -366,6 +366,20 @@ reading before you change either one.
     check, reads as missing, and the host flashes the shipped bundle in its place.
   - v26 and older firmware have a 256 KB icon slot and refuse a larger library at
     BEGIN, so the host sends a library over 256 KB only at v27.
+  **v28** adds cmd `44`, the **tap-hold terms** (`base/tap_terms.h`).
+  - Request: `data[2]` op (0 query, 1 set), `data[3..4]` tapping term ms,
+    `data[5..6]` Flow Tap term ms, little-endian. `0xFFFF` leaves a term unchanged.
+  - Reply, ACK and NACK alike: `data[3..4]` tapping term, `data[5..6]` Flow Tap
+    term, `data[7]` flags (bit 0: Flow Tap is compiled in; 0 on split42).
+  - Both ranges are CLOSED, like cmd 40: tapping term 100..500 ms, Flow Tap term
+    0..300 ms (0 = off), 10 ms steps. A report with one bad field is NACKed and
+    changes neither term.
+  - Stored in `poly_eeconf_t.tapping_term` / `.flow_tap_term` as ms / 10 plus one,
+    so an unwritten byte (0) means the default (200 / 150 ms), and "off" is not 0.
+    Written at the next settings flush, like the idle timeout.
+  - Only the master uses the values. Each half stores its own.
+  - v27 and older firmware NACK the command; their terms are the compile-time
+    200 / 150 ms.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
@@ -394,6 +408,7 @@ reading before you change either one.
   | 16 | `39` | crash record read + clear |
   | 17 | `20` SET_UNICODE_MODE | VOLATILE flag in `data[3]` — apply in RAM, leave EEPROM alone |
   | 25 | `33` SEND_OVERLAY_MAPPING_W | a `to` of 600..1199 is slot `to - 600` drawn without the legend |
+  | 28 | `44` GET/SET_TAP_TERMS | tapping term and Flow Tap term; ranges CLOSED, unknown NACKs |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs

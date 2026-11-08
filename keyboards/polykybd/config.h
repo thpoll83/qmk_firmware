@@ -291,7 +291,16 @@
 //      slot 256 -> 512 KB at 0x180000; fantasy and latinbig move down. No command
 //      changes. Older firmware has a 256 KB icon slot and refuses a larger library
 //      at BEGIN, so the host sends a library over 256 KB only at v27+.
-#define PROTOCOL_VERSION 27
+//  v28 cmd 44 (tap-hold timing) reads and sets the tapping term (100..500 ms) and the
+//      Flow Tap term (0..300 ms, 0 = off), both in 10 ms steps, persisted at the next
+//      settings flush. Closed ranges: a value outside them NACKs. Older firmware
+//      NACKs the command, and its terms are the compile-time 200 / 150 ms.
+#define PROTOCOL_VERSION 28
+
+// The tap-hold terms are runtime settings (cmd 44): QMK asks the get_*_term()
+// hooks in poly_keymap.c for every tap-hold decision.
+#define TAPPING_TERM_PER_KEY
+#define QUICK_TAP_TERM_PER_KEY
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

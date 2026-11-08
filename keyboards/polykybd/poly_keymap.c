@@ -4024,6 +4024,39 @@ void poly_fl_row_cache_invalidate(void) {
 #endif
 }
 
+// ---- Tap-hold timing (HID cmd 44, base/tap_terms.h) --------------------------
+//
+// QMK asks these hooks for every tap-hold decision, so a value set over HID takes
+// effect on the next key press. The compile-time TAPPING_TERM / FLOW_TAP_TERM are
+// only the defaults now; the asserts keep them equal to what an unset EEPROM byte
+// decodes to, so a board that never touches the setting behaves as before.
+_Static_assert(TAPPING_TERM == POLY_DEFAULT_TAPPING_TERM_MS,
+               "TAPPING_TERM and POLY_DEFAULT_TAPPING_TERM_MS have drifted");
+
+uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
+    return get_poly_tapping_term();
+}
+
+// QUICK_TAP_TERM is still the compile-time value (it defaults to TAPPING_TERM);
+// QMK requires it not to exceed the tapping term, so a shorter term pulls it down.
+uint16_t get_quick_tap_term(uint16_t keycode, keyrecord_t *record) {
+    return quick_tap_term_for(QUICK_TAP_TERM, get_poly_tapping_term());
+}
+
+#ifdef FLOW_TAP_TERM
+_Static_assert(FLOW_TAP_TERM == POLY_DEFAULT_FLOW_TAP_TERM_MS,
+               "FLOW_TAP_TERM and POLY_DEFAULT_FLOW_TAP_TERM_MS have drifted");
+
+// Same key selection as QMK's default get_flow_tap_term() (is_flow_tap_key() for
+// both keys), with the configured term in place of FLOW_TAP_TERM. 0 turns it off.
+uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_keycode) {
+    if (is_flow_tap_key(keycode) && is_flow_tap_key(prev_keycode)) {
+        return get_poly_flow_tap_term();
+    }
+    return 0;
+}
+#endif
+
 #ifdef CHORDAL_HOLD
 // Chordal Hold's opposite-hands rule needs to know which half a key is on. QMK's
 // default reads a hand-maintained `chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS]`
@@ -7517,6 +7550,7 @@ void keyboard_post_init_user(void) {
     load_auto_brightness(ee.auto_brightness);
     note_idle_style(ee.idle_style);
     note_idle_timeout(ee.idle_timeout);   // BEFORE the banner below, which prints it
+    note_poly_tap_terms(tapping_term_unpack(ee.tapping_term), flow_tap_term_unpack(ee.flow_tap_term));
     emit_idle_config();   // the style is only known here — the banner tick re-emits it
     note_glyph_script(ee.glyph_script);
     note_glyph_size(ee.glyph_size);
@@ -7880,6 +7914,9 @@ void eeconfig_init_user(void) {
     // as a 0 that the loader then reads back as unset. Same class of trap as the
     // latin_assign memset two blocks down, opposite direction.
     ee.idle_timeout   = idle_timeout_pack(POLY_DEFAULT_IDLE_TIMEOUT);
+    // Biased like idle_timeout, for the same reason (base/tap_terms.h).
+    ee.tapping_term   = tap_term_pack(POLY_DEFAULT_TAPPING_TERM_MS);
+    ee.flow_tap_term  = tap_term_pack(POLY_DEFAULT_FLOW_TAP_TERM_MS);
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.

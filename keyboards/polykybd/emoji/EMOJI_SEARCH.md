@@ -2,9 +2,10 @@
 
 Status: prototype on split72. The dictionary builder (`emoji_dict.py`), the
 firmware loader and search (`base/emoji_dict.c`, suite `polykybd_emoji_dict`), font-pack
-layout v4 with the `emojidict` slot, and the search mode on `_EMJ` are in place. Not
-done: the protocol version, the host's default bundle and language setting, split42's
-two-step search. Until the host ships the bundle, flash it by hand:
+layout v4 with the `emojidict` slot, and the search mode on `_EMJ` are in place.
+PolyKybdHost ships all 79 dictionaries and flashes the one its `emoji_search_dict`
+setting names (tray: Selected Language → Emoji Search Language). Not done: split42's
+two-step search. To flash a dictionary without the host:
 
 ```bash
 python3 keyboards/polykybd/emoji/emoji_dict.py build en -o en.plyd
@@ -13,7 +14,7 @@ polyctl fontpack flash --file en.plyd --bundle-id 9
 
 The user types a word on the emoji layer ("grin") and the result keys show the
 matching emoji. The keyword index is a data-only font-pack bundle, `emojidict`. The
-host flashes English by default. A localized dictionary is a manual host step.
+host flashes English by default; the user picks another language in the tray.
 
 ## The dictionary bundle
 
@@ -203,22 +204,57 @@ paging. The mode key or Backspace returns to typing.
   at the same position, in the active language. A key types only when the
   dictionary's fold table lists that letter.
 
+## Editing a dictionary
+
+Every dictionary is a text file, `dict_src/<id>.tsv`, and any text editor can change
+it. One line per emoji, three columns separated by a TAB:
+
+```
+1F600	grinning face	cheerful | cheery | face | grin | grinning | happy
+```
+
+- Column 1 is the codepoint in hex. Only codepoints of the emoji picker
+  (`emoji_data.h`) are used; a line for any other codepoint is ignored. An emoji
+  without a line uses the line from `en.tsv`.
+- Column 2 is the name. Its words are searchable and rank above keywords.
+- Column 3 is the keywords, separated by ` | `. A keyword may have several words.
+- Lines starting with `#` are comments. Save the file as UTF-8.
+- A spreadsheet program can open the file as tab-separated text. Save it back as
+  tab-separated UTF-8 text without quotes. A quoted codepoint stops the build.
+- `ja@romaji`, `zh-*@pinyin`, `@zhuyin` and `@cangjie` hold the keys a user types
+  (romaji, pinyin, Zhuyin or Cangjie codes), not the native script.
+- A word with a letter that no keyboard layout of that language can type is dropped
+  at build time. Upper case and accents do not matter: the search folds both.
+- Common English keywords are added to every other dictionary at build time, so a
+  file does not need them.
+
+⚠️ `extract` writes the file again from CLDR and replaces every hand edit. Do not run
+it on an edited dictionary.
+
+After an edit:
+
+1. Increase the dictionary's `revision` in `dict_src/dictionaries.tsv` (1 to 255).
+   The host flashes a keyboard whose dictionary revision differs from the shipped
+   one, so without this step no keyboard gets the change.
+2. Check it builds and fits the 128 KB slot, and try a few searches:
+   ```bash
+   python3 emoji_dict.py build de -o /tmp/de.plyd
+   python3 emoji_dict.py query /tmp/de.plyd lachen herz
+   ```
+3. Rebuild all dictionaries and copy them into the host checkout:
+   ```bash
+   python3 emoji_dict.py build-all /tmp/emojidict
+   cd ../../../../PolyKybdHost && python3 scripts/import_emojidict.py /tmp/emojidict
+   ```
+4. Commit `dict_src/` here and `polyhost/res/emojidict/` in PolyKybdHost.
+
+A new dictionary is a new last line in `dictionaries.tsv` (the list is append only,
+because a dictionary's line number is part of its version) plus its `dict_src/<id>.tsv`.
+
 ## Remaining steps
 
 Firmware:
-- GET_ID: report the dictionary's language index and revision in a new block
-  after `G`, never before `V`.
-- `PROTOCOL_VERSION` increase, once the host flashes the bundle itself.
 - split42: the two-step search and a mode key on a free thumb key.
 - The query length (16 characters) is a limit to agree with the maintainer.
 - The slave searches its own copy, so two halves with different dictionary versions
   show different results. Syncing the result indices instead costs 48 B more.
-
-Host:
-- Ship `en.plyd` as the default `emojidict` bundle and build it in CI from
-  `dict_src/en.tsv`.
-- Setting `emoji_search_lang` (default `en`). The connect flash replaces the
-  dictionary only when the reported language differs from the setting or the
-  revision is behind, so it never overwrites a language the user chose.
-- Tray entry "Emoji search language…" and a `polyctl` subcommand that set the
-  language and flash its dictionary. Gate both on the new protocol version.

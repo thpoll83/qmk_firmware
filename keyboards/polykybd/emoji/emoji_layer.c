@@ -273,8 +273,8 @@ static const uint8_t s_result_of_cat[] = EMJ_SEARCH_RESULT_OF_CAT;
 // right innermost thumb and the one beside it. When the base layout has
 // Backspace on the top-right key (Qwerty), Backspace moves one row down to
 // KC_EMJ_S_BKSP instead, and Space takes the Backspace slot. A second Space is
-// on the left innermost thumb key (EMJ_SEARCH_SPACE_MRU); the other recents keys
-// show the latest recents without a gap.
+// the emoji slot EMJ_SEARCH_SPACE2_SLOT (on split72 the left key above the
+// innermost thumb). The recents keep all 12 keys.
 enum { ROLE_NONE = 0, ROLE_SPACE, ROLE_BKSP, ROLE_PREV, ROLE_NEXT };
 
 // The letter each emoji slot types in search mode: the base layer's key at the
@@ -283,14 +283,6 @@ static uint32_t s_slot_letter[EMJ_SLOTS_PER_PAGE];
 // The base layout has Backspace on the top-right key: KC_EMJ_S_BKSP is Backspace.
 static bool     s_bksp_below;
 
-// The recents key that is a second Space in search mode (0xFF = none), and the
-// recent a recents key shows in search mode (the keys after it move up one).
-static uint8_t mru_shown(uint8_t key) {
-#if EMJ_SEARCH_SPACE_MRU < MRU_CAP
-    if (key > EMJ_SEARCH_SPACE_MRU) return (uint8_t)(key - 1u);
-#endif
-    return key;
-}
 // Rebuilt lazily from the main loop: the slave's sync handler runs on the split
 // protocol thread and only marks it stale.
 static bool     s_letters_dirty = true;
@@ -337,9 +329,7 @@ static uint8_t search_role(uint16_t kc) {
     if (kc == KC_EMJ_PAGE_NEXT) return ROLE_NEXT;
     build_slot_letters();
     if (kc == KC_EMJ_S_BKSP) return s_bksp_below ? ROLE_BKSP : ROLE_NONE;
-#if EMJ_SEARCH_SPACE_MRU < MRU_CAP
-    if (kc == KC_EMJ_MRU_BASE + EMJ_SEARCH_SPACE_MRU) return ROLE_SPACE;
-#endif
+    if (kc == KC_EMJ_SLOT_BASE + EMJ_SEARCH_SPACE2_SLOT) return ROLE_SPACE;
     if (kc == KC_EMJ_SLOT_BASE + EMJ_SEARCH_BKSP_SLOT) return s_bksp_below ? ROLE_SPACE : ROLE_BKSP;
     if (kc == KC_EMJ_SLOT_BASE + EMJ_SEARCH_SPACE_SLOT) return s_bksp_below ? ROLE_NONE : ROLE_SPACE;
     return ROLE_NONE;
@@ -428,7 +418,7 @@ static const uint32_t *search_display_text(uint16_t keycode) {
     }
     if (keycode == KC_EMJ_S_BKSP) return (const uint32_t *)U"";   // Backspace is elsewhere on this layout
     if (is_mru_key(keycode)) {
-        uint32_t cp = emj_decode(mru_emoji_get(mru_shown((uint8_t)(keycode - KC_EMJ_MRU_BASE))));
+        uint32_t cp = emj_decode(mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE)));
         return cp ? make_slot_str(cp) : (const uint32_t *)U"";
     }
     if (is_slot_key(keycode)) {
@@ -480,7 +470,7 @@ static bool search_process(uint16_t keycode) {
         return true;
     }
     if (is_mru_key(keycode)) {
-        uint16_t code = mru_emoji_get(mru_shown((uint8_t)(keycode - KC_EMJ_MRU_BASE)));
+        uint16_t code = mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE));
         uint32_t cp   = emj_decode(code);
         if (cp != 0) {
             register_unicode(cp);

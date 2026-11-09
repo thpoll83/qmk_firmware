@@ -112,8 +112,8 @@ split72, search mode:
 | right half, row 3, column 0 (slot 31) | emoji slot | Backspace (Space on Qwerty) |
 | right half, row 3, column 1 (slot 32) | emoji slot | Space (blank on Qwerty) |
 | `\`, below the top-right key (`KC_NO` before) | blank, inert | Backspace on Qwerty, blank otherwise |
-| left innermost thumb (recents 5) | recent | Space |
-| rest of the bottom row | recents | the 11 latest recents, without a gap |
+| left half, row 3, inner end (slot 18, above the innermost thumb) | emoji slot | Space |
+| bottom row | recents | recents, all 12 |
 
 Backspace sits above the right innermost thumb key (Enter on Stag!), Space beside
 it. When the base layout has Backspace on the top-right key (Qwerty), Backspace

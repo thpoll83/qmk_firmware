@@ -19,8 +19,9 @@
 // the five base layouts ([ ] on Qwerty, Lang and App/Hyper/+/IME on the others).
 #define EMJ_SEARCH_BKSP_SLOT  31
 #define EMJ_SEARCH_SPACE_SLOT 32
-// A second Space on the left innermost thumb key (recents 5, Enter on every base layout).
-#define EMJ_SEARCH_SPACE_MRU  5
+// A second Space on the left key above the innermost thumb (slot 18, MO(_NL) on
+// every base layout), mirroring the right side's row.
+#define EMJ_SEARCH_SPACE2_SLOT 18
 // Language picker: 38 slots/page (rows 1-3 + thumbs; top row = region tabs +
 // unicode-mode keys, bottom row = MRU). Mirrors the emoji slot layout.
 #define LANG_SLOTS_PER_PAGE 38

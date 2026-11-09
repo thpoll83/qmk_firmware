@@ -70,13 +70,11 @@ void emj_draw_tab_bottom(uint16_t keycode);
 // KC_EMJ_MODE switches the layer between the category tabs and a keyword search
 // through the emojidict bundle (base/emoji_dict.h). In search mode the emoji
 // slots type the letters of the base layer in the active language, the category
-// tabs show the results, and the page keys (top left, top right) and the keys
-// over the base layout's Left and Right arrows page them.
-// Space is on the two innermost thumb keys. Backspace is KC_EMJ_S_BKSP, one row
-// below the corner, when the base layout has Backspace in a top corner (Qwerty),
-// and otherwise the base layout's Space keys. KC_EMJ_S_CLEAR clears the query,
-// and leaving the layer clears it too. The mode key is blank and inert while no
-// dictionary is loaded.
+// tabs show the results, and the page keys (top left, top right) page them.
+// Backspace and Space are two fixed emoji slots (EMJ_SEARCH_BKSP_SLOT,
+// EMJ_SEARCH_SPACE_SLOT). KC_EMJ_S_CLEAR clears the query, and leaving the layer
+// clears it too. The mode key shows an on/off switch, and is blank and inert
+// while no dictionary is loaded.
 
 // Result index of each category tab key, by category: the left-to-right order of
 // the tabs on the keymap. Identity unless the keymap's config.h says otherwise.
@@ -84,9 +82,13 @@ void emj_draw_tab_bottom(uint16_t keycode);
 #  define EMJ_SEARCH_RESULT_OF_CAT { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }
 #endif
 
-// Recents keys that type a space in search mode: the innermost thumb keys.
-#ifndef EMJ_SEARCH_SPACE_MRU
-#  define EMJ_SEARCH_SPACE_MRU { 0xFF }
+// Emoji slots that are Backspace and Space in search mode. Pick slots that are no
+// letter on any base layout. 0xFF = none.
+#ifndef EMJ_SEARCH_BKSP_SLOT
+#  define EMJ_SEARCH_BKSP_SLOT 0xFF
+#endif
+#ifndef EMJ_SEARCH_SPACE_SLOT
+#  define EMJ_SEARCH_SPACE_SLOT 0xFF
 #endif
 
 #define EMJ_SEARCH_PAGE 12  // results per page: the category tab keys
@@ -97,10 +99,6 @@ bool emj_search_active(void);
 uint8_t  emj_search_query(uint32_t *out, uint8_t max);
 // Results for the query (0 while the query is empty).
 uint16_t emj_search_total(void);
-
-// A recents key that has a search role (Space, Backspace) in search mode,
-// so it does not get the recents row's top bar.
-bool emj_search_mru_is_function(uint16_t keycode);
 
 // Called when the emoji layer turns off: clears the query (the mode stays).
 void emj_search_on_layer_exit(void);

@@ -3927,7 +3927,7 @@ static void render_lang_region_tab(uint16_t keycode) {
 static void draw_mru_top_bar(uint16_t keycode) {
     bool is_mru = (keycode >= KC_EMJ_MRU_BASE  && keycode < KC_EMJ_MRU_BASE  + MRU_CAP) ||
                   (keycode >= KC_LANG_MRU_BASE && keycode < KC_LANG_MRU_BASE + MRU_CAP);
-    if (is_mru && !emj_search_mru_is_function(keycode)) kdisp_fill_rect(BUFFER_X, 0, SCREEN_WIDTH, 3);
+    if (is_mru) kdisp_fill_rect(BUFFER_X, 0, SCREEN_WIDTH, 3);
 }
 
 #if defined(POLY_FL_ALIGN_FROW)

@@ -163,12 +163,10 @@ enum my_keycodes {
     KC_GLYPH_SIZE_UP,
     // Emoji layer search mode (emoji/EMOJI_SEARCH.md). KC_EMJ_MODE switches the
     // layer between category tabs and keyword search; KC_EMJ_S_CLEAR clears the
-    // query; KC_EMJ_S_BKSP is Backspace when the base layout has Backspace in a
-    // top corner. Both are blank and inert in tab mode. Appended for the same
+    // query and is blank and inert in tab mode. Appended for the same
     // no-renumbering reason as KC_DAUTO.
     KC_EMJ_MODE,
     KC_EMJ_S_CLEAR,
-    KC_EMJ_S_BKSP,
     // ⚠️ FROZEN at the first 160 languages (KCL_FROZEN_COUNT). Every keycode after
     // this block is a value a keyboard may have stored in EEPROM (KC_OS_*, KC_IME,
     // the emoji and language layers), so growing the block would repoint them all.
@@ -363,8 +361,8 @@ static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // appended after it, so the two asserts above silently stopped covering the tail
 // they exist to bound.  Re-anchor these whenever something is appended to the
 // QK_KB_0 block.
-static_assert((int)KC_EMJ_S_BKSP <= (int)QK_KB_MAX, "Too many custom QK key codes");
-static_assert((int)KC_EMJ_S_BKSP < (int)KCL_ENUS, "Overlap detected");
+static_assert((int)KC_EMJ_S_CLEAR <= (int)QK_KB_MAX, "Too many custom QK key codes");
+static_assert((int)KC_EMJ_S_CLEAR < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 // ⚠️ Same re-anchoring rule as the QK_KB guards above, and the same way it goes

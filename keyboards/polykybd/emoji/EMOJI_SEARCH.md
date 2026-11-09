@@ -103,29 +103,27 @@ split72, search mode:
 
 | position | tab mode | search mode |
 |---|---|---|
-| Tab (`KC_NO` before) | mode key | mode key |
+| Tab (`KC_NO` before) | mode key, switch off | mode key, switch on ("Find" over the on/off switch icon) |
 | Fn, below Tab (`KC_NO` before) | blank, inert | Clear: empty the query |
 | letter keys | emoji slots | letters of the active language layout; other keys there blank and inert |
 | top row, 12 number keys | category tabs | results 1–12, best match first |
-| Esc (top left) | previous page | previous result page, always |
-| top right | next page | next result page, always |
-| `\` (`KC_NO` before) | – | Backspace, when the base layout has Backspace in a top corner |
-| over the base layout's ← and → | a recent, and Clear recents | previous / next result page |
-| two innermost thumb keys | recents | Space |
-| base layout's Space keys | recents | Backspace, when the base layout has Backspace elsewhere |
-| rest of the bottom row | recents | the latest recents |
+| Esc (top left) | previous page | previous result page |
+| top right | next page | next result page |
+| right half, row 3, column 0 (slot 31) | emoji slot | Backspace |
+| right half, row 3, column 1 (slot 32) | emoji slot | Space |
+| bottom row | recents | recents, all 12 |
 
-The base layout is read when search mode starts, from the stored keymap, so a
-remapped layout is followed too:
+Backspace sits above the right innermost thumb key (Enter on Stag!), Space beside
+it. Neither key is a letter on any of the five base layouts: `[` `]` on Qwerty,
+Lang and App / Hyper / `+` / IME on Stag!, Colemak DH, Neo and Workman. On Qwerty
+with a language that puts a letter on `[` (de: ü), that letter cannot be typed;
+the fold to the base letter makes `u` find the same words.
 
-| base layout | Space | Backspace | recents left |
-|---|---|---|---|
-| Qwerty | inner thumbs (base: Enter, Lang) | `\`, below the top-right Backspace | 9 |
-| Stag!, Colemak DH, Neo, Workman | inner thumbs (base: Enter, Enter) | both base Space keys | 7 |
-
-There is no Enter or Delete: a result key sends its emoji. Tab mode keeps all 12
-recents. The query shows on the status OLED. Switching modes keeps the query, and
-leaving the layer clears it (the mode stays).
+The letters are read from the base layout when search mode starts, from the
+stored keymap, so a remapped layout is followed too. There is no Enter or Delete
+(a result key sends its emoji), and the arrows keep their tab-mode meaning. The
+query shows on the status OLED. Switching modes keeps the query, and leaving the
+layer clears it (the mode stays).
 
 split42 has no free Tab key (category tab 0 is there) and no room for a results
 row while typing: 36 letter keys and 6 thumbs. The mode key goes on one of the two

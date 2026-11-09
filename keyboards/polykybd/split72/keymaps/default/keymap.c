@@ -389,7 +389,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_BASE,    EMRU(0),        EMRU(1),        EMRU(2),                        EMRU(3),        EMRU(4),        EMRU(5),
 
                     KC_EMJ_CAT(7),  KC_EMJ_CAT(8),  KC_EMJ_CAT(9),  KC_EMJ_CAT(10), KC_EMJ_CAT(3),  KC_EMJ_CAT(11), KC_EMJ_PAGE_NEXT,
-                    ESLOT(19),      ESLOT(20),      ESLOT(21),      ESLOT(22),      ESLOT(23),      ESLOT(24),      KC_EMJ_S_BKSP,
+                    ESLOT(19),      ESLOT(20),      ESLOT(21),      ESLOT(22),      ESLOT(23),      ESLOT(24),      KC_NO,
         KC_NO,      ESLOT(25),      ESLOT(26),      ESLOT(27),      ESLOT(28),      ESLOT(29),      ESLOT(30),      KC_NO,
         ESLOT(31),  ESLOT(32),      ESLOT(33),      ESLOT(34),      ESLOT(35),      ESLOT(36),      ESLOT(37),      KC_NO,
         EMRU(6),    EMRU(7),        EMRU(8),                        EMRU(9),        EMRU(10),       EMRU(11),       KC_EMJ_CLEAR

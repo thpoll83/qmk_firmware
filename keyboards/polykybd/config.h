@@ -291,7 +291,14 @@
 //      slot 256 -> 512 KB at 0x180000; fantasy and latinbig move down. No command
 //      changes. Older firmware has a 256 KB icon slot and refuses a larger library
 //      at BEGIN, so the host sends a library over 256 KB only at v27+.
-#define PROTOCOL_VERSION 27
+//  v28 the GET_ID reply appends ['A'][u8] after the 'G' block: 0 no animation, 1 the
+//      one-shot Eden show (boot intro or KC_EDEN), 2 the Eden screensaver. The host
+//      holds its connect-time font-pack flash while it is not 0. Older firmware has
+//      no block and the host flashes at once, as before.
+#define PROTOCOL_VERSION 28
+#define POLY_ANIM_NONE  0
+#define POLY_ANIM_INTRO 1
+#define POLY_ANIM_IDLE  2
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

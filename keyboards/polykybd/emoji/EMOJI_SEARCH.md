@@ -117,10 +117,15 @@ split72, search mode:
 
 Backspace sits above the right innermost thumb key (Enter on Stag!), Space beside
 it. When the base layout has Backspace on the top-right key (Qwerty), Backspace
-moves one row down to the `\` position and Space takes the key above the thumb. Neither key is a letter on any of the five base layouts: `[` `]` on Qwerty,
-Lang and App / Hyper / `+` / IME on Stag!, Colemak DH, Neo and Workman. On Qwerty
-with a language that puts a letter on `[` (de: ü), that letter cannot be typed;
-the fold to the base letter makes `u` find the same words.
+moves one row down to the `\` position and Space takes the key above the thumb. None of these keys is a letter on any of the five base layouts in
+English.
+
+A letter of the active language whose key has a search function (Space,
+Backspace, a result, a recent) moves to the nearest free emoji slot on the same
+half, by matrix distance. Only a letter no other key can type moves: Russian х
+and ю on Qwerty do, French é does not (e finds the same words, see `fold()`).
+`build_slot_letters()` does this in three passes. With Russian, Qwerty moves х
+and ю, Neo ъ, Workman ъ and ё, and all 33 letters can be typed.
 
 The letters are read from the base layout when search mode starts, from the
 stored keymap, so a remapped layout is followed too. There is no Enter or Delete

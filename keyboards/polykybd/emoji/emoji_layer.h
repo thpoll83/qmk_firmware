@@ -74,8 +74,9 @@ void emj_draw_tab_bottom(uint16_t keycode);
 // Backspace and Space are two fixed emoji slots (EMJ_SEARCH_BKSP_SLOT,
 // EMJ_SEARCH_SPACE_SLOT); when the base layout has Backspace on the top-right
 // key, Backspace moves one row down to KC_EMJ_S_BKSP and Space takes its slot. KC_EMJ_S_CLEAR clears the query, and leaving the layer
-// clears it too. The mode key shows an on/off switch, and is blank and inert
-// while no dictionary is loaded.
+// clears it too. The mode key shows 🔍 (tab mode) or 🥳 (search mode) with a
+// vertical on/off toggle beside it, and is blank and inert while no dictionary
+// is loaded.
 
 // Result index of each category tab key, by category: the left-to-right order of
 // the tabs on the keymap. Identity unless the keymap's config.h says otherwise.

@@ -640,10 +640,11 @@ void emj_init(void) {
 }
 
 const uint32_t *emj_display_text(uint16_t keycode) {
-    // ── Mode key: "Find" over an on/off switch, like the other toggle keys ──
+    // ── Mode key: 🔍 in tab mode, 🥳 in search mode; emj_draw_tab_indicator()
+    //    adds the vertical on/off toggle on the right ──
     if (keycode == KC_EMJ_MODE) {
         if (!emjdict_present()) return (const uint32_t *)U"";
-        return s_search ? U"Find\r\v" ICON_SWITCH_ON : U"Find\r\v" ICON_SWITCH_OFF;
+        return make_slot_str(s_search ? 0x1F973 : 0x1F50D);
     }
     if (emj_search_active()) {
         const uint32_t *t = search_display_text(keycode);
@@ -784,7 +785,27 @@ void emj_apply_sync(uint8_t category, uint8_t page) {
 uint8_t emj_active_category(void) { return s_category; }
 uint8_t emj_active_page(void)     { return s_page; }
 
+// The mode key's vertical on/off toggle: a 9x20 rounded outline at panel x 62..70,
+// y 10..29, with a 5x7 knob up (search mode on) or down (off). The emoji's ink
+// ends at x 58 and its 3 px courtyard at x 61, so neither touches the toggle
+// (measured with the keycap-layout-preview model for 🔍 and 🥳: 0 px collision,
+// 0 px erased, nothing off the panel).
+#define EMJ_TOGGLE_X 62
+#define EMJ_TOGGLE_Y 10
+#define EMJ_TOGGLE_W 9
+#define EMJ_TOGGLE_H 20
+
+static void draw_mode_toggle(void) {
+    kdisp_draw_round_rect(BUFFER_X + EMJ_TOGGLE_X, EMJ_TOGGLE_Y, EMJ_TOGGLE_W, EMJ_TOGGLE_H, 4);
+    const int8_t knob_y = s_search ? EMJ_TOGGLE_Y + 2 : EMJ_TOGGLE_Y + EMJ_TOGGLE_H - 2 - 7;
+    kdisp_fill_rect(BUFFER_X + EMJ_TOGGLE_X + 2, knob_y, 5, 7);
+}
+
 void emj_draw_tab_indicator(uint16_t keycode) {
+    if (keycode == KC_EMJ_MODE) {
+        if (emjdict_present()) draw_mode_toggle();
+        return;
+    }
     if (emj_search_active()) return;   // the tabs show results, none is "active"
     if (keycode < KC_EMJ_CAT_BASE || keycode >= KC_EMJ_PAGE_PREV) return;
     if ((uint8_t)(keycode - KC_EMJ_CAT_BASE) != s_category) return;

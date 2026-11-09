@@ -7530,6 +7530,7 @@ void keyboard_post_init_user(void) {
     note_glyph_script(ee.glyph_script);
     note_glyph_size(ee.glyph_size);
     note_glyph_place(ee.glyph_place);
+    note_emj_search_mode(ee.emj_search_mode);
     // The dynamic keymap is stored BY LAYER INDEX and QMK does not version it, so a
     // build whose layer enum has shifted would read the previous occupant of every
     // slot above the change. Discard it once, then stamp the revision so the next

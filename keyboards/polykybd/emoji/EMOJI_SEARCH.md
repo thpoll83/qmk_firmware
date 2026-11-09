@@ -176,7 +176,9 @@ The letters are read from the base layout when search mode starts, from the
 stored keymap, so a remapped layout is followed too. There is no Enter or Delete
 (a result key sends its emoji), and the arrows keep their tab-mode meaning. The
 query shows on the status OLED. Switching modes keeps the query, and leaving the
-layer clears it (the mode stays).
+layer clears it. The mode stays. It is stored in EEPROM
+(`poly_eeconf_t.emj_search_mode`, written at suspend like the other settings), so
+after a reboot the layer starts in the mode it was left in.
 
 split42 has no free Tab key (category tab 0 is there) and no room for a results
 row while typing: 36 letter keys and 6 thumbs. The mode key goes on one of the two

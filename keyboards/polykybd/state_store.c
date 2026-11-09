@@ -188,6 +188,13 @@ void save_user_glyph_place(void) {
                                    sizeof(place));
 }
 
+// Writes the emoji layer search-mode tail byte.
+void save_user_emj_search_mode(void) {
+    const uint8_t mode = get_emj_search_mode() ? EMJ_SEARCH_MODE_ON : 0;
+    eeconfig_update_user_datablock(&mode, offsetof(poly_eeconf_t, emj_search_mode),
+                                   sizeof(mode));
+}
+
 // Writes just the boot-intro marker tail byte (like glyph_script, it sits at the
 // tail of poly_eeconf_t, not in the contiguous settings block).
 void save_user_boot_flags(void) {

@@ -257,7 +257,7 @@ static void emj_mru_preset(void) {
 // runs the same search on its own dictionary copy. Results are computed lazily,
 // on the first draw or press after the query or page changed.
 
-static bool     s_search;                        // search mode chosen
+// The mode itself is get/set_emj_search_mode() (state.c), stored in EEPROM.
 static uint16_t s_query[EMJDICT_QUERY_MAX];      // typed codepoints (BMP), spaces included
 static uint8_t  s_qlen;
 static uint8_t  s_rpage;                         // result page
@@ -283,7 +283,7 @@ static bool     s_letters_dirty = true;
 _Static_assert(sizeof(((poly_sync_t *)0)->emj_query) == EMJDICT_QUERY_MAX * sizeof(uint16_t),
                "poly_sync_t.emj_query must hold EMJDICT_QUERY_MAX codepoints");
 
-bool emj_search_active(void) { return s_search && emjdict_present(); }
+bool emj_search_active(void) { return get_emj_search_mode() && emjdict_present(); }
 
 static void search_changed(void) {
     s_res_dirty = true;
@@ -574,7 +574,7 @@ void emj_search_on_layer_exit(void) {
 }
 
 void emj_search_export(uint8_t *flags, uint8_t *page, uint8_t *qlen, uint16_t *query) {
-    *flags = s_search ? 1u : 0u;
+    *flags = get_emj_search_mode() ? 1u : 0u;
     *page  = s_rpage;
     *qlen  = s_qlen;
     memset(query, 0, EMJDICT_QUERY_MAX * sizeof(uint16_t));
@@ -584,11 +584,11 @@ void emj_search_export(uint8_t *flags, uint8_t *page, uint8_t *qlen, uint16_t *q
 void emj_search_apply(uint8_t flags, uint8_t page, uint8_t qlen, const uint16_t *query) {
     if (qlen > EMJDICT_QUERY_MAX) qlen = EMJDICT_QUERY_MAX;
     bool mode = (flags & 1u) != 0;
-    bool same = mode == s_search && page == s_rpage && qlen == s_qlen &&
+    bool same = mode == get_emj_search_mode() && page == s_rpage && qlen == s_qlen &&
                 memcmp(query, s_query, (size_t)qlen * sizeof(uint16_t)) == 0;
     if (same) return;
-    if (mode && !s_search) s_letters_dirty = true;
-    s_search = mode;
+    if (mode && !get_emj_search_mode()) s_letters_dirty = true;
+    set_emj_search_mode(mode);
     s_rpage  = page;
     s_qlen   = qlen;
     memcpy(s_query, query, (size_t)qlen * sizeof(uint16_t));
@@ -613,7 +613,7 @@ const uint32_t *emj_display_text(uint16_t keycode) {
     if (keycode == KC_EMJ_MODE) {
         if (!emjdict_present()) return (const uint32_t *)U"";
         // One leading space, not make_slot_str()'s two: room for the toggle.
-        const uint32_t cp = s_search ? 0x1F973 : 0x1F50D;
+        const uint32_t cp = get_emj_search_mode() ? 0x1F973 : 0x1F50D;
         if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) == NULL) return s_missing_glyph;
         s_disp_buf[0] = ' ';
         s_disp_buf[1] = cp;
@@ -667,7 +667,7 @@ bool emj_process_keycode(uint16_t keycode, bool pressed) {
         update_performed();
         if (keycode == KC_EMJ_MODE) {
             if (emjdict_present()) {
-                s_search = !s_search;
+                set_emj_search_mode(!get_emj_search_mode());
                 s_letters_dirty = true;   // the base layer or language may have changed
                 search_changed();
             }
@@ -774,7 +774,7 @@ uint8_t emj_active_page(void)     { return s_page; }
 
 static void draw_mode_toggle(void) {
     kdisp_draw_badge_rect(BUFFER_X + EMJ_TOGGLE_X, EMJ_TOGGLE_Y, EMJ_TOGGLE_W, EMJ_TOGGLE_H, 6, 2);
-    const int8_t knob_y = s_search ? EMJ_TOGGLE_Y + 4 : EMJ_TOGGLE_Y + EMJ_TOGGLE_H - 4 - EMJ_KNOB;
+    const int8_t knob_y = get_emj_search_mode() ? EMJ_TOGGLE_Y + 4 : EMJ_TOGGLE_Y + EMJ_TOGGLE_H - 4 - EMJ_KNOB;
     kdisp_draw_badge_rect(BUFFER_X + EMJ_TOGGLE_X + 3, knob_y, EMJ_KNOB, EMJ_KNOB, 3, 0);
 }
 

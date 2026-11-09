@@ -269,14 +269,15 @@ static void overlay_flags_on(poly_sync_t *local_state, uint8_t new_flags) {
 #endif
 #define POLY_GET_ID_STR "P\x06." POLY_KB_NAME " " FW_VERSION " P" STR(PROTOCOL_VERSION) " HW" STR(DEVICE_VER) " "
 // The GET_ID reply is one 64-byte report carrying the id string, then the
-// NUL-terminated blocks after it: ['V'][count][u16 x count] and ['G'][u16].
+// NUL-terminated blocks after it: ['V'][count][u16 x count], ['G'][u16] and
+// ['A'][u8] (v28).
 // ⚠️ Asserted rather than written down as a measured number, because every part
 // of it moves: the version string grows, and the 'V' block grows TWO BYTES PER
 // BUNDLE. Both emitters below drop their block rather than truncate if it does
 // not fit, so overflowing would cost the host its font-pack versions SILENTLY --
 // it would read "no bundles on the device" and re-flash all of them on every
 // connect. sizeof() counts the string's own NUL, which is where the blocks start.
-_Static_assert(sizeof(POLY_GET_ID_STR) + 2u + FONTPACK_BUNDLE_COUNT * 2u + 3u
+_Static_assert(sizeof(POLY_GET_ID_STR) + 2u + FONTPACK_BUNDLE_COUNT * 2u + 3u + 2u
                    <= HID_REPORT_SIZE,
                "the GET_ID reply no longer fits one report - see the block layout above");
 
@@ -342,6 +343,16 @@ static void hid_cmd_6(uint8_t *data, uint8_t length, const poly_layer_t *local_l
         data[off++] = 'G';
         data[off++] = (uint8_t)(gen & 0xFFu);
         data[off++] = (uint8_t)(gen >> 8);
+    }
+    // ['A'][u8] (v28): what owns the keycaps right now -- POLY_ANIM_NONE,
+    // POLY_ANIM_INTRO (the one-shot boot / KC_EDEN show) or POLY_ANIM_IDLE (the
+    // Eden screensaver). The host holds its connect-time font-pack flash while
+    // this is not NONE: a flash during the boot intro drew the master's legends
+    // over Eden and left the slave in it (field, 2026-11-09).
+    if (off + 2u <= length) {
+        data[off++] = 'A';
+        data[off++] = !startup_anim_active() ? POLY_ANIM_NONE
+                    : startup_anim_is_loop() ? POLY_ANIM_IDLE : POLY_ANIM_INTRO;
     }
     raw_hid_send(data, length);
     return;

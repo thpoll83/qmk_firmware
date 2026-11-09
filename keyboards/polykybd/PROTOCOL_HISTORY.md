@@ -366,6 +366,17 @@ reading before you change either one.
     check, reads as missing, and the host flashes the shipped bundle in its place.
   - v26 and older firmware have a 256 KB icon slot and refuse a larger library at
     BEGIN, so the host sends a library over 256 KB only at v27.
+  **v28** appends an **`A` block** to the GET_ID reply, after `G`: `['A'][u8]`, what
+  owns the keycaps. `0` no animation, `1` the one-shot Eden show (the boot intro or
+  `KC_EDEN`), `2` the Eden screensaver (`IDLE_STYLE_EDEN`). No command changes.
+  - Field 2026-11-09: after a firmware apply the host's connect-time font-pack flash
+    ran during the boot intro. The master drew its legends over Eden and the slave
+    stayed in Eden. The host now holds that flash until the block reads `0`.
+  - The intro starts at the end of `keyboard_post_init_user()`, before the host's
+    first GET_ID, so the first reply after a boot already reads `1`.
+  - It is the MASTER's state. The slave's show starts from the master's `anim_nonce`
+    a few housekeeping passes later and ends at about the same time.
+  - v27 and older firmware have no block. The host flashes at once, as before.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload

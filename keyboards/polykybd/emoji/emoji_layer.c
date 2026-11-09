@@ -257,7 +257,7 @@ static void emj_mru_preset(void) {
 // runs the same search on its own dictionary copy. Results are computed lazily,
 // on the first draw or press after the query or page changed.
 
-static bool     s_search;                        // search mode chosen
+// The mode itself is get/set_emj_search_mode() (state.c), stored in EEPROM.
 static uint16_t s_query[EMJDICT_QUERY_MAX];      // typed codepoints (BMP), spaces included
 static uint8_t  s_qlen;
 static uint8_t  s_rpage;                         // result page
@@ -268,20 +268,13 @@ static bool     s_res_dirty = true;
 static const uint8_t s_result_of_cat[] = EMJ_SEARCH_RESULT_OF_CAT;
 
 // Search-mode roles. The page keys (top left, top right) page the results.
-// Backspace and Space are two emoji slots with no letter on any base layout
-// (EMJ_SEARCH_BKSP_SLOT, EMJ_SEARCH_SPACE_SLOT): on split72 the key above the
-// right innermost thumb and the one beside it. When the base layout has
-// Backspace on the top-right key (Qwerty), Backspace moves one row down to
-// KC_EMJ_S_BKSP instead, and Space takes the Backspace slot. A second Space is
-// the emoji slot EMJ_SEARCH_SPACE2_SLOT (on split72 the left key above the
-// innermost thumb). The recents keep all 12 keys.
+// KC_EMJ_S_SPACE and KC_EMJ_S_BKSP are Space and Backspace; every emoji slot is
+// a letter or blank. The recents keep all 12 keys.
 enum { ROLE_NONE = 0, ROLE_SPACE, ROLE_BKSP, ROLE_PREV, ROLE_NEXT };
 
 // The letter each emoji slot types in search mode: the base layer's key at the
 // slot's matrix position, in the active language. 0 = no letter (blank, inert).
 static uint32_t s_slot_letter[EMJ_SLOTS_PER_PAGE];
-// The base layout has Backspace on the top-right key: KC_EMJ_S_BKSP is Backspace.
-static bool     s_bksp_below;
 
 // Rebuilt lazily from the main loop: the slave's sync handler runs on the split
 // protocol thread and only marks it stale.
@@ -290,20 +283,11 @@ static bool     s_letters_dirty = true;
 _Static_assert(sizeof(((poly_sync_t *)0)->emj_query) == EMJDICT_QUERY_MAX * sizeof(uint16_t),
                "poly_sync_t.emj_query must hold EMJDICT_QUERY_MAX codepoints");
 
-bool emj_search_active(void) { return s_search && emjdict_present(); }
+bool emj_search_active(void) { return get_emj_search_mode() && emjdict_present(); }
 
 static void search_changed(void) {
     s_res_dirty = true;
     request_disp_refresh();
-}
-
-// Role of an emoji slot in search mode, from the fixed slot config and the
-// base layout's Backspace (s_bksp_below, set before this is used).
-static uint8_t slot_role(uint8_t slot) {
-    if (slot == EMJ_SEARCH_SPACE2_SLOT) return ROLE_SPACE;
-    if (slot == EMJ_SEARCH_BKSP_SLOT) return s_bksp_below ? ROLE_SPACE : ROLE_BKSP;
-    if (slot == EMJ_SEARCH_SPACE_SLOT) return s_bksp_below ? ROLE_NONE : ROLE_SPACE;
-    return ROLE_NONE;
 }
 
 // The letter the base layout's key at `pos` types in the active language, or 0.
@@ -338,23 +322,11 @@ static void build_slot_letters(void) {
     if (!s_letters_dirty) return;
     s_letters_dirty = false;
     memset(s_slot_letter, 0, sizeof(s_slot_letter));
-    s_bksp_below = false;
     const uint8_t base = (uint8_t)get_local_layer()->def_layer;
     const uint8_t lang = get_local_state()->lang;
 
-    // Pass 1: where the base layout has Backspace decides the slot roles.
-    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
-        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
-            keypos_t pos = {.row = r, .col = c};
-            if (keymap_key_to_keycode(_EMJ, pos) == KC_EMJ_PAGE_NEXT &&
-                poly_mt_tap(keymap_key_to_keycode(base, pos)) == KC_BACKSPACE) {
-                s_bksp_below = true;
-            }
-        }
-    }
-
-    // Pass 2: letters on their own key. A letter whose key has a search function
-    // (Space, Backspace, a result, a recent) is collected as lost.
+    // Pass 1: letters on their own key. A letter whose key has a search function
+    // (a page key, a result, a recent) is collected as lost.
     uint8_t  reach[32] = {0};                 // byte codes some key already types
     uint8_t  slot_r[EMJ_SLOTS_PER_PAGE] = {0}, slot_c[EMJ_SLOTS_PER_PAGE] = {0};
     bool     slot_free[EMJ_SLOTS_PER_PAGE] = {false};
@@ -376,8 +348,7 @@ static void build_slot_letters(void) {
                     nb_c[a] = c;
                 }
             }
-            bool     own = kc >= KC_EMJ_SLOT_BASE && kc < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE &&
-                       slot_role((uint8_t)(kc - KC_EMJ_SLOT_BASE)) == ROLE_NONE;
+            bool     own = kc >= KC_EMJ_SLOT_BASE && kc < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE;
             if (own) {
                 uint8_t slot = (uint8_t)(kc - KC_EMJ_SLOT_BASE);
                 slot_r[slot] = r;
@@ -399,8 +370,8 @@ static void build_slot_letters(void) {
         }
     }
 
-    // Pass 3: a lost letter that no other key can type (Russian х on Qwerty's
-    // Backspace key; not French é, since e finds the same words) moves to the
+    // Pass 2: a lost letter that no other key can type (a letter on the `\` key,
+    // which has no emoji slot; not French é, since e finds the same words) moves to the
     // free emoji slot nearest its standard-keyboard spot (s_anchor), on the same
     // half as its own key (rows 0..half-1 are the left half).
     const uint8_t half_rows = MATRIX_ROWS / 2;
@@ -440,9 +411,8 @@ static void build_slot_letters(void) {
 static uint8_t search_role(uint16_t kc) {
     if (kc == KC_EMJ_PAGE_PREV) return ROLE_PREV;
     if (kc == KC_EMJ_PAGE_NEXT) return ROLE_NEXT;
-    build_slot_letters();
-    if (kc == KC_EMJ_S_BKSP) return s_bksp_below ? ROLE_BKSP : ROLE_NONE;
-    if (kc >= KC_EMJ_SLOT_BASE && kc < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) return slot_role((uint8_t)(kc - KC_EMJ_SLOT_BASE));
+    if (kc == KC_EMJ_S_SPACE) return ROLE_SPACE;
+    if (kc == KC_EMJ_S_BKSP) return ROLE_BKSP;
     return ROLE_NONE;
 }
 
@@ -527,7 +497,6 @@ static const uint32_t *search_display_text(uint16_t keycode) {
         uint32_t cp = result_for_cat((uint8_t)(keycode - KC_EMJ_CAT_BASE));
         return cp ? make_slot_str(cp) : (const uint32_t *)U"";
     }
-    if (keycode == KC_EMJ_S_BKSP) return (const uint32_t *)U"";   // Backspace is elsewhere on this layout
     if (is_mru_key(keycode)) {
         uint32_t cp = emj_decode(mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE)));
         return cp ? make_slot_str(cp) : (const uint32_t *)U"";
@@ -596,7 +565,6 @@ static bool search_process(uint16_t keycode) {
         if (cp != 0) query_append(cp);
         return true;
     }
-    if (keycode == KC_EMJ_S_BKSP) return true;   // blank and inert on this layout
     return false;
 }
 
@@ -606,7 +574,7 @@ void emj_search_on_layer_exit(void) {
 }
 
 void emj_search_export(uint8_t *flags, uint8_t *page, uint8_t *qlen, uint16_t *query) {
-    *flags = s_search ? 1u : 0u;
+    *flags = get_emj_search_mode() ? 1u : 0u;
     *page  = s_rpage;
     *qlen  = s_qlen;
     memset(query, 0, EMJDICT_QUERY_MAX * sizeof(uint16_t));
@@ -616,11 +584,11 @@ void emj_search_export(uint8_t *flags, uint8_t *page, uint8_t *qlen, uint16_t *q
 void emj_search_apply(uint8_t flags, uint8_t page, uint8_t qlen, const uint16_t *query) {
     if (qlen > EMJDICT_QUERY_MAX) qlen = EMJDICT_QUERY_MAX;
     bool mode = (flags & 1u) != 0;
-    bool same = mode == s_search && page == s_rpage && qlen == s_qlen &&
+    bool same = mode == get_emj_search_mode() && page == s_rpage && qlen == s_qlen &&
                 memcmp(query, s_query, (size_t)qlen * sizeof(uint16_t)) == 0;
     if (same) return;
-    if (mode && !s_search) s_letters_dirty = true;
-    s_search = mode;
+    if (mode && !get_emj_search_mode()) s_letters_dirty = true;
+    set_emj_search_mode(mode);
     s_rpage  = page;
     s_qlen   = qlen;
     memcpy(s_query, query, (size_t)qlen * sizeof(uint16_t));
@@ -645,7 +613,7 @@ const uint32_t *emj_display_text(uint16_t keycode) {
     if (keycode == KC_EMJ_MODE) {
         if (!emjdict_present()) return (const uint32_t *)U"";
         // One leading space, not make_slot_str()'s two: room for the toggle.
-        const uint32_t cp = s_search ? 0x1F973 : 0x1F50D;
+        const uint32_t cp = get_emj_search_mode() ? 0x1F973 : 0x1F50D;
         if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) == NULL) return s_missing_glyph;
         s_disp_buf[0] = ' ';
         s_disp_buf[1] = cp;
@@ -655,7 +623,7 @@ const uint32_t *emj_display_text(uint16_t keycode) {
     if (emj_search_active()) {
         const uint32_t *t = search_display_text(keycode);
         if (t) return t;
-    } else if (keycode == KC_EMJ_S_CLEAR || keycode == KC_EMJ_S_BKSP) {
+    } else if (keycode == KC_EMJ_S_CLEAR || keycode == KC_EMJ_S_BKSP || keycode == KC_EMJ_S_SPACE) {
         return (const uint32_t *)U"";   // search-only keys: blank in tab mode
     }
     // ── Page arrows with "page/pages" — always live because paging wraps ──
@@ -693,12 +661,13 @@ const uint32_t *emj_display_text(uint16_t keycode) {
 }
 
 bool emj_process_keycode(uint16_t keycode, bool pressed) {
-    if (keycode == KC_EMJ_MODE || keycode == KC_EMJ_S_CLEAR || keycode == KC_EMJ_S_BKSP) {
+    if (keycode == KC_EMJ_MODE || keycode == KC_EMJ_S_CLEAR || keycode == KC_EMJ_S_BKSP ||
+        keycode == KC_EMJ_S_SPACE) {
         if (!pressed) return true;
         update_performed();
         if (keycode == KC_EMJ_MODE) {
             if (emjdict_present()) {
-                s_search = !s_search;
+                set_emj_search_mode(!get_emj_search_mode());
                 s_letters_dirty = true;   // the base layer or language may have changed
                 search_changed();
             }
@@ -805,7 +774,7 @@ uint8_t emj_active_page(void)     { return s_page; }
 
 static void draw_mode_toggle(void) {
     kdisp_draw_badge_rect(BUFFER_X + EMJ_TOGGLE_X, EMJ_TOGGLE_Y, EMJ_TOGGLE_W, EMJ_TOGGLE_H, 6, 2);
-    const int8_t knob_y = s_search ? EMJ_TOGGLE_Y + 4 : EMJ_TOGGLE_Y + EMJ_TOGGLE_H - 4 - EMJ_KNOB;
+    const int8_t knob_y = get_emj_search_mode() ? EMJ_TOGGLE_Y + 4 : EMJ_TOGGLE_Y + EMJ_TOGGLE_H - 4 - EMJ_KNOB;
     kdisp_draw_badge_rect(BUFFER_X + EMJ_TOGGLE_X + 3, knob_y, EMJ_KNOB, EMJ_KNOB, 3, 0);
 }
 

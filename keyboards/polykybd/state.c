@@ -39,6 +39,10 @@ static bool    g_gsize_dirty = false;
 // flushed via g_gplace_dirty.
 static uint8_t g_glyph_place  = GLYPH_PLACE_CENTRE;
 static bool    g_gplace_dirty = false;
+// Emoji layer search mode. Its own tail byte in poly_eeconf_t, flushed via
+// g_emj_search_dirty.
+static bool    g_emj_search       = false;
+static bool    g_emj_search_dirty = false;
 // First-boot startup-animation marker (poly_eeconf_t.boot_flags). 0xFF/0 (fresh
 // EEPROM) => intro pending; BOOT_INTRO_DONE => already played.
 static uint8_t g_boot_flags = 0xFF;
@@ -561,6 +565,24 @@ void note_glyph_place(uint8_t place) {
     g_glyph_place = (place < GLYPH_PLACE_COUNT) ? place : GLYPH_PLACE_CENTRE;
 }
 
+bool get_emj_search_mode(void) {
+    return g_emj_search;
+}
+
+// Marks dirty only on a change, so the slave's sync handler (which calls this with
+// the master's mode on every sync) writes nothing until the mode really changes.
+void set_emj_search_mode(bool on) {
+    if (on == g_emj_search) return;
+    g_emj_search       = on;
+    g_emj_search_dirty = true;
+}
+
+// Any byte but EMJ_SEARCH_MODE_ON is tab mode: 0 on an EEPROM written before the
+// field existed, 0xFF on an erased one.
+void note_emj_search_mode(uint8_t stored) {
+    g_emj_search = stored == EMJ_SEARCH_MODE_ON;
+}
+
 // One tier up or down, WRAPPING at the ends — the KC_GLYPH_SIZE_UP / _DOWN keys.
 // One key drives both directions (Shift reverses it), so an end tier must still
 // lead somewhere: clamping would make the key look dead at 1 and at 3.
@@ -759,6 +781,7 @@ void save_all_dirty(void) {
     if (g_glyph_dirty)      { save_user_glyph_script(); g_glyph_dirty = false; }
     if (g_gsize_dirty)      { save_user_glyph_size();   g_gsize_dirty = false; }
     if (g_gplace_dirty)     { save_user_glyph_place();  g_gplace_dirty = false; }
+    if (g_emj_search_dirty) { save_user_emj_search_mode(); g_emj_search_dirty = false; }
     if (g_boot_dirty)       { save_user_boot_flags(); g_boot_dirty = false; }
     if (g_latin_dirty)      { save_user_latin();    g_latin_dirty = false; }
     if (g_def_layer_dirty)  { eeconfig_update_default_layer(g_def_layer_pending); g_def_layer_dirty = false; }

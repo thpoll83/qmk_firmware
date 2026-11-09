@@ -578,7 +578,15 @@ typedef struct _poly_eeconf_t {
     // is needed because a Flow Tap term of 0 (off) is a real choice.
     uint8_t  tapping_term;
     uint8_t  flow_tap_term;
+    // Emoji layer search mode (emoji/EMOJI_SEARCH.md): EMJ_SEARCH_MODE_ON when the
+    // layer comes up in search mode. Appended at the tail. No sentinel is needed: an
+    // EEPROM written before this field reads 0 here, which is tab mode, as before.
+    // The datablock version stays 159 (EECONFIG_USER_DATA_VERSION in the keymap
+    // config.h), so growing the block does not reset it.
+    uint8_t  emj_search_mode;
 } poly_eeconf_t;
+
+#define EMJ_SEARCH_MODE_ON  0x01   // poly_eeconf_t.emj_search_mode: search mode chosen
 
 #define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
 #define IDLE_STYLE_FMT_OK   0x3C   // poly_eeconf_t.idle_style holds a real choice (see above)
@@ -690,6 +698,7 @@ void save_user_os(void);
 void save_user_glyph_script(void);
 void save_user_glyph_size(void);
 void save_user_glyph_place(void);
+void save_user_emj_search_mode(void);
 void save_user_boot_flags(void);
 
 // Increments brightness by BRIGHT_STEP with clamping to FULL_BRIGHT (deferred EEPROM write).
@@ -850,6 +859,13 @@ void set_glyph_place(uint8_t place);
 // Records the placement without marking dirty (boot-time EEPROM load); an
 // out-of-range value falls back to GLYPH_PLACE_CENTRE.
 void note_glyph_place(uint8_t place);
+
+// Emoji layer search mode (true = search, false = category tabs). The setter marks
+// it dirty (deferred EEPROM write) only on a change; note_ records the stored byte
+// at boot without marking dirty.
+bool get_emj_search_mode(void);
+void set_emj_search_mode(bool on);
+void note_emj_search_mode(uint8_t stored);
 
 // Steps the legend size one tier (delta +1/-1), CLAMPED at small and large — the
 // KC_GLYPH_SIZE_UP / _DOWN keys. WRAPPING, not clamping. That is a consequence of

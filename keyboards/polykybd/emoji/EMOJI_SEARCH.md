@@ -52,6 +52,11 @@ Every letter folds to exactly one base letter (`fold_letter()`): ä, á, â → 
 nothing, because the user picks the emoji from the results. Letters of other
 scripts are only lowercased, since the Indic vowel signs are separate letters.
 
+Words are stored as the keys that type them. Korean is split into jamo keys of the
+2-set layout that ko-KR's letter keys show: 한 → ㅎ ㅏ ㄴ, a compound vowel or final
+as two keys, and a Shift double (ㄲ ㅃ ㅒ ㅖ) folded to its base key. That leaves
+26 jamo codes; the ko dictionary is 110 KB (83% of the slot) with 62 letters.
+
 Words are stored one byte per letter in every script. The alphabet table lists the
 letters of the dictionary in codepoint order, and letter k is stored as byte k+1.
 The fold table maps every letter a user can type, upper and lower case, to the

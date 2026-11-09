@@ -105,9 +105,32 @@ STOPWORDS = {
 }
 
 # Letters with no Unicode decomposition, and their base letter.
+# Hangul: a syllable is typed as its jamo on the 2-set layout (ko-KR's letter keys
+# show ㅂ ㅈ ㄷ ...). A compound vowel or final is two keys; a Shift double (ㄲ ㅃ
+# ㅒ ㅖ) folds to its base key, like every other letter folds to its base letter.
+_HANGUL_L = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
+_HANGUL_V = ["ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅗㅏ", "ㅗㅐ", "ㅗㅣ", "ㅛ", "ㅜ",
+             "ㅜㅓ", "ㅜㅔ", "ㅜㅣ", "ㅠ", "ㅡ", "ㅡㅣ", "ㅣ"]
+_HANGUL_T = ["", "ㄱ", "ㄲ", "ㄱㅅ", "ㄴ", "ㄴㅈ", "ㄴㅎ", "ㄷ", "ㄹ", "ㄹㄱ", "ㄹㅁ", "ㄹㅂ", "ㄹㅅ", "ㄹㅌ",
+             "ㄹㅍ", "ㄹㅎ", "ㅁ", "ㅂ", "ㅂㅅ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"]
+
+
+def hangul_keys(text: str) -> str:
+    """Hangul syllables as the jamo keys that type them: 한 -> ㅎㅏㄴ."""
+    out = []
+    for ch in text:
+        o = ord(ch) - 0xAC00
+        if 0 <= o < 11172:
+            out.append(_HANGUL_L[o // 588] + _HANGUL_V[(o % 588) // 28] + _HANGUL_T[o % 28])
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 _FOLD_BASE = {"ß": "s", "æ": "a", "œ": "o", "ø": "o", "ł": "l", "đ": "d", "ð": "d",
               "þ": "t", "ı": "i", "ħ": "h", "ŧ": "t", "ŋ": "n", "ĸ": "k", "ſ": "s",
-              "ς": "σ"}
+              "ς": "σ",
+              "ㄲ": "ㄱ", "ㄸ": "ㄷ", "ㅃ": "ㅂ", "ㅆ": "ㅅ", "ㅉ": "ㅈ", "ㅒ": "ㅐ", "ㅖ": "ㅔ"}
 
 FOLD_SCRIPT_END = 0x0530      # Latin, Greek, Cyrillic: the scripts whose letters fold
 
@@ -122,6 +145,8 @@ def fold_letter(ch: str) -> str:
     low = ch.lower()
     if len(low) != 1:                 # İ lowercases to i + combining dot
         low = low[0]
+    if low in _FOLD_BASE:
+        return _FOLD_BASE[low]
     if ord(low) >= FOLD_SCRIPT_END:
         return low
     if low in _FOLD_BASE:
@@ -132,7 +157,7 @@ def fold_letter(ch: str) -> str:
 
 def fold(text: str) -> str:
     """Fold every letter of `text` to its base letter (see fold_letter())."""
-    text = unicodedata.normalize("NFC", text)
+    text = hangul_keys(unicodedata.normalize("NFC", text))
     return "".join(fold_letter(ch) for ch in text if not 0x0300 <= ord(ch) <= 0x036F)
 
 
@@ -142,6 +167,7 @@ def fold_table(code: dict[str, int]) -> list[tuple[int, int]]:
     whose base letter is in it. Sorted by codepoint."""
     cands = {ord(ch) for ch in code} | {ord(ch.upper()) for ch in code if len(ch.upper()) == 1}
     cands |= {c for c in range(0x41, FOLD_SCRIPT_END) if chr(c).isalpha()}
+    cands |= {ord(c) for c in _FOLD_BASE}   # the Hangul Shift doubles, among others
     return sorted((c, code[fold_letter(chr(c))]) for c in cands if fold_letter(chr(c)) in code)
 
 

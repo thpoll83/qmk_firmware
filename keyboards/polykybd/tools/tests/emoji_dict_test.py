@@ -31,6 +31,13 @@ class FoldTest(unittest.TestCase):
             if chr(c).isalpha():
                 self.assertEqual(len(ed.fold_letter(chr(c))), 1, hex(c))
 
+    def test_hangul_is_stored_as_its_keys(self):
+        self.assertEqual(ed.hangul_keys("한국"), "ㅎㅏㄴㄱㅜㄱ")
+        self.assertEqual(ed.hangul_keys("왜 닭"), "ㅇㅗㅐ ㄷㅏㄹㄱ")   # compound vowel and final: two keys
+        # Shift doubles fold to their base key, like other letters to their base letter.
+        self.assertEqual(ed.fold("까치"), "ㄱㅏㅊㅣ")
+        self.assertEqual(ed.fold_letter("ㅖ"), "ㅔ")
+
     def test_indic_vowel_signs_stay(self):
         self.assertEqual(ed.fold("புன்னகை"), "புன்னகை")
 

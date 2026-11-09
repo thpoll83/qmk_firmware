@@ -1,0 +1,1258 @@
+# emoji search keywords, zh-HK@cangjie, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived), written as cangjie keys (emoji_romanize.py, Unihan kMandarin/kCangjie). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	hhkbomo	khhk | houukhhk | pdkvid | mvdhymuoo | hhk | bomondu | anmtp | anmtiib | yrbrhxbc
+1F601	oinrhhkraiubuavbuqmbbmrhhkrgrrrgrrraiuqmvpqmb	hehe | oinrhhkraiubuavbuqmbbmrhhkrgrrrgrrraiuqmvpqmb | rgrrrgrr | houukhhk | pdkvid | etlbytap | mvdhymuoo | bomondu | anmtp | yrbrhxbc
+1F602	grtrdmemmblleytraiuqmvpqmb	XD | romrromr | rrikeyt | rihr | grtrdmemmblleytraiuqmvpqmb | khhk | irphgks | kbgosje | eyiuehsk | hhkmglnrihr | hhkjcor | bomondu | anmtp
+1F603	anmtbuavraiuhhkbomo	romrromr | rypbau | khhk | nsmvrypb | houukhhk | pdkvid | mvdhymuoo | hhk | hhkbomo | bomondu | anmtp | anmtbuavraiuhhkbomo | yrbrhxbc
+1F604	oinrhhkbmrhhkrgrrrgrrraiuqmvpqmb	oinrhhkbmrhhkrgrrrgrrraiuqmvpqmb | oinrhhkraiubuavbuqmbbmrhhkrgrrrgrrraiuqmvpqmb | romrromr | rypbau | khhk | nsmvrypb | houukhhk | pdkvid | buavbuqmb | hhkbomo | bomondu | yrbrhxbc
+1F605	abuemjbmrhhkrgrrrgrrraiuqmvpqmb	abuemjbmrhhkrgrrrgrrraiuqmvpqmb | imoiiemj | uuemj | romrromr | mkgks | kusitkuoll | nsmvrypb | houukhhk | emje | ebmgrrv | eyiuemj | eycbemj | otfkmmf | hhkbomo | sevifnsmv | bomondu
+1F606	khmghhk	XD | rmnrrmnr | romrromr | rypbau | khhk | nsmvrypb | etlbytap | khmghhk | hhkjcor | hhkdtge | bomondu | anmtp
+1F607	mtmbcymkbowjrwfquraiuhhkmwyl	fmumgwlv | fmumgwlvhhkbomo | hdrmfj | mkojlk | houukhhk | pdkvid | otfjrytj | ifrhuifmrw | ytwgyrhjr | hhk | bomondu | mtmbcymkbowjrwfquraiuhhkmwyl
+1F608	mmpidhihapihhk	vmjhhk | vhkfdqmb | ncmmpidhi | mmpidhi | mmpidhihapihhk | ytwgyrhjr | hhk | bomondu | nbg | mhnlmmp | idhihi
+1F609	buhiobuavhhkraiuqmvpqmb	rrwjbuav | phqmirp | buhiobuav | buhiobuavhhkraiuqmvpqmb | buavbuqmb | bomondu | qmvpqmb | yrbgrpqmb
+1F60A	buyfdbuavhouukhhkraiuqmvpqmb	houukhhk | etlbytap | buyfdbuavhouukhhkraiuqmvpqmb | hhkbomo | bomondu | bomovfm | anmtp | yrbrhxbc
+1F60B	hrhkphjrmtmbcraiuqmvpqmb	ron | ronoipru | vndron | vndrjd | vndoiav | houukhhk | tgkrjd | bhdn | bomondu | hjrmtmbc | hrhkp | hrhkphjrmtmbcraiuqmvpqmb | oiavhqphh
+1F60C	shdcinnronfd	imoiiqbbsd | mfjqbbsd | ysokshdci | ifrrj | bomondu | shdcinnronfd
+1F60D	ppbuavraiuqmvpqmb	143 | grtrtgno | jmucbuc | p | ppbuavraiuqmvpqmb | ptopvepysok | bbpe | irphbbuu | eiaveawe | buavbuqmb | bomondu | ydbuubbpehapi
+1F60E	jiwtckinlamhbuavcyturaiuhhkmwyl	kinlamh | kinlamhbuavcytu | houukhhk | jiwtckinlamhbuavcyturaiuhhkmwyl | ysokshdci | kbmng | buavcytu | bomondu | mwhgr | hnhlidher | wgfgcytu
+1F60F	imoiihhk	oryehhk | ohcehhk | vmjhhk | hoamiytap | odyjifbuu | khyckkhbbb | bomondu | yrhnidbln | anmtmgmmuhhk
+1F610	otfyrhjrvndyrcru	... | mfvndhhk | mfyrbrhxbc | lyt | rmmranmtp | kusitkuoll | yvpnn | otfkmmf | otfsjhhl | otfqmvpqmb | otfymmr | otfyrhjrvndyrcru | otfyrmmr | bomondu | qmvpqmb
+1F611	mwylotfqmvpqmb	... | mfvndhhk | mfyrbrhxbc | lyt | riok | rmmranmtp | kusitkuoll | yvpnn | otfkmmf | otfsjhhl | otfqmvpqmb | bomondu | andhbuav
+1F612	mfyrbrhxbc	mfyrbrhxbc | rmmranmtp | kmnrpeg | vkokvhs | wsvws | odyjifbuu | otfkmmf | otfsjhhl | hqmonfd | bomondu | rwnlifbuu | nlykbomlk
+1F613	imoiiemj	imoiiemj | uuemj | jqmrpha | irphbbuu | emj | eyiuemj | eycbemj | otfkmmf | sevifnsmv | bomondu | mtmbcknib
+1F614	ebhuwp	ooahp | mnrpha | hqobcok | hqoybhg | lypooah | qprutcno | ebhuwp | ebmgrrv | otfsjhhl | bomondu | andhbuav
+1F615	wdqmbe	mfmrobgjmyo | rwkp | wdimp | tgdimfgoru | lypooah | qprutcno | pudheahbu | bomondu
+1F616	wdimp	bbemfnn | wdimp | lypooah | irphbbuu | ebmgrrv | wmvvfjoa | knib | vfjoa | bomondu
+1F617	ytkrphhraiuqmvpqmb	rphh | grtrtgno | rjalrypb | rmtorypb | bbpe | qytvrphh | vfpiomwa | bomondu | ydbuurphh | ydbuurphhhapibomo | ydbuurphhhapiqmvpqmb | ytkrphhraiuqmvpqmb | caph
+1F618	nohtorphhraiuqmvpqmb	rphh | grtrtgno | jmucbuc | p | bbpe | qggyoyg | qytvrphh | eiaveawe | bomondu | ydbuubbpehapi | caph | cytgytap | nohtorphh | nohtorphhraiuqmvpqmb
+1F619	hhkbuavytkrphhraiuqmvpqmb	rphh | grtrtgno | bbpe | qytvrphh | anaujv | hhkbuavytkrphh | hhkbuavytkrphhraiuqmvpqmb | vfpiomwa | bomondu | ytkrphh | caph
+1F61A	omrgwgbuavydbuurphhraiuqmvpqmb	omrgwgbuavydbuurphhraiuqmvpqmb | rphh | qytvrphh | vfpiomwa | bomondu | bomovfm | ydbuurphh | yrbgrpqmb | caph | cytgytap | andhbuav
+1F61B	rwgfrwgf	mfcta | olwlbhdn | olwlbhdnraiuqmvpqmb | rghjr | rghjrmtmbc | rwgfrwgf | kbgosje | lwlbhdn | bomondu | hibomo
+1F61C	rghjrmtmbc	olwlbhdn | jrpeg | rghjr | rghjrmtmbc | rrwjbuav | rrwjbuavolwlbhdn | rwgfrwgf | kbgosje | ebbbhdiua | khnikhmg | buhiobuavrghjrmtmbc | buavbuqmb | bomondu | hjrmtmbc | hibomo
+1F61D	buhiobuavrghjrmtmbc	XP | olwlbhdn | rghjr | rghjrmtmbc | rjdythu | rgrrrgrr | rwgfrwgf | buhiobuavrghjrmtmbc | buavbuqmb | bhdn | bomondu | hjrmtmbc | andhbuav
+1F61E	hqoybhg	mfanmtp | ooahp | rmmranmtp | rhrfrhrf | hqobcok | hqoybhg | lypooah | ebmgrrv | pudheahbu | bomondu
+1F61F	qncrp	mfanmtp | mfyrbrhxbc | ooahp | rmmranmtp | mkgks | lypooah | hfp | qncrp | ogfypwp | pudheahbu | sevifnsmv | bomondu | tksqfyrmvh
+1F620	pjtcvep	mfetlb | mfyrbrhxbc | rmmranmtp | wsvws | vep | mmp | pjtcvep | ebmgrrv | hqmonfd | bomondu
+1F621	hqmonfd	mfyrbrhxbc | rmmranmtp | wsvws | vep | mmp | pjtcvep | onfdmnp | hqmonfd | vfmnau | bomondu
+1F622	rihrsevif	mfyrbrhxbc | ooahp | mnrpha | rrikeyt | rrikbomo | rmmranmtp | rihrsevif | lypooah | mbpheddbuh | pywvoinp | eyiuehsk | bomondu
+1F623	kdheofquraiuqmvpqmb	segqgdi | jidieyg | sipmbdi | piih | kdheofquraiuqmvpqmb | knibtjr | bomondu | ogdl | mtmbcknib
+1F624	ogskpawe	mfetlb | abufmwg | rmmranmtp | wsvws | pjtcvep | hqmonfd | bomondu
+1F625	hqoybhgoamnbshqbcruraiuqmvpqmb	ooahp | uuemj | hqoybhg | hqoybhgoamnbshqbcruraiuqmvpqmb | lypooah | ebmgrrv | eyiuemj | pudheahbu | sevifnsmv | bomondu | shdcinnronfd
+1F626	pudheahbuqchqkr	bbemglntksqfrgcc | rgg | jqmrpha | nsmvrypb | qtaqmfnhe | qncrp | tmmvidvi | pudheahbu | pudheahbuqchqkr | bomondu | tksqf | tksqfyrmvh
+1F627	tjrgwgrmwyl	mfyrbrhxbc | mnrpha | rgg | rmmranmtp | rgcc | jqmrpha | niliyrbgr | yvpnn | pha | tmmvidvi | knibtjr | bomondu | tjrgwgrmwyl | toogbbe | tksqfrgcc
+1F628	tksqfmnp	jqmrpha | nsmvrypb | qncrp | ogfypwp | bomondu | bomonaunonheqmb | tsitnau | qmbucothb | mwylqmb | tksqfmnp | tksqfyrmvh
+1F629	mwylmbrmrkdheobp	mfetlb | mfyrbrhxbc | ooahp | rrikeyt | riok! | rmmranmtp | nsmvrypb | lypooah | irphbbuu | kdheofqu | kdheffbks | kdheobp | wvif | bomondu | mwylmbrmrkdheobp
+1F62A	buwd	anp | otfsjhhl | kdheofqu | buhjmburvp | buhjmhbbuu | wvif | bomondu | yrlllhbbuu
+1F62B	wvif	onrumi | onrjbo | rtkrmvh | riok | rjtcrjbo | ncbuhjm | lypooah | irphbbuu | qmnonrumi | qmnonrjbo | qmnrjtcrjbo | kdheofqu | bomondu
+1F62C	oyhvgorudbbmvdh	hehe | oyhvgorudbbmvdh | ryckmvdh | ryckmvdhpshymuoo | rgrrrgrr | kusitkuoll | houukhhk | mvdhymuoo | tmmvidvi | hhk | vfubbsevif | bomondu | hibomo
+1F62D	ysokgesjkrrik	mfyrbrhxbc | ooahp | rrikeyt | rrikbomo | rmmranmtp | rihr | rhrfrhrf | krrik | lypooah | ysokgesjkrrik | ehsk | ehske | buavehsk | bomondu
+1F62E	sjqkrraiuqmvpqmb	Orypb | mfamyorau | rd | rgg | rhqi | rnlr | rypbau | rhbk | nsmvrypb | yvpnn | sjqkrraiuqmvpqmb | bomondu | toogviowljbmoymr | mbmmvtksqf | tksqfyrmvh
+1F62F	tksqfyrmvhraiuqmvpqmb	Orypb | mfamyorau | rd | rgg | rhqi | rnlr | rypbau | rhbk | jvqbbsd | nsmvrypb | bomondu | toogviowljbmoymr | mbmmvtksqf | tksqfyrmvh | tksqfyrmvhraiuqmvpqmb
+1F630	abuemj	abuemj | pkkpyv | rypbau | nsmvanmt | emj | eyiuemj | eycbemj | otfkmmf | pudheahbu | sevifnsmv | bomondu | bomonaunonheqmb | tsitnau | mwylqmb | tksqf
+1F631	rgccmnpnn	robrihr | rgg | rtct | krvl | jqmrpha | fkrvl | pha | mnppbug | bomondu | mbmmvtksqf | mwylqmb | tksqfyrmvh
+1F632	mbmmvtksqf	Orypb | mfamyorau | mfhommn | rd | rgg | vfshutgdi | bomondu | mbmmvtksqf | tksqfyrmvh
+1F633	bomovfm	rd | rgg | kusitkuoll | phamwhi | gif | bubsdkbuavbuqmb | bunotbuav | tqng | bomondu | bomovfm | teyvbkf | toogviowljbmoymr | mwylvfm | tksqfyrmvh
+1F634	buhjmtjkann	rmnrno | ncbuhjm | id | anp | qmnrihrmbrmr | amyooam | anaujv | otfsjhhl | kdheofqu | buhjmburvp | buhjmhbbuu | wvif | bomondu | yrlllhbbuu | nlykbomlk | huwmlhlmj
+1F635	mtmbcabjjbubuyvi	mnpyv | hqmkmob | kdheofqu | wvif | bomondu | mtmbcabjj
+1F636	otfymmrraiuqmvpqmb	rd | rypbau | jvqbbsd | kusitkuoll | ebhuwfik | otfrypb | otfqmvpqmb | otfymmr | otfymmrraiuqmvpqmb | otfyrmmr | nonherd | hdphjphu | bomondu | qmvpqmb
+1F637	rwlyaj	rwlyaj | irpabu | vfwtwhd | bomondu | semcwhqm
+1F638	mbrmrymuoombllhhkraiubhtwdtge	hgkshqphh | rtw | khhk | nsmvrypb | houukhhk | buavbuqmb | hhkbomo | bomondu | bhtw | bhtwbomo | anmtp | mbrmrymuoombllhhkraiubhtwdtge | yrbrhxbc
+1F639	irphgkshapibhtwbomo	XD | hgkshqphh | romrromr | grtrpcru | grtrdmemmblleytraiubhtwdtge | rtw | khhk | pdkvid | irphgks | irphgkshapibhtwbomo | buavehsk | hhkmglnrihr | bomondu | bhtw | bhtwbomo | yrbrhxbc
+1F63A	anmtpbhtwdtge	hgkshqphh | rmnrrmnr | romrromr | rtw | nsmvrypb | houukhhk | hhkbomo | bomondu | bhtw | bhtwbomo | anmtpbhtwdtge
+1F63B	topkokrhapibhtwbomo	hgkshqphh | grtrtgno | rtw | houukhhk | p | ppbuav | ppbuavraiubhtwdtge | ptopvepysok | bbpe | bomondu | topkokrhapibhtwbomo | bhtw | bhtwbomo | cytgytap
+1F63C	houukhhkbhtwbomo	hgkshqphh | rtw | vmjhhk | hoamiytap | houukhhk | houukhhkbhtwdtge | houukhhkbhtwbomo | khyckkhbbb | hhk | bomondu | yrhnidbln | bhtw | bhtwbomo
+1F63D	ytkrphhraiubhtwdtge	hgkshqphh | rphh | rtw | qytvrphh | bomondu | ydbuuydbuu | bhtw | bhtwbomo | ytkrphhraiubhtwdtge | caph
+1F63E	hqmonfdhapibhtwbomo	mfyrbrhxbc | hgkshqphh | rmmranmtp | rtw | wsvws | vep | mmp | pjtcvep | qmtorypb | hqmonfd | hqmonfdhapibhtwbomo | nonhef | bomondu | bhtw | bhtwbomo
+1F63F	rihrsevifraiubhtwdtge	mfanmtp | mfyrbrhxbc | ooahp | ooahphapibhtw | hgkshqphh | rrikeyt | rrikeythapibhtw | rrikeythapibhtwbomo | rmmranmtp | rihrsevifraiubhtwdtge | rtw | rhrfrhrf | lypooah | eyiuehsk | ehske | buavehsk | bomondu | bhtw | bhtwbomo
+1F640	wvifhapibhtwbomo	hgkshqphh | robrihr | rtw | rtct | rgcc | krvl | fkrvlraiubhtw | pha | kdheofqu | wvif | wvifhapibhtwbomo | bomondu | bhtw | bhtwbomo | tksqfrgcc | tksqfyrmvh
+1F641	mfanmtp	mfanmtp | mfyrbrhxbc | ooahp | rmmranmtp | lypooah | hfp | pudheahbu | bomondu
+1F642	hdfbiknfhouukhhkraiuqmvpqmb	houukhhk | pdkvid | hdfbiknfhouukhhkraiuqmvpqmb | hhkbomo | hhkmwyl | bomondu | anmtp | yrbrhxbc
+1F643	jcmbcomgnbomo	omgnjjjii | hejjjii | romrromr | houukhhk | hhk | bomondu | jcmbcomgn
+1F644	hehabuavraiuqmvpqmb	mfsfb | hehabuav | hehabuavraiuqmvpqmb | hebuav | amyooam | buavbuqmb | bomondu | rwnlifbuu | nlykbomlk
+1F648	lmyyyiftwtphhifbuusqsfsfhhw	mfduphqbu | mfhqbu | hgkshqphh | kusitkuoll | qgiks | khonknd | bomondu | yitfoygbuavbuqmb | yitfbuav | toogiknfpqmb | lmyyyiftwtphhifbuusqsfsfhhw | lmyyyiftwtphhsgjwp | sqsfsfhhw
+1F649	lmyyyiftwtphhsgjwp	mfsgjwp | hgkshqphh | qgiks | khonknd | bomondu | sqsfsfhhw
+1F64A	lmyyyiftwtphhymmr	mfdupyrcru | mfymmr | hgkshqphh | jvqbbsd | qgiks | qkluoygrypbau | qklurypb | khonknd | hdphjphu | bomondu | lmyyyiftwtphhymmr | sqsfsfhhw
+1F910	qytcdwfrypbraiuqmvpqmb	jvqbbsd | qytcdwf | qytcdwfrypbraiuqmvpqmb | hdphjphu | bomondu | andhrmfhomr | andhrypb
+1F911	nonhebcdh	odicii | rypbau | nonhebcdh | bomondu | buhuciianmtbuav | cii
+1F912	oinrewotiteyrj	ewotiteyrj | hqmkmob | nonhefggu | bomondu
+1F913	lgardnd	rfbmvdh | wcbuavwbkog | mkdh | jhpjhp | jhpwks | jidijmso | lgardnd | buavbuqmb | buavcytu | sjhwpab | bomondu | mwahmbu | anmvdh | nlmnrjhp
+1F914	wpjkyslraiuqmvpqmb	myau | wpjkys | wpjkysl | wpjkyslraiuqmvpqmb | jkysypwp | bomondu | qmvpqmb | yroip
+1F915	pruvfubbkpblb	ooah | bbeooah | piih | knib | vfubbkpblb | bomondu | mtmbclb
+1F916	dviidito	bot | peghqphh | dviirrikr | dviidito | dviiditobomo | bomondu
+1F917	anmtpqyvgqpruraiuqmvpqmb	qpruqpru | qyvgqpru | bomondu | anmtpqyvgqpruraiuqmvpqmb
+1F920	hqonddtge	lbabu | lbabund | nsmvrypb | hqond | hqonddtge | bomondu | mcwyrnl
+1F921	ncng	ngnbg | ncng | ebbbhdiua | bomondu
+1F922	duprsrr	bbemfnn | rg | rsrrrg | rmmpp | dup | duprsrr | hqmkmob | bomondu | mwylqmb
+1F923	hhkmglnjjixpgpd	XD | romrromr | rrik | rihr | khhk | qqkqboae | kbgosje | eyiuehsk | hhk | hhkmglnrihr | hhkmglnjjixpgpd | hhkjcor | hwsmm | bomondu | anmtp
+1F924	eyiure	re | vndoiav | tcbhogdi | eyiure | tgkrjd | bgoihqi | bomondu | oihqi
+1F925	huwmlndvfoksmvnn	olwlsmv | kyrhjr | dowlb | dheyrtkrom | bomondu | yrcruyrtyu | yrtyuymmr | yrttbkyrhjr | yrttbkyrhjrraiuqmvpqmb | huwmlnd | huwmlndvfoksmvnn
+1F926	yitfoygghimwyl	mfmjokdbuoymr | mfdbuoymr | kbbuavbucnh | riok | vo | qmmrbomo | otfkmmf | otfbuavbucnh | otfymmr | yitfoygghimwyl | yitfoygmwyl | ctaprrs | toogviowljbmoymr
+1F927	qmnonrjbo	onrumi | onrjbo | rjtcrjbo | qmnonrumi | qmnonrjbo | qmnrjtcrjbo | eyiuirp | hqmkmob | nonhefggu | vfhvplb | bomondu
+1F928	rrwjyhusihymfahburaiuqmvpqmb	mfoymrohg | mfdbuoymr | hetgdi | rrwjyhusihymfahburaiuqmvpqmb | rwkp | pywvpknio | tmmvidvi | pudheahbu | bomondu | tksqfyrmvh
+1F929	ahqmahqmbuav	dblnehsk | rgg | khhk | ahqmfmufsmafsma | ahqmahqm | ahqmahqmbuav | buavbuqmb | bomo | bomondu | hxbckogw | mbrmrymuoohhk
+1F92A	hibomo	ohce | ohcehviobomo | ohcebomo | rjjbhhk | kncbuav | kvfwbuav | peg | sjphhk | qyrbhhkbomo | khnikhmg | kjcc | buavbuqmb | bomondu | hibomo
+1F92B	rypm	jvqbbsd | qgiks | mnhjd | hdphjphu | bomondu
+1F92C	rypbauymkbhodirsypuraiuqmvpqmb	rrhnwlsqf | rypbauymkbhodirsypuraiuqmvpqmb | rypbauymkbhodirsypuhapiqmvpqmb | wsvws | vep | pjtcvep | eihfgesj | fatefdbm | hqmonfd | khnikhmg | fdbmr | bomondu | bbtmtyrhjr
+1F92D	qyitfoygrypb	rtkrmvh | rtkrvfi | houukhhk | qyitfoygrypb | qmmrrypb | qklurypb | hdphjphu | hhk | bomondu | mbmmvtksqf | tksqfyrmvh
+1F92E	rsrrrg	rg | rsrrrg | rmmpp | hqmkmob | bomondu
+1F92F	mtmbcjanlfate	rgg | fatefhsmtmbc | bvvwyrnlfatefhs | bomondu | mbmmvtksqf | mtmbcbvvwfatefhs | mtmbcjanlfate | tksqfyrmvh
+1F970	mmmowjrppraiuhhkbomo	mbuhuchjgpqmb | mmmowjrppraiuhhkbomo | grtrtgno | ujmfhqmqj | gtjifmrw | houukhhk | p | bbpe | vfpbbpe | vfpbbpel | eiaveawe | bomondu | cytgytap | anmtp | anvitp | yrbrhxbc
+1F971	rmnrno	zzz | rmnrno | ncbuhjm | anp | dupyrlllhbbuu | qmnrmnrno | qmnrmnrnoraiudtge | qmnrihrmbrmr | amyooam | anaujv | otfsjhhl | kdheofqu | kdheffbks | buhjmburvp | buhjmhbbuu | wvif | bomondu | yrlllhbbuu | nlykbomlk
+1F972	houukhhkkpblbehsk	rrikeyt | rihr | grtrpcru | rhrfrhrf | houukhhk | lypooah | irphgks | eyiuehsk | ehske | knibtjr | hhkbomo | bomondu | yrbrhxbc
+1F973	ixeifrhuhapiqmvpqmb	rnoybysp | lbabund | tcpgrtr | ixeifrhu | ehhvtgdi | hqmapdkvid | bomondu | hxbckogw | anmtp
+1F974	mtmbchpabuavtop	ohce | rapvmwyoj | rypbau | kvfwbuav | abjj | edheeiavrypb | khni | pudheahbu | bomondu | emcwmwyoj | mwyojemcw | mtmbchpabuavtop | mtmbcabjj
+1F975	gifraiudtge	lajka | olwlbhdn | uuemj | rghjr | vndgif | onfdrumb | emj | eyiuemj | gif | gifraiudtge | nonhegif | nonhefggu | vfmnau | bomondu | bomovfm | hjrmtmbc
+1F976	imdwraiudtge	imeimdw | imoii | imdw | imdwraiudtge | jtcyimoii | vfgrime | vfgrmbdbu | bomondu | tsitnau | tsitnauraiudtge
+1F978	oryeqcshhapibomo	ohqphh | oikfvgyhv | kyfe | ahbuhqu | buavcytu | bomondu | anayrptd | shjrbshhhc
+1F97A	yrqmbijeraiudtge	mfetlb | onije | mnrpfdq | yrhvije | kbuavbuqmb | lypooah | piih | pfdqpank | bvpije | qprutcno | hqmqjyrhp | ijeijeonf | ehskemgemg | iknfojidvi | otfjrytjraiudtge | buavbuqmb | bomondu | yrqmbijeraiudtge
+1FAE0	mblmiopraiuqmvpqmb	romrromr | kusitkuoll | qyrbhhk | eyokopraiudtge | ejcrop | ejcrrkm | ejcrnbshqraiuqmvpqmb | gif | gifmglnejcr | gifks | mblmiop | mblmiopraiuqmvpqmb | yrhnidbln | nlbmpmthhh
+1FAE1	trokiftwtraiuqmvpqmb	yes madam | vnd | vlokmgln | trokiftwt | trokiftwtraiuqmvpqmb | abha | okrythu | mgoktrok | ytwiomrl | yrnlnltpo | nlamhfmu
+1FAE2	qmnanmtbuavqyitfrypbraiuqmvpqmb	omgnqlwmreyrfonfd | rmy | rmmrohvfqggy | rmmruugesj | rmmrmjokdbuoymr | rmmryrttbhoami | rgccmnphqi | kohqjlln | hqoybhg | kusitkuoll | phapha | ytapniy | hqikbyrttbybbr | qmnanmtbuavqyitfrypbraiuqmvpqmb | qklurypb | mbmmvtksqf | tksqfrgcc | tksqfkmnr | tksqfyrmvh
+1FAE3	mogebuavoomnbucnhraiuqmvpqmb	mogebuavoomnbucnhraiuqmvpqmb | mfmjokhqbu | oomnhqbu | oomnbucnh | kbbuavbucnh | impkoifbuu | rmmrmjokbucnh | jqmrtqng | kusitkuoll | phapha | phamwhi | qklubuav | eygifbuu | hqbumfmgln | bucnhhqirmmrmgln | jcqouhqbu | jchdbhqbu | tjkayfd | yitfbuav | tksqf
+1FAE4	tbhurypbraiuqmvpqmb	mfdbuoymr | onfyrhjrjllnrqyt | onfchjgytaprqyt | rmmrymbjmyo | hqoybhg | pywvpknio | amyooam | ijetmmc | ebmgrrv | eappbbu | khqmbpknio | jbmchapirsqf | fdjrbedg | tbhurypbraiuqmvpqmb | hlbucpknio | nlykbonfgrtrtgno | nlykbomlkonf
+1FAE5	yptmvfhaeraiuqmvpqmb	kbirphbbuu | kbqmvpqmb | rdnn | rdrkm | hqoybhg | qhvlddbuh | amyooam | ijetmmc | enekbqmvpqmb | ebmgrrv | efbebhu | otfytapbuhu | otfirp | yptmvfhaeraiuqmvpqmb | nlykbomlkonf | nlbmpmthhh | nlbmptims | nlbmphxh
+1FAE7	epruepru	visnapo | onfdepru | epruepru | edheedhe | ebndwfyr | emwfebnd | mgohhmghjd | hdwdbuu | hdwdbuuepru | bauhap | bauhapepru
+1FAE8	hgksqbouraiuqmvpqmb	hgksqbou | hgksqbouraiuqmvpqmb | rgg | rtmj | gpdmbmmv | mkrmvh | pfmupphp | qyjhgks | qbou | qbouhgks | qbouafmu | khnikhmg | kpkovfhae | kjcc | qmvpqmb | mbmmv | mbmmvhgks | ymmbcqyj | tksqfyrmvh
+1F381	iftwthqphh	pruvgyhv | ixeifrhu | hqma | omrtnd | iftwthqphh | iftwthqphhomrt | srhgyrnkmhail | tksqfgrtr
+1F389	qytfpru	ixeifrhu | ehhvtgdi | hqma | iftwtfpru | hxbckogw
+1F38A	tcpkrbucbdhhhmgije	yeah | mdmbdhhhvfhvpsfb | kivndnn | tcpkrbucbdhhhmgije | ixeifrhu | ehhvtgdi | mgije | hxbckogw | topfpru
+1F47B	hi	mnrpha | rgcc | wdqmbe | visdup | pha | peghqphh | qytghi | hqmhqphh | twlbsrhghail | ytwgyrhjr | hxbckogw | hjrmtmbc | tksqfrgcc | hi | hibomo
+1F47C	mkojlkbcvhxhu	mkojlk | mkojlkbcvhxhu | bcvhxhu | ytwgyrhjr | bomondu
+1F47D	niyahqmo	ET | niyahqmo | kijcm | peghqphh | hqmhqphh | ytwgyrhjr
+1F47E	peghqphh	osmewherjka | onaoqmvif | niyahqmo | niyahqmpeghqphh | kijcm | kijcmosmewherjka | kijcmohosmejka | jmdjlw | peghqphh | hqmhqphh | ypvifnaupeghqphh | yysdyti | mbwumgmmupeghqphh
+1F47F	mmpidhi	wsvws | vep | mmp | mmpidhi | pjtcvep | ytwgyrhjr | bomondu | nbg | mhnlmmp | idhihi
+1F480	bbjrbblwvmtmbc	peghqphh | mnpyv | ytwgyrhjr | hhkmnp | bomondu | hxhbbtwt | mtmbcbbb | bbbmtmbc | bbjrbblwvmtmbc
+1F481	qtoganmtqraiuo	ollvfshr | kbhshmlyrwb | nrrjmtmbcshikk | qnoemtmbcshikk | qtoganmtq | qtoganmtqraiuo | amyooamrqyt | agdifbr | kbyrqmb | ijetmmc | otfhshmlyrwb | bcyrjm | nlykbomlk
+1F482	jdihodqn	bearskin | ohqphh | oombydok | jdihodqn | ylmhomc | ipfdhelbabu | wksjm | wksphqm | hacetlojrhr | tlbkwirmhodqnomc | hodqnomc | mtmbckfbt
+1F489	cjhbmr	mlmbmmc | qmncj | qlwhbt | qytvhdhjg | eyghhdi | hqmkmob | khnetw | tvidhqphh | semcwhqm | cj
+1F48A	tvidkni	bsletvid | hqmkmob | vfogopdomrl | tvidkni | tvidhqphh | semcwhbnd | semcwhqm
+1F4A2	vep	wsvws | vep | pjtcvep | fateqmbhbks | khnikhmg | hodirsypu | napohougk
+1F4A4	zzz	zzz | anaujv | kdheofqu | buhjmnn | buhjmburvp | buhjmhbbuu | buhjmhbbuuhodirsypu | buyrlhbbuu | wvif | yrlllhbbuu | huwmlhlmj
+1F4A5	mrttcqytg	fhsnrrj | fatefhs | mrttcqytg
+1F4A6	uuemj	uuemj | eeycb | emje | eyiuemj | ybjjhgks | chjefdwf
+1F4A7	eeycb	mkonfd | jtcyimoii | e | eeycb | ewfyr | emje | buavehsk | hbubkf | mlbyeycb
+1F4A8	nilihnhli	khnhli | kjtrmpru | nilihnhli | pdkydl | ysokspp | fmwg | fmwgmbnhs | gyonn | goamjpdk | rmpru | mbmmi
+1F4A9	sfd	mhsqfsfd | omlkomlk | komlk | sfd | fdwtcomlk | huik
+1F4AB	mtmbcabjjahqmahqm	ahqmahqm | eyiuahqm | mtmbcabjj | mtmbcabjjahqmahqm
+1F4AC	tgdiyrhjrdsmg	... | tgdiyrhjr | qmnjnd | ykjnd | epruepru | fhbuwherrsypu | okmrtyrnj | yrcruyrhjr | yrttbyrhjr | jjomnoh
+1F4AD	pgesjtgdiyrhjrdsmg	twlndup | jwjcmgbuu | wpdup | wpjkys | dupegi | irpdup | edkjmyo | epruepru | nonhetwln | nonheab | haatwln | mbmmi | mbrrmirp
+1F4AE	hatop	hpslytaj | hanautophnd | hatop | top
+1F4A0	lanakbmwfyrraiutgcemthhh	lanakbmwfyrraiutgcemthhh | vihiomnr | tgcemthhh | tsitnau | chucmr | wfyr
+1F4A1	fnotbncr	ygytap | fmu | dupegi | fnotepru | fnotbncr | homrjvd | mbrrmfmumano
+1F4A3	fhsnrrj	nmsunlomo | fhsnrrj | fatefhs
+1F4AF	100 csh	100 | 100 csh | mma | mmacsh | l | cshlvok | bmrytap | rumr | tgdi | mylmmrobg | etlbcsh | macshma | ymbjmyo | yrsipbmr
+1F4B0	mopyhvcii	$ | mopyhvcii | jmrwkb | ihsdm | jeodi | kbfd | kbcii | mgbuuc | nonheygtq | bcdhjmrw | bcjkaeyg | c | cii | ciiopyhv
+1F4B1	opbucfklbcrhuqnbk	crhuqnbk | seogcrhu | seogyioj | niyseog | qiqnbk | opbucfklb | opbucfklbcrhuqnbk | cavhommn
+1F4B2	ciihodirsypu	$ | vloklnbuc | mgbuuc | tgkmmu | opbucfklb | cciihodirsypu | cii | ciihodirsypu
+1F4B8	ciinohtogyo	$ | odigfno | kbcii | ehgucii | mgbuuc | jchhn | vfhvpfklb | smwtc | topcii | lmbuc | cfhmwmmf | cavhommn | cii | ciinohtogyo | nohtogyo
+1F525	f	f | ffnhx | gif | fbkffggu
+1F52E	eaaamgije	mlmbmmc | visdup | jddoo | eaaamgije | mgije | ytwgyrhjr | nnmbcymmr | idhiegi
+1F440	ogebuav	eygifbuu | hqbu | buavbuqmb | jcqouifbuu | hxhbbtwt
+1F441	buavbuqmb	mogebuavbuqmb | rrwjbuav | buavbuqmb | hxhbbtwt
+1F442	sjhnd	sjhnd | sjoiisgjwp | gesjyta | sgjwp | hxhbbtwt
+1F443	huwml	rhukhbbuu | onfdrjd | ansj | hxhbbtwt | hxhbbtwtyrnloyt | huwml | huwmlnd
+1F444	rypbau	rphh | rbm | mvryrbb | rypbmvr | rypbau | qytvrphh | hxhbbtwt
+1F445	hjrmtmbc	olwlbhdn | rghjrmtmbc | hhk | bhdn | hjrmtmbc | hrhkp | hxhbbtwt | hxhbbtwtyrnloyt
+1F446	ym	ym | hbrym | hoygymqpa | q | qgiks | qpahbr | qpammf | qpatjka | yymrowjr | oiavqpa
+1F447	my	my | hbrmy | hoygmyqpa | q | qgiks | qpahbr | qpammf | qpatjka | yymrowjr | oiavqpa
+1F448	km	hbrkm | hoygkmqpa | q | qgiks | qpahbr | qpatjka | yymrowjr | oiavqpa
+1F449	kr	kr | hbrkr | hoygkrqpa | q | qgiks | qpahbr | qpammf | qpatjka | yymrowjr | oiavqpa
+1F44A	uufqq	rhucnlh | bmrytap | qmn | fqqmtmbc | qsmgfqq | fbrwbkf | mrttcfqq | yhvlmwylmblldoo
+1F44B	qbjjq	88 | hi | onfvnd | mgbbuhu | anrolnk | rwmvrwmv | q | hqmqjhqmqj | qbjjq | tgnoyhvl
+1F44C	OK qgiks	OK | vnd | hoami | q | abha | fbrwbkf | ymbjmyo
+1F44D	yrhuc	+1 | like | bmrytap | grtrtgno | vnd | q | qwyiqpa | kbbuavfmu | otfanraombc | fbrwbkf | vfvvivfgwcveksks | ymbjmyo | yrhuc | yrhucvnd | hubucihs | yruchoamivnd
+1F44E	edam	-1 | nono | mfmnribpp | mfqytvbbe | mfhommn | mmkstqm | hbrmy | rmmrhoami | vwyiqpahbrmy | tqm | tqmmmks | q | eneyjksjegi | edam | fanw | fanwyrucqwlj
+1F44F	qhaq	yeah | ojrkhoamivnd | tcpgrtr | ixekrbuc | qhaq | fbrqgesj | gifmnf | ifhmlifgni | ifrhukrbuc | hxbckogw | gtjefbrq
+1F450	qtoganmtq	q | qgiks | qmnanmt | qpruqpru | qyvgqpru | bwlijmq | jjjiihbr
+261D	eygytap	ym | hbrym | hoygymqpa | qgiks | qpammf | qpatjka | hgdimhgdi | yymrowjr | oiavqpa
+270A	fqqmtmbc	wjiivfgr | q | qgiks | fqqmtmbc | qsmgsevif | hcqgoruhapifqqmtmbc
+270B	hcqq	hi | hi5 | high 5 | high5 | mdm | oyrnylm | q | jeqfbrq | hcqq
+270C	Vjndqgiks	v | Vjndqgiks | vq | yeah | tbnhshqgiks | bfqshdlninoq | bfqshdlnqgiks | hdrmfj | q | qgiks
+270D	jhxf	jhxfjnd | q | hlq
+1F4AA	bhnobo	add oil | fight | man | mmmtmbcbhn | onkqtgk | onkqhxh | ksrelw | koge | kogeojkp | kmpifqq | nilivmg | nilivmgraiummmtmbcbhn | vfntw | qsjb | qmn | qiyr | otfanraombc | bhnobo | hcqhjwg
+1F590	oyrnylm	5 | oyrnylm | nsmvanmt | q | qgiks | qqpa | jeqfbrq | hcqq | anmt
+1F64C	hcqogeqtgnorhfd	10 | high five | yeah | irpehsk | irpyrhhi | ixeifrhu | q | qgiks | twlbymihh | hdbgbyrhuc | hcqq | hcqgoru | hcqogeq | hcqogeqtgnorhfd | yrhuctgk
+1F64F	irpwkp	hi5 | high5 | onije | omrj | rmmryryvo | niniyrhhi | irpehsk | irpyrhhi | q | qgiks | hqmqjqhp | jeqfbrq | ijeije | ifhmlifgni | yrqmbije | yrhhiyrhhi
+1F90C	qhxmqqpa	rtk | rwkp | vndrjd | q | qgiks | qhlo | qryo | ysokshdci | hgdiomwa | mbdip | mbdiphqm | wfyr
+1F90F	qhxm	mrhairhai | mwfyr | fhfh | fhlvok | fhamwg | qhxm | qhxmqpa | kbwfyr | wheriknf | vfw
+1F918	ROCK	rock | q | qqpa | qboueycv
+1F919	call hqi	6 | call hqi | yc | q | qgiks | qmn | qmnmbwuyrhjr | mbwuyrhjr
+1F91A	semrtgoruqfbrq	q | qlpb | hcqq
+1F91B	fqqmtmbchbrkm	hbrkm | qgiks | qmn | fqqmtmbc | fqqmtmbchbrkm | qsmgfqq | jeqfqq | hjwgjeq
+1F91C	fqqmtmbchbrkr	hbrkr | q | qgiks | qmn | fqqmtmbc | fqqmtmbchbrkr | qsmgfqq | jeqfqq | hjwgjeq
+1F91D	qsmgq	jkssyrtgi | bmrytap | ihsyck | q | qmnyckythu | qsmgq | omwayrtgi
+1F91E	ifrhuvndybjj	yckei | vndybjj | q | qgiks | qqpa | ifrhuifmrw
+1F91F	hqibbpeonfqgiks	ILY | mmmogeqqpa | bbpeonf | bbpeonfqgiks | hqibbpeonf | hqibbpeonfqgiks | q | qgiks
+1F932	ogeqfbrqphbrym	omrj | q | ifhmlifgni | yrojmfmbc | ogeqomrj | ogeqfbrqphbrym
+1F9B4	bbbmtmbc	khpr | bbbmtmbc | bbjrbblwv
+1F9B5	byav	vfntwhapibyav | bjebbtwt | bcrl | byav | bdoetgit | rmaph
+1F9B6	bcrl	bcrl | bcrlrmwd | rmhndbcrl | rmeagpd | rmaph
+1F9B7	mvdhymuoo	eqhfha | mvdhsemcw | mvdhymuoo | mgohhmghjdha | hanau
+1F9E0	bvvw	kbvvw | wpdup | wpjkys | oraks | sjhwpab | bvvwopyhv | bvvwyrnl
+1F9BE	dviiditqsjb	dviiditsjb | otfnlytjmrpko | tghqibje
+1FAC0	pbtis	pbtis | prmlmo | vfmnau | nbshqyrln
+1FAC1	bjb	rhfdrnhe | bjb
+1FAE6	ryckmvr	rbmmvr | ryckmvr | mvr | nlyrhds | phqmirp | qncrp | ogfypwp | vfmmvr | sevifnsmv | yrhdso
+1FAF0	oiavqpahdrqwyiqpayckeihapiq	bts | ohhjp | pmng | pp | bbpe | bbpeonf | bbpep | qgiks | ppp | ehhvp | lmbuc | cii | jjdmqipmpp
+1FAF1	hbrkrhapiq	krq | q | qhbrkr | qlpb | qsmgq
+1FAF2	hbrkmhapiq	krq | q | qhbrkm | qfbrq | qsmgq
+1FAF3	qfbrqhbrmy	gjknigoru | q | qphbrmy | qfbrq | qomrgoru | omrqgoru | qyaj | qamogoru | qtak | rmhqo
+1FAF4	qfbrqhbrym	olwlq | doornlr | rhherqyt | qgiks | qp | qphbrym | qfbrqhbrym | omrqgoru | ybbrrhhe | hhoermvh
+1FAF5	oiavqpaqpahbrtgbuuwlooo	I want you | onf | tgdiegj | yfikuamyoonf | q | qqpa | qpa | qpaoygonf | qpahbr | qpatjkaonf | hsqf | oiavqpaqpahbrtgbuuwlooo
+1FAF6	ogeqppp	ohhjp | pmngqgiks | pp | bbpe | bbpeonf | bbpep | qgiks | kbbbpe | ppp | ogeq | ogeqppp
+1FAF7	qhbrkmqog	hi 5 | mfnn | oyrnylm | hbrkm | rfdoyg | rmmrrdln | rmmrmwv | q | qssvfshu | qog | jeqfbrq | qfbw | jlaoyrn | hgdihgdi
+1FAF8	qhbrkrqog	hi 5 | mfnn | oyrnylm | hbrkr | rfdoyg | rmmrrdln | rmmrmwv | q | qssvfshu | qog | jeqfbrq | qfbw | jlaoyrn | hgdihgdi
+2764	bbpep	grtrtgno | p | bbpe | irppqmb | vfmnau | cytgytap
+1F380	lijrbliptdvfgr	ixeifrhu | vfvifkpblb | lijrbliptdvfgr
+1F382	hqmanolmifdtgf	ixeifrhu | kblivvvfwlihapinolmifdtgf | hrtmrrr | hqma | hqmapdkvid | hqmanolmifdtgf | nolmifdtgf
+1F383	jbtjhviofnot	onqdjrhufnothybp | jbtjhvio | jbtjhviofnothybp | romrrwlgrwmv | fnothybp | twlbsrhghail
+1F384	srhgyrnkmdgti	ixeifrhu | dgti | srhgyrnkm | srhgyrnkmdgti | srhgyrnkmhail
+1F386	fmwgtop	vrvkvid | ixeifrhu | fmwgtop | fatefhs
+1F387	fyedfanwfmwgtop	ixeifrhu | fnhxf | fmwgtop | fyedfanwfmwgtop | fatefhs
+1F388	onfdmgije	ixeifrhu | onfdmgije | hqma
+1F9E7	hdlnamyo	hdlnamyo | hdlnamyoggdi | grhdln | mkgymihhcii | vndybjj | ydhmloq | iftwthqphh | vfmggdipru | ybbroq
+1F9E8	fpruojk	f | ftop | ftvid | fpruojk | fhstvid | fmwgf | fmwgtop | fatefhs | fatefhsrrr | fatefhshqphh | tjomkfpru
+1F38B	juni	junidgti | ixeifrhu | adm | admjuni | lgahoim | h | hhoim | hptoiolb | haila
+1F38C	yckeiraiuysotc	yckei | yckeiraiuysotc | yckeiysotc | ysotc | adm
+1F38D	cshtjid	aipm | aipmdjbmhqphh | admdjbmhqphh | dci | djbmhqphh | h | andci
+1F38E	vhxhuhail	vhxhuhail | adm | admciond | admvggvgg | admhaila | haila | puogbommf
+1F38F	nfwgnwfysotc	nfwgnwfysotc
+1F390	hnhlicoii	coii | hnhlicoii
+1F391	fbrbcb	otgiipm | ixeifrhu | byrbu | haila | fbrbcb
+1F393	wtjtctdlbabu	jibijm | hbndjka | lbabund | jdokyib | yhslbabu | bslevgyhv | wtjtctd | wtjtctdlbabu | mrmbcjm | yrbrhgdijdokyib
+1F484	mvryrbb	opvmv | opvmvrrr | mvryrbb | vfpiomwa | vfmnau
+1F485	qpawlelw	gelwl | olohq | olohqpawl | olohwl | opvmv | opvmvrrr | qqpa | qpawlelw | elwqpawl | otfsjhhl | vfgrdl | yrtoeq | yrtoemgwg | nlykbomlk
+1F48B	mvrhpsl	rphhkav | mvrhpsl | rypbmvr | phqmirp | bbpe | irppqmb | qytvrphh | eiaveawe | vfpiomwa | ydbuu | ydbuurypb | caph
+1F48C	pqmboymr	oymrohq | grtrtgno | p | pqmboymr | pqmblga | bbpe | eiaveawe | mbwuhmnl
+1F48D	itqpa	vhpaiftwt | itqpa | ijevhpa | eiaveawe | nonhefmu | vfgrvhpa | yrmnvhpa | chucmr | anoyrbu
+1F48E	chucmr	vhpaiftwt | jmucmr | eiaveawe | mghjdjmuc | vfgrvhpa | yrmnvhpa | chucmr
+1F48F	caphsevifraiumwksmv	bb | ohqphh | rbm | jmucbuc | pqmborhr | pqmborhrqytvrphh | bbpeonf | bbpepqmb | qytvrphh | vfpiomwa | ydbuurphh | ydbuurypb | yrffvfpbbpe | caph | caphsevifraiumwksmv
+1F490	topdl	mduviftop | bbpepqmb | djbmhqphh | eiaveawe | hqma | vfsuoinpa | vfpiomwa | top | topdl | ybgroqvfsuoinp | ddbuhchdatopdl
+1F491	vfpbbpel	date | ohqphh | jmucbuc | pp | pqmborhr | bbpeonf | bbpepqmb | vfpbbpel | wksohdrvokbowjrbbpep | vfpiomwa | anvitohvf
+1F492	vhpaiftwt	vhpaiftwt | nklqhmndhqphh | jdokfbrg | eiaveawe
+1F493	prmlmo	grtrtgno | p | prmlmo | bbpe | irppqmb | fdcshvfmnau | rmlmohgks | cytgytap
+1F494	pmryoj	ooahp | ndhvokhwli | pknib | pmryoj | lypooah | irppqmb | qmnmrdhe
+1F495	ppdbuhpsl	grtrtgno | p | bbpe | irppqmb | vfpiomwa | ybgroqvfsuoinp | cytgytap
+1F496	anmtp	grtrtgno | p | bbpe | irppqmb | eiaveawe | cytgytap | anofmu
+1F497	phgks	dblnehsk | grtrtgno | p | phgks | prmlmo | bbpe | irppqmb | sevifnsmv | rmlmohgks | cytgytap
+1F498	mhtbnjcmvhp	mhtbnjcmvhp | ompphqgdi | lhtbn | p | pqmbohail | bbpe | irppqmb | eiaveawe | htbn | vfpiomwa | cytgytap
+1F499	tsitp	grtrtgno | p | bbpe | irppqmb | eiaveawe | tsitnau | cytgytap
+1F49A	vfvnep	grtrtgno | p | bbpe | irppqmb | eiaveawe | vfvnenau | cytgytap
+1F49B	tmwcp	grtrtgno | p | bbpe | irppqmb | cytgytap | tmwcnau
+1F49C	ypvifp	grtrtgno | p | bbpe | irppqmb | ypvifnau | cytgytap
+1F49D	bbpehapiiftwthqphh	grtrtgno | p | pqmbohail | bbpe | irppqmb | iftwthqphh | vfvifkpblb | ybgroqvfsuoinp | cytgytap
+1F49E	hohjumgwlvpp	143 | grtrtgno | hohjumgwlvpp | p | bbpe | irppqmb | ysonojjjiihapip | otniqhgkshapip | jjjiihgks | ybgroqvfsuoinp | cytgytap
+1F49F	pmthhhvgyhvoiolb	grtrtgno | p | pmng | pmthhhvgyhvoiolb | bbpe | irppqmb | hanau | ypvifnau | cytgytap
+1F90D	hap	grtrtgno | p | bbpe | ha | hap | hanau | hanauraiup | hanaup
+1F90E	rlmyp	rlmy | rlmyp | rlmynau | rlmynauraiup | rlmynaup | grtrtgno | p | bbpe | lapvnau | cytgytap
+1F9E1	dnotp	grtrtgno | p | pmng | bbpe | dnotp | dnotnau | cytgytap
+1FA75	eiitsitp	mnrbbpe | grtrtgno | mktsitnau | pqmbvfjka | bbpep | bbpepqmb | hqibbpeonf | ebcdtsitvfvnenau | eiitsitnau | hqgdirsln | tsitp | tsitvfvnenau
+1FA76	kfnaup	ooahp | kbppqmb | pmng | bbpep | bbpepqmb | hqibbpeonf | aytakfnau | kf | kfp | kfnau | kfnaup | otfppqmb | hqgdirsln | mrdhenau | cav | cavp | cavnau | wgfha
+1FA77	fdcshvfmp	mnrbbpe | grtrtgno | hoamiytap | pqmbvfjka | bbpe | bbpeonf | bbpep | bbpepqmb | hqibbpeonf | hqgdirsln | hrtmtgk | fdcshvfmp | fdcshvfmnau | chjgytap
+2763	prtlorsypu	! | grtrtgno | p | prtlorsypu | pmngirprtlorsypu | bbpe | irprtlorsypu | dmwfyrsu | dmwfwfyrhodirsypu | cytgytap
+2733	hotyvahqm	hotyvahqm | honbgahqm | ahqmahqm | ahqmrsypu
+2734	honbgahqm	honbgahqm | ahqmahqm
+2747	ftop	manomano | ftop | nonhefmu | anofmu | anofvid
+1F3E0	hsyhsnd	jmso | smigoylm | smignd | nklqhmndhqphh | hsyhsnd | yknlsrrr | vhiilddi
+1F3E1	kbtopwgrvraiusmig	rslnwng | jmso | smig | smigoylm | nklqhmndhqphh | hsyhsnd | hsyhssmig | kbtopwgrvraiusmig | topwgrv | yknlsrrr
+1F3E2	yjksjcikdlwv	gihsylb | jhxfjnddlwv | mlmohs | nklqhmndhqphh | yjksjcikdlwv | yjksjcijmig
+1F3E3	admhmnlssr	nklqhmndhqphh | adm | admhmnlssr | hmnlssr | hmnlmmok
+1F3E4	srnoeillhmnlssr	nklqhmndhqphh | srnoeill | hmnlssr | hmnlmmok
+1F3E5	semcwnljmu	nklqhmndhqphh | semcwhqm | semcwnljmu
+1F3E6	cavhommn	nklqhmndhqphh | cavhommn
+1F3E7	qamogfnodvii	atm | qamogfno | dslcrbucdvii | mgbuuc | hbuhgksdslcrbucdvii | cavhommn | cii
+1F3E8	emcwiyr	nklqhmndhqphh | ysohvifg | ysohvoijrr | emcwiyr | oiheiyr
+1F3E9	bbpepqmbjmhcoijrr	knybyspgilr | nklqhmndhqphh | pqmbgosjeemcwiyr | bbpepqmbjmhcoijrr | agdicytgemcwiyr | emcwiyr
+1F3EA	omlkhdlniyr	24 | 24ncagdi | omlkhdln | omlkhdlniyr | ycbriyr | nklqhmndhqphh
+1F3EB	hbnddyck	hbnddyck | nklqhmndhqphh
+1F3EC	maopbuccismr	ycbriyr | nklqhmndhqphh | maopbuccismr
+1F3ED	mlmifbk	mlmifbk | nklqhmndhqphh
+1F3EE	fnothybp	hdrhnhli | sjremcwsmig | aipm | adm | fnot | fnothybp | vfmfnothybp | vfmnau | vfhvpfnothybp | emcwrau | yeoivisgp
+1F3EF	admgihsodg	gihsodg | nklqhmndhqphh | adm | admgihsodg
+1F3F0	srnoeillgihsodg	gihsodg | nklqhmnd | srnoeill | srnoeillgihsodg
+1F463	bcrlhpsl	mnlnhpsl | qmnhpsl | bslevgyhv | bcrlhpsl | glncbcrl
+1F464	omthhhtbnhafhhh	wanted | mwksnd | o | omthhhtbnhafhhh | oafhhh | ohgomnro | tbnhafhhh | fqhxhonao | mnrpknio | vtxcpknio | tmdtmd | iflwlhdph | iflwlhdpho | ynibvfrsj | yleqijb | nloiiafhhh
+1F465	ogeotbnhafhhh	ohqphh | mlboowjro | tbnhafhhh | fqhxhonao | ndnd | bbke | yleqijb | nloiiafhhh | ogeotbnhafhhh | ogend
+1F466	wksndyvo	ohqphh | hxhuytwg | ndyvond | ncbbke | ncytwg | wksndyvo
+1F467	vndyvo	lanacshwoll | vhxhu | vndyvo | ndndyjvfj | oqjjmvm | abyrbu | ehcneowy | yjvfjnd
+1F468	wkso	ohqphh | bbke | wkso | wksjm | wksphqm | wksbbke
+1F469	vo	ohqphh | vo | vjm | vphqm | mgwgshikk | cshikk | smvshikk | nohtoshikk
+1F46A	jmsoinkg	bb | mmmo | mmmr | ohqphh | ndyvond | jmsoinkg | ckwyi
+1F46B	mwksmvqopdoygq	bb | mwksmvqopdoygq | ohqphh | vjm | vphqm | jmucbuc | pqmbo | pqmborhr | bbpe | bbpepqmb | qopdq | qsmgq | bbke | yvbqq | yvbqqhapiwksphqmhdrvphqm | wksjm | wksphqm
+1F46C	mlboowjrwksoqopdoygq	hehe | ohqphh | ofqorhr | mlboowjrwkso | mlboowjrwksoqopdoygq | bmrphqm | jmucbuc | pqmbo | pqmborhr | bbpe | qopdq | bbke | wksjm | wksphqm | wksbbke | wkswks | vfpiomwa | sjlbutgk | ogebprubir
+1F46D	mlboowjrvoqopdoygq	LGBT | mlboowjrvo | mlboowjrvoqqytq | vhxhu | vbbke | vndbbke | vbmvjd | vbmvjdepou | qqytq
+1F46E	tkymrjbof	ohqphh | tqmo | tqmojkp | wksjm | wksphqm | tkymrjbof
+1F46F	nuiviinl	nuiviinl | nuisj | nuisjond | vjm | ndndv | ndndvjd | ndndhqmv | ehhvtgdi | otniqrmbhxrbuc | rmlmootniq | ogebprubir
+1F470	qdhetjkamtmbcvffhhapio	ohqphh | vjm | vphqm | vhpaiftwt | vhpavffh | ydhmlviav | vfgrvhpa | mwylvffh | mtmbcvffh
+1F471	cshikkraiuo	ohqphh | mfjmtmbc | wksjm | wksphqm | cmtmbcshikk | cshikk | cshikko | cshikkraiuo | cshikkwks
+1F472	jiwtclipmlbaburaiuwkso	lipmlbabu | ohqphh | lbabu | lbabund | jiwtclipmlbaburaiuwkso | hviodhelbabu | wksjm | wksphqm
+1F473	jiwtcmtmbclbraiuo	ohqphh | prumtmbc | prumtmbclb | wrjdokhogyo | jiwtcmtmbclb | jiwtcmtmbclbraiuo | hqgdidm | wksjm | hdhahtchmldd | caphjrhujdok | caphjrhujdokhogyo | mtmbclb
+1F474	jkpo	ohqphh | ohaoha | fmumtmbc | gpdleowy | oraqjsmp | cksjlcksjl | wksjm | wksphqm | ifbmck | hdhumtmbc | jkp | jkpo | jkpohaoha | jkpcici | bcrushikk
+1F475	jkpvsmb	ohqphh | vjm | vphqm | eeveev | viddvidd | vidividi | oraqjsmp | fanwshikkmng | ifbmwyi | jkpo | jkpkiki | jkpeeveev | jkpvsmb | jkptop | cshikk | nlmnreev
+1F476	bcvhxhu	bb | ond | hxhuytwg | lshhqm | v | bcvhxhu | jmucjmuc | jmucbuc | ncbcvhxhu | oqjjmvm | vikshxhu | ydhmlhqm | mvdhmvdhhbndyrmmr | hqm
+1F477	nklqhmndmlmo	gpdhebt | gpdhebtojkp | gpdhebtmlmo | jvomglbabu | mlmo | mlmohs | mlmhdrhg | nklqhmnd | nklqhmndmlmo | mtmbckfbt
+1F478	ciyg	ohqphh | ciyg | vhxhu | vjm | vphqm | vmg | vhamg | mgbmui | mghmr | hamgbmui | hamghmr | ytwgyrhjr | jkpeev
+1F479	idhihi	peghqphh | mmphi | adm | admpeghqphh | hqmhqphh | ytwgyrhjr | bomondu | qmvpqmb | mwylbmmc | oiavoidhi | idhihi
+1F47A	mkkhpr	mkkhpr | pjtcvep | adm | hqmhqphh | ytwgyrhjr | vfmnau | bomondu | mwylbmmc
+1F483	rmlmootniqraiuvo	disco | party | ohqphh | ombemhog | vo | vjm | vphqm | qbcdi | egitanwabmrno | otniqrmbhxrbuc | tnlmmfbktnlmotniq | rmlmootniq | rmlmootniqraiuvo
+1F486	qytvbbemtmbcyrnlqjvidqraiuo	facial | ohqphh | ojrkfacial | vjm | vphqm | qjvidq | qytvbbemtmbcyrnlqjvidqraiuo | ysokshdci | mylmklgqytvbbeqjvidqhapio | tgkjcor | bomondu | orninvfbme | shikkiiil
+1F487	tbnhmtmbcshikk	ohqphh | tbnhmtmbcshikk | tbnhshikk | vjm | vphqm | mgwgshikk | mgwgshikkhrmlb | tgkjcor | nohtoshikk
+1F645	bqqsjbojrkuuyckeiqgiksraiuo	dame | mfmnr | mfhommn | yckeiqgiks | kbmnribpp | rmmrohvf | rmmrmnrvio | rmmrhoami | iovgiks | qgiks | otfmnribpp | bqqsjbojrkuuyckeiqgiksraiuo | ddmmfylm
+1F646	bqqgiksqmvmmf OK raiuo	o | OK | ohqphh | mnrvio | vjm | vphqm | vnd | qmnqgiks | bqqgiksqmvmmf OK raiuo | ynibybbr
+1F647	tjpfdhhn	sor | sorry | rmmrvndytapwp | rmmryryvoamcw | tgdimfgoru | tgdirmmroyg | irpehsk | qprutcno | ijeijeonf | rmnmuije | ythutcno | tjpfdhhn | ijccfmbcamcw
+1F64B	hcqgorumogeq	hi | me | yckohhjhqi | romrrwlg | anraombc | hqi | hqiOK | hqiokr | hqiokrythu | q | kbanraombc | hcqq | hcqgorumogeq | anmtp
+1F64D	pudheahburaiuo	sad | mfetlb | ohpmtehr | ohsbrypb | rmmranmtp | rmmryrbrhxbc | hqoybhg | hsbtrbm | hsbtrypb | qfbkrypb | pudheahbu | pudheahburaiuo | qmvpqmb
+1F64E	qmtorypbraiuo	mabkmmp | rmmryrbrhxbc | rjalrypb | hqoybhg | wsvws | hsbtrbm | qmtorypb | qmtorypbraiuo | pudheahbu | okmrtshikk | yrdimabk
+1F930	nsndvsmb	ohqphh | kbg | vo | vjm | vphqm | jlvnd | nsndvsmb | pywvnsnd | kb bb | jkpeev
+1F931	rijbbdu	bb | bduhsyhs | ohqphh | rijbbdu | vjm | vphqm | vsqfvsqf | bcvhxhu | wyibdu | arfhgmbc | oiwmvovnhs | oiwmvvnhs | oiwmvwyibdu
+1F933	hbuqha	qqamombwuyrhjr | qdvii | dbudvii | hbuqha | mbwuyrhjr
+1F934	mgnd	ohqphh | wirmhamg | kind | mgoyra | mgnd | wksjm | wksphqm | hamgjmig | hamgyblb
+1F935	tqbuiftwtbsleraiuwkso	ohqphh | ydhmliinl | anaujav | mylmipm | tlpfshqubsle | wksjm | wksphqm | tqbuiftwtbsleraiuwkso | iftwtbsle | mcwvgyhv | rmaphmnpnui | yrbrvfnhe
+1F936	srhgyrnkmeeveev	merry | xmas | ixeifrhu | haila | srhgyrnkmqoo | srhgyrnkmeeveev | srhgyrnkmhail | srhgyrnkmjkpo
+1F937	hosjhsbraiuo	kbhshmlyrwb | kbyrj | kbyjksjegi | mnribppohvf | hqirmmrokr | amyooam | amyooamrqyt | ijetmmc | otfkmmf | otfhshmlyrwb | pknioimp | hosjhsb | hosjhsbraiuo | nlykbomlk
+1F385	srhgyrnkmjkpo	merry | xmas | ohqphh | ixeifrhu | ckydbuu | wksjm | wksphqm | ytwgyrhjr | haila | srhgyrnkmhail | srhgyrnkmjkpo
+1F9B8	goshro	ohqphh | mkbcmpm | vndo | tlbkkiog | goshro | goshrvfnhetlbkkiog | goshribppks
+1F9B9	goshrvfnheheehhv	ohqphh | gywvo | gywvnolmi | kgywvnolmi | khsuwllmy | wllmykhsu | goshrvfnheheehhv | goshribppks | mhnlmmp
+1F9BF	dviiditbcrl	dviiditbcrl | dviiditbyav | otfnlytjmrpko | tghqibje
+1F9D0	jiwtcrrwjllmlbuavcytu	ombemhog | rrwjllmlbuavcytu | jmrwkb | jiwtcrrwjllmlbuavcytu | buavcytu | bomondu
+1F9D1	ko	mfcshphqmrsln | lphqm | ohqphh | ko | ihso
+1F9D2	ncndyvo	mfcshphqmrsln | lphqm | ohqphh | hxhuytwg | ndyvond | oqjjmvm | hhk | vfwrmher | anmtp
+1F9D3	smvjka	mfcshphqmrsln | lphqm | ohqphh | oqytwb | oqsmv | kfshikk | hashikk | jkpo | jkpojmso | jkpoqo | smvjka
+1F9D4	hhwshhhcraiuo	ohqphh | kbshjrbshhhchapio | hhwshhhcraiuo | shjrbshhhc | shhhc
+1F9D5	prumtmbclbraiuvo	ohqphh | prumtmbc | prumtmbclbraiuvo | wdmqlb | vjm | vphqm | kklbmwbucklb | jiwtcmtmbclbhapivjm | mwylvffh | mtmbclb
+1F9D6	fssreeedomrqraiuo	ysokshdci | eeedomrq | eeedomrqhsyhs | fssreeedomrq | fssreeedomrqraiuo | tnefonfdjmig | tnefonfdhsyhs | tnefonfdeeedomrq | tnefonfdecor
+1F9D7	ddkqumrraiuo	ddkqu | ddkqumr | ddkqumrraiuo | ddkqumrjka | ddkqhoau | ddkqnomrt | ddkqmr | hoau | nomrtu
+1F9D8	hebtbyavoograiuo	baycdup | rhfdrnhe | qmnoog | ysokshdci | ebcdrhfdrnhe | mgomnoksr | mgomnoksrv | mgomnmgksr | hebtbyavoog | hebtbyavoograiuo | tyjjtopoog | qbbsdtgbuu
+1F9D9	moohrmlb	ohaoha | cici | rrhnyrmmr | moohrmlb | egihoicn | wkso | jkpoha | jkpcici | hoicnjm | idhiegihrmlb | idhihoicnhrmlb
+1F9DA	ound	ound | vhkfdqmb | ncound | ncfdqmbmbrrm | fdqmbmbrrm
+1F9DB	rnhehbthi	mfmnpysook | yvmbrrm | rnhehbtmnmwmsmnp | rnhehbthi | hojwpjrqyt | mnmwmsmnp | wksrnhehbthi | twlbsrhghail
+1F9DC	onwf	ariel | onwf | eowyihpmhqmhqphh | ytwgyrhjr | tgkonwf
+1F9DD	fdqmbmbrrm	vhkpeg | fdqmbmbrrm | idhiit | idhiegi | idhiwoll
+1F9DE	fnotiflwl	fnotiflwl | iflwlfnot | fdqmbmbrrm | yrojmfmbc | yrojmfmbcfnot | nlmnrqytmniflwlfnot
+1F9DF	grrvsmnp	mfmnpo | grrvsmnp | mnppklb | mnmwmsmnp | hommnsmnp | tksqfrgcc | hi
+1FAC2	qyvgqpruhapio	bro | mgbbuhu | kepqmb | keyrjbm | hgrrsln | jvsip | bbpepqmb | qpruqpru | qyvgqpru
+1FAC3	pywvnsndraiuwkso	food baby | ojkp | kbg | kbgeev | kbgbjbj | kioipru | nsndvsmb | pywvnsnd | pywvnsndraiuwkso | wkso | nonheifmrw | bgnd | bgthbsmv | byvgbhjg | oiavkinini
+1FAC4	pywvnsndhapio	kbg | kbgeev | kbgbjbj | nsndvsmb | pywvnsnd | pywvnsndhapio | kbrkm | kbgrtr | egjvsqfvsqf | bgnd | bgthbsmv | byvgbhjg | hxhnsnd | hxhsu
+B9	ymdmwflvokjnd 1	1 | ymdmwf | ymdmwflvokjnd 1
+B2	ymdmwflvokjnd 2	2 | ymdmwf | ymdmwflvokjnd 2 | mfjyhs
+B3	ymdmwflvokjnd 3	3 | ymdmwf | ymdmwflvokjnd 3 | ytyhs
+207B	ymdmwfnbuclvok	ymdmwf | ymdmwfnbuclvok | nbuclvok
+B0	ite	ite | itelvok | iteagdi | emcwfdqmbite
+B1	ksreihr	ksreihr | mylmnbucrsypu
+D7	hdlprsypu	hdlp | hdlpegi | hdlprsypu
+F7	nlomdegihodirsypu	nlomd | nlomdegi | nlomdegihodirsypu | nlomdrsypu
+B5	houukhapihodirsypu	houukhapihodirsypu | ebcnamwg
+A9	llhedtrg	c | llhedtrg
+AE	yrygbt	R | ycbrdmwf | yrygbt
+2122	ycbrdmwf	tm | ycbrdmwf
+A7	cshhailhodirsypu	cshhailhodirsypu | hjhnetehr | yrnlcsh | ytajhail
+B6	hjhnetehrdmwfyrsu	dmwfyrsu | hjhnetehr | hjhnetehrdmwfyrsu | hjhnetehrhodirsypu
+B7	ananlmrbrsypu	lwfyr | ananlmrbrsypu | wfyr
+2022	mmbcbursypu	mmbcbursypu | wfyr
+2013	yjwjqytvrsypu	dmwfwfyr | yjwjqytvrsypu
+2026	fhbuwherrsypu	fhbuwherrsypu | wfyrwfyrwfyr
+AB	kmlganirrsypu	V jndmng | hbrkm | kmlganirrsypu | nlrsypu | qhjrrsypu | qhjxohhodirsypu | nbgite
+BB	krlganirrsypu	V jndmng | krlganirrsypu | hbrkr | nlrsypu | qhjrrsypu | qhjxohhodirsypu | nbgite
+2030	hjcshyioj	hjcshpp | hjcshyioj
+20AC	srnommuhodirsypu	srnommu | srnommuhodirsypu | srnoeill | opbucfklb
+A3	tlbkcybshodirsypu	tlbkwirm | tlbkcybs | tlbkcybshodirsypu | opbucfklb
+A5	awrbchodirsypu	awrbc | awrbchodirsypu | afklb | adm | opbucfklb
+A2	ou	ou | csh
+20B9	hpsliteypwbtpp	hpsliteypwbtpp | ypwbtpp | opbucfklb
+20BD	ypwbtklb	ypwbtklb | opbucfklb
+20A9	jjdmqmmu	jjdmqmmu | jjdmqwrbc
+20BA	gsjtmmcwgqyt	
+20BF	pphqgdifklb	pphqgdifklb
+20AA	vionaumnlnydhmlyrhhijrhumfbk	
+20AB	goivjbtjhjbu	
+20B1	qdhejbvif	qdhejbvif | ppjbvif
+20BC	mllmjtcghqmqjngmwmsqsfvfobhqgdi	
+20B4	hryfjrhutanwdherwgqovfob	
+20A6	spahdlnmllmkmmfqyt	
+20A1	mrnrtchmlygtqhhoeksrhdyjiinl	
+20B2	auqytgghvioqytsp	
+20B5	ksrvfobjtcggpd	
+20B8	romrtnlmjrhugamgr	
+20BE	dhernwfagrmllmqytwg	
+20AE	tbmojrwrywdherwgjrhu	
+20AD	jkpqybbtcgtca	
+20A8	ypwbtpp	ypwbtpp
+24	tgkmmu	mmu | ppjbvif | tgkmmu | cii
+58F	mllmtgkspmllmhojwpqytvwyi	
+9F3	ndbtksrqytgtorymy	
+E3F	qkechjd	
+20A3	egiwirmegiiinl	egiwirmegiiinl
+20A4	wgqyt	wgqyt
+20A7	mcwmgilgmvdhnlytrjmhqgdi	
+20B0	hojwpwirmomlkjm	hojwpwirmomlkjm
+20B3	hbktchmlhqgdiqytmfbk	hbktchmlhqgdiqytmfbk
+20A2	jrhunwfajtcgwlvfg	jrhunwfajtcgwlvfg
+20A5	jphumfbk	jphumfbk
+20B6	wrywmfbkwgllnmfbk	wrywmfbkwgllnmfbk
+20B7	tchmlbuctchmlfdwlvfg	tchmlbuctchmlfdwlvfg
+A4	jdokropbucfklb	
+201E	krohpmogenlrsypu	ohpmogenlrsypu | krohpmogenlrsypu | nlrsypu | oraqjsmpnlrsypu | ogenlrsypu
+201C	kmogenlrsypu	kmogenlrsypu | nlrsypu | oraqjsmpnlrsypu | ogenlrsypu
+201D	krogenlrsypu	krogenlrsypu | nlrsypu | oraqjsmpnlrsypu | ogenlrsypu
+2018	kmrrwjnlrsypu	rrwjnlrsypu | kmrrwjnlrsypu | nlrsypu | qfbkrsypu | oraqjsmpnlrsypu
+2019	krrrwjnlrsypu	krrrwjnlrsypu | rrwjnlrsypu | nlrsypu | qfbkrsypu | oraqjsmpnlrsypu
+A1	omgntksqfrtlorsypu	omgnwljbm | omgntksqfrtlorsypu | tksqfrtlorsypu | tksqfyrmvh
+BF	omgnanrrsypu	omgnanrrsypu | omgnwljbm | anrrsypu | pknioanr
+2020	oolndmwf	oolndmwf | okmrtoolnrsypu
+2021	ogeoolndmwf	oolndmwf | okmrtoolnrsypu | oge | ogeoolndmwf
+2044	cshlvokodyjvfhae	cshlvokodyjvfhae
+2032	nbgcshhodirsypu	nbgcshhodirsypu
+2033	nbghdfhhodirsypu	nbgcshhodirsypu | nbghdfhhodirsypu
+201A	fqmthhhymrtrsypu	fqmthhhymrtrsypu | qfbkrsypu | ymrtrsypu
+AC	mfrjmyo	mfr | mfrjmyo
+2117	cvneytatjkaohsdtrg	tjkaohsdtrg | cvneyta | cvneytatjkaohsdtrg
+2212	eihregihodirsypu	eihr | eihregi | eihregihodirsypu
+2213	nbucmylmrsypu	nbucmylmrsypu
+2248	vfpihgdiysoy	kvfpi | vfpi | vfpihgdiysoy
+2260	mfhgdirsypu	mfhgdiysoy | mfhgdirsypu
+2261	omghgdi	omghgdi | bmroiomd | pmbmhgdi
+2264	ncysoyirmhgdiysoy	mfhgdiysoy | ncysoy | ncysoyirmhgdiysoy | hgdiysoy | hgdirsypu
+2265	kysoyirmhgdiysoy	mfhgdiysoy | kysoy | kysoyirmhgdiysoy | hgdiysoy | hgdirsypu
+226A	ygrvncysoy	ygrvncysoy
+226B	ygrvkysoy	ygrvkysoy
+221E	otfnlavhodirsypu	otfnlav | otfnlavhodirsypu
+221A	mfjyhsdav	tcglvok | mfjyhsdav | davrsypu
+221D	mylmpp	mylmpp
+2211	n mmuijehdr	n mmuijehdr
+220F	n mmuijehdqmc	n mmuijehdqmc
+222B	hdqmccsh	hdqmccsh
+2202	ohsbyudilvokhodirsypu	ohsbyudilvokhodirsypu
+2206	yhyugcwa	mmmnbgmthhh | yhyugcwa
+2207	yhyueihr	omgnmmmnbgmthhh | yhyueihr
+2200	omghdbgbamwgyrsmrhodirsypu	omghdbgbamwgyrsmrhodirsypu
+2203	klndklgamwgyrsmrhodirsypu	klndklgamwgyrsmrhodirsypu
+2205	jcmogd	jcmogd
+2208	syyiysoy	pruoinr | syyiysoy
+2209	mfsyyiysoy	mfsyyiysoy
+2229	yckogd	yckogd | ogd
+222A	sjvitogd	sjvitogd | ogd
+2282	ndogd	ndogd | ogd
+2283	wyiogd	wyiogd
+2286	ndogdhgdiysoy	ndogdhgdiysoy
+2287	wyiogdhgdiysoy	wyiogdhgdiysoy
+2227	ywlgjjrsjhxyc	ywlgjjrsjhxyc
+2295	kpblbwrbcwfquhapiksrrsypu	kpblbwrbcwfquhapiksrrsypu
+2297	kpblbwrbcwfquhapihdlprsypu	kpblbwrbcwfquhapihdlprsypu
+22A5	omgn T	omgn T
+2220	ccrunbg	ccrunbg
+2234	hshmlvio	hshmlvio
+2235	wkiknf	wkiknf
+2218	mgwlvybjjhbutnd	mgwlvybjjhbutnd
+2219	mmbcbuhodirsypuybjjhbutnd	mmbcbuhodirsypuybjjhbutnd
+22C5	prwfyrybjjhbutnd	prwfyrybjjhbutnd
+2215	nlomdegiodyjvfhae	nlomdegiodyjvfhae
+2190	hbrkmhtbnrypb	hbrkm | hbrkmhtbnrypb | htbnrypb
+2191	hbrymhtbnrypb	hbrym | hbrymhtbnrypb | htbnrypb
+2192	hbrkrhtbnrypb	hbrkr | hbrkrhtbnrypb | htbnrypb
+2193	hbrmyhtbnrypb	hbrmy | hbrmyhtbnrypb | htbnrypb
+2196	ymkmhtbnrypb	ymkmhtbnrypb | kmymhtbnrbm | yhshbr | htbnrbm | mcwlmp
+2197	ymkrhtbnrypb	ymkrhtbnrypb | krymhtbnrbm | yhshbr | dwlmp | htbnrbm
+2198	mykrhtbnrypb	mykrhtbnrypb | myrmhqo | krmyhtbnrbm | yhshbr | dwjbtj | htbnrbm
+2199	mykmhtbnrypb	mykmhtbnrypb | kmmyhtbnrbm | yhshbr | htbnrbm | mcwjbtj
+2194	kmkrhtbnrypb	kmkrhtbnrbm | kmkrhtbnrypb | htbnrbm
+2195	ymmyhtbnrypb	ymmyhtbnrbm | ymmyhtbnrypb | htbnrbm
+21D0	hbrkmogehtbnrypb	hbrkmogehtbnrypb
+21D1	hbrymogehtbnrypb	hbrymogehtbnrypb
+21D2	hbrkrogehtbnrypb	hbrkrogehtbnrypb
+21D3	hbrmyogehtbnrypb	hbrmyogehtbnrypb
+21D6	mcwlmpogehtbnrypb	mcwlmpogehtbnrypb
+21D7	dwlmpogehtbnrypb	dwlmpogehtbnrypb
+21D8	dwjbtjogehtbnrypb	dwjbtjogehtbnrypb
+21D9	mcwjbtjogehtbnrypb	mcwjbtjogehtbnrypb
+21D4	kmkrogehtbnrypb	kmkrogehtbnrypb
+21A4	shquyrnlkpblbdmbchapihbrkmhtbnrypb	shquyrnlkpblbdmbchapihbrkmhtbnrypb
+21A6	shquyrnlkpblbdmbchapihbrkrhtbnrypb	shquyrnlkpblbdmbchapihbrkrhtbnrypb
+21A5	shquyrnlkpblbdmbchapihbrymhtbnrypb	shquyrnlkpblbdmbchapihbrymhtbnrypb
+21A7	shquyrnlkpblbdmbchapihbrmyhtbnrypb	shquyrnlkpblbdmbchapihbrmyhtbnrypb
+21A9	hbrkmvfnraiukrhtbnrypb	krhtbnrbmjjjiikm | hbrkmvfnraiukrhtbnrypb | htbnrbm | yrbgrjjjii
+21AA	hbrkrvfnraiukmhtbnrypb	hbrkrvfnraiukmhtbnrypb | kmhtbnrbmjjjiikr | htbnrbm | yrbgrjjjii
+219E	hbrkmogemtmbchtbnrypb	hbrkmogemtmbchtbnrypb
+21A0	hbrkrogemtmbchtbnrypb	hbrkrogemtmbchtbnrypb
+219F	hbrymogemtmbchtbnrypb	hbrymogemtmbchtbnrypb
+21A1	hbrmyogemtmbchtbnrypb	hbrmyogemtmbchtbnrypb
+21A2	kbshquauhapihbrkmhtbnrypb	kbshquauhapihbrkmhtbnrypb
+21A3	kbshquauhapihbrkrhtbnrypb	kbshquauhapihbrkrhtbnrypb
+219A	kpblbkbbtlnnlomdvfhaehapihbrkmhtbnmtmbc	kpblbkbbtlnnlomdvfhaehapihbrkmhtbnmtmbc
+219B	kpblbkbbtlnnlomdvfhaehapihbrkrhtbnmtmbc	kpblbkbbtlnnlomdvfhaehapihbrkrhtbnmtmbc
+21AE	kpblbkbbtlnnlomdvfhaehapikmkrhtbnmtmbc	kpblbkbbtlnnlomdvfhaehapikmkrhtbnmtmbc
+21CD	kbbtlnnlomdvfhaehapihbrkmogehtbnrypb	kbbtlnnlomdvfhaehapihbrkmogehtbnrypb
+21CF	kbbtlnnlomdvfhaehapihbrkrogehtbnrypb	kbbtlnnlomdvfhaehapihbrkrogehtbnrypb
+21CE	kbbtlnnlomdvfhaehapikmkrogehtbnrypb	kbbtlnnlomdvfhaehapikmkrogehtbnrypb
+21C4	hbrkrhtbnrypbklghbrkmhtbnrypbhapiymmwyl	hbrkrhtbnrypbklghbrkmhtbnrypbhapiymmwyl
+21C6	hbrkmhtbnrypbklghbrkrhtbnrypbymyhus	hbrkr | hbrkm | hbrkmhtbnrypbklghbrkrhtbnrypbymyhus | htbnrypb
+21CB	hbrkmnwfeiklghbrkrnwfeihapiymmwyl	hbrkmnwfeiklghbrkrnwfeihapiymmwyl
+21CC	hbrkrnwfeiklghbrkmnwfeihapiymmwyl	hbrkrnwfeiklghbrkmnwfeihapiymmwyl
+21BC	omgncprklgymmwylhapihbrkmnwfei	omgncprklgymmwylhapihbrkmnwfei
+21BD	omgncprklgmymwylhapihbrkmnwfei	omgncprklgmymwylhapihbrkmnwfei
+21C0	omgncprklgymmwylhapihbrkrnwfei	omgncprklgymmwylhapihbrkrnwfei
+21C1	omgncprklgmymwylhapihbrkrnwfei	omgncprklgmymwylhapihbrkrnwfei
+21BE	omgncprklgkryhushapihbrymnwfei	omgncprklgkryhushapihbrymnwfei
+21BF	omgncprklgkmyhushapihbrymnwfei	omgncprklgkmyhushapihbrymnwfei
+21C2	omgncprklgkryhushapihbrmynwfei	omgncprklgkryhushapihbrmynwfei
+21C3	omgncprklgkmyhushapihbrmynwfei	omgncprklgkmyhushapihbrmynwfei
+21C7	mtgdihbrkmhtbnrypb	mtgdihbrkmhtbnrypb
+21C9	mtgdihbrkrhtbnrypb	mtgdihbrkrhtbnrypb
+21C8	mtgdihbrymhtbnrypb	mtgdihbrymhtbnrypb
+21CA	mtgdihbrmyhtbnrypb	mtgdihbrmyhtbnrypb
+21DA	hbrkmmmmhtbnrypb	hbrkmmmmhtbnrypb
+21DB	hbrkrmmmhtbnrypb	hbrkrmmmhtbnrypb
+219C	edheeiavkmhtbnrypb	edheeiavkmhtbnrypb
+219D	edheeiavkrhtbnrypb	edheeiavkrhtbnrypb
+21DC	hbrkmtwvfhaehtbnrypb	hbrkmtwvfhaehtbnrypb
+21DD	hbrkrtwvfhaehtbnrypb	hbrkrtwvfhaehtbnrypb
+21AD	kmkredheeiavhtbnrypb	kmkredheeiavhtbnrypb
+21AF	hbrmycsjrymuoomthhhhtbnrypb	hbrmycsjrymuoomthhhhtbnrypb
+21BA	ytuagdicjanmtrhohjumgwlvhtbnrypb	ytuagdicjanmtrhohjumgwlvhtbnrypb
+21BB	lllcagdicjanmtrhohjumgwlvhtbnrypb	lllcagdicjanmtrhohjumgwlvhtbnrypb
+1F400	jkphxvyv	hgkshqphh | jkphxvyv | hxvyv
+1F401	ncjkphxvyv	hgkshqphh | ncjkphxvyv | hajkphxvyv | jkphxvyv
+1F402	hq	cihq | hgkshqphh | hq | hqmfb | twmmvgamh | chqioog
+1F403	ehq	hgkshqphh | hgkshqphhwgrv | ehq
+1F404	bduhq	bduhq | hgkshqphh | wyihq | hq | hqvnhs | twmmvgamh
+1F405	jkpyphu	hgkshqphh | hgkshqphhwgrv | kbhtw | khndtrrik | jkpyphu | wgninrrik
+1F406	bhpi	hgkshqphh | hgkshqphhwgrv | kbhtw | khndtrrik | topbhpi | bhpi | bhpind
+1F407	nuind	nui | nuiond | nuind | hgkshqphh | jybphqphh | hanui
+1F408	bhtw	hgkshqphh | rtw | jybphqphh | ncbhtw | bhtw | bhtwond | bhtwrfd
+1F409	ybysp	ltmtj | hgkshqphh | iflwlyrhjr | qmbybysp | ybysp
+1F40A	nfmgrnwf	hgkshqphh | hgkshqphhwgrv | nfmgrnwf
+1F40B	ioogmtmbcnfyrf	hgkshqphh | ioogmtmbcnfyrf | eowyetq | eowyetog | nfyrfnwf
+1F40C	libbrhq	hgkshqphh | hbubkf | topwgrv | libbrhq
+1F40D	lijp	hgkshqphh | ahqmioog | qmwyilijp | hqmfb | lijp | lijpqoioog
+1F40E	sqsf	hgkshqphh | jtccsqsf | rmprusqsf | twmmvgamh | sqsf | sqsfhoicn
+1F40F	citq	citq | hgkshqphh | hgkshqphhwgrv | utqioog | ahqmioog | hqgtqioog | hqmfb | hatqioog | tq | tqnbg | nbg
+1F410	utq	hgkshqphh | utq | utqioog | idqtqapvioog | hqmfb | twmmvgamh
+1F411	vfhabtq	hgkshqphh | rtq | vfhabtq | tq | tqhqu | twmmvgamh
+1F412	sqsfsfhhw	hgkshqphh | khonk | khonknd | hdatogf | sqsfsfhhw
+1F413	cibkog	cibkog | hgkshqphh | foghayf | bkog | hayf
+1F414	bkog	cibkog | cibkogmtmbc | hgkshqphh | bkog | bkogmtmbc
+1F415	khpr	hgkshqphh | jybphqphh | nckhpr | khpr
+1F416	mojka	hgkshqphh | ncmojka | baumojka | mojka | mojkaond | twmmvgamh
+1F417	wgninmojka	hgkshqphh | umojka | mojka | wgninmojka
+1F418	knapo	hgkshqphh | khdmnapo | knapo | napo
+1F419	ytajnwf	hohlonwf | hgkshqphh | eowyetq | hqmhqphh | ytajnwf
+1F41A	bucgnhne	hgkshqphh | eowyetog | eowyliwvf | liwvfgnhne | bucgnhne
+1F41B	hqulilii	hgkshqphh | applilii | hquhqulilii | hqulilii | topwgrv | liliind
+1F41C	lisqflitgi	hgkshqphh | applilii | topwgrv | lisqflitgi
+1F41D	jphilihej	hgkshqphh | ktmwclihej | applilii | qkamk | hbubkf | lihejjphi | jphifdilr | jphilihej | tmwclihej
+1F41E	mfhvolilii	hgkshqphh | applilii | mfhvolilii | wllilii | hbubkf | topwgrv
+1F41F	nwf	hgkshqphh | hqmfb | tsitnaunwf | cpinwf | ogenwfioog | nwf
+1F420	gifkpblbnwf	hgkshqphh | gifkpblb | gifkpblbnwf | nwf
+1F421	emnrbmso	hgkshqphh | emnrbmso | nwf
+1F422	hryfnxu	hgkshqphh | nchryfnxu | hryfnxu | nxu
+1F423	hhsldopbkogond	hgkshqphh | hhsldop | hhsldopbkogond | ncbkog | nolmi | foghayf | puoghayf | hayf
+1F424	ncbkogdtge	hgkshqphh | ncbkog | ncbkogdtge | fogond | foghayf | puoghayf | hayf
+1F425	ncbkog	hgkshqphh | ncbkog | ncbkogond | foghayf | puoghayf | bkog | bkogond | hayf
+1F426	fogond	hgkshqphh | fogond | foghayf | hayf
+1F427	oylmhihaf	oylmhihaf | hgkshqphh | jbtjdmem | hayf
+1F428	dgtiipf	hgkshqphh | dgtiipf | ehbkeill | otfshquipf
+1F429	lmbucvsmbkhpr	hgkshqphh | khpr | lmbucvsmbkhpr
+1F42A	rrwjuhejsfhersfjp	hgkshqphh | rrwjuhejsfjp | efhetak | sfjpuhej | sfhersfjp
+1F42B	ogeuhejsfhersfjp	hgkshqphh | efhetak | ogeuhejsfjp | ogesfjpuhej | sfjpuhej | sfhersfjp
+1F42C	eowybmso	hgkshqphh | eowyetq | eowyetog | eowybmso
+1F42D	jkphxvyvdtge	hgkshqphh | jkphxvyv | jkphxvyvdtge | jkphxvyvbomo | jkphxvyvmwyl | jkphxvyvmtmbc
+1F42E	hqdtge	hgkshqphh | hq | hqvnhs | hqdtge | hqbomo | hqmwyl | hqmtmbc | twmmvgamh
+1F42F	jkpyphudtge	hgkshqphh | kbhtw | ncjkpyphu | khndtrrik | jkpyphu | jkpyphudtge | yphubomo | yphumwyl | yphumtmbc
+1F430	nuionddtge	nuiond | nuionddtge | nuind | nuibomo | hgkshqphh | jybphqphh | hanui | bomondu
+1F431	bhtwdtge	hgkshqphh | rtw | jybphqphh | ncbhtw | bhtw | bhtwrfd | bhtwdtge | bhtwbomo
+1F432	ybyspdtge	ojiiyrcru | hgkshqphh | iflwlyrhjr | bomondu | ybysp | ybyspdtge | ybyspbomo | ybyspmtmbc
+1F433	nfyrfnwf	hgkshqphh | rjtce | rjtcenfyrfnwf | eowyetq | eowyetqhqmhqphh | eowyetog | nfyrfnwf | nfyrfnwfrjtce
+1F434	sqsfmtmbc	hgkshqphh | bomondu | twmmvgamh | sqsf | sqsfbomo | sqsfmwyl | sqsfmtmbc
+1F435	sqsfsfhhwmwyl	hgkshqphh | khonknd | khonkbomo | bomondu | hdatogf | sqsfsfhhw | sqsfsfhhwmwyl
+1F436	khprdtge	hgkshqphh | jybphqphh | nckhpr | khpr | khprond | khprdtge | khprbomo | khprmwyl | khprmtmbc
+1F437	mojkadtge	hgkshqphh | ncmojka | mojka | mojkaond | mojkadtge | mojkabomo | mojkamtmbc | twmmvgamh
+1F438	qmbliggdtge	hgkshqphh | qmbligg | qmbliggdtge | qmbliggbomo | qmbliggmwyl
+1F439	oiarhxvyvdtge	oiarhxvyv | oiarhxvyvdtge | oiarhxvyvbomo | oiarhxvyvmwyl | hgkshqphh | jybphqphh
+1F43A	khiav	hgkshqphh | khiav | khiavbomo | khiavmwyl | khiavmtmbc | bhdhkhiav
+1F43B	ipfonddtge	hgkshqphh | ncipf | ipf | ipfond | ipfonddtge | ipfbomo | ipfmwyl | ipfmtmbc | lihejjphi | jphifdilr
+1F43C	ipfbhtwdtge	hgkshqphh | ipfbhtw | ipfbhtwdtge | ipfbhtwbomo | ipfbhtwmwyl | ipfbhtwmtmbc | hnd
+1F43D	mojkahuwml	hgkshqphh | mojka | mojkahuwml | twmmvgamh | huwmlnd
+1F43E	hgkshqphhbcrlhpsl	hgkshqphhbcrlhpsl | hgkshqphhryohpsl | fbrqhpsl | hlohpsl | hlond | khprhlo | bcrl | bcrlhpsl | bhtwhlo | ryohpsl | ryormylc
+1F43F	dcihxvyv	hgkshqphh | dcihxvyv | topmwdhxvyv
+1F981	khhrbnddtge	hgkshqphh | ahqmioog | khndtrrik | khhrb | khhrbnd | khhrbndioog | khhrbnddtge | khhrbndbomo | khhrbndmtmbc | hqmfb | wgninhqmhgkshqphhwgrv
+1F982	liavond	mkliavo | mkliavoioog | applilii | hqmfb | liavond
+1F983	fbkog	hgkshqphh | irpwkphail | fbkog
+1F984	khwlinbgrrik	khwlinbgrrik
+1F985	jkpighaf	hgkshqphh | jkpighaf | foghayf | hayf | ighaf
+1F986	wlhafnd	hgkshqphh | vfvnemtmbcwlhaf | foghayf | hayf | nuhaflkhaf | wlhaf
+1F987	lihsblimrw	hgkshqphh | rnhehbtlihsblimrw | rnhehbthi | lihsblimrw
+1F988	ehnwfnwf	hgkshqphh | nwf | ehnwf | ehnwfnwf
+1F989	bhtwmtmbcighaf	hgkshqphh | oraqjsmp | sjhwpab | bhtwmtmbcighaf | foghayf | hayf
+1F98A	khhvokhwgdtge	hgkshqphh | hgkshqphhhapibomo | khhvokhwg | khhvokhwgdtge
+1F98B	lijrbliptd	applilii | tsitnaulijrbliptd | lijrbliptd
+1F98C	ixp	hgkshqphh | wgninixp | ixp
+1F98D	kkhahmkhahm	hgkshqphh | kkhahmkhahm | khahmkhahm
+1F98E	lidhlliaph	hgkshqphh | wcbcrlhoauhoau | hoauhommnhgkshqphh | lidhlliaph
+1F98F	syyqhq	hgkshqphh | syyqhq
+1F990	lirye	ablirye | eowynftq | lirye | liryend | bucfkmbc | oiavrrr
+1F991	nfikunwf	hgkshqphh | hryfbcij | jjnobbtwthgkshqphh | oiavhqphh | nfikunwf | wgfgnwf
+1F992	smvmmmbcixp	hgkshqphh | mgykgwfyr | smvmmmbcixp
+1F993	mgykgsqsf	hgkshqphh | mgykgsqsf | olodvfyk
+1F994	dblnliwb	dblnkhwb | hgkshqphh
+1F995	mnpybysp	hgkshqphh | mnpybysp | eidybysp | bjnuybysp | lidhlbcrlfkmbcmnpybysp | mbwybysp
+1F996	atceybysp	mnpybysp | atceybysp | mbtjbmgybysp
+1F997	lihdpliyij	hgkshqphh | applilii | lihslindt | lihaglilii | lihdpliyij
+1F998	opyhvhxvyv	hgkshqphh | ehbkeill | opyhvhxvyv | rmlmormsmg
+1F999	tajespsqsf	hgkshqphh | hqu | tqhqu | tqsfjp | tqsfjphqu | tgkwgninhqmtqsfjp | tajespsqsf
+1F99A	ndufog	hgkshqphh | ninibdhhh | ndufog | ndufoganmtstt | topiovqshrstv | tmtjmmbbp | anmtstt | foghayf | hayf
+1F99B	emnrsqsf	hgkshqphh | emnrsqsf
+1F99C	bvhafmmhaf	hgkshqphh | eowyeobt | yrcruyrhjr | foghayf | hayf | bvhafmmhaf
+1F99D	ejmuipf	hgkshqphh | vndkmnr | ejmuipf | khyckkhbbb
+1F99E	ybysplirye	hgkshqphh | eowynftq | ctm | oiavhqphh | ybysplirye
+1F99F	liyknd	rmnryck | applilii | kokkmob | kmobqmwyi | kypmkok | nonhefggu | liyk | liyknd
+1F9A0	houukhqmhqphh	houukhqmhqphh | kmobqmwyi | hdyjhbnd | vfwtwhd | vfokmthhhlilii | nlmnrfdauvfokmthhhlilii
+1F9A1	khtrg	hgkshqphh | khtrg | jphikhtrg
+1F9A2	mkhihaf	hgkshqphh | mkhihaf | mwhincwlhaf | foghayf | hayf
+1F9A3	hqunapo	hgkshqphh | khndtkhsqfnapo | smvhqunapo
+1F9A4	eiteeitehayf	hgkshqphh | eiteeitehayf | foghayf | hayf
+1F9A5	dgtipdlc	hgkshqphh | pawehkrhkr | pdlcpkmb | dgtikhdlc | vfbmepawe
+1F9A6	ekhdlc	ofbdhe | hgkshqphh | ekhdlc | cpinwf
+1F9A7	khahmkhahm	hgkshqphh | kkhahmkhahm | khahmkhahm | khonknd | khgrv
+1F9A8	huikhvlw	hgkshqphh | huik | huikhvlw | huikhvlwhxvyv
+1F9A9	vfmoghaf	hgkshqphh | fmnfhayf | ftghaf | gifkpblb | vfmoghaf | tmtjmmbbp
+1F9AA	liyro	emuae | mgohhmghjd | hqmliyro | liyro | oiavhqphh
+1F9AB	eowykhwg	hgkshqphh | eowykhwg | mvdhymuoo
+1F9AC	wgninhq	hgkshqphh | wgninhq
+1F9AD	eowybhpi	hgkshqphh | eowyetq | eowykhhrb | eowybhpi
+1F9AE	yudiyvbuik	hgkshqphh | yudiyvbu | yudiyvbuik | otfnlytjmrpko | khpr | yvbuo | ifbuunlytj | ifbuunlytjojm
+1FABC	ewyi	hgkshqphh | keowy | eysookoijrr | ewyi | ebndeysdhqmhqphh | eowyetq | eowyetqhqmhqphh | gklmiooah | nbwliq
+1F330	mwdnd	segwd | hsbtdlmo | mwdnd | djbmhqphh | oiavhqphh
+1F331	vikstw	vdlktaj | nctaj | nctptd | vikstw | djbmhqphh | dgtitw | nonhetmvh | tptdnd | qmbtaj
+1F332	fbrlbvfvnedgti	fbrlbvfvnedgti | dcidgti | ddddd | djbmhqphh | dgti | srhgyrnkmdgti
+1F333	tehrtptddgti	wrbcmthhhdgti | wrbcdgti | ddddd | djbmhqphh | dgti | vfvnenau
+1F334	djmfdanrdgti	djmfdanrdgti | djbmhqphh | dsjldgti | dgti | eowyetog | gifkpblb
+1F335	ouofbrq	jjonamj | ouofbrq | djbmhqphh | efhetak | hbubkf
+1F337	ddbuhchda	djbmhqphh | hqmsmv | isbtysok | isbtanmt | vfjmoysok | top | anmttop | ddbuhchda
+1F338	dbcvtop	qkamk | djbmhqphh | dbcvtop | vfjmoysok | top | anmttop
+1F339	mgokmghi	ombemhog | pqmbohail | bbpepqmb | djbmhqphh | mgokmghi | mgokmghitop | vfmmgokmghi | tgkmmbbp | top
+1F33A	qqoeeedtop	kvfmtop | qqoeeedtop | dgrbhaftop | djbmhqphh | tqotjcr | tqotjcrtop | top
+1F33B	hbratnok	hbratnok | kinlamh | kinlamhtop | djbmhqphh | top
+1F33C	tophnd	kinlamhtop | djbmhqphh | vfjmoysok | top | tophnd | teibcitlbk | anmttop
+1F33D	mwfdfd	mgifd | mwfdfd | tnmutbd | twmmvohshqphh | oiavhqphh
+1F33E	hdbhxhdjip	djbmhqphh | hdbhx | hdbhxw | hdbhxhdjip | hdbhxfd | hdbhxtaj | gdhnehqphh | fd
+1F33F	tajdmdjbmhqphh	knscwagtor | djbmhqphh | hqmigtaj | wlvfgtjks | tajdmdjbmhqphh | tptdnd | hdataj
+1F340	wctptdtaj	4 | wc | wctptd | wctptdtaj | gtjybjjtaj | djbmhqphh
+1F341	dhnitptd	dhnitptd | vfmtptd | tehrtptd | tptd | tptdnd
+1F342	tehrtptd	hdfmk | tehrtptd | tptdnd | tmwctptd
+1F343	nlykbhnhlimfhnitehrraiudgtitptd	dgtitptd | tehrtptd | tptdnd | nlykbhnhlimfhnitehrraiudgtitptd | hnhlirno | mfhniqamh
+1F344	tidrtvjr	jbmctwhdfkmbc | tvjrfkmbc | tidrtvjr | vfokk | hdatvjr | sqsfwghbk
+1FAB0	toirlirxu	hgkshqphh | applilii | hryflirxu | toirlirxu | qmblirxu
+1FAB1	limbblilii	hgkshqphh | liomlinl | liliind
+1FAB2	wllilii	hgkshqphh | jqmrlilii | applilii | wllilii | liliind
+1FAB3	liytjliiil	hgkshqphh | applilii | alla | liytjliiil
+1FAB4	cshtayrf	niniobodjbmhqphh | djbmhqphh | cshtjid | topcsht | vgyhvoiolb
+1FAB5	dmtmbc	mhafd | wrbcd | dddh | dmtmbc | dgtijjomj
+1FAB6	smsimhqu	smsimhqu
+1FAB7	tyjjtop	ombemhog | jpbnqbbsd | mfjqbbsd | buhjmtyjj | tgkipp | top | tomrtop | tyjjtop | tyjjtyhj | qbbsdp
+1FAB8	mgbtmgjrb	qwlpyrhne | onfdolnkvfokop | eowyihpm | eowyetq | mgbtmgjrb | mgbtmgjrbmrogf | mgbtmgjrbvfm
+1FAB9	jcmvvwd	jcmvvwd | fogvvwd | fogjcgwc | ybogvvwd | hayfvvwd | hayfjcbbr
+1FABA	kbnolmihapivvwd	fogondnolmi | fogvvwd | fogjcgwc | hayfvvwd | hayfjcbbr | hayfnolmi
+1FABB	hnhlioymrnd	qkamk | djbmhqphh | effypvifnau | etrgd | okjwjtpfd | ypvifwlvfgtanwnau | ypvifnau | top | thgfyhvtaj | anmttop | qbjmotsitnau | hnhlioymrnd
+2618	mmmtptdtaj	mmmtptdtaj | djbmhqphh
+1F347	tpibtpou	qamond | ewd | vfmqamo | tpibqamond | tpibtpou | oiavhqphh
+1F348	jphihvio	romrjphuhvio | jphuhvio | ewd | jphihvio | oiavhqphh | hdahvio
+1F349	mcwhvio	ewd | mcwhvio | oiavhqphh
+1F34A	dnot	dtmdnhb | dhhldnot | dnot | ewd | vfogopdomrlc | oiavhqphh
+1F34B	djpndtbo	djpndtbo | ewd | tdoovwyi | mwice | oiavhqphh
+1F34C	hdatogf	ewd | hqmwd | cwl | oiavhqphh | hdatogf
+1F34D	tedetwlg	ewd | gifkpblb | tedetwlg | oiavhqphh
+1F34E	vfmtyhcwd	ihsyif | ewd | vfmnau | vfmtyhcwd | tyhcwd | oiavhqphh
+1F34F	qmbtyhcwd	ewd | vfvnetyhcwd | tyhcwd | qmbtyhcwd | oiavhqphh
+1F350	rhhjhnd	rhhjhnd | hnd | ewd | mcwetqhnd | oiavhqphh
+1F351	dlmo	dlmo | dlmond | ewd | ejphidlmo | oiavhqphh
+1F352	jwjmwgnd	dbcvdlmo | ewd | jwjmwgnd | oiavhqphh
+1F353	jmninirhhjhnd	jmninirhhjhnd | ewd | tajtowy | oiavhqphh
+1F336	yjdldyfe	qpamkdyfe | gif | vfmdyfe | vfmyjdldyfe | tnmutbd | yjdldyfe | oiavhqphh
+1F354	etloodgpru	pdkyeoiv | etloodg | oiavhqphh | oihqi
+1F355	teiioitt	pizza | mghiteiioitt | mllmlteiioitt | qdhetnlm | tghqikhdlnvfmbamh | teiioitt | oiavhqphh
+1F356	obobbb	kghihapiobo | kpblbbbbobo | eawelgwmobo | obo | obobbb | oiavhqphh | bbbhapiobo | bbbmtmbc
+1F357	bkogbbhhj	jmsooyub | byav | bkogobo | bkogbyav | bkogcyhr | bkogbbhhj | oiavhqphh | bbbmtmbc
+1F358	fdoitt	oubuc | tbnfoitt | fd | fdwd | fdoitt | oiavhqphh | oittjjon
+1F359	oihefdwji	adm | fdoihe | oiavhqphh | oihefdwji
+1F35A	haoihe	jafyif | haoihe | fdoihe | qbbuuond | oiavhqphh | oihe
+1F35B	rksrrwgoihe	rksrrwg | fdoihe | oiavhqphh
+1F35C	gifonfdbfqfbfqfraiumrjnu	qytjnmwl | eamh | eamhjnmwl | gif | gifonfdbfqfbfqfraiumrjnu | mrjnu | hpdknd | oiavhqphh | jnmwl | jnmwlmrjnu
+1F35D	ytapkhdlnfdcsh	ytapkhdlnfdcsh | ytapkhdlnjnmls | ytapkhdlnjnmwl | ytapfdcsh | ytapjnmwl | obokni | oiavhqphh | yeoivisgp
+1F35E	jnmwlpru	ninijmjnmwlpru | ncjoni | yhspru | hajnmwlpru | mrumfeopomrhqphh | gdhnehqphh | oiavhqphh | yeoivisgp | jnmwlpru
+1F35F	twlaolod	pdkyeoiv | fhstwlaolod | twlaolod | oiavhqphh
+1F360	fwmvthdwtwla	fjkshdwtwla | fwmvhdwtwla | fwmvthdwtwla | hdwtwla | oiavhqphh
+1F361	hdrtwdnd	mmmnaufdwjind | ll | llfggummmrhucnlh | knind | knindll | hdrtwdnd | adm | hrtmrrr | fdwjind | oiavhqphh
+1F362	anvitdwjaf	ll | eowynftq | fjksoboll | hhoim | anvitdwjaf | oiavhqphh | yeoivisgp
+1F363	gnmismr	gnmismr | oiavhqphh
+1F364	fhslirye	mkvsmbwlvfg | fhslirye | lirye | liryend | oiavhqphh
+1F365	rhafanfqsu	aipmnwfnolmi | eysoebbr | oiavhqphh | yeoivisgp | nwfdhe | nwffdtgf | nwfoitt | rhafanfqsu
+1F366	jjnombsmfdtgf	hrtmrrr | hrtmhbmr | hrtmhbmrmbsmdtgf | jjnombsmfdtgf | mbsmdtgf | mbsmfdtgf | oiavhqphh | yeoivisgp
+1F367	pulnime	ime | puln | pulnime | hrtmrrr | oiavhqphh | yeoivisgp
+1F368	mbsmfdtgf	hrtmrrr | mbsmfdtgf | oiavhqphh | yeoivisgp
+1F369	heybqu	heybqu | hrtmrrr | hrtmhrtmwfqu | hrtmwfyr | oiavhqphh
+1F36A	twkmnr	twkmnr | hqjrksmryoj | hrtmrrr | oiavhqphh | oittjjon
+1F36B	hjdjrks	mqlmyhjdjrks | hjdjrks | hqjrks | hrtmrrr | twlbsrhghail | fdilrwd | oiavhqphh
+1F36C	fdilr	hrtmrrr | twlbsrhghail | fdilr | fdilrwd | fdilrvfhvp | liygmvdh | oiavhqphh | yeoivisgp
+1F36D	edhedhefdilr	dqkqdqkqfdilr | edhedhefdilr | hrtmrrr | fdilrwd | oiavhqphh | yeoivisgp
+1F36E	grjm	grjm | klbmn | klbpw | ogffdilrklbmn | ogffdilrklbpw | hrtmrrr | hrtmoiav | hrtmwfyr | bkognolmiklbpw | oiavhqphh
+1F36F	lihejjphigblm	ncipfvfogsp | ipf | fdilroutrg | vfogsp | outrg | lihejjphi | lihejjphigblm | lihejjphioutrg | jphifdilr | jphifdilroutrg | oiavhqphh
+1F370	nolmifdtgf	mghi | mghinolmifdtgf | mllml | jmninirhhjhndnolmifdtgf | hrtmrrr | hrtmwfyr | nolmifdtgf | oiavhqphh | wfyrp
+1F371	oiheomrt	omlkfbrw | gnmismr | aipm | omrtnd | oiavhqphh | oiheomrt
+1F372	qmnyhusfypt	qmnyhusfypt | eamh | etwveamh | fydkjaf | fydkobo | cbbr | oiavhqphh
+1F373	jafoihe	kinlamhnolmi | mfjihpmcbbr | mfjihpmctoe | ajyeoiv | yrnfoihg | jafoihe | tbnfnolmi | tomrprunolmi | jjmvmshdci | ctoe | bkognolmi | yeoivisgp
+1F374	shei	shei | ojyeoiv | vndrjd | ajyeoiv | anauyeoiv | yrnfoihg | oiavhqphh | yeoivbmmc | yeoivisgp
+1F375	kbsjraiutoddmf	kbsjraiutoddmf | qdjtod | admtod | dmfnd | hryfybysptod | gif | giftod | vfvnetod | tod | toddmf | oinorrr | oinofdyj
+1F376	eqmbemcw	dmfnd | eqmbemcw | eqmbemcwttmvn | ttmvnnd | fdemcw | emcwrau | emcwdmf | emcwttmvn | oinorrr | oinofdyj | yeoivisgp
+1F377	vfmemcw	mdmfvfmemcw | mdmfemcw | mgdhemgyubdmf | vfmemcw | emcw | emcwrau | emcwdmf | oinorrr | oinofdyj | yeoivisgp
+1F378	bkogshquemcwdmf	obmcvidyrnl | mgdhemgyubdmf | yrbgremcw | emcw | emcwrau | bkogshquemcw | bkogshquemcwdmf | oinorrr | oinofdyj | sqsfmnsp
+1F379	gifkpblboinorrr	mai tai | obmcvidyrnl | iteorye | gifkpblb | gifkpblboinorrr | mgdhemgyubdmf | yrbgremcw | ytwbqke | emcw | emcwrau | bkogshquemcw | oinorrr | oinofdyj
+1F37A	rhhjemcw	rhhjemcw | rhhjemcwdmf | rhhjemcwhail | hojwpwirm | mgdhemgyubdmf | emcw | emcwrau | emcwdmf | oinorrr | oinofdyj
+1F37B	jjondmf	jjondmf | rhhjemcw | emcw | emcwrau | oinobfqs | oinorrr | oinofdyj
+1F37C	vnhsdtwi	vnhs | vnhsdtwi | vnhsttmvn | bcvhxhu | vikshxhu | hqvnhs | hqvnhsdtwi | oiavhqphh
+1F37D	sheibmrmrptd	shei | sheibmrmrptd | shnd | eind | anauyeoiv | yrnfoihg | hebtnd | yeoivbmmc
+1F37E	anmtseviftgitraiudtwi	djtcg | ttmvnnd | emcw | emcwrau | emcwdtwi | anmtseviftgitraiudtwi | oinorrr | oinofdyj | hdadjmc | hdadjmcemcwdtwi
+1F37F	fatecor	fatecor | mbwuafhhh | oiavhqphh
+1F950	hqnbgpru	egiwirm | hqnbgpru | oiavhqphh | jnmwlpru
+1F951	hqelwwd	ewd | hqelwwd | oiavhqphh
+1F952	qmbhvio	tnmutbd | qmbhvio | qmbhviopshllml | oiavhqphh | tmwchvio
+1F953	fmwgobo	gytrdav | fmwgobo | fmwgobollml | obo | oiavhqphh
+1F954	twlaond	tnmutbd | twlaond | oiavhqphh | sqsfcoiitwla
+1F955	vfmtwlgtpmw	vfmtwlgtpmw | jrbtwlgtpmw | tnmutbd | twlgtpmw | oiavhqphh
+1F956	egidapppru	segmrmlk | egipru | egiwirm | egiwirmjnmwlpru | egiipmsmvdappjnmwlpru | egidapppru | smvdappjnmwlpru | smvegipru | oiavhqphh | jnmwlpru
+1F957	hqmtbdefhholq	efhholq | hqmtbdefhholq | vfvnenau | tnmutbd | tnmutbdefhholq | oiavhqphh
+1F958	mcbbroiavhqphh	mcbbroiavhqphh | mfjihpmcbbr | egiwirmfjkscbbr | egiwirmmrfhcbbr | eowynftqoihe | eiicbbr | mrfhcbbr | mcwmgilgmvdheowynftqfydkoihe | cbbr | oiavhqphh
+1F959	kboinhxmmmykeir	mmmykeir | ropyhvoitt | gsjtmmcfjksobo | kklbbvvvysonojjjiifjksobo | ysonojjjiifjksobo | kboinhxmmmykeir | elwfhsighafrypbmrtoitt | dhegtor | dhegtormmmykeir | oiavhqphh
+1F95A	nolmi	nolmi | bkognolmi | oiavhqphh
+1F95B	mdmfhqvnhs	mdmfhqvnhs | dmf | hqvnhs | oinorrr | oinofdyj
+1F95C	tophqm	segwd | wdomm | bucnhyti | tophqm | tnmutbd | oiavhqphh
+1F95D	kmnrwtcwd	kmnrwtcwd | ewd | oiavhqphh
+1F95E	mgilgjji	fheroitt | fjksoitt | gifhdaoitt | mgilgjji | oiavhqphh
+1F95F	eoiyck	prund | nchybppru | eoiyck | tbnfoiyck | cbbrbcyr | oiavhqphh | oiycknd
+1F960	gtjybjjtwkmnr	gtjybjjtwkmnr | gtjybjjoittjjon | nnmbcymmr | oiavhqphh
+1F961	niygwlcomrt	niygwlc | niygwlcomrt | niygwlcyeoivomrt | hpdknd | yeoivomrt
+1F962	hpdknd	hpdknd | yeoivbmmc
+1F963	aoptgfobmrmrjnu	aop | aoptgfo | aoptgfobmrmrjnu | aoptgftk | ajyeoiv | eamh | mrjnu | nfdn | nlodikbeamhaophapimrjnu | jonillml
+1F964	kboinohjrrraiudmf	rnhehjrr | kboinohjrrraiudmf | wdej | e | eomne | tnfdqmne | oinorrr | oinofdyj | oinohbmr | oinohjrr
+1F965	dsjlnd	dsjlnd | ewd | gifkpblb | oiavhqphh
+1F966	mcwtanwtop	tnmutbd | mcwtanwtop | oiavhqphh
+1F967	qpp	jbtjhvioqpp | qpp | tyhcwdqpp | mcwipmoinhxoitt | oiavhqphh | oinhxoitt
+1F968	lijrbliptdwfqu	dyfeswbtfqsuoitt | lijrbliptdwfqu | lijrbliptdoitt | oiavhqphh | jnmwlpru
+1F969	oboghi	hqqc | hqobo | vfmobo | tqqc | tqobo | oboghi | mojkaqc | mojkaobo | oiavhqphh
+1F96A	mmmykeir	mmmykeir | oiavhqphh | jnmwlpru
+1F96B	outrgmtmbcoiavrrr	outrgmtmbc | oiavhqphh
+1F96C	vfvnenautnmutbd	nchatbd | qfquptbd | efhholq | tmtsittbd | hatbd | vfvnenautnmutbd | vfvnetptd | smsimyhvtmtsit | tbbrtss | tnmutbd | oiavhqphh
+1F96D	tyvwd	ewd | gifkpblb | tyvwd | oiavhqphh
+1F96E	boitt	lhdfhail | boitt | haila | oiavhqphh
+1F96F	bucwd	ajyeoiv | fytrwd | bucwd | oiavhqphh | jnmwlpru
+1F9C0	tinojm	vnhsfkmbc | tinojm
+1F9C1	dmfndnolmifdtgf	hrtmrrr | fdilr | vfhvpdmfnolmifdtgf | oiavhqphh | jnmwlpru
+1F9C2	swbt	yrbgrrjdfdyj | yrbgrrjdttmvn | yrbgrrjdoutrg | swbt
+1F9C3	vfhvppruvgyhv	rnhehjrr | wdej | omrtvgyhv | vfhvppruvgyhv | oinorrr | oinofdyj | oinohbmr | oinohjrr
+1F9C4	tmffmtmbc	ktmff | tmffmtmbc | yrbgrrjd | oiavhqphh
+1F9C5	etqthwp	etqthwp | yrbgrrjd | oiavhqphh
+1F9C6	fhsmrtoitt	mmmnbgmrt | fhsmrtoitt | obokni | oiavhqphh | ighafrypbmrt
+1F9C7	jcbbrqo	ajyeoiv | dherondoitt | dherndshdcioitt | dhnifdilr | jcbbrqo | cjig | oiavhqphh
+1F9C8	hqelw	bduhnyhvrrr | vnhsfkmbc | hqelw | oiavhqphh
+1F9C9	mgsqfopwgftod	eamh | mgsqfopwgftod | oinorrr | oinofdyj
+1F9CA	imefdyt	ime | imeghi | imeu | imefdyt | imoii
+1F9CB	mgohhmghjdvnhstod	irevfn | mgohhmghjdvnhstod | tod | oiavhqphh | oinorrr | oinofdyj
+1FAD0	tsittowy	ewd | viewd | tsittowy | oiavhqphh
+1FAD1	hrtmdyfe	fnothybpdyfe | qmbdyfe | oiavhqphh
+1FAD2	dmjkdswu	djbmhqphh | dmjkdswu | vfvnetptd | oiavhqphh
+1FAD3	jnmwloitt	koitt | imfbkylwgtoroitt | nlmnrmgumbau | oiavhqphh | jnmwlpru
+1FAD4	mgifdfdcshtnefobo	aumcwfdjmf | oiavhqphh | wgfgmcwmrnrfdjmf
+1FAD5	esbnhnyhvtbdoikkb	hotpot | qmnyhusfypt | fcbbr | hpdknd | tinojm | oiavhqphh
+1FAD6	todgblm	tod | todgblm | oiavhqphh
+1FAD7	omgnuueyokbbtwt	omgne | omgnejhf | rapvjmmu | fkt | ytapniy | qmnejhf | qmnhwsmm | e | oinorrr | oinojmmu
+1FAD8	mrtnd	jjonmrt | vfmbmwvmrt | vfmnau | vfmmrt | vfwnc | mrt
+1FAD9	mgdhemgyubdtwi	jcorrrikr | mgdhemgyubdtwi | mgdhemgyubttmvn | lkbt | jcm | jcmdtwi | jcmttmvn | tvidkni | tviddtwi | tvidttmvn | yrbgrrjdrrr | bcjmnklndrrr | yhdsabdtwi | oiavtvid
+1FADA	tmwm	onkqile | rhhjemcw | mkbkf | tajtvid | tmwm | yjdl | hdafdyj | hdataj
+1FADB	mtjnumrttkoo	kmrt | djemrt | hqumrt | tkoomrt | tnmuwd | tnmutbd | mrttmvm | mrttkoo | mrtfkmbc | mtjnumrt
+2615	gifrksrrlmy	rksrrlmy | ajammv | gif | gifrksrrlmy | gifoino | tod | oinorrr | oinofdyj | wgfrlmy | yxfrlmy
+2600	kinlamh	mkonfd | kijcm | kinlamh | vndmkonfd | jmdjlw | aqmbmk | nlamhfmu
+2601	mbmmi	ninimbmmi | mkonfd | hambmmi | nloiimk | mbmmi
+2602	yitf	mymlby | oooj | yitf | mlbyoooj | mlbyyitf
+2603	mbsmlhapimbsmo	mymbsm | imdw | jtcyimoii | tehrmbsm | mbsm | mbsmo
+2614	tehrmlby	mymlby | oooj | mkonfd | tehrmlby | yitf | mlbyoooj | mlbye | mlbyeycb | mlbyyitf | mlbywfyr
+26A1	yrbrmkgmbwu	nmsunlomo | qmnmbw | hbubkf | hommnmbw | anombwu | mbw | mbwmbwu | mbwu | mbwuks | mbwumkg | yrbrmbwumkg
+26C4	mbsmo	mymbsm | imdw | jtcyimoii | tehrmbsm | mbsm | mbsmo
+26C5	nloiimk	ninimbmmi | mkonfd | kinlamh | hambmmi | nloiimk | nloiiaqmbmfjmyo | mbmmi
+26C8	kbmbwmlbyraiumbmmi	mymlby | mkonfd | qmnmbw | kbmbwmlbyraiumbmmi | tehrmlby | hommnmbw | anombwu | mlby | mlbymbmmi | mbmmi | mbwatce
+2744	mbsmtop	imdw | mkonfd | jtcyimoii | mbsm | mbsmtop
+1F300	hnirhnhli	khnhli | mkonfd | ysonojjjii | ysonohnhli | abjj | mtmbcabjj | hnirhnhli | ybyspqfquhnhli
+1F301	mbnhs	kbmbnhs | btbobybp | yfdmbnhs | mbmmimbnhs | mbnhs | mbnhsonfd
+1F302	vlokgoruraiuyitf	oooj | vlokgoruraiuyitf | yitf | mlbyoooj | mlbyyitf
+1F303	ahqmjcm	gihsylb | yonkanau | yonkayrf | mknlbofvfhae | nklqhmndhqphh | ahqmahqm | ahqmjcm | anauym
+1F304	umtmbcraiuauu	kinlamh | u | umtmbcraiuauu | auu | ajym | ajammv | eqmbammv | hhoeab
+1F305	auu	kinlamh | auu | ajammv | hbubkf | nlamhfmu
+1F306	tmwchpa	gihsylb | ninlamh | kinlamh | nklqhmnd | atehr | anauym | tmwchpa
+1F307	ninlamh	gihsylb | kinlamh | nklqhmnd | atehr | tmwchpa
+1F308	bdhhhlim	bmrphqmvfp | mkonfd | vbmrphqmvfp | bdhhhlim | phqmrslnmwhgrhxhu | wksbmrphqmvfp | rmkmsphqmrsln | mwhgrhxhu | ogephqmvfp | sfhkbogsk
+1F309	yonkanauraiudhkb	yonkanau | yonkanauraiudhkb | yonkayrf | kdhkb | anauym | dhkb
+1F30A	eowyeiav	e | eedhe | edheeiav | eowye | eowyetq | eowyeiav | hbubkf | hohgneiav
+1F30B	fu	rjtcnonhe | u | fu | fufatenonhe | hbubkf
+1F30C	cavemnr	kijcm | jmdjlw | cavemnrhvif
+1F30D	afmbcmmfsrnoeillbmrlmyyyeillraiugpdmgije	ptwoll | gpdmgije | ahqmmgije | srnoeill | lmyyyeill | lmyyyeillgpdmgije | afmbcmmfsrnoeillbmrlmyyyeillraiugpdmgije | afmbcmmfsrnoeillhdrlmyyyeillhapigpdmgije
+1F30E	afmbcmmftgkeillraiugpdmgije	ptwoll | gpdmgije | tgkeill | tgkeillgpdmgije | afmbcmmftgkeillraiugpdmgije | afmbcmmftgkeillhapigpdmgije
+1F30F	afmbcmmfmllmeillhdrehbkeillhapigpdmgije	ptwoll | mllmeill | mllmeillhdrehbkeillgpdmgije | mllmeillgpdmgije | gpdmgije | ehbkeill | afmbcmmfmllmeillhdrehbkeillhapigpdmgije
+1F310	kpblbkbvfmvmvfdmqraiugpdmgije	www | ptwoll | mvnmsjvitvfbtv | gpdmgije | kpblbkbvfmvmvfdmqraiugpdmgije | vfmvmvfdmq | vfmvmvfdmqvfhae | vfbtvvfher
+1F311	ydhmlb	kijcm | ydhmlb | byrbu | wgfayta | wgfbyrbu
+1F312	vhqiahbub	kijcm | vhqiahbub | jmdjlw | uhqiuahub | ydhmlb | byrbu | boilmi
+1F313	ymnyvib	ymnyvib | fqb | kijcm | jmdjlw | byrbu | boilmi
+1F314	nsbtbssb	kijcm | jmdjlw | byrbu | boilmi | nsbtbssb
+1F315	etlbb	kijcm | jmdjlw | byrbu | etlbb
+1F316	ygmmsbssb	bssb | kijcm | jmdjlw | byrbu | boilmi | ygmmsbssb
+1F317	mynyvib	mynyvib | fqb | fqbmthhh | kijcm | jmdjlw | byrbu | boilmi
+1F318	mniib	mynyvib | kijcm | jmdjlw | ydhmlb | byrbu | boilmi
+1F319	vfnb	ymnyvib | kijcm | jmdjlw | ydhmlb | byrbu | yxfitb
+1F31A	ydhmlbraiumwylndu	kijcm | jmdjlw | ydhmlb | ydhmlbraiumwylndu | ydhmlbbomo | byrbu | kbbomohapiydhmlb | bomondu | mwylndu | wgfbyrbu | wgfmwyl
+1F31B	ymnyvibraiumwylndu	ymnyvib | ymnyvibraiumwylndu | kijcm | jmdjlw | vfnb | byrbu | byrbubomo | byrbumwyl | bomondu
+1F31C	mynyvibraiumwylndu	mynyvib | mynyvibraiumwylndu | kijcm | jmdjlw | vfnb | byrbu | byrbubomo | byrbumwyl | bomondu
+1F31D	etlbbraiumwylndu	kijcm | jmdjlw | byrbu | byrbubomo | byrbumwyl | etlbb | etlbbraiumwylndu | bomondu
+1F31E	kinlamhhhkmwyl	mkonfd | kinlamh | kinlamhhhkmwyl | kinlamhbomo | kinlamhmwyl | amtmbc | aqmbmk | eowyetog | gif | bomondu | nlamhfmu
+1F31F	anoyrburaiuahqmahqm	bfqshdln | yonkanau | ahqmahqm | nonhefmu | anoyrbu | anoyrburaiuahqmahqm | anofusmg | anoanononhefmu
+1F320	eyiuahqm	manomano | nogtehr | yonkanau | kijcm | jmdjlw | ahqmahqm | anauym | eyiuahqm
+1F321	ewotiteyrj	mkonfd | ewotiteyrj
+1F324	kinlamhrohfmrtoxvfwmbmmihoviemwyl	mkonfd | kinlamh | kinlamhrohfmrtoxvfwmbmmihoviemwyl | aqmbmk | hambmmi | nloiimk | mbmmi
+1F325	kinlamhrohfmkllmlmbmmihoviemwyl	mkonfd | kinlamh | kinlamhrohfmkllmlmbmmihoviemwyl | nloiimk | nloiiaqmbmfjmyo | mbmmi
+1F326	kinlamhrohfmlbymbmmihoviemwyl	mymlby | mkonfd | kinlamh | kinlamhrohfmlbymbmmihoviemwyl | agdiaqmbagdimlby | tehrmlby | nloiiaqmbmfjmyo | mlby | mlbymbmmi | mbmmi
+1F327	mlbymbmmi	mymlby | mkonfd | tehrmlby | mlby | mlbymbmmi | mbmmi
+1F328	tehrmbsmraiumbmmi	mymbsm | imdw | mkonfd | jtcyimoii | tehrmbsm | tehrmbsmraiumbmmi | mbsm | mbmmi
+1F329	anombwu	mkonfd | qmnmbw | hambmmi | hommnmbw | anombwu | mbmmi | mbwatce
+1F32A	ybyspqfquhnhli	mkonfd | ysonohnhli | hnhliatce | ybyspqfquhnhli
+1F32B	kbmbnhs	mkonfd | hryfmbmmi | mbmmi | mbnhsonfd
+1F32C	hnhlirnobomo	hrlnhnhli | rno | rnoonfd | rnohnhli | khnhli | mkonfd | bomondu | mbmmi | mwyl | hnhli | hnhlirnobomo
+2648	hatqioog	citq | ahqmioog | hqgtqioog | hatqioog | tq
+2649	chqioog	cihq | ahqmioog | hq | chqioog
+264A	ogendioog	ahqmioog | ogendioog
+264B	ssnqlmiioog	ssnqlmiioog | ahqmioog | nqlmi
+264C	khhrbndioog	ahqmioog | khhrbndioog
+264D	yphenvioog	ahqmioog | yphenvioog
+264E	mkhdmfjioog	mkmfjioog | mkhdmfjioog | ahqmioog
+264F	mkliavoioog	mkliavoioog | ahqmioog
+2650	hhdiqioog	osqsfioog | hhdiqioog | ahqmioog
+2651	utqioog	utqioog | idqtqapvioog | ahqmioog | tq
+2652	ettmvnioog	ahqmioog | ettmvnioog
+2653	ogenwfioog	ahqmioog | ogenwfioog | nwf
+1F550	mwfyr	1 | 1:00 | 1wfyr | mwfyr | agdicytg | agdiana | cytg
+1F551	mlbowfyr	2 | 2:00 | 2wfyr | mlbowfyr | agdicytg | agdiana | cytg
+1F552	mmmwfyr	3 | 3:00 | 3wfyr | mmmwfyr | agdicytg | agdiana | cytg
+1F553	wcwfyr	4 | 4:00 | 4wfyr | wcwfyr | agdicytg | agdiana | cytg
+1F554	mdmwfyr	5 | 5:00 | 5wfyr | mdmwfyr | agdicytg | agdiana | cytg
+1F555	ycwfyr	6 | 6:00 | 6wfyr | ycwfyr | agdicytg | agdiana | cytg
+1F556	juwfyr	7 | 7:00 | 7wfyr | juwfyr | agdicytg | agdiana | cytg
+1F557	howfyr	8 | 8:00 | 8wfyr | howfyr | agdicytg | agdiana | cytg
+1F558	knwfyr	9 | 9:00 | 9wfyr | knwfyr | agdicytg | agdiana | cytg
+1F559	jwfyr	10 | 10:00 | 10wfyr | agdicytg | agdiana | cytg
+1F55A	jmwfyr	11 | 11:00 | 11wfyr | jmwfyr | agdicytg | agdiana | cytg
+1F55B	jmmwfyr	00 | 12 | 12:00 | 12wfyr | imgceammv | jmmwfyr | agdicytg | agdiana | cytg
+1F55C	mwfyrfq	1 | 1:30 | 1wfyrfq | 30 | mwfyrfq | agdicytg | agdiana | cytg
+1F55D	mlbowfyrfq	2 | 2:30 | 2wfyrfq | 30 | mlbowfyrfq | agdicytg | agdiana
+1F55E	mmmwfyrfq	3 | 3:30 | 30 | 3wfyrfq | mmmwfyrfq | agdicytg | agdiana | cytg
+1F55F	wcwfyrfq	30 | 4 | 4:30 | 4wfyrfq | wcwfyrfq | agdicytg | agdiana | cytg
+1F560	mdmwfyrfq	30 | 5 | 5:30 | 5wfyrfq | mdmwfyrfq | agdicytg | agdiana | cytg
+1F561	ycwfyrfq	30 | 6 | 6:30 | 6wfyrfq | ycwfyrfq | agdicytg | agdiana | cytg
+1F562	juwfyrfq	30 | 7 | 7:30 | 7wfyrfq | juwfyrfq | agdicytg | agdiana | cytg
+1F563	howfyrfq	30 | 8 | 8:30 | 8wfyrfq | howfyrfq | agdicytg | agdiana | cytg
+1F564	knwfyrfq	30 | 9 | 9:30 | 9wfyrfq | knwfyrfq | agdicytg | agdiana | cytg
+1F565	jwfyrfq	10 | 10:30 | 10wfyrfq | 30 | jwfyrfq | agdicytg | agdiana | cytg
+1F566	jmwfyrfq	11 | 11:30 | 11wfyrfq | 30 | jmwfyrfq | agdicytg | agdiana | cytg
+1F567	jmmwfyrfq	12 | 12:30 | 12wfyrfq | 30 | jmmwfyrfq | agdicytg | agdiana | cytg
+1FA90	kbhommnahqmmgwlvhapihommnahqm	gahqm | gahqmmgwlv | ahqmmgije | kbhommnahqmmgwlvhapihommnahqm | mgwlvvmikhommnahqm
+2604	qjsmpahqm	kijcm | jmdjlw | qjsmahqm
+26F0	u	u | ubhhv
+26F1	efhetogyitf	oooj | kinlamh | kinlamhoooj | kinlamhyitf | efhetogyitf | yitf | mlby | mlbyoooj | mlbyyitf
+26F2	rjtchae	rjtceepd | rjtchae
+26F4	eitejjomb	hdlpjher | eiteeowyncjjomb | eitejjomb | hycr | jjombhycr
+26F5	lbhnihycr	lbhnihycr | hycr | yysdhynkg
+2708	nohtodvii	rjtchhdidvii | ysohvhommn | nohtodvii | nohtohommn
+1F488	shikkmngsmigqshrllhhj	tbnhmtmbcshikk | tbnhshikk | ysonojjjiifnot | ehgutbnhrno | mgwgshikk | mgwgshikkdamj | vfmhatsit | nohtoshikk | nohtoshikkcijb | shikkmngsmig | shikkmngsmigqshrllhhj
+1F4BA	ioogoyt	ioogoyt | ioogdkmr | dkmrnd
+1F680	fhtbn	kijcm | jmdjlw | ysohvhommn | fhtbn | nonhehhdi
+1F681	jbmmhtdvii	ysohvhommn | jbmmhtdvii
+1F682	tnefeomnfjwj	ysohvhommn | fjwj | tnefeomnfjwj | cjigrmher
+1F683	cjigrmherjwjjjmlb	ysohvhommn | eomnjwj | otfjjknmbwujwj | cjigrmher | cjigrmherjwjjjmlb | mbwujwj
+1F684	yrbrydlmnlnjwj	ndnrrjfjwj | ydhmljjomjvfhae | ysohvhommn | fjwj | cjigrmher | yrbrydl | yrbrydlmnlnjwj | yrbrydlcjigrmher | yrbrcjig
+1F685	ndnrrjfjwj	ndnrrjfjwj | ydhmljjomjvfhae | ysohvhommn | fjwj | cjigrmher | yrbrydl | yrbrydlmnlnjwj | yrbrcjig
+1F686	fjwj	MTR | mglnygtq | gpdmycjigrmher | gpdcjig | etcucjig | fjwj | cjigrmher
+1F687	gpdcjig	MTR | mnlnjwj | gpdmycjig | gpdmycjigrmher | gpdcjig | qjloybjj | ysohvhommn | etcucjig
+1F688	jjmvmjjknmnlnjwj	mnlnjwj | mglnytyr | mglnygtq | rrwjjjkn | qhpmygtq | fjwj | fjwjmglnytyr | jjmvmjjkn | jjmvmjjknmnlnjwj | jjmvmcjig | cjigrmher
+1F689	jwjytyr	mnlnjwj | fjwj | jwjytyr | cjigrmher
+1F68A	mbwujwj	otfjjknmbwujwj | jwjjjmlb | mbwuhgksaujm | mbwujwj
+1F68B	mbwuvfswujwj	aujm | eomnjwj | otfjjknmbwujwj | vfswujwj | jwjjjmlb | mbwuvfswujwj | mbwujwj
+1F68C	aujm	citceomnjwj | hbnddyck | aujm | dyckau | eomnjwj | jwjjjmlb
+1F68D	qytvyhmllraiuaujm	aujm | qytvyhmllraiuaujm | eomnjwj | jwjjjmlb | yhvlmwylmblldoo
+1F68E	mbwuhgksjwj	aujm | eomnjwj | otfjjknmbwujwj | jwjjjmlb | mbwuhgksjwj | mbwujwj
+1F68F	aujmytyr	aujm | aujmytyr | aujmytyrllhhj | jwjytyr
+1F690	ncau	vanond | jheropbucjwj | ncau | aujm | eomnjwj | jwjjjmlb | krsqfsflk
+1F691	ieokyrtoejwj	ieokooahjwj | ieokyrtoejwj | eomnjwj | sevifnsp | jwjjjmlb
+1F692	efbnlyhsjwj	eomnjwj | efbnlyhsjwj | ffwli | ftkymr
+1F693	tkymrjwj	eomnjwj | tkymrjbof | tkymrjwj | jwjjjmlb | yvvvywlg
+1F694	tkymrjbofjwj	eomnjwj | tkymrjbof | tkymrjwj | jwjjjmlb
+1F695	hapijm	qdamhapijm | eomnjwj | hapijm | yrjhdrhgjwj | jwjjjmlb | krsqfsflk | tmwchapi | tmwcnauhapijm
+1F696	qytvyhmllhapiyrjhdrhgjwj	jioghapijm | qytvyhmllhapiyrjhdrhgjwj | qdamhapijm | eomnjwj | hapijm | jwjjjmlb | anmtjwj | tmwchapi | tmwcnauhapijm
+1F697	jwj	qdamjwj | eomnjwj | vfmnaujwj | jwj | jwjjjmlb | jjhkbjwj | anmtjwj | krsqfsflk
+1F698	eomnjwj	qdamjwj | eomnjwj | vfmnaujwj | jwj | jwjjjmlb | jjhkbjwj | anmtjwj | krsqfsflk
+1F699	grtcajwj	SUV | odysohvjwj | odanb | grtcajwj | qdamjwj | ysohvhommnjwj | eomnjwj | tsitnaujwj | jwjjjmlb | ybjjhgksmngninibqyomdjwj | anmtjwj | krsqfsflk
+1F69A	opbucjwj	ymyjwj | eomnjwj | opbucjwj | jwjjjmlb | ytkopbuc | ytkopbucymyjwj | ytkopbucopbucjwj | ybjjjjomn | krsqfsflk
+1F69B	opbucdslcjwj	fqqggyipmymyjwj | ymyjwj | eomnjwj | hdninhgks | opbucdslcjwj | opbucjwj | jwjjjmlb | ybjjjjomn | krsqfsflk
+1F69C	qopdqytdvii	qopdqytdvii | jwjjjmlb
+1F69D	rrwjjjknmbwujwj	mnlnjwj | rrwjjjknmnlnjwj | rrwjjjkncjigrmher | rrwjjjknmbwujwj | jwjjjmlb
+1F69E	ymucjigrmher	ymucjigrmher | ubhhv | ysohvhommn | eomnjwj | fjwj | nomrtucjigrmher | cjigrmher
+1F69F	bfpebndmnlnjwj	rrwjjjknfjwj | bfpqggyipm | bfpqggyipmrrwjjjkncjigrmher | bfpqggyipmrrwjjjknmbwujwj | bfpqggycjigrmher | bfpebndmnlnjwj | cjigrmher
+1F6A0	vfswujwj	umnmbcvfswujwj | ebbbmbsmvfswujwj | jbvifythu | vfswujwj | mbwuvfswu
+1F6A1	rlbjwj	rlbjwj | umnmbcvfswujwj | jcmlvfswujwj | jbvifythu | vfswujwj
+1F6A2	hycr	hdlpjher | ysohvhommn | hycr | jjombhycr | hmnljjomb
+1F6A3	qfbqhynkg	ilnhycr | ilnhynkg | qfbqhycr | qfbqhynkg | hoauhycr | khwlidhbyi | hycr | hycrond | yysdemnr | yysdejrb | cpinwf
+1F6A4	pdkhynkg	muhemk | jmrwyrbo | pdkhynkg | ysohvhommn | kbciio | hycr | yrbotmtj | yysdhynkg
+1F6A5	vfmvfvnefnot	yckynib | yckynibfnot | dtmchbryckynibfnot | emfjyckynibfnot | fnotfmu | vfmvfvnefnot | yrnjrsypu | rmherr
+1F6A6	jbmmipmvfmvfvnefnot	yckynib | yckynibfnot | hjtmjbmmyckynibfnot | fnotfmu | jbmmipmvfmvfvnefnot | vfmvfvnefnot | yrnjrsypu | rmherr
+1F6A7	ysopdmlm	rmhernlytj
+1F6A8	tkymrjwjfnot	ysonojjjii | eomnjwj | fnotfmu | sevifnsp | tkymrgjslerrikr | tkymrjbof | tkymrjwj | tkymrjwjfnot
+1F6A9	mmmnbgysotc	mmmnbgysotc | mrnrmfbkqo | nklqyrhne | ysotclbyia | ysotcdamj | dyg | vfmysotc | yrbrmfbkqo
+1F6AA	an	tblnan | kan | hoviean | dan | dslcan | an
+1F6B0	oinobqe	e | eronk | edmf | eybyspmtmbc | oinobqe
+1F6B1	lmyyyoinobqe	jjonamj | ddmmfylm | ddmmfylmrapve | ddmmfylmoinoe | oudke | lmyyyoinobqe
+1F6B3	ddmmfylmrrwjjwj	mfimogrmbdrrwjjwj | rrwjjwj | dmwfyrgp | ddmmfylm | ddmmfylmrrwjjwj
+1F6B7	hommnoddmmfylm	mfimogynibhommn | dmwfyrgp | ddmmfylm | ddmmfylmynibhommn | hommnoddmmfylm
+1F6B8	ncphxhuytwg	yckynib | hxhuytwg | jjndrmherr | hbnddyck | ncphxhuytwg | hommno | ybbrsqsfrmher
+1F6B9	wksibcn	ibcnhshml | ehguqana | wksjm | wksibcnhshml | wksphqm
+1F6BA	vibcn	wc | vjm | vibcn | vphqm | ibcnhshml | ehguqana
+1F6BB	ehguqana	wc | ciibcn | ibcnhshml | ehguqana
+1F6BC	bcvhxhuhodirsypu	BB | bcvhxhu | bcvhxhuhodirsypu | vikshxhu | qnbksellml | mlwkqnbk | hodirsypu | yibbcv
+1F6BD	ibcnhshml	ibcnhshml | elnbuc | ehguqana | ecorjmig | sqsfdnib
+1F6BE	WC	wc | WC | ciibcn | ibcnhshml | ehguqana
+1F6BF	eddecor	showerhead | e | eleyrf | ehguerrd | eddecor | topemmp | topemmpmtmbc
+1F6C0	esmeecorraiuo	ohqphh | eleyrf | ehguerrd | ecoroum | esmeecor | esmeecorraiuo | eddecor
+1F6C1	ecoroum	bubblebath | eleyrf | epruepruecor | ehguerrd | ecoroum | esmeecor | eddecor
+1F6C2	ynibanvitdomodam	uuohgytu | eowyanvit | yrtoearf | yrtoearfdomodam | ynibanvitdomodam
+1F6C3	eowyanvit	domodam | eowyanvit | hommndnd
+1F6C4	qamosjehommndnd	mglnygtq | rnsp | qhpmygtq | ysohvhommn | hommndnd | hommndndhdbu | ynibybbrdomodam | nohtodvii
+1F6C5	jkmrklndhommndnd	oyrahqphhdslc | jkmrklnd | jkmrklndhommndnd | hommndndjkmrklnd | hommndndhdbu
+1F6D0	ifhmlifgnijmighodirsypu	jmmfjdok | ifhmlifgni | ifhmlifgnijmig | ifhmlifgnijmighodirsypu | iftwthqmqj | iftwthqmqjgamhhshml
+1F6D1	oyrnylmdmwfyrgp	oyrn | oyrnylm | honbgmthhh | dmwfyrgp
+1F6D2	bcttbhqphhjwj	qqogjwj | bcttbhqphhjwj
+2668	ewothae	ewothae | tnefonfd | gif
+26BD	ryomgije	edhe | mgije | mgijemg | tgktchml | ryomgije | rmaphedhe | ybjjhgks
+26BE	dqkqmgije	dqkqmgije | edhe | mgije | ybjjhgks
+26F3	mrnrmfbkqomgije	mrnrmfbkqo | mrnrmfbkqomgije | wduoic | ebmr | mgijeebmr | ybjjhgks | yrbrmfbkqo
+1F392	lgapru	hbnddyck | jdokyib | lgapru | lpbpru | lpbjbrrv
+1F3A0	ysonojjjiidsqsf	ygaombcvidwgrv | vrvkvid | ysonojjjiidsqsf | sqsf
+1F3A1	idqmkjjomb	ygaombcvidwgrv | idqmkjjomb | dviihgksyysdyti | yysdvidgamh
+1F3A2	ybbrujwj	ygaombcvidwgrv | dviihgksyysdyti | yysdvidgamh | ybbrujwj
+1F3A3	cpinwf	vrvkvid | ybjjhgks | cpibmmc | cpinwf | cpinwfhmj | nwf
+1F3A4	rfdyrbrhnhli	ymyqytOK | rfdyrbrhnhli | raaK | raamrno | mrno | gesjyta | ytavid | jonijrhuhnhli
+1F3A5	mbwuafhhhqsjjafhhhdvii	bollywood | hollywood | qsjjafhhhdvii | edhewgehjr | tomrwgehjr | yrsucvne | cvneafhhh | mbwuafhhh
+1F3A6	ytinljmu	ytinljmu | qhaqsjj | qjvcng | qsjjafhhh | qsjjcvnedvii | cytumtmbc | mbwuafhhh | mbwuafhhhnljmu
+1F3A7	sjhbmr	headset | noise | sjjtcg | sjdvii | sjhbmr | gesjyta | nlmrbyta | ytavid
+1F3A8	yrbgrnaudhe	orlnytap | ninibdhhh | vrvkvid | lgwmjmso | lgwmlgwm | vfomalgwm | tgkhoicn | tgkhoicnoijrr | naubdhhh | nauhebt | tgiihoicn | yrbgrnaudhe | yrbgrnauhebt
+1F3A9	iftwtlbabu	lbabund | bslevgyhv | iftwtlbabu | vflwljmlbabu | yhvbsle | yrbrlbabu | yrbrmnmbciftwtlbabu | idhihoicn | idhihoicnhrmlblbabu
+1F3AA	sqsfytiwjii	lbsmvtakb | lbsmvhyhj | sqsfytiwjii | sqsfytiwjiilbsmvtakb | sqsfytiwjiilbsmvhyhj
+1F3AB	mwmmf	ohgamh | ohgamhfqsh | ohgamhfqsu | mwmmf | mwmmfdav | anmwmmf
+1F3AC	gamhyrsudhe	action | qhadhe | anmtqha | mbwuafhhh
+1F3AD	qmvejmctgiihoicn	yolnnljmu | vrvkvid | ejmcrbuc | tgiihoicn | qmvejmc | qmvejmctgiihoicn | yrhjryoln | mwylbmmc
+1F3AE	mbwundyysdyti	vrvkvid | qhnq | qmndvii | qjcmhblnrrikr | yysdyti | yysdytidvii | mbwundyysdyti | mbwumgmmu
+1F3AF	omrll	omrll | vrvkvid | dmwftjau | mylmlvfmp | budmwf | vfmp | yysdyti | cmwftjau | tjaup | nohtocmwf
+1F3B0	jkpyphudvii	777 | lviik | jkpyphudvii | bcjkajibi | bcjkagamh | bcjkacii | yysdyti
+1F3B1	yadmgije	8 | 8rsypuedhe | 8rsypumgije | diredhe | yadmgije | ppjtcc | mgije | hsqfedhe | yysdyti
+1F3B2	bbhnend	vrvkvid | qtklbbhnend | yysdyti | bbhneond | bbhnend
+1F3B3	ordyuoiimgije	ordyuoiimgije | omgl | ppjtcc | mgije | yysdyti | ybjjhgks
+1F3B4	topduvfhvpllhhj	adm | admtopdu | admtopllhhj | toprhhjllhhj | topdu | topduvfhvpllhhj | topllhhj | yysdyti
+1F3B5	ytahodi	gesjyta | ytavid | ytahodi
+1F3B6	mmmowjrytahodi	mmmowjrytahodi | gesjyta | ytavid | ytahodi
+1F3B7	naujmhnhli	vidrrikr | naujmhnhli | ytavid
+1F3B8	vfgropd	vidrrikr | vfgropd | mbwundvfgropd | mbwuvfgropd | ytavid
+1F3B9	cappmgoin	vidrrikr | cappmgoin | cnkqhebt | ytavid
+1F3BA	ncrsypu	ncrdlnrc | ncrsypu | vidrrikr | ytavid
+1F3BB	ncqamomgoin	ncqamomgoin | vidrrikr | ytavid
+1F3BC	vidyrtca	vidyrtca | mrno | ytavid | ytahodi
+1F3BD	ybjjhgksbsle	Tee | Tshirt | Tphbt | otfllwTphbt | whomvm | lpbp | rmpruylmh | ybjjhgks | ybjjhgksbsle | ybjjhgkslhhh
+1F3BE	vfbtvmgije	ppjtcc | mgije | vfbtvmgije | yysdyti | ybjjhgks
+1F3BF	ebbbmbsm	ebbbmbsm | ebbbmbsmdhe | ybjjhgks | mbsm
+1F3C0	hsitmgije	edhe | mgije | hsitmgije | ybjjhgks
+1F3C1	vfheywfyrysotc	bfqshdln | jmmuihs | ysotclbyia | dherond | dhernd | dherndysotc | ppjtcc | vfheywfyr | jtccjwj | ybjjhgks
+1F3C2	mgmmuebbbmbsmdhe	rrwjdheebbbmbsm | ebbbmbsm | ebbbmbsmdhe | mgmmuebbbmbsmdhe | ybjjhgks | mbsm
+1F3C3	rmpruylmhraiuo	ohqphh | pdkrmpru | pdkydl | wksjm | wksphqm | rmpruylmh | rmpruylmhraiuo | rmpruylmhhapiwksjm | rmprujka | sqsfqytdci
+1F3C4	ebbbeiav	ohqphh | eymybjjhgks | efhetog | eowyetq | eowyetog | ebbbeiav | wksjm | wksphqm | hohgneiav | ybjjhgks
+1F3C5	bbtwtyibviikytaj	bmuibjwj | viikllhhj | viikytaj | ybjjhgksviikllhhj | cllhhj | bbtwtyibviikytaj
+1F3C6	viikmfbt	bmuibjwj | bfqshdln | viikmfbt | ybjjhgks
+1F3C7	sfkmrsqsf	ppjtcc | bcjkasqsf | jtccsqsf | rmprusqsf | ybjjhgks | sqsf | sqsfomwa | sqsfjtcc | sfkmrhrmlb | sfkmrhoicn | sfkmrsqsf
+1F3C8	tgkipmryomgije	mgije | tgkipmdmjkdswumgije | tgkipmryomgije | goshrvfnhemfbt | goshrvfnhemrjnu | ybjjhgks
+1F3C9	dswumgije	dmjkdswumgije | dswumgije | mgije | ybjjhgks
+1F3CA	eysde	ohqphh | eineq | eysde | eysderaiuo | eysdeine | eysdeinehapiwksjm | wksjm | wksphqm | hbulwipm | ybjjhgks
+1F3CB	hcqhjwg	ohqphh | onkqtgk | onkqhxh | wksjm | wksphqm | hcqhjwg | hcqcjig | ybjjhgksrbuc | chjefdwf
+1F3CC	qmnyrbrmfbkqomgije	mdmjohebmr | mrnrmfbkqo | mrnrmfbkqomgije | qmngolf | qmnyrbrmfbkqomgije | qmnyrbrmfbkqomgijeraiuo | qbjjdmj | dmj | mgije | yrbrmfbkqo | yrbrmfbkqomgije | yrbrmgije
+1F3CD	mbwurrwjjwj	jtccjwj | mbwurrwjjwj
+1F3CE	jtccjwj	ppjtcc | eomnjwj | jtccjwj | jwj
+1F451	hamgbmui	bfqshdln | wirmmg | vmg | bslevgyhv | hamgbmui | hamgjmig
+1F452	lbabund	vphqm | lbabund | bslevgyhv | topwgrv | tajlbabu | yhvbsle
+1F453	buavcytu	bslevgyhv | buavbuqmb | buavcytu | jkptop | yhmlifbuu | ygrvifbuu
+1F454	oimbcrki	bbeohsg | rbucmlm | mlmohs | bslevgyhv | yhvbsle | lhbtlhhh | lydulhhh | yrsipjbmc | oimbcrki | oimbckpblb
+1F455	Tphbt	polo | tee | Thtsl | Tphbt | Tlhbt | odanb | omlkvgyhv | bslevgyhv | hwsmmoimbc | tsitnau | yhvbsle | lydulhhh | bcttbhqphh | ybgrdj
+1F456	hqondlijj	odanb | bslevgyhv | hqondklb | hqondlijj | tsitnau | yhvbsle | lijjnd | bcttbhqphh | ybgrdj
+1F457	yjwjhxhlskr	bslevgyhv | toprfb | yhvbsle | lskrnd | bcttbhqphh | yjwjhxhlskr
+1F458	hdrbsle	yukata | hdrbsle | bslevgyhv | ecoryhv | orninyycb | yhvbsle
+1F459	ppsegsp	sexy | mmmwfyripm | mlboohqipm | kinlamh | phqmirp | afmuecor | ppsegsp | efhetog | eineyhv | eowyetog | eysde | eysdeine
+1F45A	vvgyhv	ymyhv | vphqm | bslevgyhv | fdcshvfm | yhvbsle | lhbtlhhh | lydulhhh
+1F45B	cavpru	qmnqcsh | bslevgyhv | mrmlkfklb | fdcshvfm | vfmnau | tomrpru | yhvbsle | bcttbhqphh | cavpru | ciipru
+1F45C	qopyhv	prupru | vjm | qqamopru | qopyhv | bslevgyhv | dhepru | yhvbsle | bcttbhqphh | cavpru | ciipru
+1F45D	qomrqpru	qqamopru | qopyhv | bslevgyhv | yhvbsle | cavpru | ciipru
+1F45E	dhetjgg	oxford | rlmynau | hbndhqm | bslevgyhv | wksvgyhv | dhetjgg | bcrl | yhvbsle | lapvnau | rmaph | tjgg
+1F45F	edhetjgg	bslevgyhv | edhetjgg | vfbtvmgije | yhvbsle | bcttbhqphh | rmpruylmh | rmprutjgg | rmaph | ybjjhgks | ybjjhgkstjgg | tjgg
+1F460	yrbrrmbsdtjgg	vphqm | vvgyhvtjgg | agdifbr | bslevgyhv | yhvbsle | bcttbhqphh | tjgg | yrbrrmavtjgg | yrbrrmbsdtjgg
+1F461	eyrftjgg	mandihpmtjgg | vphqm | eyrftjgg | tjgg | yrbrrmbsdtjgg | shdcifdtgftjgg
+1F462	tjopnd	vjm | bslevgyhv | yhvbsle | bcttbhqphh | smvtjop | tjopnd | tjgg
+1F6B2	rrwjjwj	rrwjjwj | ysonojjjii | bcrlrmeajwj | hbuhommnjwj | rmbdrrwjjwj
+1F6B4	rmbdrrwjjwj	ohqphh | rrwjjwj | rrwjjwjq | rrwjjwjwks | rrwjjwjybjjhgksrbuc | wksjm | wksphqm | rmbdrrwjjwj | ybjjhgks | sfkmrrrwjjwj
+1F6B5	rmbdhoauurrwjjwj	ohqphh | rrwjjwj | ugpdrrwjjwj | hoauurrwjjwj | wksjm | wksphqm | goivwgninrrwjjwj | rmbdrrwjjwj | rmbdhoauurrwjjwj | ybjjhgks | sfkmrrrwjjwj
+1F6B6	hommno	ohqphh | rrwjo | pawermpru | tbokylmh | ylmhhommn | eaweylmh | hommno | hommnrmher | gyormher | ygrvryo
+1F938	obcnqhwsmm	obcnqhwsmm | qmnanvityj | hxbckogw | bbtwtqrrd | bbtwtqrrdv
+1F939	mbvydogqje	mfjhonknirp | qjetgii | qknsedhe | qknsedheqmvejmc | hqgdiqje | mbvydogqje | ydogqje | ydogmbv
+1F93A	oolnjeqybjjhgksrbuc	ooln | oolnjeq | oolnjeqybjjhgksrbuc | jeqooln | ybjjhgks
+1F93C	qyijnbgyrucq	battle | owjro | tgdiqmn | qmnyck | qngqmn | qyijnbg | qyijnbgq | qyijnbgppjtcc | qyijnbgyrucq | qyijrmyck | qmbwir | nbgks | ybjjhgks
+1F93D	emgije	eymybjjhgks | emgije | eysde | eysdeine | ybjjhgksrbuc
+1F93E	qmgije	hhdiedhe | hhdimgije | hhdian | hhdiybyspan | qmgije | mokjeq | edhe | rmlmohhdi | yogmok
+1F93F	emuaemwylwlyaj	ebjb | ebndemua | emuae | emuaebqrrr | emuaebuavwlyaj | emuaecytu | emuaemwylbmmc | emuaemwylwlyaj
+1F9E2	dqkqmgijelbabu	caplbabu | dqkqmgijelbabu | vfvnelbabu | wlhafrypblbabu
+1F9E3	mmmbclb	wdmqlb | jtcyimoii | qwdvfqjl | vfvnenau | mmmbclb
+1F9E4	qksmi	q | qksmi | qltwi | tsitnau
+1F9E5	kllwv	imdw | niyksmi | kyhv | kllwv | koojrhu | jtcyimoii | vfmnau | smsimvfij | llwv
+1F9E6	ltwind	okmrtltwi | tsitnau | ltwind | smvltwi
+1FA70	tautmbwotniqtjgg	otniqrmbhx | tautmbwotniq | tautmbwotniqtjgg | rmlmootniq | tjgg
+1FA71	mohqipmeineyhv	mohqipmeineyhv | mohqmtmbceineyhv | eineyhv | yjwjbbtwteineyhv
+1FA72	einelijj	mohqipm | mmmnbglijj | oblijj | ihpmlijj | eineyhv | einelijj
+1FA73	okmrtlijj	obyhv | ihpmlijj | eineyhv | einelijj | okmrtlijj | lijj | lijjnd
+1FA74	ojndqopd	ojndqopd | qopdtjgg | efhetog | eyrftjgg | tjgg
+1FA80	qbouqbou	yoyo | qbouqbou | eycvhgks | mgmmubmmc
+1FA81	hnhlihbsd	ysokhnhlihbsd | vfhvpiphaf | hjsmmtqsmm | hnhlihbsd | nohtohommn
+1FA82	nlheqtehroooj	bfpqggyipmebbbtqsmm | ebbbtqsmmoooj | rmlmooooj | nlheqtehroooj
+1FA83	ywrkscmwf	mpylmrrikr | ywrkscmwf
+1FA84	iflwloudqkq	mooeev | moohrmlb | iflwloudqkq | idhidjk | idhiegi | idhiegidqkq | idhihoicn | idhihoicnhrmlb
+1FA85	dhevfobgtor	mdmbhail | ixeifrhu | dhevfobgtor | haila | fdilrwd | wgfgmcwmrnr | wgfgmcwmrnrmdmbhail
+1FA86	ohqiwlvfgtchmlvggvgg	ohqiwlvfgtchml | ohqiwlvfgtchmlvggvgg | ksmivgg | vggvgg
+1FA95	mgilgyajmgoin	mdmnyvimgoin | nyvividrrikr | nrrjqkhk | mgilgyajmgoin | mgilgifbmmgoin | ytavid
+1FA97	qhnhlimgoin	qhnhlimgoin | vidrrikr | ytavid
+1FA98	smvgtje	ileksrgtje | vidrrikr | smvgtje | gtje
+265F	omc	omc | rjiwher | dtmcnd | lnora
+2660	tnokhssmm	rhhjllhhj | tnokhssmm | yysdyti
+2663	dowytop	rhhjllhhj | dowytop | yysdyti
+2665	vfmp	rhhjllhhj | pmng | pp | irppqmb | vfmp | yysdyti
+2666	nlppamrjii	rhhjllhhj | yysdyti | nlppamrjii
+1F4B3	oymrbqymy	odigfno | oymrbqymy | ohhjcii | ymyllml | vloklnbuc | mrvneymy | cavhommn | cii
+1F4B4	ammuvfhvpfklb	yen | by | ammu | ammuvfhvpfklb | afklb | admopbucfklb | mgbuuc | vfhvpfklb | opbucfklb | cfhmwmmf | cavhommn | cii
+1F4B5	tgkcvfhvpfklb	$ | dollar | mgbuuc | vfhvpfklb | tgkmmu | tgkc | tgkcvfhvpfklb | opbucfklb | cfhmwmmf | cavhommn | cii
+1F4B6	srnommuvfhvpfklb	srnommu | srnommuvfhvpfklb | srnowlvfg | mgbuuc | vfhvpfklb | opbucfklb | cfhmwmmf | cavhommn | cii
+1F4B7	tlbkcybsvfhvpfklb	mgbuuc | vfhvpfklb | tlbkcybs | tlbkcybsvfhvpfklb | opbucfklb | cfhmwmmf | cavhommn | cii
+1F4B9	kbammudmwfyrgpraiuhbrymqhmlvfhaewryw	ymht | crhuqnbk | by | seogyioj | hbrym | wrywqmv | niyseog | ylbgamhgyogiks | ammu | ammuhtojbm | afklb | kbammudmwfyrgpraiuhbrymqhmlvfhaewryw | opbucfklb | gopuugiks | cavhommn
+1F4BB	qqamombwubvvw	pc | owjrombwubvvw | qqamombwubvvw | hlqyrsumngmbwubvvw | hlqyrsudmmbwubvvw | bdoeymmngmbwubvvw | yjksjcijmig | mbwubvvw
+1F4BC	cijllnpru	cijllnpru | yjksjcijmig
+1F4BD	yfdonffmumrptd	MD | minidisk | fmumrptd | mbwubvvw
+1F4BE	mrtvimrptd	1.4 | 1.44 | 3.5 | oyraklnd | mrtvimrptd | mbwubvvw
+1F4BF	fmumrptd	blu-ray | cd | dvd | LD | fmumrptd | tsitfmu | cmbwhhdifmumrptd
+1F4C0	DVD	blu-ray | cd | dvd | LD | fmumrptd | tsitfmu | cmbwhhdifmumrptd
+1F4C1	ykohqkoo	ykohqkoo | dfbwjvd | dfbwjvdkoo
+1F4C2	qmnanmtraiuykohqkoo	qmnanmt | qmnanmtraiuykohqkoo | ykohq | ykohqkoo | dfbwjvd | dfbwjvdkoo
+1F4C3	vfntwraiuykohq	vfntwraiuykohq | qfqutw | ykohq | ykohqdfbw | lgambuc | vfhvp
+1F4C4	ykohqmylmmwyl	qfqutw | ykohq | ykohqmylmmwyl | yklga | ykdfbw | lgambuc | vfhvp
+1F4C5	amda	jubjjua | amda | atcb
+1F4C6	qtclanmtraiuamda	jubjjua | qtclamda | qtclanmtraiuamda | amda
+1F4C7	jbvifnlymy	ymyllml | ymyllmlomrt | ymyllmljbvifnl | nirllml | nirllmlkrd | nirllmlomrt | jbvifnl | jbvifnlymy | togxhbnddyck
+1F4C8	hbrymqhmlvfhaewryw	hbrym | hbrymqhmlvfhaewryw | wrywmthhh | wrywqmv | gcwaksr | gcwasmv | lvokqypo | tctdvfqmc | mylmhbr | vfhaeolod | qmvmgbuu | gopuugiks
+1F4C9	hbrmyqhmlvfhaewryw	myrmhqo | mynlheq | hbrmy | hbrmyqhmlvfhaewryw | wrywmthhh | wrywqmv | lvokqypo | tctdvfqmc | eihrfh | vfhaeolod | gopuugiks
+1F4CA	dqkqmthhhwryw	wrywmthhh | wrywqmv | lvokqypo | olodmthhhwryw | dqkqmthhhwryw | iobucfdyj
+1F4CB	tbnhbcyrheii	tbnhbcyrdhe | tbnhbcyrheii | hogdiyjksjjllnmmbc | hlqyrsu
+1F4CC	kmtmbccmn	wrywcmn | khbnd | kmtmbccmn
+1F4CD	wrbcmtmbckmtmbccmn	oytwljbm | wrbcmthhh | wrbcmtmbckmtmbccmn | wrywcmn | gpdwryw | kmtmbccmn | kmtmbccj | wljbmmnmbc | cmnyruc
+1F4CE	twlbjndkoo	twlbjndkoo | ywrvfykcj
+1F4CF	anaso	so | lvokhbnd | jbmmso | nbgite | rmssybog | amwgite | anaso
+1F4D0	mmmnbgso	mmmnbgso | mmmnbgmthhh | sond | lvokhbnd | nbgite | anaso
+1F4D1	lgahoimmbuc	ykohq | lgahoim | lgahoimdmwfhoim | lgahoimmbuc | dmwfhoim | dmwfyrsu | dmwfyrsumbucmwyl | vfhvp
+1F4D2	lbsmvheii	lbsmvheii | hlqyrsudm | hlqyrsuheii | heii | vfhvp | bcsmvdm
+1F4D3	hlqyrsuheii	ayrsu | lga | hlqyrsudm | hlqyrsuheii | heii | vfhvp
+1F4D4	bdhhhnauggdimwylhlqyrsuheii	hardcover | hbnddyck | ggdimwyl | bdhhhnauggdimwylhlqyrsuheii | jdokyib | ayrsu | lgadm | lgahqda | hlqyrsudm | hlqyrsuheii | fdqmbvgyhv | yrwddm
+1F4D5	anmgwgraiulga	ggdimwyl | ncyrcru | lga | lgadm | lgahqda | hnlhmbt | heii | vfmnau | anmgwgraiulga | anvitandh
+1F4D6	qmnanmtraiulga	wrywlgaoijrr | ncyrcru | qmnanmt | qmnanmtraiulga | lga | lgadm | lgahqda | okryryia | ancruyrgwc
+1F4D7	vfvnenauheii	ggdimwyl | ncyrcru | lga | lgadm | lgahqda | hnlhmmbt | vfvnenau | vfvnenauheii | anvitandh
+1F4D8	tsitnauheii	ggdimwyl | ncyrcru | lga | lgadm | lgahqda | hnlhmmmbt | tsitnau | tsitnauheii | anvitandh
+1F4D9	dnotnauheii	ggdimwyl | ncyrcru | lga | lgadm | lgahqda | dnotnau | dnotnauheii | hnlhwcbt | anvitandh
+1F4DA	mwwwmlga	mwwwmlga | wrywlgaoijrr | hbnddyck | ncyrcru | lga | lgadm | lgahqda | okryryia
+1F4DB	vhqmnirllhhj	burning tofu | flaming tofu | tofu on fire | nirjnd | nirllhhj | nirhodi | vhqmnir | vhqmnirllhhj | vikshdogwgrvnirllhhj | houfkytaj | vfmnauddbuhchdanirllhhj
+1F4DC	qfqujjlw	qfqujjlw | lgafqsu | vfhvp | tqdhevfhvp
+1F4DD	omlkolod	ohsyk | omlkolod | othbyvpcvne | vtmdbbtwt | jhxf | ettbynib | hlq | hlqyrsu | ynibyrnj | ccrhlq
+1F4DE	mbwuyrhjrhbmr	ettbynib | sgjwphbmr | ynibyrnj | mbwuyrhjr | mbwuyrhjrhbmr
+1F4DF	ojiirhfddvii	Calldvii | ojiirhfddvii | ettbynib | hdphlgair | ynibyrnj
+1F4E0	ojiijbmcdvii	fax | ojiijbmc | ojiijbmcdvii | ynibyrnj
+1F4E1	hodqnahqmmkvfhae	niyahqmo | mkvfhae | kijcm | jmdjlw | mrptd | hdyjhbnd | hodqnahqm
+1F4E2	kgesjci	annoucement | siren | citcitmcqhdw | rdlnrc | kgesjci | qamhgesjrrikr | qitcytarrikr | eygytap | efbhup | gesjyta | tkymrgjsle | ynibyrnj | vlytagesj
+1F4E3	ojiigesjhbmr	ojiigesjhbmr | rdlnrc | kgesjci | qitcytarrikr | tgnorhfd | gesjyta
+1F4E4	jkmrohqhdbu	e-mail | email | oymr | oymrohq | jkmrohqhdbu | nonheuu | ytkuu | hmnlohq | hmnlhdbu | mbwundhmnlohq | mbwuhmnl
+1F4E5	vlokohqhdbu	e-mail | email | oymr | oymrohq | qytvvlok | vlokohqhdbu | vlokmgln | otfmbwuhmnl | hmnlohq | hmnlhdbu | mbwundhmnlohq | mbwuhmnl
+1F4E6	pruywdv	pruywdv | ehhvyhyu | hdbu | hdbund | ytkopbuc | ynibyrnj | ydlyhyu | ybjjjjomn
+1F4E7	mbwuhmnl	e-mail | email | oymrohq | hmnlohq | mbwundhmnlohq | mbwuhmnl
+1F4E8	doooymr	e-mail | email | doooymr | oymr | oymrggdi | qytvvlok | vlokohqhdbu | vlokoymr | nonheytk | hmnlohq | mbwundhmnlohq | mbwuhmnl
+1F4E9	kbhtbnrypbraiuoymrggdi	e-mail | email | inbox | my | oymr | oymrohq | oymrggdi | jkmroymr | qytvvlok | vlokmgln | kbhtbnrypbraiuoymrggdi | nonheuu | nonheytk | htbnrbm | ytkuu | ynibyrnj | hmnlohq | mbwundhmnlohq | mbwuhmnl
+1F4EA		oymrohq | oymrhdbu | kboymr | ysotcnd | jcmoymrhdbu | ynibyrnj | hmnlhdbu | anmrkmraiuhmnlhdbu | anvitandh | nlheqmy
+1F4EB		ymht | oymrohq | oymrhdbu | ysotcnd | kboymr | mwvvlokoymr | ynibyrnj | hmnlhdbu | anmrkmraiuhmnlhdbu
+1F4EC		ymht | oymrohq | oymrhdbu | qmnanmt | vlokoymr | ysotcnd | kboymr | hmnlhdbu | anmtrkmraiuhmnlhdbu
+1F4ED		oymrohq | oymrhdbu | kboymr | ysotcnd | jcmoymrhdbu | ynibyrnj | hmnlhdbu | anmtrkmraiuhmnlhdbu | anmthrok | nlheqmy
+1F4EE	hmnlhbmr	oymrohq | oymrggdi | oymrhdbu | hmnlhbmr | hmnlhdbu
+1F4EF	hmnlmmokrsypunbg	rdlnrc | ynibokr | hmnlmmokrsypunbg | hmnlmmokynibokr | hmnlrsypu | hmnlyhyuwrbcrsypu
+1F4F0	gjslevfhvp	gjslevfhvp | ydhmlansj | vfhvp | ynibyrnj
+1F4F1	qqamombwuyrhjr	qqamombwuyrhjr | qdvii | ettbynib | ynibyrnj | mbwuyrhjr
+1F4F2	owjrkbhtbnrypbraiumbwuyrhjr	doombwu | owjrkbhtbnrypbraiumbwuyrhjr | qqamombwuyrhjr | qdvii | qytvmbwuyrhjr | htbnrbm | mbwuyrhjr
+1F4F3	mbmmvdviidtakipm	qqamombwuyrhjr | qdvii | dtakipm | ynibyrnj | mbwuyrhjr | mbwuyrhjrjjjiimbmmvhgks | mbwuyrhjrjjjiiqbbsdyta | mbmmvhgks | mbmmvhgksdtakipm | mbmmvdvii | mbmmvdviidtakipm | qbbsdytadtakipm
+1F4F4	qqamombwuyrhjranvitandh	qqamombwuyrhjr | qqamombwuyrhjranvitandh | qdvii | qdviianvitandh | anvitqdvii | anvitdvii | anvitandhqqamombwuyrhjr | mbwuyrhjr
+1F4F5	ddmmfbqqqamombwuyrhjr	mfimogojlkbqqdvii | qqamombwuyrhjr | qdvii | ddmmfylm | ddmmfbqqqamombwuyrhjr | ddmmfbqqdvii | anvitdvii | mbwuyrhjr | qbbsdyta
+1F4F6	qdviiyrnjrsypudher	oymrrsypu | mkvfhae | qqamombwuyrhjr | qdvii | qdviiyrnjrsypudher | qytvvlok | yrnjrsypu | ynibyrnj | mbwuyrhjr
+1F4F7	dbudvii	instagram | afhhhllml | afhhhdbu | qhaqsjj | dbudvii | dbullml | hbuqha
+1F4F8	anmtrkmanofmufnotraiudbudvii	afhhhllml | afhhhdbu | arf | dbudvii | dbullml | anofmufnot | anmtrkmanofmufnotraiudbudvii | anmtanofmufnot
+1F4F9	cvneafhhhdvii	afhhhllml | qsjjafhhhdvii | cvneafhhh | cvneafhhhdvii
+1F4FA	mbwuifbuu	tv | TV | afhhhllml | mbwuifbuu | mbwuifbuudvii
+1F4FB	vlokytadvii	vrvkvid | itmcqhdw | vlokytadvii
+1F4FC	cvneafhhhkpblb	vhs | pywvtogx | mrtvikpblb | cvneafhhhkpblb
+1F4FD	mbwuafhhhysokalbkdvii	qhneafhhhdvii | ysokalbkdvii | mbwuafhhh | mbwuafhhhysokalbkdvii | mbwuafhhhnljmu
+1F4FF	mmmbccyjj	jmmfjdok | oinpmghjd | bslevgyhv | mghjdnd | ifhmlifgni | mmmbccdwf | mmmbccyjj | thbuoiolb
+1F505	ohpmyrbuite	yrbuite | ohpmyrbuite | qjvcng | hpaayta | wfytaeff
+1F506	yrbryrbuite	yrbuite | fmuyrbu | qjvcng | fnotfmu
+1F507	anvitqyajrdlnrc	rdlnrc | jvqbbsd | qamhgesjrrikr | gesjyta | anvitqyajrdlnrc | qbbsdyta | ytavlyta
+1F508	vfwgesjrdlnrc	rdlnrc | ncgesj | qamhgesjrrikr | nhdhdr | vfwgesj | vfwgesjrdlnrc | gesjyta | ytavid | ytaamwg | ytavlyta
+1F509	gesjamwglhgdiraiurdlnrc	lytaamwg | rdlnrc | qamhgesjrrikr | gesjamwglhgdi | gesjamwglhgdiraiurdlnrc | gesjyta | ytavid | ytaamwg | ytavlyta
+1F50A	gesjamwgkraiurdlnrc	rdlnrc | kgesj | qamhgesjrrikr | gesjamwgkraiurdlnrc | gesjyta | ytavid | ytaamwg | ytavlyta | yrbrytaamwg
+1F50B	mbwuepd	mbwuks | mbwuepd | mbwuamwg
+1F50C	qhjxtnfd	mlbobcrl | qhjxtnfd | qhjxmtmbc | mbwu | mbwuks
+1F50D	hbrkmraiuysokkcytu	ondvfw | hbrkmraiuysokkcytu | hbrkmysokkcytu | jwjcsfomojmig | ncp | mlmbmmc | qhxesmmri | qhxejbvif | ysokk | ysokkcytu | mgdhemgyub | hdyjhbnd | vfhaejbvif | yrbgrdam
+1F50E	hbrkrraiuysokkcytu	ondvfw | hbrkrraiuysokkcytu | hbrkrysokkcytu | jwjcsfomojmig | ncp | mlmbmmc | qhxesmmri | qhxejbvif | ysokk | ysokkcytu | mgdhemgyub | hdyjhbnd | vfhaejbvif | yrbgrdam
+1F50F	capphlqhdrcfbc	hdinlbmp | capphlq | cfbcjmyo | wgfge
+1F510	combaophdrcfbc	rrwjjwjcfbc | cfbcaop | combaop
+1F511	combaop	jphumrsqf | nbshqcfbc | cfbcaop | cfbcjmyo | combaop
+1F512	cfbc	ymcfbc | hdinlbmp | cfbc | cfbcym | cfbcjmyo | anvitandh
+1F513	anmtcfbc	qmnanmt | mrdhenbshq | nbshqcfbc | cfbc | cfbcjmyo | anmtcfbc
+1F514	cytg	odhup | jdokfbrg | gesjyta | coiigesj | cytg
+1F515	kbgesjraiucytg	kbgesj | kbgesjraiucytg | jvqbbsd | odyjvfhae | dmwfyrgp | otfgesj | ddmmfylm | coiigesj | cytg | qbbsdyta
+1F516	lgahoim	tag | lgahoim | dmwfyrsu
+1F517	yjwjvfgr	yjwjvfgr
+1F518	wrbcmthhhqjvcng	rrwjyruc | wrbcwfqu | wrbcmthhh | wrbcmthhhqjvcng | vihiomnr | qjvcng | otfvfhaembwucng
+1F51E	jhoddmmf	18 | jhoddmmf | rcnlav 18 ymihhvioymojm | oqyuoiinlavhbln | jdihsoq | dmwfyrgp | ddmmfylm | nlavhblnvfnhe
+1F51F		qjvcnkq
+1F526	mbwuhbmr	fmu | mlmbmmc | qqamombwuhbmr | qmbwuhbmr | fnot | mbwuhbmr
+1F527	jmauomrq	jmauomrq | mlmbmmc | qheq | vgyhvoloh
+1F528	cyhrond	mlmbmmc | dyhr | vfogoloh | cyhrond | cyhrnd
+1F529	liwvfvfvif	mlmbmmc | liwvflbabu | liwvfvfvif | liwvfvfviflbabu | vgyhvoloh
+1F52A	sh	sh | mlmbmmc | igtihrmlb | mpylmrrikr | yrnfoihg | tbdsh
+1F52B	edoir	mlmbmmc | qdoir | doir | mpylmrrikr | edoir
+1F52C	afmbchouukcytu	jwjcsfomo | jwjcsfomojmig | mlmbmmc | hdyjhbnd | afmbchouukcytu
+1F52D	ybhgygrvcytu	e.t. | mlmbmmc | qytvnbwli | ybhgygrvcytu | hdyjhbnd | tgbuuebcn
+1F9BA	ieokhqmyhv	hefmulpbp | jvomg | sevifnsp | lpbp | ffblifmulpbp
+1F9BB	jiwtcbmkssgjwprrikrhapisjhnd	bmkssgjwprrikr | jiwtcbmkssgjwprrikrhapisjhnd | otfnlytjmrpko | sjhnd | sgjwpnlytj | hxhbbtwtmniinlytj
+1F9BC	mbwuhgksjjombdkmr	otfnlytjmrpko | jjombdkmr | mbwuhgksjjombdkmr
+1F9BD	jjombdkmr	qhgksjjombdkmr | otfnlytjmrpko | jjombdkmr
+1F9E9	qttwryw	qttwryw | mrpshwryw | vfhaejbvif
+1F9EA	yripmhjrr	ophbnd | ophbndjmso | jwjcsfomo | jwjcsfomojmig | hdyjhbnd | vfvnenau | tvide | yripmhjrr
+1F9EB	gytrtoiavbt	gytrtoiav | gytrtoiavbt | tcgwk | jwjcsfomo | jwjcsfomojmig | hqmhqphh | hqmhqphhhbndjmso | vfwtwhd
+1F9EC	DNA	dna | tcgwk | hqmomrl | hqmhqphhhbnd | yogop | ylmcojiihbnd
+1F9ED	qpajbtjcj	yudihyyhn | qpajbtjcj | yhshbr | mrtviks | mrtvigamh | wgninniyjmyohbr
+1F9EE	hbuthebt	hbuthebt | yrjlvok | yrjhbut
+1F9EF	eihffhbmr	qtcoeihf | eihff | eihffrrikr | eihffhbmr | ffwli | fhupeihf
+1F9F0	mlmbmmchdbu	mlmbmmc | mlmbmmchdbu | mlmhdrhghrmlb | hdbund | vfmnau | vfogoloh
+1F9F1	mrjiimtmbc	espg | kfesp | vmgow | vmgowsjg | mrjiivmgow | mrjiimtmbc | vfmmrjii
+1F9F2	mrtvicjig	Umthhh | mylmdmem | mylmnbucdmem | mrtviks | mrtvimr | mrtvicjig | nbucdmem | sqsfrmybbmthhh
+1F9F3	hommndnd	gip | skoo | qqytjwj | qqamohdbu | qopdskoo | qopdhsko | ysohvhommn | hsko | hommndnd | hommndndskoo | hommndndhdbu | hommndndhsko
+1F9F4	eangypwbbdudtwi	lotion | bdueyok | ordeavf | ordeavfmbdbu | ehgumtmbce | ehgushikke | eangypwbbdu | eangypwbbdudtwi | ttmvnnd | nlyhsammp | nlyhsammpmbdbu
+1F9F5	vfhae	vfhae | vfhaejjlw | vfyhjvfshi | vfyhjvfhae | vfyhjcj | cj
+1F9F6	hquimoii	imoiimgije | hquimoii | mgije | vfhsbvfyia | vfyia | vfyiaimoiilhhh | cjvfyia | cpicjvfhsbvfyia
+1F9F7	qrcj	punk rock | rslncj | jvomgrslncj | sellml | qrcj
+1F9F8	qkeylwipf	rhhjrhhjipf | gjbcyihu | hquciond | qkeylwipf | ipf | ipfond | mgmmubmmc | mgmmubmmcipf
+1F9F9	qsmbsmblb	vmoo | qsmbsmblb | qsmbqau | eqmbqsmb | eqmbeqhf
+1F9FA	hsit	ehguyhv | ehgulhhh | hdhjgtbd | hsit | hsitnd | twmmvtctd | wgninyeoiv
+1F9FB	mqfquibcnvfhvp	mqfquibcnvfhvp | ibcnvfhvp | qfquhbmrvfhvp | vfhvplb | hodqnhqmvfhvp
+1F9FC	hdwdbuu	edecor | eleyrf | epruedj | epruepru | ehguerrd | eqmbeqhf | hdwdbuu | hdwdbuumrptd | bauhap
+1F9FD	eowyvfhab	rnhevlok | ninindu | eowyvfhab | esmeepru | eqmbeqhf
+1F9FE	vlokqypo	rrwj | lbsmvrrwj | vlokqypo | abvfw | omwayrj | nonhemwmmf | heiiyrsu | yrsubcsmv | yrnotqypo | yrnotab
+1F9FF	mhnlbuav	gsjtmmctsitbuav | gsjtmmcmhnlbuav | mmpbuav | mmpidhiinobuav | tsitbuav | mhnlbuav | mhnlbuavyrtoehxhhodi
+1FA78	meycbhbt	meycbhbt | bbeooah | qrbhbt | eyiuhbt | eycbhbt | ybikhbt | vfmnau | vfmvmtcb | tvid | tvidhqphh | hbt
+1FA79	bsmhklb	OKvfubb | ooahr | bbeooah | vfubbkpblb | bsmhklb | tvidebsmhklb
+1FA7A	sgjwpyrohhrrikr	pbtis | prmlmo | hqbukmob | sgjwpyrohhrrikr | semcwhbnd | semcwhqm
+1FA91	dkmrnd	nomrn | oogmy | ioogoyt | dkmrnd
+1FA92	chlnsh	shllml | hrlnshjrbsh | chlnsh | chlnshhhcsh | chejhdln
+1FA93	ckhmlmtmbc	cshjrln | ckhmlmtmbc | dmtmbc | okmrtdmobckhmlmtmbc | mrno | mrnosjsh
+1FA94	nlpoumrjnuelwfnot	diya | elwfnot | fnot | mwhdelwfnot
+1FA96	mtmbckfbt	jmomc | rjibsd | ylmhomc | bjwjjlln | bjwjnltpo | mtmbckfbt
+1FA99	mrmlkfklb	srnommu | mrmlkfklb | bcdhjmrw | cfklb | ccii | cavhommn | cii | tmwcc
+1FA9A	dmlmcsjr	olohtbnh | pshjrln | mlmbmmc | csjrnd
+1FA9B	liwvfvfvifgorund	mjndqpp | mlmbmmc | yhsomlk | liwvfvfvifqpp
+1FA9C	dcnhnd	mfomrdher | ddkqhoau | dcnhnd | hoaudcnh | nlppadcnh
+1FA9D	cprnd	pi | qggycpr | hycrctw | cpr | nwfcpi
+1FA9E	cytund	opvmv | hehhdi | cytund
+1FA9F	jchwkhs	jchwkr | jchwkhs
+260E	mbwuyrhjr	jmigobmbwuyrhjr | qjvcnkqmbwuyrhjr | mbwuyrhjr | mbwuyrhjrhbmr
+2620	yckeibbjrbblwvmtmbc	yckei | peghqphh | mnpyv | qmwyi | bomondu | hxhbbtwt | mtmbcbbb | bbbmtmbc | bbjrbblwvmtmbc
+2622	jjmrwhhdi	ysokhhdiphqm | dyvond | dmwfyrgp | jjmrwhhdi | jjmrwhhdiphqm | jjmrwhhdidmwfyrgp
+2623	hqmhqphhnmsujqmr	dmwfyrgp | hqmopnmsudvii | hqmhqphhnmsujqmr | hqmhqphhnmsujqmrdmwfyrgp | hqmhqphhphqmnmsujqmr
+267F	jjombdkmrhodirsypu	ooahmnii | ooahmniiojm | mniinlytj | mniinlytjojm | otfnlytjmrpko | otfnlytjmrpkojcmana | jjombdkmr | jjombdkmrhodirsypu
+2692	cyhrondbmrjjndcbms	jjndcbms | jjndcyrb | mlmbmmc | dyhr | cyhrond | cyhrondbmrjjndcbms | cyhrnd | cyrb
+2693	ctw	mlmbmmc | hycr | hycrctw | ctw
+2694	ooln	yckei | sh | ooln | mpylmrrikr
+2695	lijpdjk	lijpdjk | semcwhbnd | semcwkkcf | nlmnrtchmljrhutjksippohqitchml
+2696	mkhdmfj	cimfj | cimylm | mkmfj | mkhdmfj | mlmbmmc | mfjhonkn | egihbln | egiholq | egieir | hdmfj | hdbgb | hjwgamwg | amwgite
+2697	tnefoihhwrrikr	ophbnd | jwjcsfomo | mlmbmmc | tnefoihhwrrikr
+2699	ymuoojjomb	mlmbmmc | ymuoojjomb
+269B	mhafndhodirsypu	mhafnd | mhafndhodirsypu | otfiflwlyromb | hdyjhbnd | hodirsypu
+269C	iphafshqutop	maomrtop | vfykytaj | sfkmrjm
+26A0	tkymrhgr	! | nmsunlomo | ncp | dmwfyrgp | tkymrhgr
+26CF	jjndcbms	jjndcbms | jjndcyrb | mlmbmmc | qbdmritc | dyhr | cyhrnd | cyrb | tec
+26D1	jvomglbabu	jjnd | lbabund | qbmebmks | ieokqbmeorbuc | ieokyrtoe | semcwyrtoe | mtmbckfbt
+26D3	cdwf	cdwf | cdwfnd | cdwfolod | cfbccyjj | cyjj
+26D4	ddmmfylmyogoh	mfimog | yckynib | hqobcok | dmwfyrgp | ddmmfylm | ddmmfylmynibhommn | ddmmfylmyogoh | nlavhblnynibhommn
+2702	bbycktbnh	pshjrln | tbnh | tbnhsh | mlmbmmc | cycktbnh | bbycktbnh
+2709	oymrggdi	e-mail | email | oymr | oymrohq | oymrggdi | hmnlohq | mbwundhmnlohq | mbwuhmnl
+270F	ccrhlq	hlq | ccrhlq
+2712	capphlqmtmbc	hlq | hlqfk | homonirhlq | capphlq | wgfnau | wgfgehlq
+2714	ahlnrsypu	ahln | ahlnrsypu | rumr | jmmuihs | mylmmrobg | mrobgyrsip
+2716	qmnyckei	x | hdlprsypu | yckei | qmnyckei | lvokhbnd | hodirsypu | ctayrrvk | wgfnau
+2753	vfmnauanrrsypu	? | anrrsypu | anraombc | dmwfyrsu | dmwfwfyr | dmwfwfyrhodirsypu | pknioimp | vfmnau | vfmnauanrrsypu
+2757	irprtlorsypu	! | irprtlorsypu | dmwfyrsu | dmwfwfyr | dmwfwfyrhodirsypu
+27A1	krhtbnrypb	kr | krhtbnrypb | hbrkr | hbrkrhtbnmtmbc | hoygkr | yhshbr | dw | htbnrbm
+1F500	nlykbdviiqhdwysokqjvcng	yckei | qjvcng | htbnrbm | nlykbdvii | nlykbdviiqhdwysok | nlykbdviiqhdwysokqjvcng
+1F501	hjwgqhdwqjvcng	hohjumgwlv | qjvcng | htbnrbm | hjwgqhdw | hjwgqhdwqjvcng | hjwgloae | lllcagdicj
+1F502	hjwgqhdwrrwjtwqjvcng	mimno | rrwjimno | hohjumgwlv | qjvcng | htbnrbm | hjwgqhdwrrwjtwqjvcng | hjwgloae | hjwgloaeqhdwysokrrwjtw | lllcagdicj
+1F503	lllcagdicjyhshbrhjtmjbmmraiuhtbnrypb	htbnrbm | hjwgydhmldkmymmgwg | hjwgydhmljijwjoh | lllcagdicj | lllcagdicjhjtmjbmmhtbnrbm | lllcagdicjyhshbr | lllcagdicjyhshbrhjtmjbmmraiuhtbnrypb
+1F504	ytuagdicjhtbnrypbqjvcng	omgnkpblb | omgnjjjii | mgbimno | hohjumgwlv | qjvcng | ysonojjjii | htbnrbm | ytuagdicj | ytuagdicjhtbnrypb | ytuagdicjhtbnrypbqjvcng | hjwgydhmldkmymmgwg
+1F519	hovieyavhtbnrypb	BACK | hbrhovie | hbrhoviehtbnrypb | hovieyav | hovieyavhtbnrypb | htbnrbm | yhewr
+1F51A	vfgrdlhtbnrypb	END | htbnrbm | vfgrdl | vfgrdlhtbnrypb
+1F51B		ON! | tblnyog | kmkrhtbnrbm | dmwfyrsu | htbnrbm | vfvvivfgwc
+1F51C	soon dmwfyrgphapihtbnrypb	SOON | soon dmwfyrgphapihtbnrypb | aislvmbdi | hoavpdk | pdknn | htbnrbm
+1F51D	top dmwfyrgphapihtbnrypb	TOP | top dmwfyrgphapihtbnrypb | ymhtbnrbm | asjemnmbc | hbrym | htbnrbm | mnmbc
+1F520	knlppatlbkykjjomnoh	ABCD | kjhxf | kdppa | knlppa | knlppatlbkyk | knlppatlbkykjjomnoh | jndwyi | qytmnjndwyi | wlvfgsqsfjndwyi | tlbkykjndwyi
+1F521	vfwnlppatlbkykjjomnoh	abcd | jndwyi | ncjhxf | qytmnjndwyi | vfwdppa | vfwnlppa | vfwnlppatlbkyk | vfwnlppatlbkykjjomnoh | wlvfgsqsfjndwyi | tlbkykjndwyi
+1F522	lvokjndjjomnoh	mmmmmmwc | lvokjnd | lvokjndjjomnoh | rsypumrsqf | jjomnoh
+1F523	hodirsypujjomnoh	hodirsypujjomnoh | jjomnoh | jjomnohhodirsypu
+1F524	jjomnohqytmnjndwyi	abc | jndwyi | qytmnjndwyi | wlvfgsqsfjndwyi | tlbkykjndwyi | jjomnoh | jjomnohqytmnjndwyi
+21B5	nbgjjbkmhapihbrmyhtbnrypb	nbgjjbkmhapihbrmyhtbnrypb
+21B0	mtmbcjjbkmhapihbrymhtbnrypb	mtmbcjjbkmhapihbrymhtbnrypb
+21B1	mtmbcjjbkrhapihbrymhtbnrypb	mtmbcjjbkrhapihbrymhtbnrypb
+21B2	mtmbcjjbkmhapihbrmyhtbnrypb	mtmbcjjbkmhapihbrmyhtbnrypb
+21B3	mtmbcjjbkrhapihbrmyhtbnrypb	mtmbcjjbkrhapihbrmyhtbnrypb
+21B4	nbgjjbmyhapihbrkrhtbnrypb	nbgjjbmyhapihbrkrhtbnrypb
+21E4	mtmbcyrnlkpblbdmbchapihbrkmhtbnrypb	mtmbcyrnlkpblbdmbchapihbrkmhtbnrypb
+21E5	mtmbcyrnlkpblbdmbchapihbrkrhtbnrypb	mtmbcyrnlkpblbdmbchapihbrkrhtbnrypb
+21B9	mtmbckpblbdmbchapihbrkmhtbnrypbklgmtmbckpblbdmbchapihbrkrhtbnrypbymmwyl	mtmbckpblbdmbchapihbrkmhtbnrypbklgmtmbckpblbdmbchapihbrkrhtbnrypbymmwyl
+21E7	hbrymjcmphtbnrypb	hbrymjcmphtbnrypb
+21EA	shquyrnlkpblbdmbchapihbrymjcmphtbnrypb	shquyrnlkpblbdmbchapihbrymjcmphtbnrypb
+21E6	hbrkmjcmphtbnrypb	hbrkmjcmphtbnrypb
+21E8	hbrkrjcmphtbnrypb	hbrkrjcmphtbnrypb
+21E9	hbrmyjcmphtbnrypb	hbrmyjcmphtbnrypb
+21DE	kpblbkbogebtlnnlomdvfhaehapihbrymhtbnrypb	kpblbkbogebtlnnlomdvfhaehapihbrymhtbnrypb
+21DF	kpblbkbogebtlnnlomdvfhaehapihbrmyhtbnrypb	kpblbkbogebtlnnlomdvfhaehapihbrmyhtbnrypb
+21B8	qpahbrsmvdmbchapimcwlmphtbnrypb	qpahbrsmvdmbchapimcwlmphtbnrypb
+21B6	ytuagdicjymfqwrbchtbnrypb	ytuagdicjymfqwrbchtbnrypb
+21B7	lllcagdicjymfqwrbchtbnrypb	lllcagdicjymfqwrbchtbnrypb
+21C5	ymmyttcmnlnhtbnrypb	ymmyttcmnlnhtbnrypb | hbrym | hbrmy | htbnrypb
+21A8	yphenysoytcgvfhaehapiymmyhtbnrypb	yphenysoytcgvfhaehapiymmyhtbnrypb
+21E0	hbrkmyptmvfhaehtbnrypb	hbrkmyptmvfhaehtbnrypb
+21E1	hbrymyptmvfhaehtbnrypb	hbrymyptmvfhaehtbnrypb
+21E2	hbrkryptmvfhaehtbnrypb	hbrkryptmvfhaehtbnrypb
+21E3	hbrmyyptmvfhaehtbnrypb	hbrmyyptmvfhaehtbnrypb
+21AB	shquyrnlkpblbmgwlvhapihbrkmhtbnrypb	shquyrnlkpblbmgwlvhapihbrkmhtbnrypb
+21AC	shquyrnlkpblbmgwlvhapihbrkrhtbnrypb	shquyrnlkpblbmgwlvhapihbrkrhtbnrypb
+2B05	kmhtbnrypb	hbrkm | kmhtbnrbm | kmhtbnrypb | yhshbr | htbnrbm | mcw
+2B06	ymhtbnrypb	ymhtbnrypb | ymhtbnrypbqjvcng | lmp | hbrym | yhshbr | htbnrbm
+2B07	myhtbnrypb	my | myhtbnrypb | jbtj | hbrmy | hbrjbtj | yhshbr | htbnrbm

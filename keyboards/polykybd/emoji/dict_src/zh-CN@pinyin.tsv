@@ -1,0 +1,1254 @@
+# emoji search keywords, zh-CN@pinyin, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived), written as pinyin keys (emoji_romanize.py, Unihan kMandarin/kCangjie). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	heihei	heihei | xiaolian | lian | gaoxing
+1F601	xixi	xixi | xiaolian | xiaoyan | lian | luchierxiao
+1F602	xiaokule	lol | xijierqi | daxiao | yanlei | xiao | xiaoku | xiaokule | lian
+1F603	haha	haha | taibangle | kaikouxiao | kaikouxiaolian | xiaolian | lian | gaoxing
+1F604	daxiao	haha | daxiao | kaikouerxiaodelian | kaixin | xiao | lian | luchierxiao | gaoxing
+1F605	kuxiao	lenghan | chuhan | kaikoumaolenghandelian | han | xieqi | jinzhang | lian | kuxiao
+1F606	xieyanxiao	lol | liezuixiao | haha | kaixin | xieyanxiao | miyan | miyandaxiao | xiao | lian | gaoxing
+1F607	weixiaotianshi	guanghuan | tianshi | tianzhen | huanxiang | weixiao | weixiaotianshi | lian | dingzhaoguanghuandexiaolian
+1F608	emoweixiao	huanxiang | weixiao | emoweixiao | jijiao | shenhuagushi | lian | xiemo
+1F609	zhayan	meiyan | liaobo | zhayan | zhayandelian | xiao | lian
+1F60A	xiuseweixiao	haixiu | weixiao | manyi | xiaolianxiangying | xiuse | xiuseweixiao | lian | lianhong
+1F60B	haochi	koushui | halazi | haochi | jinjinyouwei | liukoushui | meiwei | lian
+1F60C	songlekouqi	rushizhongfu | songlekouqi | songkouqi | lian | chan
+1F60D	huachi	woaini | ai | hongxin | lian | huachi
+1F60E	mojingxiaolian	taiyangjing | yanjing | ye | lian | ku | mojing | mojingxiaolian
+1F60F	deyi	jiaxiao | lengxiao | deyi | deyidexiao | lian | guiyidexiao
+1F610	lengmo	lengmo | wugan | lian | biaoqingkongdong | mianwubiaoqing
+1F611	wuyu	wuyu | meiyoufanying | bengzhelian | lian | mangran | mianwubiaoqing
+1F612	bugaoxing	buxie | bufu | bushuangdelian | bugaoxing | lian | yumen | bishi | suibianla
+1F613	han	maolenghan | maohan | leng | ganga | danxin | han | lian
+1F614	chensi	shiluo | xinshizhongzhong | youlü | chensi | lian
+1F615	kunrao	budong | buqueding | kunhuo | kunrao | yihuo | lian
+1F616	kunhuo	kunhuo | kunhuodelian | jiaotoulane | jiujie | lian
+1F617	qinqin	qinqin | qinwen | wen | lian
+1F618	feiwen	qinqin | xiangni | woaini | zhayan | lian | feiwen
+1F619	weixiaoqinqin	qinqin | wen | weixiao | weixiaoqinqin | xiaoyanqinwen | lian
+1F61A	xiuseqinqin	qinqin | wen | woaini | xiuse | xiuseqinqin | lian | biyan | biyanqinwen
+1F61B	tushe	tushe | tushetoudelian | taihaole | lian | shetou | diaopi
+1F61C	danyantushe	danyan | danyantushe | guguai | tushe | kaiwanxiao | guairen | jimeinongyan | lian
+1F61D	miyantushe	kepa | tushe | chang | miyan | miyantushe | yanjing | lian | douhao | suibian
+1F61E	shiwang	bugaoxing | shiwang | shiwangdelian | lian | nanguo
+1F61F	danxin	bugaoxing | shangxin | youxindelian | yiwai | danxin | danyou | jiaolü | jinzhang | lian
+1F620	shengqi	bushuang | bugaoxing | nu | fennu | shengqi | lian
+1F621	nuhuozhongshao	fahuo | fabiao | nu | nuhuozhongshao | shengqi | lian
+1F622	ku	shangxin | aishang | ku | kulian | lei | lian
+1F623	tongku	zhuanzhu | ruding | toutong | rennai | tongku | lian | nanshou
+1F624	aoman	bushuang | aoman | fennu | qizhale | shengli | zifu | ying | zhigaoqiang
+1F625	shiwangdanrushizhongfu	xiaciba | chulenghan | shiwang | shiwangdanrushizhongfu | shiwangdanjietuo | rushizhongfu | lian
+1F626	a	a | jingya | yiwai | mudengkoudai | lian
+1F627	jidutongku	jidutongku | tong | tonga | tongku | lian | nanshou
+1F628	haipa	buan | haipa | pa | kongbu | kongju | lian
+1F629	leisile	pijuan | pilao | pibei | lei | leisile | lian
+1F62A	kun	ku | kun | xiangshui | manlianshuirong | pibei | shuijue | keshui | lian
+1F62B	lei	juanrong | pijuan | pilao | pibei | lei | lian
+1F62C	ziyaliezui	yaoyaqiechi | ganga | yayi | lian | luchi | luchierxiao | guilian | ziyaliezui
+1F62D	fangshengdaku	ku | daku | fangshengdaku | fangshengdakudelian | lei | tongku | lian
+1F62E	chijing	chijing | tongqing | a | wangji | wobuxin | wodetian | lian
+1F62F	jianmo	chijing | o | wodetian | jianmo | lian | jingerwuyu
+1F630	lenghan	lenghan | zhangzuimaolenghandelian | jingya | wuyu | han | jiaolü | jinzhang | lian
+1F631	xiasile	xiasi | xiasile | haipa | jianjiao | kongbu | jingxiadajiaodelian | lian
+1F632	zhenjing	bukeyi | jing | jingya | jingyadelian | meikeneng | juebu | lian | zhenjing
+1F633	lianhong	kunhuo | tianya | haixiu | xiuse | lian | lianhong | mangran | mimang | nanyizhixin
+1F634	shuizhele	hulu | xiaoshui | xiangshui | dahu | wanan | shuirong | shuizhele | shuijue | lei | leile | lian
+1F635	yuntouzhuanxiang	touyun | touyunyanhua | yuntou | yuntoudelian | yuntouzhuanxiang | lian
+1F636	chenmo	zui | anjing | chenmo | meizui | mimi | lian
+1F637	ganmao	yisheng | kouzhao | ganmao | daikouzhao | daikouzhaodelian | shengbing | bingjun | lian
+1F638	weixiaodemao	hehe | weixiaodemao | weixiaodemaolian | maolian | xiao | xiaoyanzhukai | lian
+1F639	xiaochuyanleidemao	xijierqi | kuaile | maolian | yanlei | xiaochuyanlei | xiaochuyanleidemao | xiaochuyanleidemaolian | lian
+1F63A	daxiaodemao	haha | daxiaodemao | daxiaodemaolian | maolian | xiao | lian
+1F63B	huachidemao	WC | xihuan | xin | mao | maolian | lian | huachi | huachidemao | huachidemaolian
+1F63C	jianxiaodemao	chaofengxiaorong | jianxiao | jianxiaodemao | jianxiaodemaolian | maolian | lian | fengci
+1F63D	qinqinmao	qinqin | qinqinmao | wen | maolian | maolianqinqin | lian | biyanqinqindemaolian
+1F63E	shengqidemao	maolian | shengqi | shengqidemao | shengqidemaolian | lian
+1F63F	kuqidemao	ku | kuqidemao | kuqidemaolian | lei | maolian | yanlei | lian | nanguo
+1F640	pijuandemao	jingya | maolian | pijuan | pijuandemao | pijuandemaolian | pilao | pibei | lei | lian
+1F641	weiweibuman	bukaixin | bugaoxing | bugaoxingdelian | weiqu | xiaoweiqu | weiweibuman | xinqingbuhao | lian
+1F642	hehe	hehe | kaixin | qianxiaodelian | xiao | lian
+1F643	daolian	daolian | haowan | haoxiao | lian | diandao | diandaodelian
+1F644	fanbaiyan	bugangoutong | wuyu | baiyan | fanbaiyan | lian | suibianla
+1F648	feiliwushi	buxukan | biekan | ganga | qiu | lian | mengzhuyanjing | mengyan | feiliwushi
+1F649	feiliwuting	xu | dushangerduo | duer | houzi | lian | feiliwuting
+1F64A	feiliwuyan	buxushuo | wushangzuiba | wuzui | mimi | lian | feiliwuyan
+1F910	bizui	zhuzui | zui | fengkou | mimi | lian | bizui
+1F911	facai	facai | baijin | lian | jianqianyankai | jinqianzhishang | qian
+1F912	fashao	tiwenji | fashao | yaozhetiwenjidelian | wenduji | shengbing | lian | liangtiwen
+1F913	shudaizilian	zhuanjia | shudaizi | shudaizilian | tiancai | qipa | zhainan | jike | yanjing | yanjingxiaolian | congming | lian
+1F914	xiangyixiang	sikao | xiang | xiangyixiang | xiangshiqing | lian
+1F915	shoushang	shoushang | toubangbengdai | dabengdai | lian
+1F916	jiqiren	guaiwu | jiqiren | lian
+1F917	baobao	bao | baobao | yongbao | xiao | lian
+1F920	niuzimaolian	mao | niuzi | niuzimaolian | lian
+1F921	xiaochoulian	xiaochou | xiaochoulian | lian
+1F922	exin	tu | ou | exin | exinzuooudelian | lian | lianlüle
+1F923	xiaodemandedagun	lolol | lefanle | haha | deban | taichele | dagun | mandedagundexiao | xiao | xiaodeliulei | xiaodemandedagun | lian | chaoche
+1F924	liukoushui	koushui | chuixian | chuixiansanchi | liukoushui | liukoushuidelian | lian
+1F925	shuohuang	pinuocao | lian | shuohuang | zhangbizi | zhangbizilian
+1F926	wulian	ren | ganga | naonu | wodetianna | fue | wulian | wuyu | nanyizhixin | zhenjing
+1F927	dapenti	penti | dapenti | dapentidelian | shengbing | lian | biti
+1F928	tiaomei	buxinren | buganzhixin | buzantong | huaiyi | tiaomei | yangqimeimaodelian | meimaoshangtiaodelian | lian
+1F929	haochongbaio	xingfen | liezuixiao | haochongbaio | mantianxing | manyanxing | lian | zhuixingzu | luchixiao
+1F92A	huaji	daxiaoyan | dayan | xiaoyan | huaji | huajidelian | fengkuangdelian | fengyan | fenglian | lian
+1F92B	anjingdelian	xu | xushengshoushidelian | anjing | anjingdelian
+1F92C	zuishangyoufuhaodelian	bushuang | fashi | zhouma | zuishangyoufuhaodelian | shengqi | suisuiniandelian | lian | zuzhou
+1F92D	bushuo	bukeshuo | bushuo | shaxiao | chichishaxiao | aiya | yiwai | wuzuierxiao | mengranfaxian | mimi | lian
+1F92E	outu	bushufu | tu | outu | outudelian | shengbing | bingrong | bingyanyan | lian
+1F92F	baozhatou	bukeneng | yinxiangshenke | xiadaole | jingxia | baozhatou | zhenjing
+1F970	xixiaoyankai	sankeaixindexiaolian | xixiaoyankai | xin | woaini | aimu | xiangai | xiaolian | milian | xianruaihe
+1F971	daheqian	heqian | haqian | kun | kunjuan | yeli | daheqian | dahaqian | dahaqiandelian | wuliao | hunhunyushui | wanan | pijuan | lei
+1F972	hanleidexiaolian	hanleidexiaolian | xiyue | xijierqi | xingfu | weixiao | weixiaode | gandong | gandongde | ganende | ganji | yanlei | xiaozhongdailei | xiaolian | zihao | kuzhongzuole | shihuaide | jiaoaode
+1F973	juhuixiaolian	haojiao | hecai | maozi | qingzhu | paidui | kuanghuandelian | shengri | juhui | juhuixiaolian | lian | jierikuaile
+1F974	touhunyanhua	liangyanbuping | hezui | zuichunchandou | touhunyanhua | touyunmuxuan | touyunyanhua | weizui | weixun | bolangzuixing | xuanyundelian | yanhua | zuixunxun
+1F975	lianfashao	zhongshu | maohan | chuhan | fashao | fare | tushe | xinkuangtiao | re | lianfashao | lianhong
+1F976	lenglian	bingzhu | leng | lengbingbing | lenglian | dong | dongjiang | manmianhanshuang | lian | liansefaqing | lanse | lingxia
+1F978	weizhuangdelian	renwu | weizhuang | weizhuangdelian | meimao | yanjing | huzi | lian | jiandie | yinmanshenfen | bizi
+1F97A	kenqiudelian	kelianxixideyanshen | dayanjing | xiaogoudelian | lianmin | kenqiudelian | qiqiu | qiqiudelian | lian | qingqiu
+1FAE0	ronghua	lengxiao | haha | ganga | weixiao | xiaoshi | yeti | rongjie | re | ronghua
+1FAE1	zhijing	jundui | hao | haode | shoudao | jingli | shi | zhijing | yangguang
+1FAE2	zhengyanwuzui	wasai | yakouwuyan | haipa | ganga | huaiyi | jingqi | jinge | jingya | jingwei | zhengyanwuzui | zhenjing
+1FAE3	toukan	toukan | toukui | ningshi | haipa | haixiu | ganga | mizhu
+1FAE4	yumen	buxiangxin | buqueding | kunhuo | shiwang | huaiyi | wusuowei | wuliao | jusang | yihuo | miwang | yumen
+1FAE5	xuxianlian	neixiang | wusuowei | jusang | xiaoshi | xuxianlian | yinxing | yincang
+1FAE7	qipao	dage | qipao | shuixia | paopao | qingjie | piaofu | zhenzhuzhuang | feizao | feizaopao
+1FAE8	chandou	wa | dezhen | tiana | jingxi | jinghuang | yuntouzhuanxiang | fengkuang | lian | zhendong | zhenjing | chandou
+1F381	liwu	baoliwu | baozhuang | shengdan | qingzhu | jingxi | shengriliwu | hezi | lipin | liwu
+1F389	lapaocaidai	xingfen | gugujiao | qingzhu | caidai | lapao | lapaocaidai | paidui | paiduilibinhua | shengri
+1F38A	wucaizhixieqiu	wucaizhixie | wucaizhixieqiu | qingzhu | caisezhixie | qiu | wuhui
+1F47B	gui	wanshengjie | yaoguai | huanxiang | youling | guaiwu | shenhuagushi | lian | gui | guilian
+1F47C	xiaotianshi	ertong | tianshi | haizi | xiaotianshi
+1F47D	waixingren	ufo | waitaikong | waixing | waixingren | taikong | huanxiang | xingji | lian | feidie
+1F47E	waixingguaiwu	ufo | waixing | waixingren | waixingguaiwu | taikong | guaiwu | xingji | lian | feidie
+1F47F	shengqideemo	daijiaodenurong | huanxiang | emo | jijiao | shengqideemo | lian | wantong
+1F480	tougu	tougu | yaoguai | guaishou | siwang | shenhuagushi | lian | shenti | kulou
+1F481	qiantai	jieshao | shenshougeixiaofei | xinxi | bagua | qiantai | bangzhu | shou | bonongtoufa | zixinshimao | qingninlikai | suibianla
+1F482	weibing	lundun | weibing | weishi | shouwei | baijinhangong
+1F489	zhusheqi	yixue | yisheng | gongju | dazhen | jiezhong | zhiliao | zhusheqi | yimiao | yao | zhentou | zhentong
+1F48A	yaowan	yisheng | chiyao | zhiliao | shengbing | yongyao | weitaming | yao | yaowan | yaowu
+1F4A2	nu	nu | huoda | shengqi | qingjin
+1F4A4	shuizhe	hulu | kunle | xiangshui | dahu | wanan | pijuan | shuizhe
+1F4A5	baozha	zhuang | wang | zha | bao | baozha
+1F4A6	handi	penjian | xiaoshuidi | xiaoshuizhu | han | handi | pojian | jian
+1F4A7	shuidi	leng | tianqi | shui | shuidi | lei | yanlei
+1F4A8	weiqi	weiqi | yangchenerqu | fangpi | yan | jichierqu | feibenerqu
+1F4A9	dabian	dabian | haochou | shi | guaiwu | baba | lian | chou
+1F4AB	touyun	touyun | touyunmuxuan | xingxing | liuxing
+1F4AC	huayuqipao	fayan | duihuakuang | qipao | qipaoduihuakuang | qiqiu | manhua | huayuqipao
+1F4AD	neixinhuodongqipao	neixinhuodongqipao | duihuakuang | sixiang | sixianghuodong | xiangfa | meng | qipao | paopaoduihuakuang | bairimeng
+1F4AE	baihua	baihua | hua
+1F4A0	daiyuandiandelingxing	zhongxin | neibu | yuan | daiyuandiandelingxing | fangkuai | fangkuaineiyoudian | meihuaxing | lingxing
+1F4A1	dengpao	zhuyi | xiangfa | dengpao | dianzi | dian | diandengpao | baichideng
+1F4A3	zhadan	zhadan | baozha
+1F4AF	yibaifen	100 | yibaifen | manfen | baifenbai | juedui | kaoshi
+1F4B0	qiandai	fuqian | shiyi | bianxian | shoucainu | fuyou | youqian | xianjin | baiwan | meiyuan | duqian | yingqian | qian | qianbao | qiandai | yinxing
+1F4B1	huobiduihuan	duihuan | waihui | huanhui | huilü | liutong | huobiduihuan | yinxing
+1F4B2	cumeiyuanfuhao	xianjin | cumeiyuanfuhao | meiyuan | meiyuanfuhao | meidao | huobi | jinqian
+1F4B8	zhangchibangdeqian	zhibi | chibang | huaqian | qian | zhangchibangdeqian | fei
+1F525	huoyan	huo | huoyan | shao | ranshao
+1F52E	shuijingqiu	mingyun | gongju | menghuan | shuijing | shuijingqiu | qiu | tonghua | caifu | mofa
+1F440	shuangyan	shuangyan | kan | yanjing | kuishi | shenti
+1F441	yanjing	danyan | kan | yan | yanjing | shenti
+1F442	erduo	zixiting | ting | er | erduo
+1F443	bizi	xiu | qiwei | wen | bi | bizi
+1F444	zui	kou | kouhong | wen | chun | chungao | zui
+1F445	shetou	zezedehe | she | shetou | tian | shenti
+1F446	fanshoushizhixiangshangzhi	fanshou | fanshoushizhixiangshangzhi | xiangshangzhi | shou | zhishang | shizhi
+1F447	fanshoushizhixiangxiazhi	fanshou | fanshoushizhixiangxiazhi | xiangxiazhi | shou | zhixia | shizhi
+1F448	fanshoushizhixiangzuozhi	fanshou | fanshoushizhixiangzuozhi | xiangzuozhi | shou | zhizuo | shizhi
+1F449	fanshoushizhixiangyouzhi	fanshou | fanshoushizhixiangyouzhi | xiangyouzhi | shou | zhiyou | shizhi
+1F44A	chuquan	chuquan | wanquantongyi | shou | da | quan | huiquanguolai | jueduizhengque
+1F44B	huishou	nihao | zaijian | hai | zaima | shou | huishou | dengyixia | dengdeng | gaizoule
+1F44C	OK	OK | OK shoushi | keyi | tongyi | haode | dangran | shou | meiwenti | queding
+1F44D	muzhixiangshang	tongyi | hao | shou | muzhi | muzhixiangshang | zhenbang | zan | zancheng | dingyixia
+1F44E	muzhixiangxia	buzancheng | fandui | foujue | shou | muzhixiangxia | zebei
+1F44F	guzhang	gandehao | gongxi | paishou | zancheng | guzhang
+1F450	zhangkaishuangshou	shi | shuangshou | zhangkaishuangshou | tanshou
+261D	shizhixiangshangzhi	xiangshangzhi | shou | zhishang | shizhi | shizhixiangshangzhi
+270A	juqiquantou	juquan | juqiquantou | tuanjie | shou | quantou | woquan
+270B	juqishou	jushou | juqishou | juqideshou | wuzhi | ting | jizhang | shou
+270C	shenglishoushi	V | heping | chenggong | shou | shengli | shenglishoushi
+270D	xiezi	xie | xiezi | shou | bi
+1F4AA	jirou	ertouji | jianshenfang | qiangzhuang | jirou
+1F590	shouzhang	juqizhangkaideshouzhang | jizhang | bu | shou | shouzhang | jinzhi
+1F64C	jushuangshou	jushuangshou | jushou | jizhang | shuangshou | qingzhu | shou
+1F64F	shuangshouheshi	shuangshouheshi | hezhang | ganen | baituo | qiqiu | qidao | qifu | zhufu | xiexie
+1F90C	nieshouzhi	weishenme | nidaodizaishuoshenme | kuifa | shenxun | qiangdiao | ninyaoshenme | shoushi | shouzhi | waku | nieshouzhi | fangsongdian
+1F90F	niehedeshoushi	yidian | yidiandian | xiao | shao | shaoliang | shouzhi | niehedeshoushi | niezhe | mouzhongchengdushang
+1F918	yaogun	shou | yaogun | yaogunjingshen | zaoqilai | jiao | jinshuli
+1F919	geiwodadianhua	shou | dadianhuageiwo | dianhua | geiwodadianhua | geiwodadianhuadeshoushi
+1F91A	liqideshoubei	juqi | juqishoubei | shou | shoubei | liqi | liqideshoubei
+1F91B	chaozuodequantou	quantou | chaozuo | chaozuodequantou
+1F91C	chaoyoudequantou	shou | quantou | chaoyou | chaoyoudequantou
+1F91D	woshou	yiyanweiding | huimian | xieyi | junzixieding | woshou
+1F91E	jiaochadeshouzhi	jiaocha | jiaochadeshouzhi | xingyun | shou | shouzhi | zhuhaoyun
+1F91F	ainideshoushi	sanzhong | woaini | shou | aini | ainideshoushi
+1F932	zhangxinxiangshangtuoqi	shuangzhang | shuangzhangxiangshang | xiwang | zhangxinxiangshangtuoqi | qidao | daogao
+1F9B4	gutou	chagu | gou | gutou | guge
+1F9B5	tui	wantui | zhiti | jiao | tui | boxing | ti
+1F9B6	jiao	jiao | zuhuai | ta | huai | ti | cai | duo
+1F9B7	yachi	yayi | yakeyisheng | yachi | zhenzhuse | baise
+1F9E0	nao	danao | tounao | zhihui | zhineng | congming | nao
+1F9BE	jixieshoubi	yizhi | shoubi | wuzhangai | jixieshoubi
+1FAC0	xinzangqiguan	zhongxin | qiguan | xinlü | xinzang | xinzangqiguan | xinzangbingxue | xintiao | zhenxin | hongxin | jiepou | shenti
+1FAC1	fei	xiqi | huxi | huxizuoyong | huqi | qiguan | fei | feibu | shenti
+1FAE6	yaozhuzuichun	bushufu | kouhong | yaozhuzuichun | yaozuichun | zuichun | haipa | xinggan | danxin | jiewen | jiaolü | jinzhang | diaoqing
+1FAF0	shizhiyumuzhijiaochadeshou	xiangzhi | xin | shou | anggui | bixin | ai | aixin | jinqian | chaopiao | shizhiyumuzhijiaochadeshou
+1FAF1	xiangyoudeshou	shenshou | you | youshou | xiangyou | xiangyoudeshou | shou | woshou
+1FAF2	xiangzuodeshou	shenshou | xiangzuo | xiangzuodeshou | zuo | zuoshou | shou | woshou
+1FAF3	zhangxinxiangxiadeshou	xiatou | shou | rengdiao | naqi | jianqi | zhangxinxiangxiadeshou | jiesan | qugan
+1FAF4	zhangxinxiangshangdeshou	buzhidao | zhaohuan | gaosuwo | shou | nazhe | zhangxinxiangshangdeshou | jiezhu | tigong | guolai | songchu
+1FAF5	zhixiangguanchazhedeshizhi	shenchushouzhi | ni | chuo | shouzhi | zhi | zhixiang | zhixiangguanchazhedeshizhi
+1FAF6	zuochengxinxingdeshuangshou	zuochengxinxingdeshuangshou | shou | bixin | ai | aini | aixin
+1FAF7	xiangzuotui	zhongzhi | tingzhi | jizhang | xiangzuo | xiangzuotui | wangzuo | shou | jujue | tui | zanting | dengdeng | zudang
+1FAF8	xiangyoutui	zhongzhi | tingzhi | jizhang | xiangyou | xiangyoutui | wangyou | shou | jujue | tui | zanting | dengdeng | zudang
+2764	hongxin	xin | ai | hongxin
+1F380	hudiejie	sidai | qingzhu | duandai | hudiejie
+1F382	shengridangao	qingzhu | tian | tiandian | shengri | shengrikuaile | shengridangao | gaodian | dangao
+1F383	nanguadeng	wanshengjie | nangua | nanguadeng | qingzhu | deng | denglong
+1F384	shengdanshu	shengdan | shengdanshu | qingzhu | shu | zhuangshi
+1F386	yanhuo	qingdian | qingzhu | paozhu | yanhua | yanhuo | baozhu
+1F387	yanhua	qingzhu | huohua | yanhuo | yanhua | yanhuo
+1F388	qiqiu	qingzhu | qiqiu | shengri | jieri
+1F9E7	hongbao	lishi | lishi | haoyun | liwu | hongxinfeng | hongbao | yunqi | qian
+1F9E8	baozhu	guangliang | huohua | zhayao | yanhuo | yanhua | baozha | baozhu | bianpao
+1F38B	qixishu	qixi | qixishu | qingzhu | riben | tiaofu | shu
+1F38C	jiaochaqi	jiaochaqi | duicha | qi | qizhi | riben
+1F38D	mensong	qingzhu | riben | songshu | penzai | zhu | mensong
+1F38E	ribenrenxing	renou | wawa | qingzhu | riben | ribenrenou | ribenrenxing | jieri
+1F38F	liyuqi	qingzhu | riben | nanhaijie | zhangqi | liyuqi
+1F390	fengling	qingzhu | lingdang | feng | fengling
+1F391	shangyue	zhongqiu | jiajie | qingzhu | yueliang | jiyue | shangyue
+1F393	biyemao	sifangmao | xuewei | xuezhe | biye | biyemao
+1F484	chungao	huazhuang | huazhuangpin | kouhong | chungao | yuehui
+1F485	tuzhijiayou	xiuzhijia | mangwanle | hushou | zhijiayou | tuzhijiayou | meijia | men | suibianla
+1F48B	chunyin	qinwen | wen | chun | chunyin | xinggan | jiewen | langman
+1F48C	qingshu	xin | xin | qingshu | youjian
+1F48D	jiezhi	jiezhi | jiehun | dinghun | zuanjie | shan
+1F48E	baoshi	hunli | baoshi | zhubao | dinghun | zuanshi
+1F48F	qinwen	qinwen | baobei | qinglü | jiewen | langman | yuehui
+1F490	huashu	zhounianjinian | shengri | luomanshi | huashu | xianhua
+1F491	qinglü	lianai | qinglü | langman | hongxin | yuehui
+1F492	hunli	hunli | jiaotang | langman | jiehun
+1F493	xintiao	xindong | xintiao | woaini | ai
+1F494	xinsui	shangxin | xinsui
+1F495	liangkexin	liangkexin | woaini | aiqing
+1F496	shanliangdexin	woaini | jidong | hongxin | shanliang | shanliangdexin
+1F497	bodongdexin	qinqin | wen | woaini | bodong | bodongdexin | jidong | hongxin | jinzhang
+1F498	xinzhongjianle	yijianchuanxin | qiubite | xinzhongjianle | woaini | langman | aiqing | jian | hongxin
+1F499	lanxin	woaini | lan | lanxin
+1F49A	lüxin	woaini | lü | lüxin
+1F49B	huangxin	woaini | huang | huangxin
+1F49C	zixin	woaini | zi | zixin
+1F49D	xiyouduandaidexin	woaini | aideliwu | xiyouduandaidexin | bangsidaidexin | songniyikexin
+1F49E	wudongdexin	woaini | xuanzhuan | yongdong | wudongdexin | yuedong
+1F49F	xinxingzhuangshi	xin | xinxingzhuangshi | woaini | zhuangshi
+1F90D	baixin	xin | xinxing | aixin | bai | baixin | baise | baiseaixin
+1F90E	zongxin	xin | xinxing | zong | zongxin | zongse | zongseaixin | aixin
+1F9E1	chengxin	juxin | juse | jusedexin | cheng | chengxin
+1FA75	qianlansedexin	keai | xihuan | tianlan | xin | ganqing | woaini | qianlan | qianlansedexin | ai | teshu | lanlü | lanlüse | qingse
+1FA76	huixin	xin | ganqing | woaini | anhui | hui | huixin | huise | ai | teshu | yin | yinse
+1FA77	fenhongsedexin	keai | xihuan | xin | ganqing | woaini | ai | teshu | tianmi | fenhong | fenhongsedexin | taorenxihuan
+2763	xintanhao	tanhao | xindong | xintanhao | biaodianfuhao
+2733	balunfuxinghao	bamangxing | balunfuxinghao | xinghao
+2734	bajiaoxing	bajiaoxing | xing | fuhao
+2747	huohua	huohua | yanhuo | shanguang | shanyao
+1F3E0	fangzi	zhujia | jia | xiangcunjiayuan | jianzhu | xinzhisuozai | fangzi | fangwu | jiaoqu
+1F3E1	bieshu	zhujia | bieshu | jia | xiangcunjiayuan | tingyuan | tingyuanjujia | jianzhu | xinzhisuozai | fangzi | huayuan | jiaoqu
+1F3E2	bangonglou	xiezilou | bangonglou | jianzhu
+1F3E3	ribenyouju	jianzhu | riben | ribenyouju | youbian | youju
+1F3E4	youju	jianzhu | ouzhou | ouzhouyouju | youju
+1F3E5	yiyuan	yisheng | yiyao | yiyuan | jianzhu | kanbing
+1F3E6	yinxing	jianzhu | yinxing
+1F3E7	qukuanji	ATM | qukuanji | tikuanji | guiyuanji | biaoshi | yinxing
+1F3E8	jiudian	jianzhu | lüguan | jiudian
+1F3E9	qingrenjiudian	jianzhu | qingrenlüguan | qingrenjiudian | qinglüjiudian | lüguan
+1F3EA	bianlidian	24 xiaoshi | bianlidian | shangdian | jianzhu
+1F3EB	xuexiao	xuexiao | jianzhu | jiaoxuelou
+1F3EC	shangchang	shangchang | jianzhu | baihuogongsi | baihuoshangcheng | baihuoshangdian
+1F3ED	gongchang	gongchang | jianzhu
+1F3EE	hongdenglong	guang | xiqing | jujiuwu | riben | denglong | hongdenglong | jieri | jiuguan | canguan
+1F3EF	ribenchengbao	chengbao | jianzhu | riben | ribenchengbao
+1F3F0	ouzhouchengbao	chengbao | jianzhu | ouzhou | ouzhouchengbao
+1F463	jiaoyin	zailushang | jiaoyin | chijiao | zuji
+1F464	renxiang	renxiang | jianying | banshen | banshenxiang
+1F465	shuangrenxiang	jianying | banshen | banshenxiang | shuangrenxiang | pengyou
+1F466	nanhai	ertong | haizi | xiaohai | nan | nanhai
+1F467	nühai	ertong | dayannühai | nü | nüer | nühai | haizi | xiaohai
+1F468	nanren	xiongdi | chengren | nan | nanren
+1F469	nüren	nü | nüren | shunü | jinfa
+1F46A	jiating	qinzi | jiating | fumuheerzi
+1F46B	shoulashoudeyinanyinü	yinanyinü | qinglü | shoulashou | shoulashoudeyinanyinü | xianglian
+1F46C	shoulashoudelianggenanren	lianggenanren | shuangzizuo | qinglü | shoulashou | shoulashoudelianggenanren | pengyou | huangdaoshiergong
+1F46D	shoulashoudelianggenüren	lianggenüren | haopengyou | qinglü | shoulashou | shoulashoudelianggenüren | pengyou
+1F46E	jingcha	jiaojing | chuanhuan | gongan | wodi | wujing | fajing | jingguan | jingcha | jingfang | daibu
+1F46F	daituerduoderen	tuzifu | tuerduo | shuangrenwu | shuangbaotai | tonghao | daituerduoderen | yongyuandehaopengyou | paidui | linghunbanlü | juhui | wuzhe | tiaowu | guimi
+1F470	daitoushaderen	ren | tousha | hunli | daitoushaderen | daitoushadexinniang | xinniang | jiehun
+1F471	jinsetoufaderen	ren | lian | jinfa | jinsetoufaderen
+1F472	daiguapimaoderen	renwu | maozi | daiguapimaoderen | guapimao
+1F473	daitoujinderen	toujin | daitoujinderen
+1F474	laoyeye	zufu | tutou | laoren | laotou | laoyeye
+1F475	laonainai	zumu | laoren | laotai | laonainai
+1F476	xiaobaobei	haizi | baobao | xiaobaobei | xiaomaotou
+1F477	jianzhugongren	baogongtou | toukui | anquanmao | gongren | gongchengshi | jianzhu | jianzhugongren | jianzao | banzhuan | gaizao
+1F478	gongzhu	gongzhu | huangguan | tonghua
+1F479	shirenmo	xiaren | yaoguai | huanxiang | riben | shenhuagushi | lian | mianju | shirenmo | gui | mogui
+1F47A	xiaoyaojing	yaoguai | xiaoyaojing | huanxiang | guaiwu | riben | shenhuagushi | lian | gui
+1F483	tiaowudenüren	youya | fulamenge | nüren | nüwuzhe | tange | wuzhe | saersawu | tiaowu | tiaowudenüren
+1F486	anmo	xiangshouanmoderen | toutong | anmo | fangsong | shuiliao | zhiliao | jinzhang | huanjie | meirong | meirongshalong | mianbu
+1F487	lifa	jiantou | faxing | lifa | lifashi | lifaderen | meifa | meirong | meirongshalong | meirongyuan | zaoxingshi
+1F645	jinzhishoushi	buyunxu | bukeneng | buxing | butongguo | fandui | shou | yongshoushibiaoshibuderen | jinzhi | jinzhishoushi
+1F646	OKshoushi	ok | OKshoushi | tongyi | nüziyongshoushibiaoshihao | haode | shou | shoushi | baizishi | duanlian
+1F647	jugong	buhaoyisi | mingxiang | zishi | duibuqi | cankui | ganxie | aohui | qiqiukuanshu | daoqian | jugong | jugongderen
+1F64B	jushou	jushou | jushouderen | hai | kaixin | wocanjia | wokeyibangmang | wozhidao | shou | kanzheli | xuanwo
+1F64D	zhoumei	bukaixin | buman | bushuang | shiwang | xinfanyiluan | naohuo | jusang | zhoumei | zhoumeideren
+1F64E	juezui	bukaixin | bugaoxing | diluo | juezui | shiwang | nushi | juezui | juezuideren | shengmenqi | zhoumei | kuxiang | biaoqing
+1F930	yunfu	nüren | yunfu | huaiyun | huaiyundenüren
+1F931	muruweiyang	rufang | buru | weinai | yinger | muruweiyang
+1F933	zipai	shouji | xiangji | zipai
+1F934	wangzi	wangzi | huangjia
+1F935	chuanyanweifuderen	ren | xinlang | zhengshi | yanweifu | nanren | chuanyanweifuderen | chuanyanweifudenanren
+1F936	shengdannainai	shengdan | shengdannainai | shengdanjie | jieri
+1F937	songjian	buguanxin | buzhidao | ren | tianxiaode | huaiyi | wonazhi | wocaide | wusuowei | wushi | songjian
+1F385	shengdanlaoren	shengdan | shengdanlaoren | shengdanjie | jieri
+1F9B8	chaojiyingxiong	nüyingxiong | nüchaoren | haoren | yingxiong | bianfuxia | chaoren | chaojiyingxiong | chaonengli
+1F9B9	chaojidahuaidan	ren | huaidan | dafanpai | emo | zuifan | chaojidahuaidan | chaojiegun | chaonengli | xiee
+1F9BF	jixietui	yizhi | wuzhangai | jixietui | tui
+1F9D0	daidanpianyanjingdelian	danyanjing | guban | shehua | fuyou | daidanpianyanjingdelian | daidanyanjingdelian
+1F9D1	chengren	zhongxing | xingbiezhongli | xinggebuming | chengren
+1F9D2	ertong	zhongxing | ertong | xiaohai | nianqingren | xingbiebuming | xingbiezhongli
+1F9D3	laonianren	zhongxing | xingbiebuming | xingbiezhongxing | chengren | shuling | laoren | laonianren | laonanren | laoling
+1F9D4	youhuzideren	ren | dahuzi | youhuzideren | nan | luosaihu | huzi | huxu | saibangzi | lianbinhuzi
+1F9D5	daitoushidenüren	toujin | xijiabu | daitoushidenüren | daitoujindenüren
+1F9D6	zhengfanglideren	zaisangnajianderen | fangsong | sangna | sangnayu | zhengfang | zhengfanglideren | zhengqimanyi | zhengqiyu
+1F9D7	panpaderen	xiangshangpaderen | panyan | panyanzhe | panpaderen | pashan | dengshan | dengshanzhe
+1F9D8	pantuideren	mingxiang | fangsong | chensi | yujia | pantuideren | pantuierzuo | chan | lianhuazuoderen
+1F9D9	fashi	zhaohuan | nüwu | nümoshushi | wushi | zhizhe | fashi | fashu | nanwu | nanmoshushi | mozhou | moshushi
+1F9DA	jingling	xiannü | xianzi | tonghua | jingling | chibang
+1F9DB	xixuegui	wanshengjie | busizu | liya | xixuegui | kongbu | duya | zhuangbanfuzhuang | chaoziran
+1F9DC	renyu	sanchaji | renyu | nürenyu | minjianchuanshuo | haiyao | haidi | haiyangshengwu | nanrenyu | tonghua | meirenyu
+1F9DD	xiaojingling	xiaojingling | shenmi | jingling | mohuan | mofa
+1F9DE	yaoguai	qihuan | yaoguai | yuanwang | cashishendeng | jieni | dengshen | shenling | shenmi | shenhua | jingling | zhenni
+1F9DF	jiangshi	wanshengjie | busizu | jiangshi | bansibuhuo | xiaren | xingshizourou
+1FAC2	rendeyongbao	rendeyongbao | zaijian | youyi | gaobie | anwei | ninhao | ganxie | baobao | yongbao | ai
+1FAC3	huaiyundenanren	chongman | chicheng | huaiyun | huaiyundenanren | nanzi | fubu | yongzhong
+1FAC4	huaiyunderen	chongman | chicheng | huaiyun | huaiyunderen | fubu | yongzhong
+B9	shangbiao1	1 | shangbiao | shangbiao1
+B2	shangbiao2	2 | shangbiao | shangbiao2 | pingfang
+B3	shangbiao3	3 | shangbiao | shangbiao3 | lifang
+207B	shangbiaojianhao	shangbiao | jianhao
+B0	du	du | dushu | shijiao | biaozhunjiujingdu
+B1	zhengfu	zhengfu
+D7	chenghao	chengyi | chenghao | chengfa | chengji | beishu
+F7	chuhao	shangshu | chuyi | chuhao | chushang | chufa
+B5	weifuhao	duliang | weifuhao
+A9	banquan	banquan
+AE	zhuce	zhuce | zhucebiaoji
+2122	shangbiao	chanpin | shangbiao | biaozhi
+A7	zhangjiefuhao	shuangS | duanluo | bufen | zhangjie | zhangjiefuhao
+B6	duanluobiaoji	duanluo | duanluobiaoji | duanluofuhao
+B7	jiangehao	zhongdian | zhongjian | dian | jiangehao
+2022	xiangmufuhao	yuandian | xiangmufuhao
+2013	lianjiehao	hengxian | duanhuaxian | lianjiehao
+2026	shenglüehao	duogeyuandian | shenglüe | shenglüehao
+AB	zuoyanweihao	weiba | zuo | zuoyanweihao | yinyong | fangkuang | yanzi | jiao
+BB	youyanweihao	you | youyanweihao | weiba | yinyong | fangkuang | yanzi | jiao
+2030	qianfenhao	qianfenhao | qianfenbi
+20AC	ouyuanfuhao	ouyuan | ouyuanqu | ouyuanfuhao | ouzhou | huobi
+A3	yingbangfuhao	yingbang | yingbangfuhao | huobi | bang
+A5	yuanfuhao	zhongguo | renminbi | yuan | yuanfuhao | riyuan | riben | huobi
+A2	meifen	meifen
+20B9	yindulubifuhao	lubi | yindulubi | yindulubifuhao | huobi
+20BD	lubufuhao	eluosi | eluosilubu | lubu | lubufuhao | huobi
+20A9	hanyuan	chaoxianyuan | hanyuan
+20BA	tuerqilila	
+20BF	bitebi	BTC | bitebi
+20AA	yiseliexinxiekeer	
+20AB	yuenandun	
+20B1	bisuo	bisuo
+20BC	asaibaijiangmanate	
+20B4	wukelangelifuna	
+20A6	niriliyanaila	
+20A1	gesidalijiakelang	
+20B2	balaguigualani	
+20B5	jianasaide	
+20B8	hasakesitanjiange	
+20BE	gelujiyalali	
+20AE	menggutugelike	
+20AD	laowojipu	
+20A8	lubi	lubi
+24	meiyuanfuhao	bisuo | meiyuan | meiyuanfuhao | jinqian
+58F	yameiniyadelamu	
+9F3	mengjialataka	
+E3F	taizhu	
+20A3	faguofalang	faguofalang
+20A4	lila	lila
+20A7	xibanyabisaita	
+20B0	deguobianshi	deguobianshi
+20B3	aositelaer	aositelaer
+20A2	kelusailuo	kelusailuo
+20A5	mier	mier
+20B6	lifuer	lifuer
+20B7	sipeisimiluo	sipeisimiluo
+A4	weizhihuobi	
+201E	diyoushuangyinhao	diyoushuangyinhao | diyinhao | shuangyinhao | yinhao | yinyong | huayinhao
+201C	zuoshuangyinhao	shuangyinhao | zuoshuangyinhao | yinhao | yinyong | huayinyong
+201D	youshuangyinhao	shuangyinhao | youshuangyinhao | yinhao | yinyong | huayinhao
+2018	zuopiehao	danyinhao | zuopiehao | yinhao | piehao | huayinhao
+2019	youpiehao	danyinhao | youpiehao | yinhao | piehao | huayinhao
+A1	daozhidegantanhao	daozhi | daozhidegantanhao | jingtanhao | gantan | gantanhao | mengzhuang
+BF	daozhidewenhao	daozhi | daozhidewenhao | yiwen | wenhao
+2020	jianhao	jian | jianhao | shizijia
+2021	shuangjianhao	jian | jianhao | shuang | shuangjianhao
+2044	fenshuxiexian	fenshuxiexian
+2032	jiaofenfuhao	jiaofenfuhao
+2033	jiaomiaofuhao	jiaomiaofuhao
+201A	diyoupiehao	diyoupiehao | diyinhao | yinhao | piehao
+AC	fei	fou | fei
+2117	luyinbanquan	luyin | luyinbanquan | banquan | yinpin
+2212	jianhao	jian | jianqu | jianhao
+2213	jianhuojia	jianhuojia
+2248	yuedengyu	dagai | yuedengyu | jinsizhi
+2260	budengyu	buxiangdeng | budeng | budengyu
+2261	dengtongyu	sanxian | xiangtong | dengyu | dengtong | dengtongyu
+2264	xiaoyudengyu	budengshi | xiaoyu | xiaoyudengyu | xiangdeng | dengyu
+2265	dayudengyu	budeng | dayu | dayudengyu | xiangdeng | dengyu
+226A	yuanxiaoyu	yuanxiaoyu
+226B	yuandayu	yuandayu
+221E	wuqiongdafuhao	wuqiongda | wuqiongdafuhao
+221A	pingfanggen	bujingen | pingfanggen | kaipingfang | kaigen | genhao
+221D	chengbili	chengbili
+2211	Nyuanqiuhe	Nyuanqiuhe
+220F	Nyuanchengji	Nyuanchengji
+222B	jifen	jifen
+2202	pianweifen	pianweifen
+2206	zengliang	sanjiao | zengliang
+2207	xiangliangweifen	daosanjiao | xiangliangweifen
+2200	quanchengliangci	quanchengliangci
+2203	cunzailiangci	cunzailiangci
+2205	kongji	kongji
+2208	shi...deyuansu	yuansu | baohan | chengyuan | shi...deyuansu | jihe
+2209	bushuyu	bushuyu
+2229	jiaoji	jiaoji | ji | jihe
+222A	bingji	bingji | ji | jihe
+2282	shi...deziji	ziji | shi...deziji | jihe
+2283	chaoji	chaoji
+2286	zijihuodengyu	zijihuodengyu
+2287	chaojihuodengyu	chaojihuodengyu
+2227	luojiyu	luojiyu
+2295	daiyuanquanjiahao	daiyuanquanjiahao
+2297	daiyuanquanchenghao	daiyuanquanchenghao
+22A5	shangdingzi	shangdingzi
+2220	jiao	jiao
+2234	suoyi	suoyi
+2235	yinwei	yinwei
+2218	huanyunsuanfu	huanyunsuanfu
+2219	xiangmufuhaoyunsuanfu	xiangmufuhaoyunsuanfu
+22C5	dianyunsuanfu	dianyunsuanfu
+2215	chuhaoxiexian	chuhaoxiexian
+2190	xiangzuodejiantou	xiangzuodejiantou | zuo | jiantou
+2191	xiangshangdejiantou	shang | xiangshangdejiantou | jiantou
+2192	xiangyoudejiantou	you | xiangyoudejiantou | jiantou
+2193	xiangxiadejiantou	xia | xiangxiadejiantou | jiantou
+2196	zuoshangjiantou	zuoshang | zuoshangjiantou | fangxiang | biaoshi | jiantou | xibei
+2197	youshangjiantou	dongbei | youshang | youshangjiantou | fangwei | fangxiang | biaoshi | jiantou
+2198	youxiajiantou	dongnan | youxia | youxiajiantou | fangwei | fangxiang | biaoshi | jiantou
+2199	zuoxiajiantou	zuoxia | zuoxiajiantou | fangxiang | biaoshi | jiantou | xinan
+2194	zuoyoujiantou	zuoyou | zuoyoujiantou | jiantou
+2195	shangxiajiantou	shangxia | shangxiajiantou | jiantou
+21D0	xiangzuoshuangjiantou	xiangzuoshuangjiantou
+21D1	xiangshangshuangjiantou	xiangshangshuangjiantou
+21D2	xiangyoushuangjiantou	xiangyoushuangjiantou
+21D3	xiangxiashuangjiantou	xiangxiashuangjiantou
+21D6	xibeishuangjiantou	xibeishuangjiantou
+21D7	dongbeishuangjiantou	dongbeishuangjiantou
+21D8	dongnanshuangjiantou	dongnanshuangjiantou
+21D9	xinanshuangjiantou	xinanshuangjiantou
+21D4	zuoyoushuangjiantou	zuoyoushuangjiantou
+21A4	weibudaigangdexiangzuojiantou	weibudaigangdexiangzuojiantou
+21A6	weibudaigangdexiangyoujiantou	weibudaigangdexiangyoujiantou
+21A5	weibudaigangdexiangshangjiantou	weibudaigangdexiangshangjiantou
+21A7	weibudaigangdexiangxiajiantou	weibudaigangdexiangxiajiantou
+21A9	youzhuanwanjiantou	youzhuanwan | youzhuanwanjiantou | xiangzuowanqudeyoujiantou | jiantou
+21AA	zuozhuanwanjiantou	xiangyouwanqudezuojiantou | zuozhuanwan | zuozhuanwanjiantou | jiantou
+219E	xiangzuoshuangtoujiantou	xiangzuoshuangtoujiantou
+21A0	xiangyoushuangtoujiantou	xiangyoushuangtoujiantou
+219F	xiangshangshuangtoujiantou	xiangshangshuangtoujiantou
+21A1	xiangxiashuangtoujiantou	xiangxiashuangtoujiantou
+21A2	daiweidexiangzuojiantou	daiweidexiangzuojiantou
+21A3	daiweidexiangyoujiantou	daiweidexiangyoujiantou
+219A	daishanchuxiandexiangzuojiantou	daishanchuxiandexiangzuojiantou
+219B	daishanchuxiandexiangyoujiantou	daishanchuxiandexiangyoujiantou
+21AE	daishanchuxiandezuoyoujiantou	daishanchuxiandezuoyoujiantou
+21CD	daishanchuxiandexiangzuoshuangjiantou	daishanchuxiandexiangzuoshuangjiantou
+21CF	daishanchuxiandexiangyoushuangjiantou	daishanchuxiandexiangyoushuangjiantou
+21CE	daishanchuxiandezuoyoushuangjiantou	daishanchuxiandezuoyoushuangjiantou
+21C6	shangzuoxiayoulianggejiantou	shangzuoxiayoulianggejiantou | you | zuo | jiantou
+21BC	daogouzaishangdexiangzuoyucha	daogouzaishangdexiangzuoyucha
+21BD	daogouzaixiadexiangzuoyucha	daogouzaixiadexiangzuoyucha
+21C0	daogouzaishangdexiangyouyucha	daogouzaishangdexiangyouyucha
+21C1	daogouzaixiadexiangyouyucha	daogouzaixiadexiangyouyucha
+21BE	daogouzaiyoudexiangshangyucha	daogouzaiyoudexiangshangyucha
+21BF	daogouzaizuodexiangshangyucha	daogouzaizuodexiangshangyucha
+21C2	daogouzaiyoudexiangxiayucha	daogouzaiyoudexiangxiayucha
+21C3	daogouzaizuodexiangxiayucha	daogouzaizuodexiangxiayucha
+21C7	lianggexiangzuojiantou	lianggexiangzuojiantou
+21C9	lianggexiangyoujiantou	lianggexiangyoujiantou
+21C8	lianggexiangshangjiantou	lianggexiangshangjiantou
+21CA	lianggexiangxiajiantou	lianggexiangxiajiantou
+21DA	xiangzuosanjiantou	xiangzuosanjiantou
+21DB	xiangyousanjiantou	xiangyousanjiantou
+219C	xiangzuobolangjiantou	xiangzuobolangjiantou
+219D	xiangyoubolangjiantou	xiangyoubolangjiantou
+21DC	xiangzuoquxianjiantou	xiangzuoquxianjiantou
+21DD	xiangyouquxianjiantou	xiangyouquxianjiantou
+21AD	zuoyoubolangjiantou	zuoyoubolangjiantou
+21AF	xiangxiajuchixingjiantou	xiangxiajuchixingjiantou
+21BA	nishizhenkaikouyuanjiantou	nishizhenkaikouyuanjiantou
+21BB	shunshizhenkaikouyuanjiantou	shunshizhenkaikouyuanjiantou
+1F400	haozi	haozi | shu
+1F401	laoshu	laoshu | haozi | shu
+1F402	gongniu	gongniu | niu | jinniuzuo | huangdaoshiergong
+1F403	shuiniu	shuiniu
+1F404	nainiu	runiu | nainiu | niu
+1F405	laohu	dongwuyuan | laohu | hu
+1F406	baozi	dongwu | liebao | bao | baozi
+1F407	tuzi	tu | tuzi | dongwu
+1F408	mao	chongwu | xiaomao | mao
+1F409	long	zhongguo | quanlideyouxi | long
+1F40A	eyu	eyu
+1F40B	jingyu	jingyu
+1F40C	woniu	faguowoniu | woniu
+1F40D	she	chipiaoren | jiaohuaderen | she | shefuzuo | huangdaoshiergong
+1F40E	ma	dongwu | bisai | saima | ma | qima
+1F40F	gongyang	gongyang | baiyangzuo | yang | xiongxing | huangdaoshiergong
+1F410	shanyang	shanyang | mojiezuo | huangdaoshiergong
+1F411	muyang	mie | muyang | maorongrong | mianyang | yang | yangmao | cixing
+1F412	houzi	hou | houzi
+1F413	gongji	gongji | dongwu | ji
+1F414	ji	dongwu | ji
+1F415	gou	dongwu | chongwu | xiaogou | wangxingren | gou
+1F416	zhu	peigen | zhu | zhurou
+1F417	yezhu	dongwu | zhu | yezhu
+1F418	daxiang	dongwu | daxiang | xiang
+1F419	zhangyu	bazhao | zhangyu | yu
+1F41A	hailuo	hailuo | luo | luoxuan
+1F41B	maomaochong	kunchong | maomaochong | maochong
+1F41C	mayi	mayi
+1F41D	mifeng	qinlao | kunchong | fengmi | mifeng
+1F41E	piaochong	kunchong | mu | piaochong
+1F41F	yu	shuangyuzuo | xingzuo | yu | huangdaoshiergong
+1F420	redaiyu	redai | redaiyu | yu
+1F421	hetun	hetun | yu
+1F422	gui	wugui | haigui | lugui | gui
+1F423	xiaojipoke	xiaoji | xiaojipoke | poke
+1F424	xiaoji	xiaoji | ji
+1F425	zhengmianchaoxiangdexiaoji	xiaoji | zhengmianchaoxiangdexiaoji
+1F426	niao	dongwu | niao | niaoleixue
+1F427	qie	qie | nanji | nanjizhou
+1F428	kaola	dongwu | youdaileidongwu | shudaixiong | aodaliya | kaola
+1F429	guibinquan	juanmaogou | maorongrong | gou | guibinquan
+1F42A	luotuo	danfeng | danfengtuo | shamo | tuofeng | luotuo
+1F42B	shuangfengluotuo	shuangfeng | shuangfengluotuo | shamo | luotuo
+1F42C	haitun	haitun | yajiaoban
+1F42D	laoshutou	laoshutou | shu
+1F42E	nainiutou	runiu | nainiu | nainiutou | muniu | niutou | lian
+1F42F	laohutou	senlinzhiwang | laohu | laohutou | lian
+1F430	tuzitou	tu | tuzitou | tubaobao | chongwu
+1F431	maolian	chongwu | mao | maomi | maolian | lian
+1F432	longtou	shenhua | tonghua | long | longtou
+1F433	penshuidejing	penshui | penshuidejing | jing
+1F434	matou	shengzhuangwubu | ma | matou
+1F435	houtou	dongwu | hou | houtou | houzi
+1F436	goulian	chongwu | xiaogou | wangxingren | gou | goulian | lian
+1F437	zhutou	bajie | zhu | zhutou | lian
+1F438	qingwa	dongwu | tou | lian | qingwa | qingwatou
+1F439	cangshu	cangshu | cangshutou | niechi | tou | chongwu | lian
+1F43A	lang	tou | lang | langtou | lian
+1F43B	xiong	dihou | tou | huixiong | xiong | xiongtou | xionglian | lian
+1F43C	xiongmao	tou | xiongmao | xiongmaolian | maoxiong | maoxionglian | pangda | lian
+1F43D	zhubizi	zhu | zhubizi | lian | wen | bi | bizi
+1F43E	zhaoyin	zhao | zhaoyin | zhaozi | zuji
+1F43F	songshu	songshu | hualishu | jinhuashu
+1F981	shizi	shizi | shizitou | shizizuo | lian | huangdaoshiergong
+1F982	xiezi	tianxiegong | tianxiezuo | xiezi | huangdaoshiergong
+1F983	huoji	ganenjie | huoji
+1F984	dujiaoshou	tou | dujiaoshou | dujiaoshoutou | lian
+1F985	ying	laoying | niao | ying
+1F986	yazi	niao | ya | yazi
+1F987	bianfu	xixuegui | bianfu
+1F988	shayu	yu | sha | shayu
+1F989	maotouying	maotouying | ruizhi | niao
+1F98A	huli	dongwu | tou | huli | hulidelian | lian
+1F98B	hudie	kunchong | piaoliang | meili | hudie
+1F98C	lu	dongwu | lu
+1F98D	daxingxing	dongwu | daxingxing
+1F98E	xiyi	paxingdongwu | xiyi
+1F98F	xiniu	dongwu | xiniu
+1F990	xia	jiake | xia | beileishuichan | shiwu
+1F991	wuzei	wuzei | ruantidongwu | shiwu | youyu | moyu
+1F992	zhangjinglu	bandian | zhangjinglu
+1F993	banma	banma | tiaowen
+1F994	ciwei	ciwei | duoci
+1F995	xiyilei	wanlongshu | konglong | lianglong | wanlong | xiyilei | leilong
+1F996	bawanglong	konglong | baolong | baolongjunzhu | bawanglong
+1F997	xishuai	kunchong | zhameng | ququ | xishuai
+1F998	daishu	dongwu | xiaodaishu | youdaimudongwu | youdaileidongwu | aozhou | daishu | tiao | tiaoyue
+1F999	meizhoutuo	dongwu | yuantuo | xiaoyangtuo | wufengtuo | yangmao | yangtuo | meizhoutuo | luoma
+1F99A	kongque	mainong | kongque | zhaoyao | secaibinfen | cikongque | jiaoao | niao
+1F99B	hema	dongwu | hema
+1F99C	yingwu	piaoqie | mofang | shuohua | niao | yingwu
+1F99D	huanxiong	dongwu | haoqi | huanxiong | taoqi | jiaohua
+1F99E	longxia	nongtang | haixian | honglongxia | beileinongtang | qian | ao | longxia
+1F99F	wenzi	fashao | fare | kunchong | nüeji | jibing | bing | bingdu | wenzi
+1F9A0	xijun	bianxingchong | bingdu | kexue | xijun | amiba
+1F9A1	huan	dongwu | darao | huan | jiuchan | mihuan
+1F9A2	tiane	chouxiaoya | dongwu | tiane | xiaotiane | niao
+1F9A3	mengma	dongwu | daxing | yourongmaode | miejue | mengma | mengmaxiang | zhangmaoxiang | zhangya
+1F9A4	duduniao	dongwu | duduniao | miejue | niao
+1F9A5	shulan	man | lan | shulan | pashu | chihuan
+1F9A6	shuita	dongwu | haowan | buyu | shuita | aikaiwanxiao | ta | you
+1F9A7	hongmaoxingxing	dongwu | xingxing | hou | houzi | yuan | hongmaoxingxing
+1F9A8	chouyou	xun | chou | chouyou | you
+1F9A9	huolieniao	huali | huolieniao | redai | hongguan | yanli
+1F9AA	muli	haixian | muli | zhenzhu | shenghao
+1F9AB	haili	dongwu | dabanya | muchu | haili
+1F9AC	dayeniu	dongwu | dayeniu | ouzhouyeniu | shuiniu | niu | maoniu | chuqun | yeniu
+1F9AD	haibao	dongwu | haiyang | haishi | haibao
+1F9AE	daomangquan	daomangquan | zhiyin | wuzhangai | mang | mangren
+1FABC	shuimu	cimao | dongwu | faguang | aiyo | wujizhuidongwu | youcidongwu | guodong | shuizuguan | shuimu | fuyoushengwu | haiyang | haiyangshengwu | haizhe | chushou
+1F330	lizi	xingren | lizi
+1F331	youmiao	faya | youmiao | ya | miao
+1F332	songshu	shengdanshu | changqingshu | songshu | shu
+1F333	luoyeshu	shu | luoye | luoyeshu | luoyezhiwu
+1F334	zonglüshu	shu | zonglü | zonglüshu | redai
+1F335	xianrenzhang	xianrenzhang | ganhan | zhiwu | shamo
+1F337	yujinxiang	kaihua | hua | yujinxiang
+1F338	yinghua	yinghua | hua
+1F339	meigui	youya | meigui | hongmeigui | hua
+1F33A	furong	mujin | zhiwu | furong | hua
+1F33B	xiangrikui	xiangrikui | taiyang | taiyanghua | hua
+1F33C	kaihua	kaihua | hua | pugongying
+1F33D	yumi	nongzuowu | baogu | yumi | baomi
+1F33E	daozi	dao | daozi | mi | liangshi | guwu
+1F33F	yaocao	caoyao | yaocao | xiangcao
+1F340	siyecao	siyecao | xingyun | aierlande
+1F341	fengye	fengye | shuye | qiuye | luoye
+1F342	luoye	ye | qiu | luoye
+1F343	fengchuiyeluo	yezi | shuye | suifengpiaowu | fengchuiyeluo
+1F344	mogu	duxun | zhenjun | mogu
+1FAB0	cangying	dongwu | haichong | jibing | fulan | cangying | chongzi | qu
+1FAB1	ruchong	dongwu | jishengchong | huanjiedongwu | qiuyin | ruchong
+1FAB2	jiachong	dongwu | kunchong | jiachong | chongzi
+1FAB3	zhanglang	dongwu | haichong | xiaoqiang | kunchong | chongzi | zhanglang
+1FAB4	penzaizhiwu	peiyu | fangzi | kuzao | zhiwu | shengzhang | penjing | penzai | penzaizhiwu | huapen
+1FAB5	mutou	yuanmu | yuanmu | mutou | mucai | muzhuang
+1FAB6	yumao	yumao | qing | fei | niao
+1FAB7	lianhua	fujiao | yindujiao | youjing | tianjing | chunjie | hua | huaduo | lianhua
+1FAB8	shanhu	qihoubianhua | haiyang | shanhu | shanhujiao | jiao
+1FAB9	kongchao	jia | shuzhi | kongchao | zhuchao | niaochao
+1FABA	youdandechao	youdandechao | shuzhi | zhuchao | dan | niao | niaochao | niaodan
+1FABB	fengxinzi	chuntian | zhiwu | guanmu | shicheju | zidingxiang | ziluolan | zise | yushandou | hua | huaduo | lanmaohua | xunyicao | jinyucao | dianlan | fengxinzi
+2618	sanyecao	sanyecao | aierlan | muxu | zuojiangcao
+1F347	putao	shuiguo | putao
+1F348	tiangua	hamigua | shuiguo | tiangua | migua | xianggua
+1F349	xigua	shuiguo | xigua
+1F34A	juzi	ganjie | ganju | jiezi | juzi | shuiguo | youtao | weitaming C
+1F34B	ningmeng	ganju | ningmeng | shuiguo | suan
+1F34C	xiangjiao	shuiguo | jia | xiangjiao
+1F34D	boluo	shuiguo | redai | boluo
+1F34E	hongpingguo	jiankang | shuiguo | shu | hong | hongpingguo | pingguo | shiwu
+1F34F	qingpingguo	shuiguo | pingguo | qing | qingpingguo
+1F350	li	li | shuiguo
+1F351	tao	tao | shuiguo
+1F352	yingtao	yingtao | shuiguo
+1F353	caomei	shuiguo | jiangguo | caomei
+1F336	honglajiao	honglajiao | la | lajiao
+1F354	hanbao	chi | hanbao | hanbaobao | sushi | shiwu | e
+1F355	pisa	yipianbisa | pisa | bisa | bisabing | qisi | laweixiangchang | shiwu | e
+1F356	paigu	daiguderou | paigu | rou | gu
+1F357	jiaqindetui	jiaqin | jiaqindetui | huoji | e | gu | jirou | jitui
+1F358	mibing	mi | miguo | mibing | shiwu
+1F359	fantuan	rishifantuan | riben | mi | shiwu | fantuan
+1F35A	mifan	zhushi | mi | mifan | shiwu | fan
+1F35B	kalifan	kali | kalifan | shiwu | fan
+1F35C	miantiao	lamian | hefen | reqitengteng | reqitengtengmianwan | wan | kuaizi | miantiao | shiwu
+1F35D	yifen	yidalimian | yifen | yimian | rouwan | shiwu | canting
+1F35E	mianbao	yitiaomianbao | quanmaimianbao | xiaomai | dianfen | kaomianbao | gulei | mianbao | shiwu | canting
+1F35F	shutiao	kuaican | youzha | shutiao | shiwu
+1F360	kaohongshu	degua | kaodegua | kaohongshu | hongshu | shiwu
+1F361	tuanzi	chuan | heguozi | tuanzi | riben | tiandian | tanghulu
+1F362	guandongzhu	chuan | guandongzhu | kabo | haixian | shiwu | canguan
+1F363	shousi	shousi | shiwu
+1F364	tianfuluo	tianfuluo | duixia | youzha | zhaxia | xia
+1F365	yuban	yu | yuban | yubing
+1F366	yuantongbingjiling	bingqilin | yuantongbingqilin | yuantongbingjiling | tian | tiandian | shuangqilin | shiwu
+1F367	paobing	bing | bingsha | paobing | shabing | tian | tiandian | canguan
+1F368	bingqilin	bing | bingqilin | bingjiling | naiyou | tian | tiandian | xuegao
+1F369	tiantianquan	tian | tiandian | tiantianquan | shiwu
+1F36A	binggan	qiaokelipian | quqi | quqibing | tiandian | binggan
+1F36B	qiaokeli	wanshengjie | qiaokeli | qiaokelibang | tian | tianpin | tiandian | tangguo
+1F36C	tang	wanshengjie | shitianshi | aichitianshi | tian | tiandian | tang | tangguo | tangguozhi | zhuya | canguan
+1F36D	bangbangtang	guozi | bangbangtang | tian | tang | tangguo
+1F36E	naihuang	kashida | naihuang | tiandian | dannaidong | dannaishasi
+1F36F	fengmi	xiaoxiongweini | tong | tian | fengmi | miguan
+1F370	shuiguodangao	yipiandangao | naiyou | naiyousubing | shuiguodangao | tiandian | gaodian | dangao
+1F371	hefan	biandang | biandanghe | hefan | shiwu
+1F372	yiguoshiwu	yiguoshiwu | duncai | guo | shiwu
+1F373	jiandan	yimianlaoyimiannendejiandan | zuocai | zhijianyimianlao | pingdiguo | zaocan | jian | jiandan | dan | shitang
+1F374	daocha	zhongcan | dao | daocha | wucan | cha | chi | chizaocan | chifan | haochi | zaocan | wancan | pengdiao | xican | canju | ele
+1F375	recha	wulongcha | wubingchabei | bei | meiyoubashoudechabei | recha | reyin | cha | chabei | yinliao
+1F376	qingjiu	hejiu | qingjiu | qingjiubei | qingjiuping | ping | jiu | jiuba | jiubei | yinliao
+1F377	putaojiu	julebu | hejiu | putaojiu | jiu | jiuba | jiubei | yinliao
+1F378	jiweijiu	julebu | hejiu | bei | bolibei | jiu | jiuba | madingni | jiweijiu | jiweijiubei
+1F379	redaishuiguoyinliao	julebu | hejiu | redaishuiguoyinliao | redaiyinliao | jiu | jiuba | yinliao | jiweijiu
+1F37A	pijiu	pijiu | pijiujie | hejiu | bei | jiu | jiuba
+1F37B	ganbei	pijiu | hejiu | ganbei | pengbei | jiu | jiuba
+1F37C	naiping	nai | naiping | yinger | xinshenger
+1F37D	canju	zuocai | dao | daochayupan | cha | wancan | pengren | pan | xican | canju
+1F37E	kaixiangbin	hejiu | qingzhu | kaixiangbin | musai | pingzi | peng | pengmusaidepingzi | xiangbin
+1F37F	baomihua	baomihua | kandianying
+1F950	yangjiaomianbao	xinyuexingmianbao | fashi | niujiaomianbao | yangjiaomianbao | mianbao | shiwu
+1F951	eli	shuiguo | niuyouguo | laoli | shiwu | eli | huangyouguo
+1F952	huanggua	paocai | yancai | shucai | shiwu | huanggua
+1F953	peigen	peigen | yanrou | xunrou | rou | beiken | shiwu
+1F954	tudou	tudou | shucai | shiwu | malingshu
+1F955	huluobo	huluobo | shucai | shiwu
+1F956	fashizhanggunmianbao	fashi | fashizhangtiaomianbao | fashizhanggunmianbao | mianbao | shiwu
+1F957	lüseshala	shala | lüseshala | lüseshucai | shiwu
+1F958	zhuangyoushiwudeqiandiguo	pingdiguo | qiandi | duncai | dunguo | jianguo | zhuangyoushiwudeqiandiguo | xibanyahaixianfan | shiwu
+1F959	jiaxinbing	dabing | jiaxin | jiaxinbing | shalasanmingzhi | zhadouwanzi | kaorouchuan | roujiamo | shiwu
+1F95A	dan	dan | shiwu
+1F95B	yibeinai	yibeinai | he | nai | bei | niunai
+1F95C	huasheng	jianguo | huasheng | shucai | shiwu
+1F95D	mihoutao	qiyiguo | shuiguo | mihoutao | shiwu
+1F95E	laobing	laobing | jianbing | baojianbing | baobing | shiwu
+1F95F	jiaozi	enpannada | shuijiao | bolanjiaozi | jianjiao | jiaozi
+1F960	xingyunbinggan	xingyunbinggan | qianbing | suanming | yuyan
+1F961	waimaihe	zhongshiwaimai | waimai | waimaibaozhuang | waimaitong | waimaihe | waimaicanhe | mulitong | hefan | kuaizi | songcan | songcanfuwu
+1F962	kuaizi	kuaizi | zhu
+1F963	wanshao	zaocan | yanmai | yanmaizhou | wanzhongtangshi | wanshao | wanhetangshi | xifan | zhou | guwu
+1F964	daixiguanbei	daixiguanbei | daixiguandebeizi | guozhi | shui | qishui | suda | sudayinliao | ruanyinliao | mairujingyinliao
+1F965	yezi	zonglü | yezi | boluoyezilanmujiu
+1F966	xilanhua	ganlan | xilanhua | yeshengjuanxincai
+1F967	pai	yipianpai | nanguapai | shuiguopai | yousudianxin | pai | gaodian | roupai | pingguopai | xian
+1F968	jiaoyanjuanbing	wanqu | niuqushipin | jiaoyanjuanbing | panrao | chanrao | cuozongfuza
+1F969	roukuai	paigu | niupai | zhupai | hongrou | yangpai | rou | roukuai | roupai
+1F96A	sanmingzhi	sanmingzhi | mianbao
+1F96B	guantoushipin	guantou | guantoushipin
+1F96C	lüyeshucai	juanxincai | yuanbaicai | xiaobaicai | ganlan | shengcai | lüyeshucai | yuyiganlan | sela | woju
+1F96D	mangguo	shuiguo | redai | mangguo | shiwu
+1F96E	yuebing	zhongqiujie | yuebing | qiu | qiutian | jieri
+1F96F	mianbaoquan	nailaojiang | zaocan | hongkaoshipin | yingmianbaoquan | beiguo | mianbao | mianbaoquan
+1F9C0	zhishi	nailao | zhishi | qisi
+1F9C1	zhibeidangao	hongbeishipin | tiandian | zhibeidangao | qingke | mianbaodian
+1F9C2	yan	zuoliaoping | weidao | xian | huoda | yan | diaoweipin | diaoweiliao
+1F9C3	yinliaohe	xiguan | guozhi | guozhihe | tianwei | hezhuang | yinliaohe
+1F9C4	suan	zuoliao | dasuan | suan | suantou | diaowei
+1F9C5	yangcong	zuoliao | yangcong | diaowei
+1F9C6	zhadouwanzi	zhongdongshucaiqiu | youzhayingzuidoubing | zhadouwanzi | rouwan | yingzuidou
+1F9C7	huafubing	huafubing | songbing | gezibing | dianxin | kao | tiandian | wofubing
+1F9C8	huangyou	ruzhipin | niunai | huangyou
+1F9C9	madaicha	cha | yinliao | madaicha
+1F9CA	bingkuai	bing | bingleng | bingkuai | bingshan | leng | lengque | lengyin
+1F9CB	zhenzhunaicha	naicha | paopao | niunai | zhenzhu | zhenzhunaicha | cha | chayin | yinliao
+1FAD0	lanmei	shuiguo | jiangguo | lanmei | yuejie | shiwu
+1FAD1	denglongjiao	denglongjiao | shucai | lajiao | qingjiao | shiwu
+1FAD2	ganlan	ganlan | shiwu
+1FAD3	bianmianbao	yuanpanzhuangkaobing | bianmianbao | yumibing | pitabing | baocuibing | mianbao | mianbing | shiwu
+1FAD4	moxigezongzi	baxizong | zongzi | shiwu | moxige | moxigezongzi | moxigebing
+1FAD5	nailaohuoguo	nailao | nailaohuoguo | nailaoguo | qiaokeli | huoguo | zhu | baotang | ruishi | ronghua | guo | shiwu
+1FAD6	chahu	chongpao | hu | cha | chahu | shiwu
+1FAD7	qingdaoyeti	daochu | qingdao | qingdaoyeti | sachu | liuchu | bolibei | pengdao | kong | yinliao
+1FAD8	dou	shen | dou | douzi | doulei | shiwu
+1FAD9	guan	rongqi | pingzi | kong | kongping | guan | diaoweipin | zhucang | jiang
+1FADA	jiang	jiankang | pijiu | tianran | jiang | gen | genzhipijiu | genjing | caoyao | xiangliao
+1FADB	wandoujia	dadou | maodou | sushizhe | jia | shucai | dou | doulei | doujing | doujia | wandou | wandoujia | huangdou
+2615	reyin	kafei | zaochen | xingbake | reqitengteng | reyin | cha | yinliao
+2600	taiyang	guangxian | taiyang | qing | qingtian | yangguangmingmei | yangguangpuzhao
+2601	yun	yun | yuncai | yunduo | tianqi | yin
+2602	san	san | yu | yusan
+2603	xueyuxueren	ling | xue | xueyuxueren | xueren
+2614	yusan	xiayu | san | yusan | yudi
+26A1	gaoya	weixian | youdian | shandian | gaoya
+26C4	xueren	xiaxue | ling | xueren
+26C5	yin	wuyunbiri | duoyun | yin
+26C8	leizhenyu	baofengyu | zhenyu | yu | lei | leibao | leizhenyu
+2744	xuehua	leng | tianqi | xue | xuehua
+1F300	taifeng	taifeng | tianqi | xuanfeng | yun | qixuan | jufeng | longjuanfeng
+1F301	youwu	youwu | wu | mai
+1F302	shouqidesan	xiayu | san | shouqidesan | yu | yusan
+1F303	yewan	yewan | xingkong | wanshang
+1F304	shandingrichu	taiyang | shan | shandingrichu | richu | zaochen | qingchen
+1F305	richu	daziran | taiyang | richu | zaochen | qingchen
+1F306	chengshihuanghun	chengshi | chengshihuanghun | yewan | riluo | doushi | huanghun
+1F307	riluo	xiyang | riluo
+1F308	caihong	LGBT | shuangxinglian | tongzhi | caihong | kuaxingbie
+1F309	yemuxiadeqiao	yemu | yemuxiadeqiao | wanshang | qiao
+1F30A	langhua	bolang | lang | langhua | haiyang
+1F30B	huoshan	penfa | daziran | shan | huoshan | baofa
+1F30C	yinhe	taikong | xingkong | yinhe
+1F30D	deqiushangdeouzhoufeizhou	shijie | deqiu | deqiushangdeouzhoufeizhou | ouzhou | feizhou
+1F30E	deqiushangdemeizhou	shijie | quanqiu | deqiu | deqiushangdemeizhou | meizhou
+1F30F	deqiushangdeyazhouaozhou	shijie | yazhou | yaao | quanqiu | deqiu | deqiushangdeyazhou | deqiushangdeyazhouaozhou | aozhou
+1F310	daijingweixiandedeqiu	shijie | quanqiu | deqiu | ziwuxian | daijingweixiandedeqiu | jingwei | jingxian
+1F311	shuoyue	xinyue | yueliang | shuoyue
+1F312	emeiyue	sanriyue | emeiyue | wanyue | yueliang | yingyue | meiyue | emeiyue
+1F313	shangxianyue	shangxianyue | yueliang
+1F314	yingtuyue	yueliang | yingtuyue
+1F315	manyue	yueliang | wangyue | manyue
+1F316	kuituyue	kuituyue | yueliang | shuailuo
+1F317	xiaxianyue	xiaxianyue | yueliang
+1F318	canyue	kuimeiyue | wanyue | yueliang | canyue
+1F319	wanyue	emeiyue | wanyue | xinyuexing | yueliang | canyue | emeiyue
+1F31A	weixiaodeshuoyue	weixiaodeshuoyue | xinyue | yueliang | shuoyue
+1F31B	weixiaodeshangxianyue	shangxianyue | weixiaodeshangxianyue | yueliang | emeiyue
+1F31C	weixiaodexiaxianyue	xiaxianyue | weixiaodexiaxianyue | yueliang | canyue
+1F31D	weixiaodeyueliang	weixiaodeyueliang | yueliang | wangyue | manyue
+1F31E	weixiaodetaiyang	taiyang | weixiaodetaiyang | wennuanyangguang | yangguangmingmei
+1F31F	shanliangdexingxing	faguang | xingxing | shanliang | shanliangdexingxing | shanguang
+1F320	liuxing	yewan | taikong | xingkong | liuxing | yunluozhixing
+1F321	wenduji	tianqi | qiwen | wendu | wenduji
+1F324	qingouyouyun	yun | tianqi | taiyang | shaoyun | qing | qingouyouyun | yin
+1F325	duoyun	yun | duoyun | taiyang | ling | yin
+1F326	qingzhuanyu	xiayu | yun | tianqi | taiyang | qingshiduoyunouzhenyu | qingzhuanyu | yu
+1F327	xiayu	xiayu | yun | tianqi | yu
+1F328	xiaxue	xiaxue | yun | tianqi | xue
+1F329	dalei	yun | tianqi | dalei | shandian | lei
+1F32A	longjuanfeng	yun | tianqi | xuanfeng | longjuanfeng
+1F32B	wu	yun | wu | mai
+1F32C	dafeng	dafeng | kuangfeng | fengchui
+2648	baiyangzuo	gongyang | xingzuo | muyangzuo | baiyangzuo
+2649	jinniuzuo	gongniu | xingzuo | jinniu | jinniuzuo
+264A	shuangzizuo	shuangzi | shuangzizuo | luanshengzi | xingzuo
+264B	juxiezuo	juxie | juxiezuo | xingzuo | pangxie
+264C	shizizuo	xingzuo | shizizuo | xiongshi
+264D	chunüzuo	chunüzuo | shinüzuo | xingzuo | huangdaoshiergong
+264E	tianchengzuo	tianchengzuo | pingheng | xingzuo | zhengyi
+264F	tianxiezuo	tianxie | tianxiezuo | xingzuo | xiezi
+2650	sheshouzuo	renmazuo | sheshou | sheshouzuo | gongjianshou | xingzuo
+2651	mojiezuo	tiangongtu | shanyang | mojie | mojiezuo | xingzuo
+2652	shuipingzuo	xingzuo | shui | shuipingzuo
+2653	shuangyuzuo	shuangyu | shuangyuzuo | xingzuo | yu
+1F550	yidian	00 | 1 | 1:00 | yidian | shijian
+1F551	liangdian	00 | 2 | 2:00 | liangdian | shizhong
+1F552	sandian	00 | 3 | 3:00 | sandian | shizhong
+1F553	sidian	00 | 4 | 4:00 | sidian | shizhong
+1F554	wudian	00 | 5 | 5:00 | wudian | shizhong
+1F555	liudian	00 | 6 | 6:00 | liudian | shizhong
+1F556	qidian	00 | 7 | 7:00 | qidian | shizhong
+1F557	badian	00 | 8 | 8:00 | badian | shijian | zhong
+1F558	jiudian	00 | 9 | 9:00 | jiudian | shizhong
+1F559	shidian	00 | 10 | 10:00 | shidian | shizhong
+1F55A	shiyidian	00 | 11 | 11:00 | shiyidian | shizhong
+1F55B	shierdian	00 | 12 | 12:00 | shierdian | zhengdian | shijian | dianzhong | zhong
+1F55C	yidianban	1 | 1:30 | 30 | yidianban | shijian | zhong
+1F55D	liangdianban	2 | 2:30 | 30 | liangdianban | shijian | zhong
+1F55E	sandianban	3 | 3:30 | 30 | sandianban | shijian | zhong
+1F55F	sidianban	30 | 4 | 4:30 | sidianban | shijian | zhong
+1F560	wudianban	30 | 5 | 5:30 | wudianban | shizhong
+1F561	liudianban	30 | 6 | 6:30 | liudianban | shizhong
+1F562	qidianban	30 | 7 | 7:30 | qidianban | shizhong
+1F563	badianban	30 | 8 | 8:30 | badianban | shizhong
+1F564	jiudianban	30 | 9 | 9:30 | jiudianban | shizhong
+1F565	shidianban	10 | 10:30 | 30 | shidianban | shizhong
+1F566	shiyidianban	11 | 11:30 | 30 | shiyidianban | shizhong
+1F567	shierdianban	12 | 12:30 | 30 | shierdianban | shizhong
+1FA90	youhuanxingxing	tuxing | youhuanxingxing | xingxing
+2604	huixing	taikong | huixing
+26F0	shan	shan | feng
+26F1	yangsan	xiayu | san | deshangdeyangsan | taiyang | yangsan
+26F2	penquan	penquan
+26F4	dulun	lüke | duchuan | dulun | lunchuan
+26F5	fanchuan	fanchuan | youting | chuan | jiafanchuan
+2708	feiji	penqiji | lüxing | feiji | feixing
+1F488	lifadian	xuanzhuan | zhu | lifa | lifashi | lifadian | lifadianxuanzhuancaizhu
+1F4BA	zuowei	weizi | zuowei | yizi
+1F680	huojian	fashe | taikong | lüxing | huojian
+1F681	zhishengji	lüxing | zhishengji | zhishengfeiji
+1F682	zhengqihuoche	shouche | lüxing | huoche | huochetou | zhengqi | zhengqihuoche | zhengqichetou | tielu
+1F683	guidaoche	lüxing | dianche | guidaoche | tielu
+1F684	gaosulieche	dongche | xinganxian | huoche | sudu | gaosulieche | gaotie
+1F685	zidantougaosulieche	dongche | zidanlieche | zidantou | zidantougaosulieche | xinganxian | huoche | gaosu | gaotie
+1F686	huoche	daozhan | wuwu | huoche | tielu
+1F687	detie	detie | jieyun
+1F688	qinggui	daozhan | danguidianche | huoche | qinggui
+1F689	chezhan	detie | jieyun | huoche | chezhan | tielu
+1F68A	lumiandianche	jieyun | dianche | lumiandianche
+1F68B	youguidianche	youguidianche | guidao
+1F68C	gongjiaoche	gongjiao | gongjiaoche | gonggongqiche | daba
+1F68D	yingmianshilaidegongjiaoche	gongjiao | gonggongqiche | daba | yingmianshilai | yingmianshilaidegongjiaoche
+1F68E	wuguidianche	gonggongqiche | wuguidianche | dianche
+1F68F	gongjiaochezhan	gongjiaozhan | gongjiaochezhan | gonggongqichezhan
+1F690	xiaoba	gonggongqiche | xiaoba | kaiche | yidongfangche
+1F691	jiuhuche	jijiu | jiuhuche | cheliang
+1F692	xiaofangche	jiuhuoche | xiaofangche | huozai
+1F693	jingche	tandaojingqi | qiche | jingcha | jingche | xunluo
+1F694	yingmianshilaidejingche	qiche | jingcha | jingche | yingmianshilaidejingche
+1F695	chuzuche	chuzuche | xiaohuang | kaiche | qiche | deshi | jichengche
+1F696	yingmianshilaidechuzuche	youbu | chuzuche | jiaoche | xiaohuang | kaiche | deshi | yingmianshilaidechuzuche
+1F697	qiche	kaiche | qiche | jiaoche
+1F698	yingmianshilaideqiche	kaiche | qiche | jiaoche | yingmianerlai | yingmianshilaideqiche
+1F699	yundongxingduoyongtuche	SUV | xiulüche | xiuxianche | kaiche | fangche | qiche | cheliang | jiaoche | yundongxingduoyongtuche | jiashi
+1F69A	huoche	kache | kaiche | huoche | songhuo
+1F69B	jiaojieshihuoche	kache | tuoche | banyun | huoche | jiaojieshikache | jiaojieshihuoche
+1F69C	tuolaji	tuolaji
+1F69D	dangui	dangui | danguidianche | huoche
+1F69E	shanqutielu	shanqu | shanqutielu | shandetielu | huoche | tielu
+1F69F	konggui	xuangua | xuanguashidangui | kongzhongguidaolieche | konggui
+1F6A0	lanche	kongzhong | suodao | lanche
+1F6A1	suodao	kongzhong | suodao | lanche
+1F6A2	chuan	lüke | lüxing | chuan
+1F6A3	huating	huajiang | huachuanyundong | huating | mufa | he | fanzhouhushang | hu | dumuzhou | chuan | diaoyu
+1F6A4	kuaiting	yiwanfuweng | kuaiting | chuan | haohuayouting
+1F6A5	hengxiangdehonglüdeng	jiaotongdeng | xinhaodeng | hengxiangdehonglüdeng | honglüdeng
+1F6A6	zongxiangdehonglüdeng	jiaochakou | jiaotongdeng | xinhaodeng | zhidehonglüdeng | honglüdeng | zongxiangdehonglüdeng
+1F6A7	luzhang	shigong | luzhang
+1F6A8	jingchedeng	deng | jinji | jingbao | jingdeng | jingshi | jingchedeng
+1F6A9	sanjiaoqi	sanjiaoqi | shengqi | qi | qiganshangdesanjiaoqi | qiganshangdeqizhi | hongseqizhi | gaoerfu
+1F6AA	men	churukou | qianmen | houmen | damen | wumen | fangmen | fangjian | men
+1F6B0	yinyongshui	keyihede | heshui | jieshui | shui | shuilongtou | yinyongshui
+1F6B1	feiyinyongshui	shui | jinzhiyongshui | jieyueyongshui | feizhiyinshui | feiyinyongshui
+1F6B3	jinzhizixingche	yanjin | jiaotong | jinzhi | jinzhizixingche | jinxingzixingche | zixingche | feijidongche
+1F6B7	jinzhixingrentongxing	yanjin | jinzhixingrentongxing | xingren
+1F6B8	ertongguojie	jiaotong | ertongguojie | anquan | zhishipai | xingren
+1F6B9	nance	weishengjian | cesuo | xishoujian | nance | nanshi
+1F6BA	nüce	weishengjian | cesuo | nüce | nüshi | xishoujian
+1F6BB	weishengjian	WC | weishengjian | cesuo | xishoujian
+1F6BC	baobao	yinger | baobao | huanniaopian | muyingshi
+1F6BD	matong	WC | weishengjian | cesuo | xishoujian | matong
+1F6BE	cesuo	weishengjian | cesuo | xishoujian | guanxishi
+1F6BF	linyu	pentou | penshui | shui | xizao huasa | linyu | huasa
+1F6C0	xizaoderen	xizao | xizaoderen | yupen | yugang | zaopen | penyu
+1F6C1	yugang	muyu | paomoyu | paozao | xizao | yupen | yugang | zaopen
+1F6C2	huzhaojiancha	anjian | huzhao | huzhaojiancha | jiancha | tongxingzheng
+1F6C3	haiguan	haiguan | xinglidabao
+1F6C4	tiquxingli	tiqu | tiquxingli | lüxing | xingli
+1F6C5	jicunxingli	chuwugui | jicun | jicunxingli | xingli
+1F6D0	zongjiaochangsuo	dedian | zongjiao | zongjiaochangsuo | chongbai | jingshen | libai | qidao
+1F6D1	tingzhibiaozhi	tingzhi | tingzhibiaozhi | bajiaoxing | babianxing | biaozhi
+1F6D2	gouwuche	shoutuiche | gouwu | gouwuche | caigou
+2668	wenquan	shui | quan | wenquan | reqitengteng | zhengqi
+26BD	zuqiu	daluo | meixi | qiu | qiusai | luonaerduo | pangluo | yingshizuqiu | zuqiu | yundong
+26BE	bangqiu	bangqiu | qiu | yundong
+26F3	gaoerfuqiudong	guoling | guolingqi | qiudong | gaoerfu | gaoerfuqiudong | gaoqiu
+1F392	shubao	shangxue | shubao | bao
+1F3A0	xuanzhuanmuma	xuanzhuanmuma | muma | youleyuan
+1F3A1	motianlun	motianlun | youleyuan
+1F3A2	guoshanche	youleyuan | guoshanche
+1F3A3	diaoyugan	diaogan | diaoyugan | yugan
+1F3A4	maikefeng	kge | kalaok | kalaOK | changK | changge | mai | maike | maikefeng
+1F3A5	dianyingsheyingji	luxiang | shexiangji | sheluji | sheying | sheyingji | dianying | dianyingsheyingji
+1F3A6	dianyingyuan	juyuan | changsuo | yingpian | sheyingji | dianying | dianyingyuan
+1F3A7	erji	toudaishierji | ersai | erji
+1F3A8	diaosepan	chuangyi | bowuguan | duozhongsecai | yule | huajia | huahua | huihua | yishu | diaoseban | diaosepan
+1F3A9	limao	maozi | zhengshi | limao | gaomao
+1F3AA	maxituanzhangpeng	zhangpeng | maxituan | maxituanzhangpeng
+1F3AB	piao	ruchangquan | dianyingpiao | piao | piaogen | chepiao | menpiao
+1F3AC	changjiban	changji | changjiban | daban | paidianying
+1F3AD	biaoyanyishu	juyuan | nüyanyuan | xiju | yanyuan | yishu | shashibiya | biaoyan | biaoyanyishu | mianju
+1F3AE	youxishoubing	shoubing | youxi | youxishoubing | youxikongzhiqi | dianziyouxi
+1F3AF	zhengzhongbaxindefeibiao	mingzhong | biaode | zhengzhongbaxindefeibiao | zhijiemingzhong | yaohai | baxin | feibiao
+1F3B0	laohuji	chijiaozilaohu | youxi | laohuji | jiaoziji | dubo | duchang
+1F3B1	taiqiu	8 qiuzhizhuoqiu | 8haoqiu | taiqiu | taiqiutai | youxi | pilibaqiu
+1F3B2	touzi	zhitouzi | sezi | touzi | touziyouxi
+1F3B3	baolingqiu	baolingqiu | quandao | qiu | yundong
+1F3B4	huazha	kapai | riben | youxi | huadou | huazha | huapai
+1F3B5	yinfu	lepu | wuxianpu | bafenyinfu | yinle | yinfu
+1F3B6	duogeyinfu	lepu | wuxianpu | bafenyinfu | duogeyinfu | yinle | yinfu
+1F3B7	sakesiguan	leqi | chuizou | yanzou | sakesiguan | sakesifeng | yinle
+1F3B8	jita	leqi | jita | danzou | yanzou | dianjita | yinle
+1F3B9	yinlejianpan	leqi | danzou | yanzou | gangqin | yinle | yinlejianpan
+1F3BA	xiaohao	leqi | chuizou | laba | xiaohao | yinle
+1F3BB	xiaotiqin	leqi | xiaotiqin | tiqin | shiteladiwaer | yanzou | yinle
+1F3BC	lepu	lepu | wuxianpu | qupu | yinle | yinfu
+1F3BD	yundongbeixin	shangyi | paobu | yundongfu | yundongbeixin | shidai
+1F3BE	wangqiu	qiu | qiupai | wangqiu | wangqiupai
+1F3BF	huaxue	huaxue | yundong | xue
+1F3C0	lanqiu	daqiu | qiu | lanqiu | lankuang | yundong
+1F3C1	heibaifanggeqi	fangge | geziqi | jingsai | zhongdian | zhongdianqi | heibaifangge
+1F3C2	huaxueban	danban | danbanhuaxue | huaxue | huaxueban | xue
+1F3C3	paobuzhe	congmang | xiangqianchong | benpao | kuaipao | saipao | paobu | paobuzhe | paolu | shanren | malasong
+1F3C4	chonglang	chonglang | chonglangderen | chonglangzhe | bolang | haishangyundong | haiyang | haitan | yonglang | wangshangchonglang | yundong
+1F3C5	jiangpai	jiangpai | huosheng | yundonghuijiangpai | yundongyuan | jinpai
+1F3C6	jiangbei	guanjun | jiangli | jiangpin | jiangbei | jiangshang | shengli | huosheng
+1F3C7	saima	sanguan | saima | saimaqishi | ma | qishi | qima
+1F3C8	meishiganlanqiu	ganlanqiu | qiu | meishiganlanqiu
+1F3C9	yingshiganlanqiu	ganlanqiu | qiu | yingshiganlanqiu | yundong
+1F3CA	youyong	youyong | youyongderen | youyongzhe | ziyouyong | yundong | tierensanxiang
+1F3CB	juzhong	juzhong | juzhongderen | juzhongyundongyuan | jutie | jianmeizhe | liliangjuzhong | gangling | yingla | xunlian | yundong
+1F3CC	dagaoerfuderen	pga | xiaoniaoqiu | dagaoerfuderen | tuiganjinqiu | qiu | qiuzuo | qiuxuequ | qiutong | zhiyegaoerfuxiehui | yundong | gaoerfu
+1F3CD	motuoche	motuo | motuoche | saiche
+1F3CE	saiche	qiche | jichi | saiche | paoche
+1F451	huangguan	guowang | quanlideyouxi | wangguan | wanghou | huangguan | huangjia
+1F452	nümao	nü | nümao | nüshi | maozi | huayuanpaidui
+1F453	yanjing	fushi | yanjing | yanjing
+1F454	lingdai	gongzuo | zhengshi | chenshanlingdai | lingdai
+1F455	Txu	Txu | xiuxianfuzhuang | xushan
+1F456	niuziku	xiuxian | zhoumo | niuziku | lanse | kuzi
+1F457	lianyiqun	yifu | qunzi | lianyiqun
+1F458	hefu	hefu | riben | yifu
+1F459	bijini	sandianshi | bijini | yongzhuang | youyong
+1F45A	nüzhuang	nü | nüshengyifu | nüchenshan | nüzhuang | yifu
+1F45B	qianbao	xuepin | qianbao | tongban
+1F45C	shoutibao	baobao | shoutibao | kuabao | xuepin
+1F45D	shoudai	bao | huazhuangbao | shouna | shounabao | shoudai
+1F45E	nanxie	zongse | nanxie | pixie | xie
+1F45F	paoxie	pao | paoxie | yundongxie | xie
+1F460	gaogenxie	nü | shizhuang | xie | gaogen | gaogenxie
+1F461	nüshiliangxie	liangxie | nü | nüshiliangxie
+1F462	nüxue	nü | nüshixuezi | nüxue | xuezi
+1F6B2	zixingche	danche | jiaotache | zixingche | zixingcheqishi | feichi | qiche | qichejichi
+1F6B4	qizixingche	danche | jiaotache | zixingche | zixingchesai | zixingcheqishi | yundong | qidanche | qijiaotachezhe | qizixingche | qizixingchederen | qizixingchezhe
+1F6B5	qishandeche	tiyujingji | danche | shan | shandezixingche | shandeche | shandeqixingderen | zixingche | yundong | qishandeche | qishandechederen | qizixingche | qizixingchezhe
+1F6B6	xingren	yamalu | tubu | sanbu | angshoukuobu | jingzou | xingren | xingzouderen | zoulu | yuanzu | xianguang
+1F938	ceshoufan	ren | ticao | tiyu | ceshoufan | xingfen | kuaile | zaji | huopo | fanjindou
+1F939	paojiezashua	yixinduoyong | ren | pingheng | pinghengyishu | paojie | paojiezashua | paojieqiu | caozong | zaji | zashua | biaoyan
+1F93A	jijianxuanshou	ren | tiyu | jijian | jijianxuanshou | jian
+1F93C	shuaijiaoxuanshou	ren | tiyu | duijue | dajia | bodou | shuaijiao | shuaijiaobisai | shuaijiaoxuanshou | leitaizhengba | yundong
+1F93D	shuiqiu	ren | tiyu | shuishangzuqiu | shuishangyundong | shuiqiu | youyong | makeboluoyouxi
+1F93E	shouqiu	ren | tiyu | shouqiu | tou | touqiu | pao | jieqiu | fanguitouqiu | qiu | yundong | gaoqiu
+1F93F	qianshuimianzhao	fuqian | shenqian | qianshui | qianshuimianzhao
+1F9E2	yashemao	maozi | bangqiumao | yashemao
+1F9E3	weijin	leng | baojin | weijin | weibo | toujin
+1F9E4	shoutao	shou | shoutao
+1F9E5	waitao	leng | waitao | jiake | chaoleng
+1F9E6	wazi	duanwa | wa | wazi | zhangwa
+1FA70	baleiwuxie	wudao | wuxie | baleiwuxie | zujianxie | tiaowu
+1FA71	liantiyongyi	yipianshi | yongyi | yongzhuang | youyong | liantiyongyi | lianshenyongyi
+1FA72	sanjiaoku	yipianshi | sanjiaoku | neiku | yongyi | yongzhuang | duanku
+1FA73	duanku	neiku | sijiaoku | yongyi | yongzhuang | yongku | duanku | kuzi
+1FA74	jiazhiliangxie	renzituo | liangxie | jiazhiliangxie | shatan | shatanliangxie | caolü | xie
+1FA80	youyouqiu	shangxiaqiluo | youyouqiu | liuliuqiu | youyubujue | wanju
+1FA81	fengzheng	aoxiang | fengzheng | feixiang
+1FA82	jiangluosan	fansan | xuanguahuaxiang | huaxiang | huaxiangsan | tiaosan | jiangluosan
+1FA83	huixuanbiao	fandan | huidan | huixuanbiao | tuzhu | wuqi | feibiao
+1FA84	mobang	nüwu | wushi | moshu | moshushi | mozhang | mobang | mofa
+1FA85	caiguan	wuyuejie | qingzhu | caiguan | pinata | tangguo | juhui | jieri | moxige
+1FA86	taowa	eluositaowa | eluosiwawa | taowa | wawa
+1FA95	banzhuoqin	xianleqi | danzou | banzhuoqin | yinle
+1FA97	shoufengqin	leqi | liujiaoxingfengqin | shoufengqin | yinle | fengqin
+1FA98	zhanggu	leqi | kangjiagu | kangjiagu | qiao | jiezou | zhanggu | feizhoushougu | gu
+265F	bing	bing | shoupianzhe | guojixiangqi | xishengpin
+2660	heitao	puke | pai | kuishan | heitao | heitaohuase
+2663	meihua	puke | meihua | meihuahuase | pai | caohua
+2665	hongtao	puke | pai | hongxin | hongtao | hongtaohuase
+2666	fangpian	puke | fangkuai | fangpian | pai | paiju
+1F4B3	xinyongka	xinyong | xinyongka | jiejika | shuaka | ka | shouqian | xianjin | xianjinka | daijika | yinxing | yinxingka
+1F4B4	riyuan	riyuan | ribi | xianjin | zhibi | huobi | chaopiao | qian | yinxing
+1F4B5	meiyuan	xianjin | zhibi | meiyuan | meidao | meichao | huobi | qian | yinxing
+1F4B6	ouyuan	ouyuan | xianjin | zhibi | huobi | chaopiao | qian | yinxing
+1F4B7	yingbang	xianjin | zhibi | yingbang | huobi | chaopiao | qian | yinxing
+1F4B9	qushixiangshangqiedaiyouriyuanfuhaodetubiao	shangyang | shangzhang | riyuan | riyuanshengzhi | riyuanhuilü | ribi | huobi | huobishengzhitubiao | zoushi | qushixiangshangqiedaiyouriyuanfuhaodetubiao
+1F4BB	bijibendiannao	PC | gerendiannao | shoutidiannao | diannao | bijibendiannao
+1F4BC	gongwenbao	shangban | gongshibao | gongwenbao | bangongshi | bao | shoutibao | wenjian
+1F4BD	diannaoguangpan	MD | minidisk | miniguangpan | guangpan | diannao | diannaoguangpan | miniguangpan | miniguangdie | minichangpian
+1F4BE	ruanpan	3.5yingcun | bianxie | cunchu | diannao | cipan | ruanpan
+1F4BF	guangpan	cd | zhuanji | guangpan | cunchu | yingpian | languang | yinle
+1F4C0	DVD	dvd | DVD | guangpan | guangdie | yingpian | diannao | languang | yinle
+1F4C1	wenjianjia	bangong | wenjian | wenjianjia | wenju | yingzhijia
+1F4C2	dakaidewenjianjia	bangong | dakai | dakaiwenjianjia | dakaidewenjianjia | wenjian | wenjianjia | wenju
+1F4C3	daijuanbiandeyemian	juanqu | juanbian | daijuanbiandeyemian | wenshu | wenjian | wendang | zhizhang | yemian
+1F4C4	wenjian	wenshu | wenjian | wendang | yemianxiangshang
+1F4C5	rili	rili | riqi
+1F4C6	shousirili	shousirili | rili | riqi
+1F4C7	kapiansuoyin	kapian | kapiansuoyin | kapaisuoyin | mingpiansuoyin | mulu | suoyin
+1F4C8	qushixiangshangdetubiao	shangsheng | shangzhang | shangzhangtubiao | shangzhangqushixian | xiangshang | tubiao | chengzhang | qushixiangshangdetubiao | qushixian
+1F4C9	qushixiangxiadetubiao	xiadie | xiadietubiao | xiadiequshixian | xiajiang | xiangxia | tubiao | qushixiangxiadetubiao | qushixian
+1F4CA	tiaoxingtu	tuxing | tubiao | tiaoxingtu | zhuxingtu | zhifangtu | ziliao | zhangtiaotu
+1F4CB	jiantieban	xiezijiaban | xieziban | jiantieban | jiantiebu | jiazi | daibanshixiang | daibanbiao | zhizhang
+1F4CC	tuding	guding | tuding | pintie | anding
+1F4CD	yuantuding	weizhi | guding | tuding | yuantuding
+1F4CE	huixingzhen	wanzijia | huixingzhen | huiwenzhen | qubiezhen | zhijia
+1F4CF	zhichi	chi | chizi | shuxue | wenju | celiang | zhichi | liang | zhangdu
+1F4D0	sanjiaochi	sanjiao | sanjiaochi | chi | shuxue | wenju | celiang | jiao | jiaodu
+1F4D1	biaoqianye	shuqian | shuqianyebiaoqian | youshuqiandeyemian | biaoqian | biaoqianye
+1F4D2	zhangben	bijiben | jishiben | jizhang | zhangben | zhangbu
+1F4D3	bijiben	rijiben | benzi | biji | bijiben | jishiben | jilu
+1F4D4	jingzhuangbijiben	shu | xiezuo | xuexiao | fengmian | jiaoyu | bijiben | jingzhuangbijiben
+1F4D5	heshangdeshuben	shu | shuben | shubenheqi | heshang | heshangdeshuben
+1F4D6	dakaideshuben	shu | shuben | tushuguan | xiaoshuo | kaijuan | dakai | dakaideshuben | zhishi | dushu | yuedu
+1F4D7	lüseshuben	shu | shuben | tushuguan | jiaoyu | lü | lüpishu | lüse | lüseshuben | yuedu
+1F4D8	lanseshuben	shu | shuben | tushuguan | jiaoyu | lan | lanpishu | lanse | lanseshuben | yuedu
+1F4D9	chengseshuben	shu | shuben | tushuguan | jiaoyu | jupishu | juse | chengse | chengseshuben | yuedu
+1F4DA	shu	shu | shuben | shuji | tushu | tushuguan | xuexi | xuexiao | xiaoshuo | jiaoyu | zhishi | yuedu
+1F4DB	xingmingpai	mingpai | xingmingpai | huizhang | xiongpai | zhengzhang
+1F4DC	juanzhou	juanzhi | juanzhou | huajuan | zhi | zhijuan | yangpizhi
+1F4DD	beiwanglu	biantiao | biantiaobu | bianjian | beiwanglu | qianbi
+1F4DE	dianhuatingtong	tingtong | gudingdianhua | guhua | zuoji | dianhua | dianhuatingtong | tongxin
+1F4DF	xunhuji	BB ji | chuanhuji | huji | xunhuji | tongxin
+1F4E0	chuanzhenji	chuanzhen | chuanzhenhao | chuanzhenji | fachuanzhen
+1F4E1	weixingtianxian	xinhaojieshou | weixing | weixingtianxian | weixingjieshoutianxian | weixingdiexingtianxian | waixingren | tianxian | jiechu
+1F4E2	laba	gonggongguangbo | laba | dasheng | guangbo | kuoyinqi | tongzhi
+1F4E3	kuoyinqi	huhan | laba | labatong | dasheng | kuoyinqi | tongzhi
+1F4E4	fajianxiang	xinjian | fajianxiang | faxin | fasong | fayoujian | shoujianxiang | dianziyoujian | dianyou | youjian
+1F4E5	shoujianxiang	xinjian | jieshou | shoujianxiang | shouxin | shoudaoyoujian | dianziyoujian | dianyou | youjian
+1F4E6	baoguo	baoguo | kuaidi | zhixiang | hezi | xiangzi | zhuanghuo | yunsong
+1F4E7	dianziyoujian	xinjian | xinfeng | dianziyoujian | dianyou | youjian
+1F4E8	laixin	xinjian | xinfeng | fasong | jieshou | shouxin | shoudaolaixin | shoudaoyoujian | laixin | dianziyoujian | dianyou | youjian
+1F4E9	shouyoujian	xinjian | xinfeng | faxin | fachu | fasong | fayoujian | shouyoujian | youjiantoudexinfeng | youjian
+1F4EA	wudaishouxinjian	xinxiang | xinxiangguanbihongqifangxia | fangxia | qibiao | wudaishouxinjian | wuxinxinjian
+1F4EB	youdaishouxinjian	xinxiang | qibiao | youdaishouxinjian | youxinxinjian | youxiang | youxiangguanbihongqishengqi
+1F4EC	youxinxinjian	xinxiang | xinxiangdakaihongqishengqi | dakai | qibiao | youdaishouxinjian | youxinxinjian
+1F4ED	wuxinxinjian	xinxiang | xinxiangdakai | xinxiangdakaihongqifangxia | qibiao | wudaishouxinjian | wuxinxinjian | youjian | youdi
+1F4EE	youtong	xin | xinxiang | jixin | youtong | youxiang
+1F4EF	youhao	hao | haojiao | laba | youhao | youzheng
+1F4F0	baozhi	chuanbo | baozhi | baodao | xinwen | kanbao | zhi | dubao
+1F4F1	shouji	shoutidianhua | shouji | zhinengshouji | dianhua | yidong | yidongdianhua | yidongtongxin | tongxin
+1F4F2	daiyoujiantoudeshouji	daiyoujiantoudeshouji | shouji | jieshou | zhinengshouji | laidian | dianhua | yidongdianhua | jiantou | tongxin
+1F4F3	zhendongmoshi	shouji | zhendong | zhendongmoshi | zhendong
+1F4F4	shoujiguanji	guanji | guanbi | guanbishouji | shouji | shoujiguanji
+1F4F5	jinzhishiyongshouji	yanjin | shouji | dianhua | jinzhi | jinzhishiyongshouji
+1F4F6	xinhaoqiangdutiao	xinhao | xinhaoqiangdutiao | tianxian | qiangdu | shouji | tiao
+1F4F7	xiangji	kapianxiangji | paizhao | sheying | zhaopian | zhaoxiangji | xiangji | zipai
+1F4F8	kaishanguangdengdexiangji	daishanguangdengdexiangji | kaishanguangdengdexiangji | paizhao | xiangji | shanguangdeng | shanguangdengdakai
+1F4F9	shexiangji	luxiang | luxiangji | luying | paishe | shexiangji | sheyingji | shipin
+1F4FA	dianshiji	dianshi | dianshiji | kandianshi | shipin | jiemu
+1F4FB	shouyinji	yule | guangbo | guangbodiantai | shouyinji | wuxiandian | diantai
+1F4FC	luxiangdai	VHS | luxiangdai | luyingdai | cidai
+1F4FD	dianyingfangyingji	yingpian | touyingyi | fangyingji | dianying | dianyingfangyingji | shipin
+1F4FF	nianzhu	zongjiao | nianzhu | zhuzi | qidao | xianglian
+1F505	diliangduanniu	liangdu | di | diliangdu | diliangduanniu | hunan | an
+1F506	gaoliangduanniu	liang | liangdu | taiyang | mingliang | gaoliangdu | gaoliangduanniu
+1F507	yijingyindeyangshengqi	shengyin | anjing | yijingyindeyangshengqi | yangshengqi | yangshengqiguanbi | wusheng | jingyin
+1F508	diyinliangdeyangshengqi	diyinliangyangyangsheng | diyinliangdeyangshengqi | laba | xiaosheng | xiaoyinliang | yangshengqi | qingsheng | yinliang
+1F509	zhongdengyinliangdeyangshengqi	zhongdeng | zhongdengyinliang | zhongdengyinliangdeyangshengqi | zhongyinliang | zhongyinliangyangshengqi | yangshengqi
+1F50A	gaoyinliangdeyangshengqi	dasheng | dayinliang | yangshengqi | yinliang | gaoyinliang | gaoyinliangdeyangshengqi
+1F50B	dianchi	zhengji | dian | dianji | dianchi | dianyuan | xudianchi | fuji
+1F50C	dianyuanchatou	chatou | dianchatou | dianyuan | dianyuanchatou | dianxian
+1F50D	zuoxiedefangdajing	gongju | zuoxiedefangdajing | sousuo | fangda | fangdajing | chazhao
+1F50E	youxiedefangdajing	youxiedefangdajing | gongju | sousuo | fangda | fangdajing | chazhao
+1F50F	moshuibihesuo	bi | bijian | gangbi | suo | yinsi | moshuibihesuo
+1F510	yaoshihesuo	anquan | jiaotachesuo | yaoshi | yaoshihesuo | suo | suoshang
+1F511	yaoshi	mima | miyao | kaisuo | jiesuo | yaoshi | suo
+1F512	heshangdesuo	shangsuo | heshangdesuo | simi | suo | suozhu | suotou | suoding
+1F513	dakaidesuo	quxiaosuoding | kaisuo | dakai | dakaidesuo | pojie | jiesuo | suo
+1F514	lingdang	dingdang | xiangling | zhong | zhongsheng | lingsheng | lingdang
+1F515	jinzhixiangling	xianglingguanbi | anjing | wusheng | jinzhixiangling | ling | jingyin
+1F516	shuqian	shuqian | biaoqian | dushu | yuedu
+1F517	lianjie	wangzhi | lianjie | liantiao | suolian
+1F518	danxuananniu	dandu | danxuananniu | danxuanniu | yuanxin | anniu | anjian | xuanzhong
+1F51E	18jin	18jin | ertongbuyi | weichengnianrenbuyi | jinzhi
+1F51F	anjian: 10	anjian
+1F526	shoudiantong	guang | gongju | shoudian | shoudiantong | zhaoming | diantong
+1F527	banshou	jiajuxiushan | gongju | banshou | luosibanshou
+1F528	chuizi	xiuli | jiajuxiushan | gongju | qiao | shigong | za | tiechui | chuizi
+1F529	luomuyuluoshuan	gongju | luosi | luomao | luoshuan | luomu | luomuyuluoshuan | luoding
+1F52A	caidao	zhuchu | dao | wuqi | pengren | caidao
+1F52B	shuiqiang	gongju | zuolun | shouqiang | qiang | wuqi | shuiqiang
+1F52C	xianweijing	shiyan | shiyanshi | gongju | xianweijing | shengwu | kexue | xibao
+1F52D	wangyuanjing	waixingren | tianti | tianwen | tianwenxue | gongju | jiechu | wangyuanjing | kexue | guanxing
+1F9BA	jiushengyi	anquan | jiushengyi | jinji | beixin | taosheng
+1F9BB	daizhutingqideerduo	zhutingqi | tinglizhangai | tingzhang | shicong | daizhutingqideerduo | wuzhangai | erlong | long
+1F9BC	diandonglunyi	wuzhangai | diandonglunyi | lunyi
+1F9BD	shoudonglunyi	shoudonglunyi | wuzhangai | lunyi
+1F9E9	pintu	tupian | pintu | zhiliyouxi | xiangkou | xiansuo | liansuo | bujian
+1F9EA	shiguan	huaxue | huaxuejia | shiyan | shiyanshi | kexue | shiguan
+1F9EB	peiyangmin	peiyang | peiyangmin | shiyanshi | shengwuxue | shengwuxuejia | xijun
+1F9EC	DNA	DNA | jiyin | yanhua | shengming | shengwuxuejia | jinhua | yichuanxue
+1F9ED	zhinanzhen	dingxiang | daohang | zhinanzhen | fangxiang | cixing | luopan
+1F9EE	suanpan	suanpan | jisuan | jisuanqi
+1F9EF	miehuoqi	yazhi | huozai | miehuo | miehuoqi | ximie
+1F9F0	gongjuxiang	daxiangzi | gongju | gongjuxiang | jixiu | xiangzi | honghezi
+1F9F1	zhuan	qiang | shajiang | zhuan | niantu
+1F9F2	citie	U xing | xiyin | xiyinli | zhengfu | cixing | citie | matitie
+1F9F3	xinglixiang	baozhuang | shoutixiang | lüxing | gunluntixiang | xingli | xinglixiang
+1F9F4	ruyeping	ruye | ruyeping | baoshiruye | hufushuang | xijiping | xifashui | xifalu | fangsaishuang | fangshaishuang
+1F9F5	xian	juanpan | xian | xianzhou | shengzi | fengren | zhen | zhenxian
+1F9F6	maoxian	maoxian | maoxianqiu | xianqiu | bianzhi | gouzhenbianzhi
+1F9F7	anquanbiezhen	biezhen | anquanbiezhen | kouzhen
+1F9F8	taidixiong	tianchong | maorongwanju | taidixiong | xiong | wanou | wanju | wanwu | zhangmaorong
+1F9F9	saozhou	nüwu | wupo | dasao | saode | saozhou | qingjie
+1F9FA	kuang	nongzuo | xiyi | zhongzhi | kuang | lanzi | zangyilan | yecan
+1F9FB	juanzhi	weishengzhi | juanzhi | shouzhi | zhijuan | zhijin
+1F9FC	zao	shajun | paomo | xishou | xizao | qingjie | zao | feizao | feizaopao | feizaohe | feizaopan
+1F9FD	haimian	xishou | xishui | duokong | haimian | jinpao | qingjie | shentou
+1F9FE	shouju	huiji | xinfeng | pingju | fapiao | shouju | shoutiao | buji | jizhang | zhengju | zhengming | zhangdan
+1F9FF	nazhaerhushenfu	xiaozhuangshipin | emozhiyan | hushenfu | zhuzi | fuzhou | nazhaer | nazhaerhushenfu | lanse | xieyan
+1FA78	xuedi	yiliao | yuejing | liuxue | xianxue | jingxue | xuedi | shuxue
+1FA79	chuangketie	OKbeng | shangkou | chuangketie | shoushang | bengdai | jiaobu
+1FA7A	tingzhenqi	yisheng | yiliao | tingzhenqi | xinzang | xintiao | zhenduan
+1FA91	yizi	zuo | zuoxia | zuowei | yizi | yibei
+1FA92	tixudao	dao | gua | guadao | tidao | tixudao | mao | huzi | fengli
+1FA93	futou	qie | pi | futou | mutou | kan
+1FA94	yinduyoudeng	yinduyoudeng | paidengjie | you | deng | diya
+1FA96	junyongtoukui	junshi | junyong | junyongtoukui | jundui | shibing | toukui | zhanzheng | zhanshi | budui
+1FA99	yingbi	fuyou | ouyuan | yingbi | meiyuan | caifu | jin | jinshu | jinbi | qian | yin
+1FA9A	mugongju	xiujian | gongju | mujiang | mugongju | mucai | ju | juzi
+1FA9B	luosidao	gongju | luosi | luosidao
+1FA9C	tizi	taijie | tizi | tiji | hengdang | pa | pati | jieti
+1FA9D	guagou	maidian | wangou | zhua | guagou | quxian | gouzi | gouzhuangwu | yugou
+1FA9E	jingzi	huazhuang | fanshe | fanshejing | kuijing | jingzi
+1FA9F	chuanghu	kaichuang | xinxiankongqi | jingse | chuangkou | chuanghu | chuangkuang | touming
+260E	dianhua	gudingdianhua | guhua | zuoji | dianhua
+2620	kulou	jiaochagugu | tougu | yaoguai | guaiwu | siwang | haidao | lian | gutou | kulou
+2622	fushe	fangshexing | biaoshi | fushe
+2623	shengwuweihai	dongwu | dangxinganran | wuran | shengwuweihai | jinggao
+267F	lunyibiaoshi	wuzhangai | canji | canzhang | lunyi | lunyibiaoshi | lunyifuhao
+2692	chuiziyugao	gongju | tiechui | tiegao | chuizi | chuiziyugao | gao | gaozi
+2693	mao	tingpo | gongju | chuan | mao
+2694	jiaochafangzhidejian	jiaocha | jiaochafangzhidejian | jian | shizi | shuangjian | zhansi | wuqi
+2695	yiliaobiaozhi	yixue | yiliao | yiliaobiaozhi | shezhang | asikeleibiesi | asikeleibiesishezhang
+2696	tianping	gongping | gongzheng | tianping | tiancheng | tianchengzuo | xingzuo | zhengyi | falü
+2697	zhengliuqi	jinghua | huaxue | shiyan | gongju | zhengliu | zhengliuqi
+2699	chilun	chuandong | gongju | jixie | lingjian | chilun
+269B	yuanzifuhao	yuanzi | yuanzifuhao | wushenlun | wuzhi
+269C	baihehuashi	baihehuashi | yuanweihua
+26A0	jinggao	xiaoxin | jinggao
+26CF	tiegao	gongju | wa | wajue | caikuang | tiegao | chutou | hezuichu
+26D1	baishizitoukui	shizi | toukui | anquanmao | jiuyuanrenyuantoukui | baishizitoukui | lian
+26D3	liantiao	tielian | lian | liantiao | suolian
+26D4	jinzhitongxing	jiaotong | jinzhirunei | jinzhitongxing | jinxing | qingwurunei | qingwushiru
+2702	jiandao	xiujian | jian | jiandao | jianzi | jiancai | gongju
+2709	xinfeng	xinjian | xinfeng | xinxi | laixin | dianziyoujian | dianyou | youjian
+270F	qianbi	xiangpi | xiangpica | huahua | huabi | bi | huihua | qianbi
+2712	gangbijian	xiezi | yingbi | bi | bijian | gangbi | gangbijian | heisebijian
+2714	gouhao	gouhao | duigou | dagou | zhengque | fuhao
+2716	cheng	x | cheng | chenghao | quxiao | xiangcheng | fuhao
+2753	hongsewenhao	weishenme | biaodian | biaodianfuhao | yiwen | hongsewenhao | wenhao
+2757	hongsegantanhao	tanhao | chijing | jingya | gantan | gantanhao | biaodianfuhao | hongsegantanhao
+27A1	xiangyoujiantou	dong | you | xiangyoujiantou | fangxiang | biaoshi | jiantou
+1F500	suijibofangyinguianniu	jiaocha | daluan | suiji | suijibofang | suijibofangyinguianniu
+1F501	zhongfuanniu	xunhuan | xunhuanbofang | jiantou | zhongfuanniu | shunshizhen
+1F502	zhongfuyicianniu	danquxunhuan | xunhuan | jiantou | zhongfuyicianniu | shunshizhen
+1F503	shunshizhenchuizhijiantou	shuaxin | chuizhishunshizhenjiantou | fangxiang | biaoshi | jiantou | zhongxinzairu | shunshizhen | shunshizhenchuizhijiantou | shunshizhenjiantou
+1F504	nishizhenjiantouanniu	daozhuan | zaici | shuaxin | jiantou | nishizhen | nishizhenjiantou | nishizhenjiantouanniu
+1F519	fanhuijiantou	huitui | jiantou | fanhui | fanhuijiantou
+1F51A	jieshujiantou	jiantou | zhongdian | jieshu | jieshujiantou
+1F51B	ON! jiantou	ON | ON! jiantou | kaishi | biaoshi | jiantou
+1F51C	SOON jiantou	SOON jiantou | zailushang | likehuilai | jiantou | mashang
+1F51D	zhiding	xiangshang | biaoshi | zhiding | ding
+1F520	shurudaxieladingzimu	ABCD | daxiezimu | daxiezimujian | zimu | dazi | ladingwen | shurudaxieladingzimu | shurufa
+1F521	shuruxiaoxieladingzimu	abcd | xiaoxiezimu | xiaoxiezimujian | dazi | ladingwen | shuruxiaoxiezimu | shuruxiaoxieladingzimu | shurufa
+1F522	shurushuzi	1234 | dazi | shuzi | shurushuzi
+1F523	shurufuhao	zifu | dazi | fuhao | shurufuhao
+1F524	shuruladingzimu	abc | zimu | dazi | ladingzimu | ladingzimujian | ladingwen | shuruzimu | shuruladingzimu
+21B5	zuoguaidexiangxiajiantou	zuoguaidexiangxiajiantou
+21B0	touchaozuodexiangshangjiantou	touchaozuodexiangshangjiantou
+21B1	touchaoyoudexiangshangjiantou	touchaoyoudexiangshangjiantou
+21B2	touchaozuodexiangxiajiantou	touchaozuodexiangxiajiantou
+21B3	touchaoyoudexiangxiajiantou	touchaoyoudexiangxiajiantou
+21B4	xiaguaidexiangyoujiantou	xiaguaidexiangyoujiantou
+21E4	toudaigangdexiangzuojiantou	toudaigangdexiangzuojiantou
+21E5	toudaigangdexiangyoujiantou	toudaigangdexiangyoujiantou
+21E7	xiangshangkongxinjiantou	xiangshangkongxinjiantou
+21EA	weibudaigangdexiangshangkongxinjiantou	weibudaigangdexiangshangkongxinjiantou
+21E6	xiangzuokongxinjiantou	xiangzuokongxinjiantou
+21E8	xiangyoukongxinjiantou	xiangyoukongxinjiantou
+21E9	xiangxiakongxinjiantou	xiangxiakongxinjiantou
+21DE	daishuangshanchuxiandexiangshangjiantou	daishuangshanchuxiandexiangshangjiantou
+21DF	daishuangshanchuxiandexiangxiajiantou	daishuangshanchuxiandexiangxiajiantou
+21B8	zhixiangzhanggangdexibeijiantou	zhixiangzhanggangdexibeijiantou
+21B6	nishizhenshangbanyuanjiantou	nishizhenshangbanyuanjiantou
+21B7	shunshizhenshangbanyuanjiantou	shunshizhenshangbanyuanjiantou
+21C5	zuoshangyouxialianggejiantou	shang | xia | zuoshangyouxialianggejiantou | jiantou
+21A8	daidibiandeshangxiajiantou	daidibiandeshangxiajiantou
+21E0	xiangzuoxuxianjiantou	xiangzuoxuxianjiantou
+21E1	xiangshangxuxianjiantou	xiangshangxuxianjiantou
+21E2	xiangyouxuxianjiantou	xiangyouxuxianjiantou
+21E3	xiangxiaxuxianjiantou	xiangxiaxuxianjiantou
+21AB	weibudaihuandexiangzuojiantou	weibudaihuandexiangzuojiantou
+21AC	weibudaihuandexiangyoujiantou	weibudaihuandexiangyoujiantou
+2B05	xiangzuojiantou	xiangzuojiantou | zuo | fangxiang | biaoshi | jiantou | xi
+2B06	xiangshangjiantou	shang | bei | xiangshangjiantou | fangwei | fangxiang | biaoshi | jiantou
+2B07	xiangxiajiantou	nan | xiangxia | xiangxiajiantou | jiben | fangwei | zhengnan | jiantou

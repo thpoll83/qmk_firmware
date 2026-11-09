@@ -58,6 +58,8 @@ keyword. The low 12 bits are the cps[] index.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import re
 import struct
 import sys
@@ -94,6 +96,7 @@ POST_NAME_BIT = 0x8000
 POST_INDEX_MASK = 0x0FFF      # 4096 picker codepoints at most
 
 SLOT_SIZE = 0x20000           # 128 KB emojidict slot
+EMOJIDICT_BUNDLE_ID = 9       # FONTPACK_EMOJIDICT_BUNDLE_ID (fontpack_layout.h)
 # A localized dictionary indexes every English name word, and the English
 # keywords that name at least this many emoji ("smile", "happy", "love"); the
 # rarer keywords would not fit the slot for every language.
@@ -433,7 +436,42 @@ def unpack_word(data: bytes, start: int, end: int) -> bytes:
     return bytes(out)
 
 
-def build(did: str, revision: int) -> bytes:
+def dictionaries() -> list[dict]:
+    """dict_src/dictionaries.tsv: the fixed, append-only list of dictionaries."""
+    out = []
+    for line in (SRC_DIR / "dictionaries.tsv").read_text(encoding="utf-8").splitlines():
+        if not line or line.startswith("#"):
+            continue
+        num, did, rev, name, native = line.split("\t")
+        out.append({"number": int(num), "id": did, "revision": int(rev), "name": name, "native": native})
+    for i, d in enumerate(out):
+        if d["number"] != i:
+            raise SystemExit(f"dictionaries.tsv: line {i} has number {d['number']} (append only, no gaps)")
+    return out
+
+
+def content_version(did: str) -> int:
+    """(number << 8) | revision from dictionaries.tsv. GET_ID reports a bundle's
+    content_version as 16 bits, so the host reads which dictionary a keyboard
+    holds, and how new it is, without a command of its own."""
+    for d in dictionaries():
+        if d["id"] == did:
+            if d["number"] > 0xFF or not 0 < d["revision"] <= 0xFF:
+                raise SystemExit(f"{did}: number or revision past 8 bits")
+            return (d["number"] << 8) | d["revision"]
+    raise SystemExit(f"{did} is not in dict_src/dictionaries.tsv")
+
+
+def _unremap(word: str, latin: dict[str, str]) -> str:
+    back = {v: k for k, v in latin.items()}
+    return "".join(back.get(ch, ch) for ch in word)
+
+
+def build(did: str, revision: int | None = None) -> bytes:
+    """The bundle for dictionary `did`. `revision` overrides the content_version
+    from dictionaries.tsv (tests only)."""
+    if revision is None:
+        revision = content_version(did)
     lang, country, method = parse_id(did)
     src = SRC_DIR / f"{did}.tsv"
     picker = picker_codepoints()
@@ -455,12 +493,26 @@ def build(did: str, revision: int) -> bytes:
 
     remap = key_remap(lang, country) if method else {}
     own = {cp for cp in _read_tsv(src)}
+    # English words are typed by key position on a layout without Latin letters:
+    # Russian, Greek, Arabic and Korean keyboards print the Latin letters too (or
+    # switch with Han/Eng), so "smile" is the keys under ы ь ш д у. On a Latin
+    # layout (German) the English words stay as written.
+    latin = key_remap(lang, country)
+    typeable_now = typeable_letters(lang, country)
 
     def own_tokens(text: str) -> list[str]:
         return ["".join(remap.get(ch, ch) for ch in t) for t in tokens(text, lang)]
 
+    def en_tokens(text: str) -> list[str]:
+        out = []
+        for t in tokens(text, "en"):
+            k = "".join(ch if ch in typeable_now else latin.get(ch, "\0") for ch in t)
+            if "\0" not in k:
+                out.append(k)
+        return out
+
     for idx, (cp, name, kws) in enumerate(entries):
-        tok = own_tokens if cp in own else (lambda text: tokens(text, lang))
+        tok = own_tokens if cp in own else (en_tokens if lang != "en" else (lambda text: tokens(text, lang)))
         name_toks = set(tok(name))
         for t in name_toks | {t for k in kws for t in tok(k)}:
             add(t, idx, POST_NAME_BIT if t in name_toks else 0)
@@ -474,9 +526,9 @@ def build(did: str, revision: int) -> bytes:
                 kw_count[tok] = kw_count.get(tok, 0) + 1
         for idx, (cp, _name, _kws) in enumerate(entries):
             en_name, en_kws = en.get(cp, ("", []))
-            common = {t for k in en_kws for t in tokens(k, "en")
-                      if kw_count[t] >= EN_KEYWORD_MIN_EMOJI}
-            for tok in set(tokens(en_name, "en")) | common:
+            common = {t for k in en_kws for t in en_tokens(k)
+                      if kw_count.get(t, kw_count.get(_unremap(t, latin), 0)) >= EN_KEYWORD_MIN_EMOJI}
+            for tok in set(en_tokens(en_name)) | common:
                 add(tok, idx, 0)
 
     # Only words this language's keyboard can type in search mode: a Russian layout
@@ -541,6 +593,28 @@ def build(did: str, revision: int) -> bytes:
     header = struct.pack(PLYF_HEADER_FMT, PLYF_MAGIC, PLYF_ABI, FLAG_DATA, revision, 0,
                          PLYF_HEADER_SIZE, total, zlib.crc32(bytes(body)) & 0xFFFFFFFF, 0)
     return header + bytes(body)
+
+
+def cmd_build_all(args: argparse.Namespace) -> int:
+    """Every dictionary in dictionaries.tsv, plus manifest.json for the host."""
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    entries = []
+    for d in dictionaries():
+        blob = build(d["id"])
+        name = f"{d['id']}.plyd"
+        (out / name).write_bytes(blob)
+        lang, country, method = parse_id(d["id"])
+        entries.append({**d, "lang": lang, "country": country, "method": method,
+                        "content_version": content_version(d["id"]), "file": name, "size": len(blob),
+                        "sha256": hashlib.sha256(blob).hexdigest()[:16]})
+        print(f"{name:20} {len(blob):7} B  {len(blob) * 100 // SLOT_SIZE:3}%")
+    manifest = {"format": DICT_FORMAT, "bundle_id": EMOJIDICT_BUNDLE_ID, "slot_size": SLOT_SIZE,
+                "default": "en", "dictionaries": entries}
+    (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n",
+                                       encoding="utf-8")
+    print(f"{out / 'manifest.json'}: {len(entries)} dictionaries")
+    return 0
 
 
 def cmd_build(args: argparse.Namespace) -> int:
@@ -746,9 +820,13 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(fn=cmd_extract)
     p = sub.add_parser("build", help="dict_src/<lang>.tsv -> .plyd")
     p.add_argument("lang")
-    p.add_argument("--revision", type=int, default=1)
+    p.add_argument("--revision", type=int, default=None,
+                   help="content_version override; default: from dict_src/dictionaries.tsv")
     p.add_argument("-o", "--out")
     p.set_defaults(fn=cmd_build)
+    p = sub.add_parser("build-all", help="every dictionary in dictionaries.tsv + manifest.json")
+    p.add_argument("out", help="output directory (the host's polyhost/res/emojidict)")
+    p.set_defaults(fn=cmd_build_all)
     p = sub.add_parser("dump", help="size breakdown of a .plyd")
     p.add_argument("file")
     p.set_defaults(fn=cmd_dump)

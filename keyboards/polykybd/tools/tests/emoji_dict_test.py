@@ -188,6 +188,23 @@ class BundleTest(unittest.TestCase):
         self.assertEqual(ed.key_remap("zh", "HK")["a"], "\u2F47")
         self.assertEqual(ed.key_remap("zh", "CN"), {})
 
+    def test_english_by_key_position_on_non_latin_layouts(self):
+        latin = ed.key_remap("ru", "")
+        self.assertEqual("".join(latin[c] for c in "smile"), "ыьшду")
+        # German types every Latin letter, so its English words keep their letters
+        # (the y/z swap of QWERTZ is not applied to them).
+        self.assertTrue(set("abcdefghijklmnopqrstuvwxyz") <= ed.typeable_letters("de", ""))
+        self.assertIn(ed.fold("smile").encode() and self.dicts["de"].encode("smile"), self.dicts["de"].words)
+
+    def test_dictionary_list_and_content_version(self):
+        ds = ed.dictionaries()
+        self.assertEqual(ds[0]["id"], "en")
+        self.assertEqual([d["number"] for d in ds], list(range(len(ds))))
+        self.assertEqual(len({d["id"] for d in ds}), len(ds))
+        self.assertEqual(ed.content_version("de"), (1 << 8) | ds[1]["revision"])
+        for d in ds:                                            # every listed source exists
+            self.assertTrue((ed.SRC_DIR / f"{d['id']}.tsv").exists(), d["id"])
+
     def test_corrupt_bundle_is_refused(self):
         blob = bytearray(self.blobs["en"])
         blob[100] ^= 1

@@ -1,0 +1,1259 @@
+# emoji search keywords, lt, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	išsišiepęs veidas	išsišiepęs veidas | išsišiepti | linksmas | veidas
+1F601	išsišiepęs veidas su besišypsančiomis akimis	akys | išsišiepęs veidas su besišypsančiomis akimis | išsišiepti | šypsena | veidas
+1F602	veidas su džiaugsmo ašaromis	ašara | džiaugsmas | džiaugsmo ašara | juokas | šypsenėlės | veidas | veidas su džiaugsmo ašaromis
+1F603	besišypsantis išsižiojęs veidas	besišypsantis išsižiojęs veidas | burna | labai laimingas | praverta | šypsena | valio | veidas
+1F604	besišypsantis išsižiojęs veidas besišypsančiomis akimis	akys | besišypsantis išsižiojęs veidas besišypsančiomis akimis | burna | laimingas | praverta | šypsena | veidas
+1F605	besišypsantis išsižiojęs veidas, išpiltas šalto prakaito	besišypsantis išsižiojęs veidas | besišypsantis išsižiojęs veidas, išpiltas šalto prakaito | išpiltas šalto prakaito | prakaitas | praverta | šaltas | šypsena | veidas
+1F606	besišypsantis išsižiojęs veidas su smarkiai užmerktomis akimis	besišypsantis išsižiojęs veidas su smarkiai užmerktomis akimis | burna | cha cha | juokas | pasitenkinęs | patenkintas | praverta | šypsena | šypsenėlės | veidas
+1F607	besišypsantis veidas su aureole	angelas | aureolė | besišypsantis veidas su aureole | fantazija | nekaltas | veidas
+1F608	besišypsantis veidas su ragais	besišypsantis veidas su ragais | fantazija | pasaka | ragai | šypsena | veidas
+1F609	mirksintis veidas	flirtas | mirksintis veidas | mirktelėjimas | veidas
+1F60A	besišypsantis veidas su besišypsančiomis akimis	akys | besišypsantis veidas su besišypsančiomis akimis | nurausti | patenkintas | šypsena | veidas
+1F60B	skaniu maistu besimėgaujantis veidas	besimėgaujantis | niam | skaniu maistu besimėgaujantis veidas | skanu | šypsena | veidas
+1F60C	veidas su palengvėjimu	nurimęs | palengvėjimas | ramus | veidas | veidas su palengvėjimu
+1F60D	besišypsantis veidas su širdelės formos akimis	akys | besišypsantis veidas su širdelės formos akimis | meilė | širdelės | šypsena | veidas
+1F60E	besišypsantis veidas su akiniais nuo saulės	akiniai nuo saulės | besišypsantis veidas su akiniais nuo saulės | kietas | saulė | šaunus | šviesus | veidas
+1F60F	iš pasitenkinimo besišypsantis veidas	iš pasitenkinimo besišypsantis veidas | pasitenkinimas | veidas
+1F610	neutralus veidas	blogai | neišraiškingas | neutralus | pavydus | veidas
+1F611	veidas be jokios išraiškos	be išraiškos | neišraiškingas | pavydus | veidas | veidas be jokios išraiškos
+1F612	nelinksmas veidas	abejingas | nelaimingas | nelinksmas | nuobodžiauti | veidas
+1F613	veidas, išpiltas šalto prakaito	išpiltas šalto prakaito | išsigandęs | nervingas | prakaitas | šaltas | veidas | veidas, išpiltas šalto prakaito
+1F614	susimąstęs veidas	prislėgtas | susimąstęs | veidas
+1F615	sutrikęs veidas	apgailestaujantis | hm | liūdnas | neužtikrintas | painus | pasimetęs | suraukęs kaktą | sutrikęs | veidas
+1F616	suglumintas veidas	piktas | suglumęs | suglumintas veidas | veidas
+1F617	bučiuojantis veidas	bučinys | bučiuojantis veidas | šypsenėlės | veidas
+1F618	bučinį siunčiantis veidas	bučinį siunčiantis veidas | bučinys | širdelė | veidas
+1F619	bučiuojantis su besišypsančiomis akimis	akys | bučinys | bučiuojantis su besišypsančiomis akimis | šypsena | šypsenėlės | veidas
+1F61A	bučiuojantis su užmerktomis akimis	akys | bučinys | bučiuojantis su užmerktomis akimis | pasimatymas | užmerktos | veidas
+1F61B	veidas su iškištu liežuviu	liežuvis | malonus | veidas | veidas su iškištu liežuviu
+1F61C	veidas su iškištu liežuviu ir viena primerkta akimi	akis | juokingas | liežuvis | mirksnis | pokštas | veidas | veidas su iškištu liežuviu ir viena primerkta akimi
+1F61D	veidas su iškištu liežuviu ir stipriai užmerktomis akimis	akys | bjaurus | liežuvis | OMG | skonis | šlykštus | veidas | veidas su iškištu liežuviu ir stipriai užmerktomis akimis
+1F61E	nusivylęs veidas	kaltas | nusivylęs | veidas
+1F61F	susirūpinęs veidas	nervingas | susirūpinęs | veidas
+1F620	piktas veidas	piktas | pyktis | veidas
+1F621	susiraukęs veidas	įniršis | įsiutęs | piktas | raudonas | susiraukęs | veidas
+1F622	verkiantis veidas	ašara | liūdnas | veidas | verkiantis veidas | verkti
+1F623	atkaklus veidas	atkaklus | susikaupęs | veidas
+1F624	veidas su iš nosies einančiais garais	laimėjo | nelaimingas | niršti | pyktis | triumfas | veidas | veidas su iš nosies einančiais garais
+1F625	nusivylęs veidas su palengvėjimu	nusivylęs | nusivylęs veidas su palengvėjimu | palengvėjimas | veidas
+1F626	paniuręs išsižiojęs veidas	burna | išsižiojęs | nustebęs | oho | paniuręs | veidas
+1F627	kenčiantis veidas	kenčiantis | nelaimingas | nustebęs | veidas
+1F628	baimės pilnas veidas	baimė | baimės pilnas veidas | išsigandęs | susirūpinęs | veidas
+1F629	nuvargęs veidas	nuvargęs | pavargęs | veidas
+1F62A	mieguistas veidas	liūdnas | miegas | mieguistas veidas | pavargęs | veidas
+1F62B	pavargęs veidas	miegoti | pavargęs | veidas
+1F62C	besivaipantis veidas	besivaipantis veidas | grimasa | šypsenėlės | veidas
+1F62D	garsiai raudantis veidas	ašara | garsiai raudantis veidas | liūdnas | raudoti | veidas | verkti
+1F62E	išsižiojęs veidas	atverta | burna | išsižiojęs | netikiu | pamiršau | veidas
+1F62F	nuščiuvęs veidas	nuščiuvęs | nustebęs | priblokštas | veidas
+1F630	išsižiojęs veidas, išpiltas šalto prakaito	burna | išpiltas šalto prakaito | išsigandęs | išsižiojęs | išsižiojęs veidas, išpiltas šalto prakaito | mėlyna | prakaitas | šaltis | šypsenėlės | veidas
+1F631	iš baimės šaukiantis veidas	baimė | iš baimės šaukiantis veidas | išsigandęs | šauksmas | veidas
+1F632	apstulbęs veidas	apstulbęs | priblokštas | veidas | visiškai
+1F633	nuraudęs veidas	karšta | nuraudęs | nustebęs | raudonis | veidas
+1F634	miegantis veidas	miegantis veidas | miegas | šypsenėlė | veidas | zzz
+1F635	apsvaigęs veidas	apsvaigęs | sergantis | veidas
+1F636	veidas be burnos	burna | negaliu patikėti | tylus | veidas | veidas be burnos
+1F637	veidas su medicinine kauke	gydytojas | kaukė | medicina | šaltis | sergantis | veidas | veidas su medicinine kauke
+1F638	išsišiepusios katės snukutis su besišypsančiomis akimis	akys | išsišiepusios katės snukutis su besišypsančiomis akimis | katė | šypsena | vaipytis | veidas
+1F639	katės snukutis su džiaugsmo ašaromis	ašara | džiaugsmas | džiaugsmo ašaros | gyvūnas | katė | katės snukutis su džiaugsmo ašaromis | veidas
+1F63A	besišypsančios katės snukutis	besišypsančios katės snukutis | burna | gyvūnas | išsižiojęs | katė | šypsena | veidas
+1F63B	besišypsančios katės snukutis su širdelės formos akimis	akis | besišypsančios katės snukutis su širdelės formos akimis | gyvūnas | katė | meilė | šypsena | veidas
+1F63C	nuvargusios besišypsančios katės snukutis	ironija | ironiškai besišypsančios katės snukutis | katė | nuvargęs | nuvargusios besišypsančios katės snukutis | šypsena | veidas
+1F63D	bučiuojančios katės snukutis	akys | bučinys | bučiuojančios katės snukutis | katė | veidas
+1F63E	susiraukusios katės snukutis	katė | susiraukęs | susiraukusios katės snukutis | veidas
+1F63F	verkiančios katės snukutis	ašara | gyvūnas | katė | liūdesys | veidas | verkiančios katės snukutis | verkti
+1F640	nustebusios katės snukutis	gyvūnas | katė | nustebęs | nustebusios katės snukutis | oi | veidas
+1F641	šiek tiek paniuręs veidas	paniuręs | šiek tiek paniuręs veidas | veidas
+1F642	šiek tiek besišypsantis veidas	šiek tiek besišypsantis veidas | šypsena | šypsenėlės | veidas
+1F643	apverstas veidas	apverstas veidas | aukštyn kojom | šypsena | veidas
+1F644	veidas, vartantis akis	akys | vartantis akis | vartyti | vartyti akis | veidas | veidas, vartantis akis
+1F648	užsidengusi akis beždžionė	beždžionė | blogis | draudžiama | gyvūnas | matyti | negaliu žiūrėti | uždrausta | užsidengusi akis beždžionė | veidas
+1F649	užsidengusi ausis beždžionė	beždžionė | blogis | draudžiama | gyvūnas | klausyti | neklausau | paslaptis | uždrausta | užsidengusi ausis beždžionė | veidas
+1F64A	užsidengusi burną beždžionė	beždžionė | blogis | gyvūnas | nekalbu | uždrausta | užsidengusi burną beždžionė | veidas
+1F910	veidas su užtrauktuku vietoje burnos	burna | paslaptis | patylėti | užtrauktukas | veidas | veidas su užtrauktuku vietoje burnos
+1F911	veidas su pinigu vietoje liežuvio	burna | pinigai | turtingas | veidas | veidas su pinigu vietoje liežuvio
+1F912	veidas su termometru	ligonis | serga | termometras | veidas | veidas su termometru
+1F913	moksliuko veidas	akiniai | ekspertas | juokingas | moksliukas | moksliuko veidas | pirmūnas | protingas | talentingas | veidas
+1F914	mąstantis veidas	mąstantis veidas | mąstymas | susimąstęs | šypsenėlės | veidas
+1F915	veidas su galvos tvarsčiu	skausmas | susižeidęs | sužeidimas | tvarstis | veidas | veidas su galvos tvarsčiu
+1F916	roboto veidas	monstras | robotas | roboto veidas | veidas
+1F917	apkabinantis veidas	apkabinantis veidas | apkabinimas | apkabinti | šypsenėlės | veidas
+1F920	kaubojaus veidas su skrybėle	kaubojaus veidas su skrybėle | kaubojus | skrybėlė | veidas
+1F921	klouno veidas	klounas | klouno veidas | veidas
+1F922	besiruošiantis vemti veidas	besiruošiantis vemti veidas | šlykštu | veidas | vemti
+1F923	raitausi iš juoko	juokas | lol | raitausi iš juoko | raitytis | veidas
+1F924	besiseilėjantis veidas	besiseilėjantis veidas | seilės | veidas
+1F925	meluojantis veidas	melas | meluojantis veidas | Pinokis | veidas
+1F926	o varge	beviltiškumas | delnas prie veido | neįtikėtinumas | netikėjimas | o ne | o varge | šokas | susierzinęs žmogus | susierzinimas | tik ne tai | vaje | veidas | žmogus
+1F927	čiaudantis veidas	čiaudantis veidas | čiaudulys | veidas
+1F928	veidas su pakeltais antakiais	nepasitikintis | skeptiškas | veidas | veidas su pakeltais antakiais
+1F929	žvaigždžių liga	akys | šypsenėlės | šypsotis | veidas | wow | žvaigždė | žvaigždžių liga
+1F92A	pamišęs veidas	akis | akys | didelis | mažas | pamišęs | veidas
+1F92B	tildantis veidas	ššš | tildantis veidas | tylus | veidas
+1F92C	veidas su simboliais ant burnos	besikeikiantis | piktas | veidas | veidas su simboliais ant burnos
+1F92D	veidas su ranka ant burnos	kikenimas | paslaptis | ups | veidas | veidas su ranka ant burnos
+1F92E	vemiantis veidas	liga | veidas | vemiantis veidas | vemti
+1F92F	sprogstanti galva	šokiruotas | sprogstanti galva | šypsenėlės
+1F970	besišypsantis veidas su trimis širdelėmis	besišypsantis veidas su trimis širdelėmis | dievinti | garbinimo objektas | įsimylėjęs | veidas
+1F971	žiovaujantis veidas	labanakt | nuobodžiaujantis | pavargęs | veidas | žiovaujantis veidas | žiovauti
+1F972	besišypsantis veidas su ašara	ašara | besišypsantis | besišypsantis veidas su ašara | dėkingas | palengvėjimas | pasididžiavimas | šypsenėlė
+1F973	švenčiantis veidas	skrybėlė | švenčiantis veidas | šventė | šventimas | švilpynė | šypsenėlė | veidas
+1F974	apkvaišęs veidas	apkvaišęs veidas | apsvaigęs | banguojanti burna | įkaušęs | nelygios akys | veidas
+1F975	įkaitęs veidas	įkaitęs veidas | karščiuojantis | karštas | prakaitavimas | raudonveidis | šilumos smūgis | veidas
+1F976	sušalęs veidas	mėlynveidis | nušalimas | šaltas | stingdantis | sušalęs veidas | varvekliai | veidas
+1F978	paslėptas veidas	akiniai | inkognito | nosis | pasislėpęs | paslėptas veidas | šnipas | ūsai | veidas | žmogus
+1F97A	maldaujantis veidas	gailestingumas | maldaujantis veidas | maldavimas | šuniuko akys | veidas
+1FAE0	tirpstantis veidas	cha cha | ištirpti | karšta | karštis | labai juokinga | lydytis | nykti | sarkazmas | skystis | sutrikęs | tirpstantis veidas
+1FAE1	pagarbą atiduodantis veidas	gerai | kariai | pagarba | pagarbą atiduodantis veidas | pagarbos atidavimas | saulėta | sėkmės | taip
+1FAE2	veidas atmerktomis akimis ir ranka uždengta burna	aiktelėjimas | gėda | išgąstis | netikėjimas | netikėtumas | nuostaba | o Dieve | pagarbi baimė | staigmena | tyla | veidas atmerktomis akimis ir ranka uždengta burna
+1FAE3	veidas su stebinčia akimi	išsigandęs | nedrąsus | pakerėtas | slėptis | stebeilytis | stebėti | susidrovėti | veidas su stebinčia akimi | žvilgsnis vogčiomis | žvilgtelėjimas
+1FAE4	veidas įstriža burna	abejojantis | abejojimas | nesvarbu | nusivylęs | nusivylimas | skeptiškas | sumišęs | sumišimas | susierzinęs | veidas įstriža burna
+1FAE5	punktyrinis veidas	abejingumas | intravertas | išnykti | nematomas | nesvarbu | prislėgtas | punktyrinis veidas | slėptis
+1FAE7	burbulai	burbulai | burbulas | muilas | perlas | po vandeniu | švara
+1FAE8	besikratantis veidukas	beprotiška | besikratantis veidukas | oho | palauk | panika | purtymas | šokas | staigmena | veidas | vibruoti | žemės drebėjimas
+1F381	supakuota dovana	dėžutė | dovana | gimtadienis | Kalėdos | supakuota dovana | suvyniota | šventė
+1F389	konfeti šaudyklė	bum | konfeti šaudyklė | šauti | šventė | vakarėlis
+1F38A	konfeti kamuolys	kamuolys | konfeti | šventė
+1F47B	vaiduoklis	fantazija | monstras | padaras | pasaka | vaiduoklis | veidas
+1F47C	angeliukas	angelas | angeliukas | fantazija | kūdikis | pasaka | veidas
+1F47D	ateivis	ateivis | fantazija | kūrinys | nežemiška būtybė | veidas
+1F47E	monstras ateivis	ateivis | fantazija | kosmosas | kūrinys | monstras ateivis | nežemiška būtybė | pabaisa | veidas
+1F47F	velniūkštis	fantazija | pasaka | veidas | velnias | velniūkštis
+1F480	kaukolė	kaukolė | mirtis | monstras | pasaka | veidas
+1F481	informacijos skyriaus darbuotojas	gandai | informacija | informacijos skyriaus darbuotojas | įžūlus | nesvarbu | pagalba | plaukų atmetimas | ranka | ranką iškėlęs žmogus | rimtai | sarkastiškas | sarkazmas
+1F482	sargybinis	Londonas | sargyba | sargybinis
+1F489	švirkštas	adata | dūris | gydytojas | įrankis | ligonis | medicina | švirkštas
+1F48A	piliulė	gydytojas | kapsulė | ligonis | medicina | piliulė
+1F4A2	pykčio simbolis	komiksas | piktas | pykčio simbolis | supykęs
+1F4A4	miego simbolis	komiksas | miegas | miego simbolis | pavargęs
+1F4A5	susidūrimas	bum | komiksas | susidūrimas
+1F4A6	prakaito lašeliai	komiksas | lašai | prakaitas | prakaito lašeliai | taškymas
+1F4A7	lašas	komiksas | lašas | oras | prakaitas | šaltis
+1F4A8	sukeltos dulkės	bėgimas | dulkės | komiksas | sukeltos dulkės
+1F4A9	išmatų krūvelė	išmatos | išmatų krūvelė | kakoti | komiksas | mėšlas | monstras | smarvė | veidas
+1F4AB	apsvaigęs	apsvaigęs | komiksas | krentanti žvaigždė | žvaigždė
+1F4AC	kalbos debesėlis	balionas | debesėlis | dialogas | kalba | kalbos debesėlis | komiksas
+1F4AD	minties debesėlis	balionas | debesėlis | komiksas | minties debesėlis | mintis | svajoti
+1F4AE	balta gėlė	balta gėlė | gėlė
+1F4A0	deimantas su tašku	deimantas | deimantas su tašku | geometrija | komiksas | viduje
+1F4A1	lemputė	elektra | idėja | komiksas | lemputė | šviesa
+1F4A3	bomba	bomba | komiksas | sprogimas
+1F4AF	šimtas taškų	100 | pilnas | rezultatas | šimtas | šimtas taškų | užtikrintai
+1F4B0	pinigų maišas	doleris | maišas | pinigai | pinigų maišas
+1F4B1	valiutos keitimas	bankas | keitimas | pinigai | valiuta | valiutos keitimas
+1F4B2	paryškintas dolerio ženklas	doleris | paryškintas dolerio ženklas | pinigai | valiuta
+1F4B8	pinigai su sparnais	bankas | banknotas | doleris | pinigai | pinigai su sparnais
+1F525	ugnis	įrankis | karšta | liepsna | ugnis
+1F52E	krištolinis rutulys	fantazija | fortūna | krištolinis | pasaka | rutulys
+1F440	akys	akis | akys | kūnas | veidas | žiūrėti
+1F441	akis	akis | kūnas
+1F442	ausis	ausis | garsas | klausyti | kūnas
+1F443	nosis	kūnas | kvapas | nosis
+1F444	burna	bučinys | burna | kūnas | lūpdažis | lūpos
+1F445	liežuvis	kūnas | laižyti | liežuvis
+1F446	delnu nusukta aukštyn pirštu rodanti ranka	delnu nusukta aukštyn pirštu rodanti ranka | į viršų | indeksas | kūnas | pirštas | ranka | rodyti
+1F447	delnu nusukta žemyn pirštu rodanti ranka	delnu nusukta žemyn pirštu rodanti ranka | į apačią | indeksas | pirštas | ranka | rodyti
+1F448	į kairę pirštu rodanti ranka	į kairę pirštu rodanti ranka | indeksas | pirštas | ranka | rodyti
+1F449	į dešinę pirštu rodanti ranka	į dešinę pirštu rodanti ranka | indeksas | pirštas | ranka | rodyti
+1F44A	artėjantis kumštis	artėjantis kumštis | kumštis | ranka | smūgis | sugniaužtas
+1F44B	mojuojanti ranka	mojuoja | mojuojanti ranka | mojuoti | ranka
+1F44C	GERAI ženklas rankomis	gerai | GERAI ženklas rankomis | OK | ranka
+1F44D	nykštys į viršų	į viršų | iškeltas nykštys | liuks | nykštys | nykštys į viršų | pirštas | ranka
+1F44E	nykštys į apačią	blogai | nykštys | nykštys į apačią | ranka
+1F44F	plojančios rankos	plojančios rankos | ploti | rankos
+1F450	atviros rankos	atviros | ranka | rankos
+261D	delnu atsukta aukštyn pirštu rodanti ranka	delnu atsukta aukštyn pirštu rodanti ranka | į viršų | indeksas | pirštas | ranka | rodyti
+270A	iškeltas kumštis	iškeltas kumštis | kumštis | ranka | smūgis | sugniaužta
+270B	iškelta ranka	duok penkis | iškelta ranka | ranka
+270C	pergalės ženklą rodanti ranka	pergalė | pergalės ženklą rodanti ranka | ranka | v
+270D	rašanti ranka	ranka | rašanti ranka | rašyti
+1F4AA	paryškinti bicepsai	bicepsai | komiksas | kūnas | paryškinti bicepsai | ranka | raumuo | sporto salė
+1F590	iškelta ranka su išskėstais pirštais	iškelta ranka su išskėstais pirštais | išskėsta | pirštas | ranka | stop
+1F64C	žmogus, iškėlęs rankas	gestas | iškėlęs rankas | iškelta | iškeltos rankos | kūnas | ranka | šventė | valio | žmogus | žmogus, iškėlęs rankas
+1F64F	suglausti delnai	gestas | melstis | prašymas | ranka | suglausti delnai
+1F90C	suspausti pirštai	pirštai | rankos gestas | sarkastiškas | suspausti
+1F90F	žnybianti ranka	mažai | mažas kiekis | pirštai | žnybianti ranka
+1F918	ragų ženklas	pirštas | ragai | ragų ženklas | ranka | rokas
+1F919	gestas paskambink man	gestas paskambink man | ranka | skambinti
+1F91A	pakelta viršutinė plaštakos pusė	pakelta | pakelta viršutinė plaštakos pusė | plaštaka | ranka
+1F91B	į kairę nukreiptas kumštis	į kairę nukreiptas kumštis | kairėn | kumštis
+1F91C	į dešinę nukreiptas kumštis	dešinėn | į dešinę nukreiptas kumštis | kumštis | ranka
+1F91D	rankos paspaudimas	pasisveikinimas | paspaudimas | ranka | rankos paspaudimas | susitarimas
+1F91E	sukryžiuoti pirštai	kryžiuoti | kryžius | laimė | pirštai | ranka | sėkmė | sukryžiuoti pirštai
+1F91F	„myliu tave“ gestas	„myliu tave“ gestas | gestas | gestas „myliu tave“ | myliu | MYLIU | ranka
+1F932	delnai suglausti	delnai suglausti | malda | ranka | suglausti delnai
+1F9B4	kaulas	kaulas | skeletas | šuo
+1F9B5	koja	galūnė | kelis | koja | kūno dalis | spyris
+1F9B6	pėda	galūnė | koja | kūno dalis | pėda | spyris | trepsėti
+1F9B7	dantis	dantis | dantistas
+1F9E0	smegenys	kūno dalis | protingas | smegenys
+1F9BE	mechaninė ranka	mechaninė ranka | neįgaliųjų prieinamumas | prieinamumas | protezavimas | rankos protezas
+1FAC0	širdis	anatomija | centras | organas | pulsas | širdies plakimas | širdis
+1FAC1	plaučiai	įkvėpimas | iškvėpimas | kvėpavimas | organas | plaučiai
+1FAE6	prikąsta lūpa	baimė | bučinys | flirtas | lūpos | nepatogu | nerimas | nervingumas | patrauklus | prikąsta lūpa | susirūpinimas
+1FAF0	ranka sukryžiuotu smiliumi ir nykščiu	brangu | meilė | pinigai | ranka | ranka sukryžiuotu smiliumi ir nykščiu | širdelė | širdis | spragtelėjimas
+1FAF1	į dešinę rodanti ranka	dešinė | dešinioji ranka | į dešinę | į dešinę rodanti ranka | pasisveikinimas | ranka | rankos paspaudimas | rankos tiesimas
+1FAF2	į kairę rodanti ranka	į kairę | į kairę rodanti ranka | kairė | kairioji ranka | pasisveikinimas | ranka | rankos paspaudimas | rankos tiesimas
+1FAF3	ranka delnu žemyn	imti | nekreipti dėmesio | numesta | numesti | paimti | ranka | ranka delnu žemyn | štiš
+1FAF4	ranka delnu į viršų	ateik | gaudyti | kviesti | nežinau | papasakok | ranka | ranka delnu į viršų | siūlymas
+1FAF5	į žiūrovą rodantis smilius	baksnoti | į žiūrovą rodantis smilius | pirštas | ranka | rodyti | tu
+1FAF6	širdelė iš rankų	meilė | myliu tave | rankos | širdelė iš rankų | širdis
+1FAF7	į kairę stumianti ranka	atsisakyti | blokuoti | duok penkis | į kairę | į kairę stumianti ranka | laukti | stumti | sulaikyti | sustoti
+1FAF8	į dešinę stumianti ranka	atsisakyti | blokuoti | duok penkis | į dešinę | į dešinę stumianti ranka | laukti | stumti | sulaikyti | sustoti
+2764	raudona širdelė	raudona | širdelė | širdis
+1F380	kaspinas	kaspinas | šventė
+1F382	gimtadienio tortas	desertas | gimtadienio tortas | gimtadienis | kepiniai | maistas | pyragas | saldu | šventė
+1F383	žibintas iš moliūgo	helovinas | šventė | žibintas | žibintas iš moliūgo
+1F384	Kalėdų eglutė	eglutė | Kalėdos | Kalėdų eglutė | šventė
+1F386	fejerverkai	fejerverkai | pramogos | šventė
+1F387	šaltoji ugnelė	fejerverkai | kibirkštis | šaltoji ugnelė | šventė
+1F388	balionas	balionas | gimtadienis | šventė
+1F9E7	raudonas vokas	dovana | pinigai | raudonas vokas | sėkmė | sėkmės
+1F9E8	fejerverkas	dinamitas | fejerverkai | fejerverkas | sprogus | šviesa
+1F38B	tanabata medis	japonų | medis | šventė | tanabata medis
+1F38C	sukryžiuotos vėliavos	japonų | kryžius | sukryžiuotos vėliavos | šventė
+1F38D	dekoracija iš pušies	augalas | bambukas | dekoracija iš pušies | japonų | pušis | šventė
+1F38E	japoniškos lėlės	festivalis | japoniškos lėlės | japonų | lėlė | šventė
+1F38F	karpio vėtrungė	gyvūnas | karpio vėtrungė | karpis | šventė | vėtrungė | žuvis
+1F390	vėjo varpeliai	skambėti | šventė | varpelis | vėjas | vėjo varpeliai
+1F391	mėnesienos ceremonija	ceremonija | mėnesienos ceremonija | mėnulis | šventė
+1F393	mokyklos baigimo kepurėlė	baigimas | drabužiai | kepurė | kepurėlė | mokyklos baigimo kepurėlė | šventė
+1F484	lūpų dažai	kosmetika | lūpdažis | lūpų dažai | makiažas
+1F485	nagų lakas	kosmetika | lakas | manikiūras | nagai | nagų lakas | priežiūra
+1F48B	bučinio žymė	bučinio žymė | bučinys | emocija | lūpos
+1F48C	meilės laiškas	laiškas | meilė | meilės laiškas | paštas | širdis
+1F48D	žiedas	deimantas | sužadėtuvės | vestuvės | žiedas
+1F48E	brangakmenis	brangakmenis | deimantas | juvelyrika | romantika | sužadėtuvės
+1F48F	bučinys	bučinys | meilė | metinės | pora
+1F490	puokštė	gėlė | gimtadienis | meilė | metinės | puokštė
+1F491	pora su širdele	meilė | metinės | pora | pora su širdele
+1F492	vestuvės	koplyčia | romantika | vestuvės
+1F493	plakanti širdelė	plakanti | pulsavimas | širdelė | širdies plakimas | širdis
+1F494	sudaužyta širdelė	emocija | liūdnas | širdelė | sudaužyta | sudaužyti
+1F495	dvi širdelės	dvi širdelės | emocijos | meilė | metinės
+1F496	žėrinti širdelė	širdelė | susijaudinimas | žėrėti | žėrinti širdelė
+1F497	auganti širdelė	auganti širdelė | didėjimas | myliu | pulsas | širdelė | susijaudinimas | susinervinęs
+1F498	širdelė su strėle	bučinys | lūpos | širdelė | širdelė su strėle | Valentino diena
+1F499	mėlyna širdelė	mėlyna | širdelė
+1F49A	žalia širdelė	širdelė | žalia
+1F49B	geltona širdelė	geltona | širdelė
+1F49C	purpurinė širdelė	aš tave myliu | emocija | meilė | širdelė | violetinė
+1F49D	širdelė su kaspinu	kaspinas | metinės | širdelė su kaspinu | valentino diena
+1F49E	besisukančios širdelės	besisukančios širdelės | širdelė | suktis
+1F49F	širdelės dekoracija	emocija | purpurinė | širdelė | širdelės dekoracija | širdis
+1F90D	balta širdelė	balta | širdelė
+1F90E	ruda širdelė	ruda | širdelė
+1F9E1	oranžinė širdelė	oranžinė | širdelė
+1FA75	šviesiai mėlyna širdelė	aš tave myliu | emocija | meilė | miela | patinka | širdis | šviesiai mėlyna | šviesiai mėlyna širdelė | žalsvai mėlyna | žydra
+1FA76	pilka širdelė	aš tave myliu | emocija | granitas | meilė | pilka | pilka širdelė | sidabras | širdis | ypatinga
+1FA77	rožinė širdelė	aš tave myliu | emocija | meilė | miela | myliu | patinka | rožinė | rožinė širdelė | širdis | ypatinga | žavinga
+2763	storas širdelės formos šauktukas	šauktukas | širdelė | širdis | skyryba | storas širdelės formos šauktukas | ženklas
+2733	aštuoniakampė žvaigždutė	aštuoniakampė žvaigždutė | žvaigždutė
+2734	aštuoniakampė žvaigždė	aštuoniakampė žvaigždė | žvaigždė
+2747	kibirkštėlė	kibirkštėlė | kibirkštis
+1F3E0	namas	namai | namas | pastatas | priemiestis
+1F3E1	namas su sodu	namai | namas | namas su sodu | pastatas | priemiestis | sodas
+1F3E2	biurų pastatas	biuras | biurų pastatas | pastatas
+1F3E3	japoniškas paštas	japoniškas paštas | japonų | paštas | pastatas
+1F3E4	pašto pastatas	europietiškas | paštas | pastatas | pašto pastatas
+1F3E5	ligoninė	gydytojas | ligoninė | medicina | pastatas
+1F3E6	bankas	bankas | pastatas
+1F3E7	bankomato ženklas	ATM | automatinis | bankas | bankomatas | bankomato ženklas | kasininkas | pinigai
+1F3E8	viešbutis	pastatas | viešbutis
+1F3E9	meilės viešbutis	meilė | meilės viešbutis | pastatas | viešbutis
+1F3EA	visą parą dirbanti parduotuvė	parduotuvė | pastatas | visą parą | visą parą dirbanti parduotuvė
+1F3EB	mokykla	mokykla | pastatas
+1F3EC	prekybos centras	parduotuvė | pastatas | prekyba | prekybos centras
+1F3ED	gamykla	gamykla | pastatas
+1F3EE	raudonas popierinis žibintas	baras | popierinis žibintas | raudonas | raudonas popierinis žibintas | šviesa | žibintas
+1F3EF	japoniška pilis	japoniška pilis | japonų | pastatas | pilis
+1F3F0	pilis	Europos | pastatas | pilis
+1F463	pėdsakai	drabužiai | kūnas | pėdsakai | pėdsakas
+1F464	biusto siluetas	biustas | biusto siluetas | paslaptingas | siluetas
+1F465	biustų siluetai	biustas | biustų siluetai | draugai | siluetas | žmonės
+1F466	berniukas	anūkas | berniukas | jaunas | sūnus | vaikas
+1F467	mergaitė	dukra | jauna | mergaitė | mergelė | zodiakas
+1F468	vyras	berniukas | draugas | vaikinas | vyras
+1F469	moteris	moteris | šviesiaplaukė
+1F46A	šeima	mama | šeima | tėvas | vaikas
+1F46B	vyras ir moteris, susikibę už rankų	draugai | laikyti | moteris | pora | ranka | susikibę už rankų | vyras | vyras ir moteris | vyras ir moteris, susikibę už rankų
+1F46C	du vyrai, susikibę už rankų	draugai | du vyrai | du vyrai, susikibę už rankų | dvyniai | laikyti | lgbt | pora | ranka | susikibę už rankų | vyras | zodiakas
+1F46D	dvi moterys, susikibusios už rankų	draugės | dvi moterys | dvi moterys, susikibusios už rankų | laikyti | lgbt | moteris | pora | ranka | susikibusios už rankų
+1F46E	policininkas	įstatymas | pareigūnas | policija | policijos pareigūnas | policininkas | priedangoje dirbantis policininkas | suimti | sulaikyti | sustabdytas
+1F46F	besilinksminančios moterys	ausys | besilinksminančios moterys | dvynės | geriausios draugės | kiškučio ausys | merginos | moterys | pora | šokėjos | vakarėlis | zuikutis
+1F470	nuotaka su veliumu	nuotaka | nuotaka su veliumu | veliumas | vestuvės
+1F471	šviesiaplaukis žmogus	asmuo | šviesiaplaukis | veidas | žmogus
+1F472	vyras su kinietiška kepurėle	kepurė | kinietiška kepurėlė | vyras | vyras su kinietiška kepurėle
+1F473	vyras su turbanu	turbanas | vyras su turbanu | žmogus su turbanu
+1F474	senas vyras	senas | vyras | žmogus
+1F475	sena moteris	močiutė | moteris | sena | šviesiaplaukė
+1F476	kūdikis	jaunas | kūdikis | lauktis | naujagimis
+1F477	statybininkas	atstatyti | darbas | darbuotojas | kepurė | rekonstruoti | šalmas | statyba | statybininkas | žmogus
+1F478	princesė	fantazija | karalienė | pasaka | princesė
+1F479	pabaisa	fantazija | monstras | pabaisa | padaras | pasaka | veidas
+1F47A	demonas	demonas | fantazija | monstras | padaras | pasaka | veidas
+1F483	šokanti moteris	moteris | šokanti moteris | šokis | tango
+1F486	veido masažas	atsipalaidavimas | atsipalaiduoti | galvos skausmas | įtampa | masažas | masažuojamas žmogus | salonas | SPA | terapija | veidas | veido masažas
+1F487	apkerpamas žmogus	apkerpamas žmogus | grožis | kirpėjas | kirpimas | kirpti plaukus | kirpykla | kosmetologija | plaukai | salonas | stilius | šukuosena | žirklės
+1F645	neigiamas gestas	be šansų | draudžiama | drausti | gestas | išskirti | ne | neigiamas gestas | ranka | žmogus rodo neigiamą gestą
+1F646	teigiamas gestas	gerai | gestą rodantis žmogus | gestai | gestas | pratimas | ranka | teigiamas gestas | vaje
+1F647	nusilenkęs žmogus	atleisk | atsiprašau | atsiprašymas | gailėtis | gailiuosi | gestas | maldauti | meditacija | medituoti | nusilenkęs žmogus | nusilenkimas
+1F64B	žmogus, iškėlęs ranką	aš | aš čia | galiu padėti | gestas | iškėlęs ranką | iškelta | klausimas | laimingas | pasirink mane | ranka | ranką iškėlęs žmogus | rankos | žinau | žmogus | žmogus, iškėlęs ranką
+1F64D	paniuręs žmogus	antakių suraukimas | gestas | liūdnas | nelaimingas | nepatenkintas | nusivylęs | paniuręs žmogus | raukytis | susierzinęs | sutrikęs
+1F64E	susiraukęs žmogus	antakių suraukimas | bloga nuotaika | gestas | grimasa | nusiminęs | nuvilti | raukymasis | susiraukęs žmogus | verkšlenimas
+1F930	nėščia moteris	moteris | neščia | nėščia moteris
+1F931	maitinimas krūtimi	krūtinė | kūdikis | maitinimas krūtimi | priežiūra | žmogus
+1F933	asmenukė	asmenukė | fotoaparatas | telefonas
+1F934	princas	kilmingas | princas
+1F935	asmuo su smokingu	asmuo su smokingu | jaunikis | smokingas | vyras | vyras su smokingu
+1F936	ponia Claus	Kalėdos | mama | ponia | ponia Claus | šventė
+1F937	gūžtelėjimas pečiais	abejojantis žmogus | abejonė | galbūt | gūžtelėjimas | gūžtelėjimas pečiais | ignoravimas | nesvarbu | nežinau | nežinojimas | trūkčioti pečiais | žmogus
+1F385	Kalėdų senelis	Kalėdos | Kalėdų senelis | senelis | šventė | tėvas
+1F9B8	superherojus	betmenas | geras | herojė | herojus | supergalia | superherojus | supermenas
+1F9B9	superpiktadarys	asmuo | blogas | nusikaltėlis | piktadarys | supergalia | supergalios | superpiktadarys
+1F9BF	mechaninė koja	kojos protezas | mechaninė koja | neįgaliųjų prieinamumas | prieinamumas | protezavimas
+1F9D0	veidas su monokliu	prabangus | turtingas | tvankus | veidas | veidas su monokliu
+1F9D1	suaugusysis	neutrali lytis | suaugusysis | žmogus
+1F9D2	vaikas	jaunas | neutrali lytis | vaikas | žmogus
+1F9D3	kitas suaugusysis	kitas suaugusysis | neutrali lytis | senas | žmogus
+1F9D4	barzdotas žmogus	barzda | barzdotas žmogus | žmogus
+1F9D5	moteris su skarele	hidžabas | moteris | moteris su skarele | skarelė | žmogus
+1F9D6	asmuo garų kambaryje	asmuo garų kambaryje | atsipalaidavimas | garai | garų kambarys | moteris | moteris pirtyje | pirtis | prabanga | sauna | SPA
+1F9D7	kopiantis žmogus	alpinistas | kalnas | kopiantis žmogus | kopimas į kalną | kopimas į uolą | laipiotojas | uola
+1F9D8	žmogus lotoso pozoje	atsipalaidavimas | joga | jogas | jogė | lotoso poza | meditacija | ramybė | sukryžiuotos kojos | žmogus lotoso pozoje
+1F9D9	magas	burtininkas | išminčius | kerai | kerėtoja | kerėtojas | magas | magija | pasaka | ragana | raganius
+1F9DA	fėja	fėja | fėjus | laumė | laumius | mitas | Oberon | pasaka | Puck | sparnai | Titania
+1F9DB	vampyras	antgamtinis | baisu | dantys | Drakula | Helovinas | iltys | kostiumas | kraujas | nemirtingas | vampyras
+1F9DC	undinius	folkloras | jūros padarai | pasaka | sirena | trišakis | undinė | undinėlė | undinius
+1F9DD	elfas	elfai | elfas | folkloras | kerai | magija | magiškas | mistika | mitas | pasaka
+1F9DE	dvasia	dvasia | džinas | džinė | mistiška | mitas | norai | pasaka | patrinti lempą
+1F9DF	zombis	apokalipsė | baisu | helovinas | nemirtingas | siaubas | vaikštantis numirėlis | zombis
+1FAC2	apsikabinę žmonės	apsikabinę žmonės | apsikabinti | atsisveikinimas | dėkui | labas | pasisveikinimas | viso | žmonės
+1FAC3	nėščias vyras	išsipūtęs | nėščias | nėščias vyras | persivalgęs | pilnas | pilvas | žmogus
+1FAC4	nėščias asmuo	išsipūtęs | nėščias | nėščias asmuo | persivalgęs | pilnas | pilvas
+B9	vienetas viršutiniame indekse	vienetas | vienetas viršutiniame indekse | viršutinis indeksas
+B2	dvejetas viršutiniame indekse	du | dvejetas | dvejetas viršutiniame indekse | kvadratu | viršutinis indeksas
+B3	trejetas viršutiniame indekse	kubu | trejetas | trejetas viršutiniame indekse | trys | viršutinis indeksas
+207B	minusas viršutiniame indekse	minusas | minusas viršutiniame indekse | viršutinis indeksas
+B0	laipsnis	laipsnis | valanda
+B1	pliusas ir minusas	pliusas ir minusas | pliuso ir minuso ženklas
+D7	daugybos simbolis	daugyba | daugybos simbolis | sandauga
+F7	dalybos simbolis	dalyba | dalybos simbolis | dalyti
+B5	„mikro-“ simbolis	„mikro-“ simbolis | matavimo vienetai | mikro simbolis
+A9	autorių teisės	autorių teisės
+AE	užregistruota	užregistruota
+2122	prekės ženklas	prekės ženklas | tm | žymė
+A7	pastraipos simbolis	paragrafas | pastraipa | pastraipos simbolis | skirsnis
+B6	paragrafo simbolis	lygiavimas | paragrafas | paragrafo simbolis | pastraipos pabaigos ženklas
+B7	interpunktas	interpunktas | taškas | vidurinysis
+2022	ženklelis	taškas | ženklelis
+2013	brūkšnys	brūkšnys
+2026	daugtaškis	daugtaškis | praleidimo simbolis
+AB	atidaromosios laužtinės kabutės	atidaromosios laužtinės kabutės | kabutės | kairiosios | laužtinės | uždaromosios
+BB	uždaromosios laužtinės kabutės	dešiniosios | kabutės | laužtinės | uždaromosios
+2030	promilės ženklas	promilė | promilės ženklas
+20AC	euras	EUR | euras | valiuta
+A3	svaras	EGP | GBP | svaras | valiuta
+A5	jena	CNY | jena | JPY | juanis | valiuta
+A2	cento ženklas	centas | cento ženklas
+20B9	Indijos rupija	Indijos rupija | rupija | valiuta
+20BD	rublis	rublis | valiuta
+20A9	vono ženklas	KPW | KRW | vono ženklas
+20BA	Turkijos lira	
+20BF	bitkoino ženklas	bitkoino ženklas | BTC
+20AA	Izraelio naujasis šekelis	
+20AB	Vietnamo dongas	
+20B1	peso ženklas	pesas | peso ženklas
+20BC	Azerbaidžano manatas	
+20B4	Ukrainos grivina	
+20A6	Nigerijos naira	
+20A1	Kosta Rikos kolonas	
+20B2	Paragvajaus guaranis	
+20B5	Ganos sedis	
+20B8	Kazachstano tengė	
+20BE	Gruzijos laris	
+20AE	Mongolijos tugrikas	
+20AD	Laoso kipas	
+20A8	rupija	rupija
+24	dolerio ženklas	dolerio ženklas | doleris | pinigai | USD
+58F	Armėnijos dramas	
+9F3	Bangladešo taka	
+E3F	Tailando batas	
+20A3	Prancūzijos frankas	Prancūzijos frankas
+20A4	lita	lita
+20A7	Ispanijos peseta	
+20B0	pfenigas	pfenigas
+20B3	australis	australis
+20A2	kruzeiras	kruzeiras
+20A5	milio ženklas	mil ženklas | milio ženklas
+20B6	Tūro livras	Tūro livras
+20B7	spesmilo	spesmilo
+A4	nežinoma valiuta	
+201E	apatinės dešiniosios kabutės	apatinės dešiniosios kabutės | dvigubos kabutės | išmaniosios kabutėstion | kabučių ženklas | kabutės | low quotation
+201C	kairiosios kabutės	dvigubos kabutės | išmani kabutė | kabutė | kabutės | kairiosios kabutės
+201D	dešiniųjų kabučių ženklas	dešiniųjų kabučių ženklas | dvigubos kabutės | išmaniosios kabutės | kabučių ženklas | kabutės
+2018	kairysis apostrofas	apostrofas | išmani kabutė | kabutė | kairysis apostrofas | vienguba kabutė
+2019	dešinysis apostrofas	apostrofas | dešinysis apostrofas | išmani kabutė | kabutė | vienguba kabutė
+A1	apverstas šauktukas	apverstas | šauktukas | šauktuko taškas | šauktuko ženklas | staiga
+BF	apverstas klaustukas	apverstas | klausimas | klaustukas
+2020	kryžiaus ženklas	kryžiaus ženklas | kryžius
+2021	dvigubas kryžiaus ženklas	dvigubas | dvigubas kryžiaus ženklas | kryžius
+2044	trupmenos ženklas	trupmenos ženklas
+2032	pagrindinis simbolis	pagrindinis | pagrindinis simbolis
+2033	dvigubas pagrindinis simbolis	dvigubas pagrindinis simbolis | pagrindinis skyriklis
+201A	apatinis dešinysis apostrofas	apatinė kabutė | apatinis apostrofas | apatinis dešinysis apostrofas | kabutė
+AC	nesutikimas	ne | nesutikimas
+2117	garso įrašo autorių teisių simbolis	autorių teisės | autorių teisių simbolis | garsas | garso įrašo autorių teisių simbolis | įrašas
+2212	minuso ženklas	atimti | minusas | minuso ženklas
+2213	minusas arba pliusas	minusas | minusas arba pliusas | pliusas
+2248	apytiksliai	apytiksliai | panašiai
+2260	nelygu	nelygu | skirtinga
+2261	tapatu	identiška | lygu | tapatu
+2264	mažiau arba lygu	lygu | mažiau arba lygu | nelygu | yra lygu
+2265	daugiau arba lygu	daugiau arba lygu | lygu | nelygu | yra lygu
+226A	daug mažiau nei	daug mažiau nei
+226B	daug daugiau nei	daug daugiau nei
+221E	begalybės simbolis	begalybė | begalybės simbolis
+221A	kvadratinė šaknis	kvadratinė šaknis | šaknis
+221D	proporcingas	proporcingas
+2211	n-aris sumavimas	matematika | n-aris | sumavimas
+220F	n-arė sandauga	logika | n-arė | sandauga
+222B	integralas	integralas
+2202	dalinis diferencialas	dalinis | diferencialas
+2206	didinti	didinti | trikampis
+2207	nabla	nabla | trikampis
+2200	visiems	visiems
+2203	egzistuoja	egzistuoja
+2205	tuščia aibė	aibė | matematika | tuščia
+2208	priklauso	aibė | elementas | narys | patenka į | priklauso | yra elementas
+2209	ne elementas	elementas | ne elementas
+2229	sankirta	aibė | sankirta
+222A	sąjunga	aibė | sąjunga
+2282	poaibis	aibė | poaibis
+2283	superaibė	matematika | operatorius | rinkinys | superrinkinys
+2286	poaibis lygus	poaibis lygus
+2287	superaibė lygi	superaibė lygi
+2227	loginis ir	loginis ir
+2295	pliuso ženklas apskritime	pliuso ženklas apskritime
+2297	daugybos ženklas apskritime	daugybos ženklas apskritime
+22A5	aukštyn	aukštyn
+2220	kampas	kampas
+2234	iš to išplaukia	iš to išplaukia
+2235	todėl, kad	kad | todėl | todėl, kad
+2218	žiedo operatorius	operatorius | sudėtis | žiedas
+2219	ženklelio operatorius	operatorius | ženklelis
+22C5	taško operatorius	operatorius | taško operatorius
+2215	dalybos ženklas	dalyba | dalyti | pasvirasis brūkšnys
+2190	į kairę nukreipta rodyklė	į kairę nukreipta rodyklė | kairė | rodyklė
+2191	į viršų nukreipta rodyklė	į viršų nukreipta rodyklė | rodyklė | viršus
+2192	į dešinę nukreipta rodyklė	dešinė | į dešinę nukreipta rodyklė | rodyklė
+2193	į apačią nukreipta rodyklė	apačia | į apačią nukreipta rodyklė | rodyklė
+2196	rodyklė į viršų ir į kairę	kryptis | rodyklė | rodyklė į viršų ir į kairę | šiaurės vakarai
+2197	rodyklė į viršų ir į dešinę	kryptis | rodyklė | rodyklė į viršų ir į dešinę | šiaurės rytai
+2198	rodyklė į apačią ir į dešinę	kryptis | pietryčiai | rodyklė | rodyklė į apačią ir į dešinę
+2199	rodyklė į apačią ir į kairę	kryptis | pietvakariai | rodyklė | rodyklė į apačią ir į kairę
+2194	rodyklė į kairę ir į dešinę	rodyklė | rodyklė į kairę ir į dešinę
+2195	rodyklė į viršų ir į apačią	rodyklė | rodyklė į viršų ir į apačią
+21D0	dviguba rodyklė kairėn	dviguba rodyklė kairėn
+21D1	dviguba rodyklė aukštyn	dviguba rodyklė aukštyn
+21D2	dviguba rodyklė dešinėn	dviguba rodyklė dešinėn
+21D3	dviguba rodyklė žemyn	dviguba rodyklė žemyn
+21D6	dviguba rodyklė į šiaurės vakarus	dviguba rodyklė į šiaurės vakarus
+21D7	dviguba rodyklė į šiaurės rytus	dviguba rodyklė į šiaurės rytus
+21D8	dviguba rodyklė į pietryčius	dviguba rodyklė į pietryčius
+21D9	dviguba rodyklė į pietvakarius	dviguba rodyklė į pietvakarius
+21D4	dviguba rodyklė kairėn ir dešinėn	dviguba rodyklė kairėn ir dešinėn
+21A4	rodyklė kairėn nuo brūkšnio	rodyklė kairėn nuo brūkšnio
+21A6	rodyklė dešinėn nuo brūkšnio	rodyklė dešinėn nuo brūkšnio
+21A5	rodyklė aukštyn nuo brūkšnio	rodyklė aukštyn nuo brūkšnio
+21A7	rodyklė žemyn nuo brūkšnio	rodyklė žemyn nuo brūkšnio
+21A9	rodyklė į dešinę, užlenkta į kairę	lenkta rodyklė | rodyklė | rodyklė į dešinę | rodyklė į dešinę, užlenkta į kairę | užlenkta į kairę
+21AA	rodyklė į kairę, užlenkta į dešinę	lenkta rodyklė | rodyklė | rodyklė į kairę | rodyklė į kairę, užlenkta į dešinę | užlenkta į dešinę
+219E	rodyklė kairėn su dvigubu smaigaliu	rodyklė kairėn su dvigubu smaigaliu
+21A0	rodyklė dešinėn su dvigubu smaigaliu	rodyklė dešinėn su dvigubu smaigaliu
+219F	rodyklė aukštyn su dvigubu smaigaliu	rodyklė aukštyn su dvigubu smaigaliu
+21A1	rodyklė žemyn su dvigubu smaigaliu	rodyklė žemyn su dvigubu smaigaliu
+21A2	rodyklė kairėn su uodega	rodyklė kairėn su uodega
+21A3	rodyklė dešinėn su uodega	rodyklė dešinėn su uodega
+219A	perbraukta rodyklė kairėn	perbraukta rodyklė kairėn
+219B	perbraukta rodyklė dešinėn	perbraukta rodyklė dešinėn
+21AE	perbraukta rodyklė kairėn ir dešinėn	perbraukta rodyklė kairėn ir dešinėn
+21CD	dviguba perbraukta rodyklė kairėn	dviguba perbraukta rodyklė kairėn
+21CF	dviguba perbraukta rodyklė dešinėn	dviguba perbraukta rodyklė dešinėn
+21CE	dviguba perbraukta rodyklė kairėn ir dešinėn	dviguba perbraukta rodyklė kairėn ir dešinėn
+21C4	rodyklė dešinėn virš rodyklės kairėn	rodyklė dešinėn virš rodyklės kairėn
+21C6	į kairę nukreipta rodyklė virš į dešinę nukreiptos rodyklės	dešinė | į kairę nukreipta rodyklė virš į dešinę nukreiptos rodyklės | kairė | rodyklė
+21CB	kabliukinė rodyklė kairėn virš kabliukinės rodyklės dešinėn	kabliukinė rodyklė kairėn virš kabliukinės rodyklės dešinėn
+21CC	kabliukinė rodyklė dešinėn virš kabliukinės rodyklės kairėn	kabliukinė rodyklė dešinėn virš kabliukinės rodyklės kairėn
+21BC	kabliukinė rodyklė kairėn su užkarpa aukštyn	kabliukinė rodyklė kairėn su užkarpa aukštyn
+21BD	kabliukinė rodyklė kairėn su užkarpa žemyn	kabliukinė rodyklė kairėn su užkarpa žemyn
+21C0	kabliukinė rodyklė dešinėn su užkarpa aukštyn	kabliukinė rodyklė dešinėn su užkarpa aukštyn
+21C1	kabliukinė rodyklė dešinėn su užkarpa žemyn	kabliukinė rodyklė dešinėn su užkarpa žemyn
+21BE	kabliukinė rodyklė aukštyn su užkarpa dešinėn	kabliukinė rodyklė aukštyn su užkarpa dešinėn
+21BF	kabliukinė rodyklė aukštyn su užkarpa kairėn	kabliukinė rodyklė aukštyn su užkarpa kairėn
+21C2	kabliukinė rodyklė žemyn su užkarpa dešinėn	kabliukinė rodyklė žemyn su užkarpa dešinėn
+21C3	kabliukinė rodyklė žemyn su užkarpa kairėn	kabliukinė rodyklė žemyn su užkarpa kairėn
+21C7	suporuotos rodyklės kairėn	suporuotos rodyklės kairėn
+21C9	suporuotos rodyklės dešinėn	suporuotos rodyklės dešinėn
+21C8	suporuotos rodyklės aukštyn	suporuotos rodyklės aukštyn
+21CA	suporuotos rodyklės žemyn	suporuotos rodyklės žemyn
+21DA	triguba rodyklė kairėn	triguba rodyklė kairėn
+21DB	triguba rodyklė dešinėn	triguba rodyklė dešinėn
+219C	vingiuota rodyklė kairėn	vingiuota rodyklė kairėn
+219D	vingiuota rodyklė dešinėn	vingiuota rodyklė dešinėn
+21DC	raityta rodyklė kairėn	raityta rodyklė kairėn
+21DD	raityta rodyklė dešinėn	raityta rodyklė dešinėn
+21AD	vingiuota rodyklė kairėn ir dešinėn	vingiuota rodyklė kairėn ir dešinėn
+21AF	laužyta rodyklė žemyn	laužyta rodyklė žemyn
+21BA	atvira apskrita rodyklė su prieš laikrodžio rodyklę nukreiptu smaigaliu	atvira apskrita rodyklė su prieš laikrodžio rodyklę nukreiptu smaigaliu
+21BB	atvira apskrita rodyklė su laikrodžio rodyklės kryptimi nukreiptu smaigaliu	atvira apskrita rodyklė su laikrodžio rodyklės kryptimi nukreiptu smaigaliu
+1F400	žiurkė	gyvūnas | žiurkė
+1F401	pelė	gyvūnas | pelė
+1F402	jautis	bulius | gyvūnas | jautis | tauras | zodiakas
+1F403	azijinis buivolas	azijinis | buivolas | gyvūnas
+1F404	karvė	gyvūnas | karvė | pienas
+1F405	tigras	gyvūnas | tigras
+1F406	leopardas	gyvūnas | leopardas | plėšrūnas
+1F407	triušis	augintinis | gyvūnas | naminis gyvūnas | triušis | triušiukas
+1F408	katė	augintinis | gyvūnas | katė | naminis gyvūnas
+1F409	drakonas	drakonas | gyvūnas | kinų | pasaka
+1F40A	krokodilas	gyvūnas | krokodilas
+1F40B	banginis	banginis | gyvūnas | paplūdimys | vandenynas
+1F40C	sraigė	gamta | gyvūnas | sraigė
+1F40D	gyvatė	gyvatė | gyvatnešis | gyvūnas | žaltys | zodiakas
+1F40E	arklys	arklių varžybos | arklys | gyvūnas | varžytis | žirgas | žirgų lenktynės
+1F40F	avinas (gyvūnas)	avinas | avinas (gyvūnas) | avis | gyvūnas | zodiakas
+1F410	ožys	ferma | gyvūnas | ožiaragis | ožys | zodiakas
+1F411	avis	avis | gyvūnas
+1F412	beždžionė	bananas | beždžionė | gyvūnas
+1F413	gaidys	gaidys | gyvūnas | paukštis
+1F414	višta	gyvūnas | paukštis | višta
+1F415	šuo	augintinis | gyvūnas | naminis gyvūnas | šuo
+1F416	kiaulė	ferma | gyvūnas | kiaulė | kiauliena
+1F417	šernas	gyvūnas | kiaulė | šernas
+1F418	dramblys	dramblys | gyvūnas
+1F419	aštuonkojis	aštuonkojis | gyvūnas | vandenynas
+1F41A	susisukusi kriauklė	gyvūnas | kriauklė | paplūdimys | spiralė | susisukusi kriauklė
+1F41B	vabalas	gyvūnas | vabalas | vabzdys
+1F41C	skruzdėlė	gyvūnas | skruzdėlė | vabzdys
+1F41D	bitė	bitė | gamta | gyvūnas | kamanė | vabzdys
+1F41E	boružė	boružė | gamta | gyvūnas | vabalas | vabzdys
+1F41F	žuvis	gyvūnas | zodiakas | žuvis | žuvys
+1F420	tropinė žuvis	gyvūnas | tropinė | žuvis
+1F421	fugu	fugu | gyvūnas | žuvis
+1F422	vėžlys	gyvūnas | vėžlys
+1F423	išsiritęs viščiukas	gyvūnas | išsiridenti | išsiritęs viščiukas | mažas | paukštis | viščiukas
+1F424	viščiukas	gyvūnas | mažas | viščiukas
+1F425	atsisukęs snapu viščiukas	atsisukęs snapu viščiukas | gyvūnas | mažas | paukštis | viščiukas
+1F426	paukštis	gyvūnas | ornitologija | paukštis
+1F427	pingvinas	antarktida | gyvūnas | paukštis | pingvinas
+1F428	koala	Australija | gyvūnas | koala | meška
+1F429	pudelis	gyvūnas | pudelis | šuo
+1F42A	kupranugaris	dykuma | gyvūnas | kupra | kupranugaris | vienakupris kupranugaris
+1F42B	dvikupris kupranugaris	dvikupris kupranugaris | dykuma | gyvūnas | kupra | kupranugaris
+1F42C	delfinas	delfinas | fliperis | gyvūnas | paplūdimys | vandenynas
+1F42D	pelės snukutis	gyvūnas | pelė | pelės snukutis | veidas
+1F42E	karvės snukis	gyvūnas | karvė | karvės snukis | veidas
+1F42F	tigro snukis	gyvūnas | plėšrūnas | tigras | tigro snukis | veidas
+1F430	triušio snukutis	gyvūnas | naminis gyvūnas | triušio snukutis | triušis | veidas | zuikis
+1F431	katės snukutis	augintinis | gyvūnas | katė | katės snukutis | naminis gyvūnas | veidas
+1F432	drakono snukis	drakonas | drakono snukis | gyvūnas | pasaka | veidas
+1F433	purškiantis banginis	banginis | gyvūnas | paplūdimys | purkšti | purškiantis banginis | veidas
+1F434	arklio snukis	arklio snukis | arklys | ferma | gyvūnas | veidas
+1F435	beždžionės snukutis	bananas | beždžionė | beždžionės snukutis | veidas
+1F436	šuns snukutis	gyvūnas | naminis gyvūnas | šuns snukutis | šuo | veidas
+1F437	kiaulės snukis	gyvūnas | kiaulė | kiaulės snukis | paršelis | veidas
+1F438	varlės snukutis	gyvūnas | princesė | varlė | varlės snukutis | veidas
+1F439	žiurkėno snukutis	augintinis | gyvūnas | naminis gyvūnas | veidas | žiurkėnas | žiurkėno snukutis
+1F43A	vilko snukis	gyvūnas | veidas | vilkas | vilko snukis
+1F43B	meškos snukis	gyvūnas | meška | meškos snukis | veidas
+1F43C	pandos snukis	bambukas | gyvūnas | panda | pandos snukis | veidas
+1F43D	kiaulės nosis	gyvūnas | kiaulė | kiaulės nosis | kiaulės šnipas | nosis | veidas
+1F43E	pėdutės	letenos | pėdos | pėdsakai | pėdutės
+1F43F	voverė	burundukas | gyvūnas | voverė
+1F981	liūto snukis	gyvūnas | liūtas | liūto snukis | stiprus | veidas | zodiakas
+1F982	skorpionas (gyvūnas)	gyvūnas | skorpionas | skorpionas (gyvūnas) | zodiakas
+1F983	kalakutas	gyvūnas | kalakutas | Padėkos diena | paukštis
+1F984	vienaragio snukis	veidas | vienaragio snukis | vienaragis
+1F985	erelis	erelis | gyvūnas | paukštis
+1F986	antis	antis | gyvūnas | paukštis
+1F987	šikšnosparnis	gyvūnas | šikšnosparnis | vampyras
+1F988	ryklys	gyvūnas | ryklys | žuvis
+1F989	pelėda	gyvūnas | išmintis | paukštis | pelėda
+1F98A	lapės snukis	gyvūnas | lapė | lapės snukis | snukis | veidas
+1F98B	drugelis	drugelis | gražus | gyvūnas | vabzdys
+1F98C	elnias	elnias | gyvūnas
+1F98D	gorila	gorila | gyvūnas
+1F98E	driežas	driežas | gyvūnas | roplys
+1F98F	raganosis	gyvūnas | raganosis
+1F990	krevetė	jūros gėrybės | kiaukutinis | krevetė | maistas | mažas
+1F991	kalmaras	gyvūnas | jūros gėrybės | kalmaras | maistas | moliuskas
+1F992	žirafa	dėmė | gyvūnas | žirafa
+1F993	zebras	dryžis | gyvūnas | zebras
+1F994	ežys	ežys | gyvūnas | spygliuotas
+1F995	sauropodas	brachiozauras | brontozauas | dinozauras | diplodokas | sauropodas
+1F996	Reksas	dinozauras | gyvūnas | Reksas | tiranozauras Reksas
+1F997	svirplys	gyvūnas | svirplys | vabzdys | žiogas
+1F998	kengūra	Australija | gyvūnas | jauniklis | kengūra | šokinėti | sterblinis gyvūnas
+1F999	lama	alpaka | guanakas | gyvūnas | lama | lamos vilna | vilna
+1F99A	povas	gyvūnas | išdidus | mėgstantis pasirodyti | paukštis | povas | povė
+1F99B	begemotas	begemotas | gyvūnas
+1F99C	papūga	gyvūnas | kalbantis | kalbėti | papūga | paukštis | piratas
+1F99D	meškėnas	gudrus | gyvūnas | meškėnas | smalsus
+1F99E	omaras	gyvūnas | jūrų gėrybė | jūrų gėrybės | maistas | omaras | žnyplės
+1F99F	uodas	gyvūnas | karštinė | maliarija | negalavimas | uodas | vabzdys | virusas
+1F9A0	mikrobas	ameba | bakterija | mikrobas | mokslas | virusas
+1F9A1	barsukas	barsukas | gyvūnas | įkyruolis
+1F9A2	gulbė	bjaurusis ančiukas | gulbė | gyvūnas | paukštis
+1F9A3	mamutas	didelis | gyvūnas | iltis | išnykimas | mamutas
+1F9A4	drontas	didelis | drontas | gyvūnas | išnykimas | Mauricijus | paukštsi
+1F9A5	tinginys	gyvūnas | lėtas | tinginys | tingus
+1F9A6	ūdra	gyvūnas | ūdra | žaisminga | žvejojanti | žvejoti
+1F9A7	orangutangas	beždžionė | gyvūnas | orangutangas
+1F9A8	skunkas	gyvūnas | skunkas | smirdantis
+1F9A9	flamingas	flamingas | gyvūnas | spalvingas | tropinis
+1F9AA	austrė	austrė | jūros gėrybės | maistas | nardymas | perlas
+1F9AB	bebras	bebras | dantys | gyvūnas | užtvanka
+1F9AC	bizonas	banda | bizonas | buivolas | gyvūnas
+1F9AD	ruonis	gyvūnas | jūrų liūtas | ruonis | vandenynas
+1F9AE	šuo vedlys	aklas | gyvūnas | neįgaliųjų prieinamumas | neregys | prieinamumas | šuo | vedlys
+1FABC	medūza	akvariumas | bestuburis | čiuptuvai | deginti | geluonis | gyvūnas | jūrinis | medūza | oi | planktonas | vandenynas | želė
+1F330	lazdyno riešutas	augalas | lazdyno riešutas | maistas | riešutas
+1F331	daigas	augalas | daigas | jaunas
+1F332	amžinai žaliuojantis medis	amžinai žaliuojantis medis | eglė | medis | pušis | spygliuotis
+1F333	lapuotis	augalas | lapuotis | medis | mesti
+1F334	palmė	medis | palmė | paplūdimys
+1F335	kaktusas	augalas | dykuma | gamta | kaktusas
+1F337	tulpė	augalas | gėlė | tulpė
+1F338	vyšnios žiedas	augalas | gėlė | vyšnia | vyšnios žiedas | žydėti
+1F339	rožė	augalas | gėlė | raudona | rožė | Valentino diena
+1F33A	kinrožė	augalas | gėlė | kinrožė
+1F33B	saulėgrąža	augalas | gėlė | saulė | saulėgrąža
+1F33C	gėlės žiedas	augalas | gėlė | gėlės žiedas | kiaulpienė
+1F33D	kukurūzo burbuolė	augalas | kukurūzas | kukurūzo burbuolė | maistas | varpa
+1F33E	ryžių pėdas	augalas | javai | ryžiai | ryžių pėdas | varpa
+1F33F	žolelė	augalas | lapas | vaistažolė | žolelė
+1F340	keturlapis dobilas	4 | augalas | dobilas | keturi | keturlapis dobilas | lapas
+1F341	klevo lapas	klevas | klevo lapas | krenta | lapas
+1F342	nukritęs lapas	krenta | lapas | nukritęs lapas | ruduo
+1F343	lapas vėjyje	lapas | lapas vėjyje | pūsti | skrajoti | vėjas
+1F344	grybas	grybas | maistas | šungrybis | Super Mario
+1FAB0	musė	cėcė | gyvulinė musė | gyvūnas | kambarinė musė | mėšlinė musė | musė | negalavimas | vabzdys
+1FAB1	kirmėlė	gyvūnas | kirmėlė | kirmėlės | parazitai | sliekai
+1FAB2	vabaliukas	gyvūnas | vabalas | vabaliukas | vabzdys
+1FAB3	tarakonas	gyvūnas | tarakonas | vabzdys
+1FAB4	pasodintas augalas	augalas | augti | bevertis | dekoro detalė | namas | nuobodus | pasodintas augalas | puoselėti | vazonas
+1FAB5	mediena	mediena | medis | rąstas
+1FAB6	plunksna	lengvumas | plunksna | skrydis
+1FAB7	lotusas	budizmas | gėlė | grožis | Indija | induizmas | lotosas | lotusas | ramybė | taika | tyrumas | Vietnamas
+1FAB8	koralas	jūra | klimato kaita | koralas | rifas | vandenynas
+1FAB9	tuščias lizdas	lizdas | namai | perėjimas | šaka | tuščias lizdas
+1FABA	lizdas su kiaušiniais	kiaušinis | lizdas | lizdas su kiaušiniais | perėjimas | šaka
+1FABB	hiacintas	augalas | gėlė | hiacintas | indigo | levandos | lubinai | pavasaris | violetinis | žeidas | želdinys | žydėjimas
+2618	trilapis dobilas	airių | augalas | dobilas | trilapis dobilas
+1F347	vynuogės	maistas | vaisius | vynuogė | vynuogės
+1F348	melionas	augalas | maistas | melionas | vaisius
+1F349	arbūzas	arbūzas | maistas | vaisius
+1F34A	mandarinas	citrusinis vaisius | maistas | mandarinas | nektarinas | oranžinis | vaisius
+1F34B	citrina	citrina | citrusinis | maistas | vaisius
+1F34C	bananas	bananas | maistas | vaisius
+1F34D	ananasas	ananasas | maistas | vaisius
+1F34E	raudonas obuolys	maistas | obuolys | raudonas | vaisius
+1F34F	žalias obuolys	maistas | obuolys | vaisius | žalias
+1F350	kriaušė	kriaušė | maistas | vaisius
+1F351	persikas	maistas | persikas | vaisius
+1F352	vyšnios	maistas | vaisius | vyšnia | vyšnios
+1F353	braškė	braškė | maistas | uoga | vaisius
+1F336	aštrusis pipiras	aštrus | aštrusis pipiras | maistas | pipiras
+1F354	mėsainis	greitasis | greitmaistis | maistas | mėsainis
+1F355	pica	gabalėlis | maistas | pica | sūris
+1F356	mėsa ant kaulo	kaulas | maistas | mėsa | mėsa ant kaulo
+1F357	paukščio šlaunelė	kaulas | maistas | mėsa | paukščio šlaunelė | paukštiena | šlaunelė | šlaunis | višta
+1F358	ryžių paplotėlis	maistas | paplotėlis | ryžiai | ryžių
+1F359	ryžių rutuliukas	japonų | maistas | rutuliukas | ryžiai | ryžių rutuliukas
+1F35A	virti ryžiai	maistas | ryžiai | virti
+1F35B	ryžiai su kariu	karis | maistas | ryžiai | ryžiai su kariu
+1F35C	makaronų sriubos dubenėlis	dubuo | maistas | makaronai | makaronų sriubos dubenėlis | ramen | sriuba
+1F35D	spagečiai	itališkas patiekalas | maistas | makaronai | pasta | spagečiai
+1F35E	duona	duona | kepalas | kepinys | maistas
+1F35F	gruzdintos bulvytės	bulvės | bulvytės | gruzdintos | maistas
+1F360	kepta saldžioji bulvė	bulvė | kepta | kepta saldžioji bulvė | maistas | saldi | saldžioji bulvė
+1F361	dango	dango | desertas | iešmas | japonų | lazdelė | maistas | saldu
+1F362	odenas	iešmas | japonų | jūros gėrybės | kebabas | lazdelė | maistas | odenas
+1F363	sušis	maistas | suši | sušis
+1F364	kepta krevetė	kepta | krevetė | maistas | tempura
+1F365	žuvies pyragėlis su išpieštu sūkurio simboliu	kepiniai | maistas | pyragėlis | sūkurys | žuvies pyragėlis su išpieštu sūkurio simboliu | žuvis
+1F366	minkšti ledai	desertas | kremas | ledai | maistas | minkšti | saldu
+1F367	susmulkintas ledas	desertas | ledas | maistas | saldu | smulkintas | susmulkintas ledas
+1F368	ledai	desertas | kremas | ledai | maistas | saldu
+1F369	spurga	desertas | maistas | saldu | spurga
+1F36A	sausainis	desertas | maistas | saldu | sausainis
+1F36B	šokolado batonėlis	batonėlis | desertas | maistas | saldu | šokoladas | šokolado batonėlis | šokolado plytelė
+1F36C	saldainis	desertas | maistas | saldainis | saldu
+1F36D	ledinukas ant pagaliuko	desertas | ledinukas | ledinukas ant pagaliuko | maistas | saldainis | saldu
+1F36E	saldus kremas	desertas | maistas | pudingas | saldu | saldus kremas
+1F36F	medaus puodynė	maistas | medaus puodynė | medus | puodas | saldu
+1F370	trapus pyragas	desertas | gabalėlis | kepiniai | kepinys | maistas | pyragas | saldu | trapus pyragas
+1F371	bento dėžutė	bento | dėžutė | maistas
+1F372	puodas su maistu	maistas | puodas | puodas su maistu | troškinys
+1F373	valgio gaminimas	kepimas | keptas kiaušinis | keptuvė | kiaušinis | maistas | valgio gaminimas
+1F374	šakutė ir peilis	įrankiai | maisto gaminimas | peilis | šakutė | šakutė ir peilis
+1F375	arbatos puodelis be rankenos	arbata | arbatos puodelis | arbatos puodelis be rankenos | gėrimas | gerti | puodelis
+1F376	sakė	baras | butelis | gėrimas | puodelis | sakė
+1F377	vyno taurė	baras | gėrimas | gerti | taurė | vynas | vyno taurė
+1F378	kokteilio taurė	baras | gėrimas | kokteilio taurė | kokteilis | taurė
+1F379	tropinis gėrimas	baras | gėrimas | taurė | tropinis
+1F37A	alaus bokalas	alaus bokalas | alus | baras | bokalas | gėrimas | puodelis
+1F37B	susidaužiantys alaus bokalai	alus | baras | bokalai | gėrimas | puodelis | susidaužiantys alaus bokalai | susidaužti
+1F37C	kūdikio buteliukas	buteliukas | gėrimas | gerti | kūdikio buteliukas | kūdikis | pienas
+1F37D	šakutė ir peilis su lėkšte	įrankiai | lėkštė | maisto gaminimas | peilis | šakutė | šakutė ir peilis su lėkšte
+1F37E	butelis su iššokusiu kamščiu	baras | butelis | butelis su iššokusiu kamščiu | gėrimas | iššauti | kamštis | šventė
+1F37F	spragėsiai	kinas | maistas | spragėsiai
+1F950	raguolis	bandelė | duona | kruasanas | maistas | prancūziškas | raguolis
+1F951	avokadas	avokadas | maistas | vaisius
+1F952	agurkas	agurkas | daržovė | maistas | raugintas
+1F953	kumpis	kumpis | maistas | mėsa
+1F954	bulvė	bulvė | daržovė | maistas
+1F955	morka	daržovė | maistas | morka
+1F956	ilgas batonas	batonas | duona | ilgas | kepinys | maistas | prancūziškas batonas | prancūzų
+1F957	žalios salotos	maistas | salotos | žalios
+1F958	prikaistuvis su maistu	maistas | prikaistuvis | prikaistuvis su maistu | troškinys
+1F959	įdarytas lavašas	įdaras | įdarytas lavašas | kebabas | lavašas | maistas
+1F95A	kiaušinis	kiaušinis | maistas
+1F95B	pieno stiklinė	gėrimas | pienas | pieno stiklinė | sktiklinė
+1F95C	žemės riešutas	maistas | riešutas | žemės
+1F95D	kivis	kivis | maistas | vaisius
+1F95E	blynai	blynai | maistas
+1F95F	kukulis	kibinas | kukulis | maistas | tešlos gaminys | Virtinis
+1F960	laimės sausainiukas	laimės sausainiukas | maistas | pranašystė
+1F961	dėžutė išsinešti	austrių kibirėlis | dėžutė išsinešti | lazdelės | maistas | maistas į namus
+1F962	lazdelės	haši | įrankiai | lazdelės
+1F963	dubuo su šaukštu	dubuo su šaukštu | košė | maistas | pusryčiai
+1F964	puodelis su šiaudeliu	gazuotas gėrimas | gėrimas | puodelis su šiaudeliu | soda | sultys
+1F965	kokosas	kokosas | maistas | palmė | pina kolada
+1F966	brokolis	brokolis | daržovė | laukinis kopūstas | maistas
+1F967	pyragas	kepinys | maistas | pyragas | tešla | tešlos gaminys | užpildytas
+1F968	riestainis	kepinys | maistas | riestainis | susuktas
+1F969	mėsos gabalėliai	kepsnys | maistas | mėsa | mėsos gabalėliai
+1F96A	sumuštinis	duona | maistas | sumuštinis
+1F96B	konservai	konservai | maistas | skardinė
+1F96C	lapinė daržovė	daržovė | kininis kopūstas | kopūstas | lapinė daržovė | maistas | salota
+1F96D	mangas	maistas | mangas | tropinis | vaisius
+1F96E	mėnulio pyragas	festivalis | kepinys | maistas | mėnulio pyragas | ruduo
+1F96F	apvalus riestainis	apvalus riestainis | desertas | duonos gaminiai | kepinys | maistas | saldu | spurga | užtepas
+1F9C0	sūrio gabaliukas	maistas | sūrio gabaliukas | sūris
+1F9C1	keksiukas	desertas | duonos gaminiai | keksiukas | kepinys | maistas | saldu | saldus
+1F9C2	druska	druska | druskinė | maistas | prieskonis
+1F9C3	gėrimo pakelis	gėrimas | gėrimo pakelis | šiaudelis | sulčių pakelis
+1F9C4	česnakas	česnakas | maistas | prieskonis
+1F9C5	svogūnas	maistas | prieskonis | svogūnas
+1F9C6	falafelis	falafelis | maistas | mėsos kukulis | vištiena
+1F9C7	vaflis	geležinis | kepinys | maistas | neaiškus | vaflis
+1F9C8	sviestas	maistas | pieno produktas | sviestas
+1F9C9	matė	gėrimas | matė
+1F9CA	ledo kubelis	ledas | ledo kubelis | maistas | šaltas
+1F9CB	burbulinė arbata	arbata | burbulai | burbulinė arbata | gėrimas su šiaudeliu | maistas | pienas
+1FAD0	mėlynės	maistas | mėlyna | mėlynė | mėlynės | uoga
+1FAD1	paprika	daržovė | paprika | pipirai
+1FAD2	alyvuogė	alyvuogė | alyvuogės šakelė | maistas
+1FAD3	paplotis	arepa | duona | lavašas | maistas | naan | paplotis | pita
+1FAD4	vyniotinis	meksikietiškas | pamonha | susuktas | vyniotinis
+1FAD5	fondiu	dubuo | fondiu | ištirpintas | maistas | šokoladas | sūris | šveicariškas
+1FAD6	arbatinukas	arbata | arbatinukas | gėrimas | maistas | puodas
+1FAD7	pilamas skystis	gėrimas | išlieti | oi | pilamas skystis | pilti | stiklinė | tuščias | vanduo
+1FAD8	pupelės	ankštiniai | maistas | pupelės | raudonosios pupelės
+1FAD9	stiklainis	indas | niekas | padažas | prieskonis | saugoti | stiklainis | tuščias
+1FADA	imbiero šaknis	alus | imbieras | imbiero šaknis | natūralu | prieskonis | šaknis | sveikata | žolelė
+1FADB	žirnių ankštis	ankštiniai augalai | ankštis | daržovė | edamame | pupos | sojos pupelė | žirnis | žirnių ankštis
+2615	karštas gėrimas	arbata | garuoja | gėrimas | gerti | karšta | karštas gėrimas | kava
+2600	saulė	kosmosas | oras | saulė | saulėta | spinduliai | šviesu
+2601	debesis	debesis | oras
+2602	skėtis	drabužiai | lietus | skėtis
+2603	sniego senis	šaltis | sniegas | sniego senis
+2614	skėtis su lietaus lašais	drabužiai | lašas | lietus | oras | skėtis | skėtis su lietaus lašais
+26A1	aukštoji įtampa	aukšta įtampa | aukštoji įtampa | elektra | įtampa | pavojus | žaibas
+26C4	sniego senis be sniego	šaltis | sniegas | sniego senis | sniego senis be sniego
+26C5	saulė už debesų	debesis | debesuota | oras | saulė | saulė už debesų
+26C8	debesis su žaibu ir lietumi	audra | debesis | debesis su žaibu ir lietumi | lietus | oras | žaibas
+2744	snaigė	oras | šaltis | snaigė | sniegas
+1F300	ciklonas	apsvaigęs | ciklonas | oras | spiralė | taifūnas
+1F301	rūkas	oras | rūkas | ūkanota
+1F302	suskleistas skėtis	drabužiai | lietus | skėtis | suskleistas skėtis
+1F303	žvaigždėta naktis	naktis | žvaigždė | žvaigždėta naktis
+1F304	saulėtekis virš kalnų	kalnas | rytas | saulė | saulėtekis | saulėtekis virš kalnų
+1F305	saulėtekis	gamta | rytas | saulė | saulėtekis
+1F306	sutemos virš miesto	kraštovaizdis | miestas | pastatas | saulėlydis | sutemos virš miesto | vakaras
+1F307	saulėlydis	pastatas | saulė | saulėlydis | sutemos
+1F308	vaivorykštė	gamta | homoseksualus | lgbt | lietus | vaivorykštė
+1F309	tiltas naktį	naktis | tiltas | tiltas naktį
+1F30A	vandens banga	banga | banglentininkas | gamta | vandens banga | vandenynas | vanduo
+1F30B	ugnikalnis	gamta | išsiveržimas | kalnas | ugnikalnis
+1F30C	paukščių takas	kosmosas | paukščių takas
+1F30D	žemės rutulys su Europos ir Afrikos žemynais	Afrika | Europa | gaublys | pasaulis | žemė | žemės rutulys su Europos ir Afrikos žemynais
+1F30E	žemės rutulys su Šiaurės ir Pietų Amerikos žemynais	Amerika | gaublys | pasaulis | žemė | žemės rutulys su Šiaurės ir Pietų Amerikos žemynais
+1F30F	žemės rutulys su Azijos ir Australijos žemynais	Australija | Azija | gaublys | pasaulis | žemė | žemės rutulys su Azijos ir Australijos žemynais
+1F310	žemės rutulys su dienovidiniais	dienovidiniai | gaublys | pasaulis | žemė | žemės rutulys su dienovidiniais
+1F311	jaunas mėnulis	jaunas mėnulis | jaunatis | kosmosas | mėnulis | tamsa
+1F312	priešpilnis mėnulis	kosmosas | mėnulis | priešpilnis | sapnai
+1F313	pirmas fazės ketvirtis	ketvirtis | kosmosas | mėnulis | pirmas fazės ketvirtis | pirmoji mėnulio fazė
+1F314	priešpilnis (pabaiga)	kosmosas | mėnulis | priešpilnis | priešpilnis (pabaiga)
+1F315	pilnatis	kosmosas | mėnulis | pilnas | pilnatis
+1F316	delčia	delčia | dylantis | kosmosas | mėnulis
+1F317	paskutinis fazės ketvirtis	ketvirtis | kosmosas | mėnulis | paskutinė mėnulio fazė | paskutinis fazės ketvirtis
+1F318	delčia (pabaiga)	delčia (pabaiga) | kosmosas | mėnulis | pusmėnulis
+1F319	pusmėnulis	kosmosas | mėnulis | pusė | pusmėnulis | ramadanas
+1F31A	jaunas mėnulis su veidu	jaunas mėnulis su veidu | kosmosas | mėnulis | veidas
+1F31B	priešpilnio mėnulis su veidu	ketvirtis | kosmosas | mėnulis | priešpilnio mėnulis su veidu | priešpilnis | veidas
+1F31C	delčios mėnulis su veidu	delčios mėnulis su veidu | ketvirtis | mėnulis | veidas
+1F31D	pilnatis su veidu	mėnulis | pilnatis | pilnatis su veidu | šviesu | veidas
+1F31E	saulė su veidu	oras | paplūdimys | saulė | saulė su veidu | šviesu | veidas
+1F31F	žėrinti žvaigždė	kibirkštis | šviesti | žėrėti | žėrinti | žvaigždė
+1F320	krintanti žvaigždė	kosmosas | krintanti | žvaigždė
+1F321	termometras	oras | termometras
+1F324	saulė už nedidelio debesies	debesis | oras | saulė | saulė už nedidelio debesies
+1F325	saulė už didelio debesies	debesis | oras | saulė | saulė už didelio debesies
+1F326	saulė už debesies, iš kurio lyja	debesis | iš kurio lyja | lietus | oras | saulė | saulė už debesies | saulė už debesies, iš kurio lyja
+1F327	debesis, iš kurio lyja	debesis | debesis, iš kurio lyja | iš kurio lyja | lietus | oras
+1F328	debesis, iš kurio sninga	debesis | debesis, iš kurio sninga | iš kurio sninga | oras | šaltis | sniegas
+1F329	debesis su žaibu	debesis | debesis su žaibu | oras | žaibas
+1F32A	tornadas	debesis | oras | sūkurys | tornadas
+1F32B	ūkana	debesis | oras | rūkas | ūkana
+1F32C	vėjo veidas	debesis | pūsti | veidas | vėjas | vėjo veidas
+2648	avinas	avinas | zodiakas
+2649	tauras	bulius | tauras | zodiakas
+264A	dvyniai	dvyniai | zodiakas
+264B	vėžys	krabas | vėžys | zodiakas
+264C	liūtas	liūtas | zodiakas
+264D	mergelė	mergelė | zodiakas
+264E	svarstyklės	pusiausvyra | svarstyklės | teisingumas | zodiakas
+264F	skorpionas	skorpionas | zodiakas
+2650	šaulys	šaulys | zodiakas
+2651	ožiaragis	ožiaragis | ožys | zodiakas
+2652	vandenio ženklas	vandenio ženklas | vandenis | vanduo | zodiakas
+2653	žuvys	zodiakas | žuvis | žuvys
+1F550	pirma valanda	00 | 1 | 1:00 | laikas | laikrodis | pirma valanda | valandos | viena
+1F551	dvi valandos	00 | 2 | 2:00 | dvi | laikas | laikrodis | valandos
+1F552	trys valandos	00 | 3 | 3:00 | laikas | laikrodis | trys | valandos
+1F553	keturios valandos	00 | 4 | 4:00 | keturios | laikrodis | valandos
+1F554	penkios valandos	00 | 5 | 5:00 | laikas | laikrodis | penkios | valandos
+1F555	šešios valandos	00 | 6 | 6:00 | laikas | laikrodis | šešios | valandos
+1F556	septynios valandos	00 | 7 | 7:00 | laikas | laikrodis | septynios | valandos
+1F557	aštuonios valandos	00 | 8 | 8:00 | aštuonios | laikas | laikrodis | valandos
+1F558	devinta valanda	00 | 9 | 9:00 | devinta valanda | devynios | laikas | laikrodis | valandos
+1F559	dešimt valandų	00 | 10 | 10:00 | dešimt | dešimt valandų | laikas | laikrodis | valandos
+1F55A	vienuolika valandų	00 | 11 | 11:00 | laikrodis | valandos | vienuolika | vienuolika valandų
+1F55B	dvylika valandų	00 | 12 | 12:00 | dvylika | dvylika valandų | laikas | laikrodis | valandos
+1F55C	pusė dviejų	1 | 1:30 | 30 | laikas | laikrodis | pusė dviejų | trisdešimt | viena
+1F55D	pusė trijų	2 | 2:30 | 30 | dvi | laikas | laikrodis | pusė trijų | trisdešimt
+1F55E	pusė keturių	3 | 3:30 | 30 | laikas | laikrodis | pusė keturių | trisdešimt | trys | valandos
+1F55F	pusė penkių	30 | 4 | 4:30 | laikas | laikrodis | pusė penkių | trisdešimt | valandos
+1F560	pusė šešių	30 | 5 | 5:30 | laikas | laikrodis | penkios | pusė šešių | trisdešimt | valandos
+1F561	pusė septynių	30 | 6 | 6:00 | laikas | laikrodis | pusė septynių | šešios | trisdešimt | valandos
+1F562	pusė aštuonių	30 | 7 | 7:30 | laikas | laikrodis | pusė aštuonių | septynios | trisdešimt
+1F563	pusė devynių	30 | 8 | 8:30 | aštuonios | laikas | laikrodis | pusė devynių | trisdešimt | valandos
+1F564	pusė dešimt	30 | 9 | 9:30 | devynios | laikas | laikrodis | pusė dešimt | trisdešimt | valandos
+1F565	pusė vienuolikos	10 | 10:30 | 30 | dešimt | laikas | laikrodis | pusė vienuolikos | trisdešimt | valandos
+1F566	pusė dvylikos	11 | 11:30 | 30 | laikas | laikrodis | pusė dvylikos | trisdešimt | valandos | vienuolika
+1F567	dvylika trisdešimt	12 | 12:30 | 30 | dvylika | laikas | laikrodis | trisdešimt
+1FA90	planeta su žiedu	planeta | planeta su žiedu | saturnas
+2604	kometa	kometa | kosmosas
+26F0	kalnas	kalnas
+26F1	skėtis ant žemės	lietus | saulė | skėtis | skėtis ant žemės
+26F2	fontanas	fontanas
+26F4	keltas	keleivis | keltas | valtis
+26F5	burlaivis	burlaivis | jachta | jūra | kurortas | laivas | valtis
+2708	lėktuvas	kelionė | lėktuvas | skyrdis
+1F488	kirpėjo suktukas	kirpėjas | kirpėjo suktukas | suktukas | šukuosena
+1F4BA	vieta	kėdė | vieta
+1F680	raketa	kelionė | kosmosas | raketa
+1F681	sraigstasparnis	kelionė | sraigstasparnis | transporto priemonė
+1F682	lokomotyvas	garai | garvežys | geležinkelis | kelionė | lokomotyvas | traukinys | variklis
+1F683	traukinio vagonas	automobilis | elektrinis | geležinkelis | kelionė | tramvajus | transporto priemonė | traukinio vagonas | traukinys | troleibusas
+1F684	greitasis traukinys	geležinkelis | greitasis | greitis | traukinys
+1F685	greitasis traukinys su smailu priekiu	geležinkelis | greitasis traukinys | greitasis traukinys su smailu priekiu | greitis | kelionė | kulka | traukinys
+1F686	traukinys	geležinkelis | traukinys
+1F687	metro	kelionė | metro | transporto priemonė
+1F688	miesto tramvajus	geležinkelis | miesto tramvajus
+1F689	stotis	geležinkelis | stotis | traukinys
+1F68A	tramvajus	tramvajus | troleibusas
+1F68B	tramvajaus vagonas	automobilis | tramvajaus vagonas | tramvajus | transporto priemonė | troleibusas
+1F68C	autobusas	autobusas | mokyklinis autobusas | transporto priemonė
+1F68D	artėjantis autobusas	artėjantis | autobusas | transporto priemonė
+1F68E	troleibusas	autobusas | tramvajus | troleibusas
+1F68F	autobusų stotelė	autobusas | autobusų stotelė | stotelė
+1F690	mikroautobusas	autobusas | mikroautobusas | transporto priemonė
+1F691	greitosios pagalbos automobilis	greitoji pagalba | greitosios pagalbos automobilis | transporto priemonė
+1F692	ugniagesių automobilis	sunkvežimis | ugniagesių automobilis | ugnis | variklis
+1F693	policijos automobilis	automobilis | patruliai | policija | policijos automobilis
+1F694	artėjantis policijos automobilis	artėjantis | artėjantis policijos automobilis | automobilis | policija | transporto priemonė
+1F695	taksi	automobilis | geltona taksi | taksi | transporto priemonė | uber
+1F696	artėjantis taksi	artėjantis | taksi | transporto priemonė | uber
+1F697	automobilis	automobilis | transporto priemonė | vairavimas
+1F698	artėjantis automobilis	artėjanti | artėjantis automobilis | automobilis | mašina | transporto priemonė
+1F699	rekreacijos automobilis	automobilis | padidinto pravažumo automobilis | rekreacijos | SUV | transporto priemonė
+1F69A	krovininis sunkvežimis	krovininis sunkvežimis | pristatymas | sunkvežimis | transporto priemonė
+1F69B	sunkvežimis su priekaba	priekaba | pusė | sunkvežimis | sunkvežimis su priekaba | transporto priemonė
+1F69C	traktorius	traktorius | transporto priemonė
+1F69D	vienbėgis geležinkelis	transporto priemonė | vienbėgis geležinkelis
+1F69E	kalnų traukinys	automobilis | geležinkelis | kalnas | kalnų traukinys | kelionė traukiniu | transporto priemonė | traukinys
+1F69F	kabanti geležinkelio linija	geležinkelis | kabanti | kabanti geležinkelio linija
+1F6A0	kalnų keltuvas	gondola | kabelis | kalnas | kalnų keltuvas
+1F6A1	lynų keltuvas	automobilis | gondola | kabelis | lyno keltuvas | lynų keltuvas | orinis | tramvajus | transporto priemonė
+1F6A2	laivas	keleivis | kelionė | laivas | Titanikas | valtis
+1F6A3	irkluojantis žmogus	ežeras | irklas | irkluojantis žmogus | irkluoti | kanoja | kelionė jūra | laivas | plaustas | transporto priemonė | upė | valtis | žvejoti | žvejyba
+1F6A4	motorinis kateris	kelionė | milijardierius | motorinė valtis | motorinis kateris | prabanga | valtis
+1F6A5	horizontalus šviesoforas	eismas | horizontalus šviesoforas | signalas | šviesa
+1F6A6	vertikalus šviesoforas	eismas | signalas | šviesa | vertikalus šviesoforas
+1F6A7	statybos	barjeras | statybos
+1F6A8	policijos automobilio lempa	automobilis | besisukanti | policija | policijos automobilio lempa | signalinis žibintas | sirena | šviesa | transporto priemonė
+1F6A9	trikampė vėliava	golfas | postas | trikampė vėliava | vėliava
+1F6AA	durys	durys
+1F6B0	geriamasis vanduo	čiaupas | geriamas | geriamasis vanduo | gerti | vanduo
+1F6B1	draudžiama gerti vandenį	draudžiama | draudžiama gerti vandenį | geriamas | gėrimas | gerti | ne | uždrausta | vanduo
+1F6B3	dviračiai draudžiami	draudžiama | dviračiai draudžiami | dviratis | ne | transporto priemonė | uždrausta | ženklas
+1F6B7	pėstiesiems eiti draudžiama	draudžiama | ne | pėstiesiems eiti draudžiama | pėstysis | uždrausta
+1F6B8	vaikų perėja	eismas | perėja | pėstysis | vaikas | vaikų perėja
+1F6B9	vyrų tualetas	tualetas | vyras | vyrų tualetas | wc | ženklas
+1F6BA	moterų tualetas	moteris | moterų tualetas | tualetas | wc
+1F6BB	tualeto kambarys	moteris | tualetas | tualeto kambarys | wc | ženklas
+1F6BC	kūdikio simbolis	kūdikio simbolis | kūdikis | vystyklų keitimas
+1F6BD	tualetas	tualetas
+1F6BE	tualeto patalpa	tualetas | tualeto patalpa | vanduo | wc
+1F6BF	dušas	dušas | vanduo
+1F6C0	žmogus prausiasi vonioje	vonia | žmogus prausiasi vonioje
+1F6C1	vonia	vonia
+1F6C2	pasų kontrolė	kontrolė | pasas | pasų kontrolė
+1F6C3	muitinė	muitinė | pakavimas
+1F6C4	bagažo skyrius	atsiimti | bagažas | bagažo skyrius | kelionė | ženklas
+1F6C5	paliktas bagažas	bagažas | lagaminas | paliktas bagažas | spintelė | ženklas
+1F6D0	garbinimo vieta	garbinimo vieta | garbinti | religija
+1F6D1	sustojimo ženklas	aštuonkampis | sustojimo ženklas | sustoti | ženklas
+1F6D2	pirkinių vežimėlis	apsipirkimas | parduotuvė | pirkinių vežimėlis | vežimėlis
+2668	karštosios versmės	garai | karšta | karštosios versmės | versmės
+26BD	futbolo kamuolys	futbolas | futbolo kamuolys | kamuolys | sportas
+26BE	beisbolo kamuoliukas	beisbolo kamuoliukas | kamuolys | sportas
+26F3	vėliava skylutėje	duobutė | golfas | skylutė | sportas | vėliava duobutėje | vėliava skylutėje
+1F392	mokyklinė kuprinė	krepšys | kuprinė | mokykla | mokyklinė kuprinė
+1F3A0	karuselės arkliukas	arklys | karuselė | karuselės arkliukas | pramogos
+1F3A1	apžvalgos ratas	apžvalgos | atrakcionų parkas | ratas
+1F3A2	linksmieji kalneliai	atrakcionų parkas | kalneliai | linksmieji
+1F3A3	meškerė	meškerė | sportas | žuvis
+1F3A4	mikrofonas	karaokė | mikrofonas | muzika
+1F3A5	filmavimo kamera	filmas | filmavimo kamera | kamera | kinas
+1F3A6	kinas	filmas | kamera | kinas
+1F3A7	ausinės	ausinės | garsas
+1F3A8	dailininko paletė	dailininko paletė | menas | muziejus | paletė | piešinys
+1F3A9	cilindras	aukšta | cilindras | drabužiai | kepurė | skrybėlė
+1F3AA	cirko palapinė	cirkas | cirko palapinė | palapinė
+1F3AB	bilietas	bilietas | įėjimas
+1F3AC	pliauškė	filmas | pliauškė | pranešimo lenta | veiksmas
+1F3AD	scenos menas	kaukė | menas | pasirodymas | scenos menas | teatras
+1F3AE	vaizdo žaidimas	pramogos | pultelis | vaizdo žaidimas | valdiklis | žaidimas
+1F3AF	smūgis tiesiai į taikinį	akis | dartas | pataikyti | smūgis tiesiai į taikinį | taikinys | žaidimas
+1F3B0	žaidimų automatas	automatas | lošimas | lošimų automatas | žaidimas | žaidimų automatas
+1F3B1	biliardo kamuoliukas	8 | 8 kamuoliukas | biliardas | biliardo kamuoliukas | žaidimas
+1F3B2	kauliukas	kauliukas | pramogos | žaidimas
+1F3B3	boulingas	boulingas | kamuolys | sportas | žaidimas
+1F3B4	kortos su gėlėmis	gėlė | japonų | kortos | kortos su gėlėmis | žaidimas
+1F3B5	muzikos nata	muzika | muzikos nata | nata
+1F3B6	muzikos natos	muzika | muzikos natos | nata | natos
+1F3B7	saksofonas	instrumentas | muzika | saksofonas
+1F3B8	gitara	gitara | instrumentas | muzika
+1F3B9	muzikos klaviatūra	instrumentas | klaviatūra | muzika | muzikos klaviatūra | pianinas
+1F3BA	trimitas	instrumentas | muzika | trimitas
+1F3BB	smuikas	instrumentas | muzika | smuikas
+1F3BC	partitūra	muzika | nata | partitūra | smuiko raktas
+1F3BD	bėgimo marškinėliai	atletika | bėgimas | bėgimo marškinėliai | juosta | marškinėliai
+1F3BE	teniso kamuoliukas	kamuolys | raketė | sportas | tenisas | teniso kamuoliukas
+1F3BF	slidės	slidės | slidinėti | sniegas | sportas
+1F3C0	krepšinio kamuolys	kamuolys | krepšinio kamuolys | krepšinis | lankas | sportas
+1F3C1	vėliava langeliais	langeliai | languota vėliava | lenktynės | sportas | vėliava | vėliava langeliais
+1F3C2	snieglenčių sporto mėgėjas	slidinėti | sniegas | snieglenčių sporto mėgėjas | snieglentė | sportas
+1F3C3	bėgikas	atbėgu | bėgantis žmogus | bėgikas | bėgiojimas | greitas | greitis | lenktynės | maratonas | skubėti
+1F3C4	banglentininkas	bangavimas | banglenčių sportas | banglentininkas | bangos | paplūdimys | sportas | vandenynas
+1F3C5	sporto medalis	auksas | laimėtojas | medalis | nugalėtojas | sporto medalis
+1F3C6	trofėjus	pergalė | prizas | sportas | trofėjus
+1F3C7	arklių lenktynės	arklių lenktynės | arklys | jojikas | lenktynės | sportas
+1F3C8	amerikietiškojo futbolo kamuolys	amerikietiškas | amerikietiškojo futbolo kamuolys | futbolas | kamuolys | sportas
+1F3C9	regbio kamuolys	futbolas | kamuolys | regbio kamuolys | regbis | sportas
+1F3CA	plaukikas	laisvasis stilius | plaukiantis žmogus | plaukikas | plaukimas | plaukti | sportas | triatlonas
+1F3CB	svorių kilnotojas	kilnotojas | pakėlimas | sportas | štanga | svoris | svorių kilnotojas | treniruotė
+1F3CC	golfo žaidėjas	golfas | golfo žaidėjas | kamuoliukas | lygiosios | patarnaujantysis | varyti kamuoliuką į duobutę | žaisti golfą | žalia
+1F3CD	motociklas	lenktynės | motociklas
+1F3CE	lenktyninis automobilis	automobilis | lenktynės | lenktyninis automobilis
+1F451	karūna	drabužiai | karalienė | karalius | karūna
+1F452	moteriška skrybėlė	drabužiai | moteris | moteriška skrybėlė | skrybėlė
+1F453	akiniai	akiniai | akys | apranga | drabužiai
+1F454	kaklaraištis	biuras | drabužiai | kaklaraištis | marškiniai
+1F455	marškinėliai	drabužiai | kasdieniai | marškinėliai | marškiniai | vyras
+1F456	džinsai	drabužiai | džinsai | kasdieniai | kelnės | trumpikės
+1F457	suknelė	drabužiai | suknelė
+1F458	kimono	drabužiai | kimono | patogu
+1F459	bikinis	bikinis | drabužiai | maudymosi kostiumėlis | moteris | paplūdimys | plaukti
+1F45A	moteriški drabužiai	drabužiai | moteris | moteriški drabužiai | palaidinė
+1F45B	piniginė	apsipirkimas | drabužiai | monetos | piniginė
+1F45C	rankinė	drabužiai | krepšys | rankinė
+1F45D	maišelis	drabužiai | drabužių krepšys | krepšys | maišelis | rankinė
+1F45E	vyriškas batas	batai | batas | drabužiai | vyras | vyriškas batas
+1F45F	bėgimo batelis	atletiškas | batai | batas | bėgimo batelis | drabužiai | sportinis batelis
+1F460	aukštakulnis batelis	aukštakulnis batelis | batai | batas | drabužiai | kulnas | moteris
+1F461	moteriška basutė	basutė | batai | batas | drabužiai | moteris | moteriška basutė | sandalas
+1F462	moteriškas batas	batai | batas | batelis | drabužiai | ilgaaulis batas | moteris | moteriškas batas
+1F6B2	dviratis	dviratis | transporto priemonė
+1F6B4	dviratininkas	dviračiu važiuojantis asmuo | dviratininkas | dviratis | sportas | važiuoti dviračiu
+1F6B5	kalnų dviratininkas	atletas | dviratininkas | dviratis | kalnas | kalnų dviratininkas | sportas | važiuoti dviračiu
+1F6B6	pėstysis	einantis žmogus | eisena | ėjimas | išdidi eisena | lengva eisena | pasivaikščiojimas | pėsčiasis | pėstysis | vaikščiojimas | vaikščioti | žingsnis
+1F938	persivertimas šonu	aktyvus | gimnastika | kūliavirstis | laimingas | persivertimas | persivertimas šonu | susijaudinęs | vertimasis kūliais | žmogus
+1F939	žongliravimas	balansuoti | daug darbų vienu metu | įgūdis | išlaikyti pusiausvyrą | įveikti | pusiausvyra | reakcija | žmogus | žonglierius | žongliravimas | žongliruoti
+1F93A	fechtuotojas	fechtavimas | fechtuotojas | kardas
+1F93C	imtynininkai	dvikova | grumtynės | imtynės | imtynininkai | imtynininkas | imtynių turnyras | kova | ringe | žmonės
+1F93D	vandensvydis	Marco | plaukimas | vandens sportas | vandensvydis | vandensvydžio žaidėjas | vanduo | žmogus
+1F93E	rankinis	atletas | gaudyti | kamuolys | mesti | rankininkas | rankinis | sportas | sviesti | žmogus
+1F93F	nardymo kaukė	nardymas | nardymo kaukė
+1F9E2	reklaminė kepurė	beisbolo kepuraitė | drabužis | kepurė | kepurė su snapeliu | reklaminė kepurė
+1F9E3	skara	drabužis | kaklas | šalikas | šalta | skara
+1F9E4	pirštinės	drabužis | pirštinės | ranka
+1F9E5	paltas	drabužis | paltas | striukė | švarkas
+1F9E6	kojinės	blauzdinė | drabužis | kojinės
+1FA70	baleto bateliai	baletas | baleto bateliai | batai | šokis
+1FA71	vientisas maudymosi kostiumėlis	drabužis | maudymosi kostiumėlis | vientisas maudymosi kostiumėlis
+1FA72	trumpikės	apatiniai | drabužis | maudymosi kostiumėlis | trumpikės | viena dalis
+1FA73	šortai	apatiniai | drabužis | maudymosi kostiumas | šortai | trumpikės
+1FA74	sandalai su dirželiu	batai | dirželiai | paplūdimio sandalai | paplūdimio šlepetė | sandalai | sandalai su dirželiu | šlepetė
+1FA80	jo-jo	jo-jo | svyruojantis | žaislas
+1FA81	aitvaras	aitvaras | pakilti | skristi
+1FA82	parašiutas	pakabinti | parašiutas
+1FA83	bumerangas	australija | bumerangas | grįžimas | įrankis
+1FA84	stebuklinga lazdelė	burtininkas | magija | ragana | stebuklinga lazdelė | stebuklingas
+1FA85	pinjata	meksikietiška | pinjata | šventė | vakarėlis
+1FA86	matrioškos	lėlė | matrioška | matrioškos | Rusija
+1FA95	bandža	bandža | instrumentas | muzika | styginis
+1FA97	akordeonas	akordeonas | armonika | instrumentas | muzika
+1FA98	ilgas būgnas	būgnas | ilgas būgnas | Kongas | ritmas
+265F	šachmatų pėstininkas	naivuolis | paaukotinas | šachmatai | šachmatų pėstininkas
+2660	pikai	kortos | pikai | žaidimas
+2663	kryžiai	kortos | kryžiai | žaidimas
+2665	širdys	kortos | širdys | žaidimas
+2666	būgnai	būgnai | būgnas | kortos | žaidimas
+1F4B3	kredito kortelė	bankas | kortelė | kreditas | kredito kortelė | pinigai
+1F4B4	jenos banknotas	bankas | banknotas | jena | jenos banknotas | pinigai | valiuta
+1F4B5	dolerio banknotas	bankas | banknotas | dolerio banknotas | doleris | pinigai | valiuta
+1F4B6	euro banknotas	bankas | banknotas | euras | euro banknotas | pinigai | valiuta
+1F4B7	svaro sterlingų banknotas	bankas | banknotas | pinigai | svaras sterlingų | svaro sterlingų banknotas | valiuta
+1F4B9	didėjimo diagrama su jenos simboliu	augimas | diagrama | didėjimo diagrama su jenos simboliu | jena | tendencijos | valiuta
+1F4BB	skreitinis kompiuteris	asmeninis | buras | kompiuteris | nešiojamas kompiuteris | skreitinis kompiuteris
+1F4BC	portfelis	biuras | portfelis
+1F4BD	kompiuterio diskas	diskas | kompiuterio diskas | kompiuteris | minidiskas | optinis
+1F4BE	diskelis	diskas | diskelis | kompiuteris
+1F4BF	optinis diskas	CD | diskas | kompaktinis diskas | kompiuteris | optinis
+1F4C0	skaitmeninis vaizdo diskas	Blu-Ray | diskas | kompaktinis diskas | kompiuteris | optinis | skaitmeninis vaizdo diskas
+1F4C1	failų aplankas	aplankas | failas | failų aplankas | uždarytas | uždarytas failų aplankas
+1F4C2	atidarytas failų aplankas	aplankas | atidarytas | atidarytas failų aplankas | failas | failų aplankas
+1F4C3	užsirietęs puslapis	dokumentas | puslapis | užsirietęs
+1F4C4	puslapis viršutine puse	dokumentas | puslapis | puslapis viršutine puse
+1F4C5	kalendorius	data | kalendorius
+1F4C6	nuplėšiamas kalendorius	data | kalendorius | nuplėšiamas kalendorius
+1F4C7	kortelių dėklas	dėklas | indeksas | kortelė | kortelių dėklas | senovinis
+1F4C8	didėjimo tendencijos diagrama	augimas | diagrama | didėjimo tendencijos diagrama | schema | tendencija
+1F4C9	mažėjimo tendencijos diagrama	diagrama | į apačią | mažėjimas | mažėjimo tendencijos diagrama | tendencija
+1F4CA	juostinė diagrama	diagrama | juosta | juostinė diagrama
+1F4CB	segtuvas	darbų sąrašas | sąrašas | segtuvas
+1F4CC	smeigtukas	smeigtukas
+1F4CD	apvalus smeigtukas	apvalus smeigtukas | smeigtukas
+1F4CE	sąvaržėlė	sąvaržėlė
+1F4CF	tiesi liniuotė	liniuotė | matematika | tiesi
+1F4D0	trikampė liniuotė	liniuotė | matematika | trikampė liniuotė | trikampis
+1F4D1	žymių skirtukai	skirtukai | skirtukas | žyma | žymė | žymeklis | žymių skirtukai
+1F4D2	sąskaitų knyga	knyga | sąskaitų knyga | užrašų knygelė
+1F4D3	užrašinė	užrašinė
+1F4D4	užrašų knygelė su dekoratyviniu viršeliu	dekoratyvinis | knyga | užrašų knygelė | užrašų knygelė su dekoratyviniu viršeliu | viršelis
+1F4D5	užversta knyga	knyga | mokslas | užversta | užverta
+1F4D6	atversta knyga	atversta | biblioteka | knyga | mokslas | žinios
+1F4D7	žalia knyga	knyga | mokslas | žalia
+1F4D8	mėlyna knyga	biblioteka | išsilavinimas | knyga | mėlyna | skaitymas
+1F4D9	oranžinė knyga	biblioteka | knyga | oranžinė | skaitymas | žinios
+1F4DA	knygos	knyga | knygos | mokslas | mokykla
+1F4DB	vardo ženklelis	vardas | vardo ženklelis | ženklelis
+1F4DC	susuktas lapas	lapas | popierius | susuktas lapas
+1F4DD	atmintinė	atmintinė | bendravimas | pieštukas
+1F4DE	telefono ragelis	prietaisas | ragelis | telefonas | telefono ragelis
+1F4DF	gaviklis	bedravimas | gaviklis
+1F4E0	fakso aparatas	faksas | fakso aparatas
+1F4E1	palydovinė antena	antena | indas | mokslas | palydovas | palydovinė antena
+1F4E2	garsiakalbio simbolis	garsiai | garsiakalbio simbolis | garsiakalbis | skelbimas | viešas
+1F4E3	garsintuvas	džiaugsmingi šūksniai | garsiakalbis | garsintuvas
+1F4E4	siunčiamų laiškų dėklas	dėklas | išsiųsti | laiškas | paštas | siunčiami | siunčiamų laiškų dėklas
+1F4E5	gaunamų laiškų dėklas	dėklas | gaunamų laiškų dėklas | gauti | laiškas | paštas
+1F4E6	paketas	dėžė | paketas | siuntinys
+1F4E7	el. laiškas	el. laiškas | laiškas | paštas
+1F4E8	gaunamas vokas	el. laiškas | gaunamas laiškas | gaunamas vokas | gavimas | laiškas | paštas | vokas
+1F4E9	vokas su rodykle	el. laiškas | el. paštas | laiškas | rodyklė | vokas | vokas su rodykle
+1F4EA	uždaryta pašto dėžutė su nuleista vėliava	nuleista | paštas | pašto dėžutė | uždaryta | uždaryta pašto dėžutė su nuleista vėliava
+1F4EB	uždaryta pašto dėžutė su pakelta vėliava	paštas | pašto dėžutė | uždaryta | uždaryta pašto dėžutė su pakelta vėliava
+1F4EC	atidaryta pašto dėžutė su pakelta vėliava	atidaryta | atidaryta pašto dėžutė su pakelta vėliava | pakelta | paštas | pašto dėžutė
+1F4ED	atidaryta pašto dėžutė su nuleista vėliava	atidaryta | atidaryta pašto dėžutė su nuleista vėliava | nuleista | paštas | pašto dėžutė
+1F4EE	pašto dėžutė	laiškas | paštas | pašto dėžutė
+1F4EF	pašto ragas	paštas | pašto | ragas
+1F4F0	laikraštis	laikraštis | naujienos | popierius
+1F4F1	mobilusis telefonas	mobilusis | prietaisas | telefonas
+1F4F2	mobilusis telefonas su rodykle	mobilusis | mobilusis telefonas su rodykle | prietaisas | rodyklė | skambinti | telefonas
+1F4F3	vibravimo režimas	mobilusis | režimas | telefonas | vibravimas | vibravimo režimas
+1F4F4	išjungti mobilųjį telefoną	išjungti | išjungti mobilųjį telefoną | mobilusis | telefonas
+1F4F5	jokių mobiliųjų telefonų	draudžiama | jokių mobiliųjų telefonų | mobilusis | ne | telefonas | uždrausta | ženklas
+1F4F6	antenos juostos	antena | antenos juostos | juosta | mobilusis | ryšys | signalas | telefonas
+1F4F7	fotoaparatas	asmenukė | fotoaparatas | vaizdo įrašas
+1F4F8	fotoaparatas su blykste	blykstė | fotoaparatas | fotoaparatas su blykste | vaizdo įrašas
+1F4F9	vaizdo kamera	fotoaparatas | vaizdo įrašas | vaizdo kamera
+1F4FA	televizorius	televizorius | TV | vaizdo įrašas
+1F4FB	radijas	pramogos | radijas | vaizdo įrašas
+1F4FC	vaizdo įrašų kasetė	juosta | kasetė | senovinė | vaizdo įrašas | vaizdo įrašų kasetė | VHS
+1F4FD	filmų projektorius	filmas | filmų projektorius | kinas | projektorius | vaizdo įrašas
+1F4FF	rožinis	drabužiai | karoliai | melstis | religija | rožinis | vėrinys
+1F505	užtemdymo mygtukas	blankus | mažas | mygtukas | ryškumas | užtemdymo mygtukas
+1F506	ryškumo mygtukas	ryškumas | ryškumo mygtukas | ryškus
+1F507	garsiakalbis išjungtas	garsiakalbis | garsiakalbis išjungtas | garsumas | nutildytas | prietaisas | tylus
+1F508	tylus garsiakalbis	garsiakalbis | prietaisas | tylus
+1F509	vidutinio garso garsiakalbis	garsiakalbis | vidutinio garso garsiakalbis | vidutinis
+1F50A	didelis garsiakalbio garsumas	didelis garsiakalbio garsumas | garsiakalbis | garsus | prietaisas
+1F50B	baterija	baterija
+1F50C	elektros kištukas	elektra | elektros kištukas | kištukas
+1F50D	didinimo stiklas į kairę	didinimo | didinimo stiklas į kairę | įrankis | laboratorija | mokslas | paieška | stiklas
+1F50E	didinimo stiklas į dešinę	didinimo | didinimo stiklas į dešinę | įrankis | paieška | stiklas
+1F50F	spyna ir rašiklis	privatumas | rašalas | rašiklis | smaigalys | spyna | spyna ir rašiklis
+1F510	užrakinta spyna su raktu	raktas | saugu | spyna | uždaryta | užrakinta spyna su raktu
+1F511	raktas	raktas | saugu | slaptažodis | spyna
+1F512	spyna	saugu | spyna | uždaryta | užrakinta
+1F513	atrakinta spyna	atidaryta | atrakinta | spyna
+1F514	varpelis	bažnyčia | pertrauka | varpas | varpelis
+1F515	perbrauktas varpelis	draudžiama | nutildyti | perbrauktas varpelis | tyliai | varpas | varpelis
+1F516	žymė	skirtukas | žyma | žymė
+1F517	jungtis	jungtis | jungtys
+1F518	akutė	akutė | geometrija | mygtukas
+1F51E	tik pilnamečiams	18 | amžiaus apribojimas | aštuoniolika | draudžiama | ne | nepilnametis | tik pilnamečiams | uždrausta
+1F51F	mygtukas: 10	mygtukas
+1F526	žibintuvėlis	deglas | elektra | įrankis | šviesa | žibintuvėlis
+1F527	veržliaraktis	įrankis | veržliaraktis
+1F528	plaktukas	įrankis | plaktukas
+1F529	veržlė ir varžtas	įrankis | varžtas | veržlė | veržlė ir varžtas
+1F52A	virtuvinis peilis	ginklas | įrankiai | įrankis | maisto gaminimas | peilis | virtuvinis peilis
+1F52B	vandens šautuvas	ginklas | įrankis | pistoletas | revolveris | vandens šautuvas
+1F52C	mikroskopas	įrankis | laboratorija | mikroskopas | mokslas
+1F52D	teleskopas	įrankis | mokslas | teleskopas
+1F9BA	gelbėjimosi liemenė	drabužis | gelbėjimosi | kritinė padėtis | liemenė
+1F9BB	ausis su klausos aparatu	ausis | ausis su klausos aparatu | kurtieji ir neprigirdintieji | neįgaliųjų prieinamumas | neprigirdintis | prieinamumas
+1F9BC	motorizuotas vežimėlis	motorizuotas vežimėlis | neįgaliųjų prieinamumas | prieinamumas | vežimėlis
+1F9BD	rankomis valdomas vežimėlis	neįgaliųjų prieinamumas | prieinamumas | rankomis valdomas vežimėlis | važimėlis
+1F9E9	dėlionė	dalis | dėlionė | galvosūkis | raktas | susijungiantis | žaidimas
+1F9EA	mėgintuvėlis	bandymas | chemija | chemikas | laboratorija | mėgintuvėlis | mokslas
+1F9EB	petri lėkštelė	bakterijos | bakterijų auginimas | biologas | biologija | laboratorija | petri lėkštelė
+1F9EC	DNR	biologas | DNR | evoliucija | genas | genetika | gyvybė
+1F9ED	kompasas	kompasas | kryptis | magnetinis | navigacija | orientacinis
+1F9EE	skaitytuvai	skaičiavimas | skaitliukas | skaitytuvai | skaitytuvas
+1F9EF	gesintuvas	gesinti | gesintuvas | ugnis
+1F9F0	įrankių rinkinys	dėžė | įrankis | įrankių rinkinys | mechanikas
+1F9F1	plyta	molis | plyta | plytos | siena | skiedinys
+1F9F2	magnetas	magnetas | magnetinis | pasaga | trauka
+1F9F3	bagažas	bagažas | kelionė | lagaminas | pakavimas
+1F9F4	losjono buteliukas	apsauga nuo saulės | drėkinamasis kremas | kremas | kremas nuo saulės | losjonas | losjono buteliukas | šampūnas
+1F9F5	siūlas	adata | gija | ritė | siūlas | siuvimas
+1F9F6	siūlų kamuolys	kamuolys | megzti | nerti | siūlai | siūlų kamuolys
+1F9F7	žiogelis	pankrokas | vystyklai | žiogelis
+1F9F8	meškiukas	kimštas | meškiukas | pliušas | pliušinis meškiukas | žaislas
+1F9F9	šluota	ragana | šlavimas | šluota | valymas
+1F9FA	pintinė	daiktas | iškyla | pintinė | skalbiniai | ūkininkavimas
+1F9FB	popieriaus ritinys	popieriaus ritinys | popieriniai rankšluosčiai | tualetinis popierius
+1F9FC	muilas	maudytis | muilas | muilinė | muilinti | plytelė | praustis
+1F9FD	kempinė	akytas | kempinė | praustis | sugeriantis
+1F9FE	čekis	apskaita | čekis | įrodymai
+1F9FF	amuletas akis	amuletas akis | blogio akis | karoliukas | nazaras | talismanas | žavesys
+1FA78	kraujo lašas	kraujas | kraujo aukojimas | kraujo lašas | medicina | menstruacijos
+1FA79	pleistras	pleistras
+1FA7A	stetoskopas	gydytojas | medicina | širdis | stetoskopas
+1FA91	kėdė	daiktas | kėdė | sėdėti
+1FA92	skustuvas	aštrus | skusti | skustuvas
+1FA93	kirvis	daiktas | kapoti | kirvis | mediena
+1FA94	žibalinė lempa	daiktas | lempa | žibalas | žibalinė lempa | žvakė
+1FA96	kareiviškas šalmas	armija | kareivis | kareiviškas šalmas | kariuomenė | karys | šalmas
+1FA99	moneta	auksas | lobis | metalas | moneta | pinigai | sidabras
+1FA9A	pjūklas	dailidė | įrankis | mediena | pjūklas
+1FA9B	atsuktuvas	atsuktuvas | įrankis | varžtas
+1FA9C	kopėčios	kopėčios | lipti | žingsnis
+1FA9D	kablys	grobis | kablys | sugauti
+1FA9E	veidrodis	atspindys | atšvaitas | makiažas | reflektorius | veidrodis
+1FA9F	langas	atvėrimas | langas | perregimas | rėmas | šviežias oras | vaizdas
+260E	telefonas	telefonas
+2620	kaukolė ir sukryžiuoti kaulai	kaukolė | kaukolė ir sukryžiuoti kaulai | mirtis | monstras | sukryžiuoti kaulai | veidas
+2622	radioaktyvu	radioaktyvu | ženklas
+2623	biorizika	biorizika | ženklas
+267F	neįgaliojo vežimėlio simbolis	neįgalieji | neįgaliojo vežimėlio simbolis | neįgaliųjų prieinamumas | pasiekiamumas | simbolis
+2692	plaktuvas ir kirstuvas	įrankis | kirstuvas | plaktukas | plaktukas ir kirstuvas | plaktuvas ir kirstuvas
+2693	inkaras	inkaras | įrankis | laivas
+2694	sukryžiuoti kardai	ginklai | kardai | sukryžiuoti
+2695	medicinos simbolis	asklepijas | asklepijus | medicina | medicinos simbolis | personalas
+2696	svarstyklės su lėkštėmis	įrankis | pusiausvyra | svarstyklės | svarstyklės su lėkštėmis | svoris | teisingumas | zodiakas
+2697	distiliavimo indas	chemija | distiliavimo indas | įrankis
+2699	krumpliaratis	įrankis | krumpliaratis
+269B	atomo simbolis	ateistas | atomas | atomo simbolis
+269C	lelijos simbolis	lelija | lelijos simbolis | riteriai
+26A0	įspėjimas	įspėjimas
+26CF	kirstuvas	įrankis | kasimas | kirstuvas
+26D1	šalmas su baltu kryžiumi	kepurė | kryžius | pagalba | šalmas | šalmas su baltu kryžiumi | veidas
+26D3	grandinės	grandinė | grandinės
+26D4	įėjimo nėra	draudžiama | eismas | įėjimas | įėjimo nėra | ne | uždrausta
+2702	žirklės	įrankis | žirklės
+2709	vokas	el. laiškas | el. paštas | laiškas | paštas | vokas
+270F	pieštukas	pieštukas
+2712	juoda plunksna	juoda plunksna | rašiklis | smaigalys
+2714	paryškinta varnelė	paryškinta varnelė | varnelė | žymė
+2716	paryškintas daugybos ženklas	atšaukti | dauginti | daugyba | paryškintas daugybos ženklas | x
+2753	raudonas klaustukas	klausimas | klaustukas | raudonas klaustukas | skyryba | žymė
+2757	raudonas šauktukas	raudonas šauktukas | šauktukas | skyryba | žymė
+27A1	rodyklė į dešinę	koordinatė | kryptis | rodyklė | rodyklė į dešinę | rytai
+1F500	maišyti takelius	maišyti takelius | mygtukas | rodyklė | sukryžiuota
+1F501	kartoti	kartoti | mygtukas | mygtukas „pakartoti“ | pagal laikrodžio rodyklę | rodyklė
+1F502	kartoti vieną	kartoti vieną | kartoti vieną kartą | mygtukas | pagal laikrodžio rodyklę | rodyklė | vieną kartą
+1F503	vertikalios laikrodžio rodyklės kryptimis nukreiptos rodyklės	pagal laikrodžio rodyklę | rodyklė | vertikalios laikrodžio rodyklės kryptimis nukreiptos rodyklės
+1F504	prieš laikrodžio rodyklę nukreiptų rodyklių mygtukas	dejavu | mygtukas | prieš laikrodžio rodyklę | prieš laikrodžio rodyklę nukreiptų rodyklių mygtukas | rodyklė
+1F519	rodyklė su užrašu „Back“	atgal | rodyklė | rodyklė su užrašu „Back“
+1F51A	rodyklė su užrašu „End“	pabaiga | rodyklė | rodyklė su užrašu „End“
+1F51B	rodyklė su užrašu „On!“	į abi puses | rodyklė | rodyklė į abi puses | rodyklė su užrašu „On!“ | žymė
+1F51C	rodyklė su užrašu „Soon“	greitai | rodyklė | rodyklė su užrašu „Soon“
+1F51D	rodyklė su užrašu „Top“	į viršų | rodyklė | rodyklė su užrašu „Top“ | viršus
+1F520	įvestis didžiosios lotyniškos raidės	ABCD | didžiosios | įvestis | lotyniškos | raidės
+1F521	įvestis mažosios lotyniškos raidės	abcd | įvestis | lotyniškos | mažosios | raidės
+1F522	įvesties skaičiai	1234 | įvesties skaičiai | įvestis | skaičiai
+1F523	įvesties simboliai	įvesties simboliai | įvestis | simbolis
+1F524	įvestis lotyniškos raidės	abc | abėcėlė | įvestis | lotyniškos | raidės
+21B5	kampinė rodyklė žemyn ir kairėn	kampinė rodyklė žemyn ir kairėn
+21B0	rodyklė aukštyn, pasukta į kairę	pasukta į kairę | rodyklė aukštyn | rodyklė aukštyn, pasukta į kairę
+21B1	rodyklė aukštyn, pasukta į dešinę	pasukta į dešinę | rodyklė aukštyn | rodyklė aukštyn, pasukta į dešinę
+21B2	rodyklė žemyn, pasukta į kairę	pasukta į kairę | rodyklė žemyn | rodyklė žemyn, pasukta į kairę
+21B3	rodyklė žemyn, pasukta į dešinę	pasukta į dešinę | rodyklė žemyn | rodyklė žemyn, pasukta į dešinę
+21B4	kampinė rodyklė dešinėn ir žemyn	kampinė rodyklė dešinėn ir žemyn
+21E4	rodyklė kairėn su brūkšneliu	rodyklė kairėn su brūkšneliu
+21E5	rodyklė dešinėn su brūkšneliu	rodyklė dešinėn su brūkšneliu
+21B9	rodyklė kairėn su brūkšneliu virš rodyklės dešinėn su brūkšneliu	rodyklė kairėn su brūkšneliu virš rodyklės dešinėn su brūkšneliu
+21E7	tuščiavidurė rodyklė aukštyn	tuščiavidurė rodyklė aukštyn
+21EA	tuščiavidurė rodyklė aukštyn nuo brūkšnio	tuščiavidurė rodyklė aukštyn nuo brūkšnio
+21E6	tuščiavidurė rodyklė kairėn	tuščiavidurė rodyklė kairėn
+21E8	tuščiavidurė rodyklė dešinėn	tuščiavidurė rodyklė dešinėn
+21E9	tuščiavidurė rodyklė žemyn	tuščiavidurė rodyklė žemyn
+21DE	dukart perbraukta rodyklė aukštyn	dukart perbraukta rodyklė aukštyn
+21DF	dukart perbraukta rodyklė žemyn	dukart perbraukta rodyklė žemyn
+21B8	rodyklė į šiaurės vakarus su ilgu brūkšniu	rodyklė į šiaurės vakarus su ilgu brūkšniu
+21B6	pusapskritimė rodyklė su prieš laikrodžio rodyklę nukreiptu smaigaliu	pusapskritimė rodyklė su prieš laikrodžio rodyklę nukreiptu smaigaliu
+21B7	pusapskritimė rodyklė su laikrodžio rodyklės kryptimi nukreiptu smaigaliu	pusapskritimė rodyklė su laikrodžio rodyklės kryptimi nukreiptu smaigaliu
+21C5	į viršų ir į apačią nukreiptos rodyklės	apačia | į viršų ir į apačią nukreiptos rodyklės | rodyklė | viršus
+21F5	rodyklė žemyn į kairę nuo rodyklės aukštyn	rodyklė žemyn į kairę nuo rodyklės aukštyn
+21A8	rodyklė aukštyn ir žemyn su pagrindu	rodyklė aukštyn ir žemyn su pagrindu
+21E0	brūkšninė rodyklė kairėn	brūkšninė rodyklė kairėn
+21E1	brūkšninė rodyklė aukštyn	brūkšninė rodyklė aukštyn
+21E2	brūkšninė rodyklė dešinėn	brūkšninė rodyklė dešinėn
+21E3	brūkšninė rodyklė žemyn	brūkšninė rodyklė žemyn
+21AB	rodyklė kairėn su kilpa	rodyklė kairėn su kilpa
+21AC	rodyklė dešinėn su kilpa	rodyklė dešinėn su kilpa
+2B05	rodyklė į kairę	koordinatė | kryptis | rodyklė | rodyklė į kairę | vakarai
+2B06	rodyklė į viršų	koordinatė | kryptis | rodyklė | rodyklė į viršų | šiaurė
+2B07	rodyklė į apačią	į apačią | koordinatė | kryptis | pietūs | rodyklė | rodyklė į apačią

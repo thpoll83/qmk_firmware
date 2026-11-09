@@ -1,0 +1,1253 @@
+# emoji search keywords, qu, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	kusisqa uya	kusi | kusisqa uya | uya
+1F601	kancharisqa uya kusisqa ñawikunawan	kancharisqa uya kusisqa ñawikunawan | kusi | ñawi | uya
+1F602	kusisqa uya wiqikunawan	kusi | kusisqa | kusisqa uya wiqikunawan | uya | wiqi
+1F603	kusisqa uya hatun ñawikunawan	kichay | kusi | kusisqa uya hatun ñawikunawan | simi | uya
+1F604	kusisqa uya kusisqa ñawikunawan	kichay | kusi | kusisqa uya kusisqa ñawikunawan | ñawi | simi | uya
+1F605	kusisqa uya sutʼuwan	asiy | chiri | kichay | kusisqa uya sutʼuwan | sutʼu | uya
+1F606	kusisqa uya wichqasqa ñawikunawan	asisqa | asiy | kusisqa uya wichqasqa ñawikunawan | munasqa | simi | uya
+1F607	kusisqa uya aureolawan	angel | aureola | fantasia | juchannaq | kusisqa uya aureolawan | uya
+1F608	kusisqa uya waqrakunawan	fantasia | hadas willana | kusisqa | kusisqa uya waqrakunawan | uya | waqra
+1F609	chʼirmi uya	chʼirmi | chʼirmi ya | uya
+1F60A	kusisqa uyata kusisqa ñawikunawan	kusi | kusisqa uyata kusisqa ñawikunawan | ñawi | pʼinqakuy | uya
+1F60B	uya mikuspa mikuna	kusi | mikuspa | miski | mmm | uya | uya mikuspa mikuna | uya mikusqa mikuna
+1F60C	llamsayasqa uya	llamsayasqa | uya
+1F60D	kusisqa uya sunqukunawan ñawikunapi	kusi | kusisqa uya sunqukunawan ñawikunapi | munay | ñawi | uya
+1F60E	kusisqa uya lenteswan	allinlla | inti | kusisqa uya lenteswan | kʼanchay | lentes de sol nisqa | uya
+1F60F	kʼaskiskachasqa uya	kʼaskikachay | kʼaskiskachasqa uya | uya
+1F610	chusaq uya	chusaq uya | kikin | neutral | uya
+1F611	mana rimasqa uya	eh | mana expresioniyuq | mana rimasqa uya | uya | wañusqa
+1F612	mana kusisqa uya	llakisqa | mana kusisqa | mana kusisqa uya | uya
+1F613	llakisqa uya sutʼuwan	chiri | llakisqa uya sutʼuwan | sutʼu | uya
+1F614	yuyaspa uya	usphu | uya | yuyaspa
+1F615	chaqrusqa uya	chaqrusqa uya | eh | uya
+1F616	pantasqa uya	pantasqa uya
+1F617	muchʼasqa uya	muchʼa | muchʼasqa uya | uya
+1F618	uya chʼamqasqa huk muchʼata	muchʼa | uya | uya chʼamqasqa huk muchʼata
+1F619	muchʼasqa uyata kusisqa ñawikunawan	muchʼa | muchʼasqa uyata kusisqa ñawikunawan | ñawi | uya
+1F61A	muchʼasqa uyata wichqasqa ñawikunawan	muchʼa | muchʼasqa uyata wichqasqa ñawikunawan | ñawi | uya | wichqasqa
+1F61B	uya qalluwan	qallu | uya | uya qalluwan
+1F61C	chʼirmi uya qalluwan	asina | chʼirmi | chʼirmi uya qalluwan | ñawi | qallu | uya
+1F61D	wichqasqa ñawikuna qalluwan	mikuy | millana | ñawi | qallu | uya | wichqasqa ñawikuna qalluwan
+1F61E	sunqunnasqa uya	sunqunnasqa uya
+1F61F	llakisqa uya	llakisqa | uya
+1F620	phiñakusqa uya	phiñakusqa | uya
+1F621	piñasqa uya	piña | piñasqa | piñay | puka | uya
+1F622	waqasqa uya	llakisqa | uya | waqasqa uya | waqay | wiqi
+1F623	yanapakusqa uya	uya | yanapakusqa uya | yanapakuy
+1F624	uya qʼusñiwan sinqamanta	atipasqa | triunfo | uya | uya qʼusñiwan sinqamanta
+1F625	llakisqa ichaqa llamsayasqa uya	llakisqa ichaqa llamkayasqa uya | llakisqa ichaqa llamsayasqa uya | llamsayasqa | sunqunnasqa uya | uf | uya
+1F626	añasqa uya kichasqa simiwan	añasqa uya kichasqa simiwan | añay | kichay | simi | uya
+1F627	ñakʼari uya	ñakʼari uya
+1F628	mancharisqa uya	manchachisqa | mancharisqa | manchariy | uya
+1F629	ayqusqa uya	ayqusqa | sayk’usqa | uya
+1F62A	uya puñuywan	puñuy | uya | uya puñuywan
+1F62B	saykusqa uya	saykusqa | uya
+1F62C	uya muecaswan	muesca | uya | uya muecaswan | uya muescakunawan
+1F62D	waqasqa uya wiqikunawan	llaki | llakisqa | uya | waqasqa uya wiqikunawan | wiqi
+1F62E	uya kichasqa simiwan	kichay | kʼacha | simi | uya | uya kichasqa simiwan
+1F62F	chin kasqa uya	chin kasqa uya | chin niy | manchakusqa uya | mancharisqa
+1F630	takurisqa uya sutʼuwan	anqas | chiri | sutʼu | takurisqa uya sutʼuwan | usqhasqa | uya
+1F631	uya qaparisqa manchanawan	khastuy | manay | manchasqa | qhapariy | uya | uya qaparisqa manchanawan
+1F632	añasqa uya	añasqa | chaqrusqa | llapan | uya
+1F633	manchakusqa uya	kuyusqa | manchakusqa | uya
+1F634	puñusqa uya	puñusqa uya | puñuy | uya | zzz
+1F635	takasqa uya	takasqa uya | uya | wañuy
+1F636	uya mana simiyuqwan	chʼin | ñañiq | simi | uya | uya mana simiyuqwan
+1F637	uya barbijowan	barbijo | chiri | hampiq | unqusqa | uya | uya barbijiwan | uya barbijowan
+1F638	kusisqa misi uya kusisqa ñawikunawan	asiy | kusi | kusisqa misi uya kusisqa ñawikunawan | misi | ñawi | uya
+1F639	misi wiqikunawan kusirikuyninmanta	kusi | misi | misi wiqikunawan kusirikuyninmanta | uya | wiqi
+1F63A	kusisqa misi	kichay | kusi | kusisqa | misi | simi | uya
+1F63B	asisqa misi sunqukunawan ñawikunapi	asisqa misi sunqukunawan ñawikunapi | asiy | misi | munay | ñawi | sunqu | uya
+1F63C	misi muyusqa kusiwan	asiy | ironico | misi | misi muyusqa kusiwan | muyusqa | uya
+1F63D	muchʼasqa misi	misi | muchʼa | muchʼasqa misi | ñawi | uya
+1F63E	turisqa misi	misi | turisqa | uya
+1F63F	waqasqa misi	llakisqa | misi | uya | waqasqa misi | waqay | wiqi
+1F640	mancharisqa misi	ayqusqa | mancharisqa | misi | oh | uya
+1F641	pisi llakisqa uya	llaki | pisi llakisqa uya | uya
+1F642	pisi kusisqa uya	kusi | pisi kusisqa uya | uya
+1F643	tikrasqa uya	tikrasqa | uya
+1F644	uya muyusqa ñawikunawan	muyusqa | muyuy | ñawikuna | uya | uya muyusqa ñawikunawan
+1F648	kusillo mana saqrayuqwan rikuy	amachasqa | kusillo | kusillo mana saqrayuqwan rikuy | rikuy | uya | Vote supay
+1F649	kusillo mana saqrayuqwan uyariy	amachasqa | kusillo | kusillo mana saqrayuqwan uyariy | supay | uya | uyariy
+1F64A	kusillo mana saqrayuqwan parlay	amachasqa | kusillo | kusillo mana saqrayuqwan parlay | parlay | supay | uya
+1F910	uya ziper simipi	simi | uya | uya ziper simipi | ziper
+1F911	simi qullqiwan uya	qullqi | qullqi simi uyawan | simi | simi qullqiwan uya | uya
+1F912	termometrowan uya	termometro | termometrowan uya | unqusqa | unquy | uya
+1F913	yuyaq uya	friki | uya | yuyaq
+1F914	yuyasqa uya	uya | yuyasqa
+1F915	uya manku umawan	kʼiri | kʼirisqa | uya | uya manku umawan | venda
+1F916	robot	mostruo | robot | uya
+1F917	kusisqa uya kichasqa makikunawan	kicasqa makikuna | kusisqa uya | kusisqa uya kichasqa makikunawan | markaspa | marqay | uya
+1F920	baquero uya chukuwan	baquera | baquero | baquero uya chukuwan | chuku | uya
+1F921	pʼaqpaku uya	pʼaqpaku uya
+1F922	unqusqa uya	unqusqa | uya | wischusqa uya
+1F923	muyusqa kusi jallpʼapi	kusi | muyusqa | muyusqa kusi allpapi | muyusqa kusi jallpʼapi | pampa | uya
+1F924	llawsasuru uyu	llawsasuru | uyu
+1F925	llullakusqa uya	llullakusqa uya | llullakuy | pinocho | uya
+1F926	runa makian uyapi	chunta | iñiynin | runa makian uyapi | tapuna | uya
+1F927	jachisqa uya	gesundheit | jachisqa uya | jachiy | uya
+1F928	uya wichasqa urku chukchapi	eseptico | mana iñisqa | uya wichasqa urku chukchapi
+1F929	quyllur añasqa	kusisqa | ñawikuna | quyllur | quyllur añasqa | uya
+1F92A	waqʼa uya	hatun | huchuy | ñawi | waqʼa | waqʼa uya
+1F92B	chin niy uya	chin niy | chin niy uya
+1F92C	uya unanchakunawan simipi	sullullchachkan | uya unanchakunawan simipi
+1F92D	uya makiwan simipi	ups | uya makiwan simipi
+1F92E	wischusqa uya	qipina | unqusqa | wischusqa uya
+1F92F	tuqyasqa uma	mancharisqa | tuqyasqa | tuqyasqa uma
+1F970	kusisqa uya sunqukunawan	kusisqa uya sunqukunawan | munanakuy | munasqa | munay | sunqukuna
+1F971	hanyasqa uya	hanyasqa | hanyasqa uya | maji | majisqa
+1F972	kusisqa uya wiqiwan	apuskachaq | kusisqa | kusisqa uya wiqiwan | kusisqa uya wiwiwan | llamkasqa | pachi | wiqi
+1F973	qʼuchukusqa uya	chuku | jarana | qʼuchukusqa uya | raymi | waqra
+1F974	uma muyuy	intoxicado | machasqa | muyu muyu | qinquykachasqa simi | uma muyuy | wistʼu ñawikuna
+1F975	qʼuñi uya	fiebre | jumpʼi | puka uya | qʼuñi | qʼuñi uya | ruphay
+1F976	chiri uya	anqas uya | chiri | chiri uya | ritiyachisqa | ritiyachiy
+1F978	pakasqa uya	lentekuna | mana riqsiqisqa | pakasqa | sinqa | uya
+1F97A	uyllasqa uya	khuyakuy | llullu uya | uyllasqa uya | uyllay
+1FAE0	chullusqa uya	chinkachisqa | chinkachiy | chullusqa uya | chulluy | yaku
+1FAE1	uya rimaykuspa	ari | rimaykuy | uya rimaykuspa | UYAKUY
+1FAE2	uya kichasqa ñawikunawan maki simipi	manchakusqa | manchakuy | pinqakusqa | pinqakuy | uya kichasqa ñawikunawan maki simipi
+1FAE3	uya chinkachisqa ñawiwan	captivatu | chinkachisqa | ñawiriy | uya chinkachisqa ñawiwan
+1FAE4	uya wiksu simiwan	chinkachisqa | eseptiku | mana uyakusqa | mmm | uya wiksu simiwan
+1FAE5	chusupa siqinwan uya	chinkachiy | chusupa siqinwan uya | mana riqisqa | upallasqa
+1FAE7	bubbles	bubble | bubbles | burp | clean | floating | pearl | soap | underwater
+1FAE8	kuyusqa uya	kuyusqa | kuyuy | temblor nisqa | uya
+1F381	pʼintusqa suña	p’intusqa | pʼintusqa suña | raymi | suña | tawak’uchu
+1F389	confeti chamqaq	chamqaq | confeti | raymi
+1F38A	muyu confetiwan	confeti | muyu | muyu confetiwan | raymi
+1F47B	kuku	criatura | fantasia | hadas willana | kuku | monstruo | uya
+1F47C	wawa angel	angel | fantasia | hadas willana | uya | wawa
+1F47D	alien	alien | criatura | extraterrestre | fantasia | ovni | uya
+1F47E	pʼarqa alienígena	alien | criatura | extraterrestre | monstruo | ovni | pʼarqa alienígena | uya
+1F47F	phiñakusqa uya waqrakunawan	challi | fantasia | phiñakusqa uya waqrakunawan | saqra | supay | uya
+1F480	saqru	hadas willana | monstruo | saqru | uya | wañuy
+1F481	runa willakuy kitipi	maki | mana p’inakuy | qillqasqa | runa willakuy kitipi | willakuy | yanapakuy
+1F482	guardia	guardia
+1F489	jeringa nisqa	aguja | disparo | gripe | hampi | hampiq | herramienta | jeringa | unquq | vacunacion
+1F48A	pastilla	hampi | hampikuna | hampiq | hampiyuq | pastilla | pastillakuna | unquq | vitamina nisqa
+1F4A2	phiñakuy unancha	comic | mana allin | phiñakuy | phiñakuy unancha
+1F4A4	zzz	comic | puñuy | zzz
+1F4A5	tupa	bum | comic | tupa
+1F4A6	jumpʼi sutukuna	chʼiqichisqa | comic | jumpʼi sutukuna | sumpʼi sutukuna | sutʼu
+1F4A7	sutʼu	chiri | kusi | miski | sut’u | sutʼu
+1F4A8	karuman phawachkan	comic | karuman phawachkan | phaway | purichkan
+1F4A9	aka	achka aka | aka | kaka | monstruo | popo | uya
+1F4AB	muyu muyu	comic | muyu muyu | quyllur
+1F4AC	rimaypa glubun	glubu | kusi | phukpu | rimana | rimasqa | rimaypa glubun
+1F4AD	yuyaypa glubun	glubu | kusi | phukpu | rimana | rimasqa | yuyaypa glubun
+1F4AE	yuraq tika	tika | yuraq tika
+1F4A0	puytu chusuwan	chirukamay | comic | puytu | puytu chusuwan | ukun
+1F4A1	kʼancha	chuya | comic | electrico | kancha | kʼancha | yuyay
+1F4A3	bomba	bomba | comic
+1F4AF	pachaq chikukuna	100 | chikukuna | hunta | pachaq
+1F4B0	qulli qipi	qipi | qulli qipi | qullqi
+1F4B1	tikrasqa qullqi	banco | qullqi | tikrasqa
+1F4B2	dolar unancha	dolar | dolar unancha | qullqi
+1F4B8	qullqi raprakunawan	billete | chanin | paway | qullqi | qullqi raprakunawan | raprakuna
+1F525	nina	llamkana | nina
+1F52E	muyu qhispillu	fantasia | hadas willana | llamkana | muyu qhispillu | p’ulu | qhispillu | qulli
+1F440	ñawikuna	ñawi | ñawikuna | uya
+1F441	ñawi	khurku | ñawi
+1F442	ninri	khurku | ninri
+1F443	sinqa	sinqa | ukhu
+1F444	simi	simi | sirpi
+1F445	qallu	khurku | qallu
+1F446	tʼupsi rukʼanawan hanaqman chimpuy	chimpuy | hanaq | jinchʼa | maki | rukana | tʼupsi rukʼanawan hanaqman chimpuy
+1F447	tʼupsi rukʼanawan uranman chimpuy	chimpuy | jinchʼa | maki | rukana | tʼupsi rukʼanawan uranman chimpuy | uran
+1F448	tʼupsi rukʼanawan lluqʼiman chimpuy	chimpuy | indice | jinchʼa | maki | rukana | tʼupsi rukʼanawan lluqʼiman chimpuy
+1F449	tʼupsi rukʼanawan pañaman chimpuy	chimpuy | indice | jinchʼa | maki | rukana | tʼupsi rukʼanawan pañaman chimpuy
+1F44A	saqma unancha	ch’uqmi | juqharisqa saqma | maki | saqma unancha
+1F44B	qinquykachasqa maki	maki | qinquykachasqa | qinquykachay
+1F44C	UYAKUY maki	maki | UYAKUY
+1F44D	hanaqpi rukʼana	+1 | hanaq | hanaqpi rukʼana | maki | rukʼana
+1F44E	uranpi rukʼana	-1 | maki | rukʼana | uran | uranpi rukʼana
+1F44F	jayllisqa makikuna	jayllisqa makikuna | jaylliy | maki
+1F450	kichasqa makikuna	kichasqa makikuna | kichay | maki
+261D	rukʼanawan hanaqman chimpuy	chimpuy | hanaq | indice | maki | rukana | rukʼanawan hanaqman chimpuy
+270A	juqharisqa saqma	ch’uqmi | juqharisqa saqma | maki | pipuyasqa | saqma
+270B	huqharisqa maki	huqharisqa maki | maki
+270C	yalli maki	maki | v | yalli
+270D	maki qillqachkan	maki | maki qillqachkan | qillqay
+1F4AA	iskaychasqa bicepkuna	challwan | comic | iskaychasqa bicepkuna | musculo | p’akchiy
+1F590	maki iskay rukanakunawa mastasqa	maki | maki iskay rukanakunawa mastasqa | mastasqa | rukana
+1F64C	juqharisqa makikuna	achhalay | gesto | juqharisqa | juqharisqa makikuna | maki | raymi
+1F64F	makikuna rezando	maki | makikuna rezando | orar | pachi | tapuy
+1F90C	tʼipsisqa rukanakuna	maki gestu | rukanakuna | sawkalli | tapurikuy | tʼipisqa | tʼipsisqa rukanakuna
+1F90F	tʼipsisqa maki	huchuy chanin | tʼipsisqa maki
+1F918	waqrakuna unancha	maki | rock | rukana | waqrakuna | waqrakuna unancha
+1F919	waqyawani maki	maki | qayana | waqyawani maki
+1F91A	juqharisqa maki	jinchʼa | juqharisqa | juqharisqa maki
+1F91B	lluqʼi saqma	lluq’iman | lluqʼi saqma | saqma
+1F91C	paña saqma	paña saqma | pañaman | saqma
+1F91D	pipuyasqa makikunapura	huñunakuy | maki | pipuyasqa | pipuyasqa makikunapura | pipuyasqa makukunapura | uyniy
+1F91E	chakatasqa rukanakuna	chakatasqa rukanakuna | chakatay | maki | rukana | suerte
+1F91F	munanki yupi	ILY | maki | munanki yupi
+1F932	makikunawan plegaria unancha	makikunawan plegaria unancha | plegaria
+1F9B4	tullu	saqru | tullu
+1F9B5	chanka	chanka | jaytʼay | miembro
+1F9B6	chaki	chaki | jaytʼay saruy
+1F9B7	kiru	dentista | kiru | kirukuna
+1F9E0	ñuqtu	ñuqtu | umayuq
+1F9BE	mecanico maki	mecanico maki | prostetico | yaykurinalla
+1FAC0	anatomico sunqu	anatomico | cardiologia | organo | pulso | sunqu
+1FAC1	surqʼankuna	inhalar | organo | respiracion | samarquy | samay | surqʼankuna
+1FAE6	kachupakuspa simi	kachupakuspa simi | llakikusqa | llakikuy | llakisqa | llakiy
+1FAF0	maki chakatasqa iskay rukanawan	chanin | maki chakatasqa iskay rukanawan | munay | qullqi | sunqu
+1FAF1	pañaman maki	maki | paña | pañaman
+1FAF2	lluqiman maki	lluqi | lluqiman | maki
+1FAF3	uranman maki pampa	chinkachiy | kachaykuy | uranman maki pampa
+1FAF4	hanaqman maki pampa	hamuy | hanaqman maki pampa | hapiy | mañay | quy
+1FAF5	indice rukanawan chimpusqa qawaqman	chimpuy | indice rukanawan chimpusqa qawaqman | qam
+1FAF6	sunqu makikunawan	munay | sunqu makikunawan
+1FAF7	tanqaspa lluqi maki	lluqi | pichqa rukanakuna | suyay | tanqaspa | tanqaspa lluqi maki | tatichiy
+1FAF8	tanqaspa paña maki	paña | pichqa rukanakuna | suyay | tanqaspa | tanqaspa paña maki | tatichiy
+2764	puka sunqu	puka sunqu | sunqu
+1F380	cinta	cinta | raymi
+1F382	wata huntaypaq torta	masa | miski | postre | raymi | torta | wata huntaypaq | wata huntaypaq torta
+1F383	mathi	halloween | jack | linterna | mathi | raymi
+1F384	Navidad sacha	Navidad | raymi | sacha
+1F386	fuegos artificiales	fuegos artificiales | raymi
+1F387	pinchi	fuegos artificiales | k’anchay | pinchi | raymi
+1F388	glubu	glubu | raymi
+1F9E7	puka carta	allinmi kay | puka carta | qullqi | suñay
+1F9E8	petardo	dinamita | petardo | tuqyay
+1F38B	tanabata sachʼa	baner | Japones | raymi | sach’a | tanabata sachʼa
+1F38C	chakatasqa wiphalakuna	chakatasqa | chakatasqa wiphalakuna | Japones | rank’usqa | raymi
+1F38D	pino achhachala	bambu | Japones | pino | pino achhachala | raymi
+1F38E	Japonesa urpukuna	Japonesa | Japonesa urpukuna | raymi | urpu
+1F38F	wipala carpaswan	carpa | qawaq | raymi | wipala carpaswan
+1F390	chhullupi wayrapaq	chhullupi wayrapaq | chhulluqi | chuullu | raymi | wayra
+1F391	killa itu qawaypaq	killa | killa itu qawaypaq | raymi
+1F393	graduacion chiku	gorra | graduacion | graduacion chiku | pacha | raymi | sumbriru
+1F484	llimpʼi simipaq	llimpʼi simipaq
+1F485	esmalte sillukunapaq	cosmeticos | esmalte | esmalte sillukunapaq | manicura | qhaway | sillu
+1F48B	muchʼa unancha	muchʼa | muchʼa unancha | sirpi
+1F48C	munay qillqa	chaski | munay | qillqa | sunqu
+1F48D	siwi	siwi
+1F48E	gema	gema
+1F48F	much’a	much’a | pitu runakuna
+1F490	tikakunamanta	tika | tikakunamanta
+1F491	pitu runakuna sunquwan	munay | pitu runakuna | pitu runakuna sunquwan
+1F492	sawa	capilla | romance | sawa
+1F493	phatatasqa sunqu	patatasqa sunqu | phatatasqa | phatatasqa sunqu | phatatay | tʼipuy
+1F494	pakasqa sunqu	pakasqa | pakasqa sunqu | pakay
+1F495	iskay sunqukuna	iskay sunqukuna | munay
+1F496	kʼanchasqa sunqu	kusisqa | kʼanchasqa | kʼanchasqa sunqu
+1F497	paqarisqa sunqu	kusisqa | paqarisqa | paqarisqa sunqu | pulso | tʼikti
+1F498	sunqu wachʼiwan	cupido | sunqu wachʼiwan | wachʼi
+1F499	anqas sunqu	anqas | anqas sunqu
+1F49A	qʼumir sunqu	qʼumir | qʼumir sunqu
+1F49B	qʼillu sunqu	qʼillu | qʼillu sunqu
+1F49C	kulli sunqu	kulli | kulli sunqu
+1F49D	sunqu cintawan	cinta | sunqu cintawan | valentin
+1F49E	muyusqa sunqukuna	muyusqa | muyusqa sunqukuna
+1F49F	sunqu rikchay	sunqu | sunqu rikchay
+1F90D	yuraq sunqu	sunqu | yuraq
+1F90E	cafe sunqu	cafe | sunqu
+1F9E1	willapi sunqu	willapi | willapi sunqu
+1FA75	chuya anqas sunqu	chuya anqas | chuya anqas sunqu | cian | sunqu
+1FA76	uqi sunqu	qata | sunqu | uqi
+1FA77	rusadu sunqu	kuyay | munay | rusadu | sumaq | sunqu
+2763	sunqu exclamasion	exclamasion | marka | puntuacion | sunqu exclamasion
+2733	pusaq siqiwan asterisco	* | asterisco | pusaq siqiwan asterisco
+2734	pusaq ñawpikunawan quyllur	* | pusaq ñawpikunawan quyllur | quyllur
+2747	k’anchay	* | k’anchay | kanchay
+1F3E0	wasi	wasi
+1F3E1	wasi inkillwan	inkill | wasi | wasi inkillwan
+1F3E2	jatariki oficinakunapaq	jatariki | jatariki oficinakunapaq
+1F3E3	Japónmanta oficina chaskipaq	chaski | Japones | Japónmanta oficina chaskipaq
+1F3E4	oficina chaskipaq	chaski | Europeo | oficina chaskipaq
+1F3E5	hampina wasi	hampi | hampina wasi | hanpiq
+1F3E6	banco	banco | jatariki
+1F3E7	ATM unancha	atm | ATM unancha | banco | cajero | kikichansqa
+1F3E8	tampuwasi	jatariki | tampuwasi
+1F3E9	munaymanta tampu wasi	munay | munaymanta tampu wasi | tampuwasi
+1F3EA	qatuna 24 phanikunawan	qatuna 24 phanikunawan
+1F3EB	yachaywasi	jatariki | yachaywasi
+1F3EC	qhatuna kiti	kiti | qhatuna
+1F3ED	ruway	jatariki | ruway
+1F3EE	izakaya linterna	chuya | izakaya linterna | linterna | puka | warra
+1F3EF	Japones pukara	Japones | pukara
+1F3F0	pukara	Europeo | pukara
+1F463	yupinay	p’acha | yupi | yupinay
+1F464	ukhu rikchay	rikchay | ukhu
+1F465	ukhu rikchaykuna	rikchay | ukhu | ukhu rikchaykuna
+1F466	yuqalla	wayna | yuqalla
+1F467	warmi warma	Virgo | warmi warma | wayna | zodiaco
+1F468	qari	puriq runa | qari
+1F469	warmi	puriq runa | warmi
+1F46A	kuraq ayllu	kuraq ayllu
+1F46B	warmi chaymanta runa iskay makikunawan	hapisqa | iskay makikunawan | maki | pitu | runa | warmi | warmi chaymanta runa iskay makikunawan
+1F46C	runa iskay makikunawan	Geminis | iskay | iskay makikunawan | runa | runa iskay makikunawan | runakuna | zodiaco
+1F46D	warmi iskay makikunawan	iskay makikunawan | maki | pitu | warmi | warmi iskay makikunawan
+1F46E	policia	hachu | oficial | paco | policia
+1F46F	runakuna quwi ninrikunawan	quwi ninri | raymichkan | runakuna quwi ninrikunawan | tusuq
+1F470	runa velowan	runa | runa velowan | salla | sawa | velo
+1F471	runa: qillu chukcha	chukcha | qillu | qillu chukcha runa | runa: qillu chukcha
+1F472	runa casquetewan	casquete | chʼullu | gorra | gua pi mao | runa | runa casquetewan
+1F473	runa turbantewan	runa turbantewan | turban
+1F474	hatun tata	hatun | hatun tata | puriq runa | qari
+1F475	hatun mama	hatun | hatun mama | puriq runa | warmi
+1F476	wawa	wawa | wayna
+1F477	Pirqaq	allichanapaq | allichay | chuku | llamkaq | llamkay | pirqaq | pirqay | runa
+1F478	ñusta	fantasia | hadas willarina | ñusta
+1F479	ogro	criatura | fantasia | hadas willana | monstruo | ogro | uya
+1F47A	huchuy kuku	criatura | fantasia | hadas willana | huchuy kuku | kuku | monstruo | uya
+1F483	warmi tusuchkan	tusuchkan | tusuy | warmi
+1F486	runa masaje uyapi	masaje | runa masaje uyapi | salon | uya
+1F487	runa chukcha rutukuy	barbero | k’acha | runa chukcha rutukuy | rutukuy | salon
+1F645	runa MANA rikuy	amasqa | amatasqa | gesto | maki | runa MANA rikuy
+1F646	runa UYAKUY rikuy	gesto | maki | runa UYAKUY rikuy | UYAKUY
+1F647	upaykusqa runa	gesto | qhispichiway | qhispichiy | upaykusqa runa | upaykuy
+1F64B	runa makita hatarichiy	gesto | hatarichisqa | kusi | maki | runa makita hatarichiy
+1F64D	llakisqa runa	gesto | llaki | llakisqa runa
+1F64E	phiñachisqa runa	gesto | phiñachisqa runa | piñachisqa
+1F930	wiksayuq warmi	warmi | wiksayuq
+1F931	ñuñuchiy	ñuñu | ñuñuchiy | ñuñuq | wawa
+1F933	selfie	camara | selfie | telefono
+1F934	awki	awki
+1F935	runa tuxedopi	machu wayna | runa | runa tuxedopi | tuxedo
+1F936	Mama Noel	mama | Navidad | noel | raymi
+1F937	runa rikrakunayuq hatarichiy	chiri sunqu | hatarichiy | pantay | runa rikrakunayuq hatarichiy | thuki
+1F385	Papa Noel	Navidad | noel | papa | raymi | tata
+1F9B8	superheroe	allin | heroe | heroina | superheroe | superpoder
+1F9B9	supervillano	criminal | supay | superpoder | supervillano | villano
+1F9BF	mecanico chaka	mecanico chaka | prostetico | yaykurinalla
+1F9D0	uya monoculowan	maskasqa | uya monoculowan
+1F9D1	runa	genero neutral | mana akllasqa genero | puriq runa | runa
+1F9D2	irqi	genero | irqi | mana akllasqa | neutral genero | yuqalla
+1F9D3	ñawpa runa	genero | genero neutral | hatun | mana akllasqa | ñawpa runa | puriq runa
+1F9D4	runa: kʼaki	kʼaki | runa | runa: kʼaki
+1F9D5	warmi barbijowan	barbijo | hijab | mantilla | tichel | warmi barbijiwan | warmi barbijowan
+1F9D6	runa wapsi wasipi	runa wapsi wasipi | sauna | wapsi wasi
+1F9D7	wichaq runa	wichaq runa | wichay
+1F9D8	runa yoga yupipi	jamut’ay | runa yoga yupipi | yoga
+1F9D9	watuq	runa layqa | runa watuq | warmi layqa | warmi watuq | watuq
+1F9DA	hada	hada | Oberon | Puck | Titania
+1F9DB	vampiro	Dracula | mana wañusqa | vampiro
+1F9DC	runa sirena	runa sirena | sirena | tata triton | warmi sirena
+1F9DD	elfo	elfo | magico
+1F9DE	genio lamparamanta	genio | genio lamparamanta
+1F9DF	zombi	mana wañusqa | zombi
+1FAC2	runakuna makʼalliwan	aywa | imaynalla | makʼalli | pachi | runakuna makʼalliwan
+1FAC3	qari wiksayuq	hunta | puputi | qari wiksayuq | wiksayuq | yawarniyuq
+1FAC4	wiksayuq runa	hunta | wiksayuq | wiksayuq runa | yawarniyuq
+B9	hatun qillqa huk	hatun qillqa | hatun qillqa huk | huk
+B2	hatun qillqa iskay	hatun qillqa | hatun qillqa iskay | iskay | tawakuchusqa
+B3	hatun qillqa kimsa	hatun qillqa | hatun qillqa kimsa | kimsa | machina
+207B	hatun qillqa qichuna	hatun qillqa | hatun qillqa qichuna | qichuna
+B0	gradu	gradu | prueba | ura
+B1	yapana qichuna	yapana qichuna | yapana-qichuna
+D7	mirachina unancha	mirachina | mirachina unancha | mirachiy | pachakuna
+F7	rakina unancha	obelus | rakina | rakina unancha | rakiy
+B5	micro unancha	micro unancha | tupuna
+A9	copyright	c | copyright | copyright nisqa
+AE	yaykusqa	r | yaykusqa
+2122	waqaychasqa chinpuy	chimpu | tm | waqaychasqa chinpu | waqaychasqa chinpuy
+A7	ruwana	hatun qillqa raki | raki | ruwana | silcrow
+B6	hatun qillqa raki chimpu	alinea | hatun qillqa raki | hatun qillqa raki chimpu | pilcrow | rubrica
+B7	chawpi chiku	chawpi | chiku | interpunct
+2022	viñeta	chiku | viñeta
+2013	uchuy qichuna	qichuna | uchuy
+2026	elipsis	chikukuna | elipsis | sayachiy
+AB	lluqi francesa kumilla	allin tuqyaq | cheuron | kuchu | kurchitikuna | lluqi | lluqi francesa kumilla | yapa willakuy
+BB	paña francesa kumilla	allin tuqyaq | cheuron | kuchu | kurchitikuna | paña | paña francesa kumilla | yapa willakuy
+2030	sapa milla	permil | permille | sapa milla | sapa waranqa
+20AC	euro	EUR | euro | qullqi
+A3	libra esterlina nisqa	EGP | GBP | libra esterlilna | libra esterlina nisqa | qullqi
+A5	yen	CNY | JPY | qullqi | yen | yuan
+A2	centavo	centavo
+20B9	rupia indu	qullqi | rupia | rupia indu
+20BD	rublo	qullqi | rublo
+20A9	won qullqi	KPW | KRW | won qullqi
+20BA	Lira Turca	
+20BF	bitcoin qullqi	bitcoin qullqi | BTC
+20AA	Nuevo Séquel	
+20AB	Dong Vietnamita	
+20B1	peso qullqi	peso qullqi
+20BC	Manat Azerbaiyano	
+20B4	Grivna	
+20A6	Naira Nigeriano	
+20A1	Colón Costarricense	
+20B2	Guaraní Paraguayo	
+20B5	Cedi Ganés	
+20B8	Tenge Kazajo	
+20BE	Lari Georgiano	
+20AE	Tugrik Mongol	
+20AD	Kip Laosiano	
+20A8	rupia	qullqi | rupia
+24	dolar	dolar | peso | qullqi | USD
+58F	Dram Armenio	
+9F3	Taka Bangladesí	
+E3F	Baht Tailandés	
+20A3	frances franco	frances franco | franco | qullqi
+20A4	lira qullqi	lira | qullqi
+20B0	centavo aleman	centavo aleman | pfennig | qullqi
+20B3	austral qullqi	ARA | austral | qullqi
+20A2	cruzeiro qullqi	BRB | cruzeiro | qullqi
+20A5	mill qullqi	mill qullqi | waranqa
+20B6	livre tournois qullqi	livre tournois | livre tournois qullqi | qullqi
+20B7	spesmilo qullqi	qullqi | spesmilo
+A4	Mana riqsisqa Qullqi	
+201E	uran paña kumilla	iskay yapa kumilla | kumilla | umayuq kumilla | uran kumilla | uran paña kumilla | yapa willakuy
+201C	lluqi kumilla	iskay kumilla | kumilla | lluqi kumilla | lluqi kumilla unancha | umayuq kumilla | yapa willakuy
+201D	paña kumilla	iskay yapa willakuy | kumilla | paña kumilla | umayuq kumilla | yapa willakuy
+2018	lluqi apostrofe	apostrofe | huklla yapa willakuy | lluqi apostrofe | umayuq yapa willakuy | yapa willakuy
+2019	paña apostrofe	apostrofe | huklla yapa willakuy | paña apostrofe | umayuq yapa willakuy | yapa willakuy
+A1	tikrasqa qapariq chimpu	bang | qapariq | qapariq chiku | qapariq chimpu | tikrasqa | tikrasqa qapariq chimpu
+BF	tikrasqa tapuna yupiy	tapuna | tapuna chimpu | tikrasqa | tikrasqa tapuna yupiy
+2020	daga chimpu	daga | daga chimpu | daga unancha | obelisco | obelus
+2021	iskay daga unancha	daqa | iskay | iskay daga unancha | obelisco | obelus
+2044	chiqta warra	chiqta warra | siqi | virgula
+2032	qapaq	qapaq
+2033	iskay qapaq	iskay qapaq | qapaq
+201A	uran paña apostrofe	apostrofe | pisi paña apostrofe | pisi yapa willakuy | uran paña apostrofe | yapa willakuy
+AC	ama	ama | mana
+2117	uyarina copyright nisqawan grawasqa	copyright | grawasqa | uyarina | uyarina copyright nisqawan grawasqa
+2212	qichuna unancha	qichuna | qichuna unancha | qichuy
+2213	qichuna utaq yapana	qichuna uta yapana | qichuna utaq yapana | qichuna-yapana
+2248	kikinña	kikinña | qayllachispa | qayllachiy
+2260	ama kikinkaq	ama kikinkaq | mana kikin | mana kikin kay
+2261	kikillantaq	kikillantaq | kikin | kimsa | riqsichisqa
+2264	pisi kayhin utaq kikin	kikin | kikinkuna | mana kikinkaq | pisi kayhin utaq kikin | pisi kayhina utaq kikin | pisi-kayhina
+2265	aswan hatun kayhina utaq kikin	aswan hatun kayhina | aswan hatun kayhina utaq kikin | kikin | kikinkuna | mana kikinkaq
+226A	aswan pisin	aswan pisin | mana kikin | matematicas
+226B	aswan kuraqnin	aswan kuraqnin | mana kikin | matematicas
+221E	wiñaypaq wiñaynin unancha	wiñaypaq | wiñaypaq wiñaynin unancha
+221A	iskaychasqa sapi	iskaychasqa sapi | radical | sapi | surd | tawakuchu
+221D	proporcional	proporcional | proporcionalidad
+2211	mana tukukuq yapaynin	mana tukukuq yapaynin | matematicas | yapaynin
+220F	mana tukukuq ruru	logico | mana tukukuq ruru | ruru
+222B	lliw	lliw | yupachay
+2202	kuska diferencial	diferencial | kuska diferencial
+2206	yapay	kimsakuchu | yapay
+2207	nabla	nabla | nabla kimsakuchu
+2200	llapapaq	llapa | llapapaq | lliw | qusqa | wakin
+2203	kaymiña	kaymiña
+2205	chusaq huñu	chusaq huñu | huñu llamkaq | matematicas
+2208	ima kaymanta	huñu | ima | ima kaymanta | intigranti | tiyan
+2209	mana huk imayuq	ima | mana huk imayuq
+2229	siqi tinkuy	huñu | siqi tinkuy
+222A	tinkuy	huñu | huñusqa | tinkuy
+2282	sullka huñu kaymanta	huñu | sullka huñu | sullka huñu kaymanta
+2283	hatun huñu	hatun huñu | huñu llamkaq | matematicas
+2286	uchuy huñu kikin chimpuwan	uchuy huñu kikin chimpuwan
+2287	hatun huñu kikin chimpuwan	hatun huñu kikin chimpuwan | kikinkaq | matematicas
+2227	logico kaywan	ac | atque | logico kaywan | patma
+2295	muyupi yapana	muyupi yapana | yapana
+2297	muyupi mirana	muyupi mirana | ruru | tensor
+22A5	hanaqman tachuela	eet | falsum | hanaqman tachuela | tachuela
+2220	kuchu	agudu | kuchu
+2234	chantapas	chantapas | logicu
+2235	imarayku	imarayku | logico
+2218	siwi llamkaq	huñuynin | llamkaq | siwi llamkaq
+2219	siqichana yupi llamkaq	llamkaq | siqichana yupi llamkaq
+22C5	chusu llamkaq	chusu llamkaq | llamkaq
+2215	rakina warra	rakina warra | siqi | virgula | warra
+2190	qawasqa lluqiman wachi	lluqi | qawasqa lluqiman wachi | wachi
+2191	qawasqa hanaqman wachi	hanaq | qawasqa hanaqman wachi | wachi
+2192	qawasqa paña wachi	paña qawasqa paña wachi | qawasqa paña wachi | wachi
+2193	qawasqa uranman wachi	qawasqa uranman wachi | uran | wachi
+2196	hanaq lluqi wachi	chincha anti | hanaq lluqi wachi | intercardinal | tarikuynin | wachi
+2197	hanaq paña wachi	chincha anti | hanaq paña wachi | intercardinal | tarikuynin | wachi
+2198	uran paña wachi	intercardinal | qulla anti | tarikuynin | uran paña wachi | wachi
+2199	uran lluqi wachi	intercardinal | qulla anti | tarikuynin | uran lluqi wachi | wachi
+2194	lluqi paña wachi	lluqi paña wachi | wachi
+2195	hanaq uran wachi	hanaq uran wachi | wachi
+21D0	lluqiman iskay wachi	lluqiman iskay wachi
+21D1	hanaqman iskay wachi	hanaqman iskay wachi
+21D2	pañaman iskay wachi	pañaman iskay wachi
+21D3	uranman iskay wachi	uranman iskay wachi
+21D6	chinchaman kuntiman iskay wachi	chinchaman kuntiman iskay wachi
+21D7	chinchaman antiman iskay wachi	chinchaman antiman iskay wachi
+21D8	qullaman antiman iskay wachi	qullaman antiman iskay wachi
+21D9	qullaman kuntiman iskay wachi	qullaman kuntiman iskay wachi
+21D4	lluqiman pañaman iskay wachi	lluqiman pañaman iskay wachi
+21A4	lluqiman wachi warramanta	lluqiman wachi warramanta
+21A6	pañaman wachi warramanta	pañaman wachi warramanta
+21A5	hanaqman wachi warramanta	hanaqman wachi warramanta
+21A7	uranman wachi warramanta	uranman wachi warramanta
+21A9	paña wachi llinkuwan lluqiman	paña wachi llinkuwan lluqiman | wachi
+21AA	lluqi wachi llinkuwan pañaman	lluqi wachi llinkuwan pañaman | lluqi wachi llinkuwan pañawan | wachi
+219E	lluqiman iskay umawan wachi	lluqiman iskay umawan wachi
+21A0	pañaman iskay umawan wachi	pañaman iskay umawan wachi
+219F	hanaqman iskay umawan wachi	hanaqman iskay umawan wachi
+21A1	uranman iskay umawan wachi	uranman iskay umawan wachi
+21A2	lluqiman wachi chupiyuq	lluqiman wachi chupiyuq
+21A3	pañaman wachi chupiyuq	pañaman wachi chupiyuq
+219A	lluqiman siqi wachi	lluqiman siqi wachi
+219B	pañaman siqi wachi	pañaman siqi wachi
+21AE	lluqi pañaman siqi wachi	lluqi pañaman siqi wachi
+21CD	lluqiman iskay wachi siqiwan	lluqiman iskay wachi siqiwan
+21CF	pañaman iskay wachi siqiwan	pañaman iskay wachi siqiwan
+21CE	lluqiman pañaman iskay wachi siqiwan	lluqiman pañaman iskay wachi siqiwan
+21C4	pañaman wachi lluqiman wachipi	pañaman wachi lluqiman wachipi
+21C6	qawasqa lluqiman pañapi wachikuna	lluqi | paña | qawasqa lluqi qawasqa pañapi wachikuna | qawasqa lluqiman pañapi wachikuna | wachi
+21CB	lluqiman arpon pañaman arponpi	lluqiman arpon pañaman arponpi
+21CC	pañaman arpon lluqiman arponpi	pañaman arpon lluqiman arponpi
+21BC	lluqiman arpon puya hina hanaqman	lluqiman arpon puya hina hanaqman | puya
+21BD	lluqiman arpon puya hina uranman	lluqiman arpon puya hina uranman
+21C0	pañaman arpon puya hina hanaqman	pañaman arpon puya hina hanaqman | puya
+21C1	pañaman arpon puya hina uranman	pañaman arpon puya hina uranman | puya
+21BE	hanaqman arpon puya hina pañaman	hanaqman arpon puya hina pañaman | puya
+21BF	hanaqman arpon puya hina lluqiman	hanaqman arpon puya hina lluqiman | puya hina
+21C2	uranman arpon puya hina pañaman	puya | uranman arpon puya hina pañaman
+21C3	uranman arpon hina lluqiman	puya | uranman arpon hina lluqiman | uranman arpon puya hina lluqiman
+21C7	iskaychasqa lluqiman wachikuna	iskaychasqa lluqiman wachikuna
+21C9	iskaychasqa pañaman wachikuna	iskaychasqa pañaman wachikuna
+21C8	iskaychasqa hanaqman wachikuna	iskaychasqa hanaqman wachikuna
+21CA	iskaychasqa uranman wachikuna	iskaychasqa uranman wachikuna
+21DA	lluqiman kimsa wachi	lluqiman kimsa wachi
+21DB	pañaman kimsa wachi	pañaman kimsa wachi
+219C	lluqiman wayrawayra wachi	lluqiman wayrawayra wachi
+219D	pañaman wayrawayra wachi	pañaman wayrawayra wachi
+21DC	lluqiman siqikunawan wachi	lluqiman siqikunawan wachi
+21DD	pañaman siqikunawan wachi	pañaman siqikunawan wachi
+21AD	lluqi paña wayrawayra wachi	lluqi paña wayrawayra wachi
+21AF	uranman zigzag hina wachi	uranman zigzag hina wachi | zigzag nisqa
+21BA	hukhina ura kichasqa muyu wachi	hukhina ura kichasqa muyu wachi | tikrasqa ura qatispa kichasqa muyuwan wachi
+21BB	ura qatispa kichasqa muyuwan wachi	ura qatispa kichasqa muyuwan wachi
+1F400	rata	rata
+1F401	ukucha	ukucha
+1F402	buey	buey | Tauro | toro | zodiaco
+1F403	bufalo yakumanta	bufalo | bufalo yakumanta | yaku
+1F404	waka	waka
+1F405	tigre	tigre
+1F406	leopardo	leopardo
+1F407	quwi	conejo | quwi | uywa
+1F408	misi	misi | uywa
+1F409	dragon	dragon | hadas willana
+1F40A	kayman	kayman
+1F40B	ballena	ballena
+1F40C	churu	churu
+1F40D	amaru	amaru | hapiq | Ophiuchus | zodiaco
+1F40E	kawallu	carrera | ecuestre | kawallu | kawallu purichiypaq
+1F40F	carnero	Aries | carnero | oveja | urqu | zodiaco
+1F410	chiwu	Capricornio | chiwu | zodiaco
+1F411	uwija	china | oveja | uwija
+1F412	kusillu	kusillu
+1F413	kanka	kanka | pisqu
+1F414	pollo	pisqu | pollo
+1F415	allqu	allqu | uywa
+1F416	kuchi	kuchi | tarpuy
+1F417	lumi kuchi	kuchi | lumi kuchi
+1F418	elefante	elefante
+1F419	pulpo	pulpo
+1F41A	muyusqa churu	churu | muyuq | muyusqa churu
+1F41B	khuru	ch’uspi | khuru
+1F41C	sikʼimira	khuru | sikʼimira
+1F41D	wara	ch’uspi | t’uktu | wara
+1F41E	mariquita	aka tanqa | ch’uspi | mariquita
+1F41F	challwa	challwa | Piscis | zodiaco
+1F420	tropical challwa	challwa | tropical
+1F421	globo challwa	challwa | challwa globo | globo challwa
+1F422	tortuga	miskʼi yakumanta tortuga | tortuga
+1F423	chiwchi pakisqa runtuwan	chiwchi | chiwchi pakisqa runtuwan | huchuy | pisqu
+1F424	chiwchi	chiwchi | huchuy | pisqu
+1F425	huchuy pollo chimpa rikuchkan	huchuy | huchuy pollo chimpa rikuchkan | p’isqu | pollo
+1F426	p’isqu	p’isqu
+1F427	pinguino	p’isqu | pinguino
+1F428	koala	hukumari | koala
+1F429	poodle	allqu | poodle
+1F42A	camello	camello | dromedario | qhupu
+1F42B	camello iskay qhupukunawan	bactriano | camello | camello iskay qhupukunawan | qhupu
+1F42C	delfin	delfin | rikracha
+1F42D	ukucha uya	ukucha | uya
+1F42E	waka uya	uya | waka
+1F42F	tigre uya	tigre | uya
+1F430	quwi uya	conejo | quwi | uya | uywa
+1F431	misi uya	misi | uya | uywa
+1F432	dragon uya	dragon | hadas willana | uya
+1F433	ballena yakuta chamqachkan	ballena | ballena yakuta chamqachkan | chamqachkan | uya
+1F434	kawallu uya	kawallu | uya
+1F435	kusillu uya	kusillu | uya
+1F436	allqu uya	allqu | uya | uywa
+1F437	khuchi uya	khuchi | uya
+1F438	jamp’atu	jamp’atu | uya
+1F439	hamster	hamster | uya | uywa
+1F43A	k’ita allqu	k’ita allqu | uya
+1F43B	ukumari	ukumari | uya
+1F43C	panda	panda | uya
+1F43D	kuchi sinqa	kuchi | kuchi sinqa | ninri | uya
+1F43E	sillu yupinay	chakikuna | sillu | sillu yupinay | yupi
+1F43F	ardilla	ardilla | huchuy ardilla
+1F981	leon	Leo | leon | uya | zodiaco
+1F982	escorpión	Escorpio | escorpión | zodiaco
+1F983	pavo	p’isqu | pavo
+1F984	unicornio	unicornio | uya
+1F985	anka	anka | p’isqu
+1F986	pili	p’isqu | pili
+1F987	masu	masu | vampiro
+1F988	tiburon	challwa | tiburon
+1F989	búho	amawta | búho | p’isqu
+1F98A	atuq	atuq | uya
+1F98B	pillpintu	ch’uspi | k’acha | pillpintu
+1F98C	taruka	taruka
+1F98D	gorila	gorila
+1F98E	qaraywa	ararankha | qaraywa
+1F98F	rinoceronte	rinoceronte
+1F990	camaron	camaron | huchuy | mariscos | mikhuna
+1F991	calamar	calamar | mikhuna | molusco
+1F992	jirafa	jirafa | mapʼakuna
+1F993	zebra	siqi | zebra
+1F994	erizo	erizo | khiskay
+1F995	sauropodo	braquiosauro | brontosauro | diplodocus | sauropodo
+1F996	T-Rex	T-Rex | Tiranosaurio Rex
+1F997	cricket	cricket | tʼintikuna
+1F998	kanguro	Australia | hey | kanguro | marsupial | phinkiy
+1F999	llama	alpaca | guanacu | llama | millma | vicuña
+1F99A	pavo real	apuskachay | pava real | pavo real | pisqu | rikurichisqa
+1F99B	hipopotamo	hipo | hipopotamo
+1F99C	uritu	parlay | pirata | pʼisqu | uritu
+1F99D	mapache	challi | curioso | mapache
+1F99E	langosta	langosta | mamaquchamanta mikhuna | sillukuna | sopa de mariscos nisqa
+1F99F	mosquito	malaria | mosquito | parasito | rupha | unqusqa | virus
+1F9A0	microbio	ameba | bacteria | microbio | virus
+1F9A1	tejon	miskʼi tejon | phiñakuy | tejon
+1F9A2	cisne	cisne | huchuy pili | millana | pisqʼu | pollo cisnemanta
+1F9A3	mamut	extinsion | hatun | mamut | millma | mumut | waqsa
+1F9A4	dodo	dodo | extinsion | hatun | Mauricio
+1F9A5	perezoso	jayra | perezoso | qhilla
+1F9A6	nutria	challwa japʼina | nutria | pukllasqa
+1F9A7	orangutan	kusillo | orangutan
+1F9A8	añas	añas | asnaq
+1F9A9	flamenco	flamenco | rikurichisqa | tropical
+1F9AA	ostra	buceo | ostra | perla
+1F9AB	castor	castor | pʼunqu
+1F9AC	bison	amawta | bison | bufalo | manada
+1F9AD	foca	foca | mamaquchamanta Leon
+1F9AE	yanapakuq allqu	haykurinalla | ñawsa | yanapaku | yanapakuq allqu
+1FABC	medusa	aguijón | invertebrado | mamaqucha | medusa | rupay
+1F330	chʼumpi	chʼumpi | mallki
+1F331	wayna mallki	wayna | wayna mallki
+1F332	sacha perene rapiwan	sacha | sacha perene rapiwan
+1F333	sacha caduca rapiwan	caduco | sacha | sacha caduca rapiwan
+1F334	chunta	chunta | sach’a
+1F335	kisqa	kisqa | mallki
+1F337	tulipán	tika | tulipan | tulipán
+1F338	cerezo tika	cerezo tika | cherry | tika
+1F339	rosa	rosa | tika
+1F33A	hibisco	hibisco | t’ika
+1F33B	girasol	girasol | inti | t’ika
+1F33C	cerezo	cerezo | tʼika
+1F33D	chuqllu	chinkana | chuqllu | ninri | sara | sarasara
+1F33E	pʼanqa arrozmanta	arroz | muru | ninri | pʼanqa arrozmanta
+1F33F	qhura	laqhi | qhura
+1F340	ispinku tawa laqhiwan	4 | ispinku tawa laqhiwan | laqhi | tawa | trevol
+1F341	arce laqhi	arce | laqhi | urmasqa
+1F342	urmasqa laqhi	laqhi | urmasqa
+1F343	wayrapi laqhikuna	laqhi | pharaqiy | phukuy | wayra | wayrapi laqhikuna
+1F344	kʼallnpa	kʼallnpa | miyu k’allampa
+1FAB0	paway	ismusqa | parasito | paway | unqusqa | uru
+1FAB1	sillwi uru	anelida | hallpa pachapi uru | parasito | sillwi uru | uru
+1FAB2	aka tanqa	aka tanqa | chʼuspi | khuru
+1FAB3	cucaracha	chʼuspi | cucaracha | parasito
+1FAB4	macetapi sachʼa	macetapi sachʼa | majiy | mana ruwanapaq | nutrir | paqariy | sachʼa | wasi
+1FAB5	kuru	kuru | kuru wasichaypaq
+1FAB6	phuru	chhalla | phaway | phuru | phurukuna | pʼisqu
+1FAB7	loto	Budismo | chuya | Hinduismo | India | loto | tika | Vietnam
+1FAB8	coral nisqa	arrecife | coral nisqa | mamaqucha
+1FAB9	chusaq qisa	chusaq qisa | qisa
+1FABA	qisa runtukunawan	qisa | qisa runtukunawan
+1FABB	jacinto	boca de dragón | jacinto | lavanda | wayta
+2618	ispinku	ispinku | mallki
+1F347	uwas	ruru | uwa | uwas
+1F348	melón	melón | ruru
+1F349	sandía	ruru | sandía | watermelon
+1F34A	mandarina	mandarina | ruru | willapi
+1F34B	limun	citrico | limun | ruru
+1F34C	platanu	platanu | ruru
+1F34D	piña	piña | ruru
+1F34E	puka manzana	manzana | puka | ruru
+1F34F	qumir manzana	manzana | qumir | ruru
+1F350	pera	pera | ruru
+1F351	rurasnu	rurasnu | ruru
+1F352	cherris	bayas | cherri | cherris | puka | ruru
+1F353	fresa	fresa | ruru
+1F336	jaya pimienta	jaya | pimienta
+1F354	hamburgesa	burger | hamburgesa
+1F355	piza	masara | pedazo | piza
+1F356	aycha tullupi	aycha | aycha tullupi | tullu
+1F357	chanka pollo	chanka | corral pʼisqu | pata de pollo nisqa | pollo | tullu
+1F358	galleta arrozmanta	arroz | galleta | mikuna
+1F359	muyu arrozwan	arroz | Japones | mikuna | muyu
+1F35A	waykʼusqa arroz	arroz | waykʼusqa
+1F35B	arroz currywan	arroz | curry nisqa | mikuna
+1F35C	mati fideuswan	fideus | mati | mikuna | palillos | ramen
+1F35D	espagueti	espagueti | pasta
+1F35E	tʼanta	pan | tʼanta
+1F35F	papas fritas	fritas | papas
+1F360	miski waykʼusqa papa	miski | papa | waykʼusqa
+1F361	dango	brocheta | dango | Japones | k’aspi | miski | postre
+1F362	oden	brocheta | ch’ampa | kebab | mama quchamanta mikhuna | oden
+1F363	sushi	sushi
+1F364	thiqtisqa yukra	gamba | tempura | thiqtisqa | yukra
+1F365	challwa pastel muyuqwan	callwa | challwa pastel muyuqwan | masa | pastel | phuyunku
+1F366	llampʼu helado	chiri | helado | llamp’u | llampʼu helado | miski | postre | tunti q’illu
+1F367	raspadillo	chiri | miski | postre | raspadillo
+1F368	helado	chiri | helado | miski | postre | tunti q’illu
+1F369	dona	dona | miski | paqarin mikhuna | postre
+1F36A	galleta	galleta | miski | postre
+1F36B	chocolate barra	barra | chocolate | miski | postre
+1F36C	miski	miski | postre
+1F36D	chupete	chupete | miski | miskʼi | postre
+1F36E	raqʼa	miski | postre | pudin | raqʼa
+1F36F	miskʼi manka	barril | manka | misk’i | miski | oso
+1F370	torta	masa | miski | pedazo | postre | torta
+1F371	bento tawakʼuchu	bento | tawakʼuchu
+1F372	llata mikunapaq	llata | llata mikunapaq | mikhuna
+1F373	waykʼuchkan	paqarin mikhuna | runtu | sarten | thiqtiy | waykʼuchkan
+1F374	tenedor chaymanta khuchuna	cuchilleria | khuchuna | tenedor | tenedor chaymanta khuchuna | waykʼsqa
+1F375	chhapukucha tepaq mana ninriwan	chhapukucha tepaq mana ninriwan | qiru | te | upyana
+1F376	sake	bar | botella | copa | qiru | sake | upyana
+1F377	vino qiru	bar | copa | qiru | upyana | vino qiru | wine
+1F378	cocktail qiru	bar | cocktail | qiru | upyana
+1F379	tropical upyana	bar | tropical | upyana
+1F37A	cerveza jumiwa	bar | cerveza | jumiwa | upyana
+1F37B	cerveza qirukuna anqusachkan	anqusay | bar | cerveza | cerveza qirukuna anqusachkan | jumiwa | upyana
+1F37C	biberón	biberon | biberón | botella | paqariy | upyana | warma | wawa | wilali
+1F37D	tenedor chaymanta khuchuna platowan	khuchuna | plato | tenedor | tenedor chaymanta khuchuna platowan | waykʼuchkan
+1F37E	descorche jumiwa	bar | botella | corcho | dercorche | descorche jumiwa | upyana
+1F37F	palomitas de maiz	palomitas de maiz
+1F950	croissant	croissant | frances | mikhuna | paqarin mikhuna | rollo | tʼanta
+1F951	palta	mikhuna | palta | ruru
+1F952	pepino	mikhuna | pepinillos | pepino | vegetal
+1F953	tocino	aycha | mikhuna | paqarin mikhuna | tocino
+1F954	patata	mikhuna | patata | vegetal
+1F955	zanahoria	mikhuna | vegetal | zanahoria
+1F956	baguette tʼanta	baguette | frances | mikhuna | tʼanta
+1F957	qʼumir ensalada	ensalada | mikhuna | q’umir | qʼumir ensalada
+1F958	pisi llata mikunapaq	caserola | llaplla | mikhuna | paella | pisi llata mikunapaq | sarten
+1F959	juntʼachisqa tʼanta moldepi	fatafel | giro | guiso | juntʼachisqa tʼanta moldepi | kebab | llaplla t’anta | mikhuna
+1F95A	runtu	mikhuna | paqarin mikhuna | runtu
+1F95B	wilali qirupi	qiru | upyana | wilali | wilali qirupi
+1F95C	chuqupi	chuqupi | mikhuna | nuez | vegetal
+1F95D	kiwi ruru	food | kiwi | ruru
+1F95E	panqueques	breakfast | crepe | mikhuna | panqueque | panqueques | pastel caliente
+1F95F	dumpling	dumpling | empanada | gyōza | jiaozi | pierogi | potsticker
+1F960	galleta samipaq	galleta samipaq | profecia
+1F961	tawak’uchu aparikuypaq	k’uchu ostrawan | tawak’uchu aparikuypaq
+1F962	palillos	hashi | palillos
+1F963	cuenco willawan	cereal | congee | cuenco willawan | paqarin mikhuna
+1F964	qiru bombillawan	jilli | qiru bombillawan | soda
+1F965	coco	coco | maki | piña colada
+1F966	brocoli	brocoli | repollo salvaje
+1F967	tarta	huntʼa | masa | tarta
+1F968	pretzel	k’uyusqa | pretzel
+1F969	chuleta aychamanta	aycha | chuleta | chuleta aychamanta | chuleta corderomanta | chuleta khuchimanta
+1F96A	sandwich	sandwich | tʼanta
+1F96B	mikhuna latapi	lata | mikhuna latapi
+1F96C	qʼumir laqhikunawan	bok choy | col rizada | lechuga | qʼumir laqhikunawan | repollo
+1F96D	mango	mango | ruru | tropical
+1F96E	killa pastel	killa pastel | otoño | raymi | yuebing]
+1F96F	bagel	bagel | panaderia | paqarin mikuna | schmear
+1F9C0	kʼallpi masaramanta	kʼallpi masaramanta | masara
+1F9C1	cupcake	cupcake | miskʼi | panaderia
+1F9C2	kachi	condimento | kachi | shaker
+1F9C3	upyana tawakʼuchu	jugo | miskʼi | pajilla | tawakʼuchu | upyana
+1F9C4	ajo	ajo | mikhusqa
+1F9C5	cebolla	cebolla | mikhusqa
+1F9C6	fatafel	albondiga | fatafel | garganzo
+1F9C7	waffle	desayuno | plancha | thuki | waffle
+1F9C8	mantequilla	lecheria | mantequilla
+1F9C9	mate	mate | upyana
+1F9CA	chiri	chhullunka | chiri | chiri tawakʼuchu
+1F9CB	phukpu te	perla | phukpu | te | wilali
+1FAD0	arandanos	anqas | arandano | arandanos | fresa
+1FAD1	pimiento	pimenton | pimiento | vegetal
+1FAD2	oliva	mikuna | oliva
+1FAD3	llaplla t’anta	agave | arepa | lavash | llaplla t’anta | llaplla tʼanta | naa
+1FAD4	tamal	mexicano | tamal | tapasqa
+1FAD5	fondue	chaqrusqa | chocolate | fondue | masara | qiru | Suizo
+1FAD6	te qiru	qiru | te | upyana
+1FAD7	taqtaspa yaku	chusaq | qiru | taqtaspa yaku | upyana
+1FAD8	porotokuna	legumbre | mikuna | porotokuna | rurun
+1FAD9	puyñu	churana | chusaq | condimento | puyñu | qatu
+1FADA	jenjibre sapi	condimento | jenjibre | sapi
+1FADB	arwijakuna	arwijakuna | legumbre | ruru | vegetal
+2615	qʼuñi upyana	cafe | chai | q’uñi | qʼuñi upyana | te | té | upyana | wapsi
+2600	inti	inti | k’anchay | wach’i
+2601	puyu	llaphiya | puyu
+2602	para achiwa	achiwa | p’acha | para
+2603	runa rit’imanta	chiri | rit’i | runa rit’imanta
+2614	para achiwa para sutʼukunawan	achiwa | p’acha | para | para achiwa para sutʼukunawan | sut’u
+26A1	kuraq voltaje	electrico | kuraq voltaje | manchakuypaq | voltaje
+26C4	ritʼi urpu mana ritʼiwan	chiri | rit’i | ritʼi urpu mana ritʼiwan | runa rit’imanta
+26C5	inti qhipa puyuman	inti | inti qhipa puyuman | puyu
+26C8	puyu k’anchasqa parawan	cloud | kunuñunu | para | puyu k’anchasqa parawan
+2744	rit’i urpu	chiri | rit’i | rit’i urpu
+1F300	ciclón	ciclón | huracan | tifon
+1F301	kamanchaka	kamanchaka | pukutay
+1F302	wichqasqa para achiwa	para | para achiwa | pʼacha | wichqasqa para achiwa
+1F303	tuta chʼaskakunawan	ch’aska | tuta | tuta chʼaskakunawan
+1F304	paqarin urqukunapura	inti | paqar | paqarin | paqarin urqukunapura | urqu
+1F305	paqarin	inti | paqar | paqarin
+1F306	rikusqa llaqtamanta tutapi	ch’isi | inti-haykupuynin | llaqta | rikchay | rikusqa llaqtamanta tutapi | tuta
+1F307	inti-haykupuynin	inti | inti-haykupuynin | tuta
+1F308	kʼuychi	kʼuychi | para
+1F309	chaka tutapi	chaka | chaka tutapi | tuta
+1F30A	yaku wallcha	mama qucha | wallcha | yaku
+1F30B	ariq	ariq | erupcion | urqu
+1F30C	via lactea	kampu | via lactea
+1F30D	saywasiqʼi Europa, Africapas Qawachkan	Africa | Africapas Qawachkan | Europa | kawsay pacha | pacha | saywasiqʼi Europa | saywasiqʼi Europa, Africapas Qawachkan
+1F30E	saywasiqʼi america qawachkan	America | kawsay pacha | pacha | saywasiqʼi america qawachkan
+1F30F	saywasiqʼi asia, austrakia qawachkan	Asia | austrakia qawachkan | Australia | kawsay pacha | pacha | saywasiqʼi asia | saywasiqʼi asia, austrakia qawachkan
+1F310	saywasiqʼi meridianoswan	kawsay pacha | meridianos | pacha | saywasiqʼi meridianoswan
+1F311	unu Killa	killa | tuta | unu Killa
+1F312	tukuspa chawpi killa	chawpi | killa | tukuspa
+1F313	hukñiqi wañu killa	hukñiqi wañu | hukñiqi wañu killa | killa
+1F314	chawpi gibosa killa	chawpi | gibosa | killa
+1F315	pura killa	hunta | killa | pacha | pura
+1F316	wañu gibosa killa	chawpi | gibosa | killa | wañu
+1F317	qhipa wañu killa	hukñiqi wañu | killa | qhipa wañu killa
+1F318	wañu killa	chawpi | killa | wañu
+1F319	chawpi killa	chawpi | killa | pacha | ramadan
+1F31A	unu killa uya	killa | unu killa uya | uya
+1F31B	chawpi killa uya	chawpi killa uya | killa | uya
+1F31C	qipa chawpi killa uya	killa | qipa chawpi killa uya | uya
+1F31D	hunta killa uya	chuya | hunta | killa | uya
+1F31E	inti uyawan	inti | inti uyawan | k’anchay | uya
+1F31F	lliphisqa quyllur	k’anchay | k’anchaynin | lliphisqa | quyllur
+1F320	utqhay quyllur	quyllur | urmay | utqhay
+1F321	termometro	llaphiya | termometro
+1F324	inti qhipa huchuy puyu	inti | inti qhipa huchuy puyu | puyu
+1F325	inti qhipa hatun puyu	inti | inti qhipa hatun puyu | puyu
+1F326	inti qhipa para puyupi	inti | inti qhipa para puyupi | para | puyu
+1F327	puyu parawan	para | puyu | puyu parawan
+1F328	puyu rit’iwan	chiri | puyu | puyu rit’iwan | rit’i
+1F329	puyu lliphiwan	k’anchaynin | puyu | puyu lliphiwan
+1F32A	wayrakuna	puyu | wayra | wayrakuna
+1F32B	pukutay	pukutay | puyu
+1F32C	wayra uya	phukuy | puyu | uya | wayra
+2648	Aries	Aries | carnero | zodiaco
+2649	Tauro	buey | Tauro | toro | zodiaco
+264A	Geminis	Geminis | wispa | zodiaco
+264B	Cancer	apanqura | Cancer | zodiaco
+264C	Leo	Leo | leon | zodiaco
+264D	Virgo	Virgo | zodiaco
+264E	Libra	aysana | justicia | Libra | ñiqichanakuna | zodiaco
+264F	Escorpion	Escorpio | Escorpion | zodiaco
+2650	Sagitario	arquero | Sagitario | zodiaco
+2651	Capricornio	Capricornio | chiwu | zodiaco
+2652	Acuario	Acuario | soporte | yaku | zodiaco
+2653	Piscis	challwa | Piscis | zodiaco
+1F550	huk	00 | 1 | 1:00 | huk
+1F551	iskay	00 | 2 | 2:00 | iskay
+1F552	kimsa	00 | 3 | 3:00 | kimsa
+1F553	tawa	00 | 4 | 4:00 | tawa
+1F554	phisqa	00 | 5 | 5:00 | phisqa
+1F555	suqta	00 | 6 | 6:00 | suqta
+1F556	qanchis	00 | 7 | 7:00 | qanchis
+1F557	pusaq	00 | 8 | 8:00 | pusaq
+1F558	jisqʼun	00 | 9 | 9:00 | isquk¡n | jisq’un | jisqʼun | pacha
+1F559	chunka	00 | 10 | 10:00 | chunka
+1F55A	chunka hukniyuq	00 | 11 | 11:00 | chunka hukniyuq
+1F55B	chunka iskayniyuq	00 | 12 | 12:00 | chunka iskayniyuq | iskayniyuq
+1F55C	huk chaymanta kimsa chunkawan	huk chaymanta kimsa chunkawan
+1F55D	iskay chaymanta kimsa chunkawan	iskay chaymanta kimsa chunkawan
+1F55E	kimsa chaymanta kimsa chunkawan	kimsa chaymanta kimsa chunkawan
+1F55F	tawa chaymanta kimsa chunkawan	tawa chaymanta kimsa chunkawan
+1F560	phisqa chaymanta kimsa chunkawan	phisqa chaymanta kimsa chunkawan
+1F561	suqta chaymanta kimsa chunkawan	suqta chaymanta kimsa chunkawan
+1F562	qanchis chaymanta kimsa chunkawan	qanchis chaymanta kimsa chunkawan
+1F563	pusaq chaymanta kimsa chunkawan	30 | 8 | 8:30 | kimsa chunka | pusaq | pusaq-kimsa chunkawan | ura
+1F564	jisqʼun chaymanta kimsa chunkawan	30 | 9 | 9:30 | isqun | jisqʼun | jisqʼun-kimsa chunkawan | kimsa chunka | pacha
+1F565	chunka chaymanta kimsa chunkawan	10 | 10:30 | 30 | chunka | chunka-kimsa chunkawan | kimsa chunka | pacha
+1F566	chunka hukniyuq-kimsa chunkawan	11 | 11:30 | 30 | chunka hukniyuq | chunka hukniyuq-kimsa chunkawan | kimsa chunka | pacha
+1F567	chunka iskayniyuq-kimsa chunkawan	chunka iskayniyuq chaymanta kimsa chunkawan | chunka iskayniyuq-kimsa chunkawan
+1FA90	anillukunawan planeta	anillukunawan planeta | saturnino | saturno
+2604	cometa	cometa | kampu
+26F0	urqu	urqu
+26F1	para achiwa jallp’api	achiwa | inti | para | para achiwa jallp’api
+26F2	pukyu	pukyu
+26F4	apay	apay | pasajero | wamp’u
+26F5	velero	samaypaq kiti | tiyana | velero | wamp’u | yate
+2708	latap’isqu	aeroplano | latap’isqu
+1F488	poste barberopaq	barbero | poste | poste barberopaq | rutuy
+1F680	cohete	cohete | kampu
+1F681	helicoptero	carru | helicoptero
+1F682	locomotora	ferrocarril | locomotora | motor | puriy | tren
+1F683	tren ferrocarrilpaq	carru | electrico | ferrocarril | ñan | tren ferrocarrilpaq | trolebus
+1F684	utqhay tren	ferrocarril | shinkansen | tren | utqhay
+1F685	bala tren	bala tren | ferrocarril | shinkansen | tren | utqay
+1F686	tren	ferrocarril | tren
+1F687	metro	metro | subterraneo
+1F688	tren ligero	ferrocarril | tren ligero | tren logero
+1F689	estacion	estacion | ferrocarril | tren
+1F68A	tranvia	ñan | tranvia | trolebus
+1F68B	vagon tranviapaq	carru | ñan | trolebus | vagon tranviapaq
+1F68C	bus	bus | carru
+1F68D	qatiq autobus	autobus | bus | qatiq
+1F68E	trolebus	bus | carretilla | tranvia | trolebus
+1F68F	parada autobúspaq	autibus | bus | parada autobus | parada autobúspaq | tatichiy
+1F690	minibus	bus | minibus
+1F691	ambulancia	ambulancia | carru
+1F692	carru bomberospaq	carru | carru bomberospaq | motor | nina
+1F693	policia carru	carru | paco | patrulla | policia carru
+1F694	qatiq carru policiapaq	carru | policia | qatiq | qatiq carru policiapaq
+1F695	taxi	carru | taxi
+1F696	qatiq taxi	qatiq taxi
+1F697	carru	auto | carru
+1F698	qatiq carru	auto | carru | qatiq
+1F699	autocaravana	autocaravana | recreacional | ruwasqa pukllay
+1F69A	qupuspa camión	camión | qupuspa
+1F69B	articulado caminón	articulado caminón
+1F69C	tractor	carru | tractor
+1F69D	monorrail	carru | monorrail
+1F69E	ferrocarril urqupaq	autu | ferrocarril | ferrocarril urqupaq | urqu
+1F69F	warkhusqa ferrocarril	ferrocarril | warkhusqa
+1F6A0	teleferico urqupi	cable | gondola | teleferico urqupi | urqu
+1F6A1	teleferico	aereo | cable | carru | gondola | teleferico
+1F6A2	nave	nave | pasajero | wamp’u
+1F6A3	runa wampʼu rmoswan	runa wampʼu rmoswan | wamp’u | wamp’u remoswan
+1F6A4	utqhay lancha	utqhay lancha | wamp’u
+1F6A5	kinranpa semaforo	k’anchay | kinranpa semaforo | trafico | unancha
+1F6A6	sayanpa semaforo	k’anchay | sayanpa semaforo | trafico | unancha
+1F6A7	wasichiy	kancha | wasichiy
+1F6A8	sirena policia carrumanta	auto | faro | k’anchay | muyusqa | policia | sirena policia carrumanta
+1F6A9	kimsa kʼuchuwan wiphala	chaski | kimsa kʼuchuwan wiphala
+1F6AA	punku	punku
+1F6B0	potable yaku unancha	potable | potable yaku unancha | upyana | yaku
+1F6B1	ama yaku upyaypaq	ama yaku upyaypaq | mana yaykuy | yaku
+1F6B3	ama bicicletakuna	ama bicicletakuna | amatasqa | bici | bicicleta | mana
+1F6B7	ama transeuntes	ama transeuntes | amatasqa | mana | manaraq | transeuntes
+1F6B8	wawakuna purichkanku	chimpay | pedestre | trafico | wawa | wawakuna purichkanku
+1F6B9	runapaq unancha	baño nisqa | runakuna | runapaq unancha | wc
+1F6BA	warmipaq unancha	baño nisqa | warmikuna | warmipaq unancha | wc
+1F6BB	baños	baño nisqa | baños | wc
+1F6BC	wawapaq unancha	tiraypaq | wawa | wawapaq unancha
+1F6BD	mayllakuna	baño | mayllakuna
+1F6BE	inodoro	baño nisqa | baños | inodoro | wc | yaku
+1F6BF	ducha	ducha | yaku
+1F6C0	runa armakuyniyuq	armakunapaq | bañera | runa armakuyniyuq
+1F6C1	bañera	bañera | baño
+1F6C2	pasaporte chiqaqchaynin	chiqaqchayninpaq | pasaporte | pasaporte chiqaqchaynin
+1F6C3	aduanas	aduanas
+1F6C4	chaskimuy qipikuna	chaskimuy qipikuna
+1F6C5	lluqsina qipikuna	harkaq | lluqsina qipikuna | qipi | qipikuna
+1F6D0	muchay kiti	muchay kiti | munaynin | religion
+1F6D1	alto unancha	alto | octagonal | unancha
+1F6D2	shopping cart	carrito | rantikuy
+2668	q’uñi yaku	q’uñi | q’uñi yaku | t’ikmu | wapsi
+26BD	futbol pʼulu	futbol | futbol pʼulu | p’ulu
+26BE	beisbol	beisbol | p’ulu
+26F3	wiphala tʼuqupi	golf | t’uqu | wiphala tʼuqupi
+1F392	qipi	mochila | qamaña | qipi | yachaywasi
+1F3A0	carrusel kawallu	carrusel | kawallu
+1F3A1	noria qhatunapi	jawka parque | muyu | noria | noria qhatunapi
+1F3A2	montaña rusa	jawka parque | montaña rusa | muyuq
+1F3A3	caña challawaypaq challwawan	callwa | caña challawaypaq challwawan | poste
+1F3A4	micrófono	karaoke | micrófono
+1F3A5	camara cinepaq	camara | camara cinepaq | cine | pelikula
+1F3A6	cine	camara | cine | pelicula | pelikula
+1F3A7	audifono	audifono | auricular
+1F3A8	paleta llimpiq	llimpi | museo | paleta | paleta llimpiq | t’iktu
+1F3A9	hanaq chiku	hanaq | hanaq chiku | pacha
+1F3AA	circo qatu	circo | qatu
+1F3AB	boleto	boleto | uyakuynin
+1F3AC	claqueta	claqueta | pelikula
+1F3AD	artes escenicas	artes escenicas | arti | maskara | teatro
+1F3AE	video pukllay	patachaq | pukllay | video pukllay
+1F3AF	diana	chiqaq chusu | dardu | diana | pukllay
+1F3B0	casinopaq maquina	casinopaq maquina | kampu | pukllay
+1F3B1	billar	8 | billar | pukllay | pusaq
+1F3B2	dado	dado | pukllay | wañuy
+1F3B3	bolos	bolos | p’ulu | pukllay
+1F3B4	tʼika naipes	Japones | pukllachkan | pukllay | t’ika | tarhita | tʼika naipes
+1F3B5	notas musical	nota | nota musical | notas musical | takiy
+1F3B6	notas musicales	nota | notas | notas musicales | takiy
+1F3B7	saxofon	instrumento | saxofon | takiy
+1F3B8	guitarra	guitarra | instrumento | takiy
+1F3B9	teclas musicales	instrumento | ñitina | piano | takiy | teclas musicales
+1F3BA	trompeta	instrumento | takiy | trompeta
+1F3BB	violin	instrumento | takiy | violin
+1F3BC	partitura	chusukuna | partitura | takiy
+1F3BD	camiseta phawaypaq	atletico | camiseta | camiseta phawaypaq | faja | phawachkan
+1F3BE	tenis	p’ulu | raqueta | tenis
+1F3BF	esquis	esqui | esquis | rit’i
+1F3C0	basket	aro | basket | p’ulu
+1F3C1	metapaq whipala	carrera | meta | metapaq whipala | tawak’uchuwan
+1F3C2	snowboarder	esqui | rit’i | snowboarder
+1F3C3	runa phawachkan	maraton | phawachkan | runa phawachkan
+1F3C4	runa surfeando	runa surfeando | surfear
+1F3C5	pukllaypaq medalla	medalla | pukllaypaq medalla
+1F3C6	trofeo	premio | trofeo
+1F3C7	atipanaku kawallukuna	atipanaku | atipanaku kawallukuna | jockey | kawallu
+1F3C8	futbol americano	americano | futbol | p’ulu
+1F3C9	rugby pʼulu	futbol | p’ulu | rugby | rugby pʼulu
+1F3CA	runa waytʼachkan	runa waytʼachkan | wayt’ay
+1F3CB	runa llasayninkunata jatarichichkan	jatarichiy | llasaynin | runa llasayninkunata jatarichichkan
+1F3CC	golfista	golf | golfista | p’ulu
+1F3CD	motocicleta	carrera | motocicleta
+1F3CE	carrera carrupi	carrera | carrera carrupi | carru
+1F451	pillu	corona nisqa | pillu | reina | rey
+1F452	warmip chikun	pacha | sombreru nisqa | warmi | warmip chikun | warmipa chikun
+1F453	lentes	lentes | lentes intipaq | lenteskuna | ñawi | pacha
+1F454	corbata	corbata | pacha
+1F455	camisa	camisa | pacha
+1F456	jeans	jeans | pacha
+1F457	aqsu	aqsu | pacha
+1F458	kimono	kimono | pacha
+1F459	bikini	bikini | pacha
+1F45A	warmipa pachan	pacha | warmi | warmipa pachan
+1F45B	pulcera	pacha | pulcera | qullqi
+1F45C	bolso	bolso | manilla | pacha
+1F45D	cartera	cartera | pacha | qipi
+1F45E	runapa papatun	pacha | qari | runapa papatun
+1F45F	pawasqa papatu	atletiku | pacha | pawasqa papatu
+1F460	tacones phapatu	tacones phapatu
+1F461	warmip sandalian	warmip sandalian
+1F462	warmip botan	warmip botan
+1F6B2	bicicleta	bici | bicicleta
+1F6B4	runa bicicletapi	bicycle | pusachkan | pusay | runa bicicletapi
+1F6B5	runa urqu bicicletapi	bicicleta | pusachkan | pusay | runa urqu bicicletapi | urqu
+1F6B6	runa purichkan	purina | puriy | runa purichkan | walking
+1F938	runa gimnasia ruwachkan	gimnasia | muyuy | runa gimnasia ruwachkan
+1F939	runa malabares ruwachkan	achka ruwanakuna | allin takyay | malabares ruway | runa malabares ruwachkan | yachay
+1F93A	runa esgrimapi	esgrima | esgrimista | espada | runa esgrimapi
+1F93C	maqanakuq runa	maqanakuq | maqanakuq runa | maqanakuy
+1F93D	runa water polo pukllachkan	polo | runa water polo pukllachkan | water
+1F93E	runa balonmano pukllachkan	balonmano | p’ulu | runa balonmano pukllachkan
+1F93F	buceo lentekuna	buceo | buceo lentekuna
+1F9E2	gorra	baseball gorra | gorra | gorra nisqa
+1F9E3	chalina	chalina | kunka
+1F9E4	guantes	guantes | maki
+1F9E5	abrigo	abrigo | pacha
+1F9E6	medias	medias | pacha
+1FA71	naryaypaq pacha	naryaypaq pacha | pacha
+1FA72	yakupaq pacha	huk pacha | naryaypaq | yakupaq pacha
+1FA73	uchuy pantalon	naryaypaq | uchuy pantalon
+1FA74	sandalia	sandalia | sandalia playapaq
+1FA80	yoyo	pukllana | yoyo
+1FA81	cometa nisqa	cometa nisqa | paway
+1FA82	paracaídas	paracaídas | pawaypaq
+1FA83	boomerang nisqa	arma | boomerang | rebote | repercusión nisqamanta
+1FA84	magica warra	magica | magica warra
+1FA85	piñata	piñata | raymi
+1FA86	qisa urpukuna	qisa | qisa urpukuna | rusia | urpu
+1FA95	banjo	banjo | cadenaswan | takiy
+1FA97	acordion	acordion | concertina | tawa kuchu
+1FA98	tambor kullumanta	atipay | conga | takiy | tambor | tambor kullumanta
+265F	peon	ajedres | peon | peón
+2660	espada tarhita	espada tarhita | pukllay | tarhita
+2663	trebol tarhita	pukllay | tarhita | trebol tarhita
+2665	sunqu tarhita	pukllay | sunqu tarhita | tarhita
+2666	diamante tarhita	diamante tarhita | pukllay | tarhita
+1F4B3	qullqi mañaypa tarjetan	mañay | qullqi | qullqi mañaypa tarjetan | tarhita
+1F4B4	yen billete	billete | chanin | qullqi | yen
+1F4B5	dolar billete	billete | chanin | dolar | qullqi
+1F4B6	euro billete	billete | chanin | euro | qullqi
+1F4B7	libras esterlinas billete	billete | chanin | libras esterlinas | libras esterlinas billete | qullqi
+1F4B9	tawa kuchu yaparispa yenwan	qullqi | siqisiqi | tawa kuchu yaparispa yenwan | tawakuchu | yapariy | yen
+1F4BB	computadora	computadora | pc | personal | sapalla
+1F4BC	maletín	maletín | oficina
+1F4BD	computadora ruyru	computadora | optico | ruyru | uchy disku
+1F4BE	disquete	computadora | disquete | muyu
+1F4BF	disku	CD | computadora | disku | optico
+1F4C0	dvd	Blu-ray | computadora | disku | DVD | optico
+1F4C1	willañiqi qillqana maytʼu	archivo | carpeta nisqapi
+1F4C2	willañiqi qillqana maytʼuta kichay	archivo | carpeta | kichasqa
+1F4C3	llinkʼu rapi	llinku | llinkʼu rapi | qillqa willakuq | rapi
+1F4C4	hanaqman rapi	hanaqman rapi | qillqa willakuq | rapi
+1F4C5	calendario nisqa	calendario nisqa | imay pacha
+1F4C6	llikisqa calendario nisqa	calendario nisqa | llikisqa
+1F4C7	tarjetapa indisnin	indis | mawkʼa | rolodex nisqa | tarjeta | yachay wasi
+1F4C8	tabla yapakuq	chʼiku | datos | derecho | grafico | tendencia | wichayman | wiñaynin | yapakuq
+1F4C9	tabla pisiyachiq	chʼiku | datos | grafico | negativo | pisiyachiq | tendencia | urayman
+1F4CA	tabla de barras nisqa	barra | chʼiku | datos | grafico nisqa
+1F4CB	portapapeles nisqa	lista | notakuna | portapapeles | ruway
+1F4CC	t’ikakuna	collage | pin | pushpin
+1F4CD	round pushpin	mapa | maypi kasqan | muyu | pin | pushpin
+1F4CE	clip rapipaq	clip rapipaq
+1F4CF	chiqan kamachiq	chiqan | chiqanchay | kamachiq | kantu | kʼuchu | matemáticas
+1F4D0	kimsa kuchuyuq kamachiq	churay | diapositiva | kamachiq | kamachiy | kimsa kuchu | kimsa kuchuyuq | kʼuchu | matemáticas
+1F4D1	rapi chinpuqkunawan	chinpuq | chinpuy | qawachiqkuna | rapi chinpuq | rapi chinpuqkunawan
+1F4D2	pʼanqa siwukunawan	panqa siwukunawan | pʼanqa siwukunawan | yachaykunapaq qillqa
+1F4D3	huchuy qillqanacha	huchuy qillqanacha
+1F4D4	yachaykunapaq pʼanqa kʼacha rapiwan	kacha rapiwan | panqa | sumaq | yachaykunapaq panqa kacha rapiwan | yachaykunapaq pʼanqa kʼacha rapiwan | yachaykunapaq qillqa
+1F4D5	wichqasqa pʼanqa	p’anqa | wichqasqa | wichqasqa pʼanqa
+1F4D6	kichasqa pʼanqa	kichasqa pʼanqa | kichay | p’anqa
+1F4D7	qʼumir pʼanqa	p’anqa | q’umir | qʼumir pʼanqa
+1F4D8	anqas p’anqa	anqas p’anqa | anqas pʼanqa
+1F4D9	willapi pʼanqa	p’anqa | willapi | willapi pʼanqa
+1F4DA	pʼanqakuna	panqa | panqakuna | pʼanqakuna
+1F4DB	nina rawra	nina | rawra
+1F4DC	suchuririy	rapi | suchuririy | suchuriy
+1F4DD	qillqa	qillqa | qillqana
+1F4DE	auricular telefonomanta	auricular telefonomanta | chaskiq | fono | telefono
+1F4DF	tariq	tariq
+1F4E0	maquina faxpaq	fax | maquina faxpaq
+1F4E1	satélite nisqamanta antena nisqa	antena | ciencia | extraterrestres | plato | rimanakuy | satélite nisqamanta
+1F4E2	altoparlante	altoparlante | hatun | riqsisqa maypi kasqan
+1F4E3	megáfono	kusirikuy | megáfono | megágono nisqa
+1F4E4	lluqsina wandiha	apachisqa | carta | chaski | kuchu | lluqsina | wandiha
+1F4E5	bandeja de entrada	bandeja | caja | carta | chaskiy | chusaq | correo | correo electrónico | inbox
+1F4E7	correo electronico	chasi | correo electronico | qillqa
+1F4E8	yaykumuq carta	carta | chakiy | correo electronico | yaykumuq
+1F4E9	carta wachiwan	carta | carta wachiwan | correo electronico | lluqsina | wachi
+1F4EA	wisq’asqa correo caja uraykachisqa banderayuq	bandera | caja de correo | correo | correo caja | uraykachisqa | wisqʼasqa
+1F4EB	wisq’asqa correo caja hoqarisqa banderayuq	bandera | caja de correo | correo | correo caja | wichasqa | willanakuy | wisqʼasqa
+1F4EC	open mailbox with raised flag	bandera | caja de correo | correo | correo caja | kichasqa | wichasqa
+1F4ED	uraykachisqa banderayuq correo cajata kichay	bandera | caja de correo | correo | correo caja | kichasqa | uraykachisqa
+1F4EE	chaski churana	chaski churana
+1F4EF	chakipaq waqra	chakipaq waqra | chaski | chaski wasi | waqra
+1F4F0	periodico	periodico | rapi | yachaykuna
+1F4F1	apaykachana telefono	apaykachana | celular | telefono
+1F4F2	apaykachana telefono wachʼiwan	apaykachana telefono wachiwan | apaykachana telefono wachʼiwan | celular | chaskiy | telefono | wachi
+1F4F3	vibracion mudu	apaykachana | mudu | pukullu | telefono | telefunu | vibracion
+1F4F4	apaykachana telefono wañuchiy	apaykachana | apaykachana telefono wañuchiy | muvil | telefunu | wañuchiy telefono
+1F4F5	ama apaykachana telefonokuna	ama apaykachana telefonokuna | amatasqa | apaykchana | mana | telefono
+1F4F6	antena siqikunawan	antena | antena siqikunawan | apaykachana | pukullu | siqikuna | telefono
+1F4F7	camara	camara | video
+1F4F8	camara flash kaqwan	camara | camara flash kaqwan | flash | video
+1F4F9	videocamara	camara | video | videocamara
+1F4FA	television	television | tv | video
+1F4FB	radio	radio | video
+1F4FC	videocaset	vhs | video | videocaset
+1F4FD	proyector cinepaq	cine | pelicula | pelikula | proyector | proyector cinepaq | video
+1F4FF	rosario	collar | pacha | religion | rezar | rosario
+1F505	lliphiy ñitina	kanchaynin | llimpiy | llimpiy ñitina | lliphiy ñitina | uchuy
+1F506	kʼanchay ñitina	kanchay | kanchay ñitina | kanchaynin | kʼanchay ñitina
+1F507	chʼin altavoz	chʼin altavoz
+1F508	altavoz pisi chanrawan	altavoz pisi chanrawan | qapya
+1F509	altavoz chawpi chanrawan	altavoz chawpi chanrawan | chawpi
+1F50A	altavoz hatun chanrawan	altavoz hatun chanrawan | hatun
+1F50B	kallpa waqaychaq	kallpa waqaychaq
+1F50C	enchufe	electricidad | enchufe | kallpa
+1F50D	lupa lluqiman	chuya | llamkana | lupa | lupa lluqiman | maskay
+1F50E	lupa pañaman	chuya | llamkana | lupa | lupa pañaman | lupa pañawan | maskay
+1F50F	plumawan wichqasqa	bloqueo | nib | pluma | sapanchasqa | tinta | wichqʼasqa
+1F510	llavewan wichqasqa	bicicleta | bloqueo | harkasqa | llave | wichqʼasqa | wisqʼasqa
+1F511	kichana	kichana
+1F512	harkana	harkana | harkasqa | wichqasqa
+1F513	mana wichqasqa	bloqueo | desbloquear | kichasqa | mana wichqasqa | raqrasqa
+1F514	kampana	kampana
+1F515	chʼin chhullupi	campana | chin | chin warrawan | chʼin chhullupi | michakuy | suyariy
+1F516	chinpuq	chinpuq
+1F517	tinkina	tinkina | tinkiy
+1F518	radio ñitina	chirukamay | ñitina | radio
+1F51E	ama sullka chunka pusaqniyuqwan	18 | ama sullka chunaka pusaqniyuqwan | ama sullka chunka pusaqniyuqwan | amatasqa | chunka pusaqniyuq | sullka wata | wata amataynin
+1F526	flash	antorcha | chuya | electrico | flash | llamkana
+1F527	llave	allinchay | herramienta | llave | wasi
+1F528	martillo	allichaykunata | allinchay | llamkana | martillo | wasi
+1F529	tuerca y perno	allinchay | llamkana | perno | tuqu | wasi
+1F52A	khuchuna waykʼuypaq	arma | hocho | khuchuna | khuchuna waykʼuypaq | llamkana | waykʼusqa
+1F52B	yaku pistola	arma | llamkana | pistola | revolver | yaku
+1F52C	microscopio	microscopio
+1F52D	telescopio	telescopio
+1F9BA	chaleku harkaypaq	chaleku harkaypaq | emergencia | harkay | pacha
+1F9BB	ninri uyarisqa yanapayniwan	haykurinalla | ninri uyarisqa yanapayniwan | pantasqa uyariypaq
+1F9BC	muturwan ruedaswan tiyana	muturwan ruedaswan tiyana | yaykurinalla
+1F9BD	manual ruedaswan tiyana	manual ruedaswan tiyana | yaykurinalla
+1F9E9	rompecabeza parti	parti | patma | rompecabeza parti | rompecabezas
+1F9EA	tubo de prueba nisqa	ciencia | experimento | laboratorio | prueba | química nisqamanta | químico | tubo
+1F9EB	petri plato	bacterias | biología | biólogo | cultura | laboratorio | petri | plato
+1F9EC	dna	biólogo | dna | evolución nisqamanta | gen | genética nisqamanta | kawsay
+1F9ED	compas	compas | magnetico | navegacion | tarikuynin
+1F9EE	abaco	abaco | tantiyay
+1F9EF	fire extinguisher	extinguish | extinguisher | fire | quench
+1F9F0	llamkanakuna huñusqa	ajedrez | llamkana | llamkanakuna huñusqa | mecanico | tawa kuchu
+1F9F1	pirqa	ladrillu | pirqa | pirqakuna
+1F9F2	magnetu	atraccion | herradura kawallumanta | iman | magnetu
+1F9F3	equipaje	equipaje
+1F9F4	loción botella	botella | champú | hidratador | intimanta hark’akuq | loción
+1F9F5	hilo	hilo | qisa
+1F9F6	watu	crochet | pelota | punto | watu
+1F9F7	seguridad pin	harkasqa | pañal | pin | punki | qaqa
+1F9F8	peluche	peluche | pukllana
+1F9F9	pichana	barrer | escoba | layqa | pichay
+1F9FA	canasta	canasta | chakra llamkʼay | lavandería | picnic nisqa
+1F9FB	rollo de papel	aseo | papel | rollo | toallas
+1F9FC	jabon	bañakuy | barra | chuya | espuma | jabon | jabon plato | pichay
+1F9FD	sponge	absorbing | cleaning | porous | soak | sponge
+1F9FE	recibo	chaskiy | contabilidad | evidencia | prueba | recibo
+1F9FF	nazar amuleto	nazar | nazar amuleto | talisman
+1FA78	yawar gota	donación | gota | hampi | kʼirisqa | menstruación nisqa | yawar
+1FA79	vendaje adhesivo nisqa	adhesivo | vendaje
+1FA7A	estetoscopio nisqawan	estetoscopio nisqawan | hampi | hampiq | sunqu
+1FA91	tiyana	
+1FA92	navajas	filoyuq | navajas | rutuy
+1FA94	diya lampara	aceite | diya | lampara
+1FA96	militar casco nisqa	armada | casco | gerrero | militar | militar casco nisqa | soldado
+1FA99	moneda	metal | moneda | paqu | qullqi | tesoro
+1FA9A	carpintería saw	carpintería | carpintero | herramienta | kuchupay | kuchusqa | madera | rikurqan
+1FA9B	screwdriver	flathead | handy | screw | screwdriver | tool
+1FA9C	escalera nisqa	escalera | escalera nisqa | lluqay | yupi
+1FA9D	gancho	gacho | gancho | muyuna | rantipaq kiti | suwa
+1FA9E	espejo	espejo
+1FA9F	wasi tuqu	kichariy | marco | musuq | qhaway | transparente | wasi tuqu | wayra
+260E	fono	fono | telefono
+2620	saqru chaymanta chakatasqa tullukuna	chakatasqa tullukuna | monstruo | saqru | saqru chaymanta chakatasqa tullukuna | uya | wañuy
+2622	radiactivo	radiactivo | unancha
+2623	biologico qupa	biologico qupa | unancha
+267F	tiyana ruedaspi unancha	tiyana ruedaspi unancha | yaykuy
+2692	martillowan pilluy	llamkana | martillo | pick
+2693	linderuyachiq	apachiy | linderuyachiq | llamkana
+2694	chakasqa espadakuna	arma | chimpasqa | espadakuna
+2695	hampiq unancha	esculapio | hampi | hampiq unancha | llamkaqkuna
+2696	balanza nisqa escala	balanza | balanzas | escala | herramienta | justicia | Libra | llasaynin | zodiaco nisqa
+2697	hinallataq	alembico | llamkana | química nisqamanta
+2699	engranaje	diente | diente rueda | engranaje | llamkana
+269B	atomo unancha	ateismo | atomo | atomo unancha
+269C	flor de lis	flor de lis
+26A0	yuyachikuy	yuyachikuy
+26CF	akllay	llamkana | martillo | minería | pick
+26D1	yanapaq llamkaqmanta casco	yanapaq llamkaqmanta casco
+26D3	cadenakuna	cadena | cadenakuna
+26D4	ama yaykuna	ama yaykuna | amatasqa | mana | manaraq | trafico | yaykuna
+2702	kuchuna	kuchusqa | kuchuy | llamkana | papel | tijeras
+2709	karta	chaski | correo electronico | karta
+270F	qillqana	qillqana
+2712	yana lapisiru	pumilla | qillqana | yana pumilla
+2714	chiqaqchay chimpu	✓ | chimpu | chiqaqchay
+2716	mirachiy	chinkachiy | mirachiy | multiplicacion | unancha | x
+2753	puka tapuna chimpu	? | chimpu | puka tapuna chimpu | punctuacion | tapuna
+2757	puka qapariq yupiy	! | chimpu | puka qapariq yupiy | punctuacion | qapariq
+27A1	paña wachi	anti | cardinal | paña wachi | tarikuynin | wachi
+1F500	chakatasqa wachʼikuna ñitina	chakatasqa | chakatasqa wachʼikuna ñitina | chaqrusqa taqikuna ñitina | wachi
+1F501	kutipay ñitina	kutipay | kutipay ñitina | ura qatichkanku | wachi
+1F502	huklla kutipay ñitina	huklla | huklla kutipay ñitina | kutipay huk ñitina | ura qatichkanku | wachi
+1F503	sayanpa wachikuna ura qatichkanku	sayanpa wachikuna ura qatichkanku | ura qatichkanku | ura sayampa qatichkanku | wachi | watiqmanta qipiy
+1F504	laduman ura qatispa wachikunata ñitina	laduman muyuspa | laduman ura qatispa | laduman ura qatispa wachikunata ñitina | tikrasqa ura qatispa | wachi
+1F519	QIPA wachi	qipa | wachi
+1F51A	TUKUY wachi	tukuy | wachi
+1F51B	KAWSARICHIY! wachi	chimpu | kawsarichiy | KAWSARICHIY! wachi | wachi
+1F51C	QATIQ wachi	QATIQ wachi | utqay | wachi
+1F51D	HANAN wachi	hanan | hanaq | wachi
+1F520	latina hatun sananpakuna yaykuy	ABCD | hatun sananpakuna | latina | latina hatun sananpakuna yaykuy | sananpakuna | yaykuy
+1F521	latina uchuy sananpakuna yaykuy	abcd | latina | latina uchuy sananpakuna yaykuy | sananpakuna | uchuy sananpakuna | yaykkuna
+1F522	yupaykuna yaykuy	1234 | yaykuy | yupaykuna
+1F523	unanchakuna yaykuy	〒♪&% | unanchakuna yaykuy | yaykuy
+1F524	latina sananpakuna yaykuy	abc | achahala | latina | latina sananpakuna yaykuy | sananpakuna
+21B5	uranman wachi kuchuwan lluqiman	uranman wachi kuchuwan lluqiman
+21B0	hanaqman wachi ñawchiwan lluqiman	hanaqman wachi ñawchiwan lluqiman
+21B1	hanaqman wachi ñawchiwan pañaman	hanaqman wachi ñawchiwan pañaman
+21B2	uranman wachi ñawchiwan lluqiman	uranman wachi ñawchiwan lluqiman
+21B3	uranman wachi ñawchiwan pañaman	uranman wachi ñawchiwan pañaman
+21B4	pañaman wachi kuchuwan uranman	pañaman wachi kuchuwan uranman
+21E4	lluqiman warrawan wachi	lluqiman warrawan wachi
+21E5	pañaman warrawan wachi	pañaman warrawan wachi
+21B9	lluqiman wachi pañaman wachipi	lluqiman wachi pañaman wachipi
+21E7	hanaqman ukunman wachi	hanaqman ukunman wachi
+21EA	hanaqman ukunman warramanta wachi	hanaqman ukunman warramanta wachi
+21E6	lluqiman ukunwan wachi	lluqiman ukunman wachi | lluqiman ukunwan wachi
+21E8	pañaman ukunman wachi	pañaman ukunman wachi
+21E9	uranman ukunman wachi	uranman ukunman wachi
+21DE	hanaqman wachi iskay siqikunawan	hanaqman wachi iskay siqikunawan
+21DF	uranman wachi iskay siqikunawan	uranman wachi iskay siqikunawan
+21B8	chincha kunti wachi hatun warrawan	chincha kunti wachi hatun warrawan
+21B6	hukhina ura hanaqpi kuska muyu wachi	hukhina ura hanaqpi kuska muyu wachi
+21B7	urawan hanaqpi kuska muyu wachi	urawan hanaqpi kuska muyu wachi
+21C5	qawasqa hanaqman-uranman wachikuna	hanaq | qawasqa hanaqman hinaspa qawasqa uranman wachikuna | qawasqa hanaqman-uranman wachikuna | uran | wachi
+21F5	uranman wachi lluqipi uranman wachiwan	uranman wachi lluqipi uranman wachiwan
+21A8	uranmanta hanaqman wachi siqiwan	uranmanta hanaqman wachi siqiwan
+21E0	lluqiman chikukunawan wachi	lluqi chikukunawan wachi | lluqiman chikukunawan wachi
+21E1	hanaqman chikukunawan wachi	hanaqman chikukunawan wachi
+21E2	pañaman chikukunawan wachi	pañaman chikukunawan wachi
+21E3	uranman chikukunawan wachi	uranman chikukunawan wachi
+21AB	lluqiman wachi lazowan	lluqiman wachi lazowan
+21AC	pañaman wachi lazowan	pañaman wachi lazowan
+2B05	lluqi wachi	anti | cardinal | lluqi wachi | tarikuynin | wachi
+2B06	hanaq wachi	cardinal | chincha | hanaq wachi | tarikuynin | wachi
+2B07	uran wachi	cardinal | qulla | tarikuynin | uran | wachi

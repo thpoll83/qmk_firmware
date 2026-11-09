@@ -1,0 +1,1242 @@
+# emoji search keywords, to, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	mata fiefia	fiefia | mata | ngutu
+1F601	mata ina moe kanoʻimata malimali	ina | kanoʻimata | mata | ngutu
+1F602	mata moe loʻimata fiefia	fiefia | loʻimata | mata | ngutu
+1F603	mata fiefia moe kanoʻimata lalahi	fiefia | kanoʻimata | mata | ngutu
+1F604	mata fiefia moe kanoʻimata malimali	fiefia | kanoʻimata | mata | ngutu
+1F605	mata fiefia moe tautaʻa	fiefia | mata | ngutu | tautaʻa
+1F606	mata fiefia moe tetepa	fiefia | mata | ngutu | tetepa
+1F607	mata malimali moe takaniko	malimali | mata | takaniko
+1F608	mata malimali moe meʻatui	lanufesiʻifekika | malimali | mata | meʻatui
+1F609	mata fakakuitaha	fakakuitaha | malimali | mata
+1F60A	mata malimali moe kanoʻimata malimali	kanoʻimata | malimali | mata
+1F60B	mataʻi ʻuakai	ʻelelo | ʻuakai | ifo | mata
+1F60C	mata fakanongononga	fakanongononga | mata
+1F60D	mata malimali moe kanoʻimata mafu	kanoʻimata | mafu | malimali | mata
+1F60E	mata malimali moe matasioʻatalaʻā	malimali | mata | matasioʻatalaʻā
+1F60F	mata katakata manuki	katakata | manuki | mata
+1F610	mata noa pē	ʻatā | mata | noa
+1F611	mata matanoa	mata | matanoa
+1F612	mata taʻefiefia	mata | taʻefiefia
+1F613	mata lototaʻotaʻomia moe tautaʻa	lototaʻotaʻomia | mata | tautaʻa
+1F614	mata fakalaulauloto	fakalaulauloto | mata
+1F615	mata puputuʻu	mata | puputuʻu
+1F616	mata fakapuputuʻu	mata | puputuʻu
+1F617	mata ʻuma	ʻuma | mata
+1F618	mata ʻoku puhi ʻae ʻuma	ʻuma | mafu | mata | puhi
+1F619	mata ʻuma moe kanoʻimata malimali	ʻuma | kanoʻimata | malimali | mata
+1F61A	mata ʻuma moe kanoʻimata kuikui	ʻuma | kanoʻimata | kuikui | mata
+1F61B	mata moe ʻelelo	ʻelelo | mata | ngutu
+1F61C	mata kuitaha moe ʻelelo	ʻelelo | kuitaha | mata | ngutu
+1F61D	mata tetepa moe ʻelelo	ʻelelo | mata | ngutu | tetepa
+1F61E	mata fakalotomamahi	lotomamahi | mata
+1F61F	mata lotohohaʻa	lotohohaʻa | mata
+1F620	mata ʻita	ʻita | mata
+1F621	mata ʻita lahi	ʻita | kuolokula | mata
+1F622	mata loʻimata	loʻimata | mata | tangi
+1F623	mata lotokītaki	lotokītaki | mata
+1F624	mata moe mao meihe ihu	ihu | mao | mata
+1F625	mata lotomamahi kā fakanongononga	fakanongononga | lotomamahi | mata
+1F626	mata fingo moe ngutu fakamanga	fakamanga | fingo | mata | ngutu
+1F627	mata lotomamahi	lotomamahi | mata
+1F628	mata fakamanavahē	fakamanavahē | mata
+1F629	mata ongosia	helaʻia | mata | ongosia
+1F62A	mata fiemohea	fiemohea | hafu | mata
+1F62B	mata helaʻia	helaʻia | mata
+1F62C	mata mioʻi	ina | mata | mio
+1F62D	mata loʻimata lahi	loʻimata | mata | tangi
+1F62E	mata moe ngutu fakamanga	fakamanga | mata | ngutu
+1F62F	mata longo	longo | mata
+1F630	mata lotomoʻua moe tautaʻa	lotomoʻua | mata | pulū | tautaʻa
+1F631	mata ʻoku kekekeke he manavahē	kekekeke | manavahē | mata
+1F632	mata ʻohovale	ʻohovale | mata
+1F633	mata pahapaha	mata | pahapaha
+1F634	mata mohe	mata | mohe
+1F635	mata ninimo	mata | mate | ninimo
+1F636	mata taʻengutu	mata | ngutu | taʻengutu
+1F637	mata moe pūloa fakafaitoʻo	fakafaitoʻo | mata | puke | pūloa
+1F638	mataʻipusi fiefia moe kanoʻimata malimali	fiefia | kanoʻimata | malimali | mata | pusi
+1F639	mataʻipusi moe loʻimata fiefia	fiefia | loʻimata | mata | pusi
+1F63A	mataʻipusi fiefia	fiefia | mata | pusi
+1F63B	mataʻipusi malimali moe kanoʻimata mafu	kanoʻimata | mafu | malimali | mata | pusi
+1F63C	mataʻipusi moe malimali feʻu	malimali feʻu | mata | pusi
+1F63D	mataʻipusi ʻuma	ʻuma | mata | pusi
+1F63E	mataʻipusi taʻefiemālie	mata | pusi | taʻefiemālie
+1F63F	mataʻipusi loʻimata	loʻimata | mata | pusi
+1F640	mataʻipusi ongosia	mata | ongosia | pusi
+1F641	mata kiʻi fingo	fingo | mata
+1F642	mata kiʻi malimali	malimali | mata
+1F643	mata fulihi	fulihi | malimali | mata
+1F644	mata kilokilo	kilokilo | mata
+1F648	ngeli ʻikai sio kovi	ʻikai | kovi | ngeli | sio
+1F649	ngeli ʻikai fanongo kovi	fanongo | ʻikai | kovi | ngeli
+1F64A	ngeli ʻikai lea kovi	ʻikai | kovi | lea | ngeli
+1F910	mata moe ngutu meʻa-fakamaʻu-fusi	mata | meʻa-fakamaʻu-fusi | ngutu
+1F911	mata ngutu-paʻanga	ʻelelo | mata | ngutu | paʻanga
+1F912	mata moe meʻafuamafana	mata | meʻafuamafana | puke
+1F913	mata moe matasioʻata lahi	mata | matasioʻata | ngutu
+1F914	mataʻi fakakaukau	fakakaukau | mata
+1F915	mata moe haʻi lavea	haʻi lavea | mata | puke
+1F916	mata tangata-ukamea	mata | tangata-ukamea
+1F917	mata fāʻufua moe nima-homo	fāʻufua | kula | mata | nima-homo
+1F920	mata moe tatā fakakaupoe	kaupoe | mata | tatā
+1F921	mata tokotaha-fieoli	fieoli | mata
+1F922	mata kavahia	kavahia | mata | puke
+1F923	mata kata moe teka faliki	kata | mata | ngutu | teka
+1F924	mata ngutu hafu fāvai	fāvai | hafu | mata | ngutu
+1F925	mata moe ihu lōloa	ihu | lōloa | mata
+1F926	tokotaha nima ʻihe mata	mata | nima | tokotaha nima ʻihe mata
+1F927	mata mafatua	fulu | mafatua | mata
+1F928	mata moe kemo mahiki	kemo | mahiki | mata
+1F929	mata fetuʻu	fetuʻu | kanoʻimata | mata
+1F92A	mata masoli	ʻelelo | kanoimata | masoli | mata | ngutu
+1F92B	mata fiemaʻu fakalongolongo	fakalongolongo | mata
+1F92C	mata kapekape	kapekape | kulokula | mata
+1F92D	mata moe nima ʻi muʻa ʻoe ngutu	ʻufiʻufi | kula | mata | ngutu | nima
+1F92E	mata lua	lua | mata | puke
+1F92F	mata pahū	mata | pahū
+1F970	mata malimali moe mafu ʻe 3	3 | mafu | malimali | mata
+1F971	mata mamao	fakahela | mamao | mata
+1F972	mata malimali moe loʻimata	loʻimata | malimali | mata
+1F973	mata paati	mata | paati
+1F974	mata konā	konā | mata
+1F975	mata vevela	kulokula | mata | vevela
+1F976	mata momoko	mata | momoko | pulū
+1F978	mata fakapuli	fakapuli | mata | matasioʻata
+1F97A	mata kole	kole | mata
+1FAE0	mata vaia	mata | puli | vaia
+1FAE1	mata fetapa	fetapa | mata | salute
+1FAE2	mata matalahi moe nima ʻi muʻa ʻoe ngutu	ʻohovale | mata | ngutu | teteki
+1FAE3	mata moe foʻimata tauasi	foʻimata | ilifia | mata | tauasi
+1FAE4	mata ngutu fakahihifi	fakahihifi | mata | ngutu | taʻepau
+1FAE5	mata fakalaine toti	mata | puli | taʻehāmai | toti
+1FAE7	maʻupu	lililili | maʻupu | ngalomekina | pula
+1FAE8	mata tete	lulu | mafuike | ngalulu | tete
+1F381	lipine puha	kātoanga | lipine | puha
+1F389	paatipuna	kātoanga | konifeti | paatipuna
+1F38A	pulu konifeti	kātoanga | konifeti | pulu konifeti
+1F47B	fakapūloa	faʻahikehe | fakapūloa
+1F47C	ʻangelo valevale	ʻangelo | valevale
+1F47D	meʻamoʻuikehe	faʻahikehe | meʻamoʻuikehe
+1F47E	meʻamoʻuikehe fakamanavahē	faʻahikehe | fakamanavahē | komipiuta | meʻamoʻuikehe
+1F47F	mata ʻita moe meʻatui	ʻita | lanufesiʻifekika | mata | meʻatui
+1F480	ʻulupoko	ʻulupoko | mate
+1F481	tokotaha nima mafola	mafola | nima | tokotaha nima mafola
+1F482	leʻo	leʻo
+1F489	meʻafana faitoʻo	meʻafana faitoʻo
+1F48A	foʻiʻakau	foʻiʻakau
+1F4A2	fakaʻilonga ʻita	ʻilonga | ʻita
+1F4A4	mohe	ʻilonga | mohe
+1F4A5	fepaki	fepaki | ʻilonga
+1F4A6	tautaʻa tulutā	tautaʻa | tulutā
+1F4A7	tulutā vai	tulutā | vai
+1F4A8	ʻoho atu	atu | ʻoho
+1F4A9	tuʻunga meʻakovi	meʻakovi | taʻe | tuʻunga
+1F4AB	ninimo	ʻilonga | ninimo
+1F4AC	pulalea	lea | pulalea
+1F4AD	pulalea fakakaukau	fakakaukau | ʻao | pulalea
+1F4AE	matalaʻiʻakau hinehina	hinehina | matalaʻiʻakau
+1F4A0	taiamoni moe ʻila	ʻila | taiamoni | taiamoni moe ʻila
+1F4A1	foʻi ʻuhila	foʻi ʻuhila
+1F4A3	pulukōkō	pulukōkō
+1F4AF	poini ʻe teau	ʻilonga | poini | teau
+1F4B0	tangai paʻanga	tangai paʻanga
+1F4B1	paʻanga fakafetongi	fakafetongi | paʻanga | pangikē
+1F4B2	paʻanga mamafa	fakaʻilonga | paʻanga | paʻanga mamafa
+1F4B8	paʻanga moe kapakau	paʻanga moe kapakau
+1F525	afi	afi
+1F52E	pulu kalisitala	kalisitala | pulu
+1F440	ongo kanoʻimata	kanoʻimata | ongo
+1F441	kanoʻimata	kanoʻimata
+1F442	telinga	telinga
+1F443	ihu	ihu
+1F444	ngutu	ngutu
+1F445	ʻelelo	ʻelelo
+1F446	tuhu tuʻanima tonu ki ʻolunga	ʻolunga | nima | tuhu | tuhu tuʻanima tonu ki ʻolunga
+1F447	tuhu tuʻanima tonu ki lalo	lalo | nima | tuhu | tuhu tuʻanima tonu ki lalo
+1F448	tuhu tuʻanima tonu ki hema	hema | nima | tuhu | tuhu tuʻanima tonu ki hema
+1F449	tuhu tuʻanima tonu ki mataʻu	mataʻu | nima | tuhu | tuhu tuʻanima tonu ki mataʻu
+1F44A	tuke ki muʻa	muʻa | nima | tuke | tuke ki muʻa
+1F44B	nima taʻataʻalo	nima | taʻataʻalo
+1F44C	nima fakaʻilonga sai	nima | nima fakaʻilonga sai | sai
+1F44D	motuʻatuhu ki ʻolunga	ʻolunga | motuʻatuhu | motuʻatuhu ki ʻolunga | nima
+1F44E	motuʻatuhu ki lalo	lalo | motuʻatuhu | motuʻatuhu ki lalo | nima
+1F44F	nima pasipasi	nima | pasipasi
+1F450	nima homo	homo | nima | ongo
+261D	tuhu tonu ki ʻolunga	ʻolunga | nima | tuhu | tuhu tonu ki ʻolunga
+270A	tuke hiki ki ʻolunga	ʻolunga | nima | tuke | tuke hiki ki ʻolunga
+270B	nima hiki ki ʻolunga	ʻolunga | nima | nima hiki ki ʻolunga
+270C	nima ikuna	ikuna | nima
+270D	nima ʻoku tohi	nima | nima ʻoku tohi | peni | tohi
+1F4AA	pāpela ʻoku pelu	pāpela | pāpela ʻoku pelu | pelu | uoua
+1F590	nima fālalahi	fālalahi | nima
+1F64C	ongo nima hiki ki ʻolunga	ʻolunga | nima | ongo | ongo nima hiki ki ʻolunga
+1F64F	ongo nima tataʻo	lotu | nima | ongo | tataʻo
+1F90C	louhiʻinima fakamaʻopoʻopo	fakamaʻopoʻopo | louhiʻinima | nima | taʻemāhino
+1F90F	nima fakamaʻopoʻopo	fakamaʻopoʻopo | nima | siʻisiʻi
+1F918	nima fakaʻilonga fakatēvolo	nima | nima fakaʻilonga fakatēvolo | tēvolo
+1F919	nima fakaʻilonga tā mai	nima | nima fakaʻilonga tā mai | telefoni
+1F91A	tuʻanima hiki ki ʻolunga	ʻolunga | nima | tuʻanima | tuʻanima hiki ki ʻolunga
+1F91B	tuke ki hema	hema | nima | tuke | tuke ki hema
+1F91C	tuke ki mataʻu	mataʻu | nima | tuke | tuke ki mataʻu
+1F91D	lulululu	lulululu | nima
+1F91E	louhiʻinima fehauaki	fehauaki | louhiʻinima fehauaki | nima
+1F91F	nima fakaʻilonga mafu	mafu | nima | nima fakaʻilonga mafu
+1F932	ongo aofinima hiki ki ʻolunga	aofinima | ʻolunga | nima | ongo | ongo aofinima hiki ki ʻolunga
+1F9B4	hui	hui
+1F9B5	vaʻe	vaʻe
+1F9B6	lauʻivaʻe	lauʻivaʻe
+1F9B7	nifo	nifo
+1F9E0	ʻuto	ʻuto
+1F9BE	nima ukamea	nima | ukamea
+1FAC0	mafu	mafu
+1FAC1	maʻamaʻa	maʻamaʻa
+1FAE6	uʻu loungutu	hohaʻa | lotomoʻua | ngutu | uʻu loungutu
+1FAF0	louhiʻinima moe motuʻatuhu fehauaki	fisipā | louhiʻinima moe motuʻatuhu fehauaki | mamafa | paʻanga
+1FAF1	nima ki mataʻu	mataʻu | nima | nima ki mataʻu | toʻomataʻu
+1FAF2	ninma ki hema	hema | nima | ninma ki hema | toʻohema
+1FAF3	nima ʻohifo	hifo | nima | nima ʻohifo | toʻohifo
+1FAF4	nima ʻohake	hake | nima | nima ʻohake | toʻohake
+1FAF5	tuhu tonu ki muʻa	ko koe | tuhu | tuhu tonu ki muʻa
+1FAF6	ongo nima fakamafu	ʻofa | ongo nima fakamafu
+1FAF7	nima teke ki hema	ʻoua muʻa | nima | nima teke ki hema | teke | toʻohema | tuʻu
+1FAF8	nima teke ki mataʻu	ʻoua muʻa | nima | nima teke ki mataʻu | teke | toʻomataʻu | tuʻu
+2764	mafu kulokula	kulokula | mafu
+1F380	lipine	fakapona | lipine
+1F382	keke ʻaho fāʻeleʻi	keke | keke ʻaho fāʻeleʻi | teʻelango
+1F383	matahina	hina | mata | matahina
+1F384	ʻakau kilisimasi	ʻakau | kilisimasi
+1F386	fanaʻone	fanaʻone
+1F387	fanaʻone fetapatapaki	fanaʻone | fanaʻone fetapatapaki
+1F388	foʻi pula	foʻi pula | kātoanga | pula
+1F9E7	sila kulokula	kulokula | sila
+1F9E8	ʻone	fepaki | ʻone
+1F38B	ʻakau kātoanga fakasiapani	ʻakau | ʻakau kātoanga fakasiapani | kātoanga | Siapani
+1F38C	fuka fehauaki	fehauaki | fuka | siapani
+1F38D	ongo matapā-paini	matapā | ongo matapā-paini | paini | Siapani
+1F38E	tamapua fakasiapani	Siapani | tamapua | tamapua fakasiapani
+1F38F	ika fakamanumanu	fakamanumanu | ika
+1F390	fafangu-matangi	fafangu | fafangu-matangi | matangi
+1F391	vakai-māhina	māhina | vakai | vakai-māhina
+1F393	tatā maʻu mataʻitohi	tatā maʻu mataʻitohi
+1F484	lipisitiki	lipisitiki
+1F485	valivali ngeʻesinima	ngeʻesinima | valivali
+1F48B	ʻilonga loungutu	ʻilonga | ʻuma | loungutu
+1F48C	tohi ʻofa	ʻofa | mafu | tohi
+1F48D	mama	mama
+1F48E	maka koloa	maka koloa
+1F48F	ʻuma	ʻuma
+1F490	haʻinga matalaʻiʻakau	haʻinga | matalaʻiʻakau
+1F491	ongo tokoua moe mafu	ʻuma | mafu | ongo tokoua moe mafu
+1F492	mali	falelotu | mali
+1F493	mafu ʻoku tā	mafu | tā
+1F494	loto lavea	lavea | loto | mafu
+1F495	ongo mafu	mafu | ongo
+1F496	mafu ngingila	mafu | ngingila
+1F497	mafu tupu	mafu | tupu
+1F498	mafu moe ngahau	ʻofa | mafu | ngahau
+1F499	mafu lanupulū	lanupulū | mafu
+1F49A	mafu lanumata	lanumata | mafu
+1F49B	mafu engeenga	engeenga | mafu
+1F49C	mafu lanufesiʻifekika	lanufesiʻifekika | mafu
+1F49D	mafu moe lipine	lipine | mafu | ofo
+1F49E	ongo mafu takai	mafu | ongo | takai
+1F49F	mafu teuteuʻi	lanufesiʻifekika | mafu | teuteuʻi
+1F90D	mafu hinehina	hinehina | mafu | tea
+1F90E	mafu melomelo	mafu | melomelo
+1F9E1	mafu lanumoli	lanumoli | mafu
+1FA75	mafu lanupulū maama	lanupulū | maama | mafu
+1FA76	mafu lanulavilavi	fulutui | lanulavilavi | mafu | tukumisi
+1FA77	mafu lanupingikī	kulokula | lanupingikī | maama | mafu
+2763	mafu fakaʻilonga kalanga	ʻilonga | kalanga | mafu
+2733	fetuʻu huelovalu	fakaʻilonga | fetuʻu | fetuʻu huelovalu | huelo | valu
+2734	fetuʻu tapavalu	fakaʻilonga | fetuʻu | fetuʻu tapavalu | tapa | valu
+2747	fetapaki	fakaʻilonga | fetapaki | fetapatapaki
+1F3E0	fale	fale
+1F3E1	fale moe ngoue	fale | fale moe ngoue | ngoue
+1F3E2	fale ʻōfisi	fale | ʻōfisi
+1F3E3	ʻōfisi lītohi fakasiapani	ʻōfisi | ʻōfisi lītohi fakasiapani | lītohi | Siapani
+1F3E4	ʻōfisi lītohi	ʻōfisi | lītohi
+1F3E5	falemahaki	fale | falemahaki | mahaki
+1F3E6	pangikē	pangikē
+1F3E7	mīsini toho paʻanga	mīsini | mīsini toho paʻanga | pangikē | toho paʻanga
+1F3E8	fale tali-fononga	fale | tali-fononga
+1F3E9	fale paʻumutu	fale | paʻumutu
+1F3EA	falekoloa	falekoloa
+1F3EB	faleako	faleako
+1F3EC	falekoloa lahi	falekoloa | falekoloa lahi
+1F3ED	fale ngāueʻanga	fale | ngāueʻanga
+1F3EE	maama matangi kulokula	maama matangi kulokula
+1F3EF	pālasi fakasiapani	pālasi | pālasi fakasiapani | Siapani
+1F3F0	pālasi	pālasi
+1F463	topuvaʻe	topuvaʻe
+1F464	ʻata ʻoe sino	ʻata | ʻata ʻoe sino | sino
+1F465	ongo ʻata ʻoe sino	ʻata | ongo | ongo ʻata ʻoe sino | sino
+1F466	tamasiʻi	tamasiʻi
+1F467	taʻahine	taʻahine
+1F468	tangata	tangata
+1F469	fefine	fefine
+1F46A	fāmili	fāmili
+1F46B	tangata mo fefine fetakinima	fefine | fetakinima | tangata | tangata mo fefine fetakinima
+1F46C	ongo tangata fetakinima	fetakinima | ongo | tangata
+1F46D	fafine fetakinima	fafine fetakinima | fefine | fetakinima | ongo
+1F46E	ʻofisa polisi	ʻofisa | polisi
+1F46F	tokoua telinga-lāpisi	lāpisi | ongo | telinga | tokoua telinga-lāpisi
+1F470	tokotaha tui veili	tokotaha | tui | veili
+1F471	tokotaha ʻulu kelo	ʻulu | kelo | tokotaha
+1F472	tangata tui tatā fakasiaina	siaina | tangata | tangata tui tatā fakasiaina | tatā | tui
+1F473	tokotaha tui faʻu	ao | faʻu | tokotaha tui faʻu | tui
+1F474	motuʻa	motuʻa | tangata
+1F475	finemotuʻa	fefine | finemotuʻa | motuʻa
+1F476	valevale	valevale
+1F477	tokotaha ngāue langa	langa | ngāue | tokotaha ngāue langa
+1F478	ʻalo fefine	fefine | ʻalo | pilinisesi
+1F479	nifoloa	faʻahikehe | nifoloa
+1F47A	pīnōnō	faʻahikehe | pīnōnō
+1F483	fefine meʻe	fefine | meʻe
+1F486	tokotaha fotofotaʻi	fotofota | tokotaha fotofotaʻi
+1F487	tokotaha ʻulu kosi	ʻulu | kosi | tokotaha ʻulu kosi
+1F645	tokotaha kaunima fetuiaki	kaunima fetuiaki | tokotaha kaunima fetuiaki
+1F646	tokotaha kaunima fetuiaki ʻolunga	ʻolunga | kaunima fetuiaki | tokotaha kaunima fetuiaki ʻolunga
+1F647	tokotaha punou	punou | tokotaha punou
+1F64B	tokotaha nima ʻi ʻolunga	ʻolunga | nima | tokotaha nima ʻi ʻolunga
+1F64D	tokotaha matamamahi	matamamahi | tokotaha matamamahi
+1F64E	tokotaha mataʻita	mataʻita | tokotaha mataʻita
+1F930	fefine feitama	fefine feitama | feitama
+1F931	fakahuhu	fakahuhu
+1F933	faitaaʻi pē kita	faitā | faitaaʻi pē kita | foni | kita
+1F934	ʻalo tangata	ʻalo | pilinisi | tangata
+1F935	tokotaha vala kakato	kakato | tangata | tokotaha vala kakato | vala
+1F936	Sānita Kalausi fefine	fefine | Sānita Kalausi | Sānita Kalausi fefine
+1F937	tokotaha fakamahiki	fakamahiki | tokotaha fakamahiki
+1F385	Sānita Kalausi	Sānita Kalausi | tangata
+1F9B8	tokotaha ivimālohi	ivimālohi | tokotaha ivimālohi
+1F9B9	tokotaha kākā	kākā | tokotaha kākā
+1F9BF	vaʻe ukamea	ukamea | vaʻe
+1F9D0	mata moe matasioʻata tafaʻaki taha	mata | matasioʻata | taha
+1F9D1	kakai lalahi	kakai lalahi
+1F9D2	fānau	fānau
+1F9D3	tokotaha motuʻa	motuʻa | tokotaha motuʻa
+1F9D4	tokotaha kava	kava | tokotaha
+1F9D5	fefine tui sikaafi	fefine | sikaafi | tui
+1F9D6	tokotaha ʻi loki mao	mao | tokotaha ʻi loki mao
+1F9D7	tokotaha kaka	kaka | teleʻa | tokotaha kaka | vanu
+1F9D8	tokotaha tangutu fehauaki	fehauaki | tangutu | tokotaha tangutu fehauaki
+1F9D9	tokotaha taula-faʻahikehe	faʻahikehe | taula | tokotaha taula-faʻahikehe
+1F9DA	feeli	feeli
+1F9DB	tokotaha misi toto	misi | tokotaha misi toto | toto
+1F9DC	tokotaha meimeite	ika | meimeite | tokotaha meimeite
+1F9DD	kiʻi feeli	feeli | kiʻi feeli
+1F9DE	faʻahikehe	faʻahikehe
+1F9DF	tēvolo	mate | tēvolo
+1FAC2	kakai fāʻufua	fāʻufua | kakai fāʻufua
+1FAC3	tangata feitama	feitama | kete lahi | puputa | tangata feitama
+1FAC4	tokotaha feitama	feitama | kete lahi | puputa | tokotaha feitama
+B9	taha hake	fakaʻilonga | hake | taha
+B2	ua hake	fakaʻilonga | hake | ua
+B3	tolu hake	fakaʻilonga | hake | tolu
+207B	kole hake	fakaʻilonga | hake | kole
+B0	tikili	fakaʻilonga | tikili
+B1	tānaki-kole	fakaʻilonga | kole | tānaki | tānaki-kole
+D7	liunga	fakaʻilonga | liunga
+F7	vahevahe	fakaʻilonga | vahevahe
+B5	maikalo	fakaʻilonga | maikalo
+A9	mafai-pulusi	fakaʻilonga | mafai-pulusi
+AE	lēsisita	fakaʻilonga | lēsisita
+2122	fefakatauʻaki	fakaʻilonga | fefakatauʻaki
+A7	kupu	fakaʻilonga | kupu
+B6	palakalafi	fakaʻilonga | palakalafi
+B7	toti ʻi loto	fakaʻilonga | loto | toti | toti ʻi loto
+2022	fakaʻilonga toti	fakaʻilonga | fakaʻilonga toti | pulukōkō
+2013	kohi nounou	fakaʻilonga | kohi | nounou
+2026	totitolu	fakaʻilonga | tolu | toti | totitolu
+AB	lea hiki fakatouliki lōua hema	fakaʻilonga | lea hiki | lea hiki fakatouliki lōua hema | touliki | ua
+BB	lea hiki fakatouliki lōua mataʻu	fakaʻilonga | lea hiki | lea hiki fakatouliki lōua mataʻu | touliki | ua
+2030	pemila	fakaʻilonga | pemila
+20AC	ʻeulo	ʻeulo | ʻEulope | paʻanga
+A3	sōvaleni	paʻanga | Pilitānia | sōvaleni
+A5	ieni	ieni | paʻanga | Siapani
+A2	seniti	paʻanga | seniti
+20B9	lupi fakaʻinitia	ʻInitia | lupi | lupi fakaʻinitia | paʻanga
+20BD	lupi fakalūsia	lupi | lupi fakalūsia | Lūsia | paʻanga
+20A9	uoni	Kolea | paʻanga | uoni
+20BF	makapiti	fakapulipuli | makapiti | paʻanga
+20B1	peso	paʻanga | peso | Sepeni
+20A8	lupi	ʻInitia | lupi | paʻanga
+24	tola	ʻAmelika | paʻanga | tola
+20A3	falanikē	falanikē | Falanisē | paʻanga
+20A4	lila	ʻĪtali | lila | paʻanga
+20B0	pifeni	pifeni | sēniti | Siamane
+20B3	ʻōsitali	ʻAsenitina | ʻōsitali | paʻanga
+20A2	kuluseilo	kuluseilo | paʻanga | Palāsili
+20A5	mili	mili | paʻanga
+20B6	līvele tūnua	Falanisē | līvele | motuʻa | paʻanga
+20B7	sipesimilo	ʻEsipulanito | paʻanga | sipesimilo
+A4	Pa’anga Ta’e’ilo	
+201E	lea hiki lōua mataʻu hifo	fakaʻilonga | lea hiki | lea hiki lōua mataʻu hifo | ua
+201C	lea hiki lōua hema	fakaʻilonga | lea hiki | lea hiki lōua hema | ua
+201D	lea hiki lōua mataʻu	fakaʻilonga | lea hiki | lea hiki lōua mataʻu | ua
+2018	lea hiki hema	fakaʻilonga | lea hiki | lea hiki hema
+2019	lea hiki mataʻu	fakaʻilonga | lea hiki | lea hiki mataʻu
+A1	kalanga fulihi	fakaʻilonga | fulihi | kalanga
+BF	fehuʻi fulihi	fakaʻilonga | fehuʻi | fulihi
+2020	fakaʻilonga heletui	fakaʻilonga | heletui
+2021	heletui lōua	fakaʻilonga | heletui | heletui lōua
+2044	kohi fakakiseni	fakakiseni | kohi | matematika
+2032	fakaʻilonga tiki	fakaʻilonga | tiki
+2033	tiki lōua	fakaʻilonga | lōua | tiki
+201A	lea hiki mataʻu hifo	fakaʻilonga | lea hiki | lea hiki mataʻu hifo
+AC	fakaʻikai	fakaʻikai | fakaʻilonga | ʻikai
+2117	ongo mafai-pulusi	fakaʻilonga | mafai-pulusi | ongo
+2212	kole	fakaʻilonga | kole
+2213	kole pe tānaki	kole | matematika | tānaki
+2248	meimeitatau	fakaʻilonga | meimei | meimeitatau | tatau
+2260	taʻetatau	fakaʻilonga | ʻikai | taʻe | taʻetatau | tatau
+2261	tuʻupau	fakaʻilonga | tatau | tuʻupau
+2264	siʻihifo pe tatau	fakaʻilonga | hifo | siʻi | siʻihifo pe tatau | tatau
+2265	lahihake pe tatau	fakaʻilonga | hake | lahi | lahihake pe tatau | tatau
+226A	fuʻu siʻihifo	fuʻu | matematika | siʻihifo
+226B	fuʻu lahihake	fuʻu | lahihake | matematika
+221E	taʻengata	fakaʻilonga | taʻengata
+221A	aka-tautakele	aka-tautakele | fakaʻilonga
+221D	fakahoatatau ki	fakahoatatau | matematika
+2211	tānaki lōlahi	lōlahi | matematika | tānaki
+220F	liunga lōlahi	liunga | lōlahi | matematika
+222B	ʻinitakolo	ʻinitakolo | matematika
+2202	faikehekehe fakakonga	faikehekehe | fakakonga | matematika
+2206	tuputaha	fakaʻilonga | tuputaha
+2207	tapatolu fulihi	fakaʻilonga | fulihi | tapatolu
+2200	kātoa	kātoa | matematika
+2203	ʻoku ʻi ai	ʻoku ʻi ai | matematika
+2205	ngeʻesi seti	matematika | ngeʻesi | seti
+2208	ʻelemēniti	fakaʻilonga | ʻelemēniti | konga
+2209	ʻikai ha memipa	ʻikai | matematika | memipa
+2229	fehauaki	fakaʻilonga | fehauaki
+222A	fekauʻaki	fakaʻilonga | fekauʻaki
+2282	fakakonga	fakaʻilonga | fakakonga | konga
+2283	fakafano	fakafano | matematika
+2286	fakakonga tatau	fakakonga | matematika | tatau
+2287	fakafano tatau	fakafano | matematika | tatau
+2227	pea mo	matematika | mo
+2295	tānaki fakafuopotopoto	fuopotopoto | matematika | tānaki
+2297	liunga fakafuopotopoto	fuopotopoto | liunga | matematika
+22A5	foʻi tākisi hake	ʻolunga | matematika | tākisi
+2220	tuliki	masila | matematika | tuliki
+2234	ko ia ai	ko ia ai | matematika
+2235	koeʻuhi	koeʻuhi | matematika
+2218	fakafuofua mama	fakafuofua | mama | matematika
+2219	fakafuofua pulukōkō	fakafuofua | matematika | pulukōkō
+22C5	fakafuofua toti	fakafuofua | matematika | toti
+2215	kohi vahevahe	kohi | matematika | vahevahe
+2190	ngahau siʻi ki toʻohema	hema | ngahau | ngahau ki toʻohema | ngahau siʻi ki toʻohema
+2191	ngahau siʻi ki ʻolunga	hake | ʻolunga | ngahau | ngahau ki ʻolunga | ngahau siʻi ki ʻolunga
+2192	ngahau siʻi ki toʻomataʻu	mataʻu | ngahau | ngahau ki toʻomataʻu | ngahau siʻi ki toʻomataʻu
+2193	ngahau siʻi ki lalo	hifo | lalo | ngahau | ngahau ki lalo | ngahau siʻi ki lalo
+2196	ngahau ki ʻolunga toʻohema	hema | ʻolunga | ngahau | ngahau ki ʻolunga toʻohema
+2197	ngahau ki ʻolunga toʻomataʻu	ʻolunga | mataʻu | ngahau | ngahau ki ʻolunga toʻomataʻu
+2198	ngahau ki lalo toʻomataʻu	lalo | mataʻu | ngahau | ngahau ki lalo toʻomataʻu
+2199	ngahau ki lalo toʻohema	hema | lalo | ngahau | ngahau ki lalo toʻohema
+2194	ngahau ki toʻohema mo toʻomataʻu	hema | mataʻu | ngahau | ngahau ki toʻohema mo toʻomataʻu
+2195	ngahau ki ʻolunga mo lalo	hake | hifo | ʻolunga | lalo | ngahau | ngahau ki ʻolunga mo lalo
+21D0	ngahau lōua ki toʻohema	2 | hema | ngahau | ua
+21D1	ngahau lōua ki ʻolunga	2 | ʻolunga | ngahau | ua
+21D2	ngahau lōua ki toʻomataʻu	2 | mataʻu | ngahau | ua
+21D3	ngahau lōua ki lalo	2 | lalo | ngahau | ua
+21D6	ngahau lōua ki tokelauhihifo	2 | hihifo | ngahau | tokelau | ua
+21D7	ngahau lōua ki tokelauhahake	2 | hahake | ngahau | tokelau | ua
+21D8	ngahau lōua ki tongahahake	2 | hahake | ngahau | tonga | ua
+21D9	ngahau lōua ki tongahihifo	2 | hihifo | ngahau | tonga | ua
+21D4	ngahau lōua ki toʻohema-mataʻu	2 | hema | mataʻu | ngahau | ua
+21A4	ngahau ki toʻohema meihe pā	hema | ngahau | pā
+21A6	ngahau ki toʻomataʻu meihe pā	mataʻu | ngahau | pā
+21A5	ngahau ki ʻolunga meihe pā	ʻolunga | ngahau | pā
+21A7	ngahau ki lalo meihe pā	lalo | ngahau | pā
+21A9	ngahau afe ki toʻohema	afe | hema | ngahau | ngahau afe ki toʻohema
+21AA	ngahau afe ki toʻomataʻu	afe | mataʻu | ngahau | ngahau afe ki toʻomataʻu
+219E	ngahau ʻuluua ki toʻohema	2 | hema | ngahau | ua
+21A0	ngahau ʻuluua ki toʻomataʻu	2 | mataʻu | ngahau | ua
+219F	ngahau ʻuluua ki ʻolunga	2 | ʻolunga | ngahau | ua
+21A1	ngahau ʻuluua ki lalo	2 | lalo | ngahau | ua
+21A2	ngahau ki toʻohema moe hiku	hema | hiku | ngahau
+21A3	ngahau ki toʻomataʻu moe hiku	hiku | mataʻu | ngahau
+219A	ngahau ki toʻohema moe kohi	hema | kohi | ngahau
+219B	ngahau ki toʻomataʻu moe kohi	kohi | mataʻu | ngahau
+21AE	ngahau ki toʻohema-mataʻu moe kohi	hema | kohi | mataʻu | ngahau
+21CD	ngahau lōua ki toʻohema moe kohi	2 | hema | kohi | ngahau | ua
+21CF	ngahau lōua ki toʻomataʻu moe kohi	2 | kohi | mataʻu | ngahau | ua
+21CE	ngahau lōua ki toʻohema-mataʻu moe kohi	2 | hema | kohi | mataʻu | ngahau | ua
+21C4	ngahau ki toʻomataʻu ʻi olunga ʻoe toʻohema	2 | hema | mataʻu | ngahau | ua
+21C6	ongo ngahau ki toʻomataʻu mo toʻohema	hema | mataʻu | ongo ngahau | ongo ngahau ki toʻomataʻu mo toʻohema
+21CB	taovelo ki toʻohema ʻi olunga ʻoe toʻomataʻu	2 | hema | mataʻu | taovelo | ua
+21CC	taovelo ki toʻomataʻu ʻi olunga ʻoe toʻohema	2 | hema | mataʻu | taovelo | ua
+21BC	taovelo talahake ki toʻohema	hema | ʻolunga | taovelo
+21BD	taovelo talahifo ki toʻohema	hema | lalo | taovelo
+21C0	taovelo talahake ki toʻomataʻu	ʻolunga | mataʻu | taovelo
+21C1	taovelo talahifo ki toʻomataʻu	lalo | mataʻu | taovelo
+21BE	taovelo talamataʻu ki ʻolunga	ʻolunga | mataʻu | taovelo
+21BF	taovelo talahema ki ʻolunga	hema | ʻolunga | taovelo
+21C2	taovelo talamataʻu ki lalo	lalo | mataʻu | taovelo
+21C3	taovelo talahema ki lalo	hema | lalo | taovelo
+21C7	ngahau fakahoa ki toʻohema	2 | fakahoa | hema | ngahau | ua
+21C9	ngahau fakahoa ki toʻomataʻu	2 | fakahoa | mataʻu | ngahau | ua
+21C8	ngahau fakahoa ki ʻolunga	2 | fakahoa | ʻolunga | ngahau | ua
+21CA	ngahau fakahoa ki lalo	2 | fakahoa | lalo | ngahau | ua
+21DA	ngahau lōtolu ki toʻohema	3 | hema | ngahau | tolu
+21DB	ngahau lōtolu ki toʻomataʻu	3 | mataʻu | ngahau | tolu
+219C	ngahau ki toʻohema fafasi	fafasi | hema | ngahau
+219D	ngahau ki toʻomataʻu fafasi	fafasi | mataʻu | ngahau
+21DC	ngahau tafihifihu ki toʻohema	hema | ngahau | tafihifihu
+21DD	ngahau tafihifihu ki toʻomataʻu	mataʻu | ngahau | tafihifihu
+21AD	ngahau ki toʻohema-mataʻu fafasi	fafasi | hema | mataʻu | ngahau
+21AF	ngahau ki lalo fepikopikoaki	fepikopikoaki | lalo | ngahau
+21BA	ngahau ava vilovilo toʻohema	ava | hema | ngahau | vilovilo
+21BB	ngahau ava vilovilo toʻomataʻu	ava | mataʻu | ngahau | vilovilo
+1F400	kumā	kumā
+1F401	kumāsiʻi	kumā | kumāsiʻi
+1F402	pulu pokaʻi	pokaʻi | pulu
+1F403	pafalō	pafalō
+1F404	pulu	pulu
+1F405	taika	taika
+1F406	lēpati	lēpati
+1F407	lāpisi	lāpisi
+1F408	pusi	pusi
+1F409	talākoni	talākoni
+1F40A	kalokataile	kalokataile
+1F40B	tofuaʻa	tofuaʻa
+1F40C	ʻelili	ʻelili
+1F40D	ngata	ngata
+1F40E	hoosi	hoosi | lova
+1F40F	sipi tau	sipi | tau
+1F410	kosi	kosi
+1F411	sipi fefine	fefine | sipi
+1F412	ngeli	ngeli
+1F413	moataʻane	moa | moataʻane | tangata
+1F414	moa	moa
+1F415	kulī	kulī
+1F416	puaka	puaka
+1F417	puaka fekai	fekai | mata | puaka
+1F418	ʻelefānite	ʻelefānite
+1F419	feke	feke
+1F41A	keleʻa	keleʻa
+1F41B	kutu	kutu
+1F41C	lō	lō
+1F41D	hone	hone
+1F41E	mongomonga-fineʻeiki	mongomonga | mongomonga-fineʻeiki
+1F41F	ika	ika
+1F420	ika he hakau	hakau | ika | ika he hakau
+1F421	sokisoki	sokisoki
+1F422	fonu	fonu
+1F423	fōfoaʻimoa	fōfoaʻimoa | moa
+1F424	ʻuhikiʻimoa	ʻuhikiʻimoa | moa
+1F425	ʻuhikiʻimoa hanga mai	ʻuhikiʻimoa | ʻuhikiʻimoa hanga mai | moa
+1F426	manupuna	manupuna
+1F427	penikuini	penikuini
+1F428	koala	ʻAositelēlia | koala | mata | pea
+1F429	kulī pūteli	kulī | pūteli
+1F42A	kāmeli tuʻahulataha	kāmeli | kāmeli tuʻahulataha | taha | tuʻahula
+1F42B	kāmeli tuʻahulaua	kāmeli | kāmeli tuʻahulaua | tuʻahula | ua
+1F42C	pungopunga	pungopunga
+1F42D	mataʻi-kumāsiʻi	kumā | mata | mataʻi-kumāsiʻi
+1F42E	mataʻi-pulu	mata | mataʻi-pulu | pulu
+1F42F	mataʻi-taika	mata | mataʻi-taika | taika
+1F430	mataʻi-lāpisi	lāpisi | mata | mataʻi-lāpisi
+1F431	mataʻi-pusi	mata | mataʻi-pusi | pusi
+1F432	mataʻi-talākoni	mata | mataʻi-talākoni | talākoni
+1F433	tofuaʻa puhi	puhi | tofuaʻa
+1F434	mataʻi-hoosi	hoosi | mata | mataʻi-hoosi
+1F435	mataʻi-ngeli	mata | mataʻi-ngeli | ngeli
+1F436	mataʻi-kulī	kulī | mata | mataʻi-kulī
+1F437	mataʻi-puaka	mata | mataʻi-puaka | puaka
+1F438	mataʻi-poto	mata | mataʻi-poto | poto
+1F439	kumā-feti	feti | kumā | kumā-feti
+1F43A	mataʻi-ulofi	mata | mataʻi-ulofi | ulofi
+1F43B	mataʻi-pea	mata | mataʻi-pea | pea
+1F43C	mataʻi-pea-ʻuliʻuli-moe-hinehina	hinehina | ʻuliʻuli | mata | mataʻi-pea-ʻuliʻuli-moe-hinehina | pea
+1F43D	ihuʻi-puaka	ihu | ihuʻi-puaka | puaka
+1F43E	topuvaʻe manu	manu | topuvaʻe
+1F43F	sikueli	sikueli
+1F981	mataʻi-laione	laione | mata | mataʻi-laione
+1F982	sikipio	sikipio
+1F983	pīpī	pīpī
+1F984	mataʻi-meʻatuitaha	mata | mataʻi-meʻatuitaha | meʻatuitaha
+1F985	ʻikale	ʻikale
+1F986	pato	pato
+1F987	peka	peka
+1F988	ʻanga	ʻanga
+1F989	lulu	lulu
+1F98A	mataʻi-fokisi	fokisi | mata | mataʻi-fokisi
+1F98B	pepe	pepe
+1F98C	tia	tia
+1F98D	kolila	kolila
+1F98E	moko	moko
+1F98F	lainosolosi	lainosolosi
+1F990	ʻuosiʻisiʻi	ʻuo | ʻuosiʻisiʻi
+1F991	ngūfeke	ngūfeke
+1F992	silafi	silafi
+1F993	sepelā	kohi | sepelā
+1F994	puakatalatala	puakatalatala
+1F995	saulopoti	saulopoti
+1F996	tainosauli nifo māsila	māsila | nifo | tainosauli
+1F997	kālihi	kālihi
+1F998	kangikalū	kangikalū
+1F999	lama	lama
+1F99A	pīkoka	pīkoka
+1F99B	hipopotama	hipopotama
+1F99C	kakā	kakā
+1F99D	lakūni	lakūni
+1F99E	ʻuo	ʻuo
+1F99F	namu	namu
+1F9A0	siemu	siemu
+1F9A1	patisē	patisē
+1F9A2	patolahi	patolahi
+1F9A3	mamota	ʻauhamālie | mamota
+1F9A4	toto	ʻauhamālie | manupuna | toto
+1F9A5	pea-fakapikopiko	fakapikopiko | pea-fakapikopiko
+1F9A6	ʻotē	ʻotē | manu | toutai
+1F9A7	ngeli-nofoʻuta	ngeli | ngeli-nofoʻuta
+1F9A8	manu fainamukū	manu fainamukū | namukū
+1F9A9	falamingo	falamingo | manupuna
+1F9AA	tofe	mataʻitofe | tofe
+1F9AB	kumā fai-tāpuni-vai	ano | kumā | kumā fai-tāpuni-vai | tāpuni
+1F9AC	pisoni	pisoni
+1F9AD	kulītahi	kulītahi
+1F9AE	kulī tokonikui	kui | kulī | kulī tokonikui | tokoni
+1FABC	kolokalu	kalakala | kolakalu | kolokalu | tahi
+1F330	ifi	ifi
+1F331	pulopula	pulopula
+1F332	ʻakau lanumata maʻu pē	ʻakau | ʻakau lanumata maʻu pē | lanumata
+1F333	ʻakau fakatōlau	ʻakau | ʻakau fakatōlau | lanumata
+1F334	fuʻu niu	fuʻu | niu
+1F335	kakatisi	kakatisi
+1F337	tiulipe	tiulipe
+1F338	matalaʻi-seli	matalaʻi-seli | matalaʻiakau | seli
+1F339	lose	lose
+1F33A	kaute	kaute
+1F33B	siolaʻā	siolaʻā
+1F33C	matalaʻiʻakau	matalaʻiʻakau
+1F33D	foʻi koane	foʻi koane | koane
+1F33E	haʻinga laise	haʻinga | laise
+1F33F	ʻakau faitoʻo	faitoʻo | ʻakau
+1F340	kihikihipālangi lau ʻe fā	fā | kihikihipālangi | kihikihipālangi lau ʻe fā
+1F341	lauʻi-mapele	lau | lauʻi-mapele | mapele
+1F342	lau kuo tō	lau | lau kuo tō | tō
+1F343	lau ngaungaue matangi	lau | lau ngaungaue matangi | matangi
+1F344	fakamalu-ʻa-tēvolo	fakamalu-ʻa-tēvolo
+1FAB0	lango	lango
+1FAB1	kelemutu	kelemutu
+1FAB2	mongomonga iiki	mongomonga | mongomonga iiki
+1FAB3	mongomonga	mongomonga
+1FAB4	ʻakau ʻihe kulo	ʻakau | ʻakau ʻihe kulo | kulo
+1FAB5	ʻakau	ʻakau
+1FAB6	fulufulu	fulufulu | manupuna
+1FAB7	hainitevai	hainitevai | hinitū | ʻInitia | Puta
+1FAB8	feo	feo | hakau | moana
+1FAB9	ngeʻesi pununga	ngeʻesi | pununga
+1FABA	pununga moe foʻimanu	foʻimanu | pununga | pununga moe foʻimanu
+1FABB	hainite	hainite | matalaʻiʻakau
+2618	sameloki	kihikihipālangi | sameloki
+1F347	kālepi	kālepi
+1F348	meleni-pālangi	meleni | meleni-pālangi
+1F349	meleni	meleni
+1F34A	moli	moli
+1F34B	lemani	lemani
+1F34C	siaine	siaine
+1F34D	fainā	fainā
+1F34E	ʻāpele kula	ʻāpele | kula
+1F34F	ʻāpele mata	ʻāpele | mata
+1F350	pea	pea
+1F351	piisi	piisi
+1F352	seli	seli
+1F353	sitolōpeli	sitolōpeli
+1F336	polo fifisi	fifisi | polo
+1F354	hamipaka	hamipaka
+1F355	pisa	pisa
+1F356	kanomate moe hui	hui | kanomate | kanomate moe hui
+1F357	vaʻeʻi-moa	moa | vaʻe | vaʻeʻi-moa
+1F358	pisikete laise	laise | pisikete
+1F359	puluʻi laise	laise | pulu | puluʻi laise | Siapani
+1F35A	laise moho	laise | moho
+1F35B	laise kale	kale | laise
+1F35C	kulo mao	kulo | mao | nutolo
+1F35D	sipeketi	sipeketi
+1F35E	mā	mā
+1F35F	pateta fakapaku	paku | pateta | pateta fakapaku
+1F360	kumala tunu	kumala | kumala tunu
+1F361	faikakai fakasiapani	faikakai | faikakai fakasiapani | Siapani
+1F362	ʻoteni	ʻoteni
+1F363	susi	susi
+1F364	ʻuosiʻisiʻi fakapaku	ʻuo | ʻuosiʻisiʻi fakapaku | paku
+1F365	keke ika	ika | keke
+1F366	ʻaisikilimi molū	ʻaisikilimi | ʻaisikilimi molū
+1F367	ʻaisitele	ʻaisitele
+1F368	ʻaisikilimi	ʻaisikilimi
+1F369	keke fakapaku	keke | keke fakapaku | paku
+1F36A	pisikete	pisikete
+1F36B	lole sokaleti	lole | sokaleti
+1F36C	lole	lole
+1F36D	lolepopi	lole | lolepopi | popi
+1F36E	kasitati	kasitati
+1F36F	kulo hone	hone | kulo
+1F370	keke	keke
+1F371	puha meʻakai fakasiapani	meʻakai | puha | puha meʻakai fakasiapani | Siapani
+1F372	kulo meʻakai	kulo | meʻakai
+1F373	fakapaku	fakapaku
+1F374	huhukai moe helekai	helekai | huhukai | huhukai moe helekai
+1F375	ipu tī	inu | ipu | māfana | tī
+1F376	uaine-laise	laise | uaine | uaine-laise
+1F377	ipu sioʻata uaine	ipu | sioʻata | uaine
+1F378	ipu sioʻata paati	ipu | ipu sioʻata paati | sioʻata
+1F379	ʻotai	ʻotai
+1F37A	moki pia	ipu | moki | pia | sioʻata
+1F37B	moki fakapaaki	fakapaaki | ipu | moki | ongo | pia | sioʻata
+1F37C	hinahuhu	hinahuhu
+1F37D	huhukai moe helekai moe peleti	helekai | huhukai | huhukai moe helekai moe peleti | peleti
+1F37E	hina moe ʻumosi	hina | hina moe ʻumosi | ʻumosi
+1F37F	koane fakapaku	fakapaku | koane
+1F950	mā kalipa	Falanisē | kalipa | mā
+1F951	ʻāvoka	ʻāvoka
+1F952	kiukamipa	kiukamipa
+1F953	pēkani	pēkani
+1F954	pateta	pateta
+1F955	kāloti	kāloti
+1F956	mā lōloa	Falanisē | lōloa | mā
+1F957	salati	salati
+1F958	fakapaku meʻakai	fakapaku | meʻakai
+1F959	mā falati	falati | mā
+1F95A	fuaʻimoa	fuaʻimoa
+1F95B	ipu huʻakau	huʻakau | ipu
+1F95C	pīnati	pīnati
+1F95D	kiui	kiui
+1F95E	pani	mā | pani
+1F95F	tōpai	tōpai
+1F960	pisikete talamonū	pisikete | talamonū
+1F961	kato meʻakai	kato | meʻakai
+1F962	vaʻakau kai	kai | vaʻakau
+1F963	poulu moe sepuni	poulu | poulu moe sepuni | sepuni
+1F964	ipu moe vaʻakauinu	ipu | ipu moe vaʻakauinu | vaʻakauinu
+1F965	foʻi niu	foʻi niu
+1F966	kāpisi	kāpisi
+1F967	pai	pai
+1F968	pani mamio	mā | mamio | pani
+1F969	kanomate fahi	kanomate | kanomate fahi
+1F96A	sanuisi	mā | sanuisi
+1F96B	meʻakai kapa	kapa | meʻakai
+1F96C	lētisi	lētisi
+1F96D	mango	mango
+1F96E	keke māhina	keke | māhina
+1F96F	pani mama	mā | mama | pani
+1F9C0	siisi	siisi
+1F9C1	ipukeke	ipukeke
+1F9C2	masima	masima
+1F9C3	puha inu	inu | puha
+1F9C4	kaliki	kaliki
+1F9C5	ʻonioni	ʻonioni
+1F9C6	falafeli	falafeli
+1F9C7	pani manifi	mā | manifi | pani
+1F9C8	pata	pata
+1F9C9	kofi fakaʻamelika-tonga	ʻAmelika-tonga | kofi | kofi fakaʻamelika-tonga
+1F9CA	puloka ʻaisi	ʻaisi | puloka
+1F9CB	tī maʻupu	maʻupu | tī
+1FAD0	pelilanupulū	pelilanupulū
+1FAD1	polo	polo
+1FAD2	ʻolive kai	ʻolive | kai
+1FAD3	mā lafalafa	lafalafa | mā
+1FAD4	mā pulupulu	mā | pulupulu
+1FAD5	siisi māfana	kulo | siisi | siisi māfana
+1FAD6	tīpota	tīpota
+1FAD7	lilingi vai	ipu | lilingi | mahua | vai
+1FAD8	piini	meʻakai | piini
+1FAD9	siā	ʻaiʻanga | maha | siā
+1FADA	sinisā	aka | pia | sinisā
+1FADB	ngeʻesi piini	ngeʻesi | piini
+2615	inu māfana	inu | ipu | kofi | māfana
+2600	laʻā	laʻā
+2601	ʻao	ʻao
+2602	teke fakamalu	fakamalu | teke fakamalu
+2603	tangata sinou ʻihe ʻea sinou	sinou | tangata | tangata sinou ʻihe ʻea sinou
+2614	fakamalu ʻihe ʻuha	fakamalu | fakamalu ʻihe ʻuha | ʻuha
+26A1	volita māʻolunga	māʻolunga | volita
+26C4	tangata sinou	sinou | tangata
+26C5	laʻā ʻaoʻaofia	ʻao | laʻā | laʻā ʻaoʻaofia
+26C8	ʻao moe ʻuha moe ʻuhila	ʻao | ʻao moe ʻuha moe ʻuhila | ʻuha | ʻuhila
+2744	foʻi sinou	foʻi sinou | sinou | tapaono
+1F300	saikolone	saikolone
+1F301	fuʻukakapu	fale | fuʻukakapu | kakapu | kolo
+1F302	tukuhifo fakamalu	fakamalu | tukuhifo fakamalu
+1F303	pō fetuʻuʻia	fale | fetuʻu | kolo | pō | pō fetuʻuʻia
+1F304	hopo ʻae laʻā he funga moʻunga	hopo | hopo ʻae laʻā he funga moʻunga | laʻā | moʻunga | tō
+1F305	hopo ʻae laʻā	hopo | hopo ʻae laʻā | laʻā | tahi | tō
+1F306	fale lalahi lotokolo mamalu efiafi	fale | fale lalahi lotokolo mamalu efiafi | kolo | mamalu
+1F307	tō ʻae laʻā	fale | hopo | kolo | laʻā | tō | tō ʻae laʻā
+1F308	ʻūmata	ʻūmata
+1F309	hala kavakava poʻuli	fetuʻu | hala kavakava | hala kavakava poʻuli | pō
+1F30A	peau	moana | peau | tahi
+1F30B	moʻungaafi	laku | moʻungaafi | puna
+1F30C	kaniva	kaniva
+1F30D	kolope ʻasi mai ʻEulope-ʻAfilika	ʻAfilika | ʻEulope | kolope | kolope ʻasi mai ʻEulope-ʻAfilika | māmani
+1F30E	kolope ʻasi mai ongo ʻAmelika	ʻAmelika | kolope | kolope ʻasi mai ongo ʻAmelika | māmani
+1F30F	kolope ʻasi mai ʻĒsia-ʻAositelēlia	ʻAositelēlia | ʻĒsia | kolope | kolope ʻasi mai ʻĒsia-ʻAositelēlia | māmani
+1F310	kolope moe ngaahi melitiane	kolope | kolope moe ngaahi melitiane | māmani | melitiane
+1F311	mate ʻae māhina	māhina | mate | mate ʻae māhina
+1F312	māhina ʻilo ʻehe maama	kalipa | māhina | māhina ʻilo ʻehe maama
+1F313	māhina tuʻu efiafi	māhina | māhina tuʻu efiafi | vaeua
+1F314	māhina matofi	māhina | māhina matofi
+1F315	māhina kātoa	kātoa | māhina
+1F316	māhina lekeleka	māhina | māhina lekeleka
+1F317	māhina tuʻu hengihengi	māhina | māhina tuʻu hengihengi | vaeua
+1F318	māhina silipō	kalipa | māhina | māhina silipō
+1F319	māhina kalipa	kalipa | māhina
+1F31A	mata mate ʻae māhina	māhina | mata | mata mate ʻae māhina | mate
+1F31B	mata māhina tuʻu efiafi	kalipa | māhina | mata | mata māhina tuʻu efiafi
+1F31C	mata māhina tuʻu hengihengi	kalipa | māhina | mata | mata māhina tuʻu hengihengi
+1F31D	mata māhina kātoa	kātoa | māhina | mata
+1F31E	mata e laʻā	laʻā | mata | mata e laʻā
+1F31F	fetuʻu ngingila	fetuʻu | ngingila
+1F320	fetuʻu ʻesiafi	fetuʻu | ʻesiafi
+1F321	fuamāfana	fuamāfana
+1F324	ʻaoʻaofia siʻi	ʻao | ʻaoʻaofia siʻi | laʻā
+1F325	ʻaoʻaofia lahi	ʻao | ʻaoʻaofia lahi | laʻā
+1F326	ʻaoʻaofia ʻuha	ʻao | ʻaoʻaofia ʻuha | ʻuha | laʻā
+1F327	ʻuha ʻaoʻaofia	ʻao | ʻuha | ʻuha ʻaoʻaofia
+1F328	sinou ʻaoʻaofia	ʻao | sinou | sinou ʻaoʻaofia
+1F329	ʻuhila ʻaoʻaofia	ʻao | ʻuhila | ʻuhila ʻaoʻaofia
+1F32A	ʻahiohio	ʻahiohio
+1F32B	kakapu	kakapu
+1F32C	mataʻi matangi	mata | mataʻi matangi | matangi
+2648	Sipi tangata (pupunga)	pupunga | sipi | Sipi tangata (pupunga) | tangata
+2649	Pulu tau (pupunga)	pulu | Pulu tau (pupunga) | pupunga | tau
+264A	Māhanga taʻane (pupunga)	māhanga | Māhanga taʻane (pupunga) | pupunga | taʻane
+264B	ʻUo (pupunga)	ʻuo | ʻUo (pupunga) | paka | pupunga
+264C	Laione (pupunga)	laione | Laione (pupunga) | pupunga
+264D	Taupoʻou (pupunga)	pupunga | taupoʻou | Taupoʻou (pupunga)
+264E	Fuatautau (pupunga)	fuatautau | Fuatautau (pupunga) | pupunga
+264F	Sikipio (pupunga)	pupunga | Sikipio (pupunga) | skipio
+2650	Tangata fana (pupunga)	fana | pupunga | tangata | Tangata fana (pupunga)
+2651	Kositahi (pupunga)	kosi | kositahi | Kositahi (pupunga) | pupunga
+2652	Fineʻutuvai (pupunga)	fefine | Fineʻutuvai (pupunga) | ʻutuvai | pupunga | tangata
+2653	Ongo ika (pupunga)	ika | ongo | Ongo ika (pupunga) | pupunga
+1F550	hoko ʻae taha	1 | 1:00 | hoko ʻae taha | uasi
+1F551	hoko ʻae ua	2 | 2:00 | hoko ʻae ua | uasi
+1F552	hoko ʻae tolu	3 | 3:00 | hoko ʻae tolu | uasi
+1F553	hoko ʻae fā	4 | 4:00 | hoko ʻae fā | uasi
+1F554	hoko ʻae nima	5 | 5:00 | hoko ʻae nima | uasi
+1F555	hoko ʻae ono	6 | 6:00 | hoko ʻae ono | uasi
+1F556	hoko ʻae fitu	7 | 7:00 | hoko ʻae fitu | uasi
+1F557	hoko ʻae valu	8 | 8:00 | hoko ʻae valu | uasi
+1F558	hoko ʻae hiva	9 | 9:00 | hoko ʻae hiva | uasi
+1F559	hoko ʻae hongofulu	10 | 10:00 | hoko ʻae hongofulu | uasi
+1F55A	hoko ʻae tahataha	11 | 11:00 | hoko ʻae tahataha | uasi
+1F55B	hoko ʻae tahaua	12 | 12:00 | hoko ʻae tahaua | uasi
+1F55C	haafe ua	1:30 | haafe | haafe ua | uasi
+1F55D	haafe tolu	2:30 | haafe | haafe tolu | uasi
+1F55E	haafe fā	3:30 | haafe | haafe fā | uasi
+1F55F	haafe nima	4:30 | haafe | haafe nima | uasi
+1F560	haafe ono	5:30 | haafe | haafe ono | uasi
+1F561	haafe fitu	6:30 | haafe | haafe fitu | uasi
+1F562	haafe valu	7:30 | haafe | haafe valu | uasi
+1F563	haafe hiva	8:30 | haafe | haafe hiva | uasi
+1F564	haafe hongofulu	9:30 | haafe | haafe hongofulu | uasi
+1F565	haafe tahataha	10:30 | haafe | haafe tahataha | uasi
+1F566	haafe tahaua	11:30 | haafe | haafe tahaua | uasi
+1F567	haafe taha	12:30 | haafe | haafe taha | uasi
+1FA90	palanite mama	palanite mama | Sātuna
+2604	fetuʻu fuka	fetuʻu | fuka
+26F0	moʻunga	moʻunga
+26F1	fakamalu tuʻu	fakamalu | fakamalu tuʻu | laʻā
+26F2	fauniteni	fauniteni | punavai
+26F4	vaka uta pāsese	pāsese | vaka | vaka uta pāsese
+26F5	vakalā	vakalā
+2708	vakapuna	vakapuna
+1F488	pou kosiʻulu	kosiʻulu | pou
+1F4BA	sea vakapuna	sea | vakapuna
+1F680	loketi	loketi
+1F681	helikopeta	helikopeta
+1F682	mīsini lēlue	lēlue | mīsini
+1F683	sāliote lēlue	lēlue | sāliote
+1F684	lēlue oma	lēlue | oma
+1F685	lēlue oma fakasiapani	lēlue | lēlue oma fakasiapani | oma | Siapani
+1F686	lēlue	lēlue
+1F687	lēlue lalofonua	lalofonua | lēlue
+1F688	kiʻi lēlue	kiʻi lēlue | lēlue
+1F689	tauʻanga lēlue	lēlue | tauʻanga
+1F68A	talamu	talamu
+1F68B	sāliote talamu	sāliote | talamu
+1F68C	pasi	pasi
+1F68D	pasi lele mai	pasi | pasi lele mai
+1F68E	pasi ʻuhila	ʻuhila | pasi
+1F68F	tauʻanga pasi	pasi | tauʻanga
+1F690	pasi iiki	pasi | pasi iiki
+1F691	meʻalele falemahaki	falemahaki | meʻalele
+1F692	meʻalele tāmateafi	meʻalele tāmateafi
+1F693	meʻalele polisi	meʻalele | polisi
+1F694	meʻalele polisi lele mai	meʻalele | meʻalele polisi lele mai | polisi
+1F695	meʻalele utakakai	meʻalele | utakakai
+1F696	meʻalele utakakai lele mai	meʻalele | meʻalele utakakai lele mai | utakakai
+1F697	meʻalele	meʻalele
+1F698	meʻalele lele mai	meʻalele | meʻalele lele mai
+1F699	meʻalele sipoti	meʻalele | sipoti
+1F69A	loli tiliva	loli | tiliva
+1F69B	loli uta lalahi	loli | loli uta lalahi | uta
+1F69C	mīsini taulani	mīsini | taulani
+1F69D	lēlue poutaha	lēlue | poutaha
+1F69E	hala lēlue moʻunga	hala | lēlue | moʻunga
+1F69F	lēlue tāupe lahi	lēlue | lēlue tāupe lahi | tāupe
+1F6A0	lēlue tāupe moʻunga	lēlue | moʻunga | tāupe
+1F6A1	lēlue tāupe iiki	lēlue | lēlue tāupe iiki | tāupe
+1F6A2	vakalahi	vaka | vakalahi
+1F6A3	tokotaha ʻaʻalo	ʻaʻalo | tokotaha ʻaʻalo
+1F6A4	vaka oma	oma | vaka
+1F6A5	maama hala fakalava	hala | maama | maama hala fakalava | tolu
+1F6A6	maama hala tuʻutonu	hala | maama | maama hala tuʻutonu | tolu
+1F6A7	fakaʻilonga ngāue langa	fakaʻilonga | fakaʻilonga ngāue langa | ngāue
+1F6A8	maama meʻalele polisi	maama | meʻalele | polisi
+1F6A9	fuka tapatolu	fuka | tapatolu
+1F6AA	matapā	matapā
+1F6B0	vai inu	inu | vai
+1F6B1	vai taʻe inu	inu | tapu | vai | vai taʻe inu
+1F6B3	tapu pasikala	feʻaluʻaki | pasikala | tapu
+1F6B7	tapu lue	feʻaluʻaki | lue | tapu
+1F6B8	fānau kolosiʻanga	fānau | feʻaluʻaki | kolosiʻanga
+1F6B9	fale mālōlō tangata	fale mālōlō | fale mālōlō tangata | tangata
+1F6BA	fale mālōlō fefine	fale mālōlō | fale mālōlō fefine | fefine
+1F6BB	fale mālōlō	fale mālōlō
+1F6BC	ʻilonga valevale	ʻilonga | valevale
+1F6BD	po toileti	po toileti
+1F6BE	toileti	fale mālōlō | toileti
+1F6BF	meʻa fakapihi kaukau	meʻa fakapihi kaukau
+1F6C0	tokotaha kaukau	kaukau | tokotaha kaukau
+1F6C1	topu kaukau	topu kaukau
+1F6C2	ʻofisa tohifolau	ʻofisa | tohifolau
+1F6C3	tute	kasitomu | tute
+1F6C4	maʻuʻanga katoleta	katoleta | maʻuʻanga
+1F6C5	toloa katoleta	katoleta | toloa
+1F6D0	feituʻu faiʻanga lotu	feituʻu | feituʻu faiʻanga lotu | lotu
+1F6D1	fakaʻilonga tuʻu	fakaʻilonga | kulokula | tuʻu
+1F6D2	saliote tanakiʻanga fakatau	saliote tanakiʻanga fakatau
+2668	vaipuna mao	mao | vaipuna
+26BD	soka	polo | soka
+26BE	peisipolo	peisipolo | polo
+26F3	fuka ʻihe luo	fuka | fuka ʻihe luo | luo | tāpulu
+1F392	kato ako	kato ako
+1F3A0	hoosi vaʻinga	hoosi | tākai | vaʻinga
+1F3A1	veʻeteka vaʻinga	vaʻinga | veʻeteka
+1F3A2	lola vaʻinga	lola | vaʻinga
+1F3A3	ʻakau-taumātaʻu	ʻakau | ʻakau-taumātaʻu | ika | taumātaʻu
+1F3A4	maikalofone	maikalofone
+1F3A5	faitā heleʻuhila	faitā heleʻuhila
+1F3A6	fale heleʻuhila	faiva | fale | heleʻuhila
+1F3A7	sipika ʻulu	sipika ʻulu
+1F3A8	tāvalivali	tā | tāvalivali | valivali
+1F3A9	tatā māʻolunga	tatā māʻolunga
+1F3AA	teniti sākisi	sākisi | teniti
+1F3AB	tikite	tikite
+1F3AC	papapasi	papapasi
+1F3AD	faiva aati	aati | faiva | mata | pūloa
+1F3AE	vaʻinga vitiō	vaʻinga | vitiō
+1F3AF	lotomālie ʻoe tāketi	lotomālie | lotomālie ʻoe tāketi | tāketi
+1F3B0	mīsini tā paʻanga	7 | mīsini | mīsini tā paʻanga | paʻanga
+1F3B1	pulu fika 8	8 | pulu | pulu fika 8
+1F3B2	taisi	taisi
+1F3B3	tekapulu	pulu | tekapulu
+1F3B4	sioka matalaʻiʻakau	matalaʻiʻakau | pele | Siapani | sioka
+1F3B5	nota	nota
+1F3B6	ngaahi nota	ngaahi nota
+1F3B7	sakisefoni	sakisefoni
+1F3B8	kitā	kitā
+1F3B9	ʻū kī	ʻū kī
+1F3BA	meʻaifi	meʻaifi
+1F3BB	vaiolini	vaiolini
+1F3BC	pepa hiva	pepa hiva
+1F3BD	falani sipoti	falani | sipoti
+1F3BE	tenisi	pulu | tenisi
+1F3BF	heke sinou	heke | sinou
+1F3C0	pasiketipolo	pasiketipolo | polo
+1F3C1	fuka lova	fuka | lova
+1F3C2	tokotaha heke laupapa sinou	heke | laupapa | sinou | tokotaha heke laupapa sinou
+1F3C3	tokotaha lele	lele | tokotaha lele
+1F3C4	tokotaha fānifo	fānifo | tokotaha fānifo
+1F3C5	mētali fakasipoti	mētali | mētali fakasipoti | sipoti
+1F3C6	fakapale	fakapale
+1F3C7	lova hoosi	hoosi | lova
+1F3C8	ʻakapulu fakaʻamelika	ʻakapulu | ʻakapulu fakaʻamelika | polo
+1F3C9	ʻakapulu	ʻakapulu | polo
+1F3CA	tokotaha kakau	kakau | tokotaha kakau
+1F3CB	tokotaha hiki meʻamamafa	hiki | meʻamamafa | tokotaha hiki meʻamamafa
+1F3CC	tokotaha tāpulu	tāpulu | tokotaha tāpulu
+1F3CD	motopaiki	motopaiki
+1F3CE	meʻalele lova	lova | meʻalele
+1F451	kalauni	kalauni
+1F452	tatā fakafefine	tatā fakafefine
+1F453	matasioʻata	matasioʻata
+1F454	hēkesi	hēkesi
+1F455	falani	falani
+1F456	talausese	talausese
+1F457	kofu	kofu
+1F458	kimono	kimono | vala
+1F459	vala matātahi kongaua	vala matātahi kongaua
+1F45A	vala fefine	vala fefine
+1F45B	kato paʻanga	kato paʻanga
+1F45C	kato	kato
+1F45D	peesi teuteu	peesi teuteu
+1F45E	sū fakatangata	sū fakatangata
+1F45F	sū lele	sū lele
+1F460	sū ʻete	sū ʻete
+1F461	saniteli fakafefine	saniteli fakafefine
+1F462	sū puti fakafefine	sū puti fakafefine
+1F6B2	pasikala	pasikala
+1F6B4	tokotaha heka pasikala	pasikala | tokotaha heka pasikala
+1F6B5	tokotaha heka pasikala moʻunga	moʻunga | pasikala | tokotaha heka pasikala moʻunga
+1F6B6	tokotaha lue	laka | lue | tokotaha lue
+1F938	tokotaha tākisi	tākisi | tokotaha tākisi
+1F939	tokotaha hiko	hiko | tokotaha hiko
+1F93A	tokotaha tau heletā	heletā | tokotaha tau heletā
+1F93C	kakai fangatua	fangatua | kakai fangatua
+1F93D	tokotaha polovai	polo | tokotaha polovai | vai
+1F93E	tokotaha netipolo	netipolo | tokotaha netipolo
+1F93F	sioʻata uku	sioʻata | uku
+1F9E2	kepi peisipolo	kepi peisipolo
+1F9E3	sikaafi	sikaafi
+1F9E4	kofunima	kofunima
+1F9E5	kote	kote
+1F9E6	sitōkeni	sitōkeni
+1FA70	sū faiva pālangi	sū faiva pālangi
+1FA71	vala matātahi kongataha	vala matātahi kongataha
+1FA72	talausese loto	talausese loto
+1FA73	talausese mutu	talausese mutu
+1FA74	saniteli	saniteli
+1FA80	ioio	ioio
+1FA81	lofa	lofa
+1FA82	fakamalu fakatō	fakamalu | fakatō
+1FA83	pūmalengi	pūmalengi
+1FA84	vaʻakau fakamēsiki	faʻahikehe | mēsiki | vaʻakau | vaʻakau fakamēsiki
+1FA85	tamapua lole	lole | tamapua
+1FA86	tamapua fakaʻotu	tamapua fakaʻotu
+1FA95	penisiō	penisiō
+1FA97	puhaleotoho	ʻakōtiane | puhaleotoho
+1FA98	nafa	nafa
+265F	pate veimau	pate | veimau
+2660	sipeiti	pele | sipeiti
+2663	kalapa	kalapa | pele
+2665	haati	haati | pele
+2666	taimani	pele | taimani
+1F4B3	kaati pangikē	kaati pangikē
+1F4B4	laʻi paʻanga fakasiapani	laʻi paʻanga fakasiapani
+1F4B5	laʻi paʻanga fakaʻamelika	laʻi paʻanga fakaʻamelika
+1F4B6	laʻi paʻanga fakaʻeulope	laʻi paʻanga fakaʻeulope
+1F4B7	laʻi paʻanga fakapilitania	laʻi paʻanga fakapilitania
+1F4B9	siate tupulaki, paʻanga fakasiapani	paʻanga fakasiapani | siate tupulaki | siate tupulaki, paʻanga fakasiapani
+1F4BB	komipiuta fungasino	komipiuta fungasino
+1F4BC	kato leta toʻotoʻo	kato leta toʻotoʻo
+1F4BD	tisi fefeka	tisi fefeka
+1F4BE	tisi molū	tisi molū
+1F4BF	tisi mamata	tisi mamata
+1F4C0	tisi faiva	tisi faiva
+1F4C1	takafi faile	takafi faile
+1F4C2	takafi faile ava	takafi faile ava
+1F4C3	pepa fafatu	pepa fafatu
+1F4C4	pepa hanga hake	pepa hanga hake
+1F4C5	tohimāhina	tohimāhina
+1F4C6	tohimāhina fakaʻaho	tohimāhina fakaʻaho
+1F4C7	tohi fakahinohino fakamaʻu vilovilo	tohi fakahinohino fakamaʻu vilovilo
+1F4C8	siate tupulaki	siate tupulaki
+1F4C9	siate maholo	siate maholo
+1F4CA	siate pā	siate pā
+1F4CB	papa fakamaʻu pepa	papa fakamaʻu pepa
+1F4CC	pine	pine
+1F4CD	pine fuopotopoto	pine fuopotopoto
+1F4CE	fakamaʻu pepa	fakamaʻu pepa
+1F4CF	lula hangatonu	lula hangatonu
+1F4D0	lula tapatolu	lula tapatolu
+1F4D1	vahevahe tohi	vahevahe tohi
+1F4D2	lētisa	lētisa
+1F4D3	pepa tohi	pepa tohi
+1F4D4	pepa tohi teuʻi	pepa | pepa tohi teuʻi | teu | tohi
+1F4D5	tohi mapuni	tohi mapuni
+1F4D6	tohi fakaava	tohi fakaava
+1F4D7	tohi lanumata	tohi lanumata
+1F4D8	tohi lanupulū	tohi lanupulū
+1F4D9	tohi lanumoli	tohi lanumoli
+1F4DA	ʻū tohi	ʻū tohi
+1F4DB	kaati hingoa	hingoa | kaati
+1F4DC	takainga tohi	takainga tohi
+1F4DD	pepa fakamanatu	pepa fakamanatu
+1F4DE	meʻa fakaongo telefoni	meʻa fakaongo telefoni
+1F4DF	foni kikī	foni kikī
+1F4E0	foni tohi	foni tohi
+1F4E1	tisi satelaite	tisi satelaite
+1F4E2	sipikā	sipikā
+1F4E3	meʻa fakaleʻolahi	meʻa fakaleʻolahi
+1F4E4	laulau hū atu	laulau hū atu
+1F4E5	laulau hū mai	laulau hū mai
+1F4E6	kofukofu	kofukofu
+1F4E7	tohila	tohila
+1F4E8	sila hūmai	sila hūmai
+1F4E9	sila moe ngahau	sila moe ngahau
+1F4EA	puha meili mapuni moe fuka ki lalo	puha meili mapuni moe fuka ki lalo
+1F4EB	puha meili mapuni moe fuka ki ʻolunga	puha meili mapuni moe fuka ki ʻolunga
+1F4EC	puha meili ava moe fuka ki ʻolunga	puha meili ava moe fuka ki ʻolunga
+1F4ED	puha meili ava moe fuka ki lalo	puha meili ava moe fuka ki lalo
+1F4EE	puha lītohi	puha lītohi
+1F4EF	meʻa fakakōkō	meʻa fakakōkō
+1F4F0	nusipepa	nusipepa
+1F4F1	foni toʻotoʻo	foni toʻotoʻo
+1F4F2	foni toʻotoʻo moe ngahau	foni toʻotoʻo moe ngahau
+1F4F3	foni tetetete	foni | tetetete
+1F4F4	foni toʻotoʻo tāmateʻi	foni | tāmateʻi | toʻotoʻo
+1F4F5	tapu telefoni	tapu | telefoni
+1F4F6	pā lave	pā | pā lave
+1F4F7	faitā	faitā
+1F4F8	faitā moe kasa	faitā moe kasa
+1F4F9	faitā vitiō	faitā vitiō
+1F4FA	televīsone	televīsone
+1F4FB	letiō	letiō
+1F4FC	kasete vitiō	kasete vitiō
+1F4FD	mīsini heleʻuhila	mīsini heleʻuhila
+1F4FF	kulalotu	kulalotu
+1F505	meʻalolomi fakapōpōʻuli	meʻalolomi | meʻalolomi fakapōpōʻuli | pōpōʻuli
+1F506	meʻalolomi fakamaama	maama | meʻalolomi | meʻalolomi fakamaama
+1F507	leʻo matafa	leʻo matafa
+1F508	leʻo siʻi	leʻo siʻi
+1F509	leʻo loto	leʻo loto
+1F50A	leʻo lahi	leʻo lahi
+1F50B	maka fakaʻuhila	ʻuhila | maka | maka fakaʻuhila
+1F50C	ʻumosi ʻuhila	ʻumosi ʻuhila
+1F50D	sioʻata ʻesiafi falala ki hema	sioʻata ʻesiafi falala ki hema
+1F50E	sioʻata ʻesiafi falala ki mataʻu	sioʻata ʻesiafi falala ki mataʻu
+1F50F	loka moe peni	loka moe peni
+1F510	loka moe kī	loka moe kī
+1F511	kī	kī
+1F512	loka	loka
+1F513	taʻeloka	taʻeloka
+1F514	fafangu	fafangu
+1F515	fafangu matafa	fafangu matafa
+1F516	fakaʻilonga tohi	fakaʻilonga tohi
+1F517	kupuʻi sēini	kupu | kupuʻi sēini
+1F518	meʻalolomi lētio	lētio | meʻalolomi
+1F51E	tapu taʻu 18 hifo	18 | taʻu 18 hifo | tapu | tapu taʻu 18 hifo
+1F51F	tatā foʻi kī: 10	tatā foʻi kī
+1F526	kasa	kasa
+1F527	sipana	sipana
+1F528	hamala	hamala
+1F529	nati moe polota	nati moe polota
+1F52A	hele paipa	hele | hele paipa
+1F52B	pekenene vai	pekenene | pekenene vai
+1F52C	meʻa fakaʻataefu	meʻa fakaʻataefu
+1F52D	meʻa fakaʻatafetuʻu	meʻa fakaʻatafetuʻu
+1F9BA	vesi	vesi
+1F9BB	telinga moe meʻa fakafanongo	meʻa fakafanongo | telinga | telinga moe meʻa fakafanongo
+1F9BC	sāliote falemahaki mīsini	falemahaki | sāliote | sāliote falemahaki mīsini
+1F9BD	sāliote falemahaki	falemahaki | sāliote
+1F9E9	laʻilekileki	laʻi | laʻilekileki | lekileki
+1F9EA	tiupi kemi	tiupi kemi
+1F9EB	tisi kemi	tisi kemi
+1F9EC	TNA	TNA
+1F9ED	kāpasa	kāpasa
+1F9EE	solopani	solopani
+1F9EF	meʻa tāmateʻi afi	meʻa tāmateʻi afi
+1F9F0	puha meʻangāue	puha meʻangāue
+1F9F1	piliki	holisi | piliki
+1F9F2	makinito	makinito
+1F9F3	katoleta	katoleta
+1F9F4	hina kilimi milimili	hina kilimi milimili
+1F9F5	filo	filo
+1F9F6	filo lalanga	filo | lalanga | tuitui
+1F9F7	pine nāpikeni	pine nāpikeni
+1F9F8	pea tamapua	pea | tamapua
+1F9F9	taufale	taufale
+1F9FA	kato lālanga	kato lālanga
+1F9FB	takainga pepa	takainga pepa
+1F9FC	koa	koa
+1F9FD	oma	oma
+1F9FE	lisiti	lisiti
+1F9FF	mana nasā	mana | mana nasā
+1FA78	tulutā toto	tulutā toto
+1FA79	haʻihaʻi fakapipiki	haʻihaʻi fakapipiki
+1FA7A	meʻa fakaongo	meʻa fakaongo
+1FA91	sea	sea
+1FA92	telekava	telekava
+1FA93	toki	toki
+1FA94	maama tia	maama tia
+1FA96	helemeti	helemeti
+1FA99	paʻanga maka	foʻi paʻanga | paʻanga maka
+1FA9A	kili	kili | tufunga
+1FA9B	vetesikalu	vetesikalu
+1FA9C	tuʻunga	kakaʻanga | tuʻunga
+1FA9D	mātaʻu	mātaʻu
+1FA9E	sioʻata	sioʻata
+1FA9F	matapā-sioʻata	matapā-sioʻata
+260E	telefoni	telefoni
+2620	ʻulupoko moe ongo hui fehauaki	2 | fehauaki | hui | ʻulupoko | kaihaʻa ʻi tahi
+2622	mofi ʻātomi	ʻilonga | mofi ʻātomi
+2623	fakatuʻutāmaki moʻui	fakatuʻutāmaki moʻui | ʻilonga
+267F	sea poliō	sea poliō
+2692	hamala moe toki tākelekele	hamala moe toki tākelekele
+2693	taula	taula
+2694	heletā fehauaki	heletā fehauaki
+2695	ʻilonga tōketā	ʻilonga | tōketā
+2696	meʻa fuamamafa	meʻa fuamamafa
+2697	hina hakaʻanga	hina hakaʻanga
+2699	veʻeteka	veʻeteka
+269B	ʻātomi	ʻātomi | ʻilonga | taʻelotu
+269C	ʻilonga lile	Falanisē | ʻilonga | lile
+26A0	fakatokanga	fakatokanga | feʻaluʻaki
+26CF	toki tākelekele	toki tākelekele
+26D1	tatā fefeka	tatā fefeka
+26D3	sēini	sēini
+26D4	tapu hū	feʻaluʻaki | hū | tapu
+2702	helekosi	helekosi
+2709	sila	sila
+270F	peni	peni
+2712	mataʻipeni	mataʻipeni
+2714	sivi mamafa	fakaʻilonga | sivi | sivi mamafa
+2716	liunga mamafa	fakaʻilonga | liunga | liunga mamafa
+2753	fehuʻi kulokula	fakaʻilonga | fehuʻi | fehuʻi kulokula
+2757	kalanga kulokula	fakaʻilonga | kalanga | kalanga kulokula
+27A1	ngahau ki toʻomataʻu	mataʻu | ngahau | ngahau ki toʻomataʻu
+1F500	meʻalolomi tuifio	meʻalolomi | tuifio
+1F501	meʻalolomi toutou	meʻalolomi | toutou
+1F502	meʻalolomi toe tuʻotaha	meʻalolomi | meʻalolomi toe tuʻotaha | taha
+1F503	ngahau vilovilo toʻomataʻu	mataʻu | ngahau | ngahau vilovilo toʻomataʻu | vilovilo
+1F504	ngahau vilovilo toʻohema	hema | ngahau | ngahau vilovilo toʻohema | vilovilo
+1F519	ngahau FOKI	FOKI | ngahau
+1F51A	ngahau NGATA	ngahau | NGATA
+1F51B	ngahau FUNGA	FUNGA | ngahau
+1F51C	ngahau OFI	ngahau | OFI
+1F51D	ngahau TUMUTUMU	hake | ngahau | TUMUTUMU
+1F520	hū mataʻitohi lahi pē	AEF | hū mataʻitohi lahi pē | lahi | mataʻitohi
+1F521	hū mataʻitohi siʻi pē	aef | hū mataʻitohi siʻi pē | mataʻitohi | siʻi
+1F522	hū mataʻifika pē	123 | hū mataʻifika pē | mataʻifika
+1F523	hū fakaʻilonga pē	@&% | fakaʻilonga | hū fakaʻilonga pē
+1F524	hū mataʻitohi fakalatina	hū mataʻitohi fakalatina | latina | mataʻitohi
+21B5	ngahau ki lalo tafihu ki toʻohema	hema | lalo | ngahau | tafihu
+21B0	ngahau ki ʻolunga afe ki toʻohema	afe | hema | ʻolunga | ngahau
+21B1	ngahau ki ʻolunga afe ki toʻomataʻu	afe | ʻolunga | mataʻu | ngahau
+21B2	ngahau ki lalo afe ki toʻohema	afe | hema | lalo | ngahau
+21B3	ngahau ki lalo afe ki toʻomataʻu	afe | lalo | mataʻu | ngahau
+21B4	ngahau ki toʻomataʻu tafihu ki lalo	lalo | mataʻu | ngahau | tafihu
+21E4	ngahau ki toʻohema moe pā	hema | ngahau | pā
+21E5	ngahau ki toʻomataʻu moe pā	mataʻu | ngahau | pā
+21B9	ngahau ki toʻohema ʻi olunga ʻoe toʻomataʻu moe pā	hema | mataʻu | ngahau | pā
+21E7	ngeʻesi ngahau ki ʻolunga	ʻolunga | ngahau | ngeʻesi
+21EA	ngeʻesi ngahau ki ʻolunga meihe pā	ʻolunga | ngahau | ngeʻesi | pā
+21E6	ngeʻesi ngahau ki toʻohema	hema | ngahau | ngeʻesi
+21E8	ngeʻesi ngahau ki toʻomataʻu	mataʻu | ngahau | ngeʻesi
+21E9	ngeʻesi ngahau ki lalo	lalo | ngahau | ngeʻesi
+21DE	ngahau ki ʻolunga moe kohi lōua	2 | ʻolunga | kohi | ngahau | ua
+21DF	ngahau ki lalo moe kohi lōua	2 | kohi | lalo | ngahau | ua
+21B8	ngahau tokelauhihifo moe pā lōloa	hihifo | lōloa | ngahau | pā | tokelau
+21B6	ngahau vilovilo vaeuahake toʻohema	hema | ngahau | vaeuahake | vilovilo
+21B7	ngahau vilovilo vaeuahake toʻomataʻu	mataʻu | ngahau | vaeuahake | vilovilo
+21C5	ongo ngahau ki ʻolunga mo lalo	hake | hifo | ʻolunga | lalo | ongo ngahau | ongo ngahau ki ʻolunga mo lalo
+21F5	ngahau ki lalo mo ki ʻolunga	ʻolunga | lalo | ngahau
+21A8	ngahau ki ʻolunga mo lalo moe tuʻunga	ʻolunga | lalo | ngahau | tuʻunga
+21E0	ngahau kohikohi ki toʻohema	hema | kohikohi | ngahau
+21E1	ngahau kohikohi ki ʻolunga	ʻolunga | kohikohi | ngahau
+21E2	ngahau kohikohi ki toʻomataʻu	kohikohi | mataʻu | ngahau
+21E3	ngahau kohikohi ki lalo	kohikohi | lalo | ngahau
+21AB	ngahau ki toʻohema fakakahoa	fakakahoa | hema | ngahau
+21AC	ngahau ki toʻomataʻu fakakahoa	fakakahoa | mataʻu | ngahau
+2B05	ngahau ki toʻohema	hema | ngahau | ngahau ki toʻohema
+2B06	ngahau ki ʻolunga	hake | ʻolunga | ngahau | ngahau ki ʻolunga
+2B07	ngahau ki lalo	hifo | lalo | ngahau | ngahau ki lalo

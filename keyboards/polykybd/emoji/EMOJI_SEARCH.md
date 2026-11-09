@@ -85,26 +85,34 @@ on a byte (`pack_word()`), so the 16-bit word records and the binary search are
 unchanged. A dictionary holds only words its language's keyboard can type in
 search mode: `typeable_letters()` reads the unshifted legend of every key from
 `lang/lang_lut.c` (the number row counts, since a letter there is moved to a free
-key; Esc, Tab, Backspace, Enter and Space do not). So a Russian dictionary drops
-the English words its layout cannot type, and a German one keeps them. The most
+key; Esc, Tab, Backspace, Enter and Space do not). English words are kept in
+every dictionary: on a Latin layout (German) as written, on a layout without
+Latin letters as the keys that type them by position, since those keyboards print
+the Latin letters too or switch with Han/Eng (Russian "smile" is stored as
+ыьшду, Korean "heart" as ᅩᄃᄆᄀᄉ). The most
 letters any layout types is 41 (zh-TW), inside the 63 codes. A converted
 dictionary maps each Latin letter to the legend on the key that types it
 (`key_remap()`): zh-HK's keys show the Cangjie radicals, so Cangjie `a` is ⽇.
 
 Measured sizes (format 2, 128 KB slot): all 79 dictionaries CLDR has data for
-fit, median 56%.
+fit.
 
 | dictionary | size | slot |
 |---|---|---|
 | en | 62 KB | 48% |
-| de | 95 KB | 74% |
-| ru | 65 KB | 50% |
-| ko | 63 KB | 48% |
-| cs (largest) | 122 KB | 95% |
-| ja@romaji | 64 KB | 50% |
-| zh-CN@pinyin | 103 KB | 80% |
-| zh-TW@zhuyin | 47 KB | 36% |
-| zh-HK@cangjie | 77 KB | 60% |
+| de | 94 KB | 73% |
+| ru | 97 KB | 75% |
+| ko | 96 KB | 75% |
+| cs (largest) | 121 KB | 94% |
+| ja@romaji | 63 KB | 49% |
+| zh-TW@zhuyin | 80 KB | 62% |
+| zh-HK@cangjie | 110 KB | 86% |
+
+All dictionaries are listed, numbered and named in `dict_src/dictionaries.tsv`
+(append only). A bundle's content_version is `(number << 8) | revision`, which
+GET_ID's version block reports, so the host can tell which dictionary a keyboard
+holds without a command of its own. `emoji_dict.py build-all <dir>` writes every
+bundle and the host's `manifest.json`.
 
 `build` refuses a bundle larger than the slot, and a word table or posting list
 past the 16-bit record fields.

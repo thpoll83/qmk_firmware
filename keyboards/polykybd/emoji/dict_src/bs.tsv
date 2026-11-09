@@ -1,0 +1,1259 @@
+# emoji search keywords, bs, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	cerenje	cerenje | lice
+1F601	cerenje sa škiljenjem	cerenje | cerenje sa škiljenjem | lice | oči | osmijeh | škiljenje
+1F602	plakanje od smijeha	lice | plakanje od smijeha | radost | smijeh | suza
+1F603	kez	kez | lice | osmijeh | otvorena usta
+1F604	kez sa škiljenjem	kez sa škiljenjem | lice | oči | osmijeh | usta
+1F605	kez uz hladan znoj	hladan znoj | kez uz hladan znoj | lice | osmijeh
+1F606	kez žmireći	kez žmireći | lice | smijeh | zadovoljstvo
+1F607	oreol iznad glave	anđeo | fantazija | lice | nevin | oreol | oreol iznad glave
+1F608	vragolasto smješkanje	bajka | fantazija | rogovi | smiješak | vragolasto smješkanje
+1F609	namigivanje	lice | mig | namigivanje
+1F60A	širok osmijeh	lice | oko | osmijeh | rumen | širok osmijeh
+1F60B	oblizivanje	lice | njam njam | oblizivanje | ukusno | žderanje
+1F60C	olakšanje	lice | olakšanje | rasterećenje
+1F60D	osmijeh sa srcima u očima	lice | ljubav | osmijeh | osmijeh sa srcima u očima | srce
+1F60E	osmijeh sa sunčanim naočalama	fora | naočale | osmijeh sa sunčanim naočalama | sunčane naočale | svjetlost
+1F60F	zlobno smješkanje	lice | smješkanje | zlobno
+1F610	indiferentnost	indiferentno | indiferentnost | lice | neutralno
+1F611	bezizražajnost	bezizražajan | bezizražajnost | lice
+1F612	smorenost	lice | nesretan | nezainteresovanost | smor | smorenost
+1F613	oblivenost hladnim znojem	hladan | lice | oblivenost hladnim znojem | znoj
+1F614	zamišljenost	bezvoljan | potišten | utučen | zamišljen | zamišljenost
+1F615	zbunjenost	lice | zbunjen | zbunjenost
+1F616	potpuna rezigniranost	lice | potpuna rezigniranost | rezigniranost
+1F617	davanje poljupca	davanje poljupca | lice | poljubac
+1F618	slanje poljupca	lice | poljubac | slanje poljupca | srce
+1F619	poljubac sa škiljenjem	lice | oko | osmijeh | poljubac | poljubac sa škiljenjem
+1F61A	poljubac žmireći	lice | oko | poljubac | poljubac žmireći | žmirenje
+1F61B	ruganje	isplažen | jezik | lice | ruganje
+1F61C	ruganje s namigivanjem	jezik | lice | mig | ruganje s namigivanjem | šala
+1F61D	ruganje žmireći	lice | oko | ruganje žmireći | strašan | ukus
+1F61E	razočaranost	lice | razočaranost | razočarenje
+1F61F	zabrinutost	lice | zabrinutost
+1F620	ljutnja	lice | ljut | ljutnja
+1F621	durenje	bijes | crven | durenje | ljutnja | lud
+1F622	plač	lice | plač | plakanje | suza | tuga
+1F623	ustrajni pogled	lice | ustrajni pogled | ustrajnost
+1F624	huja	bijes | huja | lice | ljutnja | pobjeda
+1F625	olakšavajuće razočarenje	lice | olakšanje | olakšavajuće razočarenje | razočarenje
+1F626	namrštenost s otvorenim ustima	mrštenje | namrštenost s otvorenim ustima | otvorena | usta
+1F627	izmučenost	izmučenost | lice | mučenje
+1F628	plašljivost	plašenje | plašljivost | prepad | strah
+1F629	iscrpljenost	iscrpljen | iscrpljenost | lice | umoran
+1F62A	pospanost	lice | pospanost | umor
+1F62B	umoran	lice | umor | umoran
+1F62C	grimasa	grimasa | lice
+1F62D	glasan plač	glasan plač | jecanje | lice | plakanje | tuga
+1F62E	zinuo	lice | šokiranost | usta | zinuo
+1F62F	zanijemio	iznenađen | lice | nijem | zanijemio | zapanjen
+1F630	otvorena usta i hladan znoj	hladan | otvorena usta i hladan znoj | plav | usta | znoj
+1F631	vrištanje od straha	lice | prestrašen | strah | strašljiv | vrisak | vrištanje od straha
+1F632	zapanjenost	lice | totalno | zapanjen | zapanjenost | zatečen
+1F633	ispranost	ispran | ispranost | lice | omama | ošamućen
+1F634	lice koje spava	lice | lice koje spava | spavanje | zzz
+1F635	vrtoglavica	lice | vrtoglavica
+1F636	lice bez usta	lice | lice bez usta | šutnja | tiho | usta
+1F637	nosi medicinsku masku	bolest | doktor | maska | nosi medicinsku masku
+1F638	maca koja se ceri	cerenje | lice | maca koja se ceri | mačka | oko | osmijeh
+1F639	maca koja plače od smijeha	lice | maca koja plače od smijeha | mačka | oko | radost | suza
+1F63A	maca s otvorenim ustima	lice | maca s otvorenim ustima | mačka | osmijeh | otvorena | usta
+1F63B	maca sa srcima u očima	lice | ljubav | maca sa srcima u očima | mačka | oko | osmijeh | srce
+1F63C	maca s kiselim osmijehom	ironija | iskrivljen | kiseo | lice | maca s kiselim osmijehom | mačka
+1F63D	maca šalje poljubac zatvorenih očiju	lice | maca šalje poljubac zatvorenih očiju | mačka | oko | poljubac
+1F63E	maca se duri	durenje | lice | maca se duri | mačka
+1F63F	maca plače	lice | maca plače | mačka | plakanje | suza | tužna
+1F640	iscrpljena maca	iscrpljen | iscrpljena maca | lice | mačka | uh | umoren
+1F641	diskretna namrštenost	diskretna namrštenost | lice | mrštenje
+1F642	diskretni osmijeh	diskretni osmijeh | lice | osmijeh
+1F643	naglavačke	lice | naglavačke | obrnuto
+1F644	kolutanje očima	kolutanje | kolutanje očima | lice | oči
+1F648	ne vidim	lice | majmun | ne vidim | zabranjeno | zlo
+1F649	ne čujem	lice | majmun | ne čujem | zabranjeno | zlo
+1F64A	ne govorim	lice | majmun | ne govorim | zabranjeno | zlo
+1F910	šuti ko zaliven	lice | šuti ko zaliven | usta | začepljena
+1F911	lice s novčanicama	lice | lice s novčanicama | novčanice | pare
+1F912	toplomjer u ustima	bolestan | lice | nezdrav | toplomjer | toplomjer u ustima
+1F913	štreber	čudak | lice | štreber
+1F914	razmišljanje	lice | razmišljanje
+1F915	zavoj na glavi	bol | lice | povreda | zavoj | zavoj na glavi
+1F916	robot	čudovište | lice | robot
+1F917	zagrljaj	lice | zagrliti | zagrljaj
+1F920	lice s kaubojskim šeširom	kauboj | kaubojka | lice | lice s kaubojskim šeširom | šešir
+1F921	klaun	klaun | lice
+1F922	muka	lice | muka | povraćanje
+1F923	valjanje od smijeha	lice | pod | smijeh | valjanje | valjanje od smijeha
+1F924	slinjenje	lice | slina | slinjenje
+1F925	laganje	laganje | laž | lice | pinokio
+1F926	osoba s rukom na čelu	dlan | lice | nevjerica | osoba s rukom na čelu
+1F927	kihanje	kihanje | lice | nazdravlje
+1F928	podignuta obrva	nepovjerljiv | podignuta obrva | skeptičan
+1F929	zvjezdane oči	cerenje | lice | oči | zvijezda | zvjezdane oči
+1F92A	ludilo	ludilo | malo | oko | veliko
+1F92B	ušutkivanje	psst | šuti | tišina | ušutkivanje
+1F92C	znakovi na ustima	psovke | znakovi na ustima
+1F92D	ruka preko usta	opa | ruka preko usta | ups
+1F92E	povraćanje	muka | povraćanje
+1F92F	eksplodirajuća glava	eksplodirajuća glava | šok
+1F970	nasmijano lice sa srcima	nasmijano lice sa srcima | obožavanje | zaljubiti se | zaljubljenost
+1F971	zijevanje	dosada | umor | zijevanje
+1F972	nasmijano lice sa suzom	dirnutost | nasmijano lice sa suzom | olakšanje | ponos | smiješak | suza | zahvalnost
+1F973	lice koje se zabavlja	lice koje se zabavlja | party | proslava | šešir | slavlje | zabava
+1F974	ošamućeno lice	intoksikacija | iskrivljena usta | nejednake oči | ošamućeno lice | pripitost | vrtoglavica
+1F975	pregrijano lice	crveno lice | groznica | pregrijano lice | toplotni udar | vruće | znoj
+1F976	ledeno lice	hladnoća | ledenice | ledeno lice | plavo lice | promrzlina | smrzavanje
+1F978	prerušeno lice	inkognito | lice | naočale | nos | prerušavanje | prerušeno lice
+1F97A	molećivo lice	milost | molećiv | molećivo lice | pseći pogled
+1FAE0	lice koje se topi	lice koje se topi | nestati | otapati | tekućina | topiti
+1FAE1	lice koje salutira	da | lice koje salutira | ok | salutirati | sunčano | trupe
+1FAE2	lice s otvorenim očima i rukom preko usta	čuđenje | iznenađenje | lice s otvorenim očima i rukom preko usta | nevjerica | stid | strahopoštovanje | uplašenost
+1FAE3	lice s okom koje viri	buljiti | lice s okom koje viri | očaran | viriti
+1FAE4	lice s dijagonalnim ustima	lice s dijagonalnim ustima | nesiguran | razočaran | skeptičan
+1FAE5	lice s tačkastom linijom	depresivan | introverta | lice s tačkastom linijom | nestati | nevidljiv | sakriti
+1FAE7	balončići	balončići | čisto | pod vodom | podrigivanje | sapunica
+1FAE8	potresenost	lice | podrhtavanje | potresenost | šok | vibracija | zemljotres
+1F381	zapakovan poklon	kutija | mašna | poklon | proslava | zapakovan poklon
+1F389	pucanje i konfete	proslava | pucanje i konfete | zabava
+1F38A	konfete	konfete | proslava | zabava
+1F47B	duh	bajka | čudovište | duh | fantazija | lice | stvorenje
+1F47C	anđelak	anđelak | anđeo | bajka | beba | fantazija
+1F47D	vanzemaljac	fantazija | lice | nlo | stvorenje | svemir | vanzemaljac
+1F47E	vanzemaljsko čudovište	lice | nlo | stvorenje | svemir | vanzemaljac | vanzemaljsko čudovište
+1F47F	đavoljak	đavo | đavoljak | fantazija | lice | vrag
+1F480	lobanja	bajka | čudovište | lice | lobanja | smrt
+1F481	osoba otkriva namjere	gestikulacija | informacija | osoba otkriva namjere | pomoć | ruke
+1F482	stražar	straža | stražar
+1F489	šprica	bolest | igla | injekcija | lijek | šprica
+1F48A	pilula	bolest | doktor | medicina | pilula
+1F4A2	simbol ljutnje	bijes | ljutnja | simbol ljutnje | stripovi
+1F4A4	zzz	spavanje | stripovi | zzz
+1F4A5	eksplozija	eksplozija | stripovi
+1F4A6	kapljice znoja	kapljice znoja | prskanje | stripovi | znoj
+1F4A7	kapljica vode	kapljica | kapljica vode | stripovi | vrijeme | znoj
+1F4A8	bježanje	bježanje | pobjeći | stripovi
+1F4A9	kaka	čudovište | humor | izmet | kaka | lice
+1F4AB	ošamućen	ošamućen | ošamutiti | stripovi
+1F4AC	oblačić razgovora	dijalog | oblačić | oblačić razgovora | razgovor | stripovi
+1F4AD	oblačić razmišljanja	dijalog | oblačić | oblačić razmišljanja | razmišljanje | stripovi
+1F4AE	bijeli cvijet	bijeli cvijet | cvijet
+1F4A0	romb sa tačkom u sredini	geometrija | romb | romb sa tačkom u sredini | tačka | unutra
+1F4A1	sijalica	elektrika | ideja | sijalica | stripovi | svjetlo
+1F4A3	bomba	bomba | stripovi
+1F4AF	sto poena	100 | poeni | pun | sto | sto poena
+1F4B0	vreća novca	dolar | novac | vreća | vreća novca
+1F4B1	mjenjačnica	banka | mjenjačnica | novac | pare | valuta
+1F4B2	podebljani znak dolara	dolar | pare | podebljani znak dolara | valuta
+1F4B8	novac sa krilima	dolar | krila | novac | novac sa krilima | novčanica
+1F525	vatra	plamen | vatra
+1F52E	kristalna kugla	bajka | fantazija | gatanje | kristalna | kugla
+1F440	oči	lice | oči | oko
+1F441	oko	oko | tijelo
+1F442	uho	dio tijela | uho
+1F443	nos	dio tijela | nos
+1F444	usta	usne | usta
+1F445	jezik	jezik | tijelo
+1F446	pokazivanje kažiprstom gore	gore | kažiprst | nadlanica | pokazivanje | pokazivanje kažiprstom gore | prst | ruka
+1F447	kažiprst dolje	dolje | kažiprst | nadlanica | pokazivanje | prst | ruka
+1F448	pokazivanje kažiprstom ulijevo	kažiprst | lijevo | nadlanica | pokazivanje | pokazivanje kažiprstom ulijevo | prst | ruka
+1F449	pokazivanje kažiprstom udesno	desno | kažiprst | nadlanica | pokazivanje | pokazivanje kažiprstom udesno | prst | ruka
+1F44A	nabacivanje pesnicom	nabacivanje pesnicom | pesnica | ruka
+1F44B	mahanje rukom	mahanje | mahanje rukom | ruka
+1F44C	prsti pokazuju ok	ok | prsti pokazuju ok
+1F44D	palac gore	+1 | gore | palac | ruka
+1F44E	palac dolje	-1 | dolje | palac | ruka
+1F44F	aplaudiranje	aplaudiranje | aplauz | dlanovi | ruke
+1F450	otvoreni dlanovi	dlanovi | otvoreni dlanovi | ruke
+261D	kažiprst pokazuje gore	dlan | gore | kažiprst | kažiprst pokazuje gore | pokazivanje | pokazivanje kažiprstom gore s okrenutim dlanom
+270A	podignuta pesnica	pesnica | podignuta pesnica | podignuta šaka | ruka
+270B	podignuta šaka	podignuta šaka | pokazivanje | prsti | ruka
+270C	dva prsta u znaku pobjede	dva prsta | dva prsta u znaku pobjede | pobjeda
+270D	ruka koja piše	pisanje | ruka | ruka koja piše
+1F4AA	pokazivanje bicepsa	bicepsi | mišići | pokazivanje bicepsa | stripovi
+1F590	podignuta šaka s raširenim prstima	podignuta šaka s raširenim prstima | pokazivanje | prsti | rašireno | ruka
+1F64C	ruke podignute u zrak	dlanovi | gestikulacija | radovanje | ruke | ruke podignute u zrak
+1F64F	sastavljeni dlanovi	gestikulacija | molba | molitva | sastavljeni dlanovi | zahvalnost
+1F90C	skupljeni prsti	gest rukom | ispitivanje | prsti | sarkastično | skupljeni prsti | uštinuti
+1F90F	ruka koja štipa	ruka koja štipa | ruka pokazuje malo
+1F918	znak rogova	pokazivanje | rogovi | ruka | znak | znak rogova
+1F919	nazovi	nazovi | poziv | ruka
+1F91A	ruka gore	dlan | podignuto | ruka | ruka gore | uspravno
+1F91B	šaka ulijevo	šaka | ulijevo
+1F91C	šaka udesno	šaka | udesno
+1F91D	rukovanje	dogovor | ruka | rukovanje | sastanak | stisak
+1F91E	držanje palčeva	držanje palčeva | držati | fige | palac | sreća
+1F91F	volim te	ruka | volim | volim te | VT
+1F932	dlanovi spojeni prema gore	dlanovi spojeni prema gore | molitva
+1F9B4	kost	kost | kostur
+1F9B5	noga	noga | šutirati | udarati nogom
+1F9B6	stopalo	korak | stopalo | udarac
+1F9B7	zub	stomatolog | zub
+1F9E0	mozak	inteligentan | mozak
+1F9BE	mehanička ruka	mehanička ruka | pomagalo | proteza | ruka
+1FAC0	srce organ	centar | kardiologija | organ | otkucaj srca | puls | srce organ
+1FAC1	pluća	dah | disanje | izdisaj | organ | pluća | udisaj
+1FAE6	grickanje usne	anksioznost | flert | grickanje usne | nelagoda | nervoza | strah | zabrinutost
+1FAF0	ruka s prekrštenim kažiprstom i palcem	ljubav | novac | pucketanje | ruka s prekrštenim kažiprstom i palcem | skupo | srce
+1FAF1	ruka udesno	desno | ruka | udesno
+1FAF2	ruka ulijevo	lijevo | ruka | ulijevo
+1FAF3	ruka s dlanom nadolje	ispuštanje | odmahivanje | ruka s dlanom nadolje | tjeranje
+1FAF4	ruka s dlanom nagore	dođi | dozivanje | hvatanje | nuđenje | ruka s dlanom nagore
+1FAF5	kažiprst uperen u gledaoca	kažiprst uperen u gledaoca | pokazivanje | ti
+1FAF6	ruke formiraju srce	ljubav | ruke formiraju srce
+1FAF7	ruka koja gura ulijevo	čekaj | daj pet | guranje | odbijanje | ruka koja gura ulijevo | stani | ulijevo
+1FAF8	ruka koja gura udesno	čekaj | daj pet | guranje | odbijanje | ruka koja gura udesno | stani | udesno
+2764	crveno srce	crveno srce | srce
+1F380	mašnica	mašnica | proslava
+1F382	rođendanska torta	desert | rođendan | rođendanska torta | slavlje | torta
+1F383	bundevina glava	bundeva | bundevina glava | glava | noć vještica | praznik
+1F384	božićno drvce	božić | božićno drvce | drvo | praznik
+1F386	vatromet	proslava | vatromet | zabava
+1F387	prskalica	proslava | prskalica | vatromet | zabava
+1F388	balon	balon | proslava | zabava
+1F9E7	crvena koverta	crvena koverta | hongbao | lai see | novac | poklon | za sreću
+1F9E8	petarda	dinamit | eksploziv | petarda | vatromet
+1F38B	tanabata stablo	japan | proslava | stablo | tanabata stablo | zabava
+1F38C	ukrštene zastave	japansko | slavlje | ukrštene zastave | ukršteno
+1F38D	ukras od borovine	bambus | japan | proslava | stablo | ukras od borovine
+1F38E	japanske lutke	festival | japan | japanske lutke | proslava
+1F38F	koinobori	koinobori | proslava | šaran | zabava | zastavica
+1F390	vjetreno zvono	proslava | vjetar | vjetreno zvono | zvono
+1F391	ceremonija punog mjeseca	ceremonija | ceremonija punog mjeseca | mjesec | obred | proslava
+1F393	maturska kapa	asesoar | cilindar | maturska kapa | proslava | šešir
+1F484	karmin	karmin | kozmetika | šminka
+1F485	lakiranje noktiju	kozmetika | lak za nokte | lakiranje noktiju | nokti | uljepšavanje
+1F48B	otisak poljupca	otisak poljupca | poljubac | usne
+1F48C	ljubavno pismo	ljubav | ljubavno pismo | pismo | srce
+1F48D	prsten	dijamant | prsten
+1F48E	dragi kamen	dijamant | dragi kamen | nakit
+1F48F	poljubac	par | poljubac
+1F490	buket	biljka | buket | cvijet
+1F491	par i srce	ljubav | par | par i srce | srce
+1F492	vjenčanje	kapela | romantika | vjenčanje
+1F493	srce koje kuca	otkucaji srca | pulsiranje | srce | srce koje kuca
+1F494	slomljeno srce	patnja | slomljeno | srce
+1F495	dva srca	dva srca | ljubav | srce
+1F496	svjetlucavo srce	iskra | srce | svjetlucavo srce | uzbuđenje
+1F497	uvećano srce	nervoza | puls | raste | uvećano srce | uzbuđenje
+1F498	srce probodeno strijelom	kupid | srce | srce probodeno strijelom | strijela
+1F499	plavo srce	plava | plavo srce | srce
+1F49A	zeleno srce	srce | zelena | zeleno srce
+1F49B	žuto srce	srce | žuta | žuto srce
+1F49C	ljubičasto srce	ljubičasta | ljubičasto srce | srce
+1F49D	srce s mašnicom	mašnica | srce | srce s mašnicom
+1F49E	više srca se okreće	kretanje | srca | više srca se okreće
+1F49F	srce ukras	srce | srce ukras
+1F90D	bijelo srce	bijela | bijelo srce | srce
+1F90E	smeđe srce	smeđa | smeđe srce | srce
+1F9E1	narandžasto srce	narandžasta | narandžasto srce | srce
+1FA75	svijetloplavo srce	cijan | plavozelena | srce | svijetloplava | svijetloplavo srce
+1FA76	sivo srce	kamen | siva | sivo srce | srce | srebrna
+1FA77	ružičasto srce	ljubav | ružičasta | ružičasto srce | slatko | srce | sviđanje
+2763	uzvičnik u obliku srca	simbol | srce | uzvičnik | uzvičnik u obliku srca | znak
+2733	osmerokraka zvjezdica	* | osmerokraka zvjezdica | zvjezdica
+2734	osmerokraka zvijezda	* | osmerokraka zvijezda | zvijezda
+2747	iskra	* | iskra
+1F3E0	kuća	dom | kuća | zgrada
+1F3E1	kuća s okućnicom	bašta | dom | kuća | kuća s okućnicom | zgrada
+1F3E2	poslovna zgrada	poslovna zgrada | zgrada
+1F3E3	japanska pošta	japanska | pošta | zgrada
+1F3E4	pošta	evropska | pošta | zgrada
+1F3E5	bolnica	bolnica | doktor | medicina | zgrada
+1F3E6	banka	banka | zgrada
+1F3E7	oznaka bankomata	banka | bankomat | blagajna | oznaka bankomata | znak
+1F3E8	hotel	hotel | zgrada
+1F3E9	javna kuća	hotel | javna kuća | ljubav
+1F3EA	prodavnica	dragstor | prodavnica
+1F3EB	škola	škola | zgrada
+1F3EC	robna kuća	kuća | robna | zgrada
+1F3ED	fabrika	fabrika | tvornica | zgrada
+1F3EE	crveni papirni fenjer	crveni papirni fenjer | crveno | kineska lampa | svjetlo
+1F3EF	japanski zamak	japanski | zamak | zgrada
+1F3F0	dvorac	dvorac | evropski | zgrada
+1F463	otisci stopala	dio tijela | otisak | otisci stopala | stopala
+1F464	silueta glave s ramenima	glava | ramena | silueta | silueta glave s ramenima
+1F465	siluete glave s ramenima	glava | ramena | silueta | siluete glave s ramenima
+1F466	dječak	dječak | mladić
+1F467	djevojčica	Djevica | djevojčica | djevojka | horoskop
+1F468	muškarac	muškarac | muško | odrasla osoba
+1F469	žena	odrasla osoba | žena
+1F46A	porodica	dijete | majka | otac | porodica
+1F46B	muškarac i žena se drže za ruke	držanje za ruke | muškarac | muškarac i žena se drže za ruke | par | žena
+1F46C	dva muškarca se drže za ruke	blizanci | držanje za ruke | dva muškarca se drže za ruke | muškarac | muškarci | muškarci se drže za ruke | par
+1F46D	žene se drže za ruke	držanje za ruke | par | žene | žene se drže za ruke
+1F46E	policijski službenik	policajac | policija | policijski službenik
+1F46F	osobe u provodu	grupa | osobe u provodu | ples | provod
+1F470	osoba s velom	mlada | osoba | osoba s velom | veo | vjenčanje
+1F471	osoba s plavom kosom	kosa | osoba s plavom kosom | plavo
+1F472	muškarac s kineskom kapom	gua pi mao | kačket | muškarac | muškarac s kineskom kapom
+1F473	osoba s turbanom	osoba s turbanom | turban
+1F474	starac	muškarac | odrasla osoba | star | starac
+1F475	starica	odrasla osoba | starica | žena
+1F476	beba	beba | mlado
+1F477	građevinski radnik	građevina | građevinski radnik | građevinski radovi | radnik | šljem
+1F478	princeza	bajka | fantazija | princeza
+1F479	ljudožder	bajka | čudovište | fantazija | japansko | ljudožder | stvorenje
+1F47A	goblin	bajka | čudovište | fantazija | goblin | japansko | lice | stvorenje
+1F483	žena pleše	ples | plesanje | žena pleše
+1F486	osoba prima masažu	lice | masaža | osoba prima masažu | salon
+1F487	šišanje osobe	berber | frizer | frizura | šišanje osobe | uljepšavanje
+1F645	osoba pokazuje ne	gestikulacija | neslaganje | osoba pokazuje ne | prekriženo | zabranjeno
+1F646	osoba pokazuje ok	gestikulacija | odobravanje | osoba pokazuje ok | ruke | slaganje
+1F647	osoba se naklanja	gestikulacija | izvinjenje | naklon | osoba se naklanja | poniznost
+1F64B	osoba podiže ruku	gestikulacija | informacije | osoba podiže ruku | ruke | sretan
+1F64D	namrštena osoba	gestikulacija | izraz lica | mrštenje | namrštena osoba
+1F64E	nadurena osoba	durenje | gestikulacija | izraz lica | nadurena osoba
+1F930	trudnica	trudnica | žena
+1F931	dojenje	beba | dojenče | dojenje | hranjenje
+1F933	selfi	fotoaparat | selfi | slikanje | telefon
+1F934	princ	princ
+1F935	osoba u smokingu	mladoženja | muškarac u smokingu | odijelo | osoba u smokingu | smoking
+1F936	Baka Mraz	Baka Mraz | Božić | Djeda Mraz | žena
+1F937	slijeganje ramenima	nezainteresiranost | neznanje | slijeganje ramenima | sumnja
+1F385	djed mraz	božić | djed mraz | nova godina | praznici
+1F9B8	superheroj	dobro | heroina | heroj | superheroj | supermoć
+1F9B9	super zlikovac	kriminalac | super zlikovac | supermoć | zlikovac | zlo
+1F9BF	mehanička noga	mehanička noga | noga | pomagalo | proteza
+1F9D0	lice s monoklom	lice s monoklom | monokl | začepljen
+1F9D1	osoba	neodređeni spol | odrasla osoba | osoba | srednji rod
+1F9D2	dijete	dijete | mlado | neodređeni spol | srednji rod
+1F9D3	starija odrasla osoba	neodređen spol | srednji rod | starija odrasla osoba | staro
+1F9D4	osoba s bradom	brada | muškarac s bradom | osoba s bradom
+1F9D5	pokrivena žena	hidžab | pokrivalo | pokrivena žena | šal
+1F9D6	osoba u prostoriji s parom	osoba u prostoriji s parom | para | sauna
+1F9D7	osoba koja se penje	osoba koja se penje | penjač
+1F9D8	osoba u položaju lotosa	joga | meditacija | osoba u položaju lotosa
+1F9D9	čarobnjak	čarobnjak | čarobnjakinja | mag | vještica | vrač
+1F9DA	vila	Oberon | Puck | Titania | vila
+1F9DB	vampir	Drakula | vampir | živi mrtvac
+1F9DC	sirena	muškarac | sirena | žena
+1F9DD	patuljak	magija | patuljak
+1F9DE	duh iz boce	duh iz boce | džin
+1F9DF	zombi	hodajući mrtvac | živi mrtvac | zombi
+1FAC2	ljudi se grle	doviđenja | grljenje | ljudi se grle | pozdrav | zahvaljivanje
+1FAC3	trudan muškarac	napuhan | sit | stomak | trudan | trudan muškarac
+1FAC4	trudna osoba	napuhan | sit | stomak | trudna osoba | trudnoća
+B9	jedan eksponentno	eksponent | jedan | jedan eksponentno
+B2	dva eksponentno	dva | dva eksponentno | eksponent | na kvadrat
+B3	tri eksponentno	eksponent | kubni | tri | tri eksponentno
+207B	eksponentni minus	eksponent | eksponentni minus | minus
+B0	stepen	jačine | sati | stepen
+B1	plus-minus	plus-minus
+D7	znak za množenje	množenje | pomnožiti | puta | znak za množenje
+F7	znak za dijeljenje	dijeljenje | obelus | podijeliti | znak za dijeljenje
+B5	znak za mikro	mjera | znak za mikro
+A9	autorsko pravo	autorska prava | autorsko pravo | c
+AE	registriran	r | registracija | registriran
+2122	zaštitni znak	oznaka | tm | zaštitni znak
+A7	odlomak	dio | odlomak | paragraf
+B6	oznaka za paragraf	odlomak | oznaka za paragraf | paragraf | pasus | stavak
+B7	srednja tačka	interpunkt | sredina | srednja tačka | tačka
+2022	znak za isticanje	tačka | znak za isticanje
+2013	crtica	crtica | povlaka
+2026	elipsa	elipsa | izostavljanje | tačke | tri tačke
+AB	lijevi uglasti navodnik	karet | lijevi uglasti navodnik | lijevo | navod | ševron | ugao | zagrade
+BB	desni uglasti navodnik	desni uglasti navodnik | desno | karet | navod | ševron | ugao | zagrade
+2030	promil	potisućak | promil
+20AC	euro	EUR | euro | valuta
+A3	funta	EGP | funta | GBP | valuta
+A5	jen	CNY | jen | JPY | juan | valuta
+A2	cent	cent
+20B9	Indijska rupija	Indijska rupija | rupija | valuta
+20BD	rublja	rublja | valuta
+20A9	von	KPW | KRW | von
+20BA	Turska lira	
+20BF	bitcoin	bitcoin | BTC
+20AA	Izraelski novi šekel	
+20AB	Vijetnamski dong	
+20B1	pezo	pezo
+20BC	Azerbejdžanski manat	
+20B4	Ukrajinska hrivnja	
+20A6	Nigerijska naira	
+20A1	Kostarikanski kolon	
+20B2	Paragvajski gvarani	
+20B5	Ganski cedi	
+20B8	Kazahstanski tenge	
+20BE	Gruzijski lari	
+20AE	Mongolski tugrik	
+20AD	Laoski kip	
+20A8	rupi	rupi | valuta
+24	dolar	dolar | novac | pezo | USD
+58F	Armenski dram	
+9F3	Bangladeška taka	
+E3F	Tajlandski baht	
+20A3	francuski franak	franak | francuski franak | valuta
+20A4	lira	lira | valuta
+20A7	Španska pezeta	
+20B0	njemački pfening	njemački pfening | pfening | valuta
+20B3	austral	ARA | austral | valuta
+20A2	cruzeiro	BRB | cruzeiro | valuta
+20A5	mil	mil
+20B6	livre tournois	livre tournois | valuta
+20B7	spesmilo	spesmilo | valuta
+A4	Nepoznata valuta	
+201E	donji desni navodnik	dojni navodnik | donji desni navodnik | dvostruki navod | navod | navodnik | zaobljeni navodnik
+201C	lijevi navodnik	dvostruki navod | lijevi navodnik | navod | navodnik | zaobljeni navodnik
+201D	desni navodnik	desni navodnik | dvostruki navod | navod | navodnik | zaobljeni navodnik
+2018	lijevi apostrof	apostrof | jednostruki navodnici | lijevi apostrof | navod | navodnici | zaobljeni navodnici
+2019	desni apostrof	apostrof | desni apostrof | jednostruki navodnici | navod | navodnici | zaobljeni navodnici
+A1	obrnuti uzvičnik	obrnuti | uskličnik | usklik | uzvičnik | uzvik
+BF	obrnuti upitnik	obrnuti | pitanje | upitnik
+2020	znak za bodež	obelisk | znak za bodež
+2021	dvostruki znak za bodež	bodež | dvostruki | dvostruki znak za bodež | obelisk
+2044	kosa crta za odlomak	crta | kosa crta | kosa crta za odlomak
+2032	polunavodnik	polunavodnik
+2033	dvostruki polunavodnik	dvostruki polunavodnik | polunavodnik
+201A	donji desni apostrof	apostrof | donji desni apostrof | donji navod | navod
+AC	negacija	ne | negacija
+2117	autorsko pravo za zvučni snimak	autorsko pravo | autorsko pravo za zvučni snimak | snimak | zvuk
+2212	minus	minus | oduzmi
+2213	minus ili plus	minus ili plus | plus-minus
+2248	približno	otprilike | približno
+2260	nije jednako	nejednakost | nije jednako
+2261	identično	identično | tačno | trostruko
+2264	manje od ili jednako	jednako | jednakost | manje od | manje od ili jednako | nejednakost
+2265	veće od ili jednako	jednako | jednakost | nejednakost | veće od | veće od ili jednako
+226A	mnogo manje od	matematika | mnogo manje od | nejednakost
+226B	mnogo veće od	matematika | mnogo veće od | nejednakost
+221E	znak za beskonačnost	beskonačnost | znak za beskonačnost
+221A	kvadratni korijen	iracionalan | korijen | kvadratni | radikal | radikand
+221D	proporcionalno	proporcionalno | proporcionalnost
+2211	zbir neograničenog broja operanada	matematika | zbir | zbir neograničenog broja operanada
+220F	Kartezijev prozvod	Kartezijev prozvod | logika | proizvod
+222B	integral	integral | račun
+2202	parcijalni diferencijal	diferencijal | parcijalni diferencijal
+2206	inkrement	inkrement | trougao
+2207	nabla	nabla | trougao
+2200	za svaki	svaki | univerzalno | za svaki
+2203	postoji	postoji
+2205	prazan skup	matematika | operator skupa | prazan skup
+2208	element od	članstvo | element | element od | sadrži | skup
+2209	nije element	element | nije element
+2229	presjek	presjek | skup
+222A	unija	skup | unija | zbirka
+2282	podskup	podskup | skup
+2283	nadskup	matematika | nadskup | operator skupa
+2286	podskup jednak	podskup jednak
+2287	nadskup jednak	jednakost | matematika | nadskup jednak
+2227	logičko "i"	logička konjukcija | logičko "i"
+2295	zaokruženi plus	plus | zaokruženi plus
+2297	zaokruženo puta	proizvod | tenzor | zaokruženo puta
+22A5	neistina	falsum | neistina
+2220	ugao	oštar | ugao
+2234	zato	logika | zato
+2235	zbog toga	logika | zbog toga
+2218	prstenasti operator	operator | prstenasti operator | sastavljanje
+2219	tačkasti operator	operator | tačkasti operator
+22C5	operator kao tačka	operator | operator kao tačka
+2215	kosa crta za dijeljenje	crta | kosa crta | kosa crta za dijeljenje
+2190	strelica prema lijevo	lijevo | strelica | strelica prema lijevo
+2191	strelica prema gore	gore | strelica | strelica prema gore
+2192	strelica prema desno	desno | strelica | strelica prema desno
+2193	strelica prema dolje	dolje | strelica | strelica prema dolje
+2196	strelica gore-lijevo	sjeverozapad | smjer | strelica | strelica gore-lijevo
+2197	strelica gore-desno	sjeveroistok | smjer | strelica | strelica gore-desno
+2198	strelica dolje-desno	jugoistok | smjer | strelica | strelica dolje-desno
+2199	strelica dolje-lijevo	jugozapad | smjer | strelica | strelica dolje-lijevo
+2194	strelica lijevo-desno	strelica | strelica lijevo-desno
+2195	strelica gore-dolje	strelica | strelica gore-dolje
+21D0	dvostruka strelica ulijevo	dvostruka strelica ulijevo
+21D1	dvostruka strelica nagore	dvostruka strelica nagore
+21D2	dvostruka strelica udesno	dvostruka strelica udesno
+21D3	dvostruka strelica nadolje	dvostruka strelica nadolje
+21D6	dvostruka strelica sjever-zapad	dvostruka strelica sjever-zapad
+21D7	dvostruka strelica sjever-istok	dvostruka strelica sjever-istok
+21D8	dvostruka strelica jug-istok	dvostruka strelica jug-istok
+21D9	dvostruka strelica jug-zapad	dvostruka strelica jug-zapad
+21D4	dvostruka strelica ulijevo-udesno	dvostruka strelica ulijevo-udesno
+21A4	strelica s crtom ulijevo	strelica s crtom ulijevo
+21A6	strelica s crtom udesno	strelica s crtom udesno
+21A5	strelica s crtom nagore	strelica s crtom nagore
+21A7	strelica s crtom nadolje	strelica s crtom nadolje
+21A9	strelica desno zakrivljena nalijevo	strelica | strelica desno zakrivljena nalijevo
+21AA	strelica lijevo zakrivljena nadesno	strelica | strelica lijevo zakrivljena nadesno
+219E	dvoglava strelica ulijevo	dvoglava strelica ulijevo
+21A0	dvoglava strelica udesno	dvoglava strelica udesno
+219F	dvoglava strelica nagore	dvoglava strelica nagore
+21A1	dvoglava strelica nadolje	dvoglava strelica nadolje
+21A2	strelica s repom ulijevo	strelica s repom ulijevo
+21A3	strelica s repom udesno	strelica s repom udesno
+219A	precrtana strelica ulijevo	precrtana strelica ulijevo
+219B	precrtana strelica udesno	precrtana strelica udesno
+21AE	precrtana strelica ulijevo i udesno	precrtana strelica ulijevo i udesno
+21CD	precrtana dvostruka strelica ulijevo	precrtana dvostruka strelica ulijevo
+21CF	precrtana dvostruka strelica udesno	precrtana dvostruka strelica udesno
+21CE	precrtana dvostruka strelica ulijevo-udesno	precrtana dvostruka strelica ulijevo-udesno
+21C4	strelica udesno preko strelice ulijevo	strelica udesno preko strelice ulijevo
+21C6	strelica gore preko strelice dolje	desno | lijevo | strelica | strelica gore preko strelice dolje | strelica prema gore preko strelice prema dolje | strelice
+21CB	harpun strelica ulijevo preko harpun strelice udesno	harpun strelica ulijevo preko harpun strelice udesno
+21CC	harpun strelica udesno preko harpun strelice ulijevo	harpun strelica udesno preko harpun strelice ulijevo
+21BC	harpun strelica ulijevo s bodljom nagore	bodlja | harpun strelica ulijevo s bodljom nagore
+21BD	harpun strelica ulijevo s bodljom nadolje	harpun strelica ulijevo s bodljom nadolje
+21C0	harpun strelica udesno s bodljom nagore	bodlja | harpun strelica udesno s bodljom nagore
+21C1	harpun strelica udesno s bodljom nadolje	bodlja | harpun strelica udesno s bodljom nadolje
+21BE	harpun strelica nagore s bodljom udesno	bodlja | harpun strelica nagore s bodljom udesno
+21BF	harpun strelica nagore s bodljom ulijevo	bodlja | harpun strelica nagore s bodljom ulijevo
+21C2	harpun strelica nadolje s bodljom udesno	bodlja | harpun strelica nadolje s bodljom udesno
+21C3	harpun strelica nadolje s bodljom ulijevo	bodlja | harpun strelica nadolje s bodljom ulijevo
+21C7	uparene strelice ulijevo	uparene strelice ulijevo
+21C9	uparene strelice udesno	uparene strelice udesno
+21C8	uparene strelice nagore	uparene strelice nagore
+21CA	uparene strelice nadolje	uparene strelice nadolje
+21DA	trostruka strelica ulijevo	trostruka strelica ulijevo
+21DB	trostruka strelica udesno	trostruka strelica udesno
+219C	valovita strelica ulijevo	valovita strelica ulijevo
+219D	valovita strelica udesno	valovita strelica udesno
+21DC	vijugava strelica ulijevo	vijugava strelica ulijevo
+21DD	vijugava strelica udesno	vijugava strelica udesno
+21AD	valovita strelica ulijevo-udesno	valovita strelica ulijevo-udesno
+21AF	cikcak strelica nadolje	cikcak | cikcak strelica nadolje
+21BA	otvorena kružna strelica suprotno od kazaljke na satu	otvorena kružna strelica suprotno od kazaljke na satu
+21BB	otvorena kružna strelica u smjeru kazaljke na satu	otvorena kružna strelica u smjeru kazaljke na satu
+1F400	pacov	pacov
+1F401	miš	miš
+1F402	vo	bik | horoskop | vo
+1F403	bivo	bivo | voda
+1F404	krava	krava
+1F405	tigar	tigar
+1F406	leopard	leopard
+1F407	zec	ljubimac | zec | zeko
+1F408	mačka	ljubimac | mačka
+1F409	zmaj	bajka | zmaj
+1F40A	krokodil	krokodil
+1F40B	kit	kit
+1F40C	puž	puž
+1F40D	zmija	horoskopski znak | nositelj | zmija | zmijonosac
+1F40E	konj	konj | trkači konj | trkanje
+1F40F	ovan	horoskop | mužjak | ovan
+1F410	koza	jarac | koza
+1F411	ovca	ovca | ženka
+1F412	majmun	majmun
+1F413	pijetao	pijetao | ptica
+1F414	kokoš	kokoš | ptica
+1F415	pas	ljubimac | pas
+1F416	svinja	krmača | svinja
+1F417	vepar	svinja | vepar
+1F418	slon	slon
+1F419	hobotnica	hobotnica
+1F41A	spiralna školjka	školjka | spirala | spiralna školjka
+1F41B	buba	buba | insekt
+1F41C	mrav	insekt | mrav
+1F41D	pčela	insekt | pčela
+1F41E	bubamara	buba | bubamara | insekt
+1F41F	riba	riba | ribe
+1F420	tropska riba	riba | tropska
+1F421	napuhača	napuhača | riba
+1F422	kornjača	kornjača
+1F423	izleglo pile	beba | izleglo | pile | ptica
+1F424	pile	beba | pile | ptica
+1F425	portet pileta	beba | pile | portet pileta
+1F426	ptica	ptica
+1F427	pingvin	pingvin | ptica
+1F428	koala	koala | medvjed
+1F429	pudlica	pas | pudlica
+1F42A	kamila	grba | jednogrba kamila | kamila
+1F42B	dvogrba kamila	dvogrba kamila | grba | kamila
+1F42C	delfin	delfin
+1F42D	glava miša	glava | glava miša | miš
+1F42E	glava krave	glava | glava krave | krava
+1F42F	glava tigra	glava | glava tigra | tigar
+1F430	glava zeca	glava zeca | ljubimac | zec | zeko
+1F431	glava mačke	glava | glava mačke | ljubimac | mačka
+1F432	glava zmaja	bajka | glava zmaja | lice | zmaj
+1F433	kit koji izdiše	izdiše | kit | kit koji izdiše
+1F434	glava konja	glava | glava konja | konj
+1F435	glava majmuna	glava | glava majmuna | majmun
+1F436	glava psa	glava | glava psa | ljubimac | pas
+1F437	glava svinje	glava | glava svinje | svinja
+1F438	žaba	glava žabe | žaba
+1F439	hrčak	glava hrčka | hrčak | ljubimac
+1F43A	vuk	lice | vuk
+1F43B	medvjed	glava medvjeda | medvjed
+1F43C	panda	glava pande | panda
+1F43D	svinjski nos	nos | svinja | svinjski nos
+1F43E	otisci šapa	otisak | otisci šapa | šapa | stopalo
+1F43F	vjeverica	vjeverica
+1F981	glava lava	glava lava | horoskop | lav
+1F982	škorpion	horoskopski znak | škorpija | škorpion
+1F983	ćurka	ćurka | ptica
+1F984	jednorog	glava | jednorog
+1F985	orao	orao | ptica
+1F986	patka	patka | ptica
+1F987	šišmiš	šišmiš | vampir | životinja
+1F988	ajkula	ajkula | riba
+1F989	sova	mudrost | ptica | sova
+1F98A	lisica	lice | lisica
+1F98B	leptir	insekt | leptir | ljepota
+1F98C	jelen	jelen | životinja
+1F98D	gorila	gorila | životinja
+1F98E	gušter	gušter | reptil
+1F98F	nosorog	nosorog | životinja
+1F990	škamp	hrana | račić | škamp | školjka
+1F991	lignja	hrana | lignja | mekušac
+1F992	žirafa	tačke | žirafa
+1F993	zebra	linije | zebra
+1F994	jež	bodlje | jež
+1F995	sauropod	brahiosaurus | brontosaurus | diplodok | sauropod
+1F996	T-Rex	T-Rex | Tiranosaurus Reks
+1F997	cvrčak	cvrčak | skakavac
+1F998	kengur	Australija | kengur | skok | torbar
+1F999	lama	alpaka | guanaco | lama | vicuna | vuna
+1F99A	paun	hvalisav | paun | ponosan | ptica | šepurenje
+1F99B	nilski konj	hippo | hippopotamus | nilski konj
+1F99C	papagaj	papagaj | papiga | pričanje | ptica
+1F99D	rakun	lisica | lukav | rakun | znatiželjan
+1F99E	jastog	jastog | klješta | morski plodovi
+1F99F	komarac	bolest | groznica | komarac | malarija | virus
+1F9A0	mikrob	ameba | bakterija | mikrob | virus
+1F9A1	jazavac	jazavac | medojedni jazavac | štetočina
+1F9A2	labud	labud | mladi labud | ptica | ružno pače
+1F9A3	mamut	izumiranje | kljova | mamut | veliko | vuneno
+1F9A4	dodo	dodo | izumiranje | Mauricijus | veliki dodo
+1F9A5	ljenivac	lijen | ljenivac | spor | trom
+1F9A6	vidra	lovljenje riba | razigranost | vidra
+1F9A7	orangutan	bezrepi majmun | majmun | orangutan
+1F9A8	tvor	smrad | tvor
+1F9A9	flamingo	flamingo | kitnjast | tropska ptica | tropski
+1F9AA	kamenica	biser | kamenica | ronjenje | školjka
+1F9AB	dabar	brana | dabar
+1F9AC	bizon	bizon | divlji vo | evropski bizon | stado
+1F9AD	foka	foka | morski lav
+1F9AE	pas vodič	pas vodič | pristup | slijep | vodič
+1FABC	meduza	beskičmenjak | jao | meduza | morska | opekotine | žarenje | žarnjak
+1F330	kesten	biljka | kesten
+1F331	rasad	biljka | rasad | sjeme
+1F332	zimzelen	biljka | drvo | zimzelen
+1F333	bjelogorično drvo	bjelogorica | bjelogorično drvo | drvo | hrast | listopadno
+1F334	palma	drvo | palma
+1F335	kaktus	biljka | kaktus
+1F337	tulipan	biljka | cvijet | tulipan
+1F338	cvijet višnje	behar | biljka | cvijet | cvijet višnje
+1F339	ruža	biljka | cvijet | ruža
+1F33A	hibiskus	biljka | cvijet | hibiskus
+1F33B	suncokret	biljka | cvijet | sunce | suncokret
+1F33C	procvjetati	biljka | cvijet | procvjetati
+1F33D	klas	biljka | klas | kukuruz
+1F33E	snop riže	biljka | riža | snop | snop riže | zrno
+1F33F	ljekovita biljka	bijka | list | ljekovita biljka
+1F340	djetelina s četiri lista	biljka | četiri | djetelina | djetelina s četiri lista | list
+1F341	javorov list	hrast | javor | javorov list | list | opada
+1F342	opao list	biljka | lišče | opada | opao list
+1F343	list leprša	lepršanje | list | list leprša | puhanje | vjetar
+1F344	gljiva	biljka | gljiva
+1FAB0	muha	bolest | larva | muha | štetočina | truljenje
+1FAB1	crv	crv | glista | kišna glista | kišni crv | parazit | prstenasta glista | prstenasti crv
+1FAB2	tvrdokrilac	buba | insekt | tvrdokrilac
+1FAB3	žohar	bubašvaba | insekt | štetočina | žohar
+1FAB4	biljka u saksiji	beskorisno | biljka | biljka u saksiji | dosadno | kuća | raste | zalijevanje
+1FAB5	drvo	cjepanica | drvo | greda | klada
+1FAB6	pero	lagano | let | perje | pero | ptica
+1FAB7	lotos	budizam | čistoća | cvijet | hinduizam | Indija | lotos | Vijetnam
+1FAB8	koral	greben | koral | okean
+1FAB9	prazno gnijezdo	gniježđenje | prazno gnijezdo
+1FABA	gnijezdo s jajima	gniježđenje | gnijezdo s jajima
+1FABB	zumbul	cvijet | lavanda | plava | zijevalice | zumbul | zvončići
+2618	djetelina	biljka | djetelina
+1F347	grožđe	biljka | grozd | grožđe | voće
+1F348	dinja	biljka | dinja | voće
+1F349	lubenica	biljka | lubenica | voće
+1F34A	mandarina	biljka | mandarina | narandža | voće
+1F34B	limun	biljka | citrus | limun | voće
+1F34C	banana	banana | biljka | voće
+1F34D	ananas	ananas | biljka | voće
+1F34E	crvena jabuka	biljka | crvena | jabuka | voće
+1F34F	zelena jabuka	biljka | jabuka | voće | zelena
+1F350	kruška	biljka | kruška | voće
+1F351	breskva	biljka | breskva | voće
+1F352	trešnje	biljka | trešnja | trešnje | voće
+1F353	jagoda	biljka | bobica | jagoda | voće
+1F336	ljuti feferon	feferon | ljuta paprika | ljuti feferon
+1F354	hamburger	burger | hamburger
+1F355	pizza	komad | pizza | sir
+1F356	meso na kostima	kost | meso | meso na kostima
+1F357	batak	batak | kost | noga | perad | piletina
+1F358	kreker od riže	kreker | kreker od riže
+1F359	kugla od riže	japanska | kugla | kugla od riže | riža
+1F35A	kuhana riža	kuhana | riža
+1F35B	kari riža	kari | riža
+1F35C	posuda na paru	činija | knedla | posuda | posuda na paru | rezanci
+1F35D	špageti	pasta | špageti
+1F35E	hljeb	hljeb | štruca
+1F35F	pomfrit	pomfrit
+1F360	slatki pečeni krompir	krompir | pečeni | slatki
+1F361	dango	dango | desert | japanski | slatko | štapić
+1F362	oden	kebab | oden | plodovi mora | ražnjić
+1F363	suši	suši
+1F364	prženi škampi	kozice | prženi škampi | prženo | škampi | tempura
+1F365	riblji rolat	kolač | riba | riblji rolat | smotuljak | spirala
+1F366	sladoled na točenje	desert | krema | led | sladoled | sladoled na točenje
+1F367	havajski sladoled	desert | havajski sladoled | led | sladoled
+1F368	sladoled	desert | krema | sladoled | slatko
+1F369	krofna	desert | doručak | krofna | slatko
+1F36A	kolačić	desert | kolačić | slatko
+1F36B	čokolada	čokolada | čokoladica | desert | slatko
+1F36C	bombona	bombona | desert | slatko
+1F36D	lizalo	desert | lizalo | slatkiš | slatko
+1F36E	puding	desert | krema | puding | slatko
+1F36F	tegla meda	med | slatko | tegla | tegla meda
+1F370	kolač s biskvitom	kolač | kolač s biskvitom | komad | slatko | torta
+1F371	bento kutija	bento | kutija
+1F372	lonac hrane	lonac | lonac hrane | paprikaš
+1F373	kuhanje	doručak | jaje | kuhanje | pečenje | tava
+1F374	viljuška i nož	escajg | kuhanje | nož | viljuška | viljuška i nož
+1F375	šolja za čaj bez drške	čaj | napitak | šolja | šolja za čaj | šolja za čaj bez drške
+1F376	sake	boca | napitak | piće | sake | šolja
+1F377	čaša vina	čaša | čaša vina | piće | šank | vino
+1F378	koktel	čaša | koktel | piće | šank
+1F379	tropsko piće	piće | šank | tropsko
+1F37A	krigla piva	krigla | krigla piva | piće | pivo | šank
+1F37B	nazdravljanje kriglama piva	krigla | kuckanje | nazdravljanje kriglama piva | piće | pivo
+1F37C	flašica za bebu	beba | flašica | flašica za bebu | mlijeko | piće
+1F37D	viljuška i nož uz tanjir	kuhanje | nož | tanjir | viljuška | viljuška i nož uz tanjir
+1F37E	boca s plutanim čepom koji iskače	boca | boca s plutanim čepom koji iskače | čep | piće | šank
+1F37F	kokice	kokice
+1F950	kroasan	doručak | francusko | hljeb | hrana | kifla | kroasan
+1F951	avokado	avokado | hrana | voće
+1F952	krastavac	hrana | kiseli krastavac | krastavac | povrće
+1F953	slanina	doručak | hrana | meso | slanina
+1F954	krompir	hrana | krompir | povrće
+1F955	mrkva	hrana | mrkva | povrće
+1F956	francuski hljeb	baget | francuski | hljeb | hrana
+1F957	zelena salata	hrana | salata | zelena salata
+1F958	tava s hranom	hrana | plitko | tava | tava s hranom | tepsija
+1F959	kebab	falafel | giros | hrana | kebab | lepinja | punjeno
+1F95A	jaje	doručak | hrana | jaje
+1F95B	mlijeko	čaša | čaša mlijeka | mlijeko | piće
+1F95C	kikiriki	grickalice | hrana | kikiriki | povrće
+1F95D	kivi	hrana | kivi | voće
+1F95E	palačinke	crepe | doručak | hrana | palačinke
+1F95F	knedla	knedla | okruglica
+1F960	kolačić sreće	kolačić sreće | proročanstvo
+1F961	kutija s hranom za ponijeti	kutija | kutija s hranom za ponijeti | pakovanje
+1F962	štapići	haši | štapići
+1F963	zdjela s kašikom	doručak | zdjela s kašikom | žitarice
+1F964	čaša sa slamkom	čaša sa slamkom | sok
+1F965	kokos	kokos | palma | pinja kolada
+1F966	brokula	brokula | divlji kupus
+1F967	slatka pita	fil | kolač | pecivo | slatka pita
+1F968	perec	perec | savijeno
+1F969	odrezak mesa	janjeći odrezak | odrezak | odrezak mesa | stejk | svinjski odrezak
+1F96A	sendvič	hljeb | sendvič
+1F96B	konzervirana hrana	konzerva | konzervirana hrana
+1F96C	lisnato povrće	kelj | kupus | lisnato povrće | zelena salata
+1F96D	mango	mango | tropsko | voće
+1F96E	mjesečev kolač	festival | jesen | mjesečev kolač | yuebing
+1F96F	đevrek	đevrek | doručak | pecivo | zemička
+1F9C0	komad sira	komad sira | sir
+1F9C1	mafin	kolači | mafin | slatkiši
+1F9C2	so	slanik | so | začin
+1F9C3	sok u tetrapaku	gusti sok u tetrapaku | piće | slamka | slatko | sok u tetrapaku
+1F9C4	bijeli luk	bijeli luk | začinjavanje hrane
+1F9C5	luk	luk | začinjavanje hrane
+1F9C6	falafel	falafel | leblebije | okruglice od leblebija
+1F9C7	vafl	blebetanje | doručak | neodlučnost | vafl
+1F9C8	puter	mliječni proizvodi | puter
+1F9C9	mate čaj	mate čaj | topli napitak
+1F9CA	kocka leda	kocka leda | ledeno
+1F9CB	boba čaj	boba čaj | čaj | kuglice | mjehurići | mlijeko
+1FAD0	borovnice	bobica | bobičasto voće | borovnica | borovnice | plavo
+1FAD1	paprika babura	babura | paprika | povrće
+1FAD2	maslina	hrana | maslina
+1FAD3	lepinica	hrskave lepinice | lepine | lepinica | lepinice | zemičke
+1FAD4	tamale	meksička kuhinja | smotuljci | tamale
+1FAD5	fondue	čokolada | fondue | istopljeno | lonac | sir | švicarska kuhinja
+1FAD6	čajnik	čaj | čajnik | napitak | topli napitak
+1FAD7	sipanje tečnosti	čaša | piće | prazna | prosipanje | sipanje tečnosti
+1FAD8	grah	grah | hrana | mahunarka | trešnjevac
+1FAD9	tegla	odlaganje | prazno | spremnik | tegla | umak | začin
+1FADA	korijen đumbira	korijen | korijen đumbira | pivo | začin
+1FADB	mahuna graška	edamame | grahorica | mahuna | mahuna graška | mahunarka | povrće | zrno
+2615	topli napitak	čaj | kafa | napitak | para | topli napitak | toplo
+2600	sunčano	prognoza | sunčano | sunce | vrijeme
+2601	oblačno	oblaci | oblačno | prognoza | vrijeme
+2602	kišobran	asesoar | kiša | kišobran | vrijeme
+2603	snješko bijelić	hladnoća | snijeg | snješko bijelić | vrijeme
+2614	kiša s kišobranom	asesoar | kiša | kiša s kišobranom | kišobran | vrijeme
+26A1	visoki napon	munja | napon | opasnost | struja | visoki napon
+26C4	snješko bijelić bez snijega	hladnoća | snijeg | snješko bijelić bez snijega | vrijeme
+26C5	umjereno oblačno	oblaci | prognoza | sunce | umjereno oblačno | vrijeme
+26C8	oblačno s grmljavinom i kišom	grmljavina | kiša | oblačno s grmljavinom i kišom | prognoza | vrijeme
+2744	pahuljica snijega	hladnoća | pahuljica snijega | snijeg | vrijeme
+1F300	ciklon	ciklon | prognoza | tajfun | vrijeme
+1F301	maglovito	magla | maglovito | vrijeme
+1F302	zatvoren kišobran	asesoar | kiša | kišobran | vrijeme | zatvoren kišobran
+1F303	zvjezdana noć	noć | vrijeme | zvijezda | zvjezdana noć
+1F304	izlazak sunca preko planina	izlazak sunca | izlazak sunca preko planina | jutro | planina | sunce
+1F305	izlazak sunca	izlazak sunca | jutro | sunce | vrijeme
+1F306	pogled na grad u sumrak	grad | pejzaž | pogled na grad u sumrak | sumrak | večer
+1F307	zalazak sunca	sumrak | sunce | vrijeme | zalazak sunca | zgrada
+1F308	duga	duga | kiša | vrijeme
+1F309	most noću	most | most noću | noć | vrijeme
+1F30A	val	more | okean | talas | val | voda
+1F30B	vulkan	erupcija | planina | vrijeme | vulkan
+1F30C	mliječni put	mliječni put | svemir | vrijeme
+1F30D	globus prikazuje Evropu i Afriku	globus | globus prikazuje Evropu i Afriku | kugla | svijet | Zemlja
+1F30E	globus prikazuje Sjevernu i Južnu Ameriku	Amerika | globus prikazuje Sjevernu i Južnu Ameriku | svijet | zemaljska kugla | Zemlja
+1F30F	globus pokazuje Aziju i Australiju	globus | globus pokazuje Aziju i Australiju | svijet | zemaljska kugla | Zemlja
+1F310	globus s meridijanima	globus s meridijanima | meridijani | svijet | zemaljska kugla | Zemlja
+1F311	mladi mjesec	mjesec | mjesečeve mijene | mladi mjesec | svemir
+1F312	uzdižući mjesec	mjesec | mjesečeve mijene | uzdižući mjesec
+1F313	prva četvrtina	mjesec | mjesečeve mijene | prva četvrtina
+1F314	do punog mjeseca	do punog mjeseca | mjesec | mjesečeve mijene
+1F315	pun mjesec	mjesec | mjesečeve mijene | pun mjesec
+1F316	padajući mjesec	mjesec | mjesečeve mijene | padajući mjesec
+1F317	zadnja četvrtina	mjesec | mjesečeve mijene | zadnja četvrtina
+1F318	do mladog mjeseca	do mladog mjeseca | mjesec | mjesečeve mijene
+1F319	polumjesec	mjesec | polumjesec
+1F31A	mladi mjesec lice	lice | mjesec | mladi mjesec lice
+1F31B	prva četvrtina lice	lice | mjesec | prva četvrtina lice
+1F31C	posljednja četvrtina lice	lice | mjesec | posljednja četvrtina lice
+1F31D	puni mjesec lice	lice | mjesec | puni mjesec lice
+1F31E	sunce lice	lice | prognoza | sunčano | sunce | vrijeme
+1F31F	sjajna zvijezda	blistavo | sjajna zvijezda | sjajno | svemir | zvijezda
+1F320	zvijezda padalica	padalica | svemir | zvijezda
+1F321	termometar	termometar | vrijeme
+1F324	pretežno sunčano	oblaci | pretežno sunčano | prognoza | sunce | vrijeme
+1F325	pretežno oblačno	oblaci | pretežno oblačno | prognoza | vrijeme
+1F326	umjereno oblačno s kišom	kiša | oblaci | prognoza | umjereno oblačno s kišom | vrijeme
+1F327	oblačno s kišom	kiša | oblaci | oblačno s kišom | prognoza | vrijeme
+1F328	oblačno sa snijegom	oblaci | oblačno sa snijegom | prognoza | snijeg | vrijeme
+1F329	oblačno s grmljavinom	grmljavina | oblaci | oblačno s grmljavinom | prognoza | vrijeme
+1F32A	tornado	oblaci | prognoza | tornado | vihor | vrijeme
+1F32B	magla	magla | oblaci | prognoza | vrijeme
+1F32C	lice u vjetru	lice | lice u vjetru | prognoza | vjetar | vrijeme
+2648	znak ovan	horoskop | znak | znak ovan | zodijak
+2649	bik	bik | horoskop | znak | zodijak
+264A	blizanci	blizanci | horoskop | znak | zodijak
+264B	znak rak	horoskop | znak | znak rak | zodijak
+264C	lav	horoskop | lav | znak | zodijak
+264D	djevica	djevica | horoskop | znak | zodijak
+264E	znak vaga	horoskop | znak | znak vaga | zodijak
+264F	škorpija	horoskop | škorpija | znak | znak škorpion | zodijak
+2650	strijelac	horoskop | strijelac | znak | zodijak
+2651	jarac	horoskop | jarac | znak | zodijak
+2652	vodolija	horoskop | vodolija | znak | zodijak
+2653	ribe	horoskop | ribe | znak | zodijak
+1F550	jedan sat	01:00 | 13:00 | jedan sat | sat | sati
+1F551	dva sata	02:00 | 14:00 | dva sata | sat | sati
+1F552	tri sata	03:00 | 15:00 | sat | sati | tri sata
+1F553	četiri sata	04:00 | 16:00 | četiri sata | sat | sati
+1F554	pet sati	05:00 | 17:00 | pet sati | sat | sati
+1F555	šest sati	06:00 | 18:00 | sat | sati | šest sati
+1F556	sedam sati	07:00 | 19:00 | sat | sati | sedam sati
+1F557	osam sati	08:00 | 20:00 | osam sati | sat | sati
+1F558	devet sati	09:00 | 21:00 | devet sati | sat | sati
+1F559	deset sati	10:00 | 22:00 | deset sati | sat | sati
+1F55A	jedanaest sati	11:00 | 23:00 | jedanaest sati | sat | sati
+1F55B	dvanaest sati	00:00 | 12:00 | dvanaest sati | sat | sati
+1F55C	jedan i trideset	01:30 | 13:30 | jedan i trideset | sat | sati
+1F55D	dva i trideset	02:30 | 14:30 | dva i trideset | sat | sati
+1F55E	tri i trideset	03:30 | 15:30 | sat | sati | tri i trideset
+1F55F	četiri i trideset	04:30 | 16:30 | četiri i trideset | sat | sati
+1F560	pet i trideset	05:30 | 17:30 | pet i trideset | sat | sati
+1F561	šest i trideset	06:30 | 18:30 | sat | sati | šest i trideset
+1F562	sedam i trideset	07:30 | 19:30 | sat | sati | sedam i trideset
+1F563	osam i trideset	08:30 | 20:30 | osam i trideset | sat | sati
+1F564	devet i trideset	09:30 | 21:30 | devet i trideset | sat | sati
+1F565	deset i trideset	10:30 | 22:30 | deset i trideset | sat | sati
+1F566	jedanaest i trideset	11:30 | 23:30 | jedanaest i trideset | sat | sati
+1F567	dvanaest i trideset	00:30 | 12:30 | dvanaest i trideset | sat | sati
+1FA90	planeta s prstenom	planeta s prstenom | pod uticajem saturna | saturn
+2604	kometa	kometa | svemir
+26F0	planina	planina
+26F1	kišobran na zemlji	kišobran na zemlji | sunce | suncobran | suncobran na zemlji | vrijeme
+26F2	fontana	fontana
+26F4	trajekt	brod | čamac | trajekt
+26F5	jedrilica	čamac | jahta | jedrilica | more | odmaralište
+2708	avion	avion | vozilo
+1F488	oznaka berbernice	berbernica | oznaka berbernice | šišanje | znak
+1F4BA	sjedište	sjedalo | sjedište
+1F680	raketa	raketa | svemir
+1F681	helikopter	helikopter | vozilo
+1F682	lokomotiva	lokomotiva | motor | para | pruga | voz
+1F683	vagon	pruga | šina | vagon | voz | željeznica
+1F684	brzi voz	brzi voz | brzina | voz | vozilo | željeznica
+1F685	brzi voz metak	brzi voz metak | brzi voz-metak | pruga | voz | vozilo | željeznica
+1F686	voz	voz | vozilo | željeznica
+1F687	metro	metro | podzemna | željeznica
+1F688	svjetlosna pruga	svjetlosna pruga | vozilo | željeznica
+1F689	stanica	stanica | voz | vozilo | željeznica
+1F68A	tramvaj	tramvaj | trolejbus | vozilo
+1F68B	tramvajska kola	pruga | tramvajska kola | trolejbus | vozilo | željeznica
+1F68C	autobus	autobus | vozilo
+1F68D	dolazeći autobus	autobus | dolazeći autobus | dolazi | vozilo
+1F68E	trolejbus	trolejbus | vozilo
+1F68F	autobuska stanica	autobuska stanica | bus | stajalište | stanica
+1F690	minibus	bus | minibus
+1F691	sanitet	sanitet | vozilo
+1F692	vatrogasna kola	kamion | vatra | vatrogasna kola | vozilo
+1F693	policijska kola	auto | patrola | policija | policijska kola | vozilo
+1F694	dolazeća policijska kola	auto | dolazeća policijska kola | policija | vozilo
+1F695	taksi	taksi | vozilo
+1F696	dolazeći taksi	dolazeći taksi | taksi
+1F697	automobil	auto | automobil | vozilo
+1F698	dolazeći automobil	auto | automobil | dolazeći automobil
+1F699	terensko vozilo	džip | terenac | terensko | vozilo
+1F69A	dostavno vozilo	dostava | dostavno vozilo | kamion
+1F69B	teretni kamion	kamion | teret | teretni kamion | vozilo
+1F69C	traktor	traktor | vozilo
+1F69D	pruga s jednom tračnicom	pruga s jednom tračnicom | vozilo
+1F69E	pruga kroz tunel	planina | pruga kroz tunel | voz | vozilo | željeznica
+1F69F	viseći voz	viseća | viseći voz | željeznica
+1F6A0	žičara	gondola | kabl | planina | žičara
+1F6A1	zračni tramvaj	kabl | tramvaj | uže | zračni
+1F6A2	brod	brod | vozilo
+1F6A3	osoba vesla	čamac | osoba vesla | veslanje
+1F6A4	gliser	čamac | gliser | vozilo
+1F6A5	horizontalni semafor	horizontalni semafor | saobraćaj | signalizacija | svjetlo
+1F6A6	semafor	saobraćaj | semafor | signalizacija | svjetlo
+1F6A7	konstrukcija	barijera | konstrukcija
+1F6A8	rotacija	auto | policija | rotacija | sijalica | vozilo
+1F6A9	trokutasta zastava	pošta | trokutasta zastava
+1F6AA	vrata	vrata
+1F6B0	pitka voda	piće | pitka | voda
+1F6B1	nepitka voda	nepitka voda | nije pitka | piće | voda | zabranjeno
+1F6B3	zabranjeno za bicikliste	biciklo | ne | vozilo | zabranjeno | zabranjeno za bicikliste
+1F6B7	zabranjeno za pješake	nema | pješačenje | prolaz | zabranjeno | zabranjeno za pješake
+1F6B8	dječiji prijelaz	dijete | dječiji prijelaz | pješak | prelazi | saobraćaj
+1F6B9	muški zahod	muški | toalet | wc | zahod
+1F6BA	ženski zahod	toalet | wc | zahod | ženski
+1F6BB	zahod	toalet | wc | zahod
+1F6BC	slika bebe	beba | presvlačenje | slika bebe
+1F6BD	wc šolja	toalet | wc | wc šolja
+1F6BE	toalet	klozet | toalet | voda | wc | zahod
+1F6BF	tuš	tuš | voda
+1F6C0	kupanje	kada | kupanje
+1F6C1	kada	kada | kupanje
+1F6C2	pasoška kontrola	kontrola | pasoš | pasoška kontrola
+1F6C3	carina	carina
+1F6C4	preuzimanje prtljaga	preuzimanje | preuzimanje prtljaga | prtljag
+1F6C5	garderoba	garderoba | ormar | prtljag
+1F6D0	bogomolja	bogomolja | religija | vjerovanje
+1F6D1	stop	osmougao | stop | znak
+1F6D2	šoping	kolica | kupovina | šoping | supermarket
+2668	izvori vruće vode	izvor | izvori vruće vode | para | vruć | vrućina
+26BD	fudbalska lopta	fudbal | fudbalska lopta | lopta | nogomet
+26BE	bejzbol	bejzbol | lopta | sport
+26F3	golf	golf | igra | sport
+1F392	ruksak	đačka torba | ruksak | škola | torba
+1F3A0	vrteška	konjić | vrteška
+1F3A1	ringišpil	ringišpil | zabavni park
+1F3A2	voz smrti	tobogan smrti | voz | voz smrti | zabavni park
+1F3A3	štap za pecanje	pecanje | ribe | ribolov | štap za pecanje
+1F3A4	mikrofon	karaoke | mikrofon | pjevanje
+1F3A5	kamera	film | kamera | kino
+1F3A6	kino	film | kamera | kino
+1F3A7	slušalice	bubice | slušalice
+1F3A8	slikarska paleta	muzej | paleta | slika | slikarska paleta | umjetnost
+1F3A9	cilindar	asesoar | cilindar | odjevni predmet | šešir
+1F3AA	cirkuski šator	cirkus | cirkuski šator | šator
+1F3AB	karta	karta | ulaznica
+1F3AC	filmska klapa	film | filmska klapa | klapa
+1F3AD	scenske umjetnosti	izvedba | maska | pozorište | scenske umjetnosti | umjetnina
+1F3AE	video igre	igre | upravljač | video igre
+1F3AF	pikado	cilj | igra | pikado | strelica | tabla
+1F3B0	automat za kockanje	aparat | automat za kockanje | igra | kocka
+1F3B1	bilijar	bilijar | igra | osmica
+1F3B2	kockica za igru	društvene igre | igre | kockica | kockica za igru
+1F3B3	kuglanje	igra | kugla | kuglanje | sport
+1F3B4	japanske karte za igranje	igra | igranje | japanske | japanske karte za igranje | karte
+1F3B5	nota	muzika | nota
+1F3B6	note	muzika | note
+1F3B7	saksofon	instrument | muzika | saksofon
+1F3B8	gitara	gitara | instrument | muzika
+1F3B9	klavijature	instrument | klavijature | klavir | muzika
+1F3BA	truba	instrument | muzika | truba
+1F3BB	violina	instrument | muzika | violina
+1F3BC	notni zapis	muzika | note | notni zapis | partitura
+1F3BD	majica za trčanje	atletika | majica za trčanje | oprema | trčanje
+1F3BE	tenis	loptica | reket | sport | tenis
+1F3BF	skije	skijanje | skije | snijeg | sport
+1F3C0	košarka	koš | košarka | lopta
+1F3C1	karirana zastavica	karirana zastavica | karirano | utrke | zastavica
+1F3C2	daskanje na snijegu	daska | daskanje | daskanje na snijegu | snijeg
+1F3C3	osoba trči	maraton | osoba trči | trčanje | trka
+1F3C4	osoba surfa	osoba surfa | surfanje
+1F3C5	sportska medalja	medalja | sportska medalja
+1F3C6	trofej	nagrada | trofej
+1F3C7	konjska trka	konj | konjska trka | trka konja | trkaći konj
+1F3C8	američki fudbal	američki | fudbal | lopta | sport
+1F3C9	ragbi	američki fudbal | lopta | ragbi | sport
+1F3CA	osoba pliva	osoba pliva | plivanje
+1F3CB	osoba diže tegove	dizač tegova | osoba diže tegove | tegovi | težina
+1F3CC	osoba igra golf	golf | osoba igra golf
+1F3CD	motor	motor | utrka
+1F3CE	trkaći automobil	auto | trkaći automobil | utrka
+1F451	kruna	asesoar | kralj | kraljica | kruna
+1F452	ženski šešir	asesoar | šešir | žena | ženski šešir
+1F453	naočale	asesoar | naočale | oči | predmet
+1F454	kravata	kravata | odjevni predmet
+1F455	majica kratkih rukava	majica | majica kratkih rukava | odjevni predmet
+1F456	farmerke	farmerke | hlače | odjevni predmet | pantalone
+1F457	haljina	haljina | odjevni predmet
+1F458	kimono	kimono | odjevni predmet
+1F459	bikini	bikini | kupaći | odjevni predmet
+1F45A	ženska odjeća	odjeća | žena | ženska odjeća
+1F45B	tašna	asesoar | odjevni predmet | tašna
+1F45C	ručna torba	asesoar | odjevni predmet | ručna torba | torba
+1F45D	neseser	neseser | odjevni predmet | torbica
+1F45E	muška cipela	cipela | muška cipela | muškarac | obuća
+1F45F	patika	atletika | obuća | patika
+1F460	cipela s visokim potpeticama	cipela | cipela s visokim potpeticama | štikla | visoka peta | žena
+1F461	ženska sandala	obuća | sandala | žena | ženska sandala
+1F462	ženska čizma	čizma | obuća | žena | ženska čizma
+1F6B2	biciklo	bajk | biciklo
+1F6B4	osoba na biciklu	bicikl | biciklizam | osoba na biciklu
+1F6B5	osoba u brdskom biciklizmu	bicikl | biciklizam | brdski | osoba u brdskom biciklizmu
+1F6B6	osoba hoda	hodanje | osoba hoda | šetanje
+1F938	osoba pravi premet	gimnastika | osoba | osoba pravi premet | sport | zvijezda
+1F939	žongliranje	balansiranje | multitasking | vještina | žongliranje
+1F93A	mačevanje	mač | mačevalac | mačevanje | osoba | sport
+1F93C	hrvanje	hrvač | hrvanje | osoba | sport
+1F93D	vaterpolo	osoba | polo | sport | vaterpolo | voda
+1F93E	osoba igra rukomet	lopta | osoba | osoba igra rukomet | rukomet | sport
+1F93F	maska za ronjenje	gnjurenje | maska za ronjenje | ronjenje
+1F9E2	kačket	kačket | kapa za bejzbol
+1F9E3	šal	šal | vrat
+1F9E4	rukavice	ruka | rukavice
+1F9E5	kaput	jakna | kaput
+1F9E6	čarape	čarapa | čarape
+1FA70	baletske cipele	balet | baletske cipele | ples
+1FA71	jednodijelni kupaći kostim	jednodijelni kupaći kostim | kupaći kostim
+1FA72	gaće	donji veš | gaće | jednodijelni | kupaće gaće | kupaći kostim
+1FA73	šorc	donji veš | kupaći kostim | kupaći šorc | šorc
+1FA74	japanke	japanke | papuče za plažu | sandale | sandale za plažu
+1FA80	yo-yo	gibanje | igračka | yo-yo
+1FA81	zmaj od papira	lebdjenje | letenje | zmaj od papira
+1FA82	padobran	letenje zmajem | padobran | parasailing | skakanje padobranom
+1FA83	bumerang	australija | bumerang | reperkusija | vraćanje
+1FA84	čarobni štapić	čarobni štapić | čarobnjak | magija | vještica
+1FA85	pinjata	party | pinjata | proslava | slavlje
+1FA86	babuške	babuška | babuške | lutka | rusija
+1FA95	bendžo	bendžo | muzika | žičani instrument
+1FA97	harmonika	harmonika | instrument | muzika
+1FA98	kongo bubnjevi	bubnjevi | kongo bubnjevi | kongo bubnjevo | ritam | udarac
+265F	pješak	pijun | pješak | potrošni | šah
+2660	pik	igra | karte | pik | znak
+2663	tref	igra | karte | tref | znak
+2665	srce	igra | karte | srce | znak
+2666	karo	igra | karo | karte | znak
+1F4B3	kreditna kartica	kartica | kredit | kreditna kartica | pare
+1F4B4	novčanica jena	jen | novac | novčanica | novčanica jena | valuta
+1F4B5	novčanica dolara	dolar | novac | novčanica | novčanica dolara | valuta
+1F4B6	novčanica eura	euro | novac | novčanica | novčanica eura | valuta
+1F4B7	novčanica funte	funta | novac | novčanica | novčanica funte | valuta
+1F4B9	grafikon sa jenom koji prikazuje rast	grafikon sa jenom koji prikazuje rast | jen | prikaz rasta | trend | valuta
+1F4BB	laptop	laptop | računar
+1F4BC	aktovka	aktovka
+1F4BD	disk	disk | minidisk | optički | računar
+1F4BE	disketa	disk | disketa | floppy
+1F4BF	cd	blu-ray | cd | disk | optički | računar
+1F4C0	dvd	blu-ray | disk | dvd | optički | računar
+1F4C1	fascikla	fajl | fascikla
+1F4C2	otvorena fascikla	fajl | fascikla | otvorena fascikla | otvoreno
+1F4C3	stranica blago savijena	dokument | stranica | stranica blago savijena | uvoj
+1F4C4	stranica okrenuta prema gore	dokument | stranica | stranica okrenuta prema gore
+1F4C5	kalendar	datum | kalendar
+1F4C6	kalendar na kidanje	kalendar | kalendar na kidanje
+1F4C7	rotirajući stalak za vizit kartice	rotirajući stalak za vizit kartice | vizit kartica | vizitka
+1F4C8	dijagram rasta	dijagram | dijagram rasta | grafikon | rast
+1F4C9	dijagram opadanja	dijagram | dijagram opadanja | grafikon | opadanje
+1F4CA	stupčasti grafikon	dijagram | grafikon | stupčasti grafikon
+1F4CB	tabla za držanje papira	clipboard | tabla za držanje papira
+1F4CC	pribadača	pribadača | špenadla
+1F4CD	okrugla pribadača	okrugla pribadača | pribadača | špenadla
+1F4CE	spajalica	spajalica
+1F4CF	linijar	lenjir | linijar
+1F4D0	trokutasti linijar	lenjir | linijar | trokut | trokutasti linijar | trougao
+1F4D1	markeri za knjige	bukmark | marker | markeri za knjige | oznaka
+1F4D2	rokovnik	rokovnik | sveska
+1F4D3	sveska	sveska
+1F4D4	sveska sa ukrasnim koricama	knjiga | korice | sveska | sveska sa ukrasnim koricama | ukrasne
+1F4D5	zatvorena knjiga	knjiga | zatvorena
+1F4D6	otvorena knjiga	knjiga | otvorena
+1F4D7	zelena knjiga	knjiga | zelena knjiga
+1F4D8	plava knjiga	knjiga | plava knjiga
+1F4D9	narandžasta knjiga	knjiga | narandžasta knjiga
+1F4DA	knjige	knjiga | knjige
+1F4DB	značka za ime	ime | značka | značka za ime
+1F4DC	svitak	papir | svitak
+1F4DD	bilješka	bilješka | olovka | papir | podsjetnik
+1F4DE	slušalica	slušalica | telefon
+1F4DF	pejdžer	pejdžer
+1F4E0	faks	faks | faks uređaj
+1F4E1	satelitska antena	antena | satelitska | tanjir
+1F4E2	zvučnik	glasno | razglas | zvučnik
+1F4E3	megafon	megafon | navijanje
+1F4E4	ladica za slanje pošiljke	kutija | ladica | ladica za slanje pošiljke | pismo | poslana pošta
+1F4E5	ladica za dolaznu pošiljku	dolazna pošta | kutija | ladica | ladica za dolaznu pošiljku | ladica za dolaznu poštu | primiti
+1F4E6	paket	kutija | paket
+1F4E7	e-pošta	e-mail | e-pošta | pošta
+1F4E8	pristigla koverta	e-mail | e-poruka | e-pošta | pismo | pristigla koverta | pristigla pošta
+1F4E9	koverta sa strelicom	e-mail | e-poruka | e-pošta | koverta sa strelicom | koverta sa strelicom prema dolje | odlazna pošta
+1F4EA	zatvoren sandučić sa spuštenom zastavicom	pošta | poštanski sandučić | zatvoren sandučić sa spuštenom zastavicom
+1F4EB	zatvoren sandučić sa podignutom zast.	pošta | poštanski sandučić | zatvoren sandučić sa podignutom zast. | zatvoren sandučić sa podignutom zastavicom
+1F4EC	otvoren sandučić sa podignutom zast.	otvoren | otvoren sandučić sa podignutom zast. | otvoren sandučić sa podignutom zastavicom | pošta | poštanski sandučić
+1F4ED	otvoren sandučić sa spuštenom zastavicom	otvoren | otvoren sandučić sa spuštenom zastavicom | pošta | poštanski sandučić
+1F4EE	poštansko sanduče	poštansko | sanduče
+1F4EF	poštanski rog	pošta | poštanski rog | sirena
+1F4F0	novine	novine | novosti | papir
+1F4F1	mobitel	mobilni | mobitel | telefon
+1F4F2	strelica pokazuje mobitel	mobilni | poziv | strelica | strelica pokazuje mobitel | telefon
+1F4F3	način rada vibracija	mobitel | način rada | način rada vibracija | telefon | vibracija
+1F4F4	mobilni isključen	isključen | mobilni isključen | mobitel | telefon
+1F4F5	zabranjeno korištenje mobilnog telefona	mobilni | ne | telefon | zabranjen | zabranjeno korištenje mobilnog telefona
+1F4F6	antena crtice	antena crtice | baterija | mobitel | signal | signal crtice | telefon
+1F4F7	fotoaparat	fotoaparat | kamera
+1F4F8	fotoaparat sa blicom	blic | fotoaparat sa blicom | kamera | video
+1F4F9	digitalna kamera	digitalna kamera | kamera | video
+1F4FA	televizor	televizor | tv | video
+1F4FB	radio	radio | video
+1F4FC	videokaseta	kaseta | vhs | video | video-kaseta | videokaseta
+1F4FD	projektor	film | kino | projektor | video
+1F4FF	brojanica	brojanica | molitva | perle | religija | tespih
+1F505	dugme zatamni	dugme zatamni | smanji | svjetlost | zatamni
+1F506	dugme posvijetli	dugme posvijetli | posvijetli | svijetlo | svjetlost
+1F507	zvuk isključen	jačina zvuka | nečujno | zvuk isključen
+1F508	zvučnik tiho	blago | zvučnik tiho
+1F509	zvučnik srednja glasnoća	srednje | zvučnik srednja glasnoća
+1F50A	zvučnik glasno	jako | zvučnik glasno
+1F50B	baterija	baterija
+1F50C	eletrični utikač	eletrični utikač | struja | utikač
+1F50D	povećalo okrenuto ulijevo	alat | povećalo | povećalo okrenuto ulijevo | staklo | traženje
+1F50E	povećalo okrenuto udesno	alat | povećalo | povećalo okrenuto udesno | staklo | traženje
+1F50F	katanac sa olovkom	katanac | katanac s olovkom | katanac sa olovkom | naliv pero | privatnost | tinta
+1F510	zatvoren katanac sa ključem	katanac | ključ | sigurno | zatvoren | zatvoren katanac sa ključem
+1F511	ključ	ključ | lozinka | šifra | zaključan
+1F512	katanac	katanac | zaključano
+1F513	otključan katanac	otključan katanac | otključano
+1F514	zvono	zvono
+1F515	prekriženo zvono	bez zvuka | nečujno | prekriženo zvono | utišano | zabranjeno
+1F516	marker	marker | oznaka
+1F517	karika	karika
+1F518	radio dugme	geometrija | radio | radio dugme | tipka
+1F51E	zabranjen pristup maloljetnima	18 | maloljetan | ne | osamnaest | zabranjen pristup maloljetnima
+1F51F	Kapica za tipku: 10	Kapica za tipku
+1F526	baterijska lampa	alat | baterijska lampa | elektrika | lampa | svjetlo
+1F527	ključ viljuškasti	alat | ključ viljuškasti
+1F528	čekić	alat | čekić
+1F529	šaraf i matica	alat | matica | šaraf | šaraf i matica | vijak
+1F52A	kuhinjski nož	alat | kuhanje | kuhinjski nož | nož | oružje
+1F52B	pištolj	alat | oružje | pištolj | revolver
+1F52C	mikroskop	alat | mikroskop
+1F52D	teleskop	alat | teleskop
+1F9BA	sigurnosni prsluk	opasnost | prsluk | sigurnosni prsluk | sigurnost
+1F9BB	uho sa slušnim aparatom	otežan sluh | pomagalo | uho sa slušnim aparatom
+1F9BC	elektromotorna invalidska kolica	elektromotorna invalidska kolica | elektromotorno pomagalo
+1F9BD	ručna invalidska kolica	pomagalo | ručna invalidska kolica
+1F9E9	slagalica	dio | međusobno povezano | puzle | slagalica | trag
+1F9EA	epruveta	eksperiment | epruveta | hemičar | hemija | laboratorija | nauka
+1F9EB	petri jelo	bakterija | biolog | biologija | kultura | laboratorija | petri jelo
+1F9EC	dnk	biolog | dnk | evolucija | gen | genetika | život
+1F9ED	kompas	kompas | navigacija | orijentacija
+1F9EE	računaljka	računaljka | računanje
+1F9EF	aparat za gašenje požara	aparat za gašenje požara | gašenje | požar | vatra
+1F9F0	kutija za alat	alat | kofer | kutija za alat | mehaničar
+1F9F1	cigla	cigla | cigle | glina | malter | zid
+1F9F2	magnet	magnet | magnetski | potkovica | privlačenje
+1F9F3	prtljag	pakovanje | prtljag | putovanje
+1F9F4	losion	losion | ovlaživač | šampon | zaštitni faktor
+1F9F5	konac	igla | konac | šivanje | šivenje | šplulna
+1F9F6	predivo	hekleraj | klupko | pletivo | predivo
+1F9F7	bašlija	bašlija | punk rock
+1F9F8	medo	igračka | medo | plišana
+1F9F9	metla	čišćenje | metenje | metla | vještica
+1F9FA	korpa	korpa | piknik | poljoprivreda | veš
+1F9FB	papirni ubrusi	papirni ubrusi | toalet papir
+1F9FC	sapun	čišćenje | kupanje | pranje | sapun | sapunica
+1F9FD	spužva	čišćenje | porozno | spužva | upijanje
+1F9FE	račun	evidencija | izvod | knjigovodstvo | račun | računovodstvo
+1F9FF	Fatimino oko	Fatimino oko
+1FA78	kapljica krvi	doniranje krvi | kapljica krvi | medicina | menstruacija | menzes
+1FA79	ljepljivi flaster	flaster | ljepljivi flaster
+1FA7A	stetoskop	doktor | medicina | srce | stetoskop
+1FA91	stolica	sjedalo | sjedište | sjediti | stolica
+1FA92	čakija	brijač | čakija | oštrica
+1FA93	sjekira	cijepati | drvo | sjeći | sjekira
+1FA94	diya lampa	diya | lampa | ulje
+1FA96	vojna kaciga	armija | kaciga | ratnik | vojna kaciga | vojnik | vojska
+1FA99	novčić	blago | metal | novac | novčić | srebro | zlato
+1FA9A	stolaraska pila	alat | drvena građa | pila | stolar | stolaraska pila
+1FA9B	šrafciger	alat | šrafciger
+1FA9C	ljestve	ljestve | lotre | merdevine | penjanje
+1FA9D	udica	hvatanje | udica | uhvatiti u zamku | ulov | uloviti | upecati
+1FA9E	ogledalo	metalno ogledalo | odraz | ogledalo
+1FA9F	prozor	okvir | otvaranje | pogled | prozor | svjež zrak | transparentno
+260E	telefon	telefon
+2620	lobanja i ukrštene kosti	čudovište | kosti | lice | lobanja | lobanja i ukrštene kosti | smrt
+2622	radioaktivno	radioaktivno | znak
+2623	biološka opasnost	biološka | opasnost | znak
+267F	invalidska kolica	invalidska kolica | prilaz
+2692	čekić i krampa	alat | čekić | čekić i krampa | rudarstvo
+2693	sidro	alat | brod | sidro
+2694	ukršteni mačevi	mačevi | oružje | ukršteni
+2695	medicinski simbol	aesculapius | medicina | medicinski simbol | osoblje
+2696	vaga	jednakost | pravda | uteg | vaga | zodijak
+2697	alembik	alat | alembik | hemija
+2699	zupčanik	alat | zubac | zupčanik
+269B	simbol atoma	ateista | atom | simbol atoma
+269C	ljiljan	ljiljan
+26A0	upozorenje	upozorenje
+26CF	krampa	alat | krampa | rudarstvo
+26D1	šljem s bijelim krstom	krst | pomoć | prva pomoć | šljem | šljem s bijelim krstom
+26D3	lanci	lanac | lanci
+26D4	zabranjen ulaz	ne | nema | saobraćaj | zabranjen ulaz | zabranjeno | zaustavljen
+2702	makaze	makaze | pribor
+2709	koverta	e-mail | e-pošta | koverta | pošta
+270F	olovka	olovka
+2712	crno pero	crno pero | olovka | pero
+2714	kvačica	✓ | kvačica | oznaka
+2716	znak množenja	križić | množenje | otkaži | x | znak množenja
+2753	crveni upitnik	? | crveni upitnik | interpunkcija | oznaka | pitanje | upitnik
+2757	crveni uzvičnik	! | crveni uzvičnik | interpunkcija | oznaka | uzvičnik | uzvik
+27A1	strelica nadesno	istok | smjer | strelica | strelica nadesno
+1F500	dugme za ispreskakani redoslijed	dugme za ispreskakani redoslijed | isprepletena | strjelica
+1F501	dugme za ponavljanje	dugme za ponavljanje | ponavljanje | strelica
+1F502	dugme za ponavljanje jednog zapisa	dugme za ponavljanje jednog zapisa | jedan | ponavljanje | strelica
+1F503	strelice vertikalno kretanje kazaljki na satu	smjer kretanja kazaljki na satu | strelica | strelice vertikalno kretanje kazaljki na satu
+1F504	strelice suprotno od smjera kretanja sata	smjer suprotan kretanju kazaljki na satu | strelica | strelice dugme suprotno kretanju kazaljki na satu | strelice suprotno od smjera kretanja sata
+1F519	strelica za nazad	nazad | strelica | strelica za nazad
+1F51A	strelica za kraj	kraj | strelica | strelica za kraj
+1F51B	strelica za uključeno	oznaka | strelica | strelica za uključeno | uključeno
+1F51C	strelica za uskoro	strelica | strelica za uskoro | uskoro
+1F51D	strelica za gore	gore | strelica | strelica za gore
+1F520	unos latinica veliko slovo	latinica | slova | unos | unos latinica veliko slovo | velika
+1F521	unos latinica malo slovo	latinica | mala | slova | unos | unos latinica malo slovo
+1F522	unos brojeva	1234 | brojevi | unos | unos brojeva
+1F523	unos simbola	unos | unos simbola
+1F524	unos slova latinica	abc | abeceda | latinica | slova | unos
+21B5	strelica nadolje s uglom ulijevo	strelica nadolje s uglom ulijevo
+21B0	strelica nagore s vrhom ulijevo	strelica nagore s vrhom ulijevo
+21B1	strelica nagore s vrhom udesno	strelica nagore s vrhom udesno
+21B2	strelica nadolje s vrhom ulijevo	strelica nadolje s vrhom ulijevo
+21B3	strelica nadolje s vrhom udesno	strelica nadolje s vrhom udesno
+21B4	strelica udesno s uglom nadolje	strelica udesno s uglom nadolje
+21E4	strelica ulijevo s crtom	strelica ulijevo s crtom
+21E5	strelica udesno s crtom	strelica udesno s crtom
+21B9	strelica sa crtom ulijevo preko strelice sa crtom udesno	strelica sa crtom ulijevo preko strelice sa crtom udesno
+21E7	šuplja strelica nagore	šuplja strelica nagore
+21EA	šuplja strelica nagore od crte	šuplja strelica nagore od crte
+21E6	šuplja strelica ulijevo	šuplja strelica ulijevo
+21E8	šuplja strelica udesno	šuplja strelica udesno
+21E9	šuplja strelica nadolje	šuplja strelica nadolje
+21DE	dvostruko precrtana strelica nagore	dvostruko precrtana strelica nagore
+21DF	dvostruko precrtana strelica nadolje	dvostruko precrtana strelica nadolje
+21B8	strelica sjever-zapad s durgom trakom	strelica sjever-zapad s durgom trakom
+21B6	polukružna strelica suprotno od kazaljke na satu	polukružna strelica suprotno od kazaljke na satu
+21B7	polukružna strelica u smjeru kazalje na satu	polukružna strelica u smjeru kazalje na satu
+21C5	strelice prema gore i prema dolje	dolje | gore | strelica | strelice prema gore i prema dolje
+21F5	strelica nadolje strelica nagore	strelica nadolje strelica nagore
+21A8	strelica nagore-nadolje s bazom	strelica nagore-nadolje s bazom
+21E0	isprekidana strelica ulijevo	isprekidana strelica ulijevo
+21E1	isprekidana strelica nagore	isprekidana strelica nagore
+21E2	isprekidana strelica udesno	isprekidana strelica udesno
+21E3	isprekidana strelica nadolje	isprekidana strelica nadolje
+21AB	strelica s petljom ulijevo	strelica s petljom ulijevo
+21AC	strelica s petljom udesno	strelica s petljom udesno
+2B05	strelica nalijevo	smjer | strelica | strelica nalijevo | zapad
+2B06	strelica nagore	sjever | smjer | strelica | strelica nagore
+2B07	strelica nadolje	jug | smjer | strelica | strelica nadolje

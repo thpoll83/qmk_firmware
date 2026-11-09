@@ -1,0 +1,1259 @@
+# emoji search keywords, tr, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	sırıtan yüz	gülen yüz | gülme | keyifli | lol | mutlu | neşeli | sırıtan yüz | sırıtma | yüz
+1F601	gülen gözlerle sırıtma	gülen gözlerle sırıtan yüz | gülen gözlerle sırıtma | gülen yüz | gülme | gülümseme | gülümseyen gözler | lol | neşeli | yüz
+1F602	sevinç gözyaşları	ağlamak | gözyaşı | gülmek | gülmekten ağlamak | haha | inanılmaz | kahkaha | katılmak | komik | mutluluk | neşe | sevinç
+1F603	ağzı açık sırıtma	ağzı açık gülen yüz | ağzı açık gülümseme | ağzı açık sırıtma | gülen yüz | gülme | gülümseme | lol | neşeli | yüz
+1F604	gülen gözlerle ağzı açık sırıtma	ağzı açık gülen gözler | gülen gözlerle ağzı açık gülümseme | gülen gözlerle ağzı açık sırıtma | gülen yüz | gülme | gülümseme | lol | neşeli | yüz
+1F605	soğuk terli ağzı açık gülümseme	heyecanlı | soğuk ter | soğuk terli ağzı açık gülümseme | stresli | yüz
+1F606	kapalı gözlerle ağzı açık sırıtma	32 diş | ağız | ahaha | çok komik | gözler kapalı | gülmek | hahaha | kahkaha | komik | lol | mutlu | yüz
+1F607	ışık halkalı gülümseme	gülümseme | hare | ışık halkalı gülümseme | ışık halkası | melek | yüz
+1F608	boynuzlu gülen yüz	boynuzlar | boynuzlu gülen yüz | boynuzlu gülümseme | gülümseme | şeytani gülümseme | yüz
+1F609	göz kırpan yüz	cilve | göz kırpan yüz | göz kırpma | yüz
+1F60A	ağzı açık gülme	ağzı açık gülme | gülen gözlerle gülümseme | gülümseyen gözler | gülümseyen yüz | gülümseyen yüz ve gözler | samimi | sevecen | yüz
+1F60B	lezzetli yiyecek beğenen yüz	gülümseyen yüz | harika yemek | keyifli yemek | lezzetli | lezzetli yiyecek beğenen yüz | oh oh harika | yüz
+1F60C	rahatlamış yüz	huzur | rahatlamış | yüz
+1F60D	kalp gözlü gülümseme	aşk | değer verme | gözler | kalp | kalp gözlü gülümseme | kalpler | romantik | yüz
+1F60E	güneş gözlüklü gülümseme	cool | gülümseme | güneş gözlüğü | güneş gözlükleri | güneş gözlükleriyle gülümseme | güneş gözlüklü gülümseme | havalı | janti | kanka | kanki | yüz
+1F60F	imalı gülümseme	hin | imalı gülümseme | kuşkucu | sinsi | yapmacık gülümseme | yapmacık gülümseyen | yapmacık gülümseyen yüz | yüz
+1F610	duygusuz yüz	duygusuz | etkilenmemiş | nötr | umurumda değil | yorum yok | yüz
+1F611	ifadesiz yüz	ifadesiz yüz | ifadesizlik | kıskanç | umurumda değil | yorum yok | yüz
+1F612	keyifsiz yüz	canı sıkkın | canım sıkıldı | garip | keyifsiz | mutsuz | neyse | sıkılmış | yüz
+1F613	soğuk ter	baş ağrısı | endişeli | soğuk ter | soğuk terli yüz | yüz
+1F614	düşünceli yüz	dargın | düşünceli | gemileri batmış | karamsar | üzgün | yüz
+1F615	kafası karışık yüz	bilmiyorum | emin olmayan | kafası karışık yüz | kafası karışmış | yüz
+1F616	kafası çok karışık yüz	kafası çok karışık yüz | kafası çok karışmış | kızgın | pişman | yüz
+1F617	öpen yüz	aşk | cilve | muah | muck | öpen yüz | öpücük | sevgi | yüz
+1F618	öpücük gönderen yüz	aşk | muah | muck | öptüm | öpücük gönderen yüz | romantik | sevgi | yüz
+1F619	gülen gözlerle öpen yüz	gülen gözlerle öpen yüz | gülümseme | gülümseyen gözler | gülümseyerek öpen yüz | öptüm | öpücük | yüz
+1F61A	kapalı gözlerle öpen yüz	aşk | gözler kapalı | gözler kapalı öpüşme | kapalı gözlerle öpen yüz | öpücük yollama | yüz
+1F61B	dil dışarıda	dil çıkarmış yüz | dil dışarıda | dil dışarıda kalmış | komik | şapşal | yüz
+1F61C	dili dışarda göz kırpma	dil dışardayken göz kırpma | dili dışarda göz kırpma | göz kırpma | haylaz | kışkırtma | şaka | yaramaz | yüz
+1F61D	dil dışarıda ve gözler kapalı	dil dışarıda | dil dışarıda ve gözler kapalı | gözler kapalı | gözler kapalı ve dil dışarıda | iğrenç | korkunç | öğk | yüz
+1F61E	memnuniyetsiz yüz	kırgın | kırgınlık | memnuniyetsiz yüz | mutsuz | umutsuz | yüz
+1F61F	endişeli yüz	endişeli | gergin | yüz
+1F620	öfkeli yüz	deli gibi | kızgın | mutsuz | öfkeli | yüz
+1F621	somurtkan yüz	deli gibi | kırmızı somurtkan yüz | kırmızı yüz | öfkeli | somurtkan | yüz
+1F622	ağlayan yüz	ağlama | ağlayan yüz | gözyaşları | mutsuz | üzgün | üzüntülü | yüz
+1F623	kararlı yüz	baş ağrısı | dayanıklı | dikkatli | inatçı | kararlı | konsantre olmuş | yüz | zorlanan yüz
+1F624	burnundan soluyan yüz	ben kazandım | ben kazandım yüzü | burnundan soluyan | burnundan soluyan yüz | kızgın | mutsuz | sinirli | yüz | zafer
+1F625	üzgün ama rahatlamış yüz	canı sıkkın | canı sıkkın ama rahatlamış | endişeli | kafası karışmış | karışık | rahatlamış | üzgün | üzgün ama rahatlamış yüz | yırttık! | yüz
+1F626	hoşnutsuz yüz	açık ağızlı hoşnutsuz yüz | ağzı açık | boş bulunmuş | hoşnutsuz | korkmuş | yüz
+1F627	kederli yüz	acı çeken | kederli | mutsuz | şaşkın | yüz
+1F628	korkulu yüz	endişeli | korkmuş | korkulu | yüz
+1F629	çok yorgun	acıkmış | çok yorgun | hayır | olamaz | pişman | uykulu | yorgun yüz | yorulmuş | yüz
+1F62A	uykulu yüz	ağlayan yüz | uykulu yüz | yorgun | yüz
+1F62B	yorgun yüz	hapşuran yüz | perişan | pişman | üzgün | yorgun | yüz
+1F62C	dişlerini gösteren yüz	dişçi | dişlerini gösteren yüz | dişlerini sıkmak | endişeli | tedirgin | yüz | yüzünü ekşitme
+1F62D	avaz avaz ağlayan yüz	ağlama | avaz avaz ağlama | avaz avaz ağlayan yüz | gözyaşları | mutsuz | üzgün | yüz
+1F62E	ağzı açık yüz	ağız | ağzı açık | ağzı açık yüz | şaşkın | şok | süpriz | yüz
+1F62F	şaşkın yüz	şaşırmış | şaşkın yüz | şok olmuş | yüz
+1F630	terli ve endişeli yüz	açık ağız | endişeli | korkmuş | korkulu yüz | soğuk ter | soğuk ter döken mavi yüz | terli ve endişeli yüz | yüz
+1F631	korkuyla çığlık atan yüz	korkmuş | korku | korku içinde bağıran yüz | korkunç | korkuyla çığlık atan yüz | korkuyla haykıran yüz | yüz
+1F632	afallamış yüz	afallamış | şaşkın | şoke olmuş | tamamen şoke olmuş | yüz
+1F633	kızarmış ve şaşkın yüz	kızarmış | kızarmış ve şaşkın yüz | şaşırmış | şaşkınlık içinde | şok | tuhaf | yüz
+1F634	uyuyan yüz	esnemek | iyi geceler | iyi uykular | şekerleme | tatlı rüyalar | uyku | uykulu | uyumak | yatak | yatmak | yorgun | zzz
+1F635	sersemlemiş yüz	başı dönen | baygınlık | hasta | sersemlemiş | yüz
+1F636	ağzı olmayan yüz	ağız | ağzı olmayan yüz | ifadesiz | sakin | sesi kesilmiş | sessiz | sır | suskun | yüz
+1F637	maskeli yüz	grip | hasta | maske | maskeli yüz | nezle | rahatsız | soğuk | tıbbi maske | yüz
+1F638	gülen gözlerle sırıtan kedi	göz | gülen gözlerle sırıtan kedi | gülümseme | kedi | kedi yüzü | sırıtan kedi yüzü | sırıtan ve gözleri gülümseyen kedi yüzü | sırıtma | yüz
+1F639	sevinç gözyaşları döken kedi	göz yaşı | gülen kedi | kahkaha atan kedi | kedi | kedi yüzü | komik kedi | sevinç | sevinç gözyaşları döken kedi | sevinç gözyaşları döken kedi yüzü | yüz
+1F63A	sırıtan kedi	açık | ağız | gülümseme | gülümseyen kedi yüzü | gülümseyen ve ağzı açık kedi yüzü | kedi | kedi yüzü | sırıtan | yüz
+1F63B	kalp gözlü gülümseyen kedi	aşık | aşk | gözler | gülümseme | gülümseyen ve kalp şeklinde gözleri olan kedi yüzü | kalp | kalp gözlü gülümseyen kedi | kalp gözlü gülümseyen kedi yüzü | kedi | kedi yüzü | sevgi | yüz
+1F63C	iğneleyici kedi yüzü	iğneleyici | iğneleyici gülümseme | iğneleyici kedi yüzü | ironik | kedi | kedi yüzü | kurnaz | muzır | yüz
+1F63D	öpen kedi	göz | gözler | kapalı | kedi | öpen | öptüm | öpücük | yüz
+1F63E	somurtan kedi	kedi | kedi yüzü | somurtan | somurtan kedi yüzü | somurtma | yüz
+1F63F	ağlayan kedi	ağlama | ağlayan kedi | ağlayan kedi yüzü | göz yaşı | kedi | kedi yüzü | üzgün | yüz
+1F640	korkuyla bağıran kedi	aman tanrım | kedi | korkuyla bağıran kedi | sahiden şaşırmış | şaşkın kedi yüzü | yüz
+1F641	biraz asık surat	asık surat | biraz asık surat | endişeli | yüz
+1F642	hafifçe gülümseyen yüz	gülme | gülümseme | hafifçe gülümseme | hafifçe gülümseyen yüz | mutlu | neşeli | yüz
+1F643	ters yüz	gülme | gülümseme | hehe | ters yüz | yüz
+1F644	gözlerini deviren yüz	bana ne | banane | beni ilgilendirmez | bilemiyorum | göz devirme | gözlerini deviren yüz | her neyse | hmm | neyse | yani | yüz
+1F648	görmedim	görmedim | görmeyen maymun | hayvan | komik | maymun | oyun | saklambaç
+1F649	duymadım	duymadım | duymayan maymun | hayvan | kulak | maymun | üç maymun
+1F64A	bilmiyorum	ağzı kapalı maymun | bilmiyorum | hayvan | konuşma | konuşmadım | maymun | söylemedim | söylemeyen maymun | sus | üç maymun
+1F910	ağzı fermuarlı yüz	ağız | ağzı fermuarlı | ağzı fermuarlı yüz | ağzım kapalı | fermuar | sır | yüz
+1F911	para ağızlı yüz	ağız | gözünü para bürümüş | para | para ağızlı yüz | para göz | yüz
+1F912	ağzında termometre olan yüz	ağzında termometre olan yüz | ateş | grip | hasta | nezle | termometre | yüz
+1F913	ukala yüz	akıllı | bilgili | bilmiş | çalışkan | gözlük | gözlüklü | inek öğrenci | ukala | yüz | zeki
+1F914	düşünen yüz	düşünen yüz | düşünme | yüz
+1F915	kafası sarılı yüz	bandaj | kafası sarılı yüz | yara | yaralı | yüz
+1F916	robot	canavar | robot | yüz
+1F917	kucaklayarak gülümseme	heyecanlı | kucaklama | kucaklayarak gülümseme | sarılma | yüz
+1F920	kovboy şapkalı yüz	kadın kovboy | kovboy | kovboy şapkalı yüz | kovboy şapkası yüzü | şapka | yüz
+1F921	palyaço yüzü	palyaço | palyaço yüzü | yüz
+1F922	kusmak üzere olan yüz	iğrenç | istifra | kusmak üzere | kusmak üzere olan yüz | midesi bulanmış | yüz
+1F923	gülmekten yerlere yatma	ahaha | çok komik | gözümden yaş geldi | gözyaşı | gülme | hahaha | kahkaha | komik | mutluluk | neşe | yerlere yatmak | yüz
+1F924	salya akıtan yüz	ağzı sulanmış | salya akıtan yüz | salya akıtma | yüz
+1F925	yalan söyleyen yüz	pinokyo | yalan söyleme | yalan söyleyen yüz | yüz
+1F926	yüzünü eliyle kapama	aman tanrım | çileden çıkma | inanamıyorum | inanmama | inanmıyorum | kızgınlık | öfke | olamaz | şok | yüzünü eliyle kapama
+1F927	hapşıran yüz	çok yaşa | grip | hapşıran yüz | hapşırma | hasta | nezle | yüz
+1F928	tek kaşı çatık yüz	güvenmeyen | şüpheci | surat | tek kaşı çatık yüz | tek kaşı havada
+1F929	yıldız çarpmış	gözler | heyecanlı | sırıtan | surat | vov | yıldız | yıldız çarpmış | yüz
+1F92A	çılgın surat	büyük | çılgın | deli | göz | gözler | küçük | surat
+1F92B	sus işareti yapan yüz	sessiz | şişt | şş | surat | sus işareti yapan yüz
+1F92C	ağzında semboller olan yüz	ağzında semboller olan yüz | kızgın | kızmış | küfür eden | küfür etmek | sembol surat | sensör | surat
+1F92D	eliyle ağzını kapatan yüz	a ah | eliyle ağzını kapatan yüz | sır | şok olmak | süpriz | surat | tüh
+1F92E	kusan yüz	hasta | istifra | kusan yüz | kusmak | kusmuk | surat
+1F92F	patlayan kafa	aklını başından almak | patlayan kafa | şaşırmış | şok olmuş | şoke | surat
+1F970	3 kalpli gülümseyen yüz	aşık | aşk | çarpılma | gülen yüz | hayranlık | ilk görüşte aşk | kalp | mutluluk | romantik | seni seviyorum | sevgi | üç kalpli yüz
+1F971	esneyen yüz	esneme | iyi geceler | iyi uykular | sıkıcı | sıkılmış | uykulu | uykusuz | uyuklama | uyumak | yatmak | yorgun | zzz
+1F972	gözü yaşlı gülümseyen yüz	acı | duygulanmış | gözyaşı | gülümseme | gururlu | hislenmiş | memnun | minnettar | mutluluk | rahatlamış | sevinç | yüz ifadesi
+1F973	partide eğlenen yüz	doğum günü | eğlence | iyi ki doğdun | konfeti | kutlama | mutlu yıllar | neşeli | oley | parti | partide eğlenen yüz | şapka | yılbaşı
+1F974	sarhoş yüz	akşamdan kalma | alkollü | baş dönmesi | çakırkeyif | kaymış gözler | sarhoş | şaşı | sersemlemiş | yamuk | yamuk ağız | yamulmak | yüz ifadesi
+1F975	kızarmış yüz	ateşlenmek | çarpıntı | hararet | kızarmış yüz | nefes nefese | sıcak | sıcak çarpması | terleme | tükenmek | yorgun
+1F976	üşümüş yüz	buz | buz gibi | buz kesme | donma | kış | mavi surat | morarmış yüz | sıfırın altı | soğuk | soğuktan donmak | titremek | üşümek
+1F978	gizlenmiş yüz	ajan | bıyık | burun | casus | gözlük | kimliğini gizlemek | kılık değiştirmek | maskeli | yüz | yüz ifadesi
+1F97A	yalvaran yüz	acıklı bakışlar | af dilemek | gözleri dolmak | koca göz | lütfen | merhamet | pişmanlık | üzgün | yalvaran gözler | yalvarırım | yüz ifadesi
+1FAE0	eriyen yüz	aşkından erimek | çözülme | eridim | erime | eriyen yüz | eriyorum | ifade | kaybolma | sıcak | sıvılaşma | utanç | yüz ifadesi
+1FAE1	selamlayan yüz	anlaştık | asker | başüstüne | emredersiniz | güneşli | ifade | komutan | onay | saygı | selam | selamlayan yüz | yüz ifadesi
+1FAE2	gözleri açık ve eliyle ağzını kapatan yüz	gözleri açık ve eliyle ağzını kapatan yüz | hayret | ifade | inanamama | inanılmaz | korku | şaşkınlık | şok | sürpriz | utanma | yüz ifadesi
+1FAE3	gizlice bakan yüz	çaktırmadan | dikizleme | gizlice | gizlice bakan yüz | gizlice bakma | gözetleme | ifade | korkma | saklanma | ürkek | utanma | yüz ifadesi
+1FAE4	yamuk ağızlı yüz	eh | hayal kırıklığı | hüsran | ifade | kararsız | kırgın | meh | memnuniyetsiz | şüpheli | şüpheli yüz | yüz ifadesi
+1FAE5	noktalı çizgili yüz	bilinmez | depresif | endişe | gizlenme | gizli | görünmez | içe dönük | kaybolma | kaygılı | noktalı çizgili yüz | yüz ifadesi
+1FAE7	baloncuk	baloncuk | hava kabarcığı | kabarcık | köpük | nesne | sabun | su | su altı | temiz
+1FAE8	sallanan yüz	deprem | olamaz | panik | sallama | sallanma | sersemlik | şok | sürpriz | titreme | titreşim | titreyen yüz | yüz
+1F381	paketlenmiş hediye	doğum günü | hediye | kutlama | paketlenmiş hediye | paketli
+1F389	parti konfetisi	harika | konfeti | kutlama | parti | parti konfetisi | tebrikler
+1F38A	konfeti	konfeti | konfeti topu | kutlama | top
+1F47B	hayalet	cadılar bayramı | hayalet | öcü | peri masalı | yüz
+1F47C	bebek melek	bebek | melek | peri masalı | yüz
+1F47D	uzaylı	dünya dışı | fantastik | peri masalı | UFO | uzaylı | yabancı | yaratık | yüz
+1F47E	uzaylı canavar	canavar | dünya dışı | peri masalı | UFO | uzaylı | yabancı canavar | yaratık | yüz
+1F47F	boynuzlu kızgın yüz	boynuzlu kızgın yüz | kızgın | küçük şeytan | şeytan | şeytani | yüz
+1F480	kafatası	cadılar bayramı | canavar | iskelet | kafatası | masal | ölüm | yüz
+1F481	elini yana yatırma	alaycı | bilgilendirme | dedikodu | el | elini yana yatırma | keyfin bilir | kişi | kişiler | neyse | saçını savurma | sen bilirsin | umurumda değil
+1F482	muhafız	bekçi | kişiler | koruma görevlisi | londra | muhafız
+1F489	şırınga	doktor | iğne | ilaç | şırınga
+1F48A	hap	doktor | hap | ilaç
+1F4A2	öfke simgesi	çizgi roman | duygu | öfke | öfke işareti | öfke simgesi | öfkeli
+1F4A4	zzz	çizgi roman | gece | iyi geceler | iyi uykular | uyku | uyuklama | uyuma | yorgun | zzz | Zzz
+1F4A5	çarpışma	bomba | bum | çarpışma | çarpışma işareti | çizgi roman | duygu | patlama
+1F4A6	ter damlası	çizgi roman | damla | duygu | fışkır | su | ter | ter damlası | terli
+1F4A7	damlacık	çizgi roman | damla | damlacık | su | ter | terli
+1F4A8	hızla fırlama	çizgi roman | duygu | fırla | gaz çıkarma | hızla fırlama | hızlı | kaçma | koş | koşma | rüzgar
+1F4A9	kaka	kaka | kaka yığını | leş | pislik | yığın
+1F4AB	baş dönmesi	baş dönmesi | çizgi roman | dilek | duygu | gece | gökyüzü | kayan yıldız | uzay | yıldızlar | yıldızları görme
+1F4AC	konuşma balonu	balon | çizgi roman | iletişim | iletişim balonu | konuşma balonu
+1F4AD	düşünce balonu	balon | bulut | çizgi roman | düşünce | düşünce balonu | fikir
+1F4AE	beyaz çiçek	beyaz çiçek | çiçek | çiçek damgası | damga | iyi çalışma damgası
+1F4A0	içinde noktalı karo	baklava | çizgi roman | elmas | elmas biçimli | geometrik | içinde noktalı baklava şekli | içinde noktalı elmas biçimi | içinde noktalı karo | karo
+1F4A1	ampul	ampul | bir fikrim var | çizgi roman | elektrik | ışık
+1F4A3	bomba	bomba | çizgi roman | duygu
+1F4AF	yüz puan	100 | 100 puan | skor | yuz | yüz puan
+1F4B0	para torbası	çanta | dolar çantası | para | para çuvalı | para torbası | zengin
+1F4B1	kambiyo	bozdurma | döviz | kambiyo | para
+1F4B2	dolar işareti	dolar | dolar işareti | koyu renk dolar işareti | para
+1F4B8	kanatlı para	banka | banknot | kanatlı para | para | uçan banknot
+1F525	ateş	alev | ateş | sıcak | yakmak
+1F52E	kristal küre	fal | fal bakma | kristal | küre
+1F440	gözler	bakmak | görmek | gözcü | gözetlemek | gözler | yüz
+1F441	göz	beden | göz | kahverengi göz
+1F442	kulak	dinlemek | gövde | gürültü | kulak | ses
+1F443	burun	burun | gövde | koklamak | koku | nefes | yüz
+1F444	ağız	ağız | aşk | dudaklar | gövde | öpme | öptüm | öpücük | yüz
+1F445	dil	ağız | dil | gövde | yalamak | yüz
+1F446	elinin tersiyle yukarıyı gösteren işaret parmağı	el | elin arkası | elinin tersiyle yukarıyı gösteren işaret parmağı | işaret parmağı | parmak | yukarıyı gösteren parmak
+1F447	elinin tersiyle aşağıyı gösteren işaret parmağı	aşağıyı gösteren parmak | el | elin arkası | elinin tersiyle aşağıyı gösteren işaret parmağı | işaret parmağı | parmak
+1F448	elinin tersiyle solu gösteren işaret parmağı	el | elin arkası | elinin tersiyle solu gösteren işaret parmağı | işaret parmağı | parmak | solu gösteren parmak
+1F449	elinin tersiyle sağı gösteren işaret parmağı	el | elin arkası | elinin tersiyle sağı gösteren işaret parmağı | işaret parmağı | parmak | sağı gösteren parmak
+1F44A	yaklaşan yumruk	anlaştık | bam | el | katılıyorum | tamam | yaklaşan yumruk | yumruk
+1F44B	el sallama	bay bay | bye | el | görüşürüz | güle güle | hey | merhaba | orada mısın | sallama | sallamak | selam
+1F44C	tamam işareti	anlaştık | el | harika | işaret | işte bu | mükemmel | müthiş | ok | süper | tam olarak | Tamam | tamamdır
+1F44D	baş parmak yukarıda	+1 | anlaştık | beğendim | bence de | el | iyi | onay | tamam
+1F44E	baş parmak aşağıda	aşağı | baş parmak | baş parmak aşağıda | el | işaret
+1F44F	el çırpma	alkış | bravo | çırpma | el | eller | işaret | tebrik
+1F450	eller açık	açık | el | eller açık | eller açık işareti | işaret
+261D	yukarıyı gösteren işaret parmağı	beden | el | gösterme | işaret parmağı | izin isteme | parmak | yukarı | yukarıyı gösteren işaret parmağı
+270A	yumruk kaldırma	el | havada yumruk | yumruk | yumruk kaldırma
+270B	el kaldırma	beş parmak | dur | dur işareti | el | el kaldırma | havada el
+270C	zafer işareti	barış | el | oleey | zafer | zafer eli | zafer işareti
+270D	yazı yazan el	beden | el | kalem tutma | yazı yazan el | yazma
+1F4AA	pazı	çizgi roman | esnek | güçlü | kas | kas esnetme | pazı | vücutcu
+1F590	parmaklar açık el kaldırma	avuç | beden | dur | el | izin isteme | parmak | parmaklar açık el kaldırma
+1F64C	eller havaya	çak | eller havaya | her iki el | kutlama | kutlamak için iki eli birden kaldırma | tebrikler
+1F64F	birleşen eller	birleşen eller | dua | dua etme | el | hareket
+1F90C	kıstırma hareketi yapan parmaklar	bravo | çok güzel | el | el hareketleri | harika | kıstırma hareketi yapan parmaklar | lezzetli | parmaklar
+1F90F	kıstırma hareketi yapan el	azıcık | bir tutam | biraz | kıstırma hareketi yapan el | kıstırma hareketi yapan parmaklar | küçük | parmaklar
+1F918	boynuz işareti	beden | boynuz | boynuz işareti | el | metal | metalci | parmak | rock | süper | yeah | yes
+1F919	beni ara işareti	ara | beni ara işareti | el | elle beni ara işareti
+1F91A	elinin tersini kaldırma	el | elinin tersi | elinin tersini kaldırma | kaldırma
+1F91B	sola bakan yumruk	el | güm | sola bakan yumruk | sola doğru | yumruk
+1F91C	sağa bakan yumruk	el | güm | sağa bakan yumruk | sağa doğru | yumruk
+1F91D	el sıkışma	anlaşma | el | el sıkışma | sallama | toplantı
+1F91E	şans dileme	çapraz | el | parmak | şans | şans dileme | söz verme
+1F91F	seni seviyorum işareti	el | seni seviyorum | seni seviyorum işareti | SS
+1F932	iki avuç açık	dilek | dua | dua eden eller | dua etmek | ellerini açmak | iki avuç açık
+1F9B4	kemik	iskelet | kemik | köpek | köpek kemiği | mama
+1F9B5	bacak	ayak | bacak | diz | tekme | tekme atmak | uzuv
+1F9B6	ayak	ayak | bilek | parmak | tekme | topuk
+1F9B7	diş	ağız | ağrı | azı dişi | beyaz | diş | diş ağrısı | diş hekimi | diş perisi | dişçi | inci gibi | köpek dişi | süt dişi
+1F9E0	beyin	akıllı | beyin | zeka | zeki
+1F9BE	mekanik kol	erişilebilirlik | mekanik kol | protez
+1FAC0	kalp	anatomi | kalp | kalp atışı | kan | kardiyoloji | kırmızı | merkez | nabız | organ
+1FAC1	akciğer	akciğer | beden | ciğerler | nefes | nefes almak | organ | soluk | solumak | solunum | vücut
+1FAE6	ısırılan dudak	davetkar | davetkâr | dudak | endişeli | flört | gergin | ısırılan dudak | korku | öpücük | rahatsız | seksi | tutku
+1FAF0	işaret parmağı ve baş parmak birbirine geçmiş el	<3 | aşk | borç | el | hesap | işaret parmağı ve baş parmak birbirine geçmiş el | kalp | nakit | pahalı | para | parmak | sevgi
+1FAF1	sağa bakan el	anlaşma | dokun | el | el uzatma | merhaba | sağ | sağa bakan el | selam | temas | tokalaşmak
+1FAF2	sola bakan el	anlaşma | dokun | el | el uzatma | merhaba | selam | sol | sola bakan el | temas | tokalaşma
+1FAF3	avuç içi aşağı bakan el	al | atmak | avuç | avuç içi aşağı bakan el | bırak | düşürmek | el | kışkışlamak | uzanmak | uzat
+1FAF4	avuç içi yukarı bakan el	avuç içi yukarı bakan el | çağırmak | çağrı | davet | el | el etmek | el uzatmak | gel | sunmak | teklif | yakalamak | yardım
+1FAF5	karşıyı işaret eden işaret parmağı	dürtmek | el | göstermek | işaret | işaret parmağı | karşıyı işaret eden işaret parmağı | onlar | orası | parmak | sen
+1FAF6	kalp oluşturan eller	<3 | aşk | birlikte | biz | el | kalp | kalp oluşturan eller | sevgi | seviyorum
+1FAF7	sola iten el	bekle | bekletme | çak | çakma | dur | durdurma | itme | reddetme | sola | sola iten el
+1FAF8	sağa iten el	bekle | bekletme | çak | çakma | dur | durdurma | itme | reddetme | sağa | sağa iten el
+2764	kırmızı kalp	aşk | kalp | kırmızı kalp
+1F380	kurdele	kız | kurdele | kutlama | pembe kurdele
+1F382	doğum günü pastası	dilek | doğum günü | doğum günü pastası | gıda | iyi ki doğdun | kek | krema | kutlama | mum | mutlu yıllar | nice senelere | parti | pasta | tatlı | üflemek | yaş günü | yemek | yiyecek
+1F383	kabak fener	cadılar bayramı | fener | halloween | Halloween | jack | kabak | kutlama
+1F384	Noel ağacı	ağaç | çam | kutlama | noel ağacı | Noel ağacı | süs | yılbaşı
+1F386	havai fişek	eğlence | havai fişek | ışık | kutlama
+1F387	fişek	fişek | havai fişek | kıvılcım | kutlama | patlama
+1F388	balon	balon | doğumgünü | kırmızı balon | kutlama | parti
+1F9E7	kırmızı zarf	çin hediyesi | hediye | hóngbāo | iyi şans | iyi şanslar | kırmızı kağıt | kırmızı zarf | lai see | para | uzak doğu | zarf
+1F9E8	maytap	ateş | bomba | dinamit | havai fişek | kırmızı | kıvılcım | maytap | patlama | patlayıcı
+1F38B	tanabata ağacı	ağaç | ağaç ve kağıt şeritler | japon | kağıt şeritler | kutlama | Star Festivali | tanabata ağacı
+1F38C	çapraz bayraklar	bayraklar | çapraz | çapraz Japon bayrakları | japon | kutlama
+1F38D	çam süsleme	bambu | çam | çam süsleme | Japon | kutlama | Yeni Yıl
+1F38E	Japon oyuncak bebekleri	Bebek Festivali | festival | Japon | japon oyuncak bebekleri | Japon oyuncak bebekleri | kutlama
+1F38F	sazan şekilli flama	flama | kutlama | sazan şekilli flama
+1F390	rüzgar çanı	çan | rüzgar çanı
+1F391	ay izleme	ay | ay izleme töreni | izleme | kutlama
+1F393	mezuniyet kepi	kep | kutlama | mezuniyet | mezuniyet kepi
+1F484	ruj	kırmızı ruj | kozmetik | makyaj | ruj
+1F485	oje sürme	kozmetik | manikür | oje | oje sürme | tırnak | tırnak bakımı
+1F48B	öpücük izi	aşk | dudak | dudaklar | öpücük | öpücük izi | romantizm | seksi
+1F48C	aşk mektubu	aşk mektubu | kalp | kalpli mektup | mektup | romantizm
+1F48D	yüzük	alyans | evlilik | nikah | nişan | pırlanta yüzük | romantizm | tek taş | yüzük
+1F48E	mücevher	elmas | mücevher | mücevher taşı | pırlanta | romantizm
+1F48F	öpücük	aşk | kişiler | öpücük | öpüşme | romantizm | seni seviyorum | yıldönümü
+1F490	buket	aşk | buket | çiçek | doğum günü | gül | romantizm
+1F491	kalpli çift	aşk | kadın erkek | kalp | kalpli çift | kişiler | romantizm
+1F492	düğün	düğün | evlenme | kilise | kilisede evlenme | romantizm
+1F493	çarpan kalp	aşk | çarpan kalp | duygu | heyecan | kalp | kalp atışı
+1F494	kırık kalp	duygu | hüsran | kalp | kırık kalp | kırılmış | kırma
+1F495	iki kalp	aşıklar | aşk | duygu | evlilik yıldönümü | iki kalp | seni seviyorum | sevgili
+1F496	pırıldayan kalp	duygu | heyecanlı | kalp | pembe kalp | pırıldayan
+1F497	büyüyen kalp	aşk | büyüyen kalp | coşkulu | duygu | kalp | sinirli
+1F498	ok saplanmış kalp	aşk | duygu | kalp | ok | ok saplanmış kalp
+1F499	mavi kalp	duygu | kalp | mavi
+1F49A	yeşil kalp	duygu | kalp | yeşil
+1F49B	sarı kalp	duygu | kalp | sarı
+1F49C	mor kalp	duygu | kalp | mor
+1F49D	kurdeleli kalp	duygu | kalp | kurdele | kurdeleli kalp | sevgililer günü
+1F49E	dönen kalpler	aşk | dönen | dönen kalpler | kalp | kawaii | sevimli
+1F49F	kalpli dekorasyon	kalp | kalpli dekorasyon
+1F90D	beyaz kalp	beyaz | kalp
+1F90E	kahverengi kalp	kahverengi | kalp
+1F9E1	turuncu kalp	kalp | portakal | turuncu
+1FA75	açık mavi kalp	açık mavi | açık mavi kalp | aşk | camgöbeği | deniz mavisi | duygu | gökyüzü mavisi | kalp | özel kişi | sevgi
+1FA76	gri kalp	aşk | duygu | gri | gümüş | kalp | kurşun | özel kişi | sevgi | taş
+1FA77	pembe kalp	aşk | beğen | duygu | kalp | özel kişi | pembe | seni seviyorum | sevgi | sevimli | şirin
+2763	kalp şeklinde ünlem işareti	işaret | kalp | kalp şeklinde ünlem işareti | noktalama | ünlem işareti
+2733	sekiz uçlu yıldız	* | asterisk | sekiz uçlu yıldız | yıldız
+2734	sekiz noktalı yıldız	* | sekiz noktalı yıldız | yıldız
+2747	parlama	* | parlama | pırıltı
+1F3E0	ev	bina | ev | konut | yuva
+1F3E1	bahçeli ev	bahçe | bahçeli ev | bina | ev | evim evim güzel evim | yazlık
+1F3E2	ofis binası	belediye | bina | devlet dairesi | ofis | ofis binası
+1F3E3	Japon postanesi	bina | Japon | japon postanesi | Japon postanesi | posta | postane
+1F3E4	postane	Avrupa | Avrupa postanesi | bina | posta | postane
+1F3E5	hastane	bina | hastane | klinik | sağlık ocağı
+1F3E6	banka	banka | bina | dolar | para
+1F3E7	ATM işareti	ATM işareti | otomatik | vezne
+1F3E8	otel	bina | kalacak yer | otel
+1F3E9	aşk oteli	aşk | aşk oteli | bina | otel
+1F3EA	sürekli açık market	24 saat açık | bina | market | sürekli açık | sürekli açık market
+1F3EB	okul	bina | ilkokul | lise | okul | okul binası
+1F3EC	çok katlı mağaza	büyük mağaza | çok katlı | çok katlı mağaza | mağaza
+1F3ED	fabrika	bina | fabrika | sanayi
+1F3EE	kırmızı kağıt fener	bar | fener | izakaya | kırmızı | kırmızı kağıt fener | restoran
+1F3EF	Japon şatosu	bina | japon kalesi | Japon şatosu | kale | şato
+1F3F0	şato	avrupalı | bina | kale | şato
+1F463	ayak izi	ayak | ayak izi | gövde | iz
+1F464	siluet büst	büst | kişiler | siluet
+1F465	siluet büstler	büst | kişiler | siluet | siluet büstler
+1F466	erkek çocuk	erkek | erkek çocuk | insan | kişiler | oğlan çocuk
+1F467	kız çocuk	genç | insan | kişiler | kız | kız çocuk
+1F468	erkek	adam | erkek | insan | kişiler | sarışın erkek
+1F469	kadın	insan | kadın | kişiler | sarışın kadın
+1F46A	aile	aile | anne | baba | bir erkek bir kadın bir erkek çocuk | çocuk | erkek çocuk | kişiler
+1F46B	el ele tutuşan erkek ve kadın	çift | el ele tutuşan | el ele tutuşan erkek ve kadın | el ele tutuşan kız ve erkek | erkek | kadın | kişiler | sevgili
+1F46C	el ele tutuşan erkekler	çift | el ele tutuşan | el ele tutuşan erkekler | el ele tutuşan iki erkek | erkek | ikizler | kişiler
+1F46D	el ele tutuşan kadınlar	arkadaş | çift | dost | el | el ele tutuşan | el ele tutuşan iki kadın | el ele tutuşan kadınlar | kadın | kadınlar | kanki | kişiler | kızkardeşler
+1F46E	polis memuru	ceza | erkek polis | görevli | gözaltı | kanun | kişi | kişiler | meslek | polis | polis memuru | tutuklama | yasa
+1F46F	tavşan kulaklı kişiler	aynısı | dans | dansçı | ikiz | kadın | parti | ruh ikizi | tavşan kulak | tavşan kulaklar | tavşan kulaklı kişiler | vücut
+1F470	duvaklı gelin	duvak | duvaklı gelin | evlilik | gelin | kişiler
+1F471	sarışın kişi	erkek | insan | kişi | kişiler | saç | sarı saçlı kişi | sarışın | yüz
+1F472	çin şapkalı erkek	adam | çin şapkalı erkek | çinli şapkası olan adam | erkek | gua pi mao | gua pi mao takan erkek | kişiler | meslek
+1F473	sarıklı kişi	başörtüsü | insan | kişi | kişiler | sarık | sarıklı erkek | sarıklı kişi | türban | türbanlı kişi | vücut
+1F474	yaşlı erkek	büyükbaba | dede | erkek | insan | kişiler | yaşlı
+1F475	yaşlı kadın	anneanne | babaanne | insan | kadın | kişiler | yaşlı
+1F476	bebek	bebek | kişiler
+1F477	inşaat işçisi	baret | inşaat | inşaat işçisi | iş | işçi | kişi | kişiler | meslek | onarım | tadilat | tamirat | vücut
+1F478	prenses	insan | kişiler | kraliçe | peri masalı | prenses
+1F479	dev	canavar | dev | japon | japon canavarı | korkunç | maske | oni | peri masalı | yaratık | yüz
+1F47A	goblin	canavar | cin | goblin | japon | japon cini | maske | peri masalı | tengu | yaratık | yüz
+1F483	dans eden kadın	dans | dans eden kadın | dansçı | festival | kadın dansçı | kişiler | meslek | tango
+1F486	yüz masajı	baş ağrısı | gerginlik | kişi | masaj | masaj yaptıran kişi | rahatlama | salon | spa | terapi | yüz masajı
+1F487	saç kesimi	bakım | güzellik | güzellik salonu | kes | kişi | kuaför | makas | saç kesimi | saç kestirme | saç stili | salon | tarz
+1F645	hayır hareketi	asla | hareket | hayır | insan | iyi değil | izin vermiyorum | izinsiz | kişi | olmaz | vücut | yasak | yüz
+1F646	tamam hareketi	aman tanrım | egzersiz | el | hareket | kişi | kocaman | oldu | tamam | tamam hareketi | vücut | yüz
+1F647	başını öne eğme	affet | affetme | bağışlama | başını öne eğme | eğilme | hareket | kişi | merhamet | özür dilerim | üzgünüm | yakarma | yalvarma
+1F64B	elini kaldırma	ben | burada | el | el kaldırma | hareket | kalkan el | kişi | merhaba | selam | soru | söz isteme
+1F64D	somurtma	beğenmeme | hareket | hayal kırıklığı | kişi | mimik | öfkeli | rahatsız | sıkkın | somurtan kişi | somurtma | surat asma
+1F64E	darılma	darılan kişi | darılma | hareket | hayal kırıklığı | kişi | kırgın | küsme | mimik | öfkeli | somurtma | surat asma | üzgün
+1F930	hamile kadın	hamile | kadın
+1F931	emziren kadın	anne sütü | bebek | emziren kadın | emzirme | göğüs | meme verme | süt izni
+1F933	selfie	kamera | kendi çekim | öz çekim | özçekim | selfie | telefon
+1F934	prens	insan | kraliyet | prens
+1F935	smokinli kişi	adam | damat | kişi | simokin | smokin | smokinli adam | smokinli kişi
+1F936	Noel Anne	anne | insan | noel | noel annesi
+1F937	omuz silkme	bilemem | bilmem | bilmeme | bilmiyorum | ilgisizlik | kararsız | kişi | ne bileyim | ne yapalım | omuz silkme | sanırım | vücut
+1F385	Noel Baba	insan | kutlama | noel | noel baba | Noel Baba | santa claus
+1F9B8	süper kahraman	iyi | iyilik | kahraman | kurtarmak | pelerin | süper güç | süper kahraman | uçmak
+1F9B9	süper kötü	acımasız | hain | kötü | kötü adam | pelerin | şeytani | suçlu | süper güç | süper kahraman | süper kötü | vampir | zalim
+1F9BF	mekanik bacak	erişilebilirlik | mekanik bacak | protez
+1F9D0	tek cam gözlüklü yüz	havalı | kendini beğenmiş | klas | surat | tek cam gözlük | tek cam gözlüklü yüz | varlıklı | zengin
+1F9D1	yetişkin	adam | insan | kişi | yetişkin | yüz
+1F9D2	çocuk	çocuk | genç | insan | kişi | küçük çocuk | surat
+1F9D3	yaşlı yetişkin	insan | kişi | yaşlı | yaşlı yetişkin
+1F9D4	sakallı kişi	insan | sakal | sakallı | sakallı kişi | yüz
+1F9D5	başörtülü kadın	baş örtüsü | başörtülü kadın | insan | türban | türbanlı
+1F9D6	buhar odasındaki kişi	buhar banyosu | buhar odası | buhar odasındaki kişi | hamam | rahatlamak | sauna
+1F9D7	dağcı kişi	dağ | dağcı kişi | kaya | kaya tırmanışı | tırmanıcı | tırmanmak
+1F9D8	lotus pozisyonundaki kişi	bağdaş kurmak | lotus pozisyonu | lotus pozisyonundaki kişi | meditasyon | rahatlamak | yoga
+1F9D9	büyücü	büyü | büyücü | cadı | sihir | sihirbaz
+1F9DA	peri	kanat | masal | mitoloji | Oberon | peri | Puck | Titania
+1F9DB	vampir	drakula | Drakula | hortlak | kan | vampir
+1F9DC	balık insan	balık insan | balık kadın | deniz altı | deniz kızı | mitoloji | peri masalı | poseidon | su altı | üç dişli çatal
+1F9DD	elf	elf | legolas | sihirli | sivri kulak
+1F9DE	cin	Alaaddin’in sihirli lambası | Alaaddinin sihirli lambası | cin | dilek | lamba | sihir
+1F9DF	zombi	hortlak | kişi | kıyamet | korku | korkunç | ürkünç | yaşayan ölü | yürüyen ölü | zombi
+1FAC2	kucaklaşan insanlar	aşk | elveda | güle güle | hoşçakal | hoşçakalın | insan | kucaklaşan insanlar | kucaklaşma | merhaba | sağol | sağolun | sarılma | selam | sevgi | teşekkür | teşekkürler | teselli | veda
+1FAC3	hamile adam	gaz | göbek | göbekli | hamile | hamile adam | iki canlı | insan | karnı şiş | obur | şişmiş
+1FAC4	hamile kişi	çok yemek | gaz | göbek | göbekli | hamile | hamile kişi | iki canlı | insan | karnı şiş | obur | şişmiş
+B9	üs bir	bir | üs bir | üst bir simgesi | üst simge
+B2	üs iki	iki | karesi alınmış | üs iki | üst iki simgesi | üst simge
+B3	üs üç	küpü alınmış | üç | üs üç | üst simge | üst üç simgesi
+207B	üs eksi	eksi | üs | üst eksi simgesi | üst simge
+B0	derece	derece | kanıt | saat
+B1	artı-eksi	artı-eksi
+D7	çarpma işareti	çarpım | çarpma | çarpma işareti
+F7	bölme işareti	bölme | bölme işareti | bölüm | obelus
+B5	mikro işareti	mikro işareti | ölçüm
+A9	telif hakkı işareti	c | telif hakkı | Telif hakkı | telif hakkı işareti
+AE	tescil işareti	r | tescil işareti | tescilli | Tescilli | tescilli işareti
+2122	ticari marka işareti	işaret | ticari marka | ticari marka işareti
+A7	bölüm	bölüm | bölüm işareti | paragraf | parça
+B6	paragraf işareti	paragraf | paragraf işareti | pilcrow
+B7	orta nokta	nokta | orta | ortaya konan nokta
+2022	madde imi	madde imi | nokta
+2013	tire	çizgi | tire
+2026	üç nokta	eksilti | eksiltme | üç nokta
+AB	sola bakan köşeli tırnak işareti	açılı | düzeltme işareti | köşeli çift ayraç | parantezler | sol | sola bakan köşeli tırnak işareti | tırnak işareti
+BB	sağa bakan köşeli tırnak işareti	açılı | düzeltme işareti | köşeli çift ayraç | parantezler | sağ | sağa bakan köşeli tırnak işareti | tırnak işareti
+2030	binde	binde | binde bir
+20AC	avro	avro | EUR | para birimi
+A3	sterlin	EGP | GBP | para birimi | sterlin
+A5	yen	CNY | JPY | para birimi | yen | yuan
+A2	sent	sent
+20B9	hint rupisi	hint rupisi | para birimi | rupi
+20BD	ruble	para birimi | ruble
+20A9	won	KPW | KRW | won
+20BA	Türk lirası	
+20BF	bitcoin	bitcoin | BTC
+20AA	Yeni İsrail şekeli	
+20AB	Vietnam dongu	
+20B1	pezo	pezo
+20BC	Azerbaycan manatı	
+20B4	Ukrayna grivnası	
+20A6	Nijerya nairası	
+20A1	Kosta Rika kolonu	
+20B2	Paraguay guaranisi	
+20B5	Gana sedisi	
+20B8	Kazakistan tengesi	
+20BE	Gürcistan larisi	
+20AE	Moğolistan tugriki	
+20AD	Laos kipi	
+20A8	rupi	rupi
+24	dolar	ABD | dolar | para | pezo
+58F	Ermenistan dramı	
+9F3	Bangladeş takası	
+E3F	Tayland bahtı	
+20A3	fransız frangı	fransız frangı
+20A4	lira	lira
+20A7	İspanyol Pezetası	
+20B0	alman senti	alman senti
+20B3	austral	austral
+20A2	cruzeiro	cruzeiro
+20A5	mill	mil | mill
+20B6	livre tournois	livre tournois
+20B7	spesmilo	spesmilo
+A4	Bilinmeyen Para Birimi	
+201E	sağ alt tırnak işareti	akıllı tırnak | çift tırnak | sağ alt tırnak işareti | tırnak
+201C	sol tırnak işareti	akıllı tırnak | çift tırnak | sol tırnak işareti | tırnak
+201D	sağ tırnak işareti	akıllı tırnak | çift tırnak | sağ tırnak işareti | tırnak
+2018	sol kesme işareti	akıllı tırnak | kesme işareti | sol kesme işareti | tek kesme | tırnak
+2019	sağ kesme işareti	akıllı tırnak | kesme işareti | sağ kesme işareti | tek kesme | tırnak
+A1	ters ünlem işareti	ters | ters ünlem işareti | ünlem | ünlem işareti
+BF	ters soru işareti	soru | soru işareti | ters | ters soru işareti
+2020	kama işareti	dikili taş | kama | kama işareti | obelus
+2021	çift kama işareti	çift | çift kama işareti | dikili taş | kama | obelus
+2044	kesir bölme işareti	kesir bölme işareti
+2032	üssü	üssü
+2033	iki üssü	iki üssü | üssü
+201A	sağ alt kesme işareti	alt tırnak | kesme | sağ alt kesme işareti | tırnak
+AC	olumsuzlama	olumsuzlama | olumsuzluk
+2117	ses kaydı telif hakkı	kayıt | ses | ses kaydı telif hakkı | telif hakkı
+2212	eksi işareti	çıkarma | eksi | eksi işareti
+2213	artı veya eksi	artı eksi | artı veya eksi | eksi artı | eksi veya artı
+2248	neredeyse eşit	neredeyse eşit | yaklaşık | yaklaştırma
+2260	eşit değildir	denksizlik | eşit değildir | eşitsizlik
+2261	denktir	aynı | denk | denktir | üçlü
+2264	küçük eşit	eşitsizlik | eşittir | küçük eşit | küçüktür
+2265	büyük eşit	büyük eşit | büyüktür | eşit | eşitsizlik
+226A	çok daha küçüktür	çok daha küçüktür | eşitsizlik | matematik
+226B	çok daha büyüktür	çok daha büyüktür | eşizliklik | matematik
+221E	sonsuzluk işareti	sonsuzluk | sonsuzluk işareti
+221A	karekök	kare | karekök | kök | radikal | radikal ifade | taban
+221D	orantılı	orantılı
+2211	n öğeli toplama	n öğeli toplama
+220F	n öğeli çarpım	n öğeli çarpım
+222B	entegral	entegral
+2202	kısmi fark	kısmi fark
+2206	artım	artım | üçgen
+2207	nabla	nabla | üçgen
+2200	tümü için	tümü için
+2203	vardır	vardır
+2205	boş küme	boş küme
+2208	elemanıdır	eleman | elemanıdır | içerir | küme | üyelik
+2209	elemanı değildir	elemanı değildir
+2229	kesişim	kesişim | küme
+222A	birleşim	birleşim | küme | toplam
+2282	alt kümesidir	alt küme | alt kümesi | alt kümesidir | küme
+2283	üst küme	küme işlemi | matematik | üst küme
+2286	alt küme eşittir	alt küme eşittir
+2287	üst küme eşittir	eşitlik | matematik | üst küme eşittir
+2227	mantıksal ve	mantıksal ve
+2295	daire içinde artı	artı | daire içinde artı
+2297	daire içinde çarpı	daire içinde çarpı
+22A5	üst iğne	üst iğne
+2220	açı	açı | dar açı
+2234	öyleyse	öyleyse
+2235	çünkü	çünkü
+2218	döngü işleci	döngü işleci
+2219	madde işareti işleci	madde işareti işleci
+22C5	nokta işleci	nokta işleci
+2215	bölme çizgisi	bölme çizgisi
+2190	solu gösteren ok	ok | sol | solu gösteren ok
+2191	yukarı gösteren ok	ok | yukarı | yukarı gösteren ok
+2192	sağı gösteren ok	ok | sağ | sağı gösteren ok
+2193	aşağı gösteren ok	aşağı | aşağı gösteren ok | ok
+2196	sol yukarı ok	ara yön | kuzey batı | ok | sol yukarı ok | yön
+2197	sağ yukarı ok	ara yön | kuzey doğu | ok | sağ yukarı ok | yön
+2198	sağ aşağı ok	ara yön | güney doğu | ok | sağ aşağı ok | yön
+2199	sol aşağı ok	ara yön | güney batı | ok | sol aşağı ok | yön
+2194	sol ve sağ ok	ok | sol ve sağ ok
+2195	yukarı ve aşağı ok	ok | yukarı ve aşağı ok
+21D0	sola çift ok	sola çift ok
+21D1	yukarı çift ok	yukarı çift ok
+21D2	sağa çift ok	sağa çift ok
+21D3	aşağı çift ok	aşağı çift ok
+21D6	kuzeybatı yönlü çift ok	kuzeybatı yönlü çift ok
+21D7	kuzeydoğu yönlü çift ok	kuzeydoğu yönlü çift ok
+21D8	güneydoğu yönlü çift ok	güneydoğu yönlü çift ok
+21D9	güneybatı yönlü çift ok	güneybatı yönlü çift ok
+21D4	sol sağ çift ok	sol sağ çift ok
+21A4	sola doğru çubuktan ok	sola doğru çubuktan ok
+21A6	sağa doğru çubuktan ok	sağa doğru çubuktan ok
+21A5	yukarı doğru çubuktan ok	yukarı doğru çubuktan ok
+21A7	aşağı doğru çubuktan ok	aşağı doğru çubuktan ok
+21A9	sola kıvrımlı sağ ok	ok | sola kıvrımlı sağ ok
+21AA	sağa kıvrımlı sol ok	ok | sağa kıvrımlı sol ok
+219E	sola doğru çift başlı ok	sola doğru çift başlı ok
+21A0	sağa doğru çift başlı ok	sağa doğru çift başlı ok
+219F	yukarı doğru çift başlı ok	yukarı doğru çift başlı ok
+21A1	aşağı doğru çift başlı ok	aşağı doğru çift başlı ok
+21A2	sola doğru kuyruklu ok	sola doğru kuyruklu ok
+21A3	sağa doğru kuyruklu ok	sağa doğru kuyruklu ok
+219A	sola doğru çizgili ok	sola doğru çizgili ok
+219B	sağa doğru çizgili ok	sağa doğru çizgili ok
+21AE	sol sağ çizgili ok	sol sağ çizgili ok
+21CD	sola çizgili çift ok	sola çizgili çift ok
+21CF	sağa çizgili çift ok	sağa çizgili çift ok
+21CE	sol sağ çizgili çift ok	sol sağ çizgili çift ok
+21C4	sol ok üzerinde sağ ok	sol ok üzerinde sağ ok
+21C6	altta sağa üstte sola bakan oklar	altta sağa üstte sola bakan oklar | ok | sağ | sol
+21CB	sağ zıpkın üstünde sol zıpkın	sağ zıpkın üstünde sol zıpkın
+21CC	sol zıpkın üstünde sağ zıpkın	sol zıpkın üstünde sağ zıpkın
+21BC	yukarı kancalı sol yönlü zıpkın	yukarı kancalı sol yönlü zıpkın
+21BD	aşağı kancalı sol yönlü zıpkın	aşağı kancalı sol yönlü zıpkın
+21C0	yukarı kancalı sağ yönlü zıpkın	yukarı kancalı sağ yönlü zıpkın
+21C1	aşağı kancalı sağ yönlü zıpkın	aşağı kancalı sağ yönlü zıpkın
+21BE	sağ kancalı yukarı yönlü zıpkın	sağ kancalı yukarı yönlü zıpkın
+21BF	sol kancalı yukarı yönlü zıpkın	sol kancalı yukarı yönlü zıpkın
+21C2	sağ kancalı aşağı yönlü zıpkın	sağ kancalı aşağı yönlü zıpkın
+21C3	sol kancalı aşağı yönlü zıpkın	sol kancalı aşağı yönlü zıpkın
+21C7	sola eşleştirilmiş oklar	sola eşleştirilmiş oklar
+21C9	aşağı doğru eşleştirilmiş oklar	aşağı doğru eşleştirilmiş oklar
+21C8	yukarı eşleştirilmiş oklar	yukarı eşleştirilmiş oklar
+21CA	aşağı eşleştirilmiş oklar	aşağı eşleştirilmiş oklar
+21DA	sola üçlü ok	sola üçlü ok
+21DB	sağa üçlü ok	sağa üçlü ok
+219C	sola doğru dalgalı ok	sola doğru dalgalı ok
+219D	sağa doğru dalgalı ok	sağa doğru dalgalı ok
+21DC	sola eğri ok	sola eğri ok
+21DD	sağa eğri ok	sağa eğri ok
+21AD	sol sağ dalgalı ok	sol sağ dalgalı ok
+21AF	aşağı yönlü zikzak ok	aşağı yönlü zikzak ok
+21BA	saat yönünün tersinde açık daireli ok	saat yönünün tersinde açık daireli ok
+21BB	saat yönünde açık daireli ok	saat yönünde açık daireli ok
+1F400	sıçan	hayvan | kemirgen | lağım faresi | sıçan
+1F401	fare	beyaz fare | fare | fil | hayvan | kemirgen
+1F402	öküz	boğa | boğa burcu | burçlar | çiftlik | hayvan | öküz
+1F403	manda	buffalo | hayvan | manda | su
+1F404	inek	büyükbaş hayvan | çiftlik | inek | siyah beyaz | süt
+1F405	kaplan	büyük kedi | etobur | hayvanat bahçesi | kaplan | kedigiller | vahşi
+1F406	leopar	büyük kedi | hayvan | hayvanat bahçesi | kedigiller | leopar | vahşi
+1F407	tavşan	diş | havuç | hayvan | kemirgen | pamuk | şirin | tavşan | zıp zıp
+1F408	kedi	hayvan | kedi | pisi pisi | sarman
+1F409	ejderha	çin | efsane | ejderha | hayvan | masal
+1F40A	timsah	hayvan | timsah
+1F40B	balina	balina | hayvan | okyanus
+1F40C	salyangoz	böcek | hayvan | salyangoz | sümüklü böcek | yavaş
+1F40D	yılan	hayvan | yılan
+1F40E	at	at | hayvan | yarış | yarış atı
+1F40F	koç	burç | hayvan | koç | koç burcu | orman
+1F410	keçi	burçlar | çiftlik | hayvan | keçi | koç | oğlak | oğlak burcu | oğlak burcu burçlar | peynir | süt
+1F411	koyun	çiftlik | dişi koyun | koyun | küçük baş hayvan | yün
+1F412	maymun	hayvan | maymun | muz | orman
+1F413	horoz	hayvan | horoz | kuş
+1F414	tavuk	hayvan | kuş | tavuk
+1F415	köpek	hav hav | hayvan | köpek | kuçu kuçu | süs köpeği
+1F416	domuz	çiftlik | dişi domuz | domuz | pembe domuz | şişko
+1F417	yaban domuzu	domuz | hayvan | inatçı | yaban domuzu
+1F418	fil	fil | hayvan | safari
+1F419	ahtapot	ahtapot | hayvan | okyanus
+1F41A	deniz kabuğu	deniz | deniz kabuğu | deniz sesi | hayvan | midye | okyanus | spiral deniz kabuğu
+1F41B	tırtıl	böcek | hayvan | kırkayak | tırtıl
+1F41C	karınca	bahçe | böcek | çalışkan | hayvan | karınca
+1F41D	bal arısı	arı | bal arısı | hayvan | iğne | vız vız
+1F41E	uğur böceği	benekli | böcek | hanım | hanımböceği | hayvan | uğur böceği
+1F41F	balık	balık | burç | deniz | hayvan | mavi balık
+1F420	tropikal balık	balık | hayvan | okyanus | tropikal balık
+1F421	balon balığı	balık | balon balığı | hayvan
+1F422	kaplumbağa	hayvan | kaplumbağa
+1F423	yumurtadan çıkan civciv	civciv | hayvan | kuluçka | kuluçka tavuğu | piliç | tavuk | yavru | yumurtadan çıkan civciv
+1F424	civciv	civciv | civciv başı | hayvan | piliç | tavuk | yavru
+1F425	önden civciv	civciv | hayvan | önden civciv | piliç | sarı civciv | şirin | tavuk | yavru | yüzü dönük civciv
+1F426	kuş	hayvan | kuş
+1F427	penguen	antartika | buz | hayvan | penguen | soğuk
+1F428	koala	hayvan | koala | koala ayısı
+1F429	kaniş	hayvan | kaniş | köpek
+1F42A	deve	deve | hayvan | hecin devesi | hörgüç
+1F42B	iki hörgüçlü deve	çöl | deve | hayvan | hörgüç | iki hörgüçlü deve | kinci | sahara
+1F42C	yunus	balık | deniz | hayvan | mavi yunus | okyanus | yunus
+1F42D	fare yüzü	fare | fare yüzü | hayvan | sıçan | yüz
+1F42E	inek yüzü	hayvan | inek | inek yüzü | yüz
+1F42F	kaplan yüzü	büyük kedi | etobur | hayvan | kaplan | kaplan yüzü | kedigiller | vahşi | yüz
+1F430	tavşan yüzü	havuç | hayvan | kemirgen | tavşan | tavşan yüzü | yüz
+1F431	kedi yüzü	ev hayvanı | hayvan | kedi | kedi yüzü | miyav | mındık | mırnav | pisi pisi | şirin | yüz
+1F432	ejderha yüzü	ejderha | ejderha yüzü | hayvan | masal | yüz
+1F433	su püskürten balina	balina | deniz | hayvan | mavi balina | okyanus | su püskürten | su püskürten balina
+1F434	at yüzü	at | at yüzü | hayvan | yüz
+1F435	maymun yüzü	hayvan | komik | maymun | maymun yüzü | meraklı maymun | muz | neşeli | yüz
+1F436	köpek yüzü	hayvan | köpek | köpek yüzü | yüz
+1F437	domuz yüzü	domuz | domuz yüzü | hayvan | yüz
+1F438	kurbağa	hayvan | kurbağa | kurbağa yüzü | vırak | yüz | zıp zıp
+1F439	hamster	evcil hayvan | hamster | hamster yüzü | hayvan | kemirgen | yüz
+1F43A	kurt	hayvan | kurt | kurt yüzü | orman | yüz
+1F43B	ayı	ayı | ayı yüzü | hayvan | orman | yüz
+1F43C	panda	bambu | hayvan | panda | panda yüzü | tembel | yüz
+1F43D	domuz burnu	burun | domuz | domuz burnu | hayvan | yüz
+1F43E	pençe izi	hayvan | iz | pati izi | pençe izi
+1F43F	sincap	fındık | sincap
+1F981	aslan	aslan | aslan yüzü | burç | hayvan | ormanların kralı | yüz
+1F982	akrep	akrep | burç | hayvan | iğne | zehir
+1F983	hindi	hayvan | hindi | kuş | şükran günü
+1F984	tek boynuzlu at	hayal | hayvan | sihirli | tek boynuz | tek boynuzlu at | unicorn | yüz
+1F985	kartal	amerika | beşiktaş | beyaz başlı kartal | hayvan | kara kartal | kartal | kuş
+1F986	ördek	hayvan | kuş | ördek | suna
+1F987	yarasa	drakula | hayvan | kan emen | kanatlı | kuş | mağara | siyah | vampir | yarasa
+1F988	köpek balığı	balık | deniz | hayvan | jaws | köpek balığı | okyanus
+1F989	baykuş	baykuş | bilge | hayvan | kuş
+1F98A	tilki	akıllı | hayvan | kurnaz | tilki | tilki yüzü | yüz
+1F98B	kelebek	böcek | kelebek | şirin
+1F98C	geyik	boynuz | geyik | hayvan | orman | ren geyiği
+1F98D	goril	goril | hayvan
+1F98E	kertenkele	hayvan | kertenkele | sürüngen
+1F98F	gergedan	afrika | gergedan | hayvan | safari
+1F990	karides	deniz | deniz mahsulü | kabuklu deniz hayvanı | karides | küçük | okyanus | yiyecek
+1F991	mürekkep balığı	mürekkep balığı | okyanus | yiyecek | yumuşakçalar sınıfı
+1F992	zürafa	hayvan | noktalar | puanlar | uzun | zürafa
+1F993	zebra	çizgili | hayvan | hızlı | şeritli | zebra
+1F994	kirpi	diken | dikenli | hayvan | kirpi | şirin
+1F995	soropod	brachiosaurus | brontosaurus | brontozor | dinazor | diplodocus | hayvan | korkunç | soropod
+1F996	T-Rex	dinazor | hayvan | korkunç | T-Rex | Tyrannosaurus Rex
+1F997	cırcır böceği	böcek | çekirge | cırcır böceği | hayvan
+1F998	kanguru	avustralya | Avustralya | hayvan | kanguru | kese | keseli | kulak | memeli | otçul | sıçrama | yavru | zıplamak
+1F999	lama	alpaka | beyaz | guanako | hayvan | lama | sevimli | tatlı | vikunya | yün
+1F99A	tavus kuşu	dişi tavus kuşu | gösterişli | gururlu | hayvan | kuş | mavi kuş | renkli | tavus kuşu | tavuskuşu | züppe
+1F99B	hipopotam	çamur | hayvan | hipo | hipopotam | mor hayvan | sevimli | su aygırı
+1F99C	papağan	hayvan | kırmızı kuş | kırmızı papağan | konuşma | korsan | kuş | papağan | renkli kuş
+1F99D	rakun	gri | hayvan | meraklı | rakun | sinsi
+1F99E	ıstakoz	bisque | deniz ürünü | hayvan | ıstakoz | kabuklu | kırmızı | kıskaç
+1F99F	sivrisinek	ateş | böcek | hastalık | sivrisinek | sıtma | virüs
+1F9A0	mikrop	amip | bakteri | bilim | deney | hastalık | hücre | laboratuvar | mikrop | tek hücreli | virüs
+1F9A1	porsuk	bal porsuğu | bela | hayvan | porsuk | sevimli
+1F9A2	kuğu	beyaz | çirkin ördek | çirkin ördek yavrusu | gaga | göl | hayvan | kuğu | kuğu yavrusu | kuş | ördek
+1F9A3	mamut	büyük | diş | fil dişi | hayvan | mamut | nesli tükenen | soyu tükenen | yünlü mamut
+1F9A4	dodo kuşu	büyük | dodo | dodo kuşu | hayvan | kuş | Mauritius | nesli tükenmiş | soyu tükenmiş
+1F9A5	tembel hayvan	tembel | tembel hayvan | yavaş
+1F9A6	su samuru	balık avlayan | oyuncu | su samuru
+1F9A7	orangutan	hayvan | maymun | orangutan
+1F9A8	kokarca	kokan | kokarca
+1F9A9	flamingo	flamingo | gösterişli | tropikal
+1F9AA	istiridye	dalma | inci | istiridye
+1F9AB	kunduz	baraj | diş | hayvan | kemirgen | kemirmek | kunduz | kuyruk
+1F9AC	bizon	bizon | boynuz | bufalo | hayvan | sürü
+1F9AD	fok	ayı balığı | balık | bıyıklı | deniz | deniz aslanı | denizaslanı | fok | fok balığı | hayvan | okyanus
+1F9AE	rehber köpek	erişilebilirlik | görme engelli | rehber | rehber köpek
+1FABC	denizanası	ahh | akvaryum | çarpma | deniz | denizanası | dokunaç | hayvan | iğne | medüz | okyanus | omurgasız | plankton | sokma | yanma
+1F330	kestane	ağaç | bitki | gıda | kestane
+1F331	filizlenme	fide | filiz | filizlenme | genç | genç bitki | yeşil
+1F332	yaprak dökmeyen ağaç	ağaç | çam | noel ağacı | orman | yaprak dökmeyen | yaprak dökmeyen ağaç | yeni yıl | yeşil
+1F333	yaprak döken ağaç	ağaç | orman | yaprak döken | yaprak döken ağaç | yeşil ağaç
+1F334	palmiye ağacı	ağaç | palmiye | palmiye ağacı | yaz | yeşil
+1F335	kaktüs	bitki | çöl | diken | kaktüs
+1F337	lale	bitki | çiçek | kırmızı lale | lale
+1F338	kiraz çiçeği	bahar | çiçek | çiçek izleme | kiraz | kiraz çiçeği
+1F339	gül	aşk | bitki | çiçek | gül | kırmızı gül
+1F33A	çingülü	Atatürk çiçeği | bitki | çiçek | çingülü | hatmi çiçeği
+1F33B	ayçiçeği	ayçiçeği | bitki | çiçek | güneş
+1F33C	çiçek açma	bitki | çiçek | çiçek açma | sarı çiçek
+1F33D	mısır koçanı	başak | gıda | mısır | mısır başağı | mısır koçanı
+1F33E	pirinç bitkisi	başak | pirinç | pirinç başağı | pirinç bitkisi
+1F33F	ot	bitki | ot | yaprak
+1F340	dört yapraklı yonca	bitki | dört | dört yapraklı yonca | iskoç | şans | şanslı | yaprak | yeşil | yonca
+1F341	akçaağaç yaprağı	akçaağaç yaprağı | düşen yaprak | kırmızı yaprak | sarı yaprak | sonbahar | turuncu yaprak | yaprak
+1F342	düşen yapraklar	düşen | düşmüş | güz | sonbahar | yaprak | yapraklar
+1F343	rüzgardaki yaprak	esen | rüzgar | rüzgardaki yaprak | yaprak
+1F344	mantar	bitki | kırmızı mantar | mantar | masal
+1FAB0	karasinek	at sineği | böcek | çürüme | hastalık | hayvan | karasinek | kurt sineği | larva | sinek | uçmak
+1FAB1	solucan	hayvan | kurt | kurtçuk | parazit | solucan | sürüngen
+1FAB2	böcek	böcek | haşere | hayvan
+1FAB3	hamam böceği	böcek | hamam böceği | haşere | hayvan | iğrenç | kabuklu | karafatma
+1FAB4	saksı bitkisi	bitki | çiçek | dekor | doğa | ev | ev bitkisi | saksı | saksı bitkisi | yeşil | yetiştirme
+1FAB5	kütük	ağaç | ahşap | kereste | kütük | odun | seyahat | tomruk
+1FAB6	kuş tüyü	gıdıklamak | hafif | hayvan | kuş | kuş tüyü | tüy | tüylü | uçma
+1FAB7	nilüfer	bitki | Budizm | çiçek | Hinduizm | huzur | lotus | namaste | nilüfer | saflık | sakin | yoga
+1FAB8	mercan	canlı | dalış | deniz | doğa | hayvan | iklim değişikliği | mercan | okyanus | resif | su altı
+1FAB9	boş yuva	boş yuva | dal | doğa | ev | kuş | yuva
+1FABA	yumurta bulunan yuva	dal | doğa | hayvan | huzur | kuş | kuş yuvası | yavru kuş | yumurta | yumurta bulunan yuva | yuva
+1FABB	sümbül	acı bakla | aslanağzı | bahar | bitki | çiçek | doğa | eflatun | lavanta | lila | lupin | mor | sümbül
+2618	yonca	bitki | yeşil yaprak | yonca
+1F347	üzüm	gıda | meyve | salkım | üzüm
+1F348	kavun	gıda | kavun | meyve | meze | rakı | yemek
+1F349	karpuz	gıda | karpuz | meyve
+1F34A	mandalina	gıda | mandalina | meyve | portakal | turunç
+1F34B	limon	gıda | limon | meyve | narenciye
+1F34C	muz	gıda | maymun | meyve | muz
+1F34D	ananas	ananas | gıda | meyve | tropik
+1F34E	kırmızı elma	elma | gıda | kırmızı | meyve
+1F34F	yeşil elma	ekşi elma | elma | gıda | meyve | yeşil | yiyecek
+1F350	armut	armut | ayı | gıda | meyve
+1F351	şeftali	gıda | meyve | şeftali
+1F352	kiraz	gıda | kiraz | meyve
+1F353	çilek	çilek | gıda | meyve | yumuşak meyve
+1F336	acı biber	acı | biber | bitki | gıda | kırmızı biber
+1F354	hamburger	çizburger | gıda | hamburger | restoran | yemek | yiyecek
+1F355	pizza dilimi	dilim | gıda | peynirli pizza | pizza | pizza dilimi | restoran | yiyecek
+1F356	kemikli et	et | gıda | kemikli et | restoran | yemek
+1F357	tavuk butu	but | gıda | restoran | tavuk | tavuk butu | yemek
+1F358	pirinç gevreği	gıda | pirinç | pirinç gevreği | yemek
+1F359	pirinç topu	gıda | onigiri | pirinç | pirinç topu | restoran | yemek | yiyecek
+1F35A	pilav	gıda | pilav | pirinç | restoran
+1F35B	körili pilav	gıda | köri | körili pilav | pirinç | restoran | yemek
+1F35C	erişte	buharda pişmiş | erişte | gıda | makarna | noodle | noodle tabağı | restoran | tabak
+1F35D	spagetti	gıda | makarna | restoran | spagetti | yemek
+1F35E	ekmek	ekmek | ekmek dilimi | gıda | kahvaltı | restoran | yemek
+1F35F	patates kızartması	gıda | kızartma patates | McDonald’s | patates kızartması | restoran
+1F360	fırınlanmış patates	fırınlanmış patates | fırınlanmış tatlı patates | gıda | restoran | tatlı | tatlı patates | tırınlanmış
+1F361	pirinç tatlısı	çubukta pirinç tatlısı topları | dango | gıda | Japon pirinç tatlısı | pirinç tatlısı | pirinç tatlısı topları | restoran | tatlı
+1F362	oden	çubuk | çubukta deniz ürünleri | gıda | kebap | oden | restoran | şiş kebap
+1F363	suşi	çiğ balık | gıda | japon | restoran | sushi | suşi | suşi nigiri
+1F364	kızarmış karides	deniz ürünü | gıda | karides | kızarmış karides | restoran | yiyecek
+1F365	balık köftesi	balık | balık köftesi | çörek | gıda | restoran | rulo balık köftesi | yiyecek
+1F366	yumuşak dondurma	dondurma | dondurma külahı | gıda | krema | külah | restoran | vanilyalı dondurma | yumuşak dondurma
+1F367	meyveli buz	buz | meyveli | restoran
+1F368	dondurma	buz | dondurma | gıda | krema | kup | restoran | tatlı
+1F369	donut	çikolatalı donut | çikolatalı lokma | donat | donut | doughnut | gıda | restoran | tatlı | yiyecek
+1F36A	kurabiye	çikolatalı kurabiye | cookie | gıda | kurabiye | restoran
+1F36B	çikolata	bar | çikolata | çikolata barı | gıda | restoran | tatlı
+1F36C	şekerleme	bayram | restoran | şeker | şekerleme
+1F36D	lolipop	bayram | çocuk | gıda | lolipop | restoran | şeker | şekerleme
+1F36E	krem karamel	gıda | krem karamel | puding | restoran | tatlı
+1F36F	bal kabı	bal | bal kabı | gıda | kahvaltı | kap | restoran | tatlı
+1F370	pasta dilimi	dilim pasta | doğum günü | gıda | pasta | pasta dilimi | restoran
+1F371	bento	bento | bento paketi | gıda | paket | restoran | sushi | yemek
+1F372	yemek tenceresi	gıda | restoran | tencere yemeği | yahni | yemek | yemek tenceresi | yiyecek
+1F373	yemek pişirme	gıda | kahvaltı | kızartma tavası | pişirme | restoran | sahanda yumurta | tavada yumurta | yemek | yiyecek | yumurta
+1F374	çatal ve bıçak	aç | akşam yemeği | beslenmek | bıçak | brunch | çatal | çatal ve bıçak | eline sağlık | kahvaltı | leziz | meyhane | mutfak | öğle yemeği | pişirmek | restoran | yemek | yiyecek
+1F375	çay fincanı	çay | çay fincanı | içecek | yeşil çay
+1F376	sake	bar | fincan | içecek | restoran | sake | sake şişesi ve fincanı | şişe
+1F377	şarap kadehi	bar | bardak | bardak şarap | içecek | içedek | kadeh | kırmızı şarap | restoran | şarap bardağı | şarap kadehi
+1F378	kokteyl kadehi	bar | kokteyl | kokteyl bardağı | kokteyl kadehi | restoran
+1F379	tropik içecek	bar | içecek | kokteyl | restoran | tropik
+1F37A	bira kupası	bar | bira kupası | kupa | restoran
+1F37B	bira kupaları tokuşturma	bar | bira | bira kupaları tokuşturma | içki | kupa | kupalar | restoran
+1F37C	biberon	bebek | biberon | içecek | küçük şişe | şişe | süt
+1F37D	tabakla birlikte çatal ve bıçak	bıçak | çatal | tabak | tabakla birlikte çatal ve bıçak | yemek
+1F37E	patlayan mantarlı şişe	bar | içki | kutlama | mantar | patlayan mantarlı şişe | şampanya | şişe
+1F37F	patlamış mısır	gıda | mısır | patlamış mısır | sinema
+1F950	kruvasan	ay çöreği | ekmek | fransız | gıda | kruvasan | pastane | yiyecek
+1F951	avokado	avokado | gıda | meyve | tropik | yiyecek
+1F952	salatalık	gıda | hıyar | salatalık | sebze | turşu | yiyecek
+1F953	domuz pastırması	bacon | domuz pastırması | et | gıda | kahvaltı | yiyecek
+1F954	patates	gıda | patates | sebze | yiyecek
+1F955	havuç	gıda | havuç | sebze | tavşan | yiyecek
+1F956	baget ekmek	baget | ekmek | fransız | gıda | yiyecek
+1F957	yeşil salata	gıda | sağlıklı | salata | yemek | yeşil | yiyecek
+1F958	sahanda yemek	gıda | güveç | kahvaltı | krep tavası | küçük | menemen | paella | sahanda yemek | tava | yemek | yiyecek
+1F959	dürüm	döner | dürüm | ekmek arası | falafel | gıda | kebap | pide | pide arası | sarma | yiyecek
+1F95A	yumurta	gıda | kahvaltı | tavuk | yiyecek | yumurta
+1F95B	süt bardağı	bardak | gıda | içecek | süt | süt bardağı
+1F95C	yer fıstığı	fındık | fıstık | gıda | kuruyemiş | sebze | yer fıstığı | yiyecek
+1F95D	kivi	gıda | kivi | meyve | yiyecek
+1F95E	krep	gıda | gözleme | kahvaltı | krep | pancake | pankek | yiyecek
+1F95F	mantı	empanada | gıda | gyōza | hamur köftesi | haşlanmış içli hamur | jiaozi | mantı | pierogi | potsticker
+1F960	fal kurabiyesi	fal kurabiyesi | gıda | içinden fal çıkan çin kurabiye | kehanet | şans kurabiyesi | talih kurabiyesi
+1F961	yiyecek paketi	çin yemeği | eve servis | gıda | kutu | paket yemek | yemek | yiyecek | yiyecek paketi
+1F962	yemek çubukları	chopsticks | çin yemek çubuğu | yemek çubuğu | yemek çubukları
+1F963	kaşıklı kase	çorba | gıda | kahvaltı | kase | kaşıklı kase | pirinç lapası | tahıl gevreği | yemek
+1F964	pipetli bardak	ayran | gazoz | içecek | kamışlı bardak | kola | pipetli bardak | plastik bardak
+1F965	Hindistan cevizi	gıda | hindistan cevizi | Hindistan cevizi | maymun | palmiye | pina colada | tropikal
+1F966	brokoli	bitki | brokoli | gıda | sebze | yabani lahana | yemek | yeşil
+1F967	tart	elmalı pay | gıda | pasta | pay | poğaça | şeftalili pay | tart | tatlı | yemek
+1F968	pretzel	burgu | çubuk kraker | gıda | pretzel
+1F969	parça et	biftek | bonfile | et | gıda | ızgara | kırmızı et | kuşbaşı | parça et | sote | steak | yemek
+1F96A	sandviç	ekmek | gıda | sandviç | tost | yemek
+1F96B	konserve gıda	konserve | konserve domates | konserve gıda
+1F96C	yeşil yapraklı sebze	çin lahanası | karalahana | lahana | marul | salata | sebze | yaprak | yemek | yeşil | yeşil yapraklı sebze | yeşillik | yiyecek
+1F96D	mango	mango | meyve | tropik | tropikal | yiyecek
+1F96E	ay pastası	ay pastası | çörek | festival | kek | pasta | sonbahar | tatlı | yemek | yiyecek | yuèbǐng
+1F96F	simit	bagel | donut | ekmek | fırın | kahvaltı | pasta | peynirli simit | simit | sürme peynir
+1F9C0	peynir dilimi	fare | gıda | peynir | peynir dilimi
+1F9C1	cupcake	cupcake | fırın | kapkek | kek | krema | muffin | pasta | pembe krema | şekerli | tatlı | top kek | yemek
+1F9C2	tuz	baharat | baharatlık | beyaz | çeşni | tuz | tuzlu | tuzluk | yemek
+1F9C3	içecek kutusu	içecek | içecek kutusu | kutu | kutu meyve suyu | meyve suyu | pipet
+1F9C4	sarımsak	baharat | sarımsak
+1F9C5	soğan	baharat | sebze | soğan | yiyecek
+1F9C6	falafel	falafel | köfte | nohut
+1F9C7	waffle	hamur | kahvaltı | vafıl | waffle
+1F9C8	tereyağı	süt ürünü | tereyağ | tereyağı
+1F9C9	mate çayı	içecek | mate çayı
+1F9CA	buz küpü	aysberg | buz | buz küpü | soğuk
+1F9CB	bubble tea	baloncuk | boba | bubble tea | çay | içecek | inci | inci çayı | süt | tayvan
+1FAD0	yaban mersini	dağ mersini | likapa | mavi | mersin | meyve | orman meyvesi | yaban mersini | yemek | yiyecek
+1FAD1	dolma biber	biber | dolma | dolmalık biber | sebze | yemek | yeşil biber | yiyecek
+1FAD2	zeytin	dal | yemek | yeşil zeytin | yiyecek | zeytin | zeytin dalı
+1FAD3	yassı ekmek	bazlama | ekmek | lavaş | naan | pide | pita | yassı ekmek | yemek | yiyecek
+1FAD4	tamale	dürüm | Meksika yemeği | tamale | yemek | yiyecek
+1FAD5	fondü	çikolata | çubuk | erimiş | fondü | kap | kayak | peynir | raklet | yemek | yiyecek
+1FAD6	demlik	çay | çay demlemek | çaydanlık | demleme | demlik | içecek
+1FAD7	dökülen sıvı	bardak | boş | cam | dök | dökme | dökmek | dökülen sıvı | içecek | kaza | sıvı
+1FAD8	fasulye	baklagil | barbunya | bitki | fasulye | gıda | tohum | vegan | vejetaryen | yiyecek
+1FAD9	kavanoz	baharatlık | bitmiş | boş | cam | kap | kavanoz | mutfak | saklama kabı | sos | tamtakır
+1FADA	kök zencefil	baharat | bira | bitki | çeşni | doğal | kök | sağlık | şifalı | yiyecek | yumru | zencefil
+1FADB	kabuklu bezelye	bakla | baklagil | barbunya | bezelye | edamame | fasulye | fasulye sırığı | kabuk | kabuklu bezelye | sebze | vejetaryen
+2615	sıcak içecek	çay | dumanı tüten | içecek | kahve | sıcak
+2600	güneş	aydınlık | güneş | güneşli | hava durumu | ışık | sıcak | uzay
+2601	bulut	bulut | hava durumu
+2602	şemsiye	giyim | hava durumu | mor şemsiye | şemsiye | yağmur
+2603	kardan adam	hava durumu | kar | kardan adam | kış | soğuk
+2614	yağmur damlalı şemsiye	giyim | hava durumu | ıslak | mor şemsiye | şemsiye | yağmur | yağmur damlalı şemsiye | yağmurlu
+26A1	yüksek voltaj	doğa | elektrik | fırtına | işaret | şimşek | tehlike | voltaj | yıldırım | yüksek | yüksek voltaj işareti | yüksek voltaj tehlikesi
+26C4	kar yağmadan kardan adam	kar | kar yağmadan kardan adam | kardan adam | karsız kardan adam | kış | soğuk
+26C5	bulutlar ardındaki güneş	bulut | bulutlar ardındaki güneş | bulutlu güneş | güneş | hava | parçalı bulutlu
+26C8	şimşek ve yağmurlu bulut	bulut | gökgürültüsü | hava durumu | şimşek ve yağmurlu bulut | yağmur
+2744	kar tanesi	buz | hava durumu | kar | kar tanesi | kış | soğuk
+1F300	siklon	baş dönmesi | hortum | siklon | tayfun
+1F301	sisli	sis | sisli
+1F302	kapalı şemsiye	kapalı şemsiye | şemsiye | yağmur | yağmurlu
+1F303	yıldızlı gece	gece | şehir | yıldızlar | yıldızlı gece
+1F304	dağların arasından güneşin doğuşu	dağ | dağların arasından güneşin doğuşu | dağların ardında güneş | güneş | sabah güneşi
+1F305	güneşin doğuşu	gün doğumu | güneş | güneşin doğuşu | sabah | sabah güneşi | şafak
+1F306	şehirde alacakaranlık	akşam | alacakaranlık | bina | gün batımı | manzara | şehir | şehirde alacakaranlık
+1F307	gün batımı	alacakaranlık | bina | binaların üzerinden gün batımı | gökdelen | gün batımı | maslak | new york | şehir
+1F308	gökkuşağı	biseksüel | gay | gökkuşağı | hava durumu | lezbiyen | yağmur
+1F309	gece vakti köprü	boğaz | gece | gece vakti köprü | golden gate | köprü | manzara
+1F30A	dalga	dalga | okyanus dalgası | sörf | su dalgası
+1F30B	yanardağ	dağ | doğa | volkan | yanardağ | yanardağ patlaması
+1F30C	samanyolu	gökyüzü | samanyolu | uzay
+1F30D	yerkürede Avrupa-Afrika	Afrika | Avrupa | dünya | yerküre | yerkürede avrupa-afrika | yerkürede Avrupa-Afrika
+1F30E	yerkürede Amerika	Amerika | Amerika bölgeleri | dünya | yerküre | yerkürede amerika | yerkürede Amerika
+1F30F	yerkürede Asya-Avustralya	Asya | Avustralya | dünya | yerküre | yerkürede asya-avustralya | yerkürede Asya-Avustralya
+1F310	meridyenli yerküre	boylamlar | dünya | meridyen | meridyenli yerküre | yerküre
+1F311	yeni ay	ay | karanlık | yeni
+1F312	büyüyen ay	ay | büyüyen ay | hilal | yükselen
+1F313	ilk dördün	ay | ilk dördün | uzay
+1F314	geniş ay	ay | geniş ay | şişkin | yükselen
+1F315	dolunay	ay | dolu | dolunay | parlak | tam ay
+1F316	küçülen ay	ay | küçülen ay | şişkin | solgun | uzay
+1F317	son dördün	ay | dördün | son dördün
+1F318	ince ay	ay | ay kararması | ay tutulması | gece | gökyüzü | hilal | ince ay | solgun | uzay
+1F319	hilal	ay | dilek | gece | gökyüzü | hilal | uzay | yeni ay
+1F31A	yeni ay yüzü	ay | gece | yeni ay | yeni ay yüzü | yüz | yüzü olan yeni ay
+1F31B	ilk dördün ay yüzü	ay | dördün | ilk dördün | ilk dördün ay yüzü | yüz | yüzü olan ay | yüzü olan ilk dördün
+1F31C	son dördün ay yüzü	ay | dördün | son dördün | son dördün ay yüzü | yüz | yüzü olan ay | yüzü olan son dördün
+1F31D	dolunay yüzü	ay | dolu | dolunay | dolunay yüzü | yüz | yüzü olan ay | yüzü olan dolunay
+1F31E	güneş yüz	güneş | parlak | sıcak | yaz | yüz
+1F31F	parıldayan yıldız	dilek | dilek yıldızı | kıvılcım | kutup yıldızı | parıldama | parıldayan yıldız | parlak | parlayan yıldız | pırıltı | yıldız
+1F320	yıldız kayması	gece | kayan | meteor yağmuru | uzay | yıldız | yıldız kayması
+1F321	termometre	derece | hava durumu | termometre
+1F324	bulutun arkasındaki güneş	bulut | bulutun arkasındaki güneş | güneş | hava durumu | parçalı bulutlu
+1F325	bulutta kaybolan güneş	bulut | bulutta kaybolan güneş | güneş | hava durumu | parçalı bulutlu
+1F326	yağmur bulutunun arkasındaki güneş	bulut | güneş | hava durumu | parçalı bulutlu | yağmur | yağmur bulutunun arkasındaki güneş | yer yer yağmur
+1F327	yağmur bulutu	bulut | hava durumu | yağmur | yağmur bulutu
+1F328	kar bulutu	bulut | hava durumu | kar | kar bulutu | soğuk
+1F329	şimşek bulutu	bulut | fırtına | hava durumu | şimşek | şimşek bulutu | yıldırım
+1F32A	hortum	bulut | fırtına | hava durumu | hortum | tayfun
+1F32B	sis	bulut | gökyüzü | hava durumu | sis
+1F32C	rüzgar	esme | hava durumu | rüzgar
+2648	koç burcu	burçlar | koç burcu
+2649	boğa burcu	boğa burcu | burçlar
+264A	ikizler burcu	burçlar | ikizler burcu
+264B	yengeç burcu	burçlar | yengeç burcu
+264C	aslan burcu	aslan burcu | burçlar
+264D	başak burcu	başak burcu | burçlar
+264E	terazi burcu	burçlar | terazi burcu
+264F	akrep burcu	akrep burcu | burçlar
+2650	yay burcu	burçlar | yay burcu
+2651	oğlak burcu	burçlar | oğlak burcu
+2652	kova burcu	burçlar | kova burcu
+2653	balık burcu	balık burcu | burçlar
+1F550	saat 1	1:00 | bir | saat | saat 1
+1F551	saat 2	2:00 | iki | saat | saat 2
+1F552	saat 3	3:00 | saat | saat 3 | üç
+1F553	saat 4	4:00 | dört | saat | saat 4
+1F554	saat 5	5:00 | beş | saat | saat 5
+1F555	saat 6	6:00 | altı | saat | saat 6
+1F556	saat 7	7:00 | saat | saat 7 | yedi
+1F557	saat 8	8:00 | saat | saat 8 | sekiz
+1F558	saat 9	9:00 | dokuz | saat | saat 9
+1F559	saat 10	10:00 | on | saat | saat 10
+1F55A	saat 11	11:00 | on bir | saat | saat 11
+1F55B	saat 12	12:00 | on iki | saat | saat 12
+1F55C	bir buçuk	1:30 | bir buçuk | saat
+1F55D	iki buçuk	2:30 | iki buçuk | saat
+1F55E	üç buçuk	3:30 | saat | üç buçuk
+1F55F	dört buçuk	4:30 | dört buçuk | saat
+1F560	beş buçuk	5:30 | beş buçuk | saat
+1F561	altı buçuk	6:30 | altı buçuk | saat
+1F562	yedi buçuk	7:30 | saat | yedi buçuk
+1F563	sekiz buçuk	8:30 | saat | sekiz buçuk
+1F564	dokuz buçuk	9:30 | dokuz buçuk | saat
+1F565	on buçuk	10:30 | on buçuk | saat
+1F566	on bir buçuk	11:30 | on bir buçuk | saat
+1F567	on iki buçuk	12:30 | on iki buçuk | on iki otuz | saat | yarım
+1FA90	halkalı gezegen	halkalı gezegen | satürn
+2604	kuyruklu yıldız	kuyruklu yıldız | uzay
+26F0	dağ	dağ
+26F1	sabit şemsiye	gölge | güneş | hava durumu | kumsal | plaj | sabit şemsiye | şemsiye | yağmur
+26F2	fıskiye	çeşme | fıskiye | süs havuzu
+26F4	feribot	arabalı vapur | feribot | gemi | tekne | vapur
+26F5	yelkenli tekne	deniz tatil yeri | deniz tatili | tatil yeri | tekne | yat | yelkenli tekne
+2708	uçak	jet | seyahat | taşıt | uçak | uçmak | yolculuk
+1F488	berber dükkanı	berber | berber dükkanı | berber işareti | işaret
+1F4BA	koltuk	koltuk | sandalye
+1F680	roket	çıkış | roket | taşıt | uzay | yolculuk
+1F681	helikopter	helikopter | taşıt
+1F682	buharlı lokomotif	buhar | buharlı lokomotif | lokomotif | seyahat | taşıt | tren | tren yolu
+1F683	vagon	demir yolu | demiryolu | elektrik | elektrikli tren | taşıt | toplu taşıma | tramvay | vagon
+1F684	yüksek hızlı tren	hızlı tren | marmaray | metro | shinkansen | taşıt | tren | yüksek hızlı tren
+1F685	yuvarlak uçlu yüksek hızlı tren	hızlı tren | mermi burunlu | mermi burunlu shinkansen | shinkansen | taşıt | tren | yuvarlak uçlu yüksek hızlı tren
+1F686	tren	demiryolu | taşıt | tren
+1F687	metro	marmaray | metro | taşıt | toplu taşıma | tren | ulaşım
+1F688	hafif raylı	demiryolu | hafif | hafif raylı | taşıt | tren | tren yolculuğu | tren yolu
+1F689	tren istasyonu	istasyon | taşıt | tren | tren istasyonu | tren yolu
+1F68A	tramvay	metrobüs | taşıt | tramvay
+1F68B	tramvay vagonu	taşıt | toplu taşıma | tramvay | tramvay vagonu | vagon
+1F68C	otobüs	minibüs | otobüs | taşıt | toplu taşıma
+1F68D	yaklaşan otobüs	araba | otobüs | servis | taşıt | toplu taşıma | yaklaşan
+1F68E	troleybüs	otobüs | taşıt | toplu taşıma | troley | troleybüs
+1F68F	otobüs durağı	durak | minibüs durağı | otobüs | otobüs durağı | toplu taşıma
+1F690	minibüs	minibüs | otobüs | taşıt | toplu taşıma
+1F691	ambulans	acil | ambulans | taşıt
+1F692	itfaiye arabası	araba | itfaiye | itfaiye arabası | itfaiye kamyonu | taşıt | yangın
+1F693	polis arabası	araba | devriye arabası | polis | polis arabası | taşıt
+1F694	yaklaşan polis arabası	polis | polis arabası | taşıt | yaklaşan polis arabası
+1F695	taksi	araba | sarı taksi | taksi | taşıt
+1F696	yaklaşan taksi	taksi | taşıt | yaklaşan taksi
+1F697	araba	araba | araç | otomobil | taşıt
+1F698	yaklaşan araba	araba | araç | otomobil | taşıt | yaklaşan
+1F699	cip	aile arabası | araba | cip | eğlence taşıtı | karavan | mavi araba | minivan | spor araba | taşıt
+1F69A	nakliye kamyonu	eve servis | kamyon | nakliye kamyonu | taşıt | teslimat kamyonu | ulaştırma
+1F69B	tır	araba | araç | çekici | kamyon | taşıt | tır | treyler
+1F69C	traktör	taşıt | traktör
+1F69D	monoray	araç | metro | monoray | taşıt | tramvay
+1F69E	dağ demiryolu	dağ | dağ teleferiği | demiryolu | taşıt | teleferik | tren | vagon | yolculuk
+1F69F	asma demiryolu	asma | demiryolu | taşıt
+1F6A0	dağ teleferik hattı	dağ | dağ teleferiği | dağ teleferik hattı | kablo | taşıt | teleferik | telesiyej | vagon
+1F6A1	teleferik	gondol | hava tramvayı | havadan yol | kablo yolu | taşıt | teleferik | tramvay
+1F6A2	gemi	gemi | seyahat | taşıt | titanik | toplu taşıma | tur | vapur
+1F6A3	sandalda kürek çeken kişi	göl | ırmak | kano | kayık | kürek | kürek çeken erkek | nehir | sandal | sandalda kürek çeken kişi | taşıt | tekne
+1F6A4	sürat teknesi	bot | sürat teknesi | taşıt | tekne
+1F6A5	yatay trafik ışıkları	ışık | trafik | trafik lambası | trafik sinyalleri | yatay trafik ışığı | yatay trafik ışıkları
+1F6A6	dikey trafik ışıkları	dikey trafik ışığı | dikey trafik ışıkları | ışık | trafik | trafik ışıkları | trafik lambası | trafik sinyalleri
+1F6A7	inşaat	inşaat | inşaat işareti | işaret
+1F6A8	polis lambası	alarm | araba | polis arabası | polis lambası | polis tepe lambası | siren | tepe lambası
+1F6A9	üçgen bayrak	bayrak | işaret | kırmızı bayrak | konum | konum bilgisi işareti | konum işareti | üçgen bayrak | üçgen işaret | üçgen konum işareti
+1F6AA	kapı	kapı
+1F6B0	içilebilir su	içilebilir su | içme suyu | işaret | musluk | musluk ve bardak | su
+1F6B1	içilmeyen su	içilmeyen | içilmez | su
+1F6B3	bisiklet yasak	bisiklet | bisiklet giremez | bisiklet yasak | taşıt
+1F6B7	yayalara yasak	işaret | yaya | yayalar giremez | yayalara yasak | yürüyen
+1F6B8	karşıya geçen çocuklar	çocuklar | işaret | karşıya geçen çocuklar | karşıya geçiş
+1F6B9	erkekler tuvaleti	erkekler tuvaleti | Erkekler tuvaleti | işaret | tuvalet
+1F6BA	kadınlar tuvaleti	bayanlar tuvaleti | işaret | kadınlar tuvaleti | Kadınlar tuvaleti | tuvalet
+1F6BB	tuvalet	lavabo | tuvalet | wc
+1F6BC	bebek işareti	bebek | bebek alt değiştirme yeri | bebek işareti | bebek teknede
+1F6BD	klozet	alafranga tuvalet | klozet | tuvalet | wc | WC
+1F6BE	wc	lavabo | tuvalet | wc | WC
+1F6BF	duş	duş | su
+1F6C0	banyo yapan kişi	banyo | banyo yapan kişi | küvet
+1F6C1	banyo küveti	banyo | banyo küveti | köpük | köpüklü banyo
+1F6C2	pasaport kontrolü	kontrol | pasaport | pasaport kontrolü
+1F6C3	gümrük	gümrük
+1F6C4	bagaj teslim	bagaj | bagaj alma yeri | bagaj teslim | bavul | çanta | seyahat
+1F6C5	eşya emanet	bagaj | bagaj hizmeti | eşya emanet | kasa | kayıp bagaj
+1F6D0	ibadethane	din | ibadethane | tapınma
+1F6D1	dur işareti	dur | dur işareti | işaret | sekizgen
+1F6D2	alışveriş arabası	alışveriş | alışveriş arabası | araba | pazar arabası
+2668	kaplıca	hamam | ılıca | kaplıca | sıcak
+26BD	futbol topu	futbol | spor | top | topu
+26BE	beyzbol	beyzbol | beyzbol topu | spor | top
+26F3	delikteki bayrak	delik | delikteki bayrak | golf | golf bayrağı
+1F392	okul çantası	kırmızı sırt çantası | okul | okul çantası | okul sırt çantası | sırt çantası
+1F3A0	atlıkarınca	at | atlı karınca | atlıkarınca | atlıkarınca atı | eğlence | karusel
+1F3A1	dönme dolap	dolap | dönme | eğlence | eğlence parkı | lunapark
+1F3A2	hız treni	eğlence | eğlence parkı | hız | hız treni | lunapark | roller coaster | tren
+1F3A3	olta	balık | balıkçı | dinlenme | eğlence | kamış | kamış olta ve balık | olta
+1F3A4	mikrofon	eğlence | Karaoke | mikrofon | müzik | şarkı | şarkıcı
+1F3A5	film kamerası	eğlence | film | film kamerası | sinema
+1F3A6	sinema	eğlence | film işareti | sinema
+1F3A7	kulaklık	eğlence | kulaklık | müzik
+1F3A8	boya paleti	boya | boya paleti | palet | ressam | sanat | sanatçı | sanatçı paleti
+1F3A9	silindir şapka	eğlence | şapka | sihirbaz | silindir şapka
+1F3AA	sirk çadırı	çadır | eğlence | sirk | sirk çadırı
+1F3AB	bilet	bilet | eğlence | giriş
+1F3AC	film tahtası	eğlence | film | film tahtası | tahta
+1F3AD	sahne sanatları	eğlence | performans | performans sanatı | sahne sanatları | sanat | tiyatro
+1F3AE	video oyunu	kontrol cihazı | oyun | oyun konsolu | oyun kontrol cihazı | video oyunu | xbox
+1F3AF	tam isabet	hedef | hedefe isabet | isabet | on ikiden vurma | oyun | tam isabet
+1F3B0	kumar makinesi	kollu makina | kumar | kumar makinesi | oyun | şans oyunu
+1F3B1	bilardo	bilardo | oyun | sekiz top
+1F3B2	oyun zarı	oyun | oyun zarı | tavla | zar
+1F3B3	bovling	bovling | bovling ekipmanı | bovling topu | oyun | top
+1F3B4	çiçekli oyun kağıtları	çiçek | çiçekli kart | çiçekli oyun kağıtları | hanafuda | kağıt oyunu | kart | oyun
+1F3B5	müzik notası	müzik | müzik notası | nota
+1F3B6	müzik notaları	müzik | müzik notaları | nota | notalar
+1F3B7	saksafon	alet | müzik | müzik aleti | saksafon
+1F3B8	gitar	alet | elektrik gitar | gitar | müzik | müzik aleti
+1F3B9	müzik klavyesi	alet | klavye | müzik | müzik aleti | müzik klavyesi | piyano
+1F3BA	trompet	alet | müzik | müzik aleti | trompet
+1F3BB	keman	alet | keman | müzik | müzik aleti
+1F3BC	sol anahtarı	müzik | müzik partisyonu | partisyon | sol anahtarı
+1F3BD	koşu tişörtü	çizgi | çizgili koşu tişörtü | koşu | koşu tişörtü | spor | tişört
+1F3BE	tenis	spor | tenis | tenis raketi ve topu | tenis topu | top
+1F3BF	kayak	bot | kayak | kayak ve bot | spor
+1F3C0	basketbol	basketbol | basketbol potası | basketbol topu | pota | spor | top
+1F3C1	damalı bayrak	bayrak | bitiş | damalı | ralli | spor | yarış
+1F3C2	snowbordçu	kar kayağı yapan | snowboard | snowboard yapmak | snowbordçu | spor
+1F3C3	koşan kişi	acele | çabuk | hızlı | kişi | koşan kişi | koşu | koşucu | maraton | spor | vücut | yarış
+1F3C4	sörf yapan kişi	dalga | dalga sörfü | erkek sörfçü | kişi | okyanus | plaj | sahil | sörf yapan kişi | sörfçü | spor | vücut
+1F3C5	spor madalyası	altın madalya | madalya | spor madalyası
+1F3C6	zafer kupası	kupa | ödül | zafer kupası
+1F3C7	at yarışı	at | at yarışı | jokey | spor | yarış | yarış atı
+1F3C8	amerikan futbolu	amerikan | Amerikan | amerikan futbolu | spor | top
+1F3C9	ragbi	futbol topu | ragbi | ragbi futbolu | Ragbi topu | spor | top
+1F3CA	yüzen kişi	antrenman | hareket | havuz | kişi | serbest stil | spor | triatlon | vücut | yüzen kişi | yüzme | yüzücü
+1F3CB	ağırlık kaldıran kişi	ağırlık | ağırlık kaldıran kişi | ağırlık kaldırma | antrenman | erkek halterci | halter | halterci | kişi | vücut
+1F3CC	golf oynayan kişi	golf | golf oynayan kişi | golf sahası | golf sopası | golfçü | kişi | top | vücut | vuruş
+1F3CD	motosiklet	motor | motosiklet | yarış
+1F3CE	yarış arabası	araba | gokart | yarış | yarış arabası
+1F451	taç	giyim | kral | kraliçe | kraliyet | taç
+1F452	kadın şapkası	giyim | kadın şapkası | şapka
+1F453	gözlük	giyim | gözlük
+1F454	kravat	giyim | gömlek | iş adamı | kravat | takım kıyafet
+1F455	tişört	alışveriş | giyim | gömlek | tişört
+1F456	kot	blucin | blue jean | bluejean | giyim | kot | kot pantalon | pantolon
+1F457	elbise	alışveriş | elbise | giyim | Kokteyl elbisesi | şık | tek parça
+1F458	kimono	elbise | giyim | kimono
+1F459	bikini	benekli bikini | bikini | deniz | deniz giysisi | giyim | havuz | kumsal | tatil | yaz
+1F45A	kadın giysisi	alışveriş | bluz | giyim | giysiler | kadın giysisi
+1F45B	cüzdan	bozuk para | bozuk para çantası | cüzdan | giyim
+1F45C	el çantası	çanta | el çantası | giyim | kadın el çantası
+1F45D	para kesesi	çanta | giyim | para kesesi
+1F45E	erkek ayakkabısı	ayakkabı | erkek ayakkabısı | giyim
+1F45F	koşu ayakkabısı	ayakkabı | bez ayakkabı | giyim | koşu ayakkabısı | spor
+1F460	yüksek topuklu ayakkabı	ayakkabı | giyim | kırmızı ayakkabı | topuklu ayakkabı | yüksek topuklu ayakkabı
+1F461	kadın sandaleti	ayakkabı | giyim | kadın | kadın sandaleti | sandalet | topuklu ayakkabı
+1F462	kadın botu	bot | çizme | giyim | kadın | kadın botu | kadın çizmesi
+1F6B2	bisiklet	bisiklet | bisiklete binmek | cycling | sürüş | taşıt
+1F6B4	bisiklet süren kişi	antrenman | bisiklet | bisiklet süren kişi | bisiklet sürücüsü | bisikletçi | hareket | kişi | spor | vücut
+1F6B5	dağ bisikletçisi	antrenman | atletik | bisiklet | bisikletçi | dağ | dağ bisikletçisi | kişi | spor | sürüş | vücut
+1F6B6	yürüyen kişi	aylak | gezinti | kişi | salınma | tempo | vücut | yaya | yürüme | yürüyen | yürüyen adam | yürüyüş
+1F938	perende atan kişi	aktif | birey | jimnastik | perende atan kişi | spor | yanlamasına takla
+1F939	jonglör	aynı anda birçok iş yapma | denge | el becerisi | hokkabaz | hokkabazlık | jonglör | jonglörlük | kişi | top çeviren erkek | top çevirme | vücut | yetenek
+1F93A	eskrimci	birey | eskrim | eskrimci | kılıç | spor
+1F93C	güreşen kişiler	birey | dövüş | düello | güreş | güreş minderi | güreşçi | güreşçilik | güreşen kişiler | kişi | spor | vücut
+1F93D	su topu	antrenman | birey | havuz | kişi | spor | su | su sporları | su topu | top | vücut | yüzme
+1F93E	hentbol	atış | atletik | birey | el | hentbol | kişi | spor | top | vücut
+1F93F	dalgıç maskesi	aletli dalış | dalgıç maskesi | dalış | dalış maskesi | skuba | şnorkelle dalış
+1F9E2	siperli şapka	beyzbol şapkası | şapka | siperli şapka
+1F9E3	atkı	atkı | sıkı giyinmek | soğuk | yaka
+1F9E4	eldiven	el | eldiven | mavi eldiven
+1F9E5	kaban	ceket | kaban | manto | mont | sıkı giyinmek | soğuk
+1F9E6	çorap	çorap
+1FA70	bale ayakkabıları	bale | bale ayakkabıları | bale pabucu | dans
+1FA71	tek parça mayo	mayo | tek parça mayo
+1FA72	slip mayo	alt | iç çamaşırı | mayo | slip | tek parça
+1FA73	şort	alt | iç çamaşırı | mayo | şort
+1FA74	parmak arası terlik	ayakkabı | deniz terliği | eşya | flip flop | kumsal | kumsal terliği | parmak arası | parmak arası terlik | sahil | sandalet | terlik | zori
+1FA80	yoyo	inip çıkma | oyuncak | yoyo
+1FA81	uçurtma	süzülme | uçma | uçurtma
+1FA82	paraşüt	delta kanat | deniz paraşütü | paraşüt | paraşütle atlama
+1FA83	bumerang	aborjin | atmak | boomerang | bumerang | eşya | fırlatmak | geri gelmek | geri tepme | oyun | sekme | silah | tepki
+1FA84	sihirli asa	aktivite | asa | büyü | büyücü | cadı | değnek | etkinlik | sihir | sihirbaz | sihirli asa | sihirli değnek
+1FA85	pinyata	aktivite | cinco de mayo | etkinlik | kutlama | meksika | parti | pinata | pinyata | şapka | şeker
+1FA86	matruşka	aktivite | babuşka | bebek | bebekler | etkinlik | iç içe | matruşka | matruşka bebekleri | oyuncak | rus | Rusya
+1FA95	banjo	banjo | müzik | yaylı
+1FA97	akordiyon	akordeon | akordiyon | armonika | çalmak | enstrüman | eşya | körük | müzik | müzik aleti | tuş
+1FA98	uzun davul	conga | davul | davul çalmak | enstrüman | eşya | müzik aleti | perküsyon | ritim | ritm | tempo | tumba | uzun davul | vurmak | vuruş
+265F	piyon	harcanabilir | kullanılma | piyon | satranç
+2660	maça	iskambil | kart | maça | pik
+2663	sinek	iskambil | kart | sinek | trefl
+2665	kupa	iskambil | kart | kör | kupa
+2666	karo	baklava | iskambil | karo | kart | kırmızı
+1F4B3	kredi kartı	kart | kredi | kredi kartı
+1F4B4	yen banknot	banknot | döviz | para | yen
+1F4B5	dolar banknot	banknot | dolar | döviz | fatura | para
+1F4B6	euro banknot	avro | banknot | döviz | euro | fatura | para
+1F4B7	sterlin banknot	banknot | döviz | para | sterlin
+1F4B9	yen simgeli artış grafiği	banka | grafik | para | piyasa | yen | yen simgeli artış grafiği | yukarı giden grafik | yukarı yönlü
+1F4BB	dizüstü bilgisayar	bilgisayar | dizüstü bilgisayar | kişisel
+1F4BC	evrak çantası	evrak çantası | müfettiş | ofis
+1F4BD	mini disk	bilgisayar | disk | mini disk
+1F4BE	disket	disket | floppy
+1F4BF	optik disk	CD | disk | DVD | optik disk
+1F4C0	dvd	blu-ray | CD | disk | dvd | müzik
+1F4C1	dosya klasörü	dosya | dosya klasörü | klasör
+1F4C2	açık dosya klasörü	açık | açık dosya klasörü | dosya | klasör
+1F4C3	kıvrık sayfa	kenarı kıvrılmış sayfa | kıvrık sayfa | sayfa
+1F4C4	yüzü yukarıda sayfa	doküman | ön yüz | ön yüzü görünen sayfa | sayfa | yüzü yukarıda sayfa
+1F4C5	takvim	takvim | tarih
+1F4C6	koparmalı takvim	koparmalı takvim | takvim | takvim sayfası | tarih
+1F4C7	kart dizini	dizin | kart dizini | rolodeks
+1F4C8	artış grafiği	artış grafiği | grafik | yukarı yönlü | yükselen grafik
+1F4C9	iniş grafiği	alçalan grafik | aşağı yönlü | grafik | iniş grafiği
+1F4CA	çubuk grafiği	çubuk grafiği | grafik
+1F4CB	pano	duyuru | pano
+1F4CC	raptiye	iğne | raptiye
+1F4CD	yuvarlak raptiye	iğne | raptiye | yuvarlak raptiye
+1F4CE	ataş	ataş | klips
+1F4CF	düz cetvel	cetvel | düz cetvel
+1F4D0	gönye	cetvel | gönye | üçgen
+1F4D1	sayfa ayraçları	ayraçlar | işaretçi | sayfa ayraçları | sayfa işareti
+1F4D2	resmi defter	not defteri | resmi defter
+1F4D3	not defteri	defter | not defteri
+1F4D4	süslü not defteri	dekorasyonlu not defteri | kapak | not defteri | süslü not defteri
+1F4D5	kapalı kitap	kapalı kitap | kitap | kırmızı kitap
+1F4D6	açık kitap	açık defter | açık kitap | defter | kitap | okul
+1F4D7	yeşil kitap	eğitim | kitap | kütüphane | okul | yeşil kitap
+1F4D8	mavi kitap	kitap | mavi kitap
+1F4D9	turuncu kitap	kitap | turuncu kitap
+1F4DA	kitaplar	kitap | kitaplar
+1F4DB	ad rozeti	ad | ad rozeti | rozet
+1F4DC	parşömen	bildiri | kağıt | parşömen
+1F4DD	not	ders | iletişim | kalem | kalem kağıt | not | not defteri
+1F4DE	ahize	ahize | alıcı | telefon
+1F4DF	çağrı cihazı	çağrı cihazı | iletişim
+1F4E0	faks makinesi	faks makinesi | iletişim
+1F4E1	uydu anteni	anten | çanak | iletişim | uydu | uydu anteni
+1F4E2	hoparlör	halka hitap | hoparlör | iletişim | megafon
+1F4E3	megafon	iletişim | karşılama | megafon
+1F4E4	giden kutusu	giden | giden kutusu | iletişim | kutu | posta | tepsi
+1F4E5	gelen kutusu	gelen | gelen kutusu | iletişim | kutu | posta | tepsi
+1F4E6	paket	kutu | paket | posta
+1F4E7	e-posta	e-posta | ileti | iletişim | mektup | posta
+1F4E8	gelen zarf	alınan posta | e-posta | gelen | iletişim | mektup | posta | zarf
+1F4E9	oklu zarf	e-posta | giden | gönderilen posta | iletişim | mektup | oklu zarf | posta | zarf
+1F4EA	işareti aşağıda kapalı posta kutusu	işaret | işareti aşağıda kapalı posta kutusu | işareti indirilmiş posta kutusu | kapalı | posta
+1F4EB	işareti yukarıda kapalı posta kutusu	işaret | işareti kaldırılmış posta kutusu | işareti yukarıda kapalı posta kutusu | kapalı | posta
+1F4EC	işareti yukarıda açık posta kutusu	açık | işaret | işareti kaldırılmış açık posta kutusu | işareti yukarıda açık posta kutusu | posta
+1F4ED	işareti aşağıda açık posta kutusu	açık | işaret | işareti aşağıda açık posta kutusu | işareti indirilmiş açık posta kutusu | posta
+1F4EE	posta kutusu	posta | posta kutusu
+1F4EF	posta klaksonu	borozan | klakson | posta | posta klaksonu
+1F4F0	gazete	gazete | haber | kağıt | kâğıt
+1F4F1	cep telefonu	cep telefonu | iPhone | mobil telefon | telefon
+1F4F2	ok işaretli cep telefonu	çağrı yapmak | cep telefonu | mobil telefon | ok işaretli cep telefonu | telefon
+1F4F3	titreşim modu	cep telefonu | mobil | mod | telefon | titreşim modu
+1F4F4	cep telefonu kapalı	cep telefonu | cep telefonu kapalı | kapalı | mobil | telefon
+1F4F5	cep telefonu yasak	çağrı yapılmaz | cep telefonu yasak | mobil | telefon
+1F4F6	sinyal gücü	anten | çubuk işaretli anten | mobil | sinyal | sinyal gücü | telefon
+1F4F7	fotoğraf makinesi	fotoğraf makinesi | video
+1F4F8	flaşlı fotoğraf makinesi	flaş | flaşlı fotoğraf makinesi | kamera | video
+1F4F9	video kamera	kamera | video
+1F4FA	televizyon	televizyon | tv | video
+1F4FB	radyo	radyo | video
+1F4FC	videokaset	teyp | video | video kaseti | videokaset
+1F4FD	film projektörü	film | film projektörü | projektör | sinema | video
+1F4FF	tespih	boncuk | din | dua | giyim | kolye | tesbih | tespih
+1F505	düşük parlaklık	düşük | düşük parlaklık işareti | karanlık | parlaklık
+1F506	yüksek parlaklık	parlak | parlaklık | yüksek parlaklık | yüksek parlaklık işareti
+1F507	ses kapalı	iptal işaretli hoparlör | lütfen sessiz olun | ses kapalı | sessiz olun
+1F508	kısık ses	hoparlör ses düzeyi | kısık ses | ses düzeyi
+1F509	ses açık	düşük | düşük ses | düşük sesli hoparlör | ses açık
+1F50A	yüksek ses	yüksek | yüksek ses | yüksek sesli hoparlör
+1F50B	pil	pil
+1F50C	elektrik fişi	elektrik | elektrik fişi
+1F50D	sola dönük büyüteç	arama | büyüteç | cam | sola dönük büyüteç | solu gösteren | solu gösteren büyüteç
+1F50E	sağa dönük büyüteç	arama | büyüteç | cam | sağa dönük büyüteç | sağı gösteren | sağı gösteren büyüteç
+1F50F	kilit ve kalem	gizlilik | kilit ve kalem | mürekkepli kalem | mürekkepli kalemli kilit
+1F510	anahtarlı kapalı kilit	anahtarlı kapalı kilit | anahtarlı kilit | güvenli
+1F511	anahtar	anahtar | kilit | parola | şifre
+1F512	kilit	kapalı kilit | kilit
+1F513	açık kilit	açık | kilidini açma | kilit
+1F514	zil	çan | kilise | ses | tenefüs | zil
+1F515	üzeri çizili zil	çan | çan yok | iptal işaretli çan | ses yok | sessiz | üzeri çizili zil
+1F516	yer işareti	defter | işaret | kitap | not | yer işareti
+1F517	bağlantı işareti	bağlantı işareti | bağlantılar | iki halka
+1F518	radyo düğmesi	düğme | radyo | radyo düğmesi
+1F51E	18 yaş altı yasak	18 | 18 yaş altı | 18 yaş altı yasak | 18 yaş altı yasaktır | 18‘den küçükler giremez
+1F51F	tuş: 10	tuş
+1F526	el feneri	el feneri | elektrik | ışık
+1F527	somun anahtarı	araç | ingiliz anahtarı | somun anahtarı
+1F528	çekiç	araç | çekiç
+1F529	somun ve vida	araç | somun | somun ve vida | vida
+1F52A	mutfak bıçağı	bıçak | mutfak bıçağı
+1F52B	su tabancası	revolver | silah | su tabancası | tabanca
+1F52C	mikroskop	alet | bilim | labrotuar | mikroskop | test
+1F52D	teleskop	alet | teleskop | uzay | uzay gözlemleme
+1F9BA	güvenlik yeleği	acil durum | güvenlik | güvenlik yeleği | yelek
+1F9BB	işitme cihazı olan kulak	erişilebilirlik | işitme cihazı olan kulak | işitme güçlüğü
+1F9BC	elektrikli tekerlekli sandalye	akülü tekerlekli sandalye | elektrikli tekerlekli sandalye | erişilebilirlik
+1F9BD	tekerlekli sandalye	erişilebilirlik | tekerlekli sandalye
+1F9E9	yapboz parçası	bulmaca | ipucu | karmaşık | kenetleme | oyun | parça | puzzle | yap boz | yapboz | yapboz parçası
+1F9EA	deney tüpü	bilim | deney | deney tüpü | kimya | kimyacı | laboratuvar
+1F9EB	petri kabı	bakteri | biyolog | biyoloji | kültür | laboratuvar | petri kabı
+1F9EC	dna	biyolog | biyoloji | dna | evrim | gen | genetik | sarmal | yaşam
+1F9ED	pusula	hedef bulma | kaybolmak | manyetik | navigasyon | oryantiring | pusula | yön bulma
+1F9EE	abaküs	abaküs | çocuk | hesap | hesaplama | renkli abaküs
+1F9EF	yangın söndürücü	ateş | söndürme | söndürmek | yangın | yangın söndürücü | yangın tüpü
+1F9F0	alet çantası	alet | alet çantası | alet kutusu | çanta | ingiliz anahtarı | kırmızı | kutu | onarmak | sandık | tamir | tamirat | tamirci
+1F9F1	tuğla	duvar | duvar örmek | harç | inşaat | kil | kiremit | kırmızı | seramik | taş | tuğla | tuğlalar
+1F9F2	mıknatıs	at nalı | çekim | çekmek | elektrik yükü | eş kutuplar | manyetik | mıknatıs | pozitif negatif | zıt kutuplar
+1F9F3	bavul	bagaj | bavul | çanta | seyahat | tatil | valiz | yol | yolculuk
+1F9F4	losyon şişesi	güneş koruyucu | güneş kremi | krem | losyon | losyon şişesi | nemlendirici | saç kremi | şampuan | şampuan şişesi | şişe
+1F9F5	iplik	dikiş | dikmek | iğne | ip | iplik | kırmızı ip | makara | terzi
+1F9F6	iplik yumağı	ip | iplik yumağı | kedi | kroşe | örgü | örgü ipi | tığ | top | yumak | yün
+1F9F7	çengelli iğne	bebek bezi | çengel | çengelli | dikiş | iğne | iğne kancası | iğnelemek | kanca | punk rock | tutturmak
+1F9F8	oyuncak ayı	ayı | ayıcık | çocuk | dolgu | oyun | oyuncak | peluş | pelüş | sevimli | uyku
+1F9F9	süpürge	büyücü | cadı | ev işi | harry potter | süpürge | süpürme | süpürmek | temizlik | uçmak
+1F9FA	sepet	çamaşır | çamaşır sepeti | çiftçilik | hasır | piknik | piknik sepeti | sepet
+1F9FB	kağıt rulosu	banyo | emici | havlu | kağıt | kağıt rulosu | rulo | silmek | temizlik | tuvalet | tuvalet kağıdı
+1F9FC	sabun	banyo | banyo yapmak | el sabunu | el yıkamak | kalıp | katı sabun | köpük | köpürmek | köpürtmek | sabun | sabun köpüğü | sabunlamak | sabunluk | temiz | temizlik | yıkamak | yıkanmak
+1F9FD	sünger	banyo | banyo yapmak | bulaşık | emici | emmek | ev işi | gözenek | gözenekli | keselemek | köpürmek | köpürtmek | silmek | sünger | temizlik | yıkamak | yıkanmak
+1F9FE	makbuz	belge | defter tutma | dekont | ekstre | evrak | fatura | fiş | hesap | kanıt | maliye | muhasebe | senet
+1F9FF	nazarlık	boncuk | göz | iyi şans | kem göz | kötü şans | maşallah | mavi boncuk | muska | nazar | nazar boncuğu | nazar değmesin | nazarlık | tılsım
+1FA78	kan damlası	âdet | aybaşı | ilaç | kan bağışı | kan damlası | mens | menstrüasyon | regl | tıp | yaralanma
+1FA79	yara bandı	bandaj | bant | yapışkanlı bandaj | yara bandı
+1FA7A	stetoskop	doktor | kalp | stetoskop | tıp
+1FA91	sandalye	iskemle | oturma | sandalye
+1FA92	ustura	jilet | keskin | tıraş | ustura
+1FA93	balta	ağaç | balta | kesme | kısa balta | odun | yarma
+1FA94	diya lamba	diya | lamba | yağ
+1FA96	asker kaskı	asker | asker kaskı | askerlik | eşya | kafa | kask | miğfer | ordu | savaş | savaşçı
+1FA99	bozuk para	altın | avro | bozuk para | dolar | gümüş | hazine | jeton | madeni para | metal | para | sikke | zengin
+1FA9A	testere	alet | eşya | kereste | kesmek | marangoz | odun | testere
+1FA9B	tornavida	alet | düz uçlu | eşya | montaj | sıkıştırmak | sıkma | tamir | tamirci | tornavida | usta | vida
+1FA9C	merdiven	adım | aşağı | ayaklı merdiven | basamak | çıkmak | eşya | merdiven | tırmanış | tırmanmak | yukarı
+1FA9D	çengel	askı | asmak | çengel | çengellemek | eğri | eşya | kanca
+1FA9E	ayna	ayna | eşya | görüntü | makyaj | reflektör | spekulum | yansıma | yansıtıcı
+1FA9F	pencere	cam | çerçeve | dışarı bakmak | eşya | izlemek | manzara | pencere | saydam | şeffaf | temiz hava
+260E	telefon	kırmızı telefon | telefon
+2620	kuru kafa	canavar | iskelet | kemik | kuru kafa | ölüm | tehlike | yüz
+2622	radyoaktif	nükleer | radyoaktif
+2623	biyolojik tehlike	biyolojik tehlike | sembol
+267F	tekerlekli sandalye sembolü	erişim | işaret | tekerlekli sandalye | tekerlekli sandalye erişimi | tekerlekli sandalye sembolü | tekerlekli sandalye simgesi
+2692	çekiç ve kazma	alet | çekiç | çekiç ve kazma | inşaat | kazma
+2693	çıpa	çapa | çıpa | denizci | denizcilik | gemi | işaret | tekne
+2694	çapraz kılıçlar	çapraz | çapraz kılıçlar | çarpı | çatma | kılıç | silah
+2695	tıp sembolü	Asklepios | medikal sembol | medikal sembolü | personel | tıbbi sembol | tıp | tıp çalışanı | tıp sembolü
+2696	terazi	adalet | ağırlık | alet | burç | denge | ölçek | terazi
+2697	imbik	alet | damıtıcı | imbik | kimya
+2699	dişli	alet | dişli
+269B	atom sembolü	ateist | atom | atom sembolü
+269C	zambak	fleur-de-lis | zambak
+26A0	uyarı işareti	dikkat | işaret | uyarı | uyarı işareti
+26CF	kazma	alet | kazma | maden
+26D1	yardım ekibi kaskı	beyaz haçlı kask | haç | kask | meslek | şapka | yardım | yardım ekibi kaskı | yüz
+26D3	zincir	zincir
+26D4	girilmez	Girilmez | girilmez işareti | hayır | işaret | yasak
+2702	makas	alet | makas
+2709	zarf	e-mail | e-posta | mektup | zarf
+270F	kurşun kalem	kurşun kalem
+2712	siyah uç	dolma kalem | kalem | siyah uç
+2714	onay işareti	✓ | işaret | kalın onay işareti | onay | onay işareti
+2716	çarpım işareti	× | çarpı | çarpım | çarpım işareti | çarpma | iptal | işaret | kalın çarpı işareti | x
+2753	kırmızı soru işareti	? | işaret | kırmızı soru işareti | noktalama | soru | soru işareti
+2757	kırmızı ünlem işareti	! | işaret | kırmızı ünlem işareti | noktalama | ünlem | ünlem işareti
+27A1	sağ ok	ana yön | doğu | ok | sağ ok | yön
+1F500	parça karıştırma düğmesi	çapraz sağ oklar | oklar | parça karıştırma düğmesi
+1F501	tekrarlama düğmesi	oklar | saat yönünde | tekrarlama düğmesi
+1F502	tek parça tekrarlama düğmesi	1 sayısı | 1 sayısı olan saat yönünde oklar | oklar | saat yönünde | tek parça tekrarlama düğmesi
+1F503	saat yönünde dönen oklar	oklar | saat yönünde dikey oklar | saat yönünde dönen oklar | saat yönüne dönen oklar | yeniden yükle işareti
+1F504	saat yönünün tersinde dönen oklar	oklar | saat yönünün tersinde dönen oklar | saat yönünün tersine | saat yönünün tersine dönen oklar
+1F519	geri oku	geri ok | geri oku | ok | sol geri ok | sol ok
+1F51A	bitiş oku	bitiş oku | ok | sol bitiş oku | sol ok
+1F51B	açık oku	açık oku | ok | ünlem | ünlem işareti | ünlem işareti ve okla AÇIK
+1F51C	yakında işareti	ok | sağ okla Yakında | Yakında | yakında işareti
+1F51D	yukarı oku	yukarı | Yukarı | yukarı işareti | yukarı ok | yukarı okla Yukarı | yukarı oku
+1F520	büyük harfler	ABCD | büyük harf | büyük harfler | Latin | Latin büyük harfleri | Latin büyük harfleriyle giriş
+1F521	küçük harfler	abcd | alfabe | küçük harf | küçük harfler | Latin | Latin küçük harfleri | Latin küçük harfleriyle giriş
+1F522	sayılar	1234 | sayı girişi | sayılar
+1F523	işaretler	işaret girişi | işaretler
+1F524	Latin alfabesi	ABC | İngilizce | Latin | latin alfabesi | Latin alfabesi | Latin alfabesiyle giriş | Latin Alfabesiyle giriş
+21B5	sola doğru köşesi olan aşağı ok	sola doğru köşesi olan aşağı ok
+21B0	solda ipucu ile yukarı ok	solda ipucu ile yukarı ok
+21B1	sağda ipucu ile yukarı ok	sağda ipucu ile yukarı ok
+21B2	solda ipucu ile aşağı ok	solda ipucu ile aşağı ok
+21B3	sağda ipucu ile aşağı ok	sağda ipucu ile aşağı ok
+21B4	aşağı doğru köşesi olan sağ ok	aşağı doğru köşesi olan sağ ok
+21E4	sol ok çubuğu	sol ok çubuğu
+21E5	sağ ok çubuğu	sağ ok çubuğu
+21B9	sağ ok çubuğu üstünde sol ok çubuğu	sağ ok çubuğu üstünde sol ok çubuğu
+21E7	yukarı boş ok	yukarı boş ok
+21EA	çubuktan yukarı boş ok	çubuktan yukarı boş ok
+21E6	sola boş ok	sola boş ok
+21E8	sağa boş ok	sağa boş ok
+21E9	aşağı boş ok	aşağı boş ok
+21DE	çift çizgili yukarı ok	çift çizgili yukarı ok
+21DF	çift çizgili aşağı ok	çift çizgili aşağı ok
+21B8	kuzeybatı yönlü uzun çubuklu ok	kuzeybatı yönlü uzun çubuklu ok
+21B6	saat yönünün tersinde üst yarım daireli ok	saat yönünün tersinde üst yarım daireli ok
+21B7	saat yönünde üst yarım daireli ok	saat yönünde üst yarım daireli ok
+21C5	yukarı ve aşağı bakan oklar	aşağı | ok | yukarı | yukarı ve aşağı bakan oklar
+21F5	aşağı ok sol yukarı ok	aşağı ok sol yukarı ok
+21A8	yukarı aşağı tabanlı ok	yukarı aşağı tabanlı ok
+21E0	sola çizgili ok	sola çizgili ok
+21E1	yukarı çizgili ok	yukarı çizgili ok
+21E2	sağa çizgili ok	sağa çizgili ok
+21E3	aşağı çizgili ok	aşağı çizgili ok
+21AB	sola döngülü ok	sola döngülü ok
+21AC	sağa döngülü ok	sağa döngülü ok
+2B05	sol ok	ana yön | batı | ok | sol ok | yön
+2B06	yukarı ok	ana yön | kuzey | ok | yön | yukarı ok | yukarı yönlü ok
+2B07	aşağı ok	ana yön | aşağı | aşağı yönlü ok | güney | ok | yön

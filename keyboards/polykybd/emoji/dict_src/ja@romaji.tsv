@@ -1,0 +1,894 @@
+# emoji search keywords, ja@romaji, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived), written as romaji keys (emoji_romanize.py). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600		sumairu | naisu | nikkori | happi
+1F601		sumairu | naisu | happi
+1F602		ahaha | sumairu
+1F603	wai	sumairu | happi | wai
+1F604		sumairu | happi | wai
+1F605		sumairu | tohoho
+1F606	kya	ahaha | ukerune | kya | sumairu
+1F607		sumairu | happi
+1F608		sumairu | debiru
+1F609	uinku	winku | uinku
+1F60A	nikoniko	sumairu | nikoniko
+1F60B	nikonikoperori	umai | oishii | oishisou | sumairu | nikonikoperori | perori
+1F60C		ho
+1F60D		sumairu | hato | rabu
+1F60E		kuru | sangurasu | sumairu
+1F60F		niyari | fu
+1F610	pokafeisu	pokafeisu
+1F611		fun | yakimochi
+1F612	shiraketa	shirake | shiraketa | shirakeru | tsumaranai | yakimochi
+1F613		samuke
+1F614	shobon	gakkari | shobon | shonbori
+1F615		fun | wakaranai
+1F617	kisu	kisu | chu | deto
+1F618		kisu | chu | hato
+1F619	nikkorikisu	kisu | sumairu | chu | nikkorikisu
+1F61A	chu	kisu | chu | deto
+1F61B		be | bero
+1F61C	akkanbe	akkanbe | winku | joku | be
+1F61D		be | bero | wai
+1F61E		gakkari | gakkuri
+1F620	punpun	punpun
+1F621		kankan | punpun
+1F622		hidoi
+1F624		fun
+1F625	doushiyou	doushiyou
+1F626		pokan
+1F628		gan
+1F629	akirame	akirame | hetoheto
+1F62B		kushami
+1F62C		i
+1F62E		he
+1F62F	pokan	sugoine | bikkuri | pokan
+1F631		gan | shokku
+1F632	bikkuri	e | bikkuri | masaka
+1F633		e | tomadoi
+1F634		oyasumi | gugu
+1F635	memai	furafura | memai
+1F636		danmari
+1F637		dokuta | masuku
+1F638		sumairu
+1F639		sumairu
+1F63A		sumairu
+1F63B		sumairu | hato
+1F63C		niyari | fu
+1F63D		kisu | chu
+1F63E		punpun
+1F640		gan | shokku | bikkuri
+1F642		sumairu | happi | hohoemi
+1F643		sakasama
+1F644		akireta | un
+1F910		chakku
+1F911		be | bero
+1F913	otaku	ekisupato | otaku | mania | megane
+1F914		un
+1F915		kega
+1F916	robotto	robotto
+1F917	hagu	sumairu | hagu
+1F920		kaugaru | kauboi
+1F921		piero
+1F923		ahaha | ukerune | sumairu
+1F924		yodare
+1F926		acha | usodesho | jesucha | shokku | mataka
+1F927		kushami
+1F929		sumairu | wai
+1F92A		okashii | joku | fuzake
+1F92B	shi	shi | shi | shi | shi
+1F92C	nonoshiru	nonoshiri | nonoshiru
+1F92D		otto | kusukusu | sumairu
+1F92E		gero
+1F92F		shokku | bikkuri | bon
+1F970		hato | meromero | rabu
+1F971		oyasumi
+1F972		jin
+1F973		omedetou | pati | happibasude
+1F974		beronberon | memai
+1F976		shimoyake | tsurara
+1F978		hige | megane
+1F97A		pien
+1FAE0		torokeru
+1FAE1		oke
+1FAE2		osore | ononoki | bikkuri
+1FAE3		kowagowa | chira
+1FAE5		doudemoii | fun
+1FAE7		abuku | baburu
+1FAE8		gan | shokku | nantekotta | panikku | bikkuri | maitta
+1F381	purezento	gifuto | purezento | ribon
+1F389	kurakka	kurakka | pati | patikurakka
+1F38A		pati
+1F47B		gosuto | harowin | yurei
+1F47C		enjeru | enzeru
+1F47D	eirian	eirian | yufo
+1F47E	inbeda	inbeda | eirian | gemu | supesuinbeda | monsuta
+1F47F		kankan | debiru
+1F480	dokuro	sukaru | dokuro
+1F481		goshippu | jesucha
+1F48A		kapuseru
+1F4A2	muka	manga | muka
+1F4A4	gugu	ibiki | oyasumi | gugu | manga
+1F4A5		don | bon | manga
+1F4A6	asease	asease | shizuku
+1F4A7		shizuku | tara
+1F4A8	dasshu	dasshu | manga
+1F4A9	unchi	unko | unchi
+1F4AB	kurakura	kirakira | kirakira | kurakura
+1F4AC		serifu | toku | manga | messeji
+1F4AD		manga | mokumoku
+1F4AE		hanamaru | yokudekimashita
+1F4A0		daia | daiya
+1F4A1		pikon | hirameki | manga
+1F4B0		kyasshu | doru
+1F4B1		doru
+1F4B2		doru
+1F4B8		doru
+1F525		faia | faiya
+1F52E		kurisutaru
+1F440		karada
+1F441		karada
+1F442		karada
+1F443		karada
+1F444		karada | kisu
+1F445		karada | be | bero
+1F44A	gu	gu | genkotsu | kobushi | panchi
+1F44B		aisatsu | sayounara | baibai | haro | matane
+1F44C		oke | okke | tsumamu
+1F44D	samuzuappu	iine | oke | okke | guddo | samuzuappu
+1F44E	samuzudaun	samuzudaun | dame | buingu | botsu
+1F44F		omedetou | pachipachi
+1F450		ohha
+270A	genkotsu	gu | genkotsu | kobushi
+270B		sutoppu | pa
+270C		choki | pisu
+1F4AA		bodibiru | mukimuki
+1F590		sutoppu | pa
+1F64C	banzai	jesucha | banzai
+1F64F		arigatou | gomennasai | jesucha | haitacchi
+1F90C		jesucha | subomeru
+1F90F		chotto
+1F918		kitsune | rokkuon
+1F91B		kobushi | panchi
+1F91C		kobushi | panchi
+1F91D		yoroshiku
+1F91F	airabuyu	airabuyu
+1F9B5		kikku
+1F9B6		kikku | kurubushi | dansu
+1F9BE		akuseshibiriti
+1FAE6		sekushi | chi
+1FAF4		oide | choudai
+1FAF5		omaeda
+1FAF6		hato | hatopozu | rabu
+1FAF7		sutoppu | haitacchi
+1FAF8		sutoppu | haitacchi
+2764		hato
+1F380	ribon	ribon
+1F382	basudekeki	keki | suitsu | basude | basudekeki | happibasude
+1F383	harowinkabocha	kabocha | harowin | harowin | harowinkabocha
+1F384	kurisumasutsuri	kurisumasu | kurisumasuibu | kurisumasutsuri | tsuri
+1F386		don
+1F388		barun
+1F9E8		dainamaito
+1F38C		furagu | furaggu
+1F38F	koinobori	koinobori
+1F391		susuki
+1F484		kosume | meku | rippu | rippusutikku
+1F485		neiru | manikyua
+1F48B	kisumaku	kisu | kisumaku | sekushi | chu
+1F48C	rabureta	hato | barentainde | rabureta
+1F48D		jueri | daia | daiya | daiyamondo | ringu
+1F48E		jueri | daia | daiya | daiyamondo
+1F48F		kappuru | kisu | chu | hato
+1F490		buke
+1F491	kappurutohato	kappuru | kappurutohato | hato
+1F492		chaperu | romansu
+1F493	dokidokisuruhato	dokidoki | dokidokisuruhato | hato
+1F494		hato | hatobureiku
+1F495		deto | hato | rabu
+1F496	kirakirahato	kirakira | kirakira | kirakirahato | hato
+1F497		dokidoki | tokimeki | hato
+1F498		kyupiddo | hato
+1F499		hato
+1F49A		hato
+1F49B		hato
+1F49C		hato
+1F49D	hatoniribon	hato | hatoniribon | barentainde | ribon
+1F49E		kawaii | hato
+1F49F	hatodeko	hato | hatodeko | hatodekoreshon
+1F90D		hato
+1F90E		hato
+1F9E1	orenjinohato	orenji | orenjinohato | hato
+1FA75		kawaii | shian | tiruburu | hato | rabu
+1FA76		gure | suretogure | hato | rabu
+1FA77	pinkunohato	kawaii | supesharu | hato | pinku | pinkunohato | rabu
+2763	hatonobikkuri	ekusukurameshonmaku | hato | hatonobikkuri | bikkurimaku
+2733		asutarisuku
+2747	supakuru	asutarisuku | kirakira | supakuru
+1F3E0		maihomu
+1F3E1		maihomu
+1F3E2	ofisubiru	ofisubiru
+1F3E8	hoteru	hoteru
+1F3E9	rabuhoteru	hoteru | rabuho | rabuhoteru
+1F3EA	konbini	konbini | konbiniensusutoa
+1F3EC	depato	depato | biru
+1F3ED		fakutori
+1F3EE		chouchin
+1F3F0		kyassuru
+1F464		shiruetto
+1F465		shiruetto
+1F467		osage
+1F46B		kappuru
+1F46C		kappuru
+1F46D		kappuru
+1F46F	bani	sokkuri | dansa | pati | pea
+1F470		wedingu | beru
+1F471		burondo
+1F473		taban
+1F474	ojiisan	ojiisan | ojiichan
+1F475	obaasan	obaasan | obaachan
+1F476		bebi
+1F477		hanma | herumetto
+1F478	purinsesu	kuin | purinsesu
+1F479		namahage
+1F483		sarusa | tango | dansa | dansu | furamenko
+1F486		esute | saron | supa | serapi | feisumassaji | massaji | rirakkusu
+1F487		katto | heakatto
+1F645		jesucha | dame | batsu
+1F646		ekusasaizu | oke | jesucha | bikkuri
+1F647		ojigi | gomennasai | jesucha
+1F64B		jesucha
+1F64E		fukureru | punpun
+1F931		miruku
+1F933	serufi	kamera | sumaho | serufi
+1F934	purinsu	purinsu
+1F935		takishido | fomaru
+1F936		kurisumasu | santakurosu
+1F937		saane | jesucha | wakarimasen
+1F385	santa	kurisumasu | santa | santakurosu
+1F9B8	supahiro	supahiro | supaman | hiro | hiroin
+1F9B9		viran
+1F9BF		akuseshibiriti
+1F9D0		megane
+1F9D2		kizzu
+1F9D4		agohige | hige
+1F9D5		sukafu | hijabu | beru
+1F9D6		kutsurogu | sauna | supa | rirakkusu
+1F9D7		rokkukuraima
+1F9D8		kutsurogi | yoga | rirakkusu
+1F9D9		fantaji | rorupurei
+1F9DA		oberon | pakku | fantaji
+1F9DB		dorakyura | harowin | banpaia
+1F9DC		sairen | mameido
+1F9DD	erufu	erufu | fantaji
+1F9DE		jini | fantaji | ranpuokosuru
+1F9DF	zonbi	andeddo | zonbi | harowin | hora
+1FAC2		arigatou | konnichiha | sayounara | hagu
+207B		mainasu
+B1	purasumainasu	purasumainasu
+B5		mikuro
+A9		kopiraito
+2122		toredomaku
+A7		sekushon
+B6		paragurafu | pirukurou
+2022	byuretto	byuretto
+2013		enudasshu | dasshu
+AB		kakko
+BB		kakko
+2030	pamiru	pamiru
+20AC	yuro	yuro
+A3	pondo	ejiputopondo | pondo
+A2	sento	kuota | sento | daimu | nikkeru | peni
+20B9	indorupi	indorupi | rupi
+20BD	ruburu	ruburu | roshiaruburu
+20A9	won	won
+20BA	toruko rira	
+20BF	bittokoin	bittokoin
+20AB	betonamu don	
+20B1	peso	firipinpeso | peso | mekishikopeso
+20BC	azerubaijan manato	
+20B4	ukuraina furivunya	
+20A6	naijeria naira	
+20A1	kosutarika koron	
+20B2	paraguai guarani	
+20B5	gana sedi	
+20B8	kazafusutan tenge	
+20BE	jojia rari	
+20AE	mongoru togurogu	
+20AD	raosu kipu	
+20A8	rupi	rupi
+24	doru	amerikadoru | doru
+58F	arumenia doramu	
+9F3	banguradeshu taka	
+E3F	tai batsu	
+20A3	furansufuran	furan | furansufuran
+20A4	rira	rira
+20A7	supein peseta	
+20B0	doitsumaruku	doitsumaruku | penihi
+20B3	ausutoraru	ausutoraru
+20A2	kuruzeiro	kuruzeiro
+20A5	miru	miru
+20B6	tururiburu	tururiburu
+20B7	supesumiro	supesumiro
+201E		kuoteshonmaku | sumatokuoto
+201C		kuoteshonmaku | sumatokuoto
+201D		kuoteshonmaku | sumatokuoto
+2018		aposutorofi | sumatokuoto
+2019		aposutorofi | sumatokuoto
+A1		ekusukurameshonmaku | bikkurimaku
+BF		kuesuchonmaku | hatenamaku
+2020		oberisuku | daga
+2021		oberisuku | daga | daburudaga
+2044		sutoroku | surasshu
+2032	puraimu	dasshu | puraimu
+2033	daburupuraimu	daburupuraimu | puraimu
+201A		aposutorofi
+AC		denai
+2117		rekodo
+2213		purasumainasu
+2260		nottoikoru
+221E		infiniti
+221A		ruto
+2206		deruta
+2207	nabura	nabura
+2200		subeteno | subetenotameno
+2234	yueni	yueni
+2235	nazenaraba	nazenaraba
+2215		sutoroku | surasshu
+21A9		kabu
+21AA		kabu
+1F400	nezumi	nezumi | nezumi | ratto
+1F401	hatsukanezumi	nezumi | nezumi | hatsukanezumi | mausu
+1F402		ushi
+1F403		baffaro
+1F404		ushi
+1F405	tora	taiga | tora
+1F406	hyou	hyou
+1F407	usagi	usagi | usagi | petto
+1F408	neko	neko | petto
+1F409	doragon	doragon
+1F40A	wani	kurokodairu | wani
+1F40B	kujira	kujira
+1F40C	katatsumuri	esukarugo | katatsumuri | katatsumuri
+1F40D	hebi	hebi
+1F40E		uma | dabi
+1F40F		hitsuji
+1F410		yagi
+1F411		uru | hitsuji
+1F412	saru	saru
+1F413	ondori	ondori | niwatori | niwatori
+1F414	niwatori	niwatori | niwatori
+1F415	inu	inu | petto
+1F416	buta	buta | poku
+1F417	inoshishi	inoshishi
+1F418	zou	zou
+1F419	tako	okutopasu | tako
+1F41B		imomushi
+1F41C	ari	ari
+1F41D	mitsubachi	hachi | mitsubachi
+1F41E	tentoumushi	tentoumushi
+1F41F		fisshingu
+1F421	fugu	fugu
+1F422	kame	kame
+1F423		hina | hiyoko
+1F424	hiyoko	hina | hiyoko
+1F425		hina | hiyoko
+1F427	pengin	pengin
+1F428	koara	koara
+1F429	pudoru	pudoru | petto
+1F42A	rakuda	kobu | hitokoburakuda | rakuda
+1F42B	futakoburakuda	kobu | futakobu | futakoburakuda | rakuda
+1F42C	iruka	iruka | dorufin
+1F42D		nezumi | nezumi
+1F42E		ushi
+1F42F		tora
+1F430		usagi | usagi | petto
+1F431		neko | petto
+1F432		doragon
+1F433		kujira
+1F434		uma
+1F435		saru
+1F436		inu | petto
+1F437		buta
+1F438		kaeru
+1F439		nezumi | hamusuta | petto
+1F43A		ookami
+1F43B		kuma | kuma
+1F43C		panda
+1F43D		buta
+1F43F	risu	shimarisu | risu | risu
+1F981		raion
+1F982	sasori	sasori
+1F983		taki
+1F984		yunikon
+1F985	washi	iguru | washi
+1F986	kamo	kamo
+1F987	koumori	koumori | koumori | banpaia
+1F988	same	same
+1F989	fukurou	fukurou | mimizuku
+1F98A		kitsune
+1F98B	chou	chou | batafurai
+1F98C	shika	shika
+1F98D	gorira	gorira
+1F98E	tokage	tokage | yamori
+1F98F	sai	sai
+1F990	ebi	ebi | shifudo | shurinpu
+1F991	ika	ika | shifudo
+1F992	kirin	kirin
+1F993	shimauma	shimauma | shimashima | zebura
+1F994	harinezumi	toge | harinezumi | harinezumi | yamaarashi
+1F995		dipurodokusu | burakiosaurusu | burontosaurusu
+1F996	tiranosaurusu	tiranosaurusu
+1F997	batta	koorogi | batta
+1F998	kangaru	osutoraria | kangaru | janpu | joi
+1F999	rama	arupaka | uru | guanako | bikuna | rama
+1F99A	kujaku	kujaku | pikokku
+1F99B	kaba	kaba
+1F99C	oumu	oumu | shaberu
+1F99D	araiguma	araiguma
+1F99E	zarigani	zarigani | shifudo | hasami | bisuku | reddorobusuta | robusuta
+1F99F		uirusu | mararia
+1F9A0		ameba | uirusu | bakuteria
+1F9A1	anaguma	anaguma | mitsuanaguma | rateru
+1F9A2		hina
+1F9A3	manmosu	manmosu
+1F9A4	dodo	dodo
+1F9A5	namakemono	namakemono | nonbiri | monogusa
+1F9A6	kawauso	kawauso | rakko
+1F9A7	oranutan	oranutan | saru
+1F9A8	sukanku	sukanku
+1F9A9	furamingo	furamingo
+1F9AA		oisuta | kaki | shifudo | daibingu
+1F9AB	biba	biba
+1F9AC	baison	baison | baffaro
+1F9AD	azarashi	azarashi | ashika | ottosei | todo
+1F9AE		akuseshibiriti
+1FABC	kurage	kurage | purankuton
+1F330	kuri	kuri
+1F334		bichi | yashi
+1F335	saboten	saboten
+1F337	churippu	churippu
+1F338		sakura
+1F339	bara	bara | rozu
+1F33A	haibisukasu	haibisukasu
+1F33B	himawari	himawari | himawari
+1F33C		kinpouge
+1F33D	toumorokoshi	kon | toumorokoshi | toumorokoshi
+1F33E		susuki
+1F33F	habu	habu
+1F340		kuroba
+1F341	kaede	kaede | kaede | momiji
+1F344	kinoko	kinoko | kinoko | masshurumu
+1FAB0	hae	hae
+1FAB1	mimizu	mimizu
+1FAB2	kabutomushi	kabutomushi | tsuno
+1FAB3	gokiburi	gokiburi
+1FAB4		beranda
+1FAB5		rogu
+1FAB8	sango	sango
+1FABB	hiyashinsu	hiyashinsu | burubonetto | rairakku | rabenda
+2618	kuroba	kuroba
+1F347	budou	gurepu | budou | budou
+1F348	meron	masukumeron | meron
+1F349	suika	suika
+1F34A	mikan	orenji | nekutarin | mikan
+1F34B	remon	remon
+1F34C	banana	kariumu | banana
+1F34D	painappuru	toropikaru | painappuru | pain
+1F34E		appuru | ringo
+1F34F		appuru | ringo
+1F350		nashi
+1F351		pichi
+1F352	sakuranbo	sakuranbo | cheri
+1F353	ichigo	ichigo | sutoroberi
+1F336	tougarashi	tougarashi
+1F354	hanbaga	baga | hanbaga | fasutofudo
+1F355	piza	chizu | piza | pittsa | peparoni
+1F357		chikin
+1F358	senbei	senbei
+1F359	onigiri	onigiri | omusubi
+1F35A	gohan	gohan | raisu
+1F35B	kareraisu	kare | kareraisu | raisu
+1F35C	ramen	supu | donburi | nudoru | ramen
+1F35D	supagetti	supagetti | supagetti | supageti | pasuta | mitososu
+1F35E		pan | bekari
+1F35F	furaidopoteto	fasutofudo | furaidopoteto | furenchifurai | poteto | potetofurai
+1F360		satsumaimo
+1F361	dango	dango | dezato
+1F362	oden	oden
+1F363	sushi	sushi
+1F364	ebifurai	ebi | ebifurai | furai
+1F365	naruto	naruto
+1F366	sofutokurimu	aisu | suitsu | sofuto | sofutokurimu | dezato
+1F367		aisu | sheibuaisu | suitsu | dezato
+1F368	aisukurimu	aisu | aisukurimu | suitsu | dezato
+1F369	donatsu	suitsu | dezato | donatsu
+1F36A	kukki	kukki | suitsu | chokoretochippu | dezato
+1F36B	chokoreto	suitsu | choko | chokoreto | dezato
+1F36C	kyandi	ame | kyandi
+1F36D	peroperokyandi	ame | kyandi | peroperokyandi
+1F36E	purin	kasutado | suitsu | dezato | purin
+1F36F	hachimitsu	hachimitsu | hachimitsu | hani | pusan
+1F370	shotokeki	keki | shotokeki | suitsu | dezato
+1F372	nabe	shichu | supu | nabe
+1F373		furaipan | resutoran
+1F374	naifutofoku	katorari | gochisou | dina | naifu | naifutofoku | foku | resutoran
+1F377	waingurasu	arukoru | gurasu | ba | wain | waingurasu
+1F378	kakuterugurasu	arukoru | kakuteru | kakuterugurasu | gurasu | kurabu | ba | matini
+1F379	toropikarudorinku	arukoru | kakuteru | toropikaru | toropikarudorinku | ba | maitai
+1F37A	birujokki	arukoru | okutobafesuto | jokki | ba | biru | birujokki
+1F37B		arukoru | jokki | ba | biru
+1F37C		miruku
+1F37D		dina | naifu | foku
+1F37E	shanpan	koruku | shanpan | shanpen | supakuringuwain | supumante | ba | botoru
+1F37F	poppukon	poppukon
+1F950	kurowassan	kurowassan | pan | furansu | bekari
+1F951	abokado	abokado
+1F952	kyuuri	kyuuri | pikurusu
+1F953	bekon	bekon
+1F954	jagaimo	imo | jagaimo | jagaimo | poteto
+1F955		ninjin
+1F956	bagetto	bagetto | pan | furansupan | bekari
+1F957	gurinsarada	gurin | gurinsarada | sarada
+1F958	paeria	shifudo | paeria
+1F959	kebabusando	kebabu | kebabusando | pitapan | rappusando
+1F95B		gurasu | koppu | miruku
+1F95C	pinattsu	nattsu | pinattsu
+1F95D	kiuifurutsu	kiui | kiuifurutsu
+1F95E	pankeki	pankeki | hottokeki
+1F95F		gyoza | gyouza
+1F960	fochunkukki	omikuji | fochunkukki
+1F961		deribari
+1F962	hashi	ohashi | hashi
+1F963	bourutosupun	otomiru | okayu | shiriaru | bourutosupun
+1F964	sutorokappu	koppu | jusu | sutorokappu | soda | sofutodorinku
+1F965	kokonatsu	kokonatsu | kokonattsu
+1F966	burokkori	burokkori
+1F967	pai	appurupai | taruto | pai | panpukinpai | mitopai
+1F968	purettseru	nejiri | pan | purettseru
+1F969		suteki | bifu | poku | ramu
+1F96A	sandoicchi	sandoicchi | pan
+1F96C		kyabetsu | keru | sarada | retasu
+1F96D	mango	toropikaru | furutsu | mango
+1F96F	beguru	kurimuchizu | pan | bekari | beguru
+1F9C0	chizu	chizu
+1F9C1	kappukeki	oyatsu | kappukeki | keki | suitsu | bekari
+1F9C2		shoppai
+1F9C3		jusu | sutoro | dorinku
+1F9C4	ninniku	garikku | nioi | ninniku
+1F9C5	tamanegi	tamanegi | negi
+1F9C6	faraferu	korokke | hiyokomame | faraferu
+1F9C7	waffuru	funwari | waffuru
+1F9C8	bata	bata
+1F9C9		dorinku
+1F9CB	tapiokadorinku	tapioka | tapiokadorinku | dorinku | baburuti | mirukuti
+1FAD0	buruberi	biruberi | buruberi | beri
+1FAD1	piman	tougarashi | papurika | piman
+1FAD2	oribu	oribu
+1FAD3	furattobureddo	arepa | nan | pan | pitapan | furattobureddo | rabashi
+1FAD4	tamaru	tamaru | tamaresu | chimaki | pamonya | mekishikan
+1FAD5	fondyu	suisu | chizu | chizufondyu | choko | fondyu
+1FAD6	tipotto	tipotto
+1FAD7		garasu | kobosu
+1FAD8		kidonibinzu | binzu | reddokidoni
+1FAD9		ja | bin
+1FADA	shouga	shouga | jinja | supaisu | habu
+1FADB		gurinpisu | saya
+2615		kafe | kafein | kohi | hottodorinku
+1F300		saikuron | hariken | memai | moyamoya
+1F301		moya
+1F306		biru
+1F307		biru
+1F308		gei | toransujenda | baisekushuaru | reinbo | rezubian
+1F30C		mirukiwei
+1F30D		afurika | yoroppa
+1F30E		amerika
+1F30F		ajia | osutoraria
+1F310		intanetto
+1F31F		kirakira | kirakira | suta
+1F320		suta
+1F32A		torunedo
+1FA90		ringu
+26F1	parasoru	parasoru | bichi
+26F4	feri	feri
+26F5	yotto	seringu | yotto
+1F488		baba | heasaron
+1F4BA		shito
+1F680	roketto	roketto
+1F681	herikoputa	heri | herikoputa
+1F683		tororibasu
+1F687		metoro
+1F688	raitoreru	monoreru | raitoreru
+1F689		suteshon
+1F68B		tororibasu
+1F68C	basu	sukurubasu | basu
+1F68D		basu
+1F68E	tororibasu	tororibasu | basu
+1F690	maikurobasu	basu | maikurobasu | minibasu
+1F693	patoka	patoka | patororu
+1F694		patoka
+1F695	takushi	ierokyabu | takushi
+1F696		ierokyabu | takushi
+1F697		doraibu
+1F698		doraibu
+1F69A	torakku	torakku
+1F69B	torera	torakku | torera
+1F69C	torakuta	torakuta
+1F69D	monoreru	monoreru
+1F69F		monoreru
+1F6A0	keburuka	keburuka | gondora | rifuto
+1F6A1	ropuwei	gondora | ropuwei
+1F6A3		oru | kanu | kayakku | supotsu | padoru | boto
+1F6A4	supidoboto	supidoboto | boto | motaboto
+1F6A7		sain
+1F6A8	patoranpu	sairen | patoka | patoranpu
+1F6A9		gorufu | supotsu | furagu | furaggu
+1F6AA	doa	doa
+1F6B9		toire
+1F6BA		toire
+1F6BB	toire	toire
+1F6BC	bebimaku	bebi | bebishito
+1F6BD		toire
+1F6BE		toire
+1F6BF	shawa	shawa
+1F6C0		basutabu
+1F6C1	basutabu	basutabu
+1F6C2		pasupotokontororu
+1F6C4		sutsukesu | bagejjikuremu
+1F6C5		koinrokka | sutsukesu | rokka
+1F6D1		sutoppu
+1F6D2	shoppingukato	kato | shoppingu | shoppingukato | supa
+26BD	sakka	sakka | sakkaboru | supotsu | boru
+26BE		supotsu | boru
+26F3	gorufu	gorufu | supotsu | furagu | furaggu | horu
+1F392	bakkupakku	bakkupakku | randoseru | ryukkusakku
+1F3A0	merigorando	merigoraundo | merigorando
+1F3A1		amyuzumentopaku
+1F3A2	jettokosuta	amyuzumentopaku | jettokosuta
+1F3A3		supotsu | fisshingu
+1F3A4	maiku	karaoke | maiku
+1F3A5		kamera | shinema | hariuddo | firumu | mubi
+1F3A6		kamera
+1F3A7	heddohon	iyahon | heddofon | heddohon
+1F3A8		paretto
+1F3A9	shirukuhatto	shirukuhatto
+1F3AA	sakasu	sakasu | tento
+1F3AB	chiketto	chiketto
+1F3AC	kachinko	kachinko
+1F3AE	terebigemu	gemu | kontorora | terebigemu | bideogemu
+1F3AF		supotsu | datsu | buruzuai
+1F3B0	surottomashin	kajino | gyanburu | gemu | surisebun | surotto | surottomashin
+1F3B1	biriyado	eitoboru | supotsu | biriyado | boru
+1F3B2	saikoro	gemu | saikoro | daisu
+1F3B3	bouringu	sutoraiku | supotsu | boru | bouringu
+1F3B4		kado | gemu
+1F3B7	sakkusu	sakisofon | sakusofon | sakkusu
+1F3B8	gita	erekigita | gita
+1F3B9		kibodo | piano
+1F3BA	toranpetto	toranpetto | rappa
+1F3BB	baiorin	viora | sutoradibariusu | baiorin
+1F3BC		sukoa
+1F3BD		supotsu | tasuki | ranningu | ranningushatsu
+1F3BE	tenisu	supotsu | tenisu | tenisuboru | boru | raketto
+1F3BF	suki	suki | sutokku | supotsu
+1F3C0	basukettoboru	supotsu | basuke | basukettoboru | boru
+1F3C1	chekkafuraggu	supotsu | chekkafuraggu | furagu | furaggu | reshingu | resu
+1F3C2	sunoboda	sunoboda | sunobodo | sunobo | supotsu
+1F3C3		jogingu | marason | ranna | ranningu
+1F3C4		safa | safin | supotsu
+1F3C5	medaru	supotsu | medaru
+1F3C6	torofi	chanpion | torofi
+1F3C7		jokki | supotsu
+1F3C8	amefuto	amefuto | amerikanfuttoboru | supotsu | futtoboru | boru
+1F3C9	ragubi	supotsu | boru | ragubi | ragubiboru
+1F3CA		kuroru | suima | suimingu | suimu | supotsu | toraiasuron
+1F3CB		weitorifutingu | supotsu | deddorifuto | baberu | pawarifutingu | bodibiruda
+1F3CC		gorufu | gorufa | supotsu
+1F3CD	otobai	otobai | otoresu | supotsu | baiku | motasupotsu
+1F3CE	reshinguka	karesu | supotsu | motasupotsu | reshinguka | resu
+1F451		kuraun
+1F453	megane	megane
+1F454	nekutai	shatsu | nekutai | waishatsu
+1F455		shatsu
+1F456	jinzu	kajuaru | jinzu | zubon | denimu | pantsu | burujinzu
+1F457	wanpisu	doresu | wanpisu
+1F459	bikini	bichi | bikini | puru
+1F45A		shatsu | burausu
+1F45C	handobaggu	kaban | shoppingu | baggu | handobaggu
+1F45D	pochi	kuracchibaggu | baggu | handobaggu | pochi
+1F45E		rofa
+1F45F	sunika	jogingushuzu | sunika | tenisushuzu
+1F460	haihiru	haihiru | pinhiru
+1F461	sandaru	sandaru
+1F462	butsu	butsu | rongubutsu
+1F6B2		saikuringu
+1F6B4		saikurisuto | saikuringu | supotsu | rodobaiku | rodoresu
+1F6B5		saikurisuto | saikuringu | supotsu | mauntenbaiku
+1F6B6		wokingu | haikingu | buratsuku
+1F938		supotsu
+1F939		jagura | jaguringu | maruchitasuku
+1F93A		supotsu | fenshingu
+1F93C		supotsu | dyueru | resura | resuringu
+1F93D		supotsu
+1F93E		asurito | kyacchi | supotsu | surosuru | handoboru | boru
+1F93F	daibingu masuku	shunokeringu | sukyuba | supotsu | daibingu | masuku
+1F9E2	kyappu	kyappu
+1F9E3	mafura	sukafu | mafura
+1F9E5	koto	auta | oba | koto | jaketto
+1F9E6	sokkusu	sokkusu
+1FA70	toushuzu	shuzu | dansu | toushuzu | baree | bareeshuzu
+1FA71		suimuwea
+1FA72	burifu	suimuwea | pantsu | burifu
+1FA73	shotsu	shotsu | suimuwea | pantsu
+1FA74	bichisandaru	gomuzouri | sandaru | tongusandaru | bisan | bichisandaru
+1FA80	yoyo	omocha | yoyo
+1FA81	tako	omocha | kaito | tako
+1FA82	parashuto	sukaidaibingu | paraguraida | parashuto | paraseringu | hanguguraida
+1FA83	bumeran	osutoraria | bumeran
+1FA84		tsue | majikku
+1FA85	pinyata	pati | pinyata | mekishiko
+1FA86	matoryoshika	matoryoshika | roshia
+1FA95	banjo	banjo
+1FA97	akodion	akodion | jabara
+1FA98	konga	konga | doramu | bito | rizumu
+265F		chesu
+2660	supedo	kado | supedo | toranpu
+2663	kurabu	kado | kurabu | kuroba | toranpu
+2665	hato	kado | toranpu | hato
+2666	daiya	kado | daia | daiya | toranpu
+1F4B3	kurejittokado	kado | kyasshukado | kurejittokado
+1F4B5		doru
+1F4B6		yuro
+1F4B7		pondo
+1F4B9		gurafu | chato
+1F4BB	notopasokon	konpyuta | notopasokon | pasokon | rapputoppu
+1F4BC	burifukesu	kaban | burifukesu
+1F4BD		konpyuta | minidisuku
+1F4BE	furoppi	konpyuta | disuku | furoppi | furoppidisuku
+1F4BF		konpyuta | disuku | bururei
+1F4C0		disuku | bururei
+1F4C1	foruda	fairu | foruda
+1F4C2		fairu | foruda
+1F4C3		karu | dokyumento
+1F4C4	peji	dokyumento | peji
+1F4C5	karenda	karenda | sukejuru
+1F4C6		karenda | sukejuru
+1F4C7	kadoindekkusu	kadoindekkusu
+1F4C8		gurafu | chato | deta
+1F4C9		chato | deta
+1F4CA		gurafu | chato | deta
+1F4CB	kurippubodo	kurippu | kurippubodo | memo
+1F4CD		pin | pusshupin
+1F4CE	kurippu	kurippu | zemukurippu | pepakurippu
+1F4CF		monosashi
+1F4D1		fusen
+1F4D2	ringunoto	noto | ringunoto
+1F4D3	noto	noto
+1F4D4		noto
+1F4DB		bajji
+1F4DD		memo
+1F4DF	pokeberu	peja | pokettoberu | pokeberu
+1F4E0	fakkusu	fakkusu
+1F4E1	paraboraantena	antena | parabora | paraboraantena
+1F4E2		supika | megahon
+1F4E3	megahon	supika | megahon
+1F4E4		torei
+1F4E5		torei
+1F4E7		meru
+1F4EA		posuto
+1F4EB		posuto
+1F4EC		posuto
+1F4ED		posuto
+1F4EE		posuto
+1F4EF		rappa
+1F4F0		nyusu
+1F4F1		sumatofon | sumaho | mobairu
+1F4F2		sumatofon | sumaho | mobairu
+1F4F3	manamodo	sumatofon | sumaho | manamodo
+1F4F4		ofu | sumatofon | sumaho
+1F4F6	antenamaku	antenamaku | sumatofon | sumaho
+1F4F7	kamera	kamera
+1F4F8		kamera | kamerafurasshu | furasshu
+1F4F9	bideokamera	kamera | bideo | bideokamera | mubi
+1F4FA	terebi	terebi | bideo
+1F4FB	rajio	rajio
+1F4FC	bideotepu	tepu | bideo | bideokasetto | bideotepu
+1F4FD		bideo | firumu | purojekuta | mubi
+1F4FF		nekkuresu | rozario
+1F505		buraitonesu
+1F506		buraitonesu
+1F507		supika | myuto
+1F508	supika	supika | boryumu
+1F509		supika | boryumu
+1F50A		supika | boryumu
+1F50B		batteri
+1F50C	konsento	konsento | puragu
+1F50D		rupe
+1F50E		rupe
+1F50F		puraibashi | rokku
+1F510		ki | sekyuriti | rokku
+1F511		ki | pasuwado
+1F512		rokku
+1F513		rokku
+1F514	beru	beru
+1F515		myuto
+1F516	shiori	shiori | tagu | bukkumaku
+1F517	rinkushinboru	rinku | rinkushinboru
+1F518	rajiobotan	botan | rajiobotan
+1F526		raito
+1F527	renchi	supana | renchi
+1F528	hanma	kanazuchi | tonkachi | hanma
+1F529	borutotonatto	natto | boruto | borutotonatto
+1F52A		naifu
+1F52B		pisutoru | riboruba
+1F52C		saiensu
+1F52D		saiensu
+1F9BA		chokki | besuto
+1F9BB		akuseshibiriti
+1F9BC		akuseshibiriti
+1F9BD		akuseshibiriti
+1F9E9	jigusopazuru	jigusopazuru | pazuru | pisu
+1F9EA		rabo
+1F9EB		bakuteria
+1F9ED	konpasu	orienteringu | konpasu
+1F9EE	soroban	abakasu | soroban
+1F9F0		tsurubokkusu | mekanikku
+1F9F1	renga	shikkui | burokku | morutaru | renga
+1F9F2		magunetto
+1F9F3	sutsukesu	kyarikesu | sutsukesu | pakkingu
+1F9F4	roshon	shanpu | roshon | roshonbotoru
+1F9F5		soingu | himo
+1F9F6		nitto
+1F9F8	tedibea	omocha | kuma | tedibea | nuigurumi
+1F9F9	houki	houki
+1F9FA	kago	kago | pikunikku
+1F9FB	toirettopepa	kicchinpepa | toirettopepa | pepataoru | rorupepa
+1F9FC		sopu
+1F9FD	suponji	suponji
+1F9FE	reshito	reshito
+1F9FF	nazaru bonjuu	nazaru | nazaru bonjuu | bizu
+1FA78		kega
+1FA79		kega | bansoukou
+1FA91		shito | chea
+1FA92		kamisori | higesori | reza | reza
+1FA93		ono | hachetto
+1FA94	diyaranpu	oiru | diyaranpu | ranpu
+1FA96		herumetto | miritari
+1FA99	koin	koin
+1FA9A	nokogiri	noko | nokogiri
+1FA9B		sukuryudoraiba | doraiba | mainasudoraiba
+1FA9C	hashigo	suteppa | hashigo
+1FA9D	fukku	fukku
+1FA9E		mira | meku
+1FA9F		windou | furemu
+2620		sukaru | dokuro
+2623	baiohazado	baiohazado
+267F		bariafuri | bariyafuri
+2692	hanmatotsuruhashi	kanazuchi | tsuruhashi | tonkachi | hanma | hanmatotsuruhashi
+2693		ikari
+2694		tsurugi
+2696		hakari | baransu
+2699		gia
+269C	fururu do risu	enburemu | fururu do risu | yuri
+26CF	tsuruhashi	tsuruhashi
+26D1		herumetto
+26D3		kusari | chen
+2702	hasami	katto | hasami | hasami
+2709		meru
+2714		chekku | chekkumaku
+2716		kyanseru | batsu | peke
+2753		kuesuchonmaku | hatenamaku
+2757		ekusukurameshonmaku | bikkurimaku
+1F500	shaffurubotan	shaffuru | shaffurubotan | botan
+1F501	ripitobotan	botan | ripito | ripitobotan
+1F502		botan | ripito
+1F503		rirodo
+1F504		ripito
+1F519		bakku
+1F51A		endo
+1F51B		on
+1F51C		sugu
+1F51D		toppu
+1F520		arufabetto
+1F521		arufabetto
+1F524		arufabetto
+21C5		appudaun

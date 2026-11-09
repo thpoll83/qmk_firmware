@@ -1,0 +1,84 @@
+# Emoji search dictionaries, in a fixed order: APPEND ONLY. A dictionary's
+# number is its line number here (0 = en); its bundle content_version is
+# (number << 8) | revision, which GET_ID reports, so the host can tell which
+# dictionary a keyboard holds. Names: Unicode CLDR main/<lang>.xml.
+# number	id	revision	English name	native name
+0	en	1	English	English
+1	de	1	German	Deutsch
+2	fr	1	French	français
+3	es	1	Spanish	español
+4	pt	1	Portuguese	português
+5	it	1	Italian	italiano
+6	tr	1	Turkish	Türkçe
+7	ko	1	Korean	한국어
+8	ar	1	Arabic	العربية
+9	el	1	Greek	Ελληνικά
+10	uk	1	Ukrainian	українська
+11	ru	1	Russian	русский
+12	be	1	Belarusian	беларуская
+13	kk	1	Kazakh	қазақ тілі
+14	bg	1	Bulgarian	български
+15	pl	1	Polish	polski
+16	ro	1	Romanian	română
+17	nl	1	Dutch	Nederlands
+18	he	1	Hebrew	עברית
+19	sv	1	Swedish	svenska
+20	fi	1	Finnish	suomi
+21	nn	1	Norwegian Nynorsk	↑↑↑
+22	da	1	Danish	dansk
+23	hu	1	Hungarian	magyar
+24	cs	1	Czech	čeština
+25	hr	1	Croatian	hrvatski
+26	sk	1	Slovak	slovenčina
+27	lt	1	Lithuanian	lietuvių
+28	lv	1	Latvian	latviešu
+29	et	1	Estonian	eesti
+30	sr	1	Serbian	српски
+31	mk	1	Macedonian	македонски
+32	fa	1	Persian	فارسی
+33	hi	1	Hindi	हिन्दी
+34	mr	1	Marathi	मराठी
+35	ne	1	Nepali	नेपाली
+36	mn	1	Mongolian	монгол
+37	ur	1	Urdu	اردو
+38	th	1	Thai	ไทย
+39	bn	1	Bangla	বাংলা
+40	te	1	Telugu	తెలుగు
+41	ta	1	Tamil	தமிழ்
+42	ka	1	Georgian	ქართული
+43	hy	1	Armenian	հայերեն
+44	id	1	Indonesian	Indonesia
+45	az	1	Azerbaijani	azərbaycan
+46	is	1	Icelandic	íslenska
+47	vi	1	Vietnamese	Tiếng Việt
+48	mi	1	Māori	Māori
+49	tl	1	Filipino	Filipino
+50	af	1	Afrikaans	Afrikaans
+51	sw	1	Swahili	Kiswahili
+52	am	1	Amharic	አማርኛ
+53	yo	1	Yoruba	Èdè Yorùbá
+54	ku	1	Kurmanji	kurmancî
+55	ms	1	Malay	Melayu
+56	uz	1	Uzbek	o‘zbek
+57	ca	1	Catalan	català
+58	bs	1	Bosnian	bosanski
+59	sl	1	Slovenian	slovenščina
+60	fo	1	Faroese	føroyskt
+61	ky	1	Kyrgyz	кыргызча
+62	tg	1	Tajik	тоҷикӣ
+63	to	1	Tongan	lea fakatonga
+64	eu	1	Basque	euskara
+65	gl	1	Galician	galego
+66	rm	1	Romansh	rumantsch
+67	cy	1	Welsh	Cymraeg
+68	ga	1	Irish	Gaeilge
+69	mt	1	Maltese	Malti
+70	lb	1	Luxembourgish	Lëtzebuergesch
+71	qu	1	Quechua	Runasimi
+72	ps	1	Pashto	پښتو
+73	ck	1	Cherokee	ᏣᎳᎩ
+74	ja@romaji	1	Japanese, Romaji	日本語, Romaji
+75	zh-CN@pinyin	1	Chinese (China), Pinyin	中文, Pinyin
+76	zh-TW@zhuyin	1	Chinese (Taiwan), Zhuyin	中文, Zhuyin
+77	zh-HK@pinyin	1	Chinese (Hong Kong SAR China), Pinyin	中文, Pinyin
+78	zh-HK@cangjie	1	Chinese (Hong Kong SAR China), Cangjie	中文, Cangjie

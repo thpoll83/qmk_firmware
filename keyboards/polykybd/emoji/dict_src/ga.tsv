@@ -1,0 +1,1259 @@
+# emoji search keywords, ga, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	straoiseog ghealgháireach	aghaidh | gáire | meangadh | sásta | sona sásta | straoiseog ghealgháireach
+1F601	straoiseog gháire le súile & miongháire	gáire | meangadh | miongháire | straoiseag gáire le súile ag déanamh miongháire | straoiseog a bhfuil meangadh mór uirthi | straoiseog gháire le súile & miongháire | straoiseog gháire le súile ag déanamh miongháire | súile ag gáire
+1F602	straoiseog le deora áthais	ag gáire | deora áthais | gáire mhór | golgháire | greannmhar | haha | hehe | lol | sásta | sna trithí gáire | straoiseog le deora áthais
+1F603	straoiseog ag gáire le súile móra	béal ar oscailt | meangadh gáire | sásta | straoiseog ag gáire le súile móra | straoiseog ag miongháire le béal oscailte
+1F604	straoiseog ag gáire le súile gealgháireacha uirthi	béal ar oscailt | lol | meangadh gáire | sásta | straoiseog ag gáire le béal oscailte agus súile gealgháireacha | straoiseog ag gáire le bhéal oscailte agus súile ag déanamh miongháire | straoiseog ag gáire le súile ag déanamh miongháire | straoiseog ag gáire le súile gealgháireacha uirthi | straoiseog ag gáire le súile le miongháire | súile ag gáire
+1F605	straoiseog ag gáire le fuarallas	béal ar oscailt | faoi strus | fuar | fuarallas | meangadh gáire | neirbhíseach | straoiseog ag gáire le fuarallas
+1F606	straoiseog ag gáire le súile dúnta	aghaidh | béal ar oscailt | fuirseoireacht | gáire | gáire os ard | greannmhar | haha | lol | meangadh | miongháire | sásta | straoiseog ag gáire le súile dúnta | súile dúnta go dlúth
+1F607	straoiseog ag gáire le luan	ag miongháire | aingeal | beannaithe | fáinne solais | meangadh gáire | miongháire | sásta | straoiseog ag gáire le luan | straoiseog ag miongháire le luan
+1F608	straoiseog ag gáire le hadharca	adharca | diabhlaí | meangadh gáire | miongháire | straoiseog ag gáire le hadharca | straoiseog ag miongháire le hadharca
+1F609	straoiseog ag caochadh	aghaidh | caochadh | mealltach | radaire | straoiseog ag caochadh
+1F60A	straoiseog aoibhiúil le súile le miongháire	meangadh gáire | miongháire | sásta | straoiseog ag gáire le súile ag déanamh miongháire | straoiseog ag miongháire le súile ag déanamh miongháire | straoiseog aoibhiúil le súile ag déanamh miongháire | straoiseog aoibhiúil le súile le miongháire | súil | súile ag gáire
+1F60B	straoiseog ag baint taitneamh as bia blasta	aghaidh | an-bhlasta | an-deas | bia | blasta | ith | lán | meangadh | miongháire | neam | ocrach | sásamh
+1F60C	straoiseog a bhfuil faoiseamh uirthi	aghaidh | faoiseamh | síocháin | straoiseog a bhfuil faoiseamh uirthi | zen
+1F60D	staoiseog ag gáire le croíthe ina súile	croíthe | grá | meangadh gáire | póg | staoiseog ag gáire le croíthe ina súile | straoiseog ag gáire le croíthe ina shúile | straoiseog ag gáire le croíthe ina súile | súile i bhfoirm croí | xoxo
+1F60E	straoiseog ag gáire le spéaclaí gréine	ar do shuaimhneas | ar fheabhas | meangadh gáire | spéaclaí gréine | straoiseog ag gáire le spéaclaí gréine
+1F60F	straoiseog ag déanamh seitgháire	amhrasach | pioctha néata | síodúil | siotgháire | sleamhain | sotalach | straoiseog ag déanamh seitgháire
+1F610	straoiseog neodrach	aghaidh neodrach | gan a bheith ag gáire | gan a bheith tógtha | míshásta | neodrach | straoiseog neodrach
+1F611	straoiseog le haghaidh fholamh	féachaint fholamh | féachaint folamh | gbdo | gnúis dhúrúnta | óró | straoiseog le haghaidh fholamh
+1F612	straoiseog mhíshásta	aghaidh mhíshásta | cgl | dubh dóite | míshásta | straoiseog mhíshásta
+1F613	straoiseog in ísle brí le fuarallas	brónach | fuarallas | imní | neirbhíseach | straoiseog in ísle brí le fuarallas
+1F614	straoiseog mhachnamhach	brónach | díomách | dubh dóite | machnamhach | smaointeach | straoiseog mhachnamhach
+1F615	straoiseog mhearaithe	brónach | measctha | nílim cinnte | straoiseog mhearaithe | trína chéile
+1F616	straoiseog le mearbhall uirthi	ar buile | brónach | frustrachas | mearbhall | straoiseog le mearbhall uirthi | trí chéile
+1F617	straoiseog ag pógadh	143 | aghaidh | póg | straoiseog ag pógadh | xoxo
+1F618	straoiseog ag séideadh póige	aghaidh | croí | grá | grá agam ort | póg | pógadh | rómánsúil | straoiseog ag séideadh póige
+1F619	straoiseog ag pógadh le súile le miongháire	143 | aghaidh | coinne | éadan | meangadh | miongháire | póg | pógadh | rosc | straoiseog ag pógadh le súile ag déanamh miongháire | straoiseog ag pógadh le súile le miongháire | súil | súile ag gáire | súile dúnta
+1F61A	straoiseog ag pógadh le súile dúnta	coinne | póg | pógadh | straoiseog ag pógadh le súile dúnta | súile dúnta | xoxo
+1F61B	straoiseog le teanga amach	aghaidh | ar fheabhas | cóisir | deas | straoiseog le teanga amach | teanga
+1F61C	straoiseog ag caochadh le teanga amach	ait | amaideach | caochadh | straoiseog ag caochadh le teanga amach | straoiseog le teanga amach agus súil á caochadh | teanga ag gobadh amach | teanga churtha amach
+1F61D	straoiseog le teanga amach agus súile dúnta	aghaidh | blas | straoiseog le teanga amach agus súile dúnta | súil | súile dúnta go dlúth | teanga ag gobadh amach | teanga churtha amach
+1F61E	straoiseog dhíomách	díomá | dobrónach | míshásta | straoiseog dhíomách | uafásach
+1F61F	straoiseog imníoch	brónach | buartha | faoi strus | imní | neirbhíseach | straoiseog imníoch
+1F620	straoiseog fheargach	aghaidh | ar buile | cantalach | corraithe | fearg | feargach | locht | míshásta | mothú | spréachadh | spréachta
+1F621	aghaidh fheargach	aghaidh | fearg | feargach | pus | smut | straoiseog le puisín uirthi | straoiseog pus
+1F622	straoiseog chaointeach	ag gol | caoineadh | deora | gol | míshásta | straoiseog chaointeach | uafásach
+1F623	straoiseog bhuanseasmhachta	buanseasmhach | dianmhachnamh | leanaim orm | pian sa cheann | straoiseog bhuanseasmhachta | straoiseog dhíocasach
+1F624	straoiseog le gal ón tsrón	bua | fearg | mórtas | straoiseog le gal ón tsrón
+1F625	straoiseog a bhfuil díoma ach le faoiseamh	allas | cinneadh crua | díomá | faoiseamh | straoiseog a bhfuil díoma ach le faoiseamh | straoiseog a bhfuil díoma agus faoiseamh uirthi | straoiseog a bhfuil díomá agus faoiseamh uirthi | straoiseog dhíomá | suaimhneas intinne
+1F626	straoiseag ghruama le béal oscailte	aghaidh | ar oscailt | béal | grainc | iontas | púic | straoiseag ghruama le béal oscailte | straoiseog ghruama le béal oscailte
+1F627	straoiseog chráite	aghaidh | cráite | faoi strus | míshásta | straoiseog chráite
+1F628	straoiseog eaglach	buartha | eagla | faitíos | straoiseog eaglach
+1F629	straoiseog thraochta	ag caoineadh | míshásta | ocrach | straoiseog thraochta | tuirse | tuirseach
+1F62A	straoiseog chodlatach	aghaidh | brónach | caoineadh | codladh | straoiseog chodlatach | tuirseach
+1F62B	straoiseog thuirseach	aghaidh | brónach | costas | sraoth | straoiseog thuirseach | tuirseach
+1F62C	straoiseog le cár uirthi	ag miongháire | aghaidh | grainc | strainc | straoiseog le cár uirthi
+1F62D	straoiseog ag caoineadh os ard	brónach | caoineadh go hard | deora | gol go hard | míshásta | straoiseog ag caoineadh os ard | straoiseog chaointeach os ard
+1F62E	straoiseog le béal oscailte	béal ar oscailt | dearmad déanta air | dochreidte | ionadh | straoiseog le béal oscailte
+1F62F	straoiseog ina tost	gbdo | ionadh | iontas | straoiseog ina tost | straoiseog thostach
+1F630	straoiseog fhaiteach le hallas	aghaidh | allas | béal | brostaigh | éadan | faoi dheifir | fuar | fuarallas | gorm | oscailte | scanraithe | straoiseog fhaiteach le hallas
+1F631	straoiseog ag béiceach amach le heagla	ag screadaíl | aghaidh | aghaidh ag screadach le heagla | béic | coscrach | éadan | eagla | éamh | faitíos | munch | scanradh | scanraithe | sceimhle | scéin | scread | straoiseog ag béiceach amach le heagla | uafás | uamhan
+1F632	straoiseog iontais	a dhia | aghaidh | ar fad | costas | ionadh | iontas | ná habair | ní hea | stangadh
+1F633	straoiseog dhearg	aghaidh dhearg | aghaidh lasta | ionadh | mearbhall | straoiseog dhearg | te | teas | tógtha | trí chéile
+1F634	straoiseog ina codladh	am luí | codladh | ina chodladh | néal codlata | oíche mhaith | straoiseog ina codladh | suan | tuirseach | zz | zzz | zzzz
+1F635	aghaidh a bhfuil crosa curtha trína súile	aghaidh | breoite | meadhrán | meadhránach | straoiseog mheadhránach | tuirseach
+1F636	straoiseog gan bhéal	aghaidh gan bhéal | ciúin | gan bhéal | gan mhothúchán | ina thost | rún | straoiseog gan bhéal
+1F637	straoiseog le masc leighis	aghaidh agus masc uirthi | breoite | dochtúir | fiaclóir | fuar | leigheas | masc | masc máinliachta | straoiseog le masc leighis | tinn
+1F638	straoiseog cait le súile le miongháire	aghaidh | ainmhí | cat | meangadh | miongháire | straoiseog cait le súile le miongháire | súil
+1F639	straoiseog cait le deora áthais	ag gáire | aghaidh | ainmhí | áthas | cat | deora | gáire | straoiseog cait le deora áthais
+1F63A	cat ag miongháire	aghaidh | ainmhí | cat | cat ag miongháire | meangadh | mionngháire | oscailte
+1F63B	straoiseog cait le croíthe ina súile	aghaidh | ainmhí | cat | croí | croíthe sna súile | grá | meangadh | miongháire | súil
+1F63C	straoiseog cait le miongháire dóite	aghaidh | ainmhí | cat | dóite | íoróineach | meangadh | straoiseog cait le miongháire dóite
+1F63D	cat ag pógadh	aghaidh | ainmhí | cat | cat ag pógadh | póg | súil
+1F63E	cat le puisín air	aghaidh | ainmhí | cat | cat le puisín air | puisín
+1F63F	cat ag gol	aghaidh | ainmhí | brón | cat | cat ag gol | deora | gol
+1F640	cat tuirseach	aghaidh | ainmhí | cat | iontas | oh | tuirseach
+1F641	straoiseog le mionghrainc uirthi	aghaidh | brónach | grainc | straoiseog le mionghrainc uirthi
+1F642	straoiseog ag miongháire de bheagán	aghaidh | áthas | miongháire | straoiseog ag miongháire de bheagán
+1F643	straoiseog bun os cionn	aghaidh | bonn os cionn | miongháire | straoiseog bun os cionn
+1F644	straoiseog le súile ag casadh	aghaidh | ar nós mo dhuine | céard sa diabhal | pé rud a deir tú féin | straoiseog le súile ag casadh | suas chun na bhflaitheas | súile
+1F648	moncaí nach bhfeiceann aon olc	ainmhí | moncaí | moncaí nach bhfeiceann aon olc | ná feic aon olc
+1F649	moncaí nach gcloiseann aon olc	ainmhí | moncaí | moncaí nach gcloiseann aon olc | ná clois aon olc
+1F64A	moncaí nach ndeir aon olc	ainmhí | moncaí | moncaí nach labhraíonn faoin olc | moncaí nach ndeir aon olc | ná labhair faoin olc
+1F910	straoiseog le béal zipeáilte	aghaidh | béal | ciúnas | sip | straoiseog le béal zipeáilte
+1F911	straoiseog le hairgead ina béal	aghaidh | airgead | béal | íoctha | straoiseog le hairgead ina béal
+1F912	straoiseog le teirmiméadar	aghaidh | aghaidh le teirmiméadar | breoite | go dona | straoiseog le teirmiméadar | teirmiméadar | tinn
+1F913	straoiseog shaoithíneach	aghaidh | aghaidh saoithíneach | aibí | amaideach | ciotachán | cliste | éirimiúil | gaoiseach | geocach ríomhaire | saineolaí | saoithín | spéaclaí | straoiseog shaoithíneach
+1F914	straoiseog ag smaoineamh	ag machnamh | ag smaoineamh | aghaidh | machnamhach | straoiseog ag smaoineamh
+1F915	straoiseog le bindealán ar a ceann	aghaidh | aghaidh le bindealán ar a cheann | bindealán | dochar | gortaithe | pian | straoiseog le bindealán ar a ceann
+1F916	róbat	aghaidh | arracht | róbat
+1F917	aghaidh ghealgháireach agus na lámha oscailte	ag beir barróg | aghaidh | barróg | barróg a thabhairt | lámha | straoiseog ag tabhairt barróige
+1F920	straoiseog le hata buachaill bó	aghaidh | buachaill bó | cailín | hata | hata buachaill bó | straoiseog le hata buachaill bó
+1F921	fearr grinn	aghaidh | bean ghrinn | fear grinn | fearr grinn | gáire
+1F922	straoiseog bhreoite	aghaidh | breoite | fonn múisce | masmas | straoiseog bhreoite | tinn
+1F923	sna trithí gáire	aghaidh | fuirseoireacht | gáire | gáire os ard | golgháire | greannmhar | haha | lol | miongháire | sna tríthí | sna trithí gáire | urlár
+1F924	straoiseog ag prislíneacht	aghaidh | éadan | prislíneacht | straoiseog ag prislíneacht
+1F925	straoiseog ag insint bréag	aghaidh | bréag | bréaga | pinocchio | straoiseog ag insint bréag
+1F926	duine lena aghaidh ina bhos	a thiarcais | aghaidh | aghaidh ina bos | ar mire | bos | ciaptha | de spadhar | duine lena aghaidh ina bhos | gbdo | lámh | ní chreidim | ó bhó go deo | stop
+1F927	straoiseog ag sraotharthach	aghaidh | breoite | sraoth | straoiseog ag sraotharthach
+1F928	straoiseog le mala ardaithe	aghaidh | aghaidh le mala ardaithe | amhras | amhrasach | ionadh | sceipteach | straoiseog le mala ardaithe
+1F929	straoiseog faoi gheasa	aghaidh | meangadh | réalt | réalta | straoiseog faoi gheasa | súile
+1F92A	straoiseog chraiceáilte	beag | mór | rosc | straoiseog chraiceáilte | súil | súile
+1F92B	straoiseog do do chur i do thost	aghaidh | bí ciúin | ciúnaigh | ciúnas | fuist
+1F92C	straoiseog le siombailí ar an mbéal	ar buile | eascainí | straoiseog le siombailí ar an mbéal
+1F92D	straoiseog lena lámh ar a béal	aghaidh le lámha ar an mbéal | gan choinne | rún | scig-gháire | scigireacht | sciotaíl | straoiseog lena lámh ar a béal
+1F92E	straoiseog ag cur amach	aghaidh ag cur amach | aiseag | déistin | gránna | masmas | straoiseog ag cur amach | tinn | urlacan
+1F92F	straoiseog lena ceann ag pléasadh	baineadh geit asam | croitheadh bainte | pléascadh | straoiseog lena ceann ag pléasadh | suaite
+1F970	straoiseog ag miongháire le croíthe	aghaidh | aghaidh le 3 chroí | breá | croí | croíthe | cumann | gean | grá | i ngrá | is breá liom é | meangadh | miongháire | mo ghrá thú | searc | splanctha | straoiseog ag miongháire le croíthe | straoiseog le croíthe
+1F971	aghaidh ag méanfach	aghaidh ag méanfach | am codlata | ar nós cuma liom | dubh dóite | leamh | méanfach | straoiseog ag méanfach | tuirseach | zz | zzz | zzzz
+1F972	straoiseog shásta le deora	aghaidh | áthas | bródúil | buíoch | corraithe | deoir | faoiseamh | meangadh | miongháire | pian | sásta | sona | straoiseog
+1F973	straoiseog chóisireachta	ceiliúradh | cóisir | corn | féile | fleá | hata | hurá | iontach | lá breithe | lá breithe sona | sceitimíní | spraoi | straoiseog chóisireachta | tógtha
+1F974	straoiseog trína chéile	ar meisce | béal corrach | meabhránach | ólta | siabhrán | straoiseog trína chéile | súile míchothroma
+1F975	straoiseog the	ag cur allais | ag fáil bháis | aghaidh | an-te | análú trom | dearg-ghnúiseach | fiabhrasach | stróc | teanga amuigh | teas
+1F976	straoiseog fhuar	aghaidh | aghaidh fhuar | aghaidh ghorm | bior seaca | briogadán | coinlín reo | coinlíní reo | dó seaca | faoi náid chéim | fuar | gorm | préachta | reodóga | reoite | sioc | straoiseog fhuar | straoiseog ghrom
+1F978	straiseog faoi bhréagriocht	aghaidh | bréagriocht | croiméal | malaí | spéaclaí | srón | straiseog faoi bhréagriocht | straoiseog | straoiseog faoi bhréagriocht
+1F97A	straoiseog impíoch	ag impí | aghaidh | brónach | impí | impigh | le do thoil | straoiseog impíoch | súile coileáin | súile móra | trócaire
+1FAE0	straoiseog atá ag leá	aghaidh | goa | há há | imigh as radharc | leá | leacht | leáigh | náirithe | searbhas | searbhasach | te | teocht | tuaslaig
+1FAE1	straoiseog ag déanamh cúirtéise	a bhean uasal | a dhuine uasail | ádh | ag déanamh cúirtéise | aghaidh | cúirtéis | grianmhar | maith go leor | meas | mór | sea | trúpaí
+1FAE2	straoiseog le súile oscailte agus lámh ar an mbéal	a dhia | aghaidh | alltacht | aniar aduaidh | béal | ciúin | cnead | díchreideamh | ionadh | iontas | lámh | náire | oscailte | scanraithe | stangadh | súile | thar | uamhan
+1FAE3	straoiseog le súil ag píceáil	cotúil | faoi dhraíocht | gliúc | gliúcaíocht | spléachadh | stánadh | straoiseog le súil ag píceáil
+1FAE4	straoiseog le béal fiarthrasna	amhrasach | is cuma | neamhshuim | straoiseog le béal fiarthrasna | trína chéile
+1FAE5	straoiseog le líne phoncaithe	dofheicthe | easpa spéise | faoi ghruaim | folaithe | is cuma | straoiseog le líne phoncaithe
+1FAE7	boilgeoga	boilgeoga | bolgán | gallúnach
+1FAE8	aghaidh croitheadh	aghaidh | aghaidh ag croitheadh | crith | crith talún | croitheadh | turraing
+1F381	bronntanas	beart | breithlá | bronntanas | cóisir | nollaig
+1F389	pléiscín cóisire	am spraoi | ar fheabhas | ar gor | breithlá | ceiliúir | ceiliúradh | cóisir | comóir | comóradh | corraithe | hurú | lá breithe | pléiscín | pléiscín cóisire | spraoi
+1F38A	meall coinfití	bainis | ceiliúradh | coinfití | cóisir | meall coinfití | pósadh
+1F47B	taibhse	aghaidh | arracht | púca | samhain | síscéal | taibhse
+1F47C	aingeal óg	aingeal | aingeal óg | leanbh | séipéal
+1F47D	eachtrán	arracht | eachtardhomhandach | eachtrán | úfó
+1F47E	arracht eachtráin	arracht | arracht eachtráin | cluiche | cluichí | eachtrán | eachtrán arrachtaigh | picteilíní | úfó
+1F47F	straoiseog fheargach le hadharca	an t-olc | deamhan | diabhal | diaibhlín | straoiseog fheargach le hadharca
+1F480	blaosc	aghaidh | arracht | bás | blaosc | marbh | síscéal | tá mé marbh
+1F481	duine lena lámh amach	brú siar gruaige | cabhair | cibé rud | cúlchaint | deasc faisnéise | duine lena lámh amach | eolas | faisnéis | i ndáiríre | lámh á hiompú | muiníneach | tarcaisneach
+1F482	garda an rí	garda | garda an rí | londain | saighdiúir
+1F489	instealladh	dochtúir | instealladh | leigheas | uirlis
+1F48A	piolla	breoite | cógais | dochtúir | drugaí | leigheas | piolla | piollaí | tinn
+1F4A2	siombail feirge	ar buile | fearg | feargach | greannán | siombail | suaite
+1F4A4	ZZZ	codladh | codladh sámh | ina chodladh | néal codlata | oíche mhaith | srannadh | suan | tuirseach | zz | zzz | zzzz
+1F4A5	pléasc	buama | plab | pléasc | pléascadh | pléascán | torann
+1F4A6	broainíní allais	aclaíocht a dhéanamh | allas | braoiníní | braoiníní allais | braonta | broainíní allais | stealladh | uisce
+1F4A7	braoinín	aimsir | allas | braoinín | braon | cur allais | fuar | uisce
+1F4A8	rith	broim | rith | sciuird | tapa
+1F4A9	carn caca	cac | cac asail | cacamas | carn caca | raiméis | truflais
+1F4AB	meadhrán	meadhrán | mearbhall | réalta reatha | réaltaí
+1F4AC	bolgán cainte	bolgán | bolgán cainte | caint | clóscríobh | sms | téacs
+1F4AD	bolgán smaointe	ag smaoineamh | bolgán | brionglóid | scamall | smaoineamh | smaointe
+1F4AE	bláth bán	bán | bláth
+1F4A0	muileata le ponc	diamant | laistigh | muileata | muileata le ponc
+1F4A1	bolgán solais	bolgán | bolgán solais | leictreach | smaoineamh | solas | solus
+1F4A3	buama	buama | pléascadh | pléascán
+1F4AF	scór iomlán	100 | 100 pointe | a+ | céad | cinnte | fíor | fírinne | go soiléir | iomlán | lán | scór iomlán
+1F4B0	mála airgead	airgead | airgead tirim | banc | billiún | bua | dollar | geall | íocaíocht | íoctha | mála | mála airgid | milliún | saibhir
+1F4B1	malartán airgeadra	airgead | airgeadra | banc | malartán airgeadra | malartú | malartú airgid
+1F4B2	comhartha dollair trom	$ | airgead | airgeadra | billiún | comhartha dollair | comhartha dollair trom | dollar | íoc | milliún | táille
+1F4B8	airgead ag eitilt	airgead | airgead ag eitilt | airgead le sciatháin | airgead tirim | banc | billiún | dollar | eitilt | íoc | milliún | nóta | sciatháin
+1F525	tine	dóiteán | lasair | lasracha | te | tine | trí thine | uirlis
+1F52E	cruinneog chriostail	cinniúint | cruinneog chriostail | síscéal | uirlis
+1F440	súile	ag féachaint | aghaidh | féach | gbdo | súile
+1F441	súil	corp | súil | súil amháin
+1F442	cluas	ag éisteacht | cluas | cluasa | corp | fuaim
+1F443	srón	boladh | colainn | corp | srón
+1F444	béal	áilleacht | béal | béaldath | pógadh
+1F445	teanga amach	colainn | corp | luí | teanga | teanga amach
+1F446	cúl corrmhéire ag díriú suas	corrmhéar | cúlbhuille | dírigh | díriú | lámh | méar | suas
+1F447	cúl corrmhéire ag díriú síos	ag díriú | corrmhéar | cúl cormhéar ag pointeáil síos | cúl corrmhéire ag díriú síos | cúl na láimhe | lámh | méar | síos | thíos
+1F448	cúl corrmhéire ag díriú ar chlé	ciotóg | corrmhéar | cúl cormhéar ag pointeáil ar chlé | cúl corrmhéire ag díriú ar chlé | lámh | méar
+1F449	cúl corrmhéire ag díriú ar dheis	corrmhéar | cúl cormhéar ag pointeáil ar dheis | cúl corrmhéire ag díriú ar dheis | cúl na láimhe | lámh | méar
+1F44A	dorn atá chugat	aontaím leat | cinnte | dorn | dorn atá chugat | lámh
+1F44B	lámh ag croitheadh	beannú | croitheadh | haigh | hé | hóra | lámh | lámh ag croitheadh | slán
+1F44C	lámh OK	beagán bídeach | cgl | CGL | gráinnín | lámh | OK | tuigim
+1F44D	ordóg suas	+1 | ar fheabhas | go maith | iontach | is maith liom é | maith thú | moladh | OK | ordóg | ordóg suas | tá go maith | tuigim
+1F44E	ordóg síos	-1 | cáineadh | lámh | ní haontaím | ní hea | OK | ordóg | ordóg síos | ordóg thíos
+1F44F	bualadh bos	ar fheabhas | bualadh bos | comhghairdeas | lámha | maith thú
+1F450	lámha ar oscailt	ar oscailt | lámha | lámha ar oscailt | lámha oscailte
+261D	corrmhéar ag díriú suas	aimsigh | aníos | corrmhéar | corrmhéar ag díriú suas | corrmhéar ag pointeáil suas | dírigh | lámh | méar | seo | sin | suas | thuas
+270A	dorn ardaithe	buille | carraig | dlúthpháirtíocht | dorn | dorn ardaithe | dorn teannta | dúnta
+270B	lámh ardaithe	bosa in airde | lámh ardaithe | páipéar | stop
+270C	comhartha an bhua	bua | comhartha an bhua | lámh bua | lámh síocháin | lámh síochána | síocháin
+270D	lámh scríbhneoireachta	corp | lámh | lámh scríbhneoireachta | lámha ag scríobh | scríbhneoireacht | scríobh
+1F4AA	bícéips lúbtha	bícéips | bícéips lúbtha | láidir | matáin | tógáil meáchain | tógálaí meáchain
+1F590	lámh le méara spréite	ardaithe | lámh | méar | méara | spréite | stad
+1F64C	lámha ardaithe	ardú lámha | ceiliúradh | gotha | hurá | lámh | lámha ardaithe | moladh | na lámha
+1F64F	lámha le chéile	ag guí | guí | impí | lámh | lámha le chéile | paidir
+1F90C	méara fáiscthe le chéile	céard | ceistiú | comhartha láimhe | fáiscthe | foighne | greim | hea | lámh | méara | scíth | searbhasach | uch | zip
+1F90F	lámh ag pinseáil	beag | lámh ag pinseáil | méara | píosa beag
+1F918	siombail na n-adharc	lámh | lámh na binne | lean ort | méar | seinn ort | siombail na n-adharc
+1F919	an lámh cur glao orm	an lámh cur glao orm | glao | glaoch | glaoigh orm | guthán | lámh
+1F91A	cúl láimhe in airde	ardaithe | cúl | cúl láimhe in airde | cúl na láimhe | in airde | lámh | lámh in airde
+1F91B	dorn ar chlé	ar chlé | dorn | na láimhe clé
+1F91C	dorn ar dheis	ar dheis | dorn | na láimhe deise
+1F91D	croitheadh lámh	aontú | beannú | comhaontú | croitheadh láimhe | croitheadh lámh | síocháin | tairiscint
+1F91E	méarsa trasna	ádh | ag súil | crosach | méara | méara crosach ar a chéile | méara trasnaithe | méarsa trasna
+1F91F	comhartha grá	comhartha láimhe | grá | grá mo chroí thú | lámh | méara | mo ghrá thú | trí | tusa
+1F932	bosa le chéile	bos na láimhe ardaithe le chéile | bosa le chéile | guí | mian | paidir
+1F9B4	cnámh	cnáimhín súgartha | cnámh | cnámha | creatlach | madra
+1F9B5	cos	cic | cos | géag | glúin | lúbtha
+1F9B6	troigh	barrchos | cic | cos | cosa | gread | rúitín | seas | speach | troigh
+1F9B7	fiacal	bán | déad | déad cailce | fiacail | fiacal | fiacla | fiaclóir
+1F9E0	inchinn	cliste | éirimiúil | inchinn
+1F9BE	lámh mheicniúil	géag | inrochtaineacht | meicniúil | próistéiteach
+1FAC0	croí anatamaíoch	anatamaíoch | ball | ball coirp | cairdeolaíocht | corp | croí | cuisle
+1FAC1	scámhóga	anáil | análú | ball | ball coirp | scamhóga | scámhóga
+1FAE6	ag baint greim as an liopa	ag baint greim as an liopa | béal | béal mealltach | buartha | cliúsa
+1FAF0	lámh a bhfuil a corrmhéar agus a ordóg trasna ar a chéile	airgead | costasach | croí | grá | lámh a bhfuil a corrmhéar agus a ordóg trasna ar a chéile
+1FAF1	lámh ar dheis	croitheadh láimhe | lámh | lámh ar dheis | sín amach
+1FAF2	lámh ar chlé	croitheadh | croitheadh láimhe | lámh ar chlé | síneadh
+1FAF3	lámh le bos faoi	lámh | lámh le bos faoi | titim | tóg | tógáil
+1FAF4	lámh le bos suas	goitse | greim | inis dom | lámh le bos suas | ní fios
+1FAF5	corrmhéar ag díriú ar an mbreathnóir	corrmhéar ag díriú ar an mbreathnóir | priocadh | tusa
+1FAF6	lámha croí	croí | grá | lámha
+1FAF7	brú láimhe ar chlé	ar chlé | bosa in airde | bosa in airde ar chlé | brú | brú láimhe ar chlé | diúltaigh | fan | stop
+1FAF8	brú láimhe ar dheis	bosa in airde | bosa in airde ar dheis | brú | brú láimhe ar dheis | diúltaigh | fan | stop
+2764	croí dearg	croí | croí dearg | grá | mothúchán
+1F380	ribín	ceiliúradh | ribín
+1F382	cáca breithe	breithlá | cáca breithe | ceiliúradh | císte | cóisir | lá breithe | lá breithe sona | milseog
+1F383	Seán na gealaí	cóisir | oíche shamhna | Oíche Shamhna | puimcín | seán na gealaí | Seán na Gealaí | tine ghealáin
+1F384	crann Nollag	ceiliúradh | crann | crann na Nollag | crann Nollag | nollaig | Nollaig
+1F386	tine ealaíne	ceiliúradh | tine ealaíne | tinte ealaíne | tormán
+1F387	spréachaire	ceiliúradh | spréachaire | spréachaire tine ealaíne | tine ealaíne | tinte ealaíne
+1F388	balún	balún | breithlá | ceiliúir | ceiliúradh | cóisir | éadromán | lá breithe
+1F9E7	clúdach litreach dearg	ádh | ádh mór | airgead | bronntanas | clúdach litreach dearg | hóngbāo | lai see
+1F9E8	pléascóg thine	dinimít | pléascóg | pléascóg thine | tine | tinte ealaíne
+1F38B	crann tanabata	ceiliúradh | céiliúradh | crann | crann tanabata | maisiúchán | meirge | Seapánach | stiallacha páipéir
+1F38C	bratacha trasnaithe	bratacha | bratacha na Seapáine | bratacha trasnaithe | Seapánach
+1F38D	maisiúchán péine	Athbhliain | giúis | maisiúchán | péine | planda | Seapánach
+1F38E	babóga Seapánacha	babóga | babóga Seapánacha | ceiliúradh | féile | Seapánach
+1F38F	sraoilleán éisc	maisiúchán | sraoilleán | sraoilleán éisc
+1F390	clingíní gaoithe	an ghaoth | ceiliúradh | clingíní | clingíní gaoithe
+1F391	deasghnáth amhairc ar an ngealach	amharc ar an ngealach | ceiliúradh | deasghnáth amhairc ar an ngealach | féile na gealaí | gealach
+1F393	caipín bronnta céime	bronnadh céime | caipín | caipín bronnta céime | lucht acadúil | ollscoil
+1F484	béaldath	béaldath | coinne | cosmaidí | smideadh
+1F485	vearnais ingne	cosmaidí | dubh dóite | lámh-mhaisiú | smideadh | vearnais ingne
+1F48B	marc póg	beola | croí | marc póg | póg | póga
+1F48C	litir ghrá	croí | grá | litir | post | rómánsúlacht | vailintín
+1F48D	fáinne	bainis | diamant | fáinne | geallta | grá | pósta
+1F48E	geamchloch	airgead | bainis | cloch lómhar | diamant | geamchloch | pósadh | seoid
+1F48F	póg	coinne | grá | póg | pógadh
+1F490	crobhaing bláthanna	bláth | breithlá | comóradh | crobhaing bláthanna | grá
+1F491	lanúin le croí	comóradh | croí | grá | lánúin | lanúin le croí | lánúin le croí | póg
+1F492	bainis	bainis | pósadh | pósta | rómánsaíocht | séipéal
+1F493	croí ag preabadh	croí | croí ag preabadh | cuisle | grá | mothúchán | preabadh
+1F494	croíbhriste	bris | briste | brón | brúite | croí | croíbhriste | mothúchán | uaigneach
+1F495	dhá chroí	coinne | comóradh | dhá chroí | grá | mothúchán | xoxo
+1F496	croí ag lonrú	143 | croí | croí ag lonrú | grá | mo ghrá thú | mothúchán | oíche mhaith | póganna | xoxo
+1F497	croí ag fás	croí | croí ag fás | grá | mothúchán | neirbhíseach | xoxo
+1F498	croí agus saighead	coinne | croí agus saighead | grá | mothúchán | saighead
+1F499	croí gorm	croí | croí gorm | mothúchán | tá grá agam ort
+1F49A	croí glas	croí | glas | grá | grá mo chroí thú | mo ghrá thú | mothúchán | rómánsúil | uaine
+1F49B	croí buí	buí | cairdiach | croí | grá | grá mo chroí thú | mo ghrá thú | mothúchán
+1F49C	croí corcra	corcra | croí | grá | mo ghrá thú
+1F49D	croí le ribín	143 | cothrom lae | croí | croí le ribín | cuimhneachán | mothúchán | póga | ribín | vailintín | xoxo
+1F49E	croíthe ag rothlú	comóradh lae | croíthe | croíthe ag rothlú | mothúchán
+1F49F	maisiúchán croí	croí | croí corcra | maisiúchán croí | mothúchán
+1F90D	croí bán	bán | croí | mo ghrá thú
+1F90E	croí donn	croí | donn | mo ghrá thú
+1F9E1	croí flannbhuí	croí | flannbhuí | mo ghrá thú | oráiste
+1FA75	croí bánghorm	bánghorm | cian | croí | gleoite | grá | grá mo chroí thú | is maith liom | mo ghrá thú | mothúchán | spéir | speisialta | taitneamhach | téal
+1FA76	croí liath	airgead | croí | grá | grá mo chroí thú | liath | mo ghrá thú | mothúchán | slinn | speisialta
+1FA77	croí bándearg	álainn | bándearg | croí | gleoite | grá | grá mo chroí thú | is maith liom | mo ghrá thú | mothúchán | speisialta | taitneamhach
+2763	comhartha uaillbhreasa croí	croí | marc | poncaíocht | trom | uaillbhreasa
+2733	réiltín le hocht spóca	* réiltín | réiltín | réiltín le hocht spóca
+2734	réalta le hocht bpointe	* | réalta | réalta le hocht bpointe | réalta le hocht rinn
+2747	gealán	* | gealán | glioscarnach
+1F3E0	teach	baile | bruachbhaile | foirgneamh | teach | tógáil
+1F3E1	teach le gairdín	baile | bruachbhaile | foirgneamh | gairdín | teach | teach agus gairdín | teach le gairdín | teach le ghairdín
+1F3E2	foirgneamh oifigí	cathair | foirgneamh | foirgneamh oifigí | oifig | post
+1F3E3	oifig an phoist de chuid na Seapáine	foirgneamh | oifig an phoist | oifig an phoist de chuid na Seapáine | oifig an phoist Seapánach | post
+1F3E4	oifig an phoist	an post | Eorpach | foirgneamh | oifig an phoist | post
+1F3E5	ospidéal	dochtúir | foirgneamh | leigheas | lia | míochaine | ospidéal | otharlann
+1F3E6	banc	banc | foirgneamh
+1F3E7	comhartha ATM	airgead | ATM | banc | comhartha ATM | comhartha umb | meaisín bainc | poll an bhainc | umb | UMB
+1F3E8	óstán	foirgneamh | óstán
+1F3E9	óstán grá	foirgneamh | grá | leaba | óstán
+1F3EA	siopa áise	24 | 24 uair an chloig | áisiúlacht | díolbhoth | foirgneamh | siopa | siopa áise
+1F3EB	scoil	foirgneamh | foirgneamh scoile | scoil
+1F3EC	siopa ilrannach	foirgneamh | ranna | siopa | siopa ilrannach
+1F3ED	monarcha	foirgneamh | monarcha
+1F3EE	laindéar dearg	bialann | dearg | izakaya | laindéar dearg | laintéar | Seapánach
+1F3EF	caisleán Seápánach	caisleán | foirgneamh | Seápánach
+1F3F0	caisleán Eorpach	caisleán | caisleán Eorpach | foirgneamh
+1F463	loirg choise	cos | loirg choise | lorg | lorg coise | troigh
+1F464	scáthchruth cinn	cabhail | corp | diamhrach | duine | rúndiamhrach | scáth | scáthchruth cinn
+1F465	scáthchruth ceann	cabhlacha | cách | cairde | cara | coirp | daoine | gach duine | scáthchruth ceann
+1F466	buachaill	buachaill | macán | óg
+1F467	cailín	An Mhaighdean | cailín | iníon | loinnir ina súile | óg | stoidiaca | trilseáin
+1F468	fear	buachaill | cara | fear | stócach
+1F469	bean	bean | bruinneall | fionn
+1F46A	teaghlach	páiste | teaghlach
+1F46B	fear agus bean le chéile	bean | fear | fear agus bean | fear agus bean le chéile | i ngrá | lámha le chéile
+1F46C	beirt fhear le chéile	aerach | beirt fhear | beirt fhear a bhfuil g beirt fhear le chéile | beirt fhear le chéile | cairde | duine | fear | i ngrá | lámha le chéile
+1F46D	beirt bhan le chéile	aerach | beirt bhan le chéile | cairde | deirfiúracha | greim láimhe | iníonacha | lámh | leannán | leispiaigh | mná
+1F46E	póilín	dlí | duine | forghairm | gabh | garda | garda faoi cheilt | póilín | póilíní | stoptha | tarraingthe i leataobh
+1F46F	daoine le cluasa coiníní orthu	cailín | cara cléibh | cluasa coinín | cóisir | cóisireacht | cúpla comhionann | daoine le chluasa coiníní ag ceiliúradh | daoine le cluasa coinín orthu | daoine le cluasa coiníní orthu | dís | dlúthchairde | í féin nó a leathcheann atá ann | rinceoirí
+1F470	duine le caille air	bainis | brídeach | brídeog | brídeog le caille | brídeog le caille uirthi | caille | duine le caille air | pósadh
+1F471	duine: gruaig fhionn	aghaidh | duine | duine le gruaig fhionn | duine: gruaig fhionn | fionn | gruaig
+1F472	fear le gua pi mao air	fear | fear le caipín Síneach | fear le gua pi mao air | fear le hata air | guapimao | hata
+1F473	duine le turban air	duine le turban | duine le turban air | fear a bhfuil turban air | fear an turbain | fear le turban air | turban
+1F474	seanfhear	fear | maol | scothaosta | sean | seanathair | seanfhear
+1F475	seanbhean	bean | fionn | sean | seanbhean | seanmháthair
+1F476	babaí	babaí | leanaí | leanbh | naíonán | óg | páistí
+1F477	tógálaí	atógáil | clogad | clogad oibre | deisigh | duine | fear | oibrí tógála | tógáil | tógálaí
+1F478	banphrionsa	banfhlaith | banphrionsa | banríon | síscéal
+1F479	fathach	aghaidh | arrachtach | fathach | scanrúil | Seapánach | síscéal
+1F47A	gruagach	aghaidh | aghaidh fidil | arrachtach | éadan | gruagach | Seapánach | síscéal
+1F483	bean ag damhsa	bean ag damhsa | damhsa | damhsóir | flamenco | salsa | tangó
+1F486	duine ag fáil suathaireachta	aghaidh | cóireáil | duine ag fáil suathaireachta | scíth | spá | suaimhneas | suathaireacht | suathaireacht aghaidhe | teannas | teiripe | tinneas cinn
+1F487	duine ag fáil bearradh gruaige	áilleacht | bearbóir | bearradh gruaige | cosmaideolaíocht | duine ag fáil bearradh gruaige | gruagaire | gruaig | siopa gruagaire | stíl
+1F645	duine ag comharthú NÍL	bac | coiscthe | cosc | dhá lámh trasna ar a chéile aici | duine ag comharthú NÍL | duine ag tabhairt le fios gan é a dhéanamh | lámh | lámh thar an lámh eile aici | níl cead | níl sé ceadaithe | seans ar bith
+1F646	duine ag comharthú OK	ceart go leor | CGL | cleachtadh | comharthaíocht lámh | duine à dhéanamh OK | duine ag comharthú OK | gach rud i gceart | gotha | lámh | OK
+1F647	duine ag umhlú	aiféala | brón | crom síos | duine ag umhlú | gabh mo leithscéal | impigh | machnamh | maithiúnas | tá brón orm | tá mé buartha | trua
+1F64B	duine lena lámh suas	anseo | ceist | cuideoidh mise leat | duine | duine ag ardú láimhe | duine lena lámh suas | gotha | lámh á hardú | lámh in airde | roghnaigh mise | sona | tá a fhios agam
+1F64D	duine le púic air	buartha | corraithe | díomách | duine | duine le púic air | gotha | gruama | meallta | míshásta | níl sí sona | suaite
+1F64E	duine le puisín air	cnáimhseáil | díomách | duine | duine le phus orthu | duine le puisín air | duine pusach | gotha | grainc a chur ort | meallta | pus | roic a bheith i do mhalaí | smut | suaite
+1F930	bean ag iompar clainne	ag iompar linbh | bean | bean ag iompar clainne | bean torrach
+1F931	cothú cíche	babaí | bean | beathú | cíoch | cothú | cothú cíche | mam | máthair
+1F933	féinín	ceamara | féinín | fón | guthán
+1F934	prionsa	duine ríoga | prionsa
+1F935	duine a bhfuil culaith dhinnéir air	culaith | culaith dhinnéir | duine | duine a bhfuil culaith dhinnéir air | duine le culaith air | duine nuaphósta | fear | fear nuaphósta | seaicéad
+1F936	Bean Uí Claus	Bean | ceiliúradh | fantaisíocht | máthair | na Nollag | Nollaig | Saintí | saoire | scéal | Shaintí | sióg | sona
+1F937	duine ag croitheadh a ghuaillí	aineolas | b’fhéidir é | croith | croitheadh | duine ag croitheadh | duine ag croitheadh a ghuaillí | guaillí | neamhshuim | ní bheadh a fhios agat beo | níl a fhios agam | pé ní is dóigh leat
+1F385	Daidí na Nollag	aimsir na Nollag | athair | ceiliúradh | Daidí na Nollag | nollaig | Nollaig | Nollaig Shona | Saintí | San Nioclás | santa | Santa | Santa Claus
+1F9B8	sárlaoch	banlaoch | cumhacht | cumhachtaí osnádúrtha | íocónach | laoch | maith | neart dochreidte | sárbhean | sárchumhacht | sárfhear | sárlaoch | teacht aniar
+1F9B9	sárbhithiúnach	bithiúnach | coirpeach | danartha | drochdhuine | gan trua gan taise | glic | gránna | mímhacánta | olc | sárbhithiúnach | sárchumhacht | slítheánta
+1F9BF	cos mheicniúil	cos | inrochtaineacht | meicniúil | próistéiteach
+1F9D0	straoiseog le leathspéacla	aghaidh le leathspéacla | leathspéacla | saibhir | straoiseog le leathspéacla | uasaicmeach
+1F9D1	aosach	aosach | duine fásta | neodrach ó thaobh inscne de
+1F9D2	leanbh	leanbh | neodrach ó thaobh inscne de | óg | páiste
+1F9D3	seanduine	aosach | aosta | críonna | duine | sean | seantuismitheoir
+1F9D4	duine: feasóg	duine | duine: feasóg | fear | fear: feasóg | feasóg | féasóg | féasógach | meigeall
+1F9D5	bean le caifirín	bandána | bean le caifirín | bean le cumhdach cinn | buadán | cafarr | caifirín | caille chloiginn | cídeog | cochall | cumhdach cinn | hijab | mantilla | scairf | tichel
+1F9D6	duine i seomra gaile	cóireáil spá | déan cineál | do shuaimhneas a dhéanamh | duine i seomra gaile | folcadán allais | sásta | seomra allais | seomra gaile | só-spá | spá | suaimhneas
+1F9D7	duine ag dreapadóireacht	airde | an mullach a bhaint amach | caitheamh aimsire | carraig | cnoc | deapadóir | dreapadóir | duine ag dreapadóireacht | fána ghéar | fearas dreapadóireachta
+1F9D8	duine i suíomh na loiteoige	ag machnamh | bean | cos thar an gcos eile aici | dhá chos trasna ar a chéile aici | duine i suíomh na loiteoige | i mbun machnaimh | ióga | machnamh | suaimhneach | suaimhneas a dhéanamh
+1F9D9	duine draíochta	asarlaí | asarlaíocht | cailleach | cleasach | draíocht | draíodóir | draíodóireacht | draoi | duine draíochta
+1F9DA	síog	lucharachán | na daoine beaga | púca | sí | síbhean | sióg | síog | síogaí | síscéal
+1F9DB	vaimpír	diúl | Dracula | fuil | neach osnádúrtha | neamh-mharbh | oíche shamhna | scanrúil | starrfhiacla | súigh | súmaire | vaimpír
+1F9DC	duine murúch	aigéan | duine murúch | eireaball | faoin bhfarraige | maighdean mhara | mistéireach | murúch fir | ruball | rúndiamhair
+1F9DD	lucharachán	béaloideas | clutharachán | draíocht | draíochtúil | lucharachán | na daoine beaga | síofróg | síogaí
+1F9DE	ginid	draíochtúil | eagna | fantaisíocht | ginid | mí-ádh | mianta | miotasach | rúin | samhlaíocht | sióg
+1F9DF	zombaí	arracht | arrachtach | badhbh badhbh | neamh-mharbh | neamhshaolta | scanrúil | uaigneach | zombaí
+1FAC2	daoine ag tabhairt barróige	barróg | barróg a bhreith | buíochas | cairdeas | compord | croí isteach | daoine | Dia duit | grá | slán | slán a fhágáil
+1FAC3	fear torrach	an iomarca a ithe | fear | fear torrach
+1FAC4	duine torrach	barraíocht ite | duine torrach | torrach
+B9	aon forscríofa	aon forscríofa
+B2	dó forscríofa	cearnaithe | dó forscríofa
+B3	trí forscríofa	ciúbaithe | trí forscríofa
+207B	lúide forscríofa	lúide forscríofa
+B0	céim	céim
+B1	móide-lúide	móide-lúide
+D7	comhartha iolraithe	comhartha iolraithe
+F7	comhartha roinnte	comhartha roinnte | oibil | roinn | roinnt
+B5	comhartha micre	comhartha micre | tomhas
+A9	cóipcheart	c | cóipcheart
+AE	cláraithe	cláraithe | r
+2122	comhartha trádmhairc	comhartha | comhartha trádmhairc | trádmharc
+A7	rannán	alt | cuid | rannán
+B6	marc ailt	alt | comhartha ailt | marc ailt
+B7	lárphonc	lárphonc
+2022	urchar	urchar
+2013	ein-dais	ein-dais
+2026	bearna san insint	bearna san insint | easnamh | poncanna
+AB	rachtán tosaigh	clé | lúibín uilleach | rachtán tosaigh
+BB	rachtán deiridh	deas | lúibín uilleach | rachtán deiridh
+2030	in aghaidh an mhíle	in aghaidh an mhíle
+20AC	euro	EUR | euro
+A3	punt	EGP | GBP | punt
+A5	yen	CNY | JPY | yen | yuan
+A2	cent	cent
+20B9	rúipí na hIndia	rúipí na hIndia
+20BD	rúbal	rúbal
+20A9	won	KPW | KRW | won
+20BA	Lira na Tuirce	
+20BF	bonn giotáin	bonn giotáin | BTC
+20AA	Seiceal Nua Iosrael	
+20AB	Dong Vítneam	
+20B1	peso	peso
+20BC	Manat na hAsarbaiseáine	
+20B4	Hryvnia na hÚcráine	
+20A6	Naira na Nigéire	
+20A1	Colón Chósta Ríce	
+20B2	Guaraní Pharagua	
+20B5	Cedi Ghána	
+20B8	Tenge na Casacstáine	
+20BE	Lari na Seoirsia	
+20AE	Tugrik na Mongóile	
+20AD	Kip Laos	
+20A8	rúipí	rúipí
+24	dollar	airgead | dollar | peso | USD
+58F	Dram na hAirméine	
+9F3	Taka na Banglaidéise	
+E3F	Baht na Téalainne	
+20A3	franc na Fraince	franc na Fraince
+20A4	lira	lira
+20A7	Peseta na Spáinne	
+20B0	pingin na Gearmáine	pingin na Gearmáine
+20B3	austral	austral
+20A2	cruzeiro	cruzeiro
+20A5	mil	mil
+20B6	livre tournois	livre tournois
+20B7	spesmilo	spesmilo
+A4	Airgeadra Anaithnid	
+201E	comhartha athfhriotail íseal ar dheis	cliste | comhartha athfhriotail dúbailte | comhartha athfhriotail íseal ar dheis | íseal
+201C	comhartha athfhriotail ar chlé	cliste | comhartha athfhriotail | comhartha athfhriotail ar chlé | dúbailte
+201D	comhartha athfhriotail ar dheis	cliste | comhartha athfhriotail ar dheis | comhartha athfhriotail dúbailte
+2018	uaschamóg ar chlé	aonair | camóg ar chlé | comhartha athfhriotail | comhartha cliste | uaschamóg | uaschamóg ar chlé
+2019	uaschamóg ar dheis	aonair | comartha athfhriotail | comhartha cliste | uaschamóg | uaschamóg ar dheis
+A1	comhartha uaillbhreasa aisiompaithe	aisiompaithe | béic | comhartha uaillbhreasa | comhartha uaillbhreasa aisiompaithe | marc uaillbhreasa | pléasc
+BF	comhartha ceiste aisiompaithe	aisiompaithe | ceist | comhartha ceiste | comhartha ceiste aisiompaithe
+2020	comhartha miodóige	comhartha miodóige | obelus | oibilisc
+2021	comhartha miodóige dúbailte	comhartha miodóige dúbailte | obelus | oibilisc
+2044	slais chodáin	slais chodáin
+2032	prím	prím
+2033	prím dhúbailte	prím | prím dhúbailte
+201A	uaschamóg íseal ar dheis	comhartha athfhriotail | íseal | uaschamóg | uaschamóg íseal ar dheis
+AC	diúltú	diúltú | nach
+2117	cóipcheart taifid fuaime	cóipcheart | cóipcheart taifid fuaime | fuaim | taifead
+2212	comhartha lúide	bain de | comhartha lúide | lúide
+2213	lúide nó móide	lúide nó móide
+2248	beagnach cothrom le	beagnach cothrom le | meastachán
+2260	míchothrom	éagothromóid | míchothrom | neamhchothrom lena chéile
+2261	comhionann le	comhionann le
+2264	níos lú ná nó cothrom le	cothrom le | éagrothroime | níos lú ná | níos lú ná nó cothrom le
+2265	níos mó ná nó cothrom le	cothrom lena chéile | éagothromóid | níos mó ná | níos mó ná nó cothrom le | níos mó ná nó cothrom lena chéile
+226A	i bhfad níos lú ná	i bhfad níos lú ná
+226B	i bhfad níos mó ná	i bhfad níos mó ná
+221E	comhartha éigríche	comhartha éigríche
+221A	fréamh chearnach	fréamh chearnach
+221D	comhréireach	comhréireach
+2211	suimiú n-ary	suimiú n-ary
+220F	toradh n-ary	toradh n-ary
+222B	suimeálaí	suimeálaí
+2202	páirtdifreálach	páirtdifreálach
+2206	incrimint	incrimint
+2207	nabla	nabla | triantán
+2200	gach rud	gach rud
+2203	is ann do	is ann do
+2205	tacar folamh	tacar folamh
+2208	ball de	ball de | tacar
+2209	ní ball de	ní ball de
+2229	idirmhír	idirmhír | tacar
+222A	aontas	aontas | bailiúchán | tacar
+2282	fo-thacar de chuid	fo-thacar | fo-thacar de chuid
+2283	forthacar	forthacar
+2286	cothrom lena chéile fothacair	cothrom lena chéile fothacair
+2287	cothrom lena chéile forthacair	cothrom lena chéile forthacair
+2227	loighciúil agus	loighciúil agus
+2295	móide i gciorcal	móide i gciorcal
+2297	comhartha iolraithe i gciorcal	comhartha iolraithe i gciorcal
+22A5	tacóid suas	tacóid suas
+2220	uillinn	uillinn
+2234	mar sin	mar sin
+2235	mar	mar
+2218	oibritheoir fáinne	oibritheoir fáinne
+2219	oibritheoir urchair	oibritheoir urchair
+22C5	ponc-oibritheoir	ponc-oibritheoir
+2215	slais roinnte	slais roinnte
+2190	saighead chlé	saighead chlé
+2191	saighead dhírithe suas	saighead dhírithe suas
+2192	saighead dheas	saighead dheas
+2193	saighead dhírithe síos	saighead dhírithe síos
+2196	saighead suas ar chlé	idirbhunuimhir | idirmheánach | saighead | saighead suas ar chlé | siar ó thuaidh | thiar thuaidh | treo
+2197	saighead suas ar dheis	idirbhunuimhir | idirmheánach | saighead | saighead suas ar dheis | soir ó thuaidh | thoir thuaidh | treo
+2198	saighead síos ar dheis	idirbhunuimhir | idirmheánach | saighead | saighead síos ar dheis | soir ó dheas | thoir theas | treo
+2199	saighead síos ar chlé	idirbhunuimhir | idirbunuimhir | saighead | saighead síos ar chlé | thiar theas | treo
+2194	saighead chlé-dheas	saighead | saighead chlé-dheas
+2195	saighead suas-síos	saighead | saighead suas-síos
+21D0	saighead dhúbailte ar chlé	saighead dhúbailte ar chlé
+21D1	saighead dhúbailte suas	saighead dhúbailte suas
+21D2	saighead dhúbailte ar dheis	saighead dhúbailte ar dheis
+21D3	saighead dhúbailte síos	saighead dhúbailte síos
+21D6	saighead dhúbailte siar ó thuaidh	saighead dhúbailte siar ó thuaidh
+21D7	saighead dhúbailte soir ó thuaidh	saighead dhúbailte soir ó thuaidh
+21D8	saighead dhúbailte soir ó dheas	saighead dhúbailte soir ó dheas
+21D9	saighead dhúbailte siar ó dheas	saighead dhúbailte siar ó dheas
+21D4	saighead dhúbailte chlé dheas	saighead dhúbailte chlé dheas
+21A4	saighead ar chlé as barra	saighead ar chlé as barra
+21A6	saighead ar dheis as barra	saighead ar dheis as barra
+21A5	saighead suas as barra	saighead suas as barra
+21A7	saighead síos as barra	saighead síos as barra
+21A9	saighead dheas ag dul ar chlé	saighead | saighead dheas ag dul ar chlé
+21AA	saighead chlé ag dul ar dheis	saighead | saighead chlé ag dul ar dheis
+219E	saighead dhécheannach ar chlé	saighead dhécheannach ar chlé
+21A0	saighead dhécheannach ar dheis	saighead dhécheannach ar dheis
+219F	saighead dhécheannach suas	saighead dhécheannach suas
+21A1	saighead dhécheannach síos	saighead dhécheannach síos
+21A2	saighead eiteach ar chlé	saighead eiteach ar chlé
+21A3	saighead eiteach ar dheis	saighead eiteach ar dheis
+219A	túlslais saighde ar chlé	túlslais saighde ar chlé
+219B	túlslais saighde ar dheis	túlslais saighde ar dheis
+21AE	túlslais saighde ar chlé ar dheis	túlslais saighde ar chlé ar dheis
+21CD	saigheadstríoc dhúbailte ar chlé	saigheadstríoc dhúbailte ar chlé
+21CF	saigheadstríoc dhúbailte ar dheis	saigheadstríoc dhúbailte ar dheis
+21CE	saigheadstríoc dhúbailte chlé dheas	saigheadstríoc dhúbailte chlé dheas
+21C4	saighead ar dheis os cionn saighde ar chlé	saighead ar dheis os cionn saighde ar chlé
+21C6	saighead chlé os cionn saighead dheas	saighead chlé os cionn saighead dheas
+21CB	harpún ar chlé os cionn harpúin ar dheis	harpún ar chlé os cionn harpúin ar dheis
+21CC	harpún ar dheis os cionn harpúin ar chlé	harpún ar dheis os cionn harpúin ar chlé
+21BC	harpún ar chlé friofac thuas	harpún ar chlé friofac thuas
+21BD	harpún ar chlé friofac thíos	harpún ar chlé friofac thíos
+21C0	harpún ar dheis friofac thuas	harpún ar dheis friofac thuas
+21C1	harpún ar dheis friofac thíos	harpún ar dheis friofac thíos
+21BE	harpún suas friofac ar dheis	harpún suas friofac ar dheis
+21BF	harpún suas friofac ar chlé	harpún suas friofac ar chlé
+21C2	harpún síos friofac ar dheis	harpún síos friofac ar dheis
+21C3	harpún síos friofac ar chlé	harpún síos friofac ar chlé
+21C7	péire saighead ar chlé	péire saighead ar chlé
+21C9	péire saighead ar dheis	péire saighead ar dheis
+21C8	péire saighead suas	péire saighead suas
+21CA	péire saighead síos	péire saighead síos
+21DA	saighead thriarach ar chlé	saighead thriarach ar chlé
+21DB	saighead thriarach ar dheis	saighead thriarach ar dheis
+219C	saighead chorrach ar chlé	saighead chorrach ar chlé
+219D	saighead chorrach ar dheis	saighead chorrach ar dheis
+21DC	scríobshaighead ar chlé	scríobshaighead ar chlé
+21DD	scríobshaighead ar dheis	scríobshaighead ar dheis
+21AD	tonnsaighead chlé dheas	tonnsaighead chlé dheas
+21AF	saighead fhiarlánach síos	saighead fhiarlánach síos
+21BA	ciorcalshaighead oscailte tuathalach	ciorcalshaighead oscailte tuathalach
+21BB	ciorcalshaighead oscailte deiseal	ciorcalshaighead oscailte deiseal
+1F400	francach	ainmhí | francach
+1F401	luch	ainmhí | ainmhithe | luch | luchóg
+1F402	damh	ainmhí | ainmhithe | An Tarbh | damh | stoidiaca | tarbh
+1F403	buabhall uisce	ainmhí | ainmhithe | buabhall | uisce
+1F404	bó	ainmhí | ainmhithe | bainne | beithíoch | bleachtach | bleitheach bó | bó | búireach | droimeann | feirm | múú | riabhach
+1F405	tíogar	ainmhí | cat mór | leon breac | tíogar
+1F406	liopard	ainmhí | ainmhithe | liopard
+1F407	coinín	ainmhí | ainmhithe | coinín | peata
+1F408	cat	ainmhí | cat | peata
+1F409	dragan	ainmhí | dragan | finscéal | síneach
+1F40A	crogall	ainmhí | Arlene Foster | crogall
+1F40B	míol mór	aigéan | ainmhí | míol mór | trá
+1F40C	seilide	faocha sheilide | seilide
+1F40D	nathair	ainmhí | nathair | nathair nimhe | Ophiuchus | sealbhóir | stoidiaca
+1F40E	capall	ainmhí | capall | capall rásaíochta | eachaí | feirm | rásaíocht
+1F40F	reithe	ainmhí | ainmhithe | An Reithe | caora | fireann | reithe | stoidiaca
+1F410	gabhar	ainmhí | ainmhithe | An Gabhar | gabhar | stoidiaca
+1F411	caora	ainmhí | baa | baineann | caora | caorach | craiceann caorach | olann | uan
+1F412	moncaí	banana | moncaí
+1F413	coileach	ainmhí | ainmhithe | coileach | éan | éanlaithe
+1F414	sicín	ainmhí | cearc | éan | sicín
+1F415	madra	ainmhí | ainmhithe | madra | peata
+1F416	muc	ainmhí | ainmhithe | bagún | banbh | cráin | cráin mhuice | feirm | muc | ramhar
+1F417	torc	ainmhí | muc | torc
+1F418	eilifint	ainmhí | eilifint
+1F419	ochtapas	ainmhí | ochtapas
+1F41A	sliogán	ainmhí | bís | sligeán | sliogán | trá
+1F41B	míol	ainmhí | feithid | gairdín | míol
+1F41C	seangán	ainmhí | feithid | seangán
+1F41D	beach mheala	ainmhí | beach | beach mheala | bumbóg | dúlra | earrach | feithid | mil
+1F41E	bóín	ainmhí | bóín | bóín dé | ciaróg | feithid
+1F41F	iasc	ainmhí | iasc | Na hÉisc | stoidiaca
+1F420	iasc teochreasa	ainmhí | éisc | iasc | iasc teochreasa | teochriosach
+1F421	iasc torcánach	ainmhí | iasc | iasc torcánach
+1F422	turtar	ainmhí | tiripín | toirtís | turtar
+1F423	éan ag teacht as an ubh	ag teacht as an ubh | ainmhí | éan | éan ag teacht as an ubh | éinín | naíonán
+1F424	gearrshicín	ainmhí | éan | éinín | gearrshicín | sicín
+1F425	gearrshicín éadain	ainmhí | éan | éinín | gearrshicín éadain | leanbh | óg | sicín
+1F426	éan	ainmhí | éan | éaneolaíocht
+1F427	piongain	ainmhí | éan | piongain
+1F428	cóála	ainmhí | béar | cóála
+1F429	púdal	ainmhí | madra | púdal
+1F42A	camall	ainmhí | camaill | camall | dromadaire | dronn | dronnóg | fásach | gaineamhlach
+1F42B	camall le dhá dhronn	ainmhí | Baictriach | camall | camall le dhá dhronn | camalóid | dhá dhronn | dromadaire | dronn | dronnóg | fásach | gaineamhlach
+1F42C	deilf	aigéan | ainmhí | deilf | lapa | trá
+1F42D	aghaidh luiche	aghaidh | aghaidh luiche | ainmhí | luch | luchóg
+1F42E	aghaidh bó	aghaidh | ainmhí | bainne | bó
+1F42F	aghaidh tíogair	aghaidh | aghaidh tíogair | ainmhí | tíogar
+1F430	aghaidh coinín	aghaidh | ainmhí | coinín | peata
+1F431	aghaidh cait	aghaidh | aghaidh cait | ainmhí | cat | peata
+1F432	aghaidh dragain	aghaidh | aghaidh dragain | ainmhí | dragan | finscéal
+1F433	míol mór ag séideadh	aghaidh | ainmhí | míol mór | míol mór ag séideadh | séideadh
+1F434	aghaidh capaill	aghaidh | ainmhí | capaill | capall | each | feirm | gearrán | marc
+1F435	aghaidh moncaí	aghaidh | ainmhí | banana | moncaí
+1F436	aghaidh madra	aghaidh | ainmhí | coileán | madra | peata
+1F437	aghaidh muice	aghaidh | aghaidh muice | ainmhí | muc
+1F438	aghaidh froig	aghaidh | aghaidh froig | frog | loscann
+1F439	aghaidh hamstair	aghaidh | aghaidh hamstair | ainmhí | hamstar | peata
+1F43A	aghaidh mic tíre	aghaidh | aghaidh mic tíre | ainmhí | faolchú | mac tíre
+1F43B	aghaidh béair	aghaidh | aghaidh béair | ainmhí | béar | béar liath | éadan | glam | gnúsacht | mil | yosemite
+1F43C	aghaidh panda	aghaidh | ainmhí | bambú | panda
+1F43D	srón muice	aghaidh | ainmhí | muc | srón | srón muice
+1F43E	lorg lapaí	ainmhí | cosa | lapa | lorg | lorg lapaí
+1F43F	iora talún	iora rua | iora talún
+1F981	aghaidh leoin	aghaidh | aghaidh leoin | ainmhí | Leo | leon | stoidiaca
+1F982	scairp	An Scairp | scairp | Scorpius | stoidiaca
+1F983	turcaí	cearc Fhrancach | éan | gogal gogal | Lá an Altaithe | Nollaig | turcaí
+1F984	aghaidh aonbheannaigh	aghaidh | aghaidh aonbheannaigh | aonbheannach
+1F985	iolar	ainmhí | éan | iolar
+1F986	lacha	ainmhí | éan | lacha
+1F987	ialtóg	ainmhí | bás dorcha | feascarluch | ialtóg | leadhbán leathair | leadhbóg leathair | leidhbín leathair | sciathán leathair | vaimpír
+1F988	siorc	ainmhí | craosaire | iasc | siorc
+1F989	ulchabhán	ainmhí | críonna | éan | stuama | ulchabhán
+1F98A	aghaidh sionnaigh	aghaidh | aghaidh sionnaigh | ainmhí | éadan | madra rua | sionnach
+1F98B	féileacán	féileacán | feithid | gleoite
+1F98C	fia	ainmhí | fia
+1F98D	goraille	ainmhí | goraille
+1F98E	earc luachra	ainmhí | earc luachra | reiptíl
+1F98F	srónbheannach	ainmhí | srónbheannach
+1F990	ribe róibéis	beag | bia | ribe róibéis | sliogiasc
+1F991	scuid	ainmhí | bia | moileasc | scuid
+1F992	sioráf	baill | sioráf | spotaí
+1F993	séabra	séabra | Stiall | stríoc
+1F994	gráinneog	dealg | dealga | dealgach | gráinneog | spíonach
+1F995	sárapód	brachiosaurus | brontasár | dineasár | diplodocus | sárapód
+1F996	T-Rex	T-Rex | Tyrannosaurus | tyrannosaurus rex | Tyrannosaurus Rex
+1F997	criogar	criogar | criogar féir | dorsán | dreoilín teaspaigh | feithid | míol | píobaire fraoigh
+1F998	cangarú	ainmhí | cangarú | cangarú óg | léim | marsúipiach
+1F999	láma	ainmhí | alpaca | guanaco | láma | olann | vicuña
+1F99A	péacóg	bródúil | cearc phéacóige | éan | mórtasach | mórthaibhseach | péacóg | sotalach | thar fóir
+1F99B	dobhareach	ainmhí | dobhareach | hippo
+1F99C	pearóid	ainmhí | caint | éan | foghlaí | foghlaí mara | pearóid | peata
+1F99D	racún	ainmhí | fiosrach | glic | íogánta | racún | sleamhain
+1F99E	gliomach	ainmhí | bia mara | bísc | crúba | gliomach
+1F99F	muiscít	feithid | fiabhras | galar | lotnaid | maláire | muiscít | prioc | víreas
+1F9A0	miocrób	aiméibe | baictéir | eolaíocht | miocrób | víreas
+1F9A1	broc	ainmhí | broc | cráigh | mil
+1F9A2	eala	ainmhí | eala | éan | Éinín gránna lachan | lachín ghránna
+1F9A3	mamat	ainmhí | éag | lomrach | mamat | ollmhór | starrfhiacail
+1F9A4	dódó	dódó | éag | éan | mór | Oileán Mhuirís
+1F9A5	spadán	leisciúil | mall | spadán
+1F9A6	madra uisce	ainmhí | iascaireacht | madra uisce | súgrach
+1F9A7	órang-útan	ainmhí | ápa | órang-útan
+1F9A8	scúnc	boladh | bolladh | scúnc
+1F9A9	lasairéan	ainmhí | éan | éaneolaíocht | lasairéan | péacach | trópaiceach
+1F9AA	oisre	oisre | péarla | tumadóireacht | tumadóireacth
+1F9AB	béabhar	ainmhí | béabhar | creimire | damba
+1F9AC	bíosún	ainmhí | athchogantach | bíosún | buabhall
+1F9AD	rón	ainmhí | mór-rón | rón
+1F9AE	madra treorach	ainmhí | dall | inrochtaineacht | madra | treoir
+1FABC	smugairle róin	áá | aigéan | ainmhí | beathra | braiteoga | cealg | dó | ga | inveirteabrach | muir | muirí | planctón | smugairle | smugairle róin | uisceadán
+1F330	cnó capaill	almóinn | cnó capaill | planda
+1F331	síolphlanda	óg | planda | síolphlanda
+1F332	crann síorghlas	coill | crann | crann giúise | crann na nollag | giúis | péine | síorghlas
+1F333	crann duillsilteach	caitheamh | caitheamh an duilliúir | coill | crann duillsilteach | duillsilteach | foraois | glas | gnáthóg
+1F334	pailm	crann | pailm | planda | teochriosach | trá
+1F335	cachtas	cachtas | cactas | dúlra | fáslach | gaineamhlach | planda | triomach
+1F337	tiúilip	bláth | planda | tiúilip
+1F338	bláth silíní	bláth | bláth silíní | earrach | planda | silín
+1F339	rós	bláth | dearg | grá | rós
+1F33A	roiseog	bláth | planda | roiseog
+1F33B	lus na gréine	bláth | lus na gréine | planda | taobh amuigh
+1F33C	bláthú	bláth | bláthú | caisearbhán | cam an ime | planda
+1F33D	dias arbhair	arbhar | arbhar Indiach | barra | dias | feirm | grán buí
+1F33E	punann ríse	dias | grán | planda | punann ríse | rís
+1F33F	luibh	duille | duilleog | luibh | planda
+1F340	seamair Mhuire	4 | ádh | ádhúil | ámharach | ceithre | duilleog | éireannach | planda | rath | seamair | seamair Mhuire | séan
+1F341	duilleog mhailpe	duille | duilleog | duilleog mhailpe | mailp | titim
+1F342	duilleog thite	duilleog | duilleog thite | fómhar | titim
+1F343	duilleog ag séideadh sa ghaoth	croith | croitheadh | duilleog | gaoth | séid
+1F344	beacán	beacán | beacán bearaigh | fás aon oíche | fungas | mario | púca peill
+1FAB0	cuileog	cuileog | feithid | lotnaid
+1FAB1	péist	cuiteog | feithid | péist | péist talún | seadán
+1FAB2	ciaróg	ainmhí | ciaróg | feithid | míol
+1FAB3	blatóg choiteann	blatóg choiteann | ciaróg dhubh | feithid | lotnaid | séchosach
+1FAB4	planda pota	cothú | fás | fásra | glasra | leadránach | planda pota
+1FAB5	adhmad	adhmad | brosna | connadh | crann | lomán
+1FAB6	cleite	cleite | clúmh | éadrom | éan | eitilt | peann cleite | uirlis
+1FAB7	loiteog	áilleacht | bláth | Búdachas | Hiondúchas | India | loiteog | síocháin | suaimhneas | Vítneam
+1FAB8	coiréal	aigéan | an t-athrú aeráide | coiréal | farraige | sceir
+1FAB9	nead fholamh	craobh | nead | nead fholamh | neadú
+1FABA	nead le huibheacha	éan | nead | nead le huibheacha | neadú | ubh | uibheacha
+1FABB	hiasaint	bláth | bláthaigh | corcra | earrach | hiasaint | labhandar | líológ | lúipín | lúipín gorm | planda | plúirín | sailchuach | srubh lao | tor
+2618	seamróg	Éireannach | planda | seamróg
+1F347	caora fíniúna	caor fhíniúna | caor fíniúna | caora fíniúna | fíonchaor | fíonchaora | toradh
+1F348	mealbhacán	cantalúp | mealbhacán | toradh
+1F349	mealbhacán uisce	mealbhacán uisce | toradh
+1F34A	táinséirín	c | citreas | neachtairín | oráiste | táinséirín | toradh | vitimín
+1F34B	líomóid	citreas | géar | líomóid | toradh
+1F34C	banana	banana | bananna | toradh
+1F34D	anann	anann | colada | piña | toradh | trópaiceach
+1F34E	úll dearg	aibí | aiste bia | bia | dearg | sláinte | toradh | úll
+1F34F	úll glas	bia | glas | toradh | úll
+1F350	piorra	piorra | toradh
+1F351	péitseog	péitseog | toradh
+1F352	silíní	silín | silíní | toradh
+1F353	sú talún	caor | sú talún | toradh
+1F336	píobar te	piobar | píobar | spiasrach | te
+1F354	burgar	ag ithe | bia | bia gasta | burgaire | burgar | ith | ocras
+1F355	píotsa	bia | bialann | cáis | Iodálach | ocras | pepperoni | píotsa | pizza | slisín
+1F356	feoil le cnámh	cnámh | feoil | feoil ar an gcnámh | feoil ar chnámh | feoil le cnámh
+1F357	cos sicín	cnámh | cos | éineoil | sicín | turcaí
+1F358	craicear ríse	bia | craicear | craicear ríse
+1F359	liathróid ríse	bia | liathróid ríse | rís | Seapánach
+1F35A	rís chócaráilte	bia | rís | rís bhruite | rís chócaráilte | rís cócaráilte
+1F35B	curaí agus rís	bia | curaí | curaí agus rís | rís
+1F35C	ramen	babhla | babhla núdal | bia | gal | núdail | ramen | te
+1F35D	spaigití	bia | bialann | pasta | spaigití
+1F35E	arán	arán | bia | bialann | builín aráin
+1F35F	sceallóga	bia | sceallóga
+1F360	práta milis	bia | fata | ionam | práta | práta milis | rósta
+1F361	dango	bata | dango | liathróidí mocci | liathróidí mocci ar chipín | milis | milseog | mochi | Seapánach
+1F362	bia mara	bia | bia mara | bia mara ar chipín
+1F363	sushi	bia | sushi
+1F364	séacla friochta	cloicheán | ribe róibéis | séacla | séacla friochta
+1F365	cáca éisc le guairneán	bia | bialann | cáca éisc | cáca éisc le guairneán | císte | iasc
+1F366	uachtar reoite coipthe	bia | bialann | cón uachtair reoite | iarbhéile | milis | milseog | scroid | uachtar | uachtar reoite | uachtar reoite bog | uachtar reoite coipthe
+1F367	oighear bearrtha	bearrtha | bialann | milis | milseog | oighear | reoite
+1F368	uachtar reoite	bia | bialann | milis | milseog | reoite | uachtar
+1F369	taoschnó	bia | bricfeasta | milis | milseog | taoschnó | taoschnónna
+1F36A	briosca	briosca | briosca sceallaí seacláide | cisteog | milis | milseog
+1F36B	seacláid	barra | barra seacláide | milis | milseán | oíche Shamhna | seacláid
+1F36C	milseán	bialann | milseán | milseog | oíche shamhna
+1F36D	líreacán	bia | bialann | líreacán | milseán
+1F36E	custard	custard | milis | milseog
+1F36F	pota meala	bia | mil | pota meala | próca meala
+1F370	brioscarán	brioscarán | cáca | císte | iarbhéile | milis | milseog | mír | slisín | taosrán
+1F371	bosca bento	bento | bia | bosca | bosca lóin
+1F372	pota le bia	bia | pota | pota le bia | stobhach
+1F373	cócaireacht	bialann | bricfeasta | cócaireacht | friochadh | friochta | friochtán | ubh
+1F374	scian agus forc	béile | bia | bialann | blasta | bricfeasta | dinnéar | forc | ocras | sceana | scian | scian agus forc
+1F375	cupán gan chluas	cluas | cupán | deoch | ól | tae | taechupán | úlang
+1F376	sáicí	beár | bialann | buidéal | cupán | deoch | ól | sáicí
+1F377	gloine fíona	alcól | beár | bialann | club | deoch | deochanna | fíon | gloine | meisciúil | ól | ólachán
+1F378	gloine mhanglaim	007 | alcól | club | deoch | deochlann | gloine | gloine mhanglaim | james bond | mad men | manglam | martini | ól | teach tábhairne
+1F379	deoch thrópaiceach	ar meisce | deoch | deoch thrópaiceach | puins | teach tábhairne
+1F37A	pionta beorach	alcól | an ghearmáin | beoir | coirm | deochanna | Deutschland | gloine | gloine beorach | gloine bheorach | leann | oktoberfest | ól | pionta beorach | stein | teach tábhairne
+1F37B	gloiní beorach	alcól | beár | beoir | cling | clingeadh | deochanna | flagúin | meisciúil | mhaith | ólachán | sláinte
+1F37C	buidéal babaí	babaí | babaithe | bainne | breith | buidéal | deoch | naíonán | nuabheirthe | rugadh
+1F37D	forc agus scian le pláta	cócaireacht | dinnéar | forc | ith | pláta | scian
+1F37E	buidéal le corc ag popáil	beár | buidéal | corc | deoch | popáil
+1F37F	grán rósta	gráin róstach | grán rósta | scannán
+1F950	croissant	arán | bia | corrán | croissant | francach | Francach | fuineadh | rollóg chorránach
+1F951	abhacád	abhacád | bia | toradh
+1F952	cúcamar	bia | cúcamar | cularán | gircín | glasra
+1F953	bagún	bagún | bia | feoil
+1F954	práta	bia | fata | fataí | glasra | práta | prátaí
+1F955	meacan dearg	bia | glasra | meacan | meacan dearg
+1F956	baguette	arán | baguette | bia | Francach
+1F957	sailéad	bia | glas | glasraí | sailéad
+1F958	panna tanaí le bia	bia | casaról | éadomhain | friochtán | paella | stobhach
+1F959	arán leathan stuáilte	arán leathan stuáilte | bia | ceibeab | falafel | fillteog | kebab | tortilla
+1F95A	ubh	bia | ubh
+1F95B	gloine bainne	bainne | deoch | gloine | gloinne
+1F95C	pis talún	bia | cnó | glasra | pis talún
+1F95D	cíobhaí	bia | ciobhaí | cíobhaí | kiwi | toradh
+1F95E	pancóga	bia | císte te | crêpe | pancóg | pancóga
+1F95F	domplagán	bia | domplagán | empanada | gyōza | jiaozi | pierogi | potsticker
+1F960	brioscán feasa	brioscán feasa | tairngreacht | táirngreacht
+1F961	bosca beir leat	bia | bosca beir leat | bosca greim gasta | coimeádán bia | oisre
+1F962	cipíní itheacháin	cipíní itheacháin | hashi | jeotgarak | kuaizi
+1F963	babhla le spúnóg	babhla | brachán | bricfeasta | congee | gránach | leite | spúnóg
+1F964	cupán le sop	cupán le sop | deoch | deoch shóide | sú | uisce
+1F965	cnó cócó	cnó cócó | pailm | piña colada
+1F966	brocailí	brocailí | cabáiste | fiáin
+1F967	pióg	líonadh | pióg | taosrán | toradh
+1F968	preatsal	casta | comhchasta | preatsal
+1F969	gearradh feola	dearg | feoil | gearradh | gríscín | gríscín muiceola | gríscín uaineola | stéig
+1F96A	ceapaire	arán | ceapaire
+1F96B	bia stánaithe	bia | bia stánaithe | canna | cannaí | stán
+1F96C	glasra duilleach	bok choy | cabáiste | cál | glasra | glasra duilleach | leitís
+1F96D	mangó	bia | mangó | torthaí | trópaiceach
+1F96E	cáca gealaí	cáca gealaí | féile | fómhar | yuèbǐng
+1F96F	béigeal	arán | bácús | béigeal | schmear
+1F9C0	ding cháise	cáis | ding cháise | mír cháise
+1F9C1	cístín cupa	bacús | bácús | bonnóg | borróg | císte | cístín cupa | milis | milseán | milseog | siúcra
+1F9C2	salann	blastán | croiteoir | salainn | salann
+1F9C3	bosca dí	bosca | bosca dí | deoch | milis | sop | sú
+1F9C4	gairleog	blasóir | gairleog
+1F9C5	oiniún	blasóir | oiniún | oinniún
+1F9C6	falafel	falafel | millín feola | sicphiseánach
+1F9C7	vaifeal	bricfeasta | iarann | iarn | neamhchinnte | vaifeal
+1F9C8	im	déiríocht | im
+1F9C9	maité	comrádaí | deoch | maité
+1F9CA	ciúb oighir	ciúb oighir | cnoc oighir | fuar | oighear
+1F9CB	tae bolgán	coinlín óil | deoch | tae bolgán
+1FAD0	fraochán	bia | caora | deoch | fraochán | sméara | toradh | triopall
+1FAD1	piobar	bia | capsicum | glasra | piobar
+1FAD2	ológ	bia | crann olóige | duilleog olóige | ológ
+1FAD3	arán leathan	arán | arán leathan | bia | lavash | naan | pita
+1FAD4	tamale	bia | fillteog | Meicsiceach | pamonha | tamale
+1FAD5	fondú	bia | cáis | Eilvéiseach | fondú | leáite | pota | seacláid
+1FAD6	taephota	deoch | fliuchtar tae | pota | tae | taephota
+1FAD7	leacht a dhoirteadh	doirteadh | leacht a dhoirteadh | uisce | úps
+1FAD8	pónairí	bia | pónairí
+1FAD9	crúsca	crúsca | folamh | próca
+1FADA	sinséar fréimhe	beoir | fréamh | lus | nádúrtha | rúta | sinséar | sláinte | spíosra
+1FADB	faighneog pise	edamame | faighneog | faighneog pise | faighneog piseanna | glasra | léagúm | pis | pónairí
+2615	deoch the	caife | caifé | caiféin | chai | deoch | galú | maidin | ól | tae | te
+2600	grian	aimsir | gathanna | geal | grian | grianmhar | spás
+2601	scamall	aimsir | néal | scamall
+2602	scáth báistí	aimsir | báisteach | éadaí | fearthainn | scáth | scáth báistí | scáth fearthainne
+2603	fear sneachta	fear | fuar | sneachta
+2614	scáth báistí le braonta báistí	aimsir | báisteach | braon | éadaí | fearthainn | scáth | scáth báistí | scáth báistí le braonta báistí | scáth le braon baistí
+26A1	ardvoltas	ard | ardvoltas | comhartha | comhartha ardvoltais | contúirt | contúirt ardvoltais | leictreachas | splanc thoirní | tintreach | voltas
+26C4	fear sneachta gan sneachta	fear sneachta | fear sneachta gan sneachta | fuar | sneachta
+26C5	grian taobh thiar de na scamaill	aimsir | aimsir dhorcha | grian | grian agus scamaill | grian taobh thiar de na scamaill | néal | néaltach | scamall | scamallach
+26C8	scamall le tintreach agus fearthainn	aimsir | báisteach | fearthainn | scamall | scamall le tintreach agus báisteach | scamall le tintreach agus fearthainn | toirneach
+2744	calóg shneachta	aimsir | calóg shneachta | calóg sneachta | fuar | sioc | sneachta
+1F300	cioclón	aimsir | cioclón | cuaranfa | iomghaoth
+1F301	ceomhar	ceo | ceomhar
+1F302	scáth báistí dúnta	báiste | báisteach | fearthainn | scáth báistí | scáth báistí dúnta | scáth fearthainne | scáth fearthainne dúnta
+1F303	oíche le réaltaí	oíche | réalta | réaltaí
+1F304	éirí na gréine thar na sléibhte	éirí na gréine | éirí na gréine ar shléibhte | éirí na gréine thar na sléibhte | fáinne an lae | grian | grian na maidine | maidin | sliabh
+1F305	éirí na gréine	éirí na gréine | grian | grian na maidine | nádúr
+1F306	dreach cathrach i dtitim na hoíche	ag | breacdhorcha | breacdhorchadas | cathair | cathairdhreach | foirgneamh | hoíche | na | titim
+1F307	dul faoi na gréine	breacdhorcha | foirgneamh | gréine | luí | na
+1F308	bogha báistí	aerach | aiteach | an aimsir | bogha báistí | déghnéasach | éighnéasach | leispiach | trasghnéasach | tuar ceatha
+1F309	droichead istoíche	droichead | istoíche | oíche
+1F30A	tonn san uisce	farraige | Kanagawa | muir | surfálaí | tonn | tonn san uisce | tonnmharcaíocht | uisce
+1F30B	bolcán	bolcán | brúchtadh bolcáin | nádúr | sliabh
+1F30C	Bealach na Bó Finne	an Láir Bhán | An Láir Bhán | bealach na bó finne | Bealach na Bó Finne | Claí Mór na Réaltaí | spás
+1F30D	cruinneog ag taispeáint na hEorpa agus na hAfraice	an Afraic | an chruinne | an domhan | an Eoraip | cruinneog | cruinneog ag taispeáint na hEorpa agus na hAfraice | Eoraip
+1F30E	cruinneog ag taispeáint Chríocha Mheiriceá	Críocha | cruinne | cruinneog | domhan | Mheiriceá | taispeáint
+1F30F	cruinneog ag taispeáint na hÁsie agus na hAstráile	an Áis | An Áise | an Astráil | An Astráil | an domhan | cruinneog | cruinneog ag taispeáint na hÁsie agus na hAstráile
+1F310	cruinneog le fadlínte	an domhan | an gréasán domhanda | cruinneog | cruinneog le fadlínte | domhan | gréasán | idirlíon
+1F311	gealach úr	dorcha | duibhré | fánas | gealach | gealach nua | ré nua | spás | úr
+1F312	corrán gealaí atá ag líonadh	corrán gealaí | corrán gealaí ag dul ar gcúl | corrán gealaí atá ag líonadh | gealach ag líonadh | gealach ag teacht ann | spás
+1F313	céad cheathrú na gealí	céad cheathrú na gealí | ceathrú gealaí | gealach | gealach i mbéal ceathrún | spás
+1F314	gealach scothlán atá ag líonadh	gealach | gealach ag líonadh | gealach ag teach ann | gealach scothlán ag ag dul ar gcúl | gealach scothlán atá ag líonadh | líonadh | ré | spás
+1F315	gealach lán	gealach | lán | lán na ré | lánré | luan | ré
+1F316	gealach scothlán atá ag caitheamh	caolú na ré | cúlú | cúlú gealaí | gealach | gealach ag caitheamh | gealach ag dul ar gcúl | gealach scothlán atá ag caitheamh | goin ré | ré | scothlán | seanghealach | spás
+1F317	ceathrú deireanach na gealaí	ceathrú | deireanach | gealach | spás
+1F318	corrán gealaí atá ag caitheamh	corrán | dul ar gcúl | gealach | spás
+1F319	corrán gealaí	an ghealach | corrán gealaí | gealach | luan | ré
+1F31A	gealach úr le haghaidh	aghaidh | aghaidh na gealaí nua | éadan | gealach úr le haghaidh | luan | ré | spás
+1F31B	céad cheathrú na gealaí le haghaidh	aghaidh | aghaidh ghealaí | céad cheathrú na gealaí le haghaidh | ceathrú | corrán gealaí le haghaidh | éadan | gealach | spás
+1F31C	ceathrú deireanach na gealaí le haghaidh	aghaidh ghealaí | aghaidh ghealaí ina ceathrú dheireanach | brionglóidí | ceathrú | ceathrú deireanach na gealaí le haghaidh
+1F31D	aghaidh na gealaí láine	aghaidh | aghaidh ar ghealach | aghaidh ghealaí láine | aghaidh na gealaí láine | geal | gealach
+1F31E	an ghrian le haghaidh	aghaidh | aghaidh ar ghrian | aimsir | an ghrian le haghaidh | geal | grian | grian le haghaidh | grianmhar | lá | solas na gréine | taitneamh | teas | trá
+1F31F	réalta ag lonrú	lonrú | réalt | réalta | réalta ag lonrú
+1F320	réalta reatha	oíche | réalt | réalta | réalta reatha | spás
+1F321	teirmiméadar	aimsir | teirmiméadar
+1F324	grian taobh thiar de scamall beag	aimsir | an ghrian | an ghrian taobh thiar de scamall | grian | grian taobh thiar de scamall beag | scamall
+1F325	grian taobh thiar de scamall mór	aimsir | an ghrian | grian | grian taobh thiar de scamall mór | scamall
+1F326	grian taobh thiar de scamall le fearthainn	aimsir | an ghrian | an ghrian taobh thiar de scamall | báisteach | fearthainn | grian | grian taobh thiar de scamall le fearthainn | scamall
+1F327	scamall le fearthainn	aimsir | báisteach | fearthainn | scamall | scamall ag cur báistí | scamall le fearthainn
+1F328	scamall le sneachta	aimsir | fuar | scamall | sneachta
+1F329	scamall le tintreach	aimsir | scamall | tintreach
+1F32A	tornádó	aimsir | camanfa | iomghaoth | néal | scamall | tornádó
+1F32B	ceo	aimsir | ceo | scamall
+1F32C	aghaidh na gaoithe	aghaidh | aghaidh gaothach | aghaidh na gaoithe | gaoth | scamall | séideadh | straoiseog na gaoithe
+2648	an Reithe	an Reithe | Aries | reitheach | stoidiaca
+2649	an Tarbh	an Tarbh | stoidiaca | Taurus
+264A	an Cúpla	an Cúpla | Gemini | stoidiaca
+264B	an Portán	an Portán | Cancer | stoidiaca
+264C	an Leon	an Leon | Leo | stoidiaca
+264D	an Mhaighdean	an Mhaighdean | stoidiaca | Virgo
+264E	an Mheá	an Mheá | Libra | stoidiaca
+264F	an Scairp	an Scairp | Scorpion | Scorpius | stoidiaca
+2650	an Saighdeoir	an Saighdeoir | Sagittarius | stoidiaca
+2651	an Gabhar	an Gabhar | Capricorn | gabhar | stoidiaca
+2652	Iompróir an Uisce	Aquarius | Iompróir an Uisce | stoidiaca | uisce
+2653	na hÉisc	na hÉisc | Pisces | stoidiaca
+1F550	1 an chloig	1 a chlog | 1 an chloig | 1:00 | a haon a chlog | an t-am
+1F551	2 an chloig	2 | 2 a chlog | 2 an chloig | 2:00
+1F552	3 an chloig	3 a chlog | 3 an chloig | 3:00 | an t-am | clog | trí a chlog
+1F553	4 an chloig	4 a chlog | 4 an chloig | 4:00 | an t-am | ceathair a chlog
+1F554	5 an chloig	5 a chlog | 5 an chloig | 5:00 | an t-am | cúig a chlog
+1F555	6 an chloig	6 a chlog | 6 an chloig | 6:00 | an t-am | sé a chlog
+1F556	7 an chloig	00 | 7 | 7 a chlog | 7 an chloig | 7:00 | seacht
+1F557	8 an chloig	8 a chlog | 8 an chloig | 8:00 | clog
+1F558	9 an chloig	9 | 9 a chlog | 9 an chloig | 9:00
+1F559	10 an chloig	00 | 10 | 10 a chlog | 10 an chloig | 10:00 | a chlog | deich
+1F55A	11 an chloig	11 | 11 a chlog | 11 an chloig | 11:00 | an t-am
+1F55B	12 an chloig	00 | 12 | 12 a chlog | 12 an chloig | 12:00 | a chlog | a dó dhéag a chlog | am | clog | dó dhéag | dódhéag
+1F55C	leathuair tar éis a haon	1 | 1:30 | 30 | a chlog | a haon | am | aon | clog | leathuair tar éis | leathuair tar éis a haon | tríocha
+1F55D	leathuair tar éis a dó	14:30 | 2 | 2:30 | 30 | a dó | clog | dó | leathuair tar éis | leathuair tar éis a dó | tríocha
+1F55E	leathuair tar éis a trí	3:30 | clog | leathuair tar éis a trí
+1F55F	leathuair tar éis a ceathair	4:30 | am | clog | leathuair tar éis a ceathair
+1F560	leathuair tar éis a cúig	30 | 5 | 5:30 | an t-am | leathuair tar éis a cúig
+1F561	leathuair tar éis a sé	6 | 6:30 | leathuair tar éis a sé
+1F562	leathuair tar éis a seacht	30 | 7 | 7:30 | leathuair tar éis a seacht
+1F563	leathuair tar éis a hocht	8 | 8:30 | leathuair tar éis a hocht
+1F564	leathuair tar éis a naoi	30 | 9 | 9:30 | leathuair tar éis a naoi
+1F565	leathuair tar éis a deich	10 | 10:30 | leathuair tar éis a deich
+1F566	leathuair tar éis a haon déag	11 | 11:30 | 30 | am | aon déag | clog | leathuair tar éis a haon déag
+1F567	leathuair tar éis a dó dhéag	12:30 | an t-am | do dhéag | leathuair | leathuair tar éis a dó dhéag
+1FA90	pláinéad le fáinne	fáinne | pláinéad | Satarn | Satarnach
+2604	cóiméad	cóiméad | spáis | spás
+26F0	sliabh	cnoc | sléibhte | sliabh
+26F1	scáth báistí ar an talamh	aimsir | báisteach | fearthainn | grian | scáth | scáth ar talamh | scáth báistí ar an talamh | talamh
+26F2	scairdeán	foinse uisce | fuarán | scairdeán | scardán
+26F4	bád farantóireachta	bád | bád farantóireachta | bád fartha
+26F5	bád seoil	bád | bád seoil | ionad saoire | luamh | muir | seoltóireacht
+2708	eitleán	eitilt | eitleán | feithicil | iompar | taisteal
+1F488	cuaille bearbóra	bearbóir | bearr | bearradh | gruagaire | pol | úrnua
+1F4BA	suíochán	cathaoir | suíochán
+1F680	roicéad	feithicil | roicéad | taisteal
+1F681	héileacaptar	feithicil | héileacaptar | héileacoptar | ingearán | taisteal
+1F682	inneall traenach	bóthar iarainn | cabús | feithicil | gal | gal-inneall | galinneall | iarnród | inneall | inneall traenach | scruinge | taisteal | traein | traenacha
+1F683	carráiste iarnróid	bóthar iarainn | bus tralaí | carr | carr ráille | carráiste | carráiste iarnróid | feithicil | iarnród | iompar | iompar poiblí | leictreach | riancharr | taisteal | traein | tram
+1F684	traein ardluais	aibhléis | amtrak | ard-luas | feithicil | iarnród | luas | shinkansen | traein | traein ardluais
+1F685	traein philéir	feithicil | shinkansen | shinkansen piléir | taisteal | traein | traein ardluais | traein philéir | traein philéir ardluais
+1F686	traein	bóthar iarainn | feithicil | iarnród | sroichte | tagtha | traein
+1F687	traein faoi thalamh	feithicil | meitreo | taisteal | traein faoi thalamh
+1F688	iarnród éadrom	aonráille | éadrom. iarnród | feithicil | iarnród | iarnród éadrom
+1F689	stáisiún traenach	bóthar iarainn | dart | iarnród | luas | stad na traenach | stáisiún | stáisiún traenach | traein
+1F68A	tram	bus tralaí | feithicil | luas | riancharr | tram
+1F68B	carráiste tram	bus | bus tralaí | carr | carráiste tram | feithicil | luas | riancharr | tram
+1F68C	bus	bus | bus buí | feithicil | ollcharbad | scoil
+1F68D	bus atá ag teacht	ag teacht | bus | carranna
+1F68E	bus tralaí	bus | feithicil | riancharr | tralaí
+1F68F	stad bus	bus | stad | stad bhus
+1F690	mionbhus	bus | feithicil | mionbhus | tiomáin
+1F691	otharcharr	éigeandáil | feithicil | otharcharr
+1F692	inneall dóiteáin	dóiteán | feithicil | inneall | inneall dóiteáin | tine
+1F693	carr gardaí	5–0 | carr | carr patróil | feithicil | garda | gardaí | gluaisteán | póilín | póilíní
+1F694	carr gardaí ag teacht	carr gardaí | carr gardaí ag teacht | feithicil | gardaí | póilíní
+1F695	tacsaí	carr | feithicil | gluaisteán | tacsaí | tiomáin
+1F696	tacsaí ag teacht	carranna | feithicil | gluaisteáin | tacsaí | tacsaí ag teacht
+1F697	gluaisteán	carr | feithicil | gluaisteán | tiomáint
+1F698	gluaisteán atá ag teacht	ag teacht | carr | gluaisteán
+1F699	SUV	carr | feithicil | feithicil áineasa | gluaisteán | SUV | tiomáint
+1F69A	trucail seachadta	feithicil | tiomáin | trucail | trucail seachadta | veain
+1F69B	leoraí	bog | carr | feithicil | gluaisteán | leantóir | leath | leoraí | leoraí altach | lorraí | trucail
+1F69C	tarracóir	feirm | feithicil | tarracóir
+1F69D	aonráille	aonráille | feithicil | traein
+1F69E	iarnród sléibhe	carr | carr cábla sléibhe | feithicil | iarnród | iarnród sléibhe | sliabh | turas
+1F69F	iarnród crochta	carráiste | feithicil | iarnród crochta
+1F6A0	cáblabhealach sléibhe	cábla | cábla-bhealach sléibhe | cáblabhealach sléibhe | carr | carr cábla sléibhe | feithicil | gandala | sliabh
+1F6A1	trambhealach aerga	aerga | cábla | carr | gandala | téadbhealach | trambhealach
+1F6A2	long	bád | feithicil | long | paisinéir | taisteal | titanic
+1F6A3	bád rámhaíochta	abhainn | bád | bád rámhaíochta | canú | céasla | duine | duine ag rámhaíocht | feithicil | loch | rafta
+1F6A4	luasbhád	bád | feithicil | loch | luasbhád | samhradh | taisteal
+1F6A5	soilse tráchta cothrománacha	comhartha | cothrománach | crosbhealach | solas | stad | stopsholas | trácht
+1F6A6	soilse tráchta ceartingearacha	ceartingearach | comhartha | crosbhealach | solas | stad | stopsholas | tiomáinte | trácht
+1F6A7	suíomh tógála	á thógáil | bacainn | comhartha | comhartha tógála | suíomh tógála | tógáil
+1F6A8	solas rothlach	bonnán | carr gardaí | éigeandáil | póilíní | rabhachán gardaí | solas gardaí | solas rothlach
+1F6A9	bratach thriantánach	bratach | bratach chuaille | bratach thriantánach | galf
+1F6AA	doras	cúldoras | doras | doras tosaigh
+1F6B0	uisce inólta	comhartha uisce óil | uisce | uisce inólta | uisce óil
+1F6B1	uisce nach bhfuil le hól	coiscthe | ná óltar é | nach bhfuil le hól | neamh-inólta | tirim | uisce | uisce nach bhfuil le hól
+1F6B3	cosc ar rothair	cosc ar rothair | cosc ar rothar | feithicil | rothar
+1F6B7	cosc ar choisithe	coiscthe | coisí | comhartha | cosc ar choisithe | siúlóir
+1F6B8	páistí ag trasnú	comhartha | leanaí | leanbh | páiste | páistí | páistí ag trasnú | trácht | trasnú
+1F6B9	Fir	comhartha | fear | Fir | leithreas | leithreas na bhfear | Seomra na bhFear | teach an asail
+1F6BA	Mná	bean | comhartha | Comhartha na mBan | leithreas | leithreas na mban | mná | Mná | seomra na mban | Seomra na mBan
+1F6BB	comhartha na leithreas	comhartha na leithreas | cró na gcearc | leithreas | leithris | teach an asail
+1F6BC	comhartha linbh	athrú do leanaí | bord athraithe | comhartha linbh | leanbh
+1F6BD	leithreas	cró na gcearc | leithreas | seomra folctha | teach an asail
+1F6BE	na leithris	leithreas | na leithris
+1F6BF	cithfholcadán	cith | cithfholcadán | cithfholcadh | uisce
+1F6C0	duine ag folcadh	duine ag folcadh | folcadán | folcadh
+1F6C1	folcadán	folcadán
+1F6C2	rialú pasanna	pas | rialú | rialú pasanna
+1F6C3	custaim	custaim | pacáiste
+1F6C4	limistéar bagáiste	bagáiste | limistéar bagáiste | taisteal
+1F6C5	bagáiste	bagáiste | cás | seirbhís bhagáiste
+1F6D0	teach adhartha	adhartha | creideamh | ionad adhartha | paidir a rá | teach adhartha
+1F6D1	comhartha stop	bóthar | comhartha stop | dearg | stad | stop | tiomáint
+1F6D2	tralaí	carbad | ollmhargadh | siopadóireacht | tralaí
+2668	foinse the	ag galú | foinse the | foinsí | foinsí teo | te
+26BD	liathróid sacair	caid | celtic | liathróid | messi | peil | ronaldo | roy keane | sacair | sacar
+26BE	daorchluiche	cluiche corr | daorchluiche | liathróid | spórt
+26F3	brat i bpoll	brat gailf | brat i bpoll | galf | poll | spórt
+1F392	mála scoile	droim | droma | mála | malaí | oideachas | saitsil | scoil | scoile | taisteal
+1F3A0	capall an roithleagáin ró	capall | roithleagán | siamsaíocht
+1F3A1	roth Ferris	páirc siamsaíochta | roth | roth Ferris | roth mór | siamsaíochta
+1F3A2	rollchóstóir	aonach | iarnród bíse | páirc siamsaíochta | rollchóstóir | siamsaíocht
+1F3A3	slat iascaireachta	iasc | iascaireacht | siamsaíocht | slat | spórt
+1F3A4	micreafón	ceol | karaoke | karoke | micreafón | siamsaíocht
+1F3A5	ceamara scannáin	Bollywood | ceamara | Hollywood | pictiúrlann | scannán | scannánaíocht | siamsaíocht | taifead
+1F3A6	pictiúrlann	pictiúrlann | scannán | siamsaíocht
+1F3A7	cluasáin	ceol | cluasáin | cluasán | cluasán bachlóige | fuaim
+1F3A8	pailéad dathanna	dathannach | ealaín | ealaíontóir | pailéad dathanna | péint | pictiúr
+1F3A9	hata ard	éadaí | hata | hata ard
+1F3AA	sorcas	puball | puball sorcais | sorcas
+1F3AB	ticéad	cead isteach | comhdhuille | ticéad
+1F3AC	clabaire	aicsean | clabaire | scannán
+1F3AD	na taibhealaíona	aghaidhmhasc | aisteoir | amharclann | ealaín | ealaíon | léiriú | na taibhealaíona | siamsa | siamsaiocht | siamsaíocht | taibh-ealaín | taibhdhearc | taibhiúchán | taibhsiú
+1F3AE	cluiche ríomhaire	cluiche | cluiche ríomhaire | playstation | rialaitheoir | rialaitheoir cluichíochta | xbox
+1F3AF	buille díreach	buille díreach | cluiche | dairt | saighead | siamsaíocht | sprioc | súil ghloine | súil sprice
+1F3B0	meaisín sliotáin	casino | cluiche | meaisín sliotáin
+1F3B1	liathróid 8 púil	8 | cluiche | liathróid 8 púil | snúcar
+1F3B2	dísle	cluiche | dísle | siamsaíocht
+1F3B3	babhláil	babhláil | cluiche | liathróid | liathróid bhabhlála | spórt | stríoc
+1F3B4	cártaí imeartha bláthanna	cárta | cárta imeartha | cártaí | cártaí imeartha bláthanna | cluiche | Seapánach
+1F3B5	nóta ceoil	ceoil | ceol | fuaim | nóta
+1F3B6	nótaí ceoil	ceoil | ceol | fuaim | nóta | nótaí
+1F3B7	sacsafón	ceol | sacsafón | uirlis
+1F3B8	giotár	ceol | giotár | stratocaster | uirlis
+1F3B9	pianó	ceoil | ceol | méarchlár | pianó | uirlis
+1F3BA	trumpa	ceol | gléas ceoil | stoc | trumpa | uirlis | uirlis cheoil
+1F3BB	veidhlín	ceol | fidil | uirlis | veidhlín
+1F3BC	scór ceoil	ceoil | ceol | nóta | scór
+1F3BD	léine reatha	léine reatha | rith | sais | spórt | t-léine
+1F3BE	leadóg	leadóg | liathróid | liathróid leadóige | raicéad leadóige
+1F3BF	scíonna	buatais | marcaíocht sneachta | scí | scí agus buatais | scíonna | sneachta | spórt
+1F3C0	cispheil	cispheil | fonsa | fonsa cispheile | liathróid | spórt
+1F3C1	bratach chríche	bratach | bratach chríche | rásaíocht | spórt
+1F3C2	clárscimeálaí sneachta	clár sneachta | clárscimeálaí sneachta | marcaíocht sneachta | scimeáil sneachta | sneachta | spórt
+1F3C3	reathaí	ag rith | déan deifir | duine ag rith | gasta | luas | maratón | rása | reathaí | spórt
+1F3C4	duine ag surfáil	aigéan | béal na toinne | duine ag surfáil | oibriú san fharraige | spórt | surfáil | surfálaí | tonnta | trá
+1F3C5	bonn spóirt	bonn | bonn óir | bonn spóirt | buaiteoir | ór
+1F3C6	corn	an bua | corn | curadh | duais | spóirt
+1F3C7	rásaíocht capall	capall | capall rása | each | gearrán | marc | marcaí | marcaíocht | rás | rásaíocht | rásaíocht chapall | rith | spórt
+1F3C8	peil Mheiriceánach	cluiche | liathróid | meiriceánach | peil | peil mheiriceánach | peil Mheiriceánach | spórt | super bowl
+1F3C9	rugbaí	liathróid | peil | rugbaí | spóirt | spórt
+1F3CA	snámhaí	duine ag snámh | snámh | snámhaí | spórt | trí-atlan
+1F3CB	duine ag tógáil meachán	ardú éagtha | babhta traenála | barra meáchan | corpfhorbróir | duine ag tógáil meachán | duine ag tógáil meáchan | meáchan | tógálaí | tréantógáil meáchan
+1F3CC	duine ag imirt gailf	duine ag imirt gailf | éinín | gailf | galf | giolla gailf | liathróid | maide gailf | plásóg | raon gailf | tí
+1F3CD	gluaisrothar	ag rásáil | gluaisrothar
+1F3CE	carr rása	ag rásáil | ag rásaíocht | carr | carr rása | carr rásaíochta
+1F451	coróin	banríon | coróin | duine de theaghlach ríoga | game of thrones | rí
+1F452	hata mná	éadaí | hata | hata mná
+1F453	spéaclaí	feisteas | spéaclaí | spéaclaí gréine | súil
+1F454	carbhat	carbhat | dáiríre | éadaí | fostaithe | léine
+1F455	t-léine	cába | deireadh | éadaí | éadaigh | gléasta | gorm | léine | neamhfhoirmeálta | seachtaine | siopadóireacht | t-léine
+1F456	brístí géine	bríste | brístí | brístí géine | deireadh seachtaine | denim | éadach | éadaí | gorm | siopadóireacht | treabhsar
+1F457	gúna	éadaí | gúna
+1F458	cimeonó	cimeonó | compordach | éadaí | gúna | kimono
+1F459	bicíní	bicíní | bikini | éadaí snámha | linn snámha | trá
+1F45A	éadaí mná	ban | bean | blús | cába | éadaí | éadaigh | gléasta | gúna | léine | mná | siopadóireacht
+1F45B	sparán	airgead | éadaí | éadaigh | galánta | gúna | láimhe | mála | siopadóireacht | sparán
+1F45C	mála láimhe	éadaí | mála | mála láimhe
+1F45D	mála	éadaí | gúna | máilín | mála | spiorán | tiachóg
+1F45E	bróg fir	bróg | bróg fir | éadaí
+1F45F	bróg reatha	bróg | bróg reatha | éadaí
+1F460	sáil ard	bean | bonn | bróg | bróga | éadaí | mná | sáil ard | sála arda | stilletto
+1F461	cuarán mná	bean | bróg | cuarán | éadaí | mná
+1F462	buataisí mná	bróg | buatais | buataisí mná | éadaí
+1F6B2	rothar	bus | feithicil | rothaíocht | rothar | rothar glas
+1F6B4	rothaí	clogad | duine ar rothar | lúthchleasaí | rása | rothaí | rothaíocht | rothar | spórt
+1F6B5	rothaí sléibhe	aclaíocht | duine ag rothaíocht | duine ar rothar | rothaí | rothaí sléibhe | rothaíocht sléibhe | rothaíocht sna sléibhte | rothar | rothar sléibhe | sliabh
+1F6B6	coisí	coisí | duine ag siúl | siúl réidh | siúlach | siúlóid | siúlóidín | siúlóir | spaisteoireacht
+1F938	rothchasadh	aclaíocht | bunoscionn | casadh | cleas an rotha | duine | gleacaíocht | léim thar a corp | rothalchleas | rothchasadh | sásta | sona
+1F939	lámhchleasaíocht	fear | iltascáil | ionramháil | láimhseáil | lámhchleasaí | lámhchleasaíocht | liathróid | rudaí a láimhseáil go cothrom | scil | taispeántas
+1F93A	duine ag pionsóireacht	claíomh | duine | pionsóir | pionsóireacht
+1F93C	coraíocht	babhta coraíochta | comórtas | coraí | coraíocht | daoine | daoine ag coraíocht | daoine ag iomrascáil | duine | iomrascálaí | spórt | téigh chun comhraic | turnaimint
+1F93D	póló uisce	caith | duine | liathróid | Marco | póló | snámh | spórt | uisce
+1F93E	liathróid láimhe	aclaíocht | caith | duine | duine ag imirt liathróid láimhe | lámh | liathróid | liathróid láimhe | lúthchleasaíocht | pinniú
+1F93F	masc tumadóireachta	masc tumadóireachta | scúbadóireacht | snorcláil | tumadóireacht | tumasdóireach
+1F9E2	caipín speiceach	caipín | caipín daorchluiche | caipín speiceach | hata
+1F9E3	scairf	fuar | muineál | scairf
+1F9E4	lámhainní	lámh | lámhainn | lámhainní
+1F9E5	cóta	brrr | cóta | fuar | seaicéad
+1F9E6	stocaí	giosáin | stoca | stocaí
+1FA70	bróga bailé	bailé | bróga | damhsa
+1FA71	culaith shnámha aonphíosa	aonphíosa | culaith | shnámha | snámh
+1FA72	culaith shnámha fir	aonphíosa | brístíní | culaith | fo-éadaí | shnámha | snámh
+1FA73	brístí gearra	bríste | culaith | fo-éadaí | gearr | shnámha | snámh
+1FA74	cuarán	cuarán | flip fleap | trá
+1FA80	yó-yó	athraigh | bréagán | yó-yó
+1FA81	eitleog	eitil | eitleog | in airde
+1FA82	paraisiút	faileoir crochta | faoileoir crochta | paraisheol | paraisiút | spéirthumadóireacht
+1FA83	búmarang	an Astráil | anonn is anall | astrálach | búmarang | filleadh
+1FA84	slat draíochta	bob | cailleach feasa | draíocht | draíodóir | draoi | geis | slat draíochta
+1FA85	piñata	ceiliúradh | cóisir | meicsiceach | milseáin | piñata
+1FA86	bábóga Rúiseacha	bábóga Rúiseacha | matryoshka | rúiseach
+1FA95	bainseó	bainseó | ceol | téadach
+1FA97	bosca ceoil	bosca ceoil | uirlis cheoil
+1FA98	druma fada	druma | druma fada | uirlis cheoil
+265F	fichillín	ficheall | fichillín | glasóg | indiúscartha
+2660	dath spéireata	cárta | cluiche | dath | spéireata
+2663	dath truif	cárta | cluiche | dath | triufanna | truif
+2665	dath hairt	cárta | cluiche | cluiche cártaí | croí | dath | hairt | hart | hartanna | mothúchán
+2666	dath muileata	cárta | cluiche | dath | muileata
+1F4B3	cárta creidmheasa	airgead | airgead tirim | banc | cáirde | cárta | cárta creidmheasa | creidmheas
+1F4B4	nóta bainc yen	airgead | airgeadra | nóta bainc | nóta bainc yen | nóta yen | yen
+1F4B5	nóta bainc dollair	airgead | airgeadra | banc | dollar | nóta bainc | nóta bainc dollair | nóta dollair
+1F4B6	nóta bainc euro	100 | airgead | airgeadra | banc | euro | Euro | nóta | nóta bainc | nóta bainc euro | saibhir
+1F4B7	nóta bainc puint	airgead | airgeadra | banc | nóta bainc | nóta bainc puint | nóta puint | punt
+1F4B9	margadh ag méadú le yen	banc | cairt | dul i méid | margadh | margadh ag éirí | margadh ag méadú le yen | méadú
+1F4BB	ríomhaire glúine	glúine | oifig | PC | pearsanta | ríomhaire
+1F4BC	mála cáipéisí	mála cáipéisí | oifig
+1F4BD	diosca ríomhaire	diosca ríomhaire | MD | miondiosca | ríomhaire
+1F4BE	diosca bog	bog | diosca | ríomhaire
+1F4BF	diosca optúil	blu-ray | diosca | diosca optúil | DVD | ríomhaire
+1F4C0	DVD	blu-ray | cd | diosca | dlúthdhiosca | dvd | DVD | optúil | ríomhaire
+1F4C1	fillteán comhad	comhad | fillteán
+1F4C2	fillteán oscailte	comhad | fillteán | fillteán comhaid oscailte | oscail | oscailte
+1F4C3	leathanach le coirnín	cáipéis | doiciméad | leathanach | leathanach craptha | leathanach le choirnín | leathanach le coirnín
+1F4C4	leathanach iompaithe suas	doiciméad | iompaithe | leathanach | páipéar | suas
+1F4C5	féilire	dáta | féilire
+1F4C6	féilire instróicthe	féilire | féilire instróicthe | féilire le stróiceadh
+1F4C7	innéacs cártaí	cárta | innéacs | innéacs cártaí | rolodex | treorán
+1F4C8	cairt mhéadaitheach	cairt mhéadaitheach | fás | graf | sonraí | treocht mhéadaitheach
+1F4C9	cairt íslitheach	cairt | cairt íslitheach | cairt síos | graf | sonraí | treocht síos
+1F4CA	barrachairt	barrachairt | barraghraf | cairt | graf | sonraí
+1F4CB	gearrthaisce	fáisc-chlár | gearrthaisce | liosta | nithe le déanamh | nótaí | rudaí le déanamh
+1F4CC	tacóid ordóige	biorán | colláis | tacóid | tacóid ordóige
+1F4CD	tacóid chruinn	léarscáil | mapa | suíomh | tacóid | tacóid chruinn
+1F4CE	fáiscín páipéir	fáisceán páipéir | fáiscín | fáiscín páipéir
+1F4CF	rialóir díreach	imeall díreach | mata | rialóir | rialóir díreach | uillinn
+1F4D0	rialóir triantánach	mata | rialóir | rialóir triantánach | triantán | uillinn
+1F4D1	clibeanna leabharmhairc	clibeanna leabharmhairc | leabharmharc | leabharmharcanna | marcáil | táib
+1F4D2	mórleabhar	leabhar nótaí | mórleabhar
+1F4D3	leabhar nótaí	ceap nótaí | leabhar nótaí
+1F4D4	leabhar nótaí maisithe	leabhar | leabhar nótaí maisithe | scoil | scríobh
+1F4D5	leabhar dúnta	dúnta | leabhar | oideachas
+1F4D6	leabhar oscailte	eolas | leabhar | leabhar ar oscailt | leabharlann | léamh | léitheoireacht | oideachas | oscailte | úrscéalta
+1F4D7	leabhar glas	leabhar | leabhar glas | leabharlann | léamh | léitheoireacht | oideachas | uaine
+1F4D8	leabhar gorm	gorm | leabhar | leabharlann | léamh | oideachas
+1F4D9	leabhar flannbhuí	buí | flannbhuí | leabhar | leabharlann | léamh | léitheoireacht | oideachas | oráiste
+1F4DA	leabhair	eolas | leabhair | leabhar | leabharlann | léamh | léitheoireacht | oideachas | scoil | staidéar | úrscéalta
+1F4DB	suaitheantas ainm	ainm | suaitheantas
+1F4DC	scrolla	páipéar | scroll | scrolla | scrolla páipéir
+1F4DD	meabhrán	cumarsáid | leabhar meabhrán | meabhrán | meáin | meamram | nótaí | peann luaidhe
+1F4DE	glacadán fóin	comhrá | cumarsáid | faighteoir | fón | glacadán | glacadán fóin | glao | guthán | teileafón | voip
+1F4DF	glaoire	cumarsáid | glaoire
+1F4E0	meaisín facsála	cumarsáid | facs | meaisín facs | meaisín facsála
+1F4E1	aeróg satailíte	aeróg | aeróg satailíte | aeróg shatailíte | eolaíocht | mias | mias satailíte | satailít | teagmháil
+1F4E2	callaire	callaire | callaire láimhe | cumarsáid | fógairt phoiblí
+1F4E3	meigeafón	fuaim | meigeafón
+1F4E4	trae an bhosca amach	amach | bocsa | bosca | litir | post amach | post seolta | ríomhphost | seolta | trádaire | trae an bhosca amach
+1F4E5	trae an bhosca isteach	bocsa | bosca | faigh | faighte | isteach | litir | post | ríomhphost | teachtaireacht | trae an bhosca isteach
+1F4E6	pacáiste	beart | bocsa | bosca | cumarsáid | pacáiste | seachadadh
+1F4E7	ríomhphost	clúdach litreach | litir | post | ríomhphoist | ríomhphost | scéala | teachtaireacht
+1F4E8	post isteach	clúdach litreach | isteach | litir | post faighte | post isteach | ríomhphost | seolta
+1F4E9	clúdach litreach le saighead	amach | clúdach litreach | clúdach litreach le saighead | cumarsáid | ríomhphost | saighdead | saighead | seol
+1F4EA	bosca poist dúnta le bratach íslithe	bosca | bratach | dúnta | íslithe | litreacha | poist | post
+1F4EB	bosca poist dúnta le bratach ardaithe	bosca litreacha | bosca litreacha dúnta le bratach ardaithe | bosca poist | bosca poist dúnta | bosca poist dúnta le bhratach ardaithe | bosca poist dúnta le bratach ardaithe | cumarsáid | druidte | dúnta | iata | post
+1F4EC	bosca poist oscailte le bratach ardaithe	ardaithe | bosca | bratach | litreacha | oscailte | poist | post
+1F4ED	bosca poist oscailte le bratach íslithe	bosca | bratach | íslithe | litreacha | oscailte | poist | post
+1F4EE	bosca poist	an post | bosca litreacha | bosca poist | litir | post
+1F4EF	corn poist	adharc | corn | corn poist
+1F4F0	nuachtán	cumarsáid | nuacht | nuachtán | páipéar | páipéar nuachta
+1F4F1	guthán	cumarsáid | fón | fón póca | guthán | soghluaiste
+1F4F2	guthán le saighead	cuir glaoch | fón póca | fón póca le saighead | guthán | guthán le saighead
+1F4F3	mód creatha	fón | fón póca | guthán | mód creatha
+1F4F4	fón casta as	casta | fón casta as | fón póca | guthán
+1F4F5	cosc ar fhóin phóca	cosc ar fhóin phóca | guthán
+1F4F6	comharthaí fóin	aeróg | aeróg le barraí | comharthaí fóin | guthán | láidreacht
+1F4F7	ceamara	ceamara | físeán | grianghraf | grianghrafadán | instagram
+1F4F8	ceamara le splanc	ceamara | ceamara le splanc | físeán | grianghrafadán | splanc
+1F4F9	físcheamara	ceamara | físcheamara | físeán | grianghrafadán
+1F4FA	teilifís	físeán | scáileán | teilifís | teilifíseán | TV
+1F4FB	raidió	físeán | raidió | siamsaíocht
+1F4FC	fístéip	físeán | fístéip | sean | seanstíl | téip | vcr | vhs
+1F4FD	teilgeoir scannáin	cineama | físeán | pictiúrlann | scannán | teilgeoir | teilgeoir scannáin
+1F4FF	paidrín urnaí	creideamh | éadaí | muince | paidrín | urnaí
+1F505	cnaipe íslithe	cnaipe íslithe | gile | íseal
+1F506	cnaipe gile	cnaipe gile | geal | gile | gile ard | solas
+1F507	callaire maothaithe	balbh | balbhaithe | callaire | callaire ar ceal | callaire maothaithe | ciúin | ciúinas | fuaim | gan fhuaim | glór
+1F508	callaire íslithe	callaire | callaire íslithe | fuaim
+1F509	callaire fuaime ísle	callaire | callaire ar leibhéal meánach | callaire fuaime ísle | fuaim | meánach
+1F50A	callaire fuaime airde	airde | ard | callaire | callaire fuaime airde | ceol | fuaim
+1F50B	ceallra	cadhnra | ceallra
+1F50C	pluga leictreach	aibhléis | leictreachas | plogóid | pluga leictreach
+1F50D	gloine formhéadúcháin ar chlé	gloine formhéadúcháin ar chlé | uirlis
+1F50E	gloine formhéadúcháin ar dheis	gloine | gloine formhéadúcháin ar dheis
+1F50F	glasáilte le peann	dúch | glas | glas agus peann | glasáilte le peann | peann | príobháideachas
+1F510	glasáilte le heochair	faoi ghlas | glas dúnta agus peann | glas rothair | glasáilte | glasáilte le heochair | slán
+1F511	eochair	díghlasáil | eochair | eochracha
+1F512	glasáilte	druidte | dúnta | glas | glasáilte | iata | príobháideach
+1F513	neamhghlasáilte	glas | neamhghlasáilte | oscailte
+1F514	cloigín	clog | cloigín | eaglais | fuaim | séipéal | sos
+1F515	cloigín ar ceal	balbhaigh | ciúnas | cloigín ar ceal | coiscthe | níl
+1F516	leabharmharc	leabharmharc | marc
+1F517	nasc	naisc | nasc
+1F518	cnaipe raidió	cnaipe raidió | geoiméadrach | raidió
+1F51E	os cionn 18	18 | coiscthe | os cionn 18 | srian aoise
+1F51F	caipín eochrach: 10	caipín eochrach
+1F526	tóirse	lampa leictreach | tóirse | uirlis
+1F527	rinse	athchóiriú | baile | castaire | rinse | uirlis
+1F528	casúr	athchóiriú | baile | casúr | deisiú | uirlis
+1F529	cnó agus bolta	bolta | cnó | cnó agus bolta | uirlis
+1F52A	scian	arm | cistin | cócaire | cócaireacht | hocho | scian | uirlis
+1F52B	piostal	arm | gunna | piostal | uirlis
+1F52C	micreascóp	eolaíocht | micreascóp | saotharlann | turgnamh | uirlis
+1F52D	teileascóp	teileascóp | uirlis
+1F9BA	veist sábháilteachta	éigeandáil | sábháilteacht | veist | veist sábháilteachta
+1F9BB	cluas le háis éisteachta	áis | allaíre | cluas | éisteacht | inrochtaineacht
+1F9BC	cathaoir rothaí mheicniúil	cathaoir rothaí innealta | cathaoir rothaí mheicniúil | inrochtaineacht
+1F9BD	cathaoir rothaí láimhe	cathaoir rothaí | inrochtaineacht | láimhe
+1F9E9	mír mearaí	comhghlasáilte | leid | mír | mír mearaí | míreanna mearaí | nod | píosa | tomhas
+1F9EA	triaileadán	ceimic | ceimiceoir | eolaíocht | promhadán | saotharlann | triaileadán | turgnamh
+1F9EB	mias Petri	baictéir | bitheolaí | bitheolaíocht | mias | Petri | saotharlann | saothrán
+1F9EC	ADN	ADN | beatha | bitheolaí | éabhlóid | géin | géinitic | saol
+1F9ED	compás	adhmainteach | compás | loingseoireacht | maighnéadach | treo | treodóireacht
+1F9EE	abacas	abacas | áireamhán | ríomh
+1F9EF	múchtóir tine	dóiteán | múch | múchadh | múchtóir | tine
+1F9F0	bosca uirlisí	aidhleann | bocsa dearg | bosca dearg | bosca uirlisí | cófra | déan tú féin é | DIY | lámhuirlis | meicneoir | uirlis | uirlisí
+1F9F1	bríce	balla | bríce | brící | cré | falla | moirtéal | moirtéar | múr
+1F9F2	maighnéad	adhmaint | adhmainteach | aomadh | cró capaill | crú capaill | dearfach diúltach | maighnéad | maighnéadach | tarraingt | u chruth
+1F9F3	málaí	bagáiste | cás | málaí | pacáil | rothaí | taisteal
+1F9F4	buidéal lóise	buidéal lóise | foltfholcadh | lóis | maothóir | seampú | shampoo | uachtar gréine | ungadh
+1F9F5	snáth	biorán | eiteán | fuáil | snáithead | snáth | spól | spól snátha | téad
+1F9F6	abhras	abhras | cniotáil | cróiseáil | liathróid
+1F9F7	biorán dúnta	biorán brollaigh | biorán dúnta | clúdín | punc-cheol
+1F9F8	béirín	art | béar | béirín | bréagán | mathúin | pluis | rud imeartha | stuáilte | súgradh | teidí
+1F9F9	scruab	ag scuabadh | bean sí | cailleach | glanadh | scruab | scuab | Scuab chaillí | scuabadh
+1F9FA	ciseán	birdeog | cis | ciseán | ciseog | cléibhín | cliabh | cliabhán | feirmeoireacht | giúróg | muirleog | níochán | picnic
+1F9FB	rolla páipéir	leithreas | páipéar | rolla | tuáillí
+1F9FC	sópa	ag glanadh | babhla sópa | barra | cúr | folc | folcadh | gallúnach | glan | glanadh | snámh | sobal | sobal gallúnaí | soitheach gallúnaí | sópa
+1F9FD	spúinse	báigh | cuir ar maos | glanadh | ionsúigh | ionsúiteach | mac dual | póiriúil | scagach | spúinse
+1F9FE	admháil	admháil | cuntasaíocht | fianaise | leabharchoiméad | sonrasc
+1F9FF	briocht nazar	an drochshúil | briocht | buachloch | coirnín | drochshúil | gorm | mealltacht | nazar | ortha
+1FA78	braoinín fola	braoinín fola | cuir fuil | deonú fola | gortú | leigheas | míostrú
+1FA79	bindealán greamaitheach	bindealán | greamaitheach
+1FA7A	steiteascóp	croí | dochtúir | doctúir | leigheas | steiteascóp
+1FA91	cathaoir	cathaoir | suí | suíochán
+1FA92	rásúr	bearradh | géar | gearr | rásúr
+1FA93	tua	adhmad | ciorraigh | gearr | scoilt | tua
+1FA94	lampa diya	diya | lampa | ola | solas
+1FA96	clogad míleata	arm | clogad míleata | cogaíocht | saighdiúir
+1FA99	bonn	airgead | airgeadra | bonn | miotal | ór | órga | sóinseáil | stórchiste
+1FA9A	sábh cearpantóireachta	adhmad | sábh | sábh cearpantóireachta | sábhadóireacht | siúinéir | siúnéir | uirlis
+1FA9B	scriúire	scriú | scriúire | seiftiúil | uirlis
+1FA9C	dréimire	dreapadh | dréimire | dul in airde | runga
+1FA9D	crúca	croch | crúca | duán
+1FA9E	scáthán	scáil | scáthán | smideadh
+1FA9F	fuinneog	aer | fráma | fuinneog | gloine | oscailt | radharc
+260E	teileafón	fón | guthán | teileafón
+2620	blaosc agus croschnámah	aghaidh | arracht | bás | blaosc | blaosc agus croschnámah | blaosc agus croschnámha | bloasc agus cnámha crosáilte | marbh
+2622	radaighníomhach	comhartha | radaighníomhach
+2623	bithghuais	bithghuais | comhartha | comhartha bithghuaise
+267F	bealach isteach do chathaoireacha rothaí	bealach isteach | bealach isteach do chathaoireacha rothaí | cathaoir rothaí | comhartha | siombal cathaoireacha rothaí
+2692	casúr agus piocóid	casúr | piocóid | uirlis
+2693	ancaire	ancaire | bád | comhartha | farraige | long
+2694	claimhte crosáilte	airm | arm | claimhte | claíomh | crosáilte | trasnaithe
+2695	siombail leighis	aescaláipias | foireann | leigheas | siombail leighis | siombal leighis
+2696	scála	ceartas | comthromaíocht | Libra | scála | scála cothromaíochta | stoidiaca | uirlis
+2697	leamóg	ceimic | leamóg | uirlis
+2699	giar	giar | uirlis
+269B	siombail adaimh	adamh | aindiachaí | siombail adaimh
+269C	fleur-de-lis	fleur-de-lis | flór de lúis | ridirí
+26A0	comhartha rabhaidh	aire | comhartha | comhartha rabhaidh | fainic | rabhadh
+26CF	piocóid	grafán | mianadóireacht | piocóid | uirlis
+26D1	clogad tarrthálaí	aghaidh | cabhair | ceannbheart | clogad | clogad tarrthálaí | cros | cúnamh | éadan | fortacht | hata | oibrí tarrthála
+26D3	slabhraí	slabhra | slabhraí
+26D4	níl cead dul isteach	comhartha | cosc | Cosc ar iontráil | cosc ar thrácht | níl cead dul isteach
+2702	siosúr	gearr | gearradh | páipéar | siosúr | uirlis
+2709	clúdach litreach	clúdach litreach | litir | r-phost | ríomhphost | rphost
+270F	peann luaidhe	peann luaidhe | pionsail
+2712	gob dubh	gob | gob dubh | peann
+2714	ticmharc	déanta | marc | tic | ticmharc | ticmharc trom
+2716	comhartha iolrúcháin	cealaigh | comhartha iolrúcháin | iolrú | iolrúchán | méadaigh | méadú | x
+2753	comhartha ceiste dearg	? | ceist | comhartha ceiste | comhartha ceiste dearg | marc | poncaíocht
+2757	comhartha uaillbhreasa dearg	! | comhartha uaillbhreasa | comhartha uaillbhreasa dearg | marc | poncaíocht
+27A1	saighead ar dheis	bunuimhir | príomhaird | saighead | saighead ar dheis | soir | thoir
+1F500	saighead traiceanna ar suaitheadh	saighead traiceanna ar suaitheadh | saigheada | saigheada deasa trasnaithe | saigheada trasnaithe
+1F501	cnaipe athsheanma	cnáipe athdhéan | cnaipe athdhéanta | cnaipe athsheanma | deiseal | saigheada | saigheada deisil
+1F502	cnaipe athsheanma uair amháin	1 | cnáipe athdhéan amháin | cnaipe athsheanma uair amháin | deiseal | saigheada | saigheada deisil | saigheada deisil le huimhir 1
+1F503	saigheada ingéaracha ar deiseal	athlódáil | athnuaigh | ciorcal saighead | saigheada | saigheada deisil ingearacha | saigheada ingéaracha ar deiseal
+1F504	cnaipe saighead tuathail	athnuaigh | cnaipe saighead tuathail | cúlchas | saigheada | saigheada tuathail | tuathal
+1F519	saighead SIAR	saighead SIAR | siar agus saighead ar chlé
+1F51A	saighead DEIRIDH	deireadh agus saighead ar chlé | saighead DEIRIDH
+1F51B	saighead AR SIÚL!	ar siúl | marc | on | saighead | saighead AR SIÚL! | saighead ON!
+1F51C	saighead GO LUATH	go luath agus saighead ar dheis | saighead | saighead GO LUATH
+1F51D	saighead BHAIRR	aníos | barr | barr agus saighead thuas | mullach | saighead | saighead BHAIRR | saighead TOP | suas | thuas | uachtar
+1F520	ceannlitreacha Laidineacha ionchuir	ABCD | ceannlitreacha Laidineacha | ceannlitreacha Laidineacha ionchuir | laidineach | litreacha
+1F521	mionlitreacha Laidineacha ionchuir	abcd | laidineach | litreacha | mionlitreacha Laidineacha | mionlitreacha Laidineacha ionchuir
+1F522	uimhreacha ionchuir	1234 | ionchur | uimhreacha | uimhreacha ionchuir
+1F523	siombailí ionchuir	〒♪&% | comharthaí | ionchur | siombailí | siombailí ionchuir
+1F524	litreacha Laidineacha ionchuir	abc | aibítear | laidin | litreacha Laidineacha | litreacha Laidineacha ionchuir
+21B5	saighead síos cúinne ar chlé	saighead síos cúinne ar chlé
+21B0	saigheas suas barr ar chlé	saigheas suas barr ar chlé
+21B1	saighead suas barr ar dheis	saighead suas barr ar dheis
+21B2	saighead síos barr ar chlé	saighead síos barr ar chlé
+21B3	saighead síos barr ar dheis	saighead síos barr ar dheis
+21B4	saighead ar dheis cúinne síos	saighead ar dheis cúinne síos
+21E4	saigheadbharra ar chlé	saigheadbharra ar chlé
+21E5	saigheadbharra ar dheis	saigheadbharra ar dheis
+21B9	saigheadbharra ar chlé os cionn ceann ar dheis	saigheadbharra ar chlé os cionn ceann ar dheis
+21E7	saighead tholl suas	saighead tholl suas
+21EA	saighead tholl suas ó bharra	saighead tholl suas ó bharra
+21E6	saighead tholl ar chlé	saighead tholl ar chlé
+21E8	saighead tholl ar dheis	saighead tholl ar dheis
+21E9	saighead tholl síos	saighead tholl síos
+21DE	saighead suas stríce dúbailte	saighead suas stríce dúbailte
+21DF	saighead síos stríce dúbailte	saighead síos stríce dúbailte
+21B8	saighead siar ó thuaidh barra fada	saighead siar ó thuaidh barra fada
+21B6	saighead thuathal uachtar leathchiorcail	saighead thuathal uachtar leathchiorcail
+21B7	saighead dheiseal uachtar leathchiorcail	saighead dheiseal uachtar leathchiorcail
+21C5	saighead suas agus saighead síos	saighead suas agus saighead síos
+21F5	saighead síos saighead suas ar chlé	saighead síos saighead suas ar chlé
+21A8	saighead suas síos le bonn	saighead suas síos le bonn
+21E0	saighead bhriste ar chlé	saighead bhriste ar chlé
+21E1	saighead bhriste suas	saighead bhriste suas
+21E2	saighead bhriste ar dheis	saighead bhriste ar dheis
+21E3	saighead bhriste síos	saighead bhriste síos
+21AB	saighead lúbach ar chlé	saighead lúbach ar chlé
+21AC	saighead lúbach ar dheis	saighead lúbach ar dheis
+2B05	saighead ar chlé	bunuimhir | príomhaird | saighead | saighead ar chlé | siar | thiar | treo
+2B06	saighead suas	ó thuaidh | príomhaird | saighead | suas | treo
+2B07	saighead síos	an deisceart | anuas | deisceart | ó dheas | príomhaird | saighead | síos | thíos | treo

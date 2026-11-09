@@ -87,12 +87,13 @@ std::string show(const std::vector<uint32_t> &q) {
     return s;
 }
 
-void expect_matches_reference(const std::string &lang) {
+// content_version = (number in dict_src/dictionaries.tsv << 8) | revision.
+void expect_matches_reference(const std::string &lang, uint16_t content_version) {
     std::vector<uint8_t> blob = build(lang);
     ASSERT_GT(blob.size(), 1000u) << "python3 build of " << lang << " failed";
     uint16_t ver = 0;
     ASSERT_TRUE(emjdict_load_at(blob.data(), 0x20000, &ver));
-    EXPECT_EQ(ver, 1);
+    EXPECT_EQ(ver, content_version);
     ASSERT_TRUE(emjdict_present());
     std::vector<Vector> vs = vectors(lang);
     ASSERT_GE(vs.size(), 10u);
@@ -112,8 +113,8 @@ void expect_matches_reference(const std::string &lang) {
     emjdict_unload();
 }
 
-TEST(EmojiDict, EnglishMatchesReference) { expect_matches_reference("en"); }
-TEST(EmojiDict, GermanMatchesReference) { expect_matches_reference("de"); }
+TEST(EmojiDict, EnglishMatchesReference) { expect_matches_reference("en", (0 << 8) | 1); }
+TEST(EmojiDict, GermanMatchesReference) { expect_matches_reference("de", (1 << 8) | 1); }
 
 TEST(EmojiDict, PagingSkipsResults) {
     std::vector<uint8_t> blob = build("en");

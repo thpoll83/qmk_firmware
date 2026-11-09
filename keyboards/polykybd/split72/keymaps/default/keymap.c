@@ -155,8 +155,10 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
    characters would be a surprise, not a modifier. Change the one token if you
    want the literal Miryoku behaviour.
    ⚠️ Tuning lives in split72/config.h (TAPPING_TERM / CHORDAL_HOLD /
-   PERMISSIVE_HOLD / FLOW_TAP_TERM). Nothing else on either board is a tap-hold
-   key, so those settings reach these eight keys and nothing else.
+   PERMISSIVE_HOLD / FLOW_TAP_TERM). Since protocol v29 TAPPING_TERM and
+   FLOW_TAP_TERM are only the defaults: the host sets both at runtime (HID cmd
+   44, base/tap_terms.h). Nothing else on the default keymap is a tap-hold key,
+   so those settings reach these eight keys and any the user maps.
    ┌────────┬───────┬───────┬───────┬───────┬───────┬───────┐                    ┌───────┬───────┬───────┬───────┬───────┬───────┬────────┐
    │  Esc   │   1   │   2   │   3   │   4   │   5   │   `   │ ╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮ │   6   │   7   │   8   │   9   │   0   │   -   │   =    │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤ │╰╯╰╯╰╯╰╯╰╯╰╯╰╯╰╯│ ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤

@@ -1609,6 +1609,66 @@ static void hid_cmd_40(uint8_t *data, uint8_t length, const poly_layer_t *local_
     return;
 }
 
+// Cmd 44 reply flag: this build has Flow Tap compiled in (FLOW_TAP_TERM defined).
+// Without it the Flow Tap term is stored but used by nothing, and the host shows
+// the control disabled.
+#define TAP_TERMS_FLAG_FLOW_TAP 0x01u
+
+static void hid_cmd_44(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //get/set the tap-hold terms (protocol v29+)
+    {
+        // Request: data[2] = op (0 query, 1 set), data[3..4] = tapping term ms,
+        // data[5..6] = Flow Tap term ms, both little-endian; TAP_TERM_KEEP (0xFFFF)
+        // leaves that term unchanged. Ranges: base/tap_terms.h. Both are CLOSED,
+        // like the idle timeout (cmd 40): a value outside them is NACKed, because an
+        // accepted one is persisted and used for every tap-hold key.
+        //
+        // Both fields are validated before either is applied, so a report with one
+        // bad value changes nothing.
+        //
+        // Reply (ACK and NACK alike): data[3..4] = tapping term, data[5..6] = Flow
+        // Tap term, data[7] = flags (TAP_TERMS_FLAG_FLOW_TAP). Persisted at the next
+        // settings flush (suspend / store key).
+        const uint8_t  op       = hid_payload_avail(length, 2) > 0 ? data[2] : 0xFFu;
+        const uint16_t tap_ms   = hid_payload_avail(length, 4) > 0 ? (uint16_t)(data[3] | (data[4] << 8)) : TAP_TERM_KEEP;
+        const uint16_t flow_ms  = hid_payload_avail(length, 6) > 0 ? (uint16_t)(data[5] | (data[6] << 8)) : TAP_TERM_KEEP;
+        bool ok = false;
+        if (op == 0) {
+            ok = true;
+        } else if (op == 1) {
+            const bool tap_ok  = tap_ms == TAP_TERM_KEEP || tapping_term_valid(tap_ms);
+            const bool flow_ok = flow_ms == TAP_TERM_KEEP || flow_tap_term_valid(flow_ms);
+            ok = tap_ok && flow_ok;
+            if (ok) {
+                if (tap_ms != TAP_TERM_KEEP) {
+                    set_poly_tapping_term(tap_ms);
+                }
+                if (flow_ms != TAP_TERM_KEEP) {
+                    set_poly_flow_tap_term(flow_ms);
+                }
+                uprintf("Set tapping term %ums, flow tap term %ums.\n",
+                        (unsigned int)get_poly_tapping_term(), (unsigned int)get_poly_flow_tap_term());
+            } else {
+                uprintf("Refused tap terms %u / %u.\n", (unsigned int)tap_ms, (unsigned int)flow_ms);
+            }
+        }
+        memset(data, 0, length);
+        hid_reply(data, 0x2C, ok);
+        const uint16_t cur_tap  = get_poly_tapping_term();
+        const uint16_t cur_flow = get_poly_flow_tap_term();
+        data[3] = (uint8_t)(cur_tap & 0xFFu);
+        data[4] = (uint8_t)(cur_tap >> 8);
+        data[5] = (uint8_t)(cur_flow & 0xFFu);
+        data[6] = (uint8_t)(cur_flow >> 8);
+#ifdef FLOW_TAP_TERM
+        data[7] = TAP_TERMS_FLAG_FLOW_TAP;
+#else
+        data[7] = 0;
+#endif
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
 #ifdef POLYKYBD_LOOP_PROFILE
 static void hid_cmd_32(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //main-loop profiler control (POLYKYBD_LOOP_PROFILE builds only)
     {
@@ -1738,6 +1798,7 @@ static const hid_cmd_t s_hid_cmds[] = {
     [41] = {hid_cmd_41, HID_CMD_OVERLAY_BURST},
     [42] = {hid_cmd_42, HID_CMD_OVERLAY_BURST},
     [43] = {hid_cmd_43, 0},
+    [44] = {hid_cmd_44, 0},
 };
 
 void raw_hid_receive(uint8_t *data, uint8_t length) {

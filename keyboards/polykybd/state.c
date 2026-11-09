@@ -450,6 +450,43 @@ void note_idle_timeout(uint8_t value) {
     g_idle_timeout = (value < IDLE_TIMEOUT_COUNT) ? value : (uint8_t)POLY_DEFAULT_IDLE_TIMEOUT;
 }
 
+// ---- Tap-hold timing (HID cmd 44) -------------------------------------------
+//
+// Ranges and encoding: base/tap_terms.h. Only the half that processes keys (the
+// master) uses these values; each half stores its own, so a board plugged in by
+// the other half uses that half's setting.
+static uint16_t g_tapping_term_ms  = POLY_DEFAULT_TAPPING_TERM_MS;
+static uint16_t g_flow_tap_term_ms = POLY_DEFAULT_FLOW_TAP_TERM_MS;
+
+uint16_t get_poly_tapping_term(void) {
+    return g_tapping_term_ms;
+}
+
+uint16_t get_poly_flow_tap_term(void) {
+    return g_flow_tap_term_ms;
+}
+
+void set_poly_tapping_term(uint16_t ms) {
+    if (!tapping_term_valid(ms) || ms == g_tapping_term_ms) {
+        return;
+    }
+    g_tapping_term_ms  = ms;
+    g_brightness_dirty = true;   // flushed with the settings block at suspend/store
+}
+
+void set_poly_flow_tap_term(uint16_t ms) {
+    if (!flow_tap_term_valid(ms) || ms == g_flow_tap_term_ms) {
+        return;
+    }
+    g_flow_tap_term_ms = ms;
+    g_brightness_dirty = true;
+}
+
+void note_poly_tap_terms(uint16_t tapping_ms, uint16_t flow_tap_ms) {
+    g_tapping_term_ms  = tapping_term_valid(tapping_ms) ? tapping_ms : POLY_DEFAULT_TAPPING_TERM_MS;
+    g_flow_tap_term_ms = flow_tap_term_valid(flow_tap_ms) ? flow_tap_ms : POLY_DEFAULT_FLOW_TAP_TERM_MS;
+}
+
 // Console-log name for an idle style, from the style table (base/idle_style.c).
 const char* idle_style_name(uint8_t style) {
     return style < IDLE_STYLE_COUNT ? idle_style_desc(style)->name : "?";

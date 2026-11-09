@@ -8,6 +8,7 @@ TEST_LIST += polykybd_mode_byte
 TEST_LIST += polykybd_glyph_place_op
 TEST_LIST += polykybd_idle_update
 TEST_LIST += polykybd_idle_timeout
+TEST_LIST += polykybd_tap_terms
 TEST_LIST += polykybd_layer_names
 TEST_LIST += polykybd_legend_plan
 TEST_LIST += polykybd_font_bbox

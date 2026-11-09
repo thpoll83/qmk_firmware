@@ -350,6 +350,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // inert; see the HOLD_ON_OTHER_KEY_PRESS note at the bottom.
 
 // Baseline hold threshold, used when none of the rules below has already decided.
+// Since protocol v28 this is only the DEFAULT: the live value is a setting (HID
+// cmd 44, base/tap_terms.h) returned by get_tapping_term() in poly_keymap.c.
+// poly_keymap.c asserts it equals POLY_DEFAULT_TAPPING_TERM_MS.
 #define TAPPING_TERM 200
 
 // The opposite-hands rule, and the single biggest reason home row mods are usable:
@@ -370,6 +373,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // TAP, disabling hold behaviour mid-word during fast typing. QMK's own docs call
 // this "particularly useful for home row mods to avoid accidental mod triggers" and
 // recommend 150 ms as the starting point.
+// Since protocol v29 this enables Flow Tap and is the DEFAULT term; the live value
+// is a setting (HID cmd 44) returned by get_flow_tap_term() in poly_keymap.c.
 #define FLOW_TAP_TERM 150
 
 // ⚠️ HOLD_ON_OTHER_KEY_PRESS is deliberately NOT defined. It settles as held on ANY

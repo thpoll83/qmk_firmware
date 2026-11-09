@@ -12,6 +12,7 @@
 // the encoding is host-testable (make test:polykybd_idle_timeout); re-exported here
 // so every consumer of state.h is unchanged, the same seam as base/sync_ack.h.
 #include "base/idle_timeout.h"
+#include "base/tap_terms.h"
 #include "base/mines_plan.h"   // mines_board_t (poly_sync_t.mines)
 #include "base/idle_style.h"
 
@@ -571,11 +572,17 @@ typedef struct _poly_eeconf_t {
     // an EEPROM written before this field reads 0 here (wear levelling returns cleared
     // bytes as zero), and 0 is GLYPH_PLACE_CENTRE, the placement those boards had.
     uint8_t  glyph_place;
+    // Persisted tapping term and Flow Tap term (HID cmd 44, protocol v29), each
+    // ms / 10 BIASED BY ONE so that zero means "never chosen": tap_term_pack() /
+    // tapping_term_unpack() / flow_tap_term_unpack() in base/tap_terms.h. The bias
+    // is needed because a Flow Tap term of 0 (off) is a real choice.
+    uint8_t  tapping_term;
+    uint8_t  flow_tap_term;
     // Emoji layer search mode (emoji/EMOJI_SEARCH.md): EMJ_SEARCH_MODE_ON when the
     // layer comes up in search mode. Appended at the tail. No sentinel is needed: an
     // EEPROM written before this field reads 0 here, which is tab mode, as before.
     // The datablock version stays 159 (EECONFIG_USER_DATA_VERSION in the keymap
-    // config.h), so growing the block to 160 does not reset it.
+    // config.h), so growing the block does not reset it.
     uint8_t  emj_search_mode;
 } poly_eeconf_t;
 
@@ -795,6 +802,21 @@ void set_idle_timeout(uint8_t value);
 
 // Records the idle timeout without marking settings dirty (boot-time EEPROM load).
 void note_idle_timeout(uint8_t value);
+
+// ---- Tap-hold timing (HID cmd 44, base/tap_terms.h) ----
+
+// The live tapping term and Flow Tap term in milliseconds. get_tapping_term(),
+// get_quick_tap_term() and get_flow_tap_term() in poly_keymap.c return these.
+uint16_t get_poly_tapping_term(void);
+uint16_t get_poly_flow_tap_term(void);
+
+// Set a term and mark settings dirty (deferred EEPROM write). A value outside its
+// range (tapping_term_valid() / flow_tap_term_valid()) is ignored.
+void set_poly_tapping_term(uint16_t ms);
+void set_poly_flow_tap_term(uint16_t ms);
+
+// Record the terms without marking settings dirty (boot-time EEPROM load).
+void note_poly_tap_terms(uint16_t tapping_ms, uint16_t flow_tap_ms);
 
 // ---- Glyph-script override (enum poly_glyph_script) — see enum comment above. ----
 

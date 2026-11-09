@@ -57,6 +57,29 @@ Words are stored as the keys that type them. Korean is split into jamo keys of t
 as two keys, and a Shift double (ㄲ ㅃ ㅒ ㅖ) folded to its base key. That leaves
 26 jamo codes; the ko dictionary is 110 KB (83% of the slot) with 62 letters.
 
+Japanese and Chinese words are written as the Latin or Zhuyin keys that type them
+(`emoji_romanize.py`, `extract --input` through the dictionary id): ja-JP's letter
+keys show Latin letters, so kana keywords become romaji (スマイル → sumairu; kanji
+keywords have no reading and are dropped, 69% of the picker's emoji keep at least
+one kana keyword). Chinese uses Unihan's kMandarin and kCangjie, first reading,
+tones dropped. One language can have several dictionaries, told apart by country
+and input method in the header's variant field: the id is `lang[-CC][@method]`.
+
+| dictionary | letter keys | example | size |
+|---|---|---|---|
+| ja@romaji | Latin | スマイル → sumairu | 71 KB (53%) |
+| zh-CN@pinyin | Latin | 笑脸 → xiaolian | 116 KB (88%) |
+| zh-TW@zhuyin | Zhuyin | 笑脸 → ㄒㄧㄠㄌㄧㄢ | 91 KB (69%) |
+| zh-HK@pinyin | Latin | 火 → huo | 121 KB (92%) |
+| zh-HK@cangjie | Latin | 笑 → hhk | 128 KB (97%) |
+
+```bash
+python3 emoji_dict.py extract zh-HK@cangjie --unihan <Unihan dir> \
+    annotations/zh_Hant_HK.xml annotations/zh_Hant.xml \
+    annotationsDerived/zh_Hant_HK.xml annotationsDerived/zh_Hant.xml
+python3 emoji_dict.py build zh-HK@cangjie -o zh-HK@cangjie.plyd
+```
+
 Words are stored one byte per letter in every script. The alphabet table lists the
 letters of the dictionary in codepoint order, and letter k is stored as byte k+1.
 The fold table maps every letter a user can type, upper and lower case, to the

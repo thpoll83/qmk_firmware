@@ -26,7 +26,7 @@ Bundle layout (little-endian, every block 4-byte aligned)::
                         cp_count u16, word_count u16, cps_off u32,
                         words_off u32, strings_off u32, alpha_count u16,
                         fold_count u16, alpha_off u32, fold_off u32,
-                        stop_count u16, reserved u16, stop_off u32
+                        stop_count u16, variant u16 (see variant_code()), stop_off u32
                         (offsets from bundle start)
     alphabet            u32[alpha_count]: the letter for byte code 1, 2, ...
     fold table          u32[fold_count]: (code << 24) | codepoint, sorted by
@@ -70,6 +70,7 @@ HERE = Path(__file__).resolve().parent
 POLY = HERE.parent
 sys.path.insert(0, str(POLY / "lang"))
 import iso_lang_country  # noqa: E402  (frozen, append-only index table)
+import emoji_romanize    # noqa: E402  (keywords as the keys that type them)
 
 CLDR_RELEASE = "release-48"
 SRC_DIR = HERE / "dict_src"
@@ -214,13 +215,42 @@ def _read_cldr(path: Path) -> dict[str, tuple[str, list[str]]]:
     return out
 
 
+def parse_id(did: str) -> tuple[str, str, str]:
+    """A dictionary id `lang[-CC][@method]` -> (lang, country, input method).
+    Two dictionaries of one language differ by country and input method, so the
+    language table needs no new entry: zh-CN@pinyin, zh-TW@zhuyin, zh-HK@cangjie."""
+    rest, _, method = did.partition("@")
+    lang, _, country = rest.partition("-")
+    if method and method not in emoji_romanize.METHODS:
+        raise SystemExit(f"unknown input method {method!r}; one of {', '.join(emoji_romanize.METHODS)}")
+    return lang, country.upper(), method
+
+
+def variant_code(country: str, method: str) -> int:
+    """The dictionary header's variant field: (country index + 1) << 8 | method
+    number (both 0 = none). Country indices are iso_lang_country.COUNTRY_CODES."""
+    c = iso_lang_country.COUNTRY_CODES.index(country) + 1 if country else 0
+    m = emoji_romanize.METHODS.index(method) + 1 if method else 0
+    return (c << 8) | m
+
+
 def cmd_extract(args: argparse.Namespace) -> int:
-    lang = args.lang
+    did = args.lang
+    lang, _country, method = parse_id(did)
+    unihan = emoji_romanize.Unihan(Path(args.unihan)) if args.unihan else None
     data: dict[str, tuple[str, list[str]]] = {}
     for xml in args.xml:                      # later files fill gaps only
         for cp, (name, kws) in _read_cldr(Path(xml)).items():
             old_name, old_kws = data.get(cp, ("", []))
             data[cp] = (old_name or name, old_kws or kws)
+    if method:
+        conv = {}
+        for cp, (name, kws) in data.items():
+            name = emoji_romanize.convert(method, name, unihan) or ""
+            kws = [k for k in (emoji_romanize.convert(method, k, unihan) for k in kws) if k]
+            if name or kws:
+                conv[cp] = (name, kws)
+        data = conv
     rows, missing = [], []
     for cp in picker_codepoints():
         ch = chr(cp)
@@ -232,9 +262,11 @@ def cmd_extract(args: argparse.Namespace) -> int:
             continue
         rows.append(f"{cp:X}\t{name}\t{' | '.join(kws)}")
     SRC_DIR.mkdir(exist_ok=True)
-    out = SRC_DIR / f"{lang}.tsv"
-    header = (f"# emoji search keywords, {lang}, from Unicode CLDR {CLDR_RELEASE} "
-              f"(common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.\n"
+    out = SRC_DIR / f"{did}.tsv"
+    how = (f", written as {method} keys (emoji_romanize.py"
+           + (", Unihan kMandarin/kCangjie" if method != "romaji" else "") + ")") if method else ""
+    header = (f"# emoji search keywords, {did}, from Unicode CLDR {CLDR_RELEASE} "
+              f"(common/annotations, common/annotationsDerived){how}. Unicode License v3, see LICENSE.\n"
               f"# codepoint\tname\tkeywords\n")
     out.write_text(header + "\n".join(rows) + "\n", encoding="utf-8")
     print(f"{out}: {len(rows)} codepoints, {len(missing)} without any text")
@@ -259,8 +291,9 @@ def _read_tsv(path: Path) -> dict[int, tuple[str, list[str]]]:
     return rows
 
 
-def build(lang: str, revision: int) -> bytes:
-    src = SRC_DIR / f"{lang}.tsv"
+def build(did: str, revision: int) -> bytes:
+    lang, country, method = parse_id(did)
+    src = SRC_DIR / f"{did}.tsv"
     picker = picker_codepoints()
     order = {cp: i for i, cp in enumerate(picker)}
     rows = _read_tsv(src)
@@ -348,7 +381,7 @@ def build(lang: str, revision: int) -> bytes:
     body[:DICT_HEADER_SIZE] = struct.pack(DICT_HEADER_FMT, DICT_MAGIC, DICT_FORMAT, lang_idx,
                                           len(cps), len(words), cps_off, words_off, strings_off,
                                           len(alphabet), len(folds), alpha_off, fold_off,
-                                          len(stops), 0, stop_off)
+                                          len(stops), variant_code(country, method), stop_off)
     total = PLYF_HEADER_SIZE + len(body)
     if total > SLOT_SIZE:
         raise SystemExit(f"{lang}: {total} B does not fit the {SLOT_SIZE} B emojidict slot")
@@ -378,11 +411,13 @@ class Dict:
         if total != len(blob) or zlib.crc32(blob[PLYF_HEADER_SIZE:]) & 0xFFFFFFFF != crc:
             raise ValueError("size or CRC mismatch")
         (dm, fmt, self.lang_idx, ncp, nword, cps_off, words_off, strings_off,
-         nalpha, nfold, alpha_off, fold_off, nstop, _res,
+         nalpha, nfold, alpha_off, fold_off, nstop, variant,
          stop_off) = struct.unpack_from(DICT_HEADER_FMT, blob, PLYF_HEADER_SIZE)
         if dm != DICT_MAGIC or fmt != DICT_FORMAT:
             raise ValueError("not an EmjD dictionary")
         self.lang = iso_lang_country.LANG_CODES[self.lang_idx]
+        self.country = iso_lang_country.COUNTRY_CODES[(variant >> 8) - 1] if variant >> 8 else ""
+        self.method = emoji_romanize.METHODS[(variant & 0xFF) - 1] if variant & 0xFF else ""
         self.alphabet = [chr(c) for c in struct.unpack_from(f"<{nalpha}I", blob, alpha_off)]
         self.fold_map = {e & 0xFFFFFF: e >> 24
                          for e in struct.unpack_from(f"<{nfold}I", blob, fold_off)}
@@ -550,10 +585,12 @@ def cmd_vectors(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    p = sub.add_parser("extract", help="CLDR XML -> dict_src/<lang>.tsv")
+    p = sub.add_parser("extract", help="CLDR XML -> dict_src/<id>.tsv; id = lang[-CC][@romaji|pinyin|zhuyin|cangjie]")
     p.add_argument("lang")
     p.add_argument("xml", nargs="+", help="annotations/<lang>.xml, then annotationsDerived/<lang>.xml")
     p.add_argument("-v", "--verbose", action="store_true")
+    p.add_argument("--unihan", help="directory with Unihan_Readings.txt and Unihan_DictionaryLikeData.txt "
+                                    "(for @pinyin, @zhuyin, @cangjie)")
     p.set_defaults(fn=cmd_extract)
     p = sub.add_parser("build", help="dict_src/<lang>.tsv -> .plyd")
     p.add_argument("lang")

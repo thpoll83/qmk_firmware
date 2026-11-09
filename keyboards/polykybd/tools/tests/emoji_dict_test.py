@@ -42,6 +42,47 @@ class FoldTest(unittest.TestCase):
         self.assertEqual(ed.fold("புன்னகை"), "புன்னகை")
 
 
+class RomanizeTest(unittest.TestCase):
+    """Keywords written as the keys that type them (emoji_romanize.py)."""
+
+    def test_kana_to_romaji(self):
+        R = ed.emoji_romanize.kana_to_romaji
+        self.assertEqual(R("スマイル"), "sumairu")
+        self.assertEqual(R("にっこり"), "nikkori")        # small tsu doubles the consonant
+        self.assertEqual(R("コーヒー"), "kohi")            # the long-vowel mark is dropped
+        self.assertEqual(R("ちゃ"), "cha")
+        self.assertIsNone(R("笑顔"))                      # kanji: no reading here
+
+    def test_pinyin_to_zhuyin(self):
+        Z = ed.emoji_romanize.pinyin_to_zhuyin
+        self.assertEqual(Z("xiao"), "ㄒㄧㄠ")
+        self.assertEqual(Z("shi"), "ㄕ")
+        self.assertEqual(Z("ju"), "ㄐㄩ")                  # j/q/x + u is ü
+        self.assertEqual(Z("you"), "ㄧㄡ")
+        self.assertEqual(Z("lü"), "ㄌㄩ")
+
+    def test_han_to_keys(self):
+        class FakeUnihan:
+            pinyin = {"笑": "xiào", "脸": "liǎn", "绿": "lǜ"}
+            cangjie = {"笑": "HHK"}
+        H = ed.emoji_romanize.han_to
+        self.assertEqual(H("pinyin", "笑脸", FakeUnihan), "xiaolian")
+        self.assertEqual(H("pinyin", "绿", FakeUnihan), "lü")
+        self.assertEqual(H("zhuyin", "笑脸", FakeUnihan), "ㄒㄧㄠㄌㄧㄢ")
+        self.assertEqual(H("cangjie", "笑", FakeUnihan), "hhk")
+        self.assertIsNone(H("cangjie", "脸", FakeUnihan))   # no reading: keyword dropped
+
+    def test_dictionary_ids(self):
+        self.assertEqual(ed.parse_id("zh-HK@cangjie"), ("zh", "HK", "cangjie"))
+        self.assertEqual(ed.parse_id("de"), ("de", "", ""))
+        self.assertEqual(ed.variant_code("", ""), 0)
+        v = ed.variant_code("HK", "cangjie")
+        self.assertEqual(ed.iso_lang_country.COUNTRY_CODES[(v >> 8) - 1], "HK")
+        self.assertEqual(ed.emoji_romanize.METHODS[(v & 0xFF) - 1], "cangjie")
+        with self.assertRaises(SystemExit):
+            ed.parse_id("zh@wubi")
+
+
 class WithinOneTest(unittest.TestCase):
     def test_edits(self):
         for a, b in [(b"grin", b"grin"), (b"grni", b"grin"), (b"grn", b"grin"),

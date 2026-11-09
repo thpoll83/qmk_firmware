@@ -1,0 +1,1259 @@
+# emoji search keywords, eu, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	barre egiten ari den aurpegia	aurpegi | barre egiten ari den aurpegia | irribarre
+1F601	begiez barre egiten ari den aurpegia	aurpegi | barre | begi | begiez barre egiten ari den aurpegia | irribarre
+1F602	pozez negar egiten ari den aurpegia	aurpegi | barre | malko | poz | pozez negar egiten ari den aurpegia
+1F603	barre egiten ari den aurpegia, ahoa irekita	ahoa | alai | aparta | aupa | aurpegia | bikaina | egundokoa | haginak | hortzak | irekita | irribarre egiten | irribarre egiten ari den eta ahoa irekita daukan aurpegia | irribarre egiten ari den eta begi handiak dituen aurpegia | irribarrea | irribarreka | itzela | itzelezkoa | pozik | zabalduta | zabalik
+1F604	begiez barreka ari den aurpegia	ahoa | alai | aurpegia | barrea | barrez lehertzen | begia | irekita | irri egiten | irria | irribarre egiten | irribarre egiten ari den eta begiez barreka ari den aurpegia | irribarre egiten ari den, ahoa irekita daukan eta begiez irri egiten ari den aurpegia | irribarrea | irribarreka | lol | pozik
+1F605	barreka ari den aurpegia, izerdi hotzarekin	aurpegi | barreka ari den aurpegia | barreka ari den aurpegia, izerdi hotzarekin | hotz | ireki | irribarre | irribarre egiten ari den aurpegia | izerdi | izerdi hotzarekin | izerdi hotzarekin eta ahora irekita
+1F606	barreka ari den aurpegia, begiak itxita	ahoa | alai | ase | asebete | aurpegia | barre egin | barrea | barrez lehertzen | irekita | irri egiten | irria | irribarre egiten | irribarre egiten ari den eta begiak itxita dauzkan aurpegia | irribarre egiten ari den, ahora irekita daukan eta begiak itxita dauzkan aurpegia | irribarrea | irribarreka | karkar | karkarkar | lol | pozik
+1F607	barreka ari den aurpegia argi-koroarekin	aingerua | argi-koroa | aurpegia | barreka ari den aurpegia argi-koroarekin | fantasia | inuzentea | irribarre egiten ari den aurpegia argi-koroarekin | irribarrea
+1F608	irribarre egiten ari den aurpegi adarduna	adarrak | aurpegi | fantasia | ipuin | irribarre | irribarre egiten ari den aurpegi adarduna
+1F609	begiaz keinu egiten ari den aurpegia	aurpegi | begiaz keinu egiten ari den aurpegia | keinu
+1F60A	begiez irribarre egiten ari den aurpegia	aurpegi | begi | begiez irribarre egiten ari den aurpegia | gorritu | irribarre
+1F60B	janari gozoa dastatzen ari den aurpegia	aurpegi | dastatu | gozo | irribarre | janari gozoa dastatzen ari den aurpegia | mmm
+1F60C	lasaitasun-aurpegia	aurpegi | lasaitasun | lasaitasun-aurpegia
+1F60D	aurpegia barreka, bihotz-itxurako begiekin	143 | amodioa | amz | aurpegia | begia | bihotza | bihotzak | erromantikoa | irribarre egiten ari den aurpegia, bihotz-itxurako begiekin | irribarrea | laztana | maitasuna | maitekorra | maiteminduta | musuak | mz | sentimenduak
+1F60E	aurpegia barreka, eguzkitako betaurrekoekin	argitsua | atseden hartzen | aurpegia | bai horixe | betaurrekoak | bikaina | eguzkia | eguzkitako betaurrekoak | erlaxatzen | estiloa | ezin hobe | hondartza | irabazi | irabazlea | irribarre egin | irribarre egiten ari den eta eguzkitako betaurrekoak dituen aurpegia | irribarrea | oso ondo | oso ongi | primeran
+1F60F	handitasun-aurpegia	aurpegi | handiki | handitasun-aurpegia
+1F610	aurpegi neutrala	aurpegi | espresiorik gabe | neutrala
+1F611	espresiorik gabeko aurpegia	aurpegi | espresiorik gabe | espresiorik gabeko aurpegia
+1F612	aspertu-aurpegia	aspertu-aurpegia | aspertuta | aurpegi | triste
+1F613	izerdi hotza duen aurpegia	aurpegi | hotz | izerdi | izerdi hotza duen aurpegia
+1F614	aurpegi pentsakorra	aurpegi | aurpegi pentsakorra | goibel | pentsakor
+1F615	nahasketa-aurpegia	aurpegi | nahasketa-aurpegia | nahastuta
+1F616	hutsegite-aurpegia	aurpegi | hutsegite | hutsegite-aurpegia
+1F617	musuka ari den aurpegia	aurpegi | musu | musuka ari den aurpegia
+1F618	musu bat bidaltzen ari den aurpegia	aurpegi | bihotz | musu | musu bat bidaltzen ari den aurpegia
+1F619	musuka eta begiez barreka ari den aurpegia	aurpegi | begi | irribarre | musu | musuka eta begiez barreka ari den aurpegia | musuka eta begiez irribarre egiten ari den aurpegia
+1F61A	musuka ari den aurpegia, begiak itxita	143 | amz | aurpegia | begia | begiak itxita dituen eta musuka ari den aurpegia | flirtean | geratzea | hitzordua | itxi | itxita | laztana | lotsagorritu | maite-jokoetan | maite-jolasean | maite-kontuetan | musua | musuak | musutxoak | mz | zita
+1F61B	mingaina kanpoan duen aurpegia	aurpegi | mingain | mingaina kanpoan duen aurpegia
+1F61C	mihia aterata begi-keinuka ari den aurpegia	aurpegi | begi | keinu | mihia aterata begi-keinuka ari den aurpegia | mingain | mingaina kanpoan duen eta begiaz keinu egiten ari den aurpegia | txantxa
+1F61D	mihia aterata eta begiak itxita dauzkan aurpegia	aurpegi | begi | mihia aterata eta begiak itxita dauzkan aurpegia | mingain | mingaina kanpoan duen eta begiak itxita dituen aurpegia | txar | zapore
+1F61E	etsipen-aurpegia	aurpegi | etsipen | etsipen-aurpegia
+1F61F	aurpegi kezkatua	aurpegi | aurpegi kezkatua | kezkatu
+1F620	haserre-aurpegia	aurpegi | ero | haserre | haserre-aurpegia
+1F621	aurpegi muturtua	amorru | aurpegi | aurpegi muturtua | ero | gorri | haserre | muturtu
+1F622	negarrez ari den aurpegia	aurpegi | malko | negar | negarrez ari den aurpegia | triste
+1F623	aurpegi nekaezina	aurpegi | aurpegi nekaezina | nekaezin | pertseberantzia
+1F624	sudurretik kea darion aurpegia	aurpegi | irabazi | sudurretik kea darion aurpegia | txapeldun
+1F625	desengainatuta baina lasaiago	aurpegi | desengainatuta | desengainatuta baina lasaiago | eskerrak | lasai
+1F626	kopeta ilun eta ahoa zabalik duen aurpegia	aho | aurpegi | ireki | kopeta ilun eta ahoa zabalik duen aurpegia | kopeta ilunduta eta ahoa irekita duen aurpegia | kopetilun
+1F627	estutasun-aurpegia	aurpegi | estutasun | estutasun-aurpegia
+1F628	ikara-aurpegia	aurpegi | beldur | ikara | ikara-aurpegia | ikaratu
+1F629	neke-aurpegia	aurpegi | nazkatu | neke | neke-aurpegia
+1F62A	logura-aurpegia	aurpegi | lo | logura | logura-aurpegia
+1F62B	nekatu-aurpegia	aurpegi | nekatu | nekatu-aurpegia
+1F62C	imintzio-aurpegia	aurpegi | imintzio | imintzio-aurpegia
+1F62D	negar eta negar ari den aurpegia	aurpegi | malko | negar | negar eta negar ari den aurpegia | triste | zotinka
+1F62E	ahoa irekita duen aurpegia	aho | ahoa irekita duen aurpegia | aurpegi | ireki | poza
+1F62F	harridura-aurpegia	aurpegi | harridura | harridura-aurpegia | harrituta | zur eta lur
+1F630	ahoa irekita eta izerdi hotza duen aurpegia	aho | ahoa irekita eta izerdi hotza duen aurpegia | aurpegi | grinatsu | hotz | irekita | izerdi
+1F631	beldurrez oihuka ari den aurpegia	aurpegi | beldur | beldurrez oihuka ari den aurpegia | beldurti | beldurtu | izutu
+1F632	harritu-aurpegia	aurpegi | guztiz | harridura | harritu-aurpegia | sorpresa
+1F633	aurpegi gorritua	aurpegi | aurpegi gorritua | gorritu | nahastu
+1F634	lo dagoen aurpegia	aurpegi | lo | lo dagoen aurpegia | zzz
+1F635	zorabio-aurpegia	aurpegi | zorabiatu | zorabio-aurpegia
+1F636	ahorik gabeko aurpegia	aho | ahorik gabeko aurpegia | aurpegi | isilik | isiltasun
+1F637	mediku-maskara daraman aurpegia	aurpegi | gaixo | hotzeri | maskara | mediku-maskara daraman aurpegia | medikuntza | sendagile
+1F638	begiez barre egiten ari den katu-aurpegia	aurpegi | barre | begi | begiez barre egiten ari den katu-aurpegia | katu
+1F639	pozez negar ari den katu-aurpegia	aurpegi | katu | malko | poz | pozez negar ari den katu-aurpegia
+1F63A	ahoa irekita duen katu-aurpegi irribarretsua	aho | ahoa irekita duen eta irribarre egiten ari den katu-aurpegia | ahoa irekita duen katu-aurpegi irribarretsua | aurpegi | ireki | irribarre | katu
+1F63B	katu irribarretsua, bihotz-itxurako begiekin	animalia | aurpegia | begia | bihotz-itxurako begiak dituen eta irribarre egiten ari den katu-aurpegia | bihotz-itxurako begiekin | bihotza | irribarrea | katu irribarretsua | katu irribarretsua, bihotz-itxurako begiekin | katua | maitasuna
+1F63C	irribarre maltzurra duen katu-aurpegia	aurpegi | ironiko | irribarre | irribarre maltzurra duen katu-aurpegia | katu | maltzur
+1F63D	begiak itxita musuka ari den katu-aurpegia	aurpegi | begi | begiak itxita dituen eta musuka ari den katu-aurpegia | begiak itxita musuka ari den katu-aurpegia | katu | musu
+1F63E	katu-aurpegi muturtua	aurpegi | katu | katu-aurpegi muturtua | muturtu
+1F63F	negarrez ari den katu-aurpegia	aurpegi | katu | malko | negar | negarrez ari den katu-aurpegia | triste
+1F640	leher eginda dagoen katu-aurpegia	aurpegi | harritu | katu | leher eginda | leher eginda dagoen katu-aurpegia | nekatu
+1F641	aurpegi apur bat kopetiluna	aurpegi | aurpegi apur bat kopetiluna | kopetilun
+1F642	apur bat irribarre egiten ari den aurpegia	apur bat irribarre egiten ari den aurpegia | aurpegi | irribarre
+1F643	buruz behera dagoen aurpegia	aurpegi | buruz behera | buruz behera dagoen aurpegia
+1F644	begiak bueltaka dituen aurpegia	aurpegi | begiak | begiak bueltaka dituen aurpegia | biraka | bueltaka
+1F648	gauza txarrik ikusi nahi ez duen tximua	aurpegia | debekatuta | gauza txarrik ikusi nahi ez duen tximua | ikusi | keinua | txarra | tximua
+1F649	gauza txarrik entzun nahi ez duen tximua	aurpegia | debekatuta | entzun | gauza txarrik entzun nahi ez duen tximua | keinua | txarra | tximua
+1F64A	gauza txarrik esan nahi ez duen tximua	aurpegia | debekatuta | esan | gauza txarrik esan nahi ez duen tximua | keinua | txarra | tximua
+1F910	kremaileradun ahoa duen aurpegia	aho | aurpegi | kremailera | kremaileradun ahoa duen aurpegia
+1F911	diru-itxurako mingaina duen aurpegia	aho | aurpegi | diru | diru-itxurako mingaina duen aurpegia
+1F912	termometroa duen aurpegia	aurpegi | gaixo | termometro | termometroa duen aurpegia
+1F913	arraro-aurpegia	arraro | arraro-aurpegia | aurpegi | berezi
+1F914	pentsatzen ari den aurpegia	aurpegi | pentsatzen | pentsatzen ari den aurpegia
+1F915	buruan benda daraman aurpegia	aurpegi | benda | buruan benda daraman aurpegia | oinaze | zauri
+1F916	robot-aurpegia	aurpegi | munstro | robot | robot-aurpegia
+1F917	besarkada ematen ari den aurpegia	aurpegi | besarkada | besarkada ematen ari den aurpegia | besarkatu
+1F920	behizain txanodunaren aurpegia	aurpegi | behizain | behizain txanodunaren aurpegia | txano | unai
+1F921	pailazo-aurpegia	aurpegi | pailazo | pailazo-aurpegia
+1F922	aurpegi zorabiatua	aurpegi | aurpegi zorabiatua | goitika | zorabiatu
+1F923	barrez leherka	barrez | leherka | lehertu
+1F924	aurpegia lerdea dariola	aurpegi | aurpegia lerdea dariola | lerde
+1F925	aurpegi gezurtia	aurpegi | aurpegi gezurtia | gezur | pinotxo
+1F926	esku-azpia aurpegian	aurpegi | esku-azpi | esku-azpia aurpegian | sinesgaiztasun | sumindura
+1F927	aurpegia mukiak kentzen	aurpegi | aurpegia mukiak kentzen | kendu | muki
+1F928	bekaina jasota duen aurpegia	bekaina jasota duen aurpegia | eszeptiko | mesfidatu
+1F929	izar	aurpegi | begiak | irribarretsu | izar
+1F92A	ero-aurpegia	begi | ero-aurpegia | handi | txiki
+1F92B	isiltasuna eskatzen ari den aurpegia	isilarazi | isilik | isiltasuna eskatzen ari den aurpegia | ixo
+1F92C	ahoan ikurrak dituen aurpegia	ahoan ikurrak dituen aurpegia | izerditan
+1F92D	eskuaz ahoa estaltzen ari den aurpegia	ene | eskuaz ahoa estaltzen ari den aurpegia
+1F92E	goitika ari den aurpegi	gaixo | goitika | goitika ari den aurpegi
+1F92F	lehertzear den burua	lehertzear den burua | txundituta
+1F970	irri egiten ari den aurpegia, 3 bihotzekin	amodioa | amz | aurpegia | bihotza | bihotzak | irri egiten ari den aurpegia, 3 bihotzekin | irribarre egiten ari den aurpegia, bihotzekin | irribarre egiten ari diren bihotzak | irribarrea | maitasuna | maite zaitut | maiteminduta | mz | oso gustukoa | txora-txora eginda | txoratzea
+1F971	aharrausi egiten ari den aurpegia	aharrausi | aharrausi egiten ari den aurpegia | aspertuta | nekatuta
+1F972	barreka ari den aurpegia, malko batekin	alai | alaitasuna | esker ona | esker onekoa | harro | hunkituta | irribarre egiten | irribarre egiten ari den eta malko bat duen aurpegia | irribarrea | irribarreka | irribarretsua | lasai | lasaitu | malkoa | mina | pozik | poztasuna | zoriona
+1F973	parrandan dabilen aurpegia	adar | festa | kapelu | ospakizun | parrandan dabilen aurpegia
+1F974	tentel-aurpegia	ahoa okertuta | alai | begiak okertuta | mozkortuta | tentel-aurpegia | zorabiatuta
+1F975	bero-bero dagoen aurpegia	bero | bero-bero dagoen aurpegia | bero-kolpe | gorritu | izerditan | sukartsu
+1F976	aurpegi izoztu	aurpegi izoztu | hotz | izoztu | oso hotz | urdindu
+1F978	mozorrotutako aurpegia	aurpegi | betaurrekoak | ezkutu | mozorro | mozorrotutako aurpegia | sudur
+1F97A	aurpegi erregutzailea	aurpegi erregutzailea | begirada erregutzaile | erregutze | gupida
+1FAE0	urtzen ari den aurpegia	desagertu | disolbatu | likidoa | urtu | urtzen ari den aurpegia
+1FAE1	agurtzen ari den aurpegia	ados | agurtu | agurtzen ari den aurpegia | bai | eguzkitsu | tropak
+1FAE2	begiak irekita dauzkan eta ahoaren parean eskua duen aurpegia	begiak irekita dauzkan eta ahoaren parean eskua duen aurpegia | ezin sinetsi | ezustekoa | harridura | ikaratuta | lotsatuta
+1FAE3	begi batekin espiatzen ari den aurpegia	begi batekin espiatzen ari den aurpegia | begira | espiatu | txundituta
+1FAE4	ahoa diagonalean duen aurpegia	ahoa diagonalean duen aurpegia | desengainatuta | eszeptikoa | ez nago ziur | meh
+1FAE5	lerro etenarekin egindako aurpegia	barnerakoia | deprimituta | desagertu | ezkutatu | ikusezina | lerro etenarekin egindako aurpegia
+1FAE7	burbuilak	burbuilak | garbi | haizea | urpean | xaboi
+1FAE8	dardarka ari den aurpegia	ai ene | beldurra | dar-dar egin | ene | ezustea | ikara | omg | sorpresa | uau | zorabiatu
+1F381	paperez inguratutako oparia	inguratuta | kaxa | opari | ospakizun | paperez inguratutako oparia
+1F389	aire-serpentina	aire-serpentina | festa | ospakizuna | serpentina
+1F38A	konfetiz betetako bola	bola | konfeti | konfetiz betetako bola | ospakizun
+1F47B	mamua	aurpegi | fantasia | ipuin | izaki | mamua | munstro
+1F47C	aingeru-itxura duen haurtxoa	aingeru-itxura duen haurtxoa | aingerua | aurpegia | fantasia | haurtxoa | ipuina
+1F47D	estralurtarra	aurpegia | espazioa | estralurtarra | fantasia | izakia | munstroa | ohe
+1F47E	munstro estralurtarra	aurpegia | estralurtarra | fantasia | ipuina | izakia | munstro estralurtarra | munstroa | ohe
+1F47F	deabrua	aurpegi | deabru | deabrua | fantasia | ipuin
+1F480	buru-hezurra	aurpegi | buru-hezurra | gorputz | heriotz | hil | ipuin | munstro
+1F481	eskean dabilen pertsona	eskean dabilen pertsona | esku | eskupeko | informazio | kokin | laguntza
+1F482	zaindaria	zaindaria
+1F489	xiringa	gaixo | medikuntza | orratz | sendagile | tresna | xiringa | ziztada
+1F48A	pilula	gaixo | medikuntza | pilula | sendagile
+1F4A2	amorruaren ikurra	amorruaren ikurra | haserre | komiki | sutan
+1F4A4	zzz	gabon | komikia | lo | zzz
+1F4A5	eztanda	bum | eztanda | komiki
+1F4A6	izerdi-tantatxoak	izerdi | izerdi-tantatxoak | komiki | zipriztin
+1F4A7	tantatxoa	eguraldi | hotz | izerdi | komiki | tanta | tantatxoa
+1F4A8	ziztu bizian	bizi | komiki | korrika | lasterka | ziztu bizian
+1F4A9	kaka-mokordoa	aurpegi | gorotz | kaka | kaka-mokordoa | komiki | monstruo
+1F4AB	zorabiatuta	izar | komiki | zorabiatuta
+1F4AC	bunbuiloa	bunbuiloa | elkarrizketa | hizketa
+1F4AD	burutazio-bunbuiloa	bunbuilo | burutazio | burutazio-bunbuiloa | komiki | pentsamendu
+1F4AE	lore zuria	lore | lore zuria
+1F4A0	puntu bat duen diamantea	barnealde | diamante | geometriko | komiki | puntu bat duen diamantea
+1F4A1	bonbilla	argi | bonbilla | elektriko | ideia | komiki
+1F4A3	lehergailua	komiki | lehergailua
+1F4AF	ehun puntu	100 | ehun | ehun puntu | oso | puntuazio
+1F4B0	poltsa bete diru	diru-poltsa | dirua | dolarra | poltsa | poltsa bete diru
+1F4B1	truke-tasa	banku | diru | moneta | truke | truke-tasa
+1F4B2	dolar-ikur lodia	diru | dolar | dolar-ikur lodia | moneta
+1F4B8	dirua hegoekin	billetea | dirua | dirua hegoekin | dolarra | hegan
+1F525	sua	sua | sugar | tresna
+1F52E	kristalezko bola	bola | fantasia | ipuin | kristal | kristalezko bola | zorte
+1F440	begiak	aurpegia | begia | begiak | gorputza
+1F441	begi	begi | begia | gorputza
+1F442	belarri	belarri | belarria | gorputza
+1F443	sudur	gorputza | sudur | sudurra
+1F444	aho	aho | ahoa | ezpainak | gorputza
+1F445	mingain	gorputza | mingain | mingaina
+1F446	gora seinalatzen ari den hatza	erakusle | esku | gora seinalatzen ari den hatz erakuslearen atzealdea | gora seinalatzen ari den hatza | hatz | seinalatu
+1F447	behera seinalatzen ari den hatza	behera seinalatzen ari den hatz erakuslearen atzealdea | behera seinalatzen ari den hatza | erakusle | esku | hatz | seinalatu
+1F448	ezkerrera seinalatzen ari den hatz erakuslea	erakusle | esku | ezkerrera seinalatzen ari den hatz erakuslea | hatz | seinalatu
+1F449	eskuinera seinalatzen ari den hatz erakuslea	erakusle | esku | eskuinera seinalatzen ari den hatz erakuslea | hatz | seinalatu
+1F44A	ukabilkada	eskua | estutu | gorputza | ukabila | ukabilkada
+1F44B	mugitzen ari den eskua	eskua | gorputza | mugitu | mugitzen ari den eskua
+1F44C	adostasuna adierazten duen eskua	ados | adostasuna adierazten duen eskua | eskua | gorputza | ok
+1F44D	erpurua gora	erpurua | eskua | gora | gorputza
+1F44E	erpurua behera	behera | erpurua | eskua | gorputza
+1F44F	txaloka ari diren eskuak	esku | gorputz | txalo | txaloka ari diren eskuak
+1F450	esku irekiak	esku | esku irekiak | gorputz | ireki
+261D	gora seinalatzen ari den hatz erakuslea	erakusle | esku | gora seinalatzen ari den hatz erakuslea | hatz | seinalatu
+270A	ukabil altxatua	eskua | estutu | ukabil altxatua | ukabila | ukabilkada
+270B	esku altxatua	esku altxatua | eskua
+270C	garaipena adierazten duen eskua	eskua | garaipena | garaipena adierazten duen eskua | gorputza | v
+270D	idazten ari den eskua	esku | gorputz | idatzi | idazten ari den eskua
+1F4AA	bizepsak	bizepsa | bizepsak | flexioa | giharra | gorputza | komikia
+1F590	esku altxatua eta hatz hedatuak	esku altxatua eta hatz hedatuak | eskua | gorputza | hatza | hedatu
+1F64C	eskuak altxatzen ari den pertsona	altxatu | esku | eskuak altxatzen ari den pertsona | keinu | ospakizun
+1F64F	erregutzen ari diren eskuak	erregutzen ari diren eskuak | eskatu | eskerrak | mesedez | otoitz
+1F90C	hatz elkartuak	elkartuta | esku-keinua | galdera | hatz elkartuak | hatzak | sarkasmoa
+1F90F	atximurka egiten ari den eskua	atximurka egiten ari den eskua | pixka bat
+1F918	adarrak adierazten dituen eskua	adarra | adarrak adierazten dituen eskua | eskua | gorputza | hatza
+1F919	deitzeko esku-keinua	deitu | deitzeko esku-keinua | eskua
+1F91A	esku-azpia altxatuta	altxatuta | esku-azpia
+1F91B	ukabila ezkerrera begira	ezkerrera | ukabila | ukabila ezkerrera begira
+1F91C	ukabila eskuinera begira	eskuinera | ukabila | ukabila eskuinera begira
+1F91D	esku-ematea	adostasuna | bilera | esku-ematea | eskua
+1F91E	hatz gurutzatuak	eskua | gurutzatu | hatz gurutzatuak | hatza | zortea
+1F91F	adarren keinua	adarren keinua | eskua
+1F932	esku-azpiak elkartuta	esku-azpiak elkartuta | otoitza
+1F9B4	hezur	eskeletoa | hezur | hezurra
+1F9B5	hanka	gorputz-adarra | hanka | ostikada
+1F9B6	oin	oin | oina | ostikada | zanpatu
+1F9B7	hortz	dentista | hagina | hortz | hortza
+1F9E0	burmuin	adimentsua | argia | azkarra | burmuin | burmuina
+1F9BE	beso mekanikoa	beso mekanikoa | irisgarritasuna | prostetikoa
+1FAC0	bihotza organoa	bihotza organoa | erdigunea | kardiologia | organoa | pultsua | taupada
+1FAC1	birikak	arnas hartzea | arnasa | arnastu | birikak | hasperena | inhalazioa | organoa
+1FAE6	ezpainei koska egiten	artega | beldurra | deseroso | ezpainei koska egiten | kezkatuta | ligatzen | urduri
+1FAF0	erakuslea eta erpurua gurutzatuta	<3 | bihotza | dirua | erakuslea eta erpurua gurutzatuta | erakuslea eta erpurua gurutzatuta dauzkan eskua | garestia | klask | klaskatu | kriskitin | maitasuna
+1FAF1	eskuinera begira dagoen eskua	eskua | eskuina | eskuinera begira dagoen eskua | eskuinerantz
+1FAF2	ezkerrera begira dagoen eskua	eskua | ezkerra | ezkerrera begira dagoen eskua | ezkerrerantz
+1FAF3	esku-ahurra beherantz duen eskua	baztertu | erori | esku-ahurra beherantz duen eskua | ospa
+1FAF4	esku-ahura gora begira duen eskua	eskaini | esku-ahura gora begira duen eskua | etorri | etorri keinua | harrapatu
+1FAF5	ikusleari seinalatzen dion erakuslea	ikusleari seinalatzen dion erakuslea | seinalatu | zu
+1FAF6	bihotz-forma egiten ari diren eskuak	bihotz-forma egiten ari diren eskuak | maitasuna
+1FAF7	ezkerrerantz bultza egiten ari den eskua	blokeatu | bostekoa | bultza | ezkerrerantz | ezkerrerantz bultza egiten ari den eskua | gelditu | itxaron | sakatu | uko
+1FAF8	eskuinerantz bultza egiten ari den eskua	blokeatu | bostekoa | bultza | eskuinerantz | eskuinerantz bultza egiten ari den eskua | gelditu | itxaron | sakatu | uko
+2764	bihotz gorria	bihotz | bihotz gorria
+1F380	begizta	begizta | ospakizun
+1F382	urtebetetze-tarta	ospakizun | pastel | postre | tarta | urtebetetze | urtebetetze-tarta
+1F383	halloweeneko kuia	halloween | halloweeneko kuia | kuia | ospakizun
+1F384	gabonetako zuhaitza	gabonak | gabonetako zuhaitza | ospakizun | zuhaitz
+1F386	su artifizialak	ospakizun | su artifizialak
+1F387	bengala	bengala | ospakizun | su artifizialak
+1F388	puxika	ospakizun | puxika
+1F9E7	gutun-azal gorri	diru | gutun-azal gorri | hóngbāo | lai see | opari | zorte on
+1F9E8	petardo	dinamita | lehergai | petardo | su artifizial
+1F38B	tanabata zuhaitza	japonia | ospakizun | paper | tanabata zuhaitza | zuhaitz
+1F38C	bandera gurutzatuak	bandera gurutzatuak | gurutzatuta | gurutze | japoniar | ospakizuna
+1F38D	pinurako dekorazioa	banbu | japonia | ospakizun | pinu | pinurako dekorazioa
+1F38E	panpin japoniarrak	ospakizun | pan | panpin japoniarrak
+1F38F	karpa-itxurako banderatxoak	banderatxo | haizea neurtzeko karpa itxurako banderatxoak | karpa | karpa-itxurako banderatxoak | ospakizun
+1F390	haize-kanpaia	haize | haize-kanpaia | kanpai | ospakizun
+1F391	ilargiaren ospakizuna	ilargi | ilargiaren ospakizuna | ospakizun | zeremonia
+1F393	graduatu-txanoa	arropa | graduatu-txanoa | graduazio | ospakizun | txano
+1F484	ezpain-margoa	ezpain-margoa | kosmetika | makillaje
+1F485	azazkaletako esmaltea	azazkal | azazkaletako esmaltea | edertasun | esmalte | gorputz | kosmetika | manikura
+1F48B	musu-aztarna	ezpainak | musu | musu-aztarna
+1F48C	maitasun-gutuna	bihotz | gutun | maitasun | maitasun-gutuna | posta
+1F48D	eraztuna	diamante | eraztuna
+1F48E	harribitxia	bitxi | diamante | harribitxia
+1F48F	musu	bikotea | musu | musua
+1F490	lore sorta	lore | sorta
+1F491	bihotza erdian duen bikotea	bihotza | bihotza erdian duen bikotea | bikotea | maitasuna
+1F492	ezkontza	erromantze | ezkontza | kapera
+1F493	bihotz-taupada	bihotz | bihotz-taupada | taupada
+1F494	bihotz hautsia	bihotz | bihotz hautsia | hautsi | hautsita
+1F495	bi bihotz	bi bihotz | bihotz | maitasun
+1F496	bihotz distiratsua	bihotz | bihotz distiratsua | distira | urduri
+1F497	handitzen ari den bihotza	bihotz | handitu | handitzen ari den bihotza | taupada | urduri | urduritasun
+1F498	bihotza geziarekin	bihotz | bihotza geziarekin | gezi | kupido
+1F499	bihotz urdina	bihotz | bihotz urdina | urdin
+1F49A	bihotz berdea	berde | bihotz | bihotz berdea
+1F49B	bihotz horia	bihotz | bihotz horia | hori
+1F49C	bihotz morea	bihotz | bihotz morea | more
+1F49D	bihotza begiztarekin	begizta | bihotz | bihotza begiztarekin | valentin
+1F49E	biraka ari diren bihotzak	bihotz | biraka | biraka ari diren bihotzak
+1F49F	bihotz apaindua	bihotz | bihotz apaindua
+1F90D	bihotz zuria	bihotz | bihotz zuria | zuri
+1F90E	bihotz marroia	bihotz | bihotz marroia | marroi
+1F9E1	bihotz laranja	bihotz laranja | laranja
+1FA75	bihotz urdin argia	143 | anila | bihotz urdin argia | bihotza | urdin argia | ziana
+1FA76	bihotz grisa	143 | arbela | bihotz grisa | bihotza | emozioa | grisa | zilarra | zirrara
+1FA77	bihotz arrosa	143 | arrosa | atsegin | bihotz arrosa | bihotza | gogoko | maitagarria | maitasuna | polita
+2763	bihotz-itxurako harridura-marka	bihotz | bihotz-itxurako harridura-marka | harridura | marka | puntuazioa
+2733	zortzi puntako izartxoa	izartxo | zortzi puntako izartxoa
+2734	zortzi puntako izarra	izar | zortzi puntako izarra
+2747	txinparta	* | txinparta
+1F3E0	etxebizitza	eraikin | etxe | etxebizitza
+1F3E1	etxea eta lorategia	eraikin | etxe | etxea eta lorategia | lorategi
+1F3E2	bulego-eraikina	bulego-eraikina | eraikin
+1F3E3	japoniako postetxea	eraikin | japonia | japoniako postetxea | posta
+1F3E4	postetxea	eraikin | europa | posta | postetxea
+1F3E5	ospitala	eraikin | medikuntza | ospitala | sendagile
+1F3E6	bankua	bankua | eraikin
+1F3E7	kutxazainaren seinalea	ATM | automatikoa | automatizatua | bankua | kutxazain automatikoa | kutxazain automatikoaren seinalea | kutxazaina | kutxazainaren seinalea
+1F3E8	hotela	eraikin | hotela
+1F3E9	maitasun-hotela	eraikin | hotel | maitasun | maitasun-hotela
+1F3EA	supermerkatua	denda | eraikin | supermerkatu | supermerkatua
+1F3EB	eskola	eraikin | eskola
+1F3EC	merkataritza-zentroa	eraikin | gune | merkataritza | merkataritza-zentroa | zentro
+1F3ED	fabrika	eraikin | fabrika
+1F3EE	paper gorrizko faroltxoa	argi | faroltxo | gorri | japonia | paper gorrizko faroltxoa | taberna
+1F3EF	gaztelu japoniarra	eraikin | gaztelu japoniarra | gaztu | japoniar
+1F3F0	gaztelua	eraikin | europa | gaztelua
+1F463	oin-aztarnak	arropa | aztarna | gorputz | oin | oin-aztarnak
+1F464	soinaren silueta	silueta | soin | soinaren silueta
+1F465	soinen siluetak	silueta | soin | soinen siluetak
+1F466	mutila	gizona | mutila
+1F467	neska	emakume | neska
+1F468	gizona	gizon | gizona | gizonezko
+1F469	emakumea	emakume | emakumea | emakumezko
+1F46A	familia	aita | ama | familia | haurra
+1F46B	gizon-emakumeak elkarri eskua ematen	bikotea | elkarri eskua ematen | emakumea | eman | eskua | gizon-emakumeak elkarri eskua ematen | gizona
+1F46C	bi gizon elkarri eskua ematen	bi gizon elkarri eskua ematen | bikiak | bikotea | elkarri eskua ematen | gemini | gizona | zodiakoa
+1F46D	bi emakume elkarri eskua ematen	bi emakume elkarri eskua ematen | bikotea | emakume | eman | eskua
+1F46E	polizia	aginte | polizia
+1F46F	jendea untxi-belarriak jantzita	belarri | dantzari | jendea untxi-belarriak jantzita | neska | parrandan ari den jendea | untxi
+1F470	beloa daraman pertsona	belo | beloa daraman pertsona | emaztegai | ezkontza
+1F471	pertsona ilehoria	ile | ilehori | pertsona ilehoria
+1F472	txano txinatarra daraman pertsona	gizon | gua pi mao | txano | txano txinatarra daraman gizona | txano txinatarra daraman pertsona
+1F473	turbantea duen petsona	turbante | turbantea duen petsona
+1F474	aitona	agure | aitona | gizon | gizonezko | zahar
+1F475	amona	agure | amona | emakume | emakumezko | zahar
+1F476	haurtxoa	haurtxo | haurtxoa
+1F477	eskulangilea	eraikuntza | eskulangilea | kasko | langile
+1F478	printzesa	fantasia | ipuin | printzesa
+1F479	ogroa	aurpegi | fantasia | ipuin | izaki | japoniera | munstro | ogroa
+1F47A	iratxoa	aurpegi | fantasia | ipuin | iratxoa | izaki | japoniera | munstro
+1F483	dantzan ari den emakumea	dantza | dantzan ari den emakumea | emakume
+1F486	masajea egiten ari dioten pertsona	aurpegi | masaje | masajea egiten ari dioten pertsona | zentro
+1F487	ilea mozten ari dioten pertsona	edertasun | ile-apaintzaile | ilea mozten ari dioten pertsona | moztu | zentro
+1F645	ados ez dagoela adierazten ari den pertsona	ados ez dagoela adierazten ari den pertsona | debekatuta | esku | ez | galarazita | keinu
+1F646	ados dagoela adierazten ari den pertsona	ados | ados dagoela adierazten ari den pertsona | esku | keinu
+1F647	burua makurtzen ari den pertsona	barkamen | barkatu | burua makurtzen ari den pertsona | keinu | makurtu
+1F64B	eskua altxatzen ari den pertsona	altxatuta | esku | eskua altxatzen ari den pertsona | keinu | pozik
+1F64D	kopeta zimurtzen ari den pertsona	keinu | kopeta | kopeta zimurtzen ari den pertsona | zimurtu
+1F64E	pertsona muturtua	keinu | muturtu | pertsona muturtua
+1F930	emakumea haurdun	emakumea | haurdun
+1F931	bularra ematea	bular | bularra ematea | bularreko haur | haurtxo
+1F933	autoargazkia	autoargazki | autoargazkia | kamera | telefono
+1F934	printzea	printzea
+1F935	pertsona esmokinean	esmokin | pertsona | pertsona esmokinean | senargai
+1F936	gabonetako ama	Bizarzuriren emaztea | gabonak | gabonetako ama
+1F937	sorbaldak altxatu	altxatu | axolagabekeria | ezjakintasun | sorbalda | sorbaldak altxatu | zalantza
+1F385	aita noel	aita noel | Bizarzuri | fantasia | gabonak | ospakizuna
+1F9B8	superheroi	heroi | on | superbotere | superheroi
+1F9B9	superbilau	bilau | gaizto | kriminal | superbilau | superbotere
+1F9BF	hanka mekanikoa	hanka mekanikoa | irisgarritasuna | prostetikoa
+1F9D0	monokulo bat duen aurpegia	aspergarria | monokulo bat duen aurpegia
+1F9D1	pertsona	genero neutroko | heldu | pertsona
+1F9D2	haur	gazte | genero neutroko | haur
+1F9D3	agure	adineko | agure | genero neutroko
+1F9D4	pertsona bizarduna	bizar | pertsona bizarduna
+1F9D5	buruan zapi bat daraman emakumea	buruan zapi bat daraman emakumea | hijab | mantilla | tichel | zapi
+1F9D6	pertsona bat lurrun-gelan	lurrun-gela | pertsona bat lurrun-gelan | sauna
+1F9D7	pertsona bat eskalatzen	eskalatzailea | pertsona bat eskalatzen
+1F9D8	pertsona bat loto-posizioan	meditazio | pertsona bat loto-posizioan | yoga
+1F9D9	mago	azti | mago | sorgin
+1F9DA	maitagarri	maitagarri | Oberon | Puck | Titania
+1F9DB	banpiro	banpiro | Drakula | hildako bizidun
+1F9DC	itsas izaki	itsas izaki | lamina | sirena
+1F9DD	elfo	elfo | magiko
+1F9DE	iratxo	djinn | iratxo
+1F9DF	zonbi	hildako bizidun | hildako ibiltari | zonbi
+1FAC2	elkar besarkatzen ari den jendea	agur | besarkada | elkar besarkatzen ari den jendea | eskerrik asko | kaixo
+1FAC3	gizona haurdun	beteta | gizona haurdun | haurdun | puztuta | sabela
+1FAC4	pertsona haurdun	beteta | haurdun | pertsona haurdun | puztuta | sabela
+B9	goi-indizeko bat	bat | goi-indize | goi-indizeko bat
+B2	goi-indizeko bi	bi | goi-indize | goi-indizeko bi
+B3	goi-indizeko hiru	goi-indize | goi-indizeko hiru | hiru | kubiko
+207B	goi-indizeko minusa	goi-indize | goi-indizeko minusa | minus
+B0	gradu	froga | gradu | ordu
+B1	plus-minus	plus-minus
+D7	biderketa-ikur	aldiak | biderkatu | biderketa | biderketa-ikur
+F7	zatiketa-ikur	zatiketa | zatiketa-ikur | zatitu
+B5	mikro-ikurra	mikro-ikur | mikro-ikurra | neurketa
+A9	copyrighta	C | copyrighta
+AE	marka erregistratua	erregistratu | erregistratuta | marka erregistratua | R
+2122	marka komertziala	komertzial | marka | marka komertziala | tm
+A7	sekzioa	paragrafo | sekzio | sekzioa | zati
+B6	paragrafo-marka	paragrafo-marka | paragrafoa
+B7	erdiko puntua	erdia | erdiko puntu | erdiko puntua | puntu
+2022	bulleta	bullet | bulleta | puntu
+2013	marra laburra	labur | marra | marra laburra
+2026	elipsia	elipsia | puntuak
+AB	ezkerreko komatxoak	azentu zirkunflexu | ezkerra | ezkerreko komatxo | ezkerreko komatxoak | komatxo | kortxete | xebroi
+BB	eskuineko komatxoak	azentu zirkunflexu | eskuina | eskuineko komatxo | eskuineko komatxoak | komatxo | kortxete | xebroi
+2030	milakoa	milako | milakoa
+20AC	euroa	diru | EUR | euro | euroa
+A3	libera	diru | EGP | GBP | libera
+A5	yena	CNY | diru | JPY | yen | yena | yuan
+A2	zentaboa	zentaboa
+20B9	errupia indiarra	diru | errupia | errupia indiar | errupia indiarra
+20BD	errubloa	diru | errublo | errubloa
+20A9	wona	KPW | KRW | wona
+20BA	lira turkiarra	
+20BF	bitcoina	bitcoina | BTC
+20AA	shekel israeldar berria	
+20AB	dong vietnamdarra	
+20B1	pesoa	pesoa
+20BC	manat azerbaijandarra	
+20B4	hryvnia ukrainarra	
+20A6	naira nigeriarra	
+20A1	colon costarricarra	
+20B2	guarani paraguaitarra	
+20B5	cedi ghanatarra	
+20B8	tenge kazakhstandarra	
+20BE	lari georgiarra	
+20AE	tugrik mongoliarra	
+20AD	kip laostarra	
+20A8	errupia	errupia | moneta
+24	dolarra	dirua | dolarra | pesoa | USD
+58F	dram armeniarra	
+9F3	taka bangladeshtarra	
+E3F	baht thailandiarra	
+20A3	libera frantsesa	libera | libera frantsesa | moneta
+20A4	lira	lira | moneta
+20A7	pezeta espainiarra	
+20B0	penny alemana	moneta | penny aleman | penny alemana | pfennig
+20B3	australa	ARA | australa | moneta
+20A2	cruzeiro	BRB | cruzeiro | moneta
+20A5	milarena	milarena
+20B6	Tourseko libera	moneta | Tourseko libera
+20B7	spesmiloa	moneta | spesmilo | spesmiloa
+A4	moneta ezezaguna	
+201E	beheko eskuineko komatxoa	beheko eskuineko komatxoa | beheko komatxoa | kakotx bikoitza | kakotxa | komatxo adimenduna | komatxoa
+201C	ezkerreko komatxoa	ezkerreko komatxoa | kakotx bikoitza | kakotxa | komatxo adimenduna | komatxoa
+201D	eskuineko komatxoa	eskuineko komatxoa | kakotx bikoitza | kakotxa | komatxo adimenduna | komatxoa
+2018	ezkerreko apostrofoa	apostrofoa | ezkerreko apostrofoa | kakotx adimenduna | kakotx bakuna | kakotxa
+2019	eskuineko apostrofoa	apostrofoa | eskuineko apostrofoa | kakotx adimenduna | kakotx bakuna | kakotxa
+A1	harridura-marka alderantzikatua	alderantzikatua | harridura | harridura-marka | kolpea
+BF	galdera-marka alderantzikatua	alderantzikatua | galdera | galdera-marka
+2020	gurutzea	gurutze | gurutzea | obelisko
+2021	gurutze bikoitza	bikoitz | gurutze | gurutze bikoitza | obelisko
+2044	zatikiaren barra	barra okertu | marra | zatikiaren barra
+2032	kakotxa	kakotxa
+2033	kakotx bikoitza	kakotx bikoitza | kakotxa
+201A	beheko eskuineko apostrofoa	apostrofoa | beheko eskuineko apostrofoa | beheko komatxoa | komatxoa
+AC	ezezkoa	ez | ezezkoa
+2117	soinu-grabaketaren copyrighta	copyright | grabaketa | soinu | soinu-grabaketaren copyrighta
+2212	minus-ikurra	kendu | minus | minus-ikurra
+2213	minus edo plus	minus edo plus | plus-minus
+2248	ia berdin	gutxi gorabehera | ia berdin
+2260	ez da berdin	ez da berdin | inekuazioa
+2261	honen berbera	bera | berbera | hirukoitza | honen berbera
+2264	hau baino txikiagoa edo berdina	berdin | desberdintasuna | hau baino txikiagoa | hau baino txikiagoa edo berdina
+2265	hau baino handiagoa edo berdina	berdin | desberdintasuna | hau baino handiagoa | hau baino handiagoa edo berdina
+226A	hau baino askoz gutxiago	desberdintza | hau baino askoz gutxiago | matematika
+226B	hau baino askoz gehiago	desberdintza | hau baino askoz gehiago | matematika
+221E	infinitu-ikurra	infinitu-ikurra | infinitua
+221A	erro karratu	erro | errotzaile | karratu | oinarri
+221D	proportzionala	proportzionala | proportzionalitatea
+2211	n-ario batura	batura | matematika | n-ario batura
+220F	n-ario produktua	logika | n-ario produktu | n-ario produktua | produktu
+222B	integrala	integrala | kalkulua
+2202	diferentzial partziala	diferentzia | diferentzial partziala
+2206	gehikuntza	gehikuntza | triangelua
+2207	nabla	nabla | triangelua
+2200	guztientzat	edozein | emanda | guztia | guztientzat | unibertsal
+2203	existitzen da	existitzen da
+2205	multzo hutsa	ezarri eragilea | matematika | multzo hutsa
+2208	honen elementua	elementua | ezarri | hau du | honen elementua | kidetza
+2209	ez da elementu bat	elementu | ez da elementu bat
+2229	ebakidura	ebakidura | multzoa
+222A	lotura	bilduma | lotura | multzoa
+2282	honen azpimultzoa	azpimultzoa | honen azpimultzoa | multzoa
+2283	supermultzoa	matematika | multzo eragilea | supermultzoa
+2286	azpimultzoaren berdina	azpimultzoaren berdina
+2287	supermultzoaren berdina	berdintza | matematika | supermultzoaren berdina
+2227	konjuntzio logiko	konjuntzio logiko | ziri
+2295	plus zirkulu barruan	plus | plus zirkulu barruan
+2297	bider zirkulu barruan	bider zirkulu barruan | produktu | tenkagailu
+22A5	tatxeta	falsum | tatxeta
+2220	angelua	angelu | angelua | zorrotz
+2234	ondorioz	logika | ondorioz
+2235	zeren eta	logika | zeren eta
+2218	eraztun-eragilea	eragile | eraztun-eragile | eraztun-eragilea | konposizioa
+2219	bulet-eragile	bulet-eragile | eragile
+22C5	puntu-eragilea	eragilea | puntu-eragilea
+2215	zatiketa-barra	barra | barra okertua | marra | zatiketa-barra
+2190	ezkerrera seinalatzen duen gezia	ezkerra | ezkerrera seinalatzen duen gezia | gezia
+2191	gora seinalatzen duen gezia	gezia | gora | gora seinalatzen duen gezia
+2192	eskuinera seinalatzen duen gezia	eskuinera | eskuinera seinalatzen duen gezia | gezia
+2193	behera seinalatzen duen gezia	behera | behera seinalatzen duen gezia | gezia
+2196	gora eta ezkerrera gezia	gezi | gora eta ezkerrera gezia | ipar-mendebalde | kardinal arteko | norabide
+2197	gora eta eskuinera gezia	gezi | gora eta eskuinera gezia | ipar-ekialde | kardinal arteko | norabide
+2198	behera eta eskuinera gezia	behera eta eskuinera gezia | gezi | hego-ekialde | kardinal arteko | norabide
+2199	behera eta ezkerrera gezia	behera eta ezkerrera gezia | gezi | hego-mendebalde | kardinal arteko | norabide
+2194	ezkerrera eta eskuinera gezia	ezkerrera eta eskuinera gezia | gezi
+2195	gora eta behera gezia	gezi | gora eta behera gezia
+21D0	ezkerrerako gezi bikoitza	ezkerrerako gezi bikoitza
+21D1	gorako gezi bikoitza	gorako gezi bikoitza
+21D2	eskuinerako gezi bikoitza	eskuinerako gezi bikoitza
+21D3	beherako gezi bikoitza	beherako gezi bikoitza
+21D6	ipar-mendebalderako gezi bikoitza	ipar-mendebalderako gezi bikoitz | ipar-mendebalderako gezi bikoitza
+21D7	ipar-ekialderako gezi bikoitza	ipar-ekialderako gezi bikoitza
+21D8	hego-ekialderako gezi bikoitza	hego-ekialderako gezi bikoitza
+21D9	hego-mendebalderako gezi bikoitza	hego-mendebalderako gezi bikoitza
+21D4	ezker eta eskuinerako gezi bikoitza	ezker eta eskuinerako gezi bikoitza
+21A4	ezkerrerako gezia barratik	ezkerrerako gezia barratik
+21A6	eskuinerako gezia barratik	eskuinerako gezia barratik
+21A5	gorako gezia barratik	gorako gezia barratik
+21A7	beherako gezia barratik	beherako gezia barratik
+21A9	ezkerrera okertzen den eskuinera gezia	ezkerrera okertzen den eskuinera gezia | gezi
+21AA	eskuinera okertzen den ezkerrera gezia	eskuinera okertzen den ezkerrera gezia | gezi
+219E	ezkerrerako bi buruko gezia	ezkerrerako bi buruko gezia
+21A0	eskuinerako bi buruko gezia	eskuinerako bi buruko gezia
+219F	gorako bi buruko gezia	gorako bi buruko gezia
+21A1	beherako bi buruko gezia	beherako bi buruko gezia
+21A2	ezkerrerako gezi buztanduna	ezkerrerako gezi buztanduna
+21A3	eskuinerako gezi buztanduna	eskuinerako gezi buztanduna
+219A	ezkerrerako gezia trazuarekin	ezkerrerako gezia trazuarekin
+219B	eskuinerako gezia trazuarekin	eskuinerako gezia trazuarekin
+21AE	ezkerrerako eta eskuinerako gezia trazuarekin	ezkerrerako eta eskuinerako gezia trazuarekin
+21CD	ezkerrerako gezi bikoitza trazuarekin	ezkerrerako gezi bikoitza trazuarekin
+21CF	eskuinerako gezi bkoitz marratua	eskuinerako gezi bikoitz marratua | eskuinerako gezi bkoitz marratua
+21CE	ezker eta eskuinerako gezi bikoitz marratua	ezker eta eskuinerako gezi bikoitz marratua
+21C4	eskuinerako gezia ezkerrerako geziaren gainean	eskuinerako gezia ezkerrerako geziaren gainean
+21C6	ezkerrera eta eskuinera seinalatzen duen gezia	eskuina | ezkerra | ezkerrera eta eskuinera gezia | ezkerrera eta eskuinera seinalatzen duen gezia
+21CB	ezkerrerako arpoia eskuinerako arpoiaren gainean	ezkerrerako arpoia eskuinerako arpoiaren gainean
+21CC	eskuinerako arpoia ezkerrerako arpoiaren gainean	eskuinerako arpoia ezkerrerako arpoiaren gainean
+21BC	ezkerrerako goiko arpoi-bizarra	bizarra | ezkerrerako goiko arpoi-bizarra
+21BD	ezkerrerako beheko arpoi-bizarra	ezkerrerako beheko arpoi-bizarra
+21C0	eskuinerako goiko arpoi-bizarra	bizarra | eskuinerako goiko arpoi-bizarra
+21C1	eskuinerako beheko arpoi-bizarra	bizarra | eskuinerako beheko arpoi-bizarra
+21BE	gorako eskuineko arpoi-bizarra	bizarra | gorako eskuineko arpoi-bizarra
+21BF	gorako ezkerreko arpoi-bizarra	bizarra | gorako ezkerreko arpoi-bizarra
+21C2	beherako eskuineko arpoi-bizarra	beherako eskuineko arpoi-bizarra | bizarra
+21C3	beherako ezkerreko arpoi-bizarra	beherako ezkerreko arpoi-bizarra | bizarra
+21C7	ezkerrerako gezi parea	ezkerrerako gezi parea
+21C9	ezkuinerako gezi parea	eskuinerako gezi parea | ezkuinerako gezi parea
+21C8	gorako gezi parea	gorako gezi parea
+21CA	beherako gezi parea	beherako gezi parea
+21DA	ezkerrerako gezi hirukoitza	ezkerrerako gezi hirukoitza
+21DB	eskuinerako gezi hirukoitza	eskuinerako gezi hirukoitza
+219C	ezkerrerako uhin-gezia	ezkerrerako uhin-gezia
+219D	eskuinerako uhin-gezia	eskuinerako uhin-gezia
+21DC	ezkerrerako gezi zirrimarratua	ezkerrerako gezi zirrimarratua
+21DD	eskuinerako gezi zirrimarratua	eskuinerako gezi zirrimarratua
+21AD	ezkerrerako uhin-gezia begiztarekin	ezkerrerako uhin-gezia begiztarekin
+21AF	beherako gezia sigi-saga eginez	beherako gezia sigi-saga eginez | sigi-saga
+21BA	ezkerrerako zirkuluerdi irekiaren gezia	ezkerrerako zirkuluerdi irekiaren gezia
+21BB	eskuinerako zirkuluerdi irekiaren gezia	eskuinerako zirkuluerdi irekiaren gezia
+1F400	arratoia	arratoi | arratoia
+1F401	sagua	sagu | sagua
+1F402	idia	idia | taurus | zezen | zodiako
+1F403	ur-bufaloa	bufaloa | ur-bufaloa | ura
+1F404	behia	behi | behia
+1F405	tigrea	tigrea
+1F406	lehoinabarra	lehoinabar | lehoinabarra
+1F407	untxia	maskota | untxi | untxia
+1F408	katua	katua | maskota
+1F409	herensugea	herensugea | ipuin
+1F40A	krokodiloa	krokodilo | krokodiloa
+1F40B	balea	bale | balea
+1F40C	barraskiloa	barraskilo | barraskiloa
+1F40D	sugea	mezulari | ofiuko | suge | sugea | zodiako
+1F40E	zaldia	lasterketa | zaldi | zaldia
+1F40F	zikiroa	ardi | aries | zikiroa | zodiako
+1F410	ahuntza	ahuntza | capricornus | zodiako
+1F411	ardi	ardi | ardia | eme
+1F412	tximua	tximu | tximua
+1F413	oilarra	oilar | oilarra
+1F414	oiloa	oilo | oiloa
+1F415	txakur	maskota | txakur
+1F416	txerria	eme | txerri | txerria
+1F417	basurdea	ar | basurdea | txerri
+1F418	elefantea	elefante | elefantea
+1F419	olagarroa	olagarro | olagarroa
+1F41A	oskol espirala	eskola | espirala | oskol espirala
+1F41B	zomorroa	intsektu | zomorroa
+1F41C	inurria	intsektu | inurria
+1F41D	erlea	erle | erlea | intsektu
+1F41E	amona mantangorri	amona | intsektu | mantangorri
+1F41F	arrain	arrain | pisces | zodiako
+1F420	arrain tropikala	arrain tropikala | arraina | tropikala
+1F421	globo-arraina	arrain | globo-arraina
+1F422	dortoka	dortoka | dortokoa
+1F423	arrautzetik irten berri den txita	arrautzatik irtetea | arrautzetik irten berri den txita | kumea | txita | txoria
+1F424	txita	kumea | txita | txoria
+1F425	aurrera begira dagoen txita	aurrera begira dagoen txita | kume | txita
+1F426	txoria	txori | txoria
+1F427	pinguinoa	pinguino | pinguinoa
+1F428	koala	aurpegia | koala | martsupiala
+1F429	canichea	canichea | txakur
+1F42A	gamelua	dromedario | gamelua | tontor
+1F42B	bi tontorreko gamelua	bactria | bi tontorreko gamelua | gamelu | tontor
+1F42C	izurdea	flipper | izurdea
+1F42D	sagu-aurpegia	aurpegia | sagu-aurpegia | sagua
+1F42E	behi-aurpegi	aurpegia | behi-aurpegi | behia
+1F42F	tigre-aurpegia	aurpegia | tigre-aurpegia | tigrea
+1F430	untxi-aurpegia	aurpegia | maskota | untxi-aurpegia | untxia
+1F431	katu-aurpegia	aurpegia | katu-aurpegia | katua | maskota
+1F432	herensuge-aurpegia	aurpegia | herensuge-aurpegia | herensugea | ipuina
+1F433	ura jaurtitzen ari den balea	aurpegia | balea | ura jaurti | ura jaurtitzen ari den balea
+1F434	zaldi-aurpegia	aurpegia | zaldi-aurpegia | zaldia
+1F435	tximu-aurpegia	aurpegia | tximu-aurpegia | tximua
+1F436	txakur-aurpegia	aurpegia | maskota | txakur-aurpegia | txakurra
+1F437	txerri-aurpegia	aurpegia | txerri-aurpegia | txerria
+1F438	igel-aurpegia	aurpegia | igel-aurpegia | igela
+1F439	hamsterra	aurpegia | hamster | hamsterra | maskota
+1F43A	otso	aurpegia | otso | otsoa
+1F43B	hartz	aurpegia | hartz | hartza
+1F43C	panda	aurpegia | panda
+1F43D	txerri-sudurra	aurpegia | sudurra | txerri-sudurra | txerria
+1F43E	atzapar-aztarnak	atzapar | atzapar-aztarnak | aztarna | oin
+1F43F	lurreko urtxintxa	lurreko urtxintxa | urtxintxa
+1F981	lehoi	aurpegia | lehoi | lehoia | leo | zodiakoa
+1F982	eskorpioia	eskorpioi | eskorpioia | scorpius | zodiako
+1F983	indioilarra	indioilar | indioilarra
+1F984	adarbakar	adarbakar | adarbakarra | aurpegia
+1F985	arranoa	arrano | arranoa | hegazti
+1F986	ahatea	ahate | ahatea | hegazti
+1F987	saguzarra	animalia | banpiro | saguzar | saguzarra
+1F988	marrazoa	arrain | marrazo | marrazoa
+1F989	hontza	hontz | hontza | jakitun
+1F98A	azeria	aurpegia | azeria
+1F98B	pinpilinpauxa	intsektu | pinpilinpauxa | polit
+1F98C	oreina	animalia | orein | oreina
+1F98D	gorila	animalia | gorila
+1F98E	sugandila	narrasti | sugandila
+1F98F	errinozeroa	animalia | errinozero | errinozeroa
+1F990	ganba	ganba | itsaski | janari | txiki
+1F991	txibia	janari | molusku | txibia
+1F992	jirafa	jirafa | orbanak
+1F993	zebra	marra | zebra
+1F994	triku	eztendun | triku
+1F995	sauropodo	brankiosaurio | brontosaurio | diplodoko | sauropodo
+1F996	T-Rex	T-Rex | tiranosaurio rex
+1F997	kilker	kilker | matxinsalto
+1F998	kanguru	jauzi egin | jauzia | kangurua | kangurukumea | martsupiala | saltatu | saltoa
+1F999	llama	alpaka | artile | bikuina | guanako | llama
+1F99A	hegazterren	arranditsu | harro | hegazterren | txori
+1F99B	hipopotamo	hipopotamo
+1F99C	loro	hitz egin | loro | pirata | txori
+1F99D	mapatxe	kuxkuxero | maltzur | mapatxe
+1F99E	otarrain	itsaski | itsaski-krema | matxarda | otarrain
+1F99F	eltxo	birus | eltxo | gaixotasun | intsektu | malaria | sukar
+1F9A0	mikrobio	ameba | bakterio | birus | mikrobio
+1F9A1	azkonar	azkonar | azkonar eztijale | gogaitu
+1F9A2	zisne	ahatetxo itsusi | txori | zisne | zisne txiki
+1F9A3	mamut	desagerpena | handia | hortza | iletsua | mamut
+1F9A4	dodoa	desagerpena | dodo | dodoa | handia | Maurizio
+1F9A5	nagia	alferra | motela | nagia
+1F9A6	igaraba	arrantzatu | igaraba | jolastia
+1F9A7	orangutana	orangutana | tximinoa
+1F9A8	mofeta	kiratsa | mofeta
+1F9A9	flamenkoa	flamenkoa | ikusgarria | tropikala
+1F9AA	ostra	ostra | perla | urpekaritza
+1F9AB	kastore	kastore | kastorea | presa
+1F9AC	bisonte	bisonte | bisontea | bufaloa | taldea
+1F9AD	itsas txakur	foka | itsas lehoia | itsas txakurra
+1F9AE	itsu-txakurra	gida | irisgarritasuna | itsu-txakurra | itsua
+1FABC	marmoka	erroak | eztena | garroak | gelatina | itsasokoa | itsastarra | marmoka | mina | ornogabea | tentakuluak | ziztada
+1F330	gaztaina	gaztaina | landare
+1F331	kimua	gazte | kimua | landare
+1F332	hosto iraukorreko zuhaitza	hosto iraukorreko zuhaitza | landare | zuhaitz
+1F333	hosto erorkorreko zuhaitza	erorkor | hosto | hosto erorkorreko zuhaitza | landare | zuhaitz
+1F334	palmondoa	palmondoa | zuhaitza
+1F335	kaktusa	kaktusa | landare
+1F337	tulipa	landare | lore | tulipa
+1F338	gereziondo-lorea	gereziondo-lorea | gereziondoa | loratu | lorea
+1F339	arrosa	arrosa | landare | lore
+1F33A	hibiskoa	hibiskoa | landare | lore
+1F33B	ekilorea	eguzki | ekilorea | landare | lore
+1F33C	lorea	landare | lore | lorea
+1F33D	artaburua	artaburua | arto | buru | landare
+1F33E	arroz-zurtointxoak	arroz | arroz-zurtointxoak | landare | pikor
+1F33F	belarra	belarra | hosto | landare
+1F340	lau hostoko hirusta	hirusta | hosto | landare | lau | lau hostoko hirusta
+1F341	astigarraren hostoa	astigarra | astigarraren hostoa | erori | hostoa
+1F342	eroritako hostoa	erori | eroritako hostoa | hosto | landare
+1F343	haizeaz hegan ari den hostoa	haize | haizeaz hegan ari den hostoa | hosto | korronte
+1F344	barrengorria	barrengorria | landare
+1FAB0	euli	euli | eulia | gaixotasuna | harra | intsektua | usteldu
+1FAB1	zizare	anelidoa | bizioa | harra | parasitoa | zizare | zizarea
+1FAB2	kakalardo	intsektua | kakalardo | kakalardoa | mamorroa | zomorroa
+1FAB3	labezomorro	intsektua | labezomorro | labezomorroa | mokotarroa
+1FAB4	loreontziko landare	etxea | hazi | landarea | loreontziko landare | zaindu
+1FAB5	egurra	egur | egurra | enbor | zur
+1FAB6	luma	arina | hegaldia | luma | lumajea
+1FAB7	lotoa	araztasuna | budismoa | garbitasuna | hinduismoa | lorea | lotoa | purutasuna
+1FAB8	korala	arrezifea | korala | ozeanoa
+1FAB9	habi hutsa	habi hutsa | habia
+1FABA	habia arrautzekin	habia | habia arrautzekin
+1FABB	hiazintoa	anila | dragoi-muturra | hiazintoa | izpilikua | lorea | lupinus | nabar-lorea
+2618	hirusta	hirusta | landare
+1F347	mahatsa	fruitu | landare | mahats | mahatsa
+1F348	meloia	fruitu | landare | meloia
+1F349	sandia	fruitu | landare | sandia
+1F34A	mandarina	fruitu | landare | laranja | mandarina
+1F34B	limoia	fruitu | landare | limoi | limoia
+1F34C	banana	banana | fruitu | landare
+1F34D	anana	anana | fruitu | landare
+1F34E	sagar gorria	fruitu | gorri | landare | sagar | sagar gorria
+1F34F	sagar berdea	berde | fruitu | landare | sagar | sagar berdea
+1F350	udarea	fruitu | landare | udarea
+1F351	muxika	fruitu | landare | muxika
+1F352	gereziak	fruitu | gerezi | gereziak | landare
+1F353	marrubia	baia | fruitu | landare | marrubia
+1F336	txilea	bizi | landare | piper | txile | txilea
+1F354	hanburgesa	hanburgesa
+1F355	pizza	gazta | pizza | zati
+1F356	hezurra haragiarekin	haragi | hezur | hezurra haragiarekin
+1F357	izterra	hanka | hegazti | hezur | izter | izterra | oilasko
+1F358	arroz-mokadua	arroz | arroz-mokadua | mokadu
+1F359	arroz-bola	arroz | arroz-bola | bola | japonia
+1F35A	arroz egosia	arroz | arroz egosia | egosi
+1F35B	arroza curryarekin	arroz | arroza curryarekin | curry
+1F35C	kea darion katilua	fideo | katilu | kea | kea darion katilua | ramen
+1F35D	espagetiak	espagetiak | pasta
+1F35E	ogi	ogi | xerra
+1F35F	patata frijituak	frijitu | patata | patata frijituak
+1F360	batata errea	batata | batata errea | erre
+1F361	dango	dango | gozo | japonia | makila | postre
+1F362	oden	broxeta | itsaski | kebab | makil | oden
+1F363	sushi	sushi
+1F364	gabardina-ganba	frijitu | gabardina-ganba | ganba | langostino | tenpura
+1F365	arrain-pastela zurrunbiloarekin	arrain | arrain-pastela zurrunbiloarekin | gozogintza | pastel | zurrunbilo
+1F366	izozki krematsua	esne | gozo | izotz | izozki | izozki krematsua | postre
+1F367	izotz arraspatua	arraspatu | gozo | izotz | izotz arraspatua | postre
+1F368	izozkia	esne | gozo | izotz | izozkia | postre
+1F369	donuta	donut | donuta | gozo | postre
+1F36A	gaileta	gaileta | gozo | postre
+1F36B	txokolatina	gozo | postre | txokolate | txokolatina | zati
+1F36C	gozokia	gozo | gozokia | postre
+1F36D	piruleta	gozo | gozoki | piruleta | postre
+1F36E	natillak	budin | gozo | natillak | postre
+1F36F	ezti-potoa	ezti | ezti-potoa | gozo | poto
+1F370	opiltxoa	gozo | opiltxo | opiltxoa | postre | tarta | zati
+1F371	bento kutxa	bento | kaxa | kutxa
+1F372	janari bete eltzea	eltze | erregosi | janari bete eltzea
+1F373	janaria prestatu	arrautz | frijitu | janaria prestatu | zartagin
+1F374	sardeska eta labana	janari | labana | prestatu | sardeska | sardeska eta labana
+1F375	giderrik gabeko kikara	edari | giderrik gabeko kikara | kikara | kopa | te
+1F376	sake	botila | edari | kopa | sake | taberna
+1F377	ardo-kopa	ardo | ardo-kopa | edari | kopa | taberna
+1F378	koktel-kopa	edari | koktel | koktel-kopa | kopa | taberna
+1F379	edari tropikala	edan | edari | edari tropikala | taberna | tropikal
+1F37A	garagardo-pitxerra	edari | garagardo | garagardo-pitxer | garagardo-pitxerra | pitxer | taberna
+1F37B	topa egiten ari diren garagardo-pitxerrak	edari | garagardo | pitxer | taberna | topa | topa egiten ari diren garagardo-pitxerrak
+1F37C	biberoia	biberoia | botila | edan | esne | haurtxo
+1F37D	platera, sardeska eta labanarekin	janaria | labana | platera | platera, sardeska eta labanarekin | sardeska | sardeska eta labanarekin
+1F37E	kortxoa kanpoan duen botila	bar | botila | edari | kortxo | kortxoa kanpoan duen botila
+1F37F	krispetak	krispeta | krispetak
+1F950	croissanta	croissant | croissanta | Frantzia | janari | opil
+1F951	ahuakatea	ahuakate | ahuakatea | fruitu | janari
+1F952	pepinoa	barazki | janari | ozpinetako pepino | pepino | pepinoa
+1F953	hirugiharra	haragi | hirugihar | hirugiharra | janari
+1F954	patata	barazki | janari | patata
+1F955	azenarioa	azenario | azenarioa | barazki | janari
+1F956	baguettea	baguette | baguettea | Francia | janari | ogi
+1F957	entsalada berdea	berde | entsalada | entsalada berdea | janari
+1F958	sakonera txikiko zartagina	janari | kazola | paella-ontzi | sakonera txikiko zartagin | sakonera txikiko zartagina | zartagin
+1F959	ogitarteko betea	falafel | gyro | janari | kebab | ogitarteko bete | ogitarteko betea
+1F95A	arrautza	arrautza | janari
+1F95B	edalontzi bat esne	edalontzi | edalontzi bat esne | edan | esne
+1F95C	kakahuetea	barazki | intxaur | janari | kakahuete | kakahuetea
+1F95D	kiwia	fruitu | janari | kiwia
+1F95E	opil txikiak	janari | krepe | opil bero | opil txiki | opil txikiak
+1F95F	dumpling	dumpling | enpanada | gyōza | jiaozi | pierogi | potsticker
+1F960	zortearen gaileta	prophecy | zortearen gaileta
+1F961	eramateko kaxa	eramateko kaxa | janari txinatarra eramateko ontzi
+1F962	zotzak	hashi | zotzak
+1F963	katilua eta koilara	congee | gosari | katilua eta koilara | zereal
+1F964	kopa eta lastotxoa	kopa eta lastotxoa | soda | zuku
+1F965	koko	koko | palmondo | piña colada
+1F966	brokoli	aza basati | brokoli
+1F967	tarta	betegarri | hostore | tarta
+1F968	pretzel	biribilki | pretzel
+1F969	haragi-mozketa	bildots-saiheski | haragi-mozketa | saiheski | txerri-saiheski | xerra
+1F96A	ogitartekoa	ogia | ogitartekoa
+1F96B	janaria latetan	janaria latetan | lata
+1F96C	barazki hostodun	aza | barazki hostodun | bok choy | kale | letxuga
+1F96D	mango	fruta | mango | tropikal
+1F96E	ilargi-pastel	ilargi-pastel | ilargi-pastela | jaialdia | udazkena | yuèbǐng
+1F96F	bagel	bagel | okindegi | schmear
+1F9C0	gazta zatia	gazta | gazta zatia
+1F9C1	cupcake	cupcake | gozo | okindegi
+1F9C2	gatz	gatz | gatzontzi | ongailu
+1F9C3	edari-tetrabrika	edari-tetrabrika | zuku-tetrabrika
+1F9C4	baratxuria	baratxuria | ongailua
+1F9C5	tipula	gozagarria | tipula
+1F9C6	falafela	falafela | haragi-bola | txitxirioa
+1F9C7	gofrea	burdina | gofrea | zalantzatia
+1F9C8	gurina	esnekia | gurina
+1F9C9	matea	edaria | matea
+1F9CA	izotz zatia	hotza | iceberga | izotz zatia | izotza
+1F9CB	te burbuiladun	burbuila | esnea | perla | te burbuiladun | tea
+1FAD0	ahabiak	ahabia | ahabiak | baia | urdina
+1FAD1	piper	barazkia | piper | piperra
+1FAD2	oliba	janaria | oliba
+1FAD3	ogi zapal	arepa | lavash | naan | ogi zapal | pita
+1FAD4	tamal	bilkaria | kiribilkia | mexikarra | tamal
+1FAD5	fonduea	eltzea | fonduea | gazta | ontzia | suitzarra | txokolatea | urtua
+1FAD6	teontzi	edan | edaria | ontzia | tea | teontzi | teontzia
+1FAD7	likidoa isurtzen	edalontzi | edari | erori | hutsik | likidoa isurtzen
+1FAD8	babarrunak	babarrunak | giltzurrun | janari | lekale
+1FAD9	pitxerra	edukiontzi | gorde | hutsik | osagarri | pitxerra | saltsa
+1FADA	jengibrea	errizoma | espezia | garagardoa | jengibrea | osasuna | sustraia | zurtoina
+1FADB	ilar-zorroa	babak | babarrunak | barazkia | edamamea | ilar-zorroa | ilarra | leka | lekalea | zorroa
+2615	edari beroa	bero | edari | edari beroa | kafe | ke | te
+2600	eguzkia	argi | eguraldi | eguzkia | eguzkitsu | espazio | izpi
+2601	hodei	eguraldi | hodei
+2602	aterki	aterki | babes | eguraldi | euri
+2603	elurrezko gizona	eguraldi | elur | elurrezko gizona | hotz
+2614	aterkia euri-tantekin	aterki | aterkia euri-tantekin | babes | eguraldi | euri | tanta
+26A1	tentsio handia	argindar | arrisku | elektriko | tentsio | tentsio handia | tximista
+26C4	elurrezko gizona elurrik gabe	eguraldi | elur | elurrezko gizon | elurrezko gizona elurrik gabe | hotz
+26C5	eguzkia hodei baten atzean	eguraldi | eguzki | eguzkia hodei baten atzean | hodei
+26C8	hodeia tximista eta euriarekin	eguraldi | euri | hodei | hodeia tximista eta euriarekin | trumoi
+2744	elur-maluta	eguraldi | elur | elur-maluta | hotz
+1F300	zikloia	eguraldi | tifoi | tornado | zikloia | zorabio
+1F301	lainotu	eguraldi | laino | lainotu
+1F302	aterki itxia	arropa | aterki | aterki itxia | eguraldi | euri
+1F303	gaua eta izarrak	eguraldi | gau | gaua eta izarrak | izar
+1F304	egunsentia mendien artean	egunsenti | egunsentia mendien artean | eguraldi | eguzki | goiz | mendi
+1F305	egunsentia	egunsentia | eguraldi | eguzki | goiz
+1F306	hiri-paisaia ilunabarrean	arratsaldea | eguraldia | eraikina | hiri-paisaia ilunabarrean | hiria | ilunabarra | paisaia
+1F307	ilunabarra	eguraldi | eguzki | eraikin | ilunabar | ilunabarra
+1F308	ortzadarra	eguraldi | euri | ortzadarra
+1F309	zubia gauez	eguraldi | gau | zubi | zubia gauez
+1F30A	olatua	eguraldi | olatu | olatua | ozeano | ur
+1F30B	sumendia	eguraldi | erupzio | mendi | sumendia
+1F30C	esne-bidea	eguraldi | esne-bidea | espazio
+1F30D	europa eta afrika ikusgai dituen lur-globoa	afrika | europa | europa eta afrika ikusgai dituen lur-globoa | globo | lur | mundu
+1F30E	america ikusgai duen lur-globoa	america ikusgai duen lur-globoa | amerika | globo | lur | mundu
+1F30F	asia eta australia ikusgai dituen lur-globoa	asia | asia eta australia ikusgai dituen lur-globoa | australia | globo | lur | mundu
+1F310	globoa eta meridianoak	globo | globoa eta meridianoak | lur | meridiano | mundu
+1F311	ilargi berria	eguraldi | espazio | ilargi | ilargi berria | ilun
+1F312	ilgora	ilargia | ilgora
+1F313	ilgora-erdia	eguraldi | espazio | ilargi | ilgora-erdia
+1F314	ilgora-bukaera	eguraldi | espazio | handitu | ilargi | ilbehera | ilgora-bukaera
+1F315	ilargi betea	bete | eguraldi | espazio | ilargi | ilargi betea
+1F316	ilbehera-hasiera	ilargia | ilbehera | ilbehera-hasiera | konkorra
+1F317	ilbehera-erdia	eguraldi | espazio | ilargi | ilbehera-erdia
+1F318	ilbehera-bukaera	eguraldi | espazio | ilargi | ilbehera | ilbehera-bukaera | txikitu
+1F319	ilargi-adarra	ilargi-adarra | ilargia | ilgora
+1F31A	ilargi berriaren aurpegia	aurpegi | eguraldi | espazio | ilargi | ilargi berriaren aurpegia
+1F31B	lehen ilargi-laurdena aurpegiarekin	aurpegi | eguraldi | espazio | ilargi | ilargi-laurdena ezkerrera begira | lehen ilargi-laurdena aurpegiarekin
+1F31C	azken ilargi-laurdena aurpegiarekin	aurpegi | azken ilargi-laurdena aurpegiarekin | eguraldi | espazio | ilargi | ilargi-laurdena eskuinera begira
+1F31D	ilargi betea aurpegiarekin	argi | aurpegi | bete | eguraldi | espazio | ilargi | ilargi betea aurpegiarekin
+1F31E	eguzkia aurpegiarekin	argi | aurpegi | eguraldi | eguzki | eguzkia aurpegiarekin | espazio
+1F31F	izar distiratsua	distira | distiratsu | izar | izar distiratsua | txinparta
+1F320	izar-uxoa	espazio | iheskor | izar | izar-uxoa | uxo
+1F321	termometro	eguraldi | termometro
+1F324	eguzkia hodei txiki baten atzean	eguraldi | eguzki | eguzkia hodei txiki baten atzean | hodei
+1F325	eguzkia hodei handi baten atzean	eguraldi | eguzki | eguzkia hodei handi baten atzean | hodei
+1F326	eguzkia hodei baten atzean euriarekin	eguraldi | eguzki | eguzkia hodei baten atzean euriarekin | euri | hodei
+1F327	hodeia euriarekin	eguraldi | euri | hodei | hodeia euriarekin
+1F328	hodeia elurrarekin	eguraldi | elur | hodei | hodeia elurrarekin | hotz
+1F329	hodeia tximistarekin	eguraldi | hodei | hodeia tximistarekin | tximista
+1F32A	tornadoa	eguraldi | hodei | tornado | tornadoa | zurrunbilo
+1F32B	lainoa	eguraldi | hodei | lainoa
+1F32C	haize-aurpegia	aurpegia | eguraldia | haize-aurpegia | haizea | hodeia | putz
+2648	aries	aries | zikiro | zodiako
+2649	taurus	idi | taurus | zezen | zodiako
+264A	gemini	biki | gemini | zodiako
+264B	cancer	cancer | karramarro | zodiako
+264C	leo	leo | leoi | zodiako
+264D	virgo	birjina | ezkongabe | virgo | zodiako
+264E	libra	balantza | justizia | libra | oreka | zodiako
+264F	scorpio	eskorpioi | scorpio | zodiako
+2650	sagittarius	arkulari | sagittarius | zodiako
+2651	capricornus	ahuntz | capricornus | zodiako
+2652	aquarius	aquarius | berri-ekarle | ur | zodiako
+2653	pisces	arrain | pisces | zodiako
+1F550	ordu bata	00 | 1 | 1:00 | bat | erloju | ordu bata | puntuan
+1F551	ordu biak	00 | 2 | 2:00 | bi | erloju | ordu biak | puntuan
+1F552	hirurak	00 | 3 | 3:00 | erloju | hiru | hirurak | puntuan
+1F553	laurak	00 | 4 | 4:00 | erloju | lau | laurak | puntuan
+1F554	bostak	00 | 5 | 5:00 | bost | bostak | erloju | puntuan
+1F555	seiak	00 | 6 | 6:00 | erloju | puntuan | sei | seiak
+1F556	zazpiak	00 | 7 | 7:00 | erloju | puntuan | zazpi | zazpiak
+1F557	zortziak	00 | 8 | 8:00 | erloju | puntuan | zortzi | zortziak
+1F558	bederatziak	00 | 9 | 9:00 | bederatzi | bederatziak | erloju | puntuan
+1F559	hamarrak	00 | 10 | 10:00 | erloju | hamar | hamarrak | puntuan
+1F55A	hamaikak	00 | 11 | 11:00 | erloju | hamaika | hamaikak | puntuan
+1F55B	hamabiak	00 | 12 | 12:00 | erloju | hamabi | hamabiak | puntuan
+1F55C	ordu bat eta erdiak	1 | 1:30 | 30 | bat | erloju | hogeita hamar | ordu bat eta erdiak
+1F55D	ordu bi eta erdiak	2 | 2:30 | 30 | bi | erloju | hogeita hamar | ordu bi eta erdiak
+1F55E	hiru eta erdiak	3 | 3:30 | 30 | erloju | hiru | hiru eta erdiak | hogeita hamar
+1F55F	lau eta erdiak	30 | 4 | 4:30 | erloju | hogeita hamar | lau | lau eta erdiak
+1F560	bost eta erdiak	30 | 5 | 5:30 | bost | bost eta erdiak | erloju | hogeita hamar
+1F561	sei eta erdiak	30 | 6 | 6:30 | erloju | hobeita hamar | sei | sei eta erdiak
+1F562	zazpi eta erdiak	30 | 7 | 7:30 | erloju | hogeita hamar | zazpi | zazpi eta erdiak
+1F563	zortzi eta erdiak	30 | 8 | 8:30 | erloju | hogeita hamar | zortzi | zortzi eta erdiak
+1F564	bederatzi eta erdiak	30 | 9 | 9:30 | bederatzi | bederatzi eta erdiak | erloju | hogeita hamar
+1F565	hamar eta erdiak	10 | 10:30 | 30 | erloju | hamar | hamar eta erdiak | hogeita hamar
+1F566	hamaika eta erdiak	11 | 11:30 | 30 | erloju | hamaika | hamaika eta erdiak | hogeita hamar
+1F567	hamabi eta erdiak	12 | 12:30 | 30 | erloju | hamabi | hamabi eta erdiak | hogeita hamar
+1FA90	planeta eraztunduna	goibel | planeta eraztunduna | Saturno
+2604	kometa	espazioa | kometa
+26F0	mendia	mendi | mendia
+26F1	aterkia hondartzan	aterki | aterkia hondartzan | eguraldi | eguzki | euri
+26F2	iturria	iturri | iturria
+26F4	ferrya	ferrya | itsasontzi
+26F5	belaontzia	belaontzia | ibilgailu | itsaso | itsasontzi | resort
+2708	hegazkina	hegazkina | ibilgailu
+1F488	bizarginaren adierazle birakaria	adierazle | bizar | bizargin | bizarginaren adierazle birakaria | moztu
+1F4BA	eserlekua	aulki | eserlekua
+1F680	suziria	espazio | ibilgailu | suziria
+1F681	helikopteroa	helikopteroa | ibilgailu
+1F682	tren-makina	ibilgailu | lurrun | motor | tren | tren-makina | trenbide
+1F683	bagoia	bagoi | bagoia | elektriko | ibilgailu | tranbia | tren | trenbide
+1F684	abiadura handiko trena	abiadura | abiadura handiko trena | ibilgailu | shinkansen | tren | trenbide
+1F685	bala-trena	abiadura | abiadura handiko trena mutur biribilduarekin | bala-trena | biribildu | ibilgailu | shinkansen | tren | trenbide
+1F686	trena	ibilgailu | trena | trenbide
+1F687	metroa	ibilgailu | metro | metroa
+1F688	tren arina	ibilgailu | tren arina | trenbide
+1F689	geltokia	geltokia | ibilgailu | trenbide
+1F68A	tranbia	ibilgailu | tranbia | trolebus
+1F68B	tranbiaren bagoi	auto | ibilgailu | tranbia | tranbiaren bagoi | trolebus
+1F68C	autobusa	autobusa | ibilgailu
+1F68D	heldu den autobusa	autobusa | heldu | heldu den autobusa
+1F68E	trolebusa	autobus | ibilgailu | tranbia | trolebus | trolebusa
+1F68F	autobus-geltokia	autobus-geltokia | autobusa | geltokia | geralekua
+1F690	minibusa	autobus | ibilgailu | minibusa
+1F691	anbulantzia	anbulantzia | ibilgailu
+1F692	suhiltzaileen kamioia	ibilgailu | kamioi | su | suhiltzaileen kamioia
+1F693	poliziaren autoa	auto | ibilgailu | polizia | poliziaren autoa
+1F694	heldu den poliziaren autoa	autoa | heldu | heldu den poliziaren autoa | polizia
+1F695	taxia	ibilgailu | taxia
+1F696	heldu den taxia	heldu | heldu den taxia | taxia
+1F697	autoa	auto | autoa | ibilgailu
+1F698	heldu den autoa	auto | heldu | heldu den autoa | ibilgailu
+1F699	aisiarako ibilgailua	aisia | aisiarako ibilgailua | ibilgailu
+1F69A	garraiatzeko kamioia	garraiatzeko kamioia | garraio | ibilgailu | kamioi
+1F69B	kamioi artikulatua	ibilgailu | kamioi | kamioi artikulatua | semi
+1F69C	traktorea	ibilgailu | traktorea
+1F69D	monoraila	ibilgailu | monoraila
+1F69E	mendiko trenbidea	auto | ibilgailu | mendi | mendiko trenbidea | trenbide
+1F69F	monorrail esekia	eseki | ibilgailu | monorrail esekia | trenbide
+1F6A0	teleferikoa	bagoi | ibilgailu | kable | mendi | teleferikoa
+1F6A1	mendiko teleferikoa	bagoia | ibilgailua | kablea | mendiko teleferikoa | teleferikoa
+1F6A2	itsasontzia	ibilgailu | itsasontzia
+1F6A3	arraunlaria	arraun | arraunlaria | ibilgailu | ontzi
+1F6A4	abiadura handiko txalupa	abiadura handiko txalupa | ibilgailu | itsasontzi
+1F6A5	semaforo horizontala	argi | seinale | semaforo horizontala | trafiko
+1F6A6	semaforo bertikala	argi | seinale | semaforo bertikala | trafiko
+1F6A7	lanak	hesi | lanak
+1F6A8	poliziaren autoko argia	argia | autoa | birakaria | ibilgailua | polizia | poliziaren autoko argia
+1F6A9	triangelu-itxurako bandera	posta | triangelu-itxurako bandera
+1F6AA	atea	ate | atea
+1F6B0	edateko ura	edan | edateko | edateko ura | ur
+1F6B1	edateko ez den ura	debekatuta | edan | edateko | edateko ez den ura | ez | galarazita | ur
+1F6B3	bizikletarik ez	bizikleta | bizikletarik ez | debekatuta | ez | galarazita
+1F6B7	oinezkorik ez	debekatuta | ez | galarazita | oinezko | oinezkorik ez
+1F6B8	haurrek zeharkatzen duten errepidea	haur | haurrek zeharkatzen duten errepidea | oinezko | trafiko | zeharkatu
+1F6B9	gizonen komuna	bainugela | garbigela | gizona | gizonen komuna | gizonezkoa | gizonezkoen komuna | komun-ontzia | komuna | WC
+1F6BA	emakumeen komuna	bainugela | emakumea | emakumeen komuna | emakumezkoa | emakumezkoen komuna | garbigela | komun-ontzia | komuna | WC
+1F6BB	komuna	bainugela | garbigela | komun-ontzia | komuna | WC
+1F6BC	haurtxoen aldagela	aldatu | haurtxo | haurtxoen aldagela
+1F6BD	bainugela	bainugela | komuna
+1F6BE	komunak	bainugela | garbigela | komun-ontzia | komuna | komunak | WC
+1F6BF	dutxa	dutxa | ur
+1F6C0	pertsona bat bainatzen	bainu | bainuontzi | pertsona bat bainatzen
+1F6C1	bainuontzia	bainu | bainuontzia
+1F6C2	pasaporte-kontrola	kontrol | pasaporte | pasaporte-kontrola
+1F6C3	aduanak	aduanak
+1F6C4	maletak jasotzeko eremua	ekipajea | jaso | maletak jasotzeko eremua
+1F6C5	ahaztutako maletak	ahaztutako maletak | ekipaje | maleta
+1F6D0	otoizlekua	erlijio | otoitz | otoizlekua
+1F6D1	stop ikurra	ikur | oktogonal | stop | stop ikurra
+1F6D2	erosketa-orga	erosketa | erosketa-orga | orga | orgatxoa
+2668	iturri termalak	bero | iturri | iturri termalak | ke | termal
+26BD	futboleko baloia	baloi | futbol | futboleko baloia
+26BE	beisbola	baloi | beisbola
+26F3	bandera zuloan	bandera zuloan | golf | zulo
+1F392	bizkar-zorroa	bizkar-zorro | bizkar-zorroa | eskola | eskolako bizkar-zorroa | poltsa
+1F3A0	karrusela	karrusela | zaldia
+1F3A1	noria	gurpil | jolas | noria | parke
+1F3A2	errusiar mendia	errusiar | errusiar mendia | jolas | mendi | parke
+1F3A3	arrantza egiteko kanabera	arrain | arrantza egiteko kanabera | kanabera
+1F3A4	mikrofonoa	karaoke | mikrofono | mikrofonoa
+1F3A5	bideokamera profesionala	bideokamera profesionala | film | kamera | zinema
+1F3A6	zinema	film | kamera | zinema
+1F3A7	entzungailuak	entzungailu | entzungailuak
+1F3A8	margolari-paleta	arte | margo | margolari-paleta | museo | paleta
+1F3A9	kapelu altua	altu | arropa | kapelu | kapelu altua
+1F3AA	zirkoaren karpa	karpa | zirkoaren karpa | zirkua
+1F3AB	txartela	sarrera | txartela
+1F3AC	klaketa	film | klaketa
+1F3AD	arte eszenikoak	antzoki | areto | arte | arte eszenikoak | eszeniko | maskara
+1F3AE	bideo-jokoa	bideo-jokoa | joko | kontroladore
+1F3AF	itua	dardo | diana | helburu | itu | itua | joko
+1F3B0	txanpon-makina	joko | txanpon | txanpon-makina
+1F3B1	billarra	8 | billar | billarra | bola | joko | zortzi
+1F3B2	dadoa	dadoa | jokoa
+1F3B3	boloak	bola | boloak | joko
+1F3B4	loreak dituzten kartak	japonia | joko | karta | lore | loreak dituzten kartak
+1F3B5	nota musikala	musika | nota | nota musikala
+1F3B6	nota musikalak	musika | nota | nota musikalak | notak
+1F3B7	saxofoia	musika | saxofoi | saxofoia | tresna
+1F3B8	gitarra	gitarra | musika | tresna
+1F3B9	musika-teklatua	musika | musika-teklatua | piano | tresna
+1F3BA	tronpeta	musika | tresna | tronpeta
+1F3BB	biolina	biolina | musika | tresna
+1F3BC	notazio musikala	musika | notazio | notazio musikala
+1F3BD	dortsala	bizkarraldeko | dortsala | elastiko | korrika
+1F3BE	tenisa	erraketa | pilota | tenisa
+1F3BF	eskiak	elur | eski | eskiak
+1F3C0	saskibaloia	baloi | saskibaloia | uztai
+1F3C1	bandera laukiduna	bandera laukiduna | karratu | lasterketa | lauki | laukidun
+1F3C2	snowboardlaria	elur | eski | snowboard | snowboardlaria
+1F3C3	korrika ari den pertsona	korrika | korrika ari den pertsona | maratoi
+1F3C4	surflaria	surf | surflaria
+1F3C5	kirol-domina	domina | kirol-domina
+1F3C6	trofeoa	sari | trofeoa
+1F3C7	zaldi-lasterketa	lasterketa | zaldi | zaldi-lasterketa | zaldizko
+1F3C8	futbol amerikarra	amerikar | baloi | futbol | futbol amerikarra
+1F3C9	errugbia	baloi | errugbi | errugbia | futbol
+1F3CA	igerilaria	igeri | igerilaria
+1F3CB	pisuak altxatzen ari den pertsona	jasotzaile | pisu | pisuak altxatzen ari den pertsona
+1F3CC	golflaria	golf | golflaria | pilota
+1F3CD	motozikleta	lasterketa | motozikleta
+1F3CE	lasterketa-autoa	autoa | lasterketa | lasterketa-autoa
+1F451	koroa	arropa | errege | erregina | koroa
+1F452	emakumeentzako kapelua	arropa | emakume | emakumeentzako kapelua | kapelu
+1F453	betaurrekoak	arropa | begi | betaurreko | betaurrekoak
+1F454	gorbata	arropa | gorbata
+1F455	elastikoa	alkandora | arropa | elastiko | elastikoa
+1F456	galtza bakeroak	arropa | galtza bakeroak | galtzak | prakak
+1F457	soinekoa	arropa | soinekoa
+1F458	kimonoa	arropa | kimonoa
+1F459	bikinia	arropa | bikinia | igeri
+1F45A	emakumeentzako arropa	arropa | emakume | emakumeentzako arropa
+1F45B	diru-zorroa	arropa | diru-zorroa | txanpon
+1F45C	eskuko poltsa	arropa | eskuko poltsa | poltsa
+1F45D	zorroa	arropa | poltsa | zorroa
+1F45E	gizonentzako oinetakoa	arropa | gizon | gizonentzako oinetakoa | oinetako
+1F45F	korrika egiteko oinetakoa	arropa | kirol | korrika egiteko oinetakoa | oinetako
+1F460	oinetako takoidunak	arropa | emakume | oinetako | oinetako takoidunak | takoi
+1F461	emakumeentzako sandalia	arropa | emakume | emakumeentzako sandalia | oinetako | sandalia
+1F462	emakumeentzako bota	arropa | bota | emakume | emakumeentzako bota | oinetako
+1F6B2	ziklomotorra	ibilgailu | ziklomotor | ziklomotorra
+1F6B4	txirrindularia	bizikleta | txirrindularia | txirringa
+1F6B5	mendiko bizikletan dabilen pertsona	bizikleta | mendi | mendiko bizikletan dabilen pertsona | txirrindulari | txirringa
+1F6B6	oinez ari den pertsona	ibili | oinez | oinez ari den pertsona
+1F938	alboko gurpila	alboko gurpila | gimnasia | kirola | pertsona
+1F939	malabarismoa	malabarismoa | oreka | trebetasuna | zeregin ugari
+1F93A	eskrimalaria	eskrima | eskrimalaria | ezpata | kirola | pertsona
+1F93C	borrokalariak	borroka | borrokalari | borrokalariak | kirol | pertsona
+1F93D	waterpoloa	kirol | pertsona | waterpolo | waterpoloa
+1F93E	eskubaloia	baloia | eskubaloia | kirola | pertsona
+1F93F	urpekari-maskara	esnorkela | urpekari-maskara | urpekaritza
+1F9E2	bixera	bixera
+1F9E3	zapi	lepoa | zapi
+1F9E4	eskularruak	esku | eskularruak
+1F9E5	berokia	berokia | jaka
+1F9E6	galtzerdiak	galtzerdiak | galtzeta
+1FA70	balleteko oin-puntak	ballet | balleteko oin-puntak | dantza
+1FA71	bainujantzi osoa	bainujantzi | bainujantzi osoa
+1FA72	galtzontzilloak	azpiko arropa | bainujantzi | galtzontzilloak | osoa
+1FA73	galtzamotzak	azpiko arropa | bainujantzi | galtzak | galtzamotzak
+1FA74	hondartzarako sandalia	hondartzako sandaliak | hondartzarako sandalia | sandalia uhaldunak | sandaliak | zōri
+1FA80	yoyoa	gora eta behera | jostailua | yo-yoa | yoyoa
+1FA81	haize-parpaila	haize-parpaila | hegaldarazi | hegaldatu | kometa
+1FA82	paraxuta	delta hegal | parasail | paraxut | paraxuta
+1FA83	bumeran	aurkakoa | bumerana | errebotea | itzulera | kontrakoa
+1FA84	makiltxo magiko	azti | magia | makiltxo magiko | sorgin
+1FA85	gozo-eltze	festa | gozo-eltze | ospakizun
+1FA86	matrioxka	errusia | matrioxka | panpina
+1FA95	banjoa	banjoa | hari-instrumentu | musika
+1FA97	akordeoi	akordeoi | akordeoia | kontzertina
+1FA98	danbor luze	bongoa | danbor luze | danborra | erritmoa | konga
+265F	peoi	ez nahitaezko | peoi | trikimailu | xake
+2660	pika	joko | karta | palo | pika
+2663	hirustak	hirusta | hirustak | joko | karta | klub | palo
+2665	bihotza	bihotz | bihotza | joko | karta | palo
+2666	diamanteak	diamante | diamanteak | joko | karta | palo
+1F4B3	kreditu-txartela	banku | diru | kreditu | kreditu-txartela | txartel
+1F4B4	yen billetea	billetea | dirua | moneta | yen billetea | yena
+1F4B5	dolar billetea	bankua | billetea | dirua | dolar billetea | dolarra | moneta
+1F4B6	euro billetea	bankua | billetea | dirua | euro billetea | euroa | moneta
+1F4B7	libera billetea	banku | billete | diru | faktura | libera | libera billetea | moneta
+1F4B9	diagrama gorakorra yen-ikurrarekin	diagrama | diagrama gorakorra yen-ikurrarekin | dirua | grafikoa | hazkuntza | yena
+1F4BB	ordenagailu eramangarria	ordenagailu | ordenagailu eramangarria | pc | pertsonal
+1F4BC	maleta	maleta
+1F4BD	minidisc-a	disko | minidisc-a | minidisk | optiko | ordenagailu
+1F4BE	disketea	diskete | disketea | disko | ordenagailu
+1F4BF	disko optikoa	blu-ray | CDa | disko optikoa | diskoa | optikoa | ordenagailua
+1F4C0	DVD	Blue-ray | CDa | diskoa | DVDa | optikoa | ordenagailua
+1F4C1	fitxategi-sailkatzailea	fitxategi | fitxategi-sailkatzailea | sailkatzaile
+1F4C2	fitxategi-sailkatzaile irekia	fitxategi | fitxategi-sailkatzaile irekia | irekita | karpeta
+1F4C3	orri tolestua	dokumentu | orri | orri tolestua | tolestu
+1F4C4	gora begira dagoen orria	dokumentu | gora begira dagoen orria | orri
+1F4C5	egutegi	data | egutegi
+1F4C6	orriak kentzeko egutegia	egutegi | orriak kentzeko egutegia
+1F4C7	txartel-euskarria	euskarri | txartel | txartel-euskarria
+1F4C8	diagrama gorakorra	diagrama | diagrama gorakorra | gora | grafiko | hazkuntza | joera
+1F4C9	diagrama beherakorra	behera | diagrama | diagrama beherakorra | grafiko | joera
+1F4CA	barra-diagrama	barra | barra-diagrama | diagrama | grafiko
+1F4CB	ohar-bloka	ohar-blok | ohar-bloka
+1F4CC	txintxeta	txintxeta
+1F4CD	txintxeta biribila	biribil | txintxeta | txintxeta biribila
+1F4CE	klipa	klip | klipa
+1F4CF	erregela zuzena	erregela | erregela zuzena | zuzen
+1F4D0	kartaboia	erregela | kartaboi | kartaboia | triangelu
+1F4D1	laster-markak	laster | laster-markak | marka | markatu | markatzaile
+1F4D2	kontabilitate-liburua	koaderno | kontabilitate-liburua
+1F4D3	koadernoa	koaderno | koadernoa
+1F4D4	estalki apaingarria duen koadernoa	apaindu | estalki | estalki apaingarria duen koadernoa | koaderno | liburu
+1F4D5	liburu itxia	itxita | liburu itxia | liburua
+1F4D6	liburu irekia	irekita | liburu irekia | liburua
+1F4D7	liburu berdea	berde | liburu | liburu berdea
+1F4D8	liburu urdina	liburu | liburu urdina | urdin
+1F4D9	liburu laranja	laranja | liburu
+1F4DA	liburuak	liburu | liburuak
+1F4DB	izen-bereizgarria	bereizgarri | izen | izen-bereizgarria
+1F4DC	paper-biribilkia	paper | paper-biribilkia
+1F4DD	oharra	bolaluma | oharra
+1F4DE	telefono-hargailua	hargailu | telefono | telefono-hargailua
+1F4DF	bilagailua	bilagailu | bilagailua
+1F4E0	faxa	fax | faxa
+1F4E1	satelite bidezko antena	antena | parabolikoa | satelite bidezko antena
+1F4E2	bozgorailu	altu | bozgorailu | publiko
+1F4E3	megafonoa	animatu | megafonoa
+1F4E4	irteerako erretilua	bidalitako | erretilu | gutun | irteerako | irteerako erretilua | ontzi | posta
+1F4E5	sarrerako erretilua	erretilu | gutun | jaso | ontzi | posta | sarrerako | sarrerako erretilua
+1F4E6	paketea	fardel | ontzi | paketea
+1F4E7	mezu elektronikoa	elektroniko | mezu | mezu elektronikoa | posta
+1F4E8	sarrerako gutun-azala	gutun-azala | gutuna | jaso | mezu elektronikoa | posta elektronikoa | sarrerako gutun-azala
+1F4E9	gutun-azala gezi batekin	bidali | gezia | gutun-azala gezi batekin | mezu elektronikoa | posta elektronikoa
+1F4EA	bandera jaitsita duen postontzi itxia	bandera jaitsita duen postontzi itxia | itxita | jaitsita | ontzi | posta | postontzi
+1F4EB	bandera igota duen postontzi itxia	bandera igota duen postontzi itxia | itxita | ontzi | posta | postontzi
+1F4EC	bandera igota duen postontzi irekia	bandera igota duen postontzi irekia | irekita | ontzi | posta | postontzi
+1F4ED	bandera jaitsita duen postontzi irekia	bandera jaitsita duen postontzi irekia | irekita | jaitsita | ontzi | posta | postontzi
+1F4EE	postontzia	posta | postontzi | postontzia
+1F4EF	adarra	adar | adarra | posta
+1F4F0	egunkaria	albisteak | egunkari | egunkaria
+1F4F1	telefono mugikorra	mugikor | sare | telefono | telefono mugikorra
+1F4F2	telefono mugikorra gezi batekin	dei | gezi | jaso | mugikor | sare | telefono | telefono mugikorra gezi batekin
+1F4F3	bibrazio modua	bibrazio | bibrazio modua | modu | mugikor | sare | telefono
+1F4F4	telefono mugikorra itzalita	itzali | mugikor | sare | telefono | telefono mugikorra itzalita
+1F4F5	telefono mugikorrik ez	debekatuta | ez | mugikorra | sarea | telefono mugikorrik ez | telefonoa
+1F4F6	antenen barrak	antena | antenen barrak | barra | mugikor | sare | seinale | telefono
+1F4F7	kamera	bideo | kamera
+1F4F8	kamera flasharekin	bideo | flash | kamera | kamera flasharekin
+1F4F9	bideokamera	bideoa | bideokamera | kamera
+1F4FA	telebista	bideo | telebista
+1F4FB	irratia	bideo | irratia
+1F4FC	bideo-kasetea	bideo | bideo-kasetea | vhs | zinta
+1F4FD	film-proiektorea	bideo | film | film-proiektorea | proiektore | zinema
+1F4FF	arrosarioa	arrosario | arrosarioa | erlijio | lepoko | otoitz
+1F505	argitasuna ahultzeko botoia	ahul | argitasun | argitasuna ahultzeko botoia | txiki
+1F506	argitasuna igotzeko botoia	argi | argitasun | argitasuna igotzeko botoia
+1F507	bozgorailua itzalita	audio | bolumen | borgorailu | bozgorailua itzalita | desaktibatu | isilarazi | isilik
+1F508	bozgorailua bolumen txikian	bolumen | bozgorailua bolumen txikian
+1F509	bozgorailua piztuta	baxu | bolumen | bozgorailu | bozgorailua piztuta | uhin
+1F50A	bozgorailua ozen	3 | altu | bolumen | bozgorailu | bozgorailua ozen | hiru
+1F50B	bateria	bateria
+1F50C	entxufea	argindar | elektriko | entxufe | entxufea
+1F50D	ezkerrera begira dagoen lupa	beira | bilatu | ezkerrera begira dagoen lupa | lupa | tresna
+1F50E	eskuinera begira dagoen lupa	beira | bilatu | eskuinera begira dagoen lupa | lupa | tresna
+1F50F	giltzarrapoa lumarekin	giltzarrapo | giltzarrapoa lumarekin | luma | pribatutasun | tinta
+1F510	giltzarrapo itxia giltzarekin	giltz | giltzarrapo | giltzarrapo itxia giltzarekin | itxita | seguru
+1F511	giltza	blokeo | giltza | pasahitza
+1F512	giltzarrapoa	giltzarrapoa | itxita
+1F513	giltzarrapo irekia	giltzarrapo | giltzarrapo irekia | ireki | irekita
+1F514	kanpaia	kanpai | kanpaia
+1F515	kanpai marratua	debekatu | galarazi | isilarazi | isilik | isiltasuna | kanpai marratua | kanpaia
+1F516	laster-marka	laster-marka | marka
+1F517	kate-maila	kate-maila
+1F518	kontrol-laukia	botoi | geometriko | kontrol | kontrol-laukia
+1F51E	adingaberik ez	18 | adin-muga | adingabe | adingaberik ez | debekatuta | galarazita | hemezortzi
+1F51F	Tekla: 10	Tekla
+1F526	linterna	argi | elektriko | linterna | tresna
+1F527	giltza ingelesa	giltza ingelesa | tresna
+1F528	mailua	mailua | tresna
+1F529	torloju eta azkoina	azkoin | torloju | torloju eta azkoina | trsna
+1F52A	sukaldeko labana	arma | hocho | janari | labana | sukaldeko labana
+1F52B	pistola	arma | errebolber | pistola | tresna
+1F52C	mikroskopioa	mikroskopioa | tresna
+1F52D	teleskopioa	teleskopioa | tresna
+1F9BA	segurtasun-jaka	jaka | larrialdi | segurtasun | segurtasun-jaka
+1F9BB	audifonoa duen belarria	audifonoa duen belarria | gortasuna | irisgarritasuna
+1F9BC	gurpil-aulki motorduna	gurpil-aulki motorduna | irisgarritasun
+1F9BD	eskuzko gurpil-aulkia	eskuzko gurpil-aulkia | irisgarritasun
+1F9E9	buru-hausgarri	arrasto | buru-hausgarri | lotura | pieza
+1F9EA	saio-hodi	esperimentu | kimika | kimikari | laborategi | saio-hodi | zientzia
+1F9EB	Petriren kaxa	bakterio | biologia | biologo | kultura | laborategi | Petriren kaxa
+1F9EC	DNA	biologo | bizitza | DNA | eboluzio | gene | genetika
+1F9ED	iparrorratz	iparrorratz | magnetiko | nabigazio | orientazio
+1F9EE	abakoa	abakoa | kalkulua
+1F9EF	su-itzalgailu	amatatu | itzali | su | su-itzalgailu
+1F9F0	erreminta-kutxa	erreminta | erreminta-kutxa | kutxa | mekaniko
+1F9F1	adreilu	adreilu | buztin | horma | mortero
+1F9F2	iman	erakarpen | ferra | iman | magnetiko
+1F9F3	ekipaje	bidaia | ekipaje | ekipajea prestatze
+1F9F4	lozio-botila	eguzki-babes | hidratatzaile | lozio | lozio-botila | xanpu
+1F9F5	hari	hari | haril | joste | lokarri | orratz
+1F9F6	harilko	bola | harilko | kakorratz | puntu
+1F9F7	kateorratz	kateorratz | pixoihal | punk
+1F9F8	hartzatxo	hartzatxo | jostailu | peluxe
+1F9F9	erratz	erratz | errazte | garbitze | sorgin
+1F9FA	saski	gobada | nekazaritza | piknik | saski
+1F9FB	paper-bilkari	komuneko paper | paper-bilkari | paperezko zapi
+1F9FC	xaboi	apar | bainu | garbitze | pastilla | xaboi | xaboi-ontzi
+1F9FD	belaki	belaki | garbitze | porotsu | xurgatze
+1F9FE	ordainagiri	froga | kontabilitate | ordainagiri
+1F9FF	nazar	begizko | bihi | nazar | sorginkeria | talisman
+1FA78	odol tanta	hileroko | medikuntza | odol tanta | odol-emate
+1FA79	lotura itsaskorra	lotura | lotura itsaskorra
+1FA7A	estetoskopioa	bihotz | estetoskopioa | mediku | medikuntza
+1FA91	aulki	aulki | eserleku | jarleku
+1FA92	bizar-labana	bizar-labana | bizarra kendu | zorrotz
+1FA93	aizkora	aizkora | aizkorakada | arrakala | zur
+1FA94	diya lanpara	diya | lanpara | olio
+1FA96	kasko militarra	armada | ejerzito | gudari | kasko | kasko militarra | soldadu
+1FA99	txanpon	altxorra | dirua | metala | txanpon | urrea | zilarra
+1FA9A	zerra	arotza | egurra | tresna | zerra
+1FA9B	bihurkin	bihurkin | torlojua | tresna
+1FA9C	esku-eskailera	eskailera | esku-eskailera | igo | maila
+1FA9D	amu	amu | bihurritu | harrapatu | makurra | okerra | saltokia
+1FA9E	ispilua	erreflektorea | isla | islagailua | islatzailea | ispilua
+1FA9F	leihoa	gardena | ikuspegia | irekidura | irekiera | leihoa | markoa
+260E	telefonoa	telefono | telefonoa
+2620	buru-hezurra eta hezur gurutzatuak	aurpegi | buru-hezur | buru-hezurra eta hezur gurutzatuak | gorputz | heriotza | hezur gurutzatuak | hil | munstro
+2622	erradioaktiboa	erradioaktibo | erradioaktiboa | ikur
+2623	arrisku biologikoa	arrisku | arrisku biologikoa | biologiko | ikur
+267F	gurpil-aulkia	erabilerraztasun | gurpil-aulkia
+2692	mailua eta pikotxa	mailu | mailua eta pikotxa | pikotx | tresna
+2693	aingura	aingura | ontzi | tresna
+2694	ezpata gurutzatuak	arma | ezpata gurutzatuak | ezpatak | gurutzatu
+2695	ikur medikoa	Asklepio | ikur medikoa | medizina | sendagile
+2696	balantzak	balantza | balantzak | justizia | libra | oreka | zodiakoa
+2697	alanbikea	alanbikea | kimika | tresna
+2699	engranajea	engranajea | tresna
+269B	atomoaren ikurra	ateista | atomo | atomoaren ikurra
+269C	lis-lore	lis-lore
+26A0	abisua	abisua
+26CF	pikotxa	meatzaritza | pikotxa | tresna
+26D1	kaskoa gurutze zuriarekin	aurpegi | gurutze | kasko | kaskoa gurutze zuriarekin | laguntza
+26D3	kateak	kate | kateak
+26D4	sarrera debekatuta	debekatuta | ez | galarazita | sarrera | trafiko
+2702	guraizeak	guraizeak | tresna
+2709	gutun-azal	elektroniko | gutun-azal | mezu | posta
+270F	arkatza	arkatz | arkatza
+2712	luma beltza	luma | luma beltza | punta
+2714	hautamarka	✓ | hautamarka | markatu | tilet | tileta
+2716	biderkatu	× | biderkatu | biderketa | ikur | utzi | x
+2753	galdera-marka gorria	? | galdera | galdera-marka | galdera-marka gorria | puntuazioa
+2757	harridura-marka gorria	harridura | harridura-marka | harridura-marka gorria | marka | puntuazioa
+27A1	eskuinera gezia	ekialde | eskuinera gezia | gezi | kardinal | norabide
+1F500	abestiak ausaz erreproduzitzeko botoia	abestiak ausaz erreproduzitzeko botoia | gezi | gurutzatu
+1F501	errepikatzeko botoia	errepikatu | errepikatzeko botoia | eskuinera | gezi
+1F502	behin errepikatzeko botoia	behin | behin errepikatzeko botoia | eskuinera | gezi
+1F503	eskuinera gezi bertikalak	berriro | eskuinera | eskuinera gezi bertikalak | gezi | kargatu
+1F504	ezkerrera gezien botoia	ezkerrera | ezkerrera gezien botoia | gezi
+1F519	atzera gezia	atzera | BACK | gezia
+1F51A	amaiera gezia	amaiera | END | gezia
+1F51B	“on” testua duen gezia	"on" testua | gezia | marka
+1F51C	“soon” testua duen gezia	"soon" hitza | gezia | SOON
+1F51D	“top” testua duen gezia	"top" hitza | gezia | onena | TOP
+1F520	alfabeto latindarra maiuskulaz	ABCD | alfabeto latindarra maiuskulaz | latindarra | letrak | maiuskula | sarrera
+1F521	alfabeto latindarra minuskulaz	abcd | alfabeto | alfabeto latindarra minuskulaz | hizki | latindar | letra | minuskula
+1F522	zenbakiak	1234 | idazkera | zenbakiak
+1F523	ikurrak	idazketa | ikurrak
+1F524	hizki latindarrak	abc | alfabetoa | hizki latindarrak | latindarra | letrak | sarrera
+21B5	beherako gezia ezkerrerako izkinarekin	beherako gezia ezkerrerako izkinarekin
+21B0	gorako gezia ezkerrako puntarekin	gorako gezia ezkerrako puntarekin
+21B1	gorako gezia eskuinerako puntarekin	gorako gezia eskuinerako puntarekin
+21B2	beherako gezia ezkerrako puntarekin	beherako gezia ezkerrako puntarekin
+21B3	beherako gezia eskuinerako puntarekin	beherako gezia eskuinerako puntarekin
+21B4	eskuinerako gezia beherako izkinarekin	eskuinerako gezia beherako izkinarekin
+21E4	ezkerrerako gezi-barra	ezkerrerako gezi-barra
+21E5	eskuinerako gezi-barra	eskuinerako gezi-barra
+21B9	ezkerrerako gezi barraduna eskuinerako gezi barradunaren gainean	barra | eskuinera | eskuinerantz | ezkerrera | ezkerrerako gezi barraduna eskuinerako gezi barradunaren gainean | ezkerrerantz | gezia
+21E7	gorako gezi hutsa	gorako gezi hutsa
+21EA	gorako gezi hutsa barratik	gorako gezi hutsa barratik
+21E6	ezkerrerako gezi hutsa	ezkerrerako gezi hutsa
+21E8	eskuinerako gezi hutsa	eskuinerako gezi hutsa
+21E9	beherako gezi hutsa	beherako gezi hutsa
+21DE	gorako gezi bikoitz marratua	gorako gezi bikoitz marratua
+21DF	beherako gezi bikoitz marratua	beherako gezi bikoitz marratua
+21B8	ipar-mendebaldeko gezia barra luzearekin	ipar-mendebaldeko gezia barra luzearekin
+21B6	ezkerrerako goi-zirkuluerdiaren gezia	ezkerrerako goi-zirkuluerdiaren gezia
+21B7	eskuinerako goi-zirkuluerdiaren gezia	eskuinerako goi-zirkuluerdiaren gezia
+21C5	gora eta behera seinalatzen duten geziak	behera | gezia | gora | gora eta behera seinalatzen duten geziak
+21F5	beherako gezia ezkerrean eta gorako gezia	beherako gezia ezkerrean eta gorako gezia
+21A8	gorako eta beherako gezia barratik	gorako eta beherako gezia barratik
+21E0	ezkerrerako puntadun gezia	ezkerrerako puntadun gezia
+21E1	gorako puntadun gezia	gorako puntadun gezia
+21E2	eskuinerako puntadun gezia	eskuinerako puntadun gezia
+21E3	beherako puntadun gezia	beherako puntadun gezia
+21AB	ezkerrerako gezia begiztarekin	ezkerrerako gezia begiztarekin
+21AC	eskuinerako gezia begiztarekin	eskuinerako gezia begiztarekin
+2B05	ezkerrera gezia	ezkerrera gezia | gezi | kardinal | mendebalde | norabide
+2B06	gora gezia	gezi | gora gezia | ipar | kardinal | norabide
+2B07	behera gezia	behera | gezia | hegoa | kardinala | norabidea

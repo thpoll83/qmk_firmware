@@ -1,0 +1,1258 @@
+# emoji search keywords, ms, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	muka tersengih	baik | ceria | gembira | gigi | ketawa | muka | senyum | tersengih
+1F601	muka berseri-seri dengan mata tersenyum	mata | muka | muka berseri-seri dengan mata tersenyum | sengih | senyum
+1F602	muka dengan air mata kegembiraan	air mata | gembira | ketawa | muka | muka dengan air mata kegembiraan
+1F603	muka tersengih dengan mata besar	muka | muka tersengih dengan mata besar | mulut | senyum | terbuka
+1F604	muka tersengih dan mata tersenyum	gembira | haha | ketawa | lebar | mata | senyum | tersengih | tersenyum
+1F605	muka tersengih dan berpeluh	muka | muka tersengih dan berpeluh | peluh | sejuk | senyum | terbuka
+1F606	muka tersengih mata tertutup rapat	ketawa | muka | muka tersengih mata tertutup rapat | mulut | puas hati | senyum | terbuka
+1F607	muka tersenyum dengan halo	cerita dongeng | diberkati | fantasi | gembira | halo | malaikat | muka | muka tersenyum dengan halo | senyum | suci
+1F608	muka senyum bertanduk	cerita dongeng | fantasi | memujuk | muka | muka senyum bertanduk | muka tersenyum nakal | nakal | senyum | tanduk
+1F609	muka kenyit mata	kenyit mata | muka | muka kenyit mata
+1F60A	muka tersenyum dengan mata tersenyum	mata | merah | muka | muka tersenyum dengan mata tersenyum | senyum
+1F60B	muka menikmati makanan lazat	lazat | menikmati | muka | muka menikmati makanan lazat | senyum | um | yum
+1F60C	muka lega	aman | lega | muka | tenang | zen
+1F60D	muka tersenyum dengan mata berbentuk hati	cinta | hati | mata | mata berbentuk hati | muka | percintaan | romantik | senyum | tersenyum
+1F60E	muka tersenyum berkaca mata hitam	bergaya | berkaca mata hitam | hebat | kaca mata hitam | muka tersenyum | santai | suria | tenang | terang
+1F60F	muka tersenyum sinis	mata | menyeringai | muka | muka tersenyum sinis | tersenyum | tersenyum sinis
+1F610	muka neutral	air muka | bersahaja | muka | neutral
+1F611	muka selamba	dengki | muka | selamba | tiada emosi | tiada perasaan
+1F612	muka tidak puas hati	... | bosan | cemburu | marah | muka | pelik | tidak puas hati
+1F613	muka berpeluh sejuk	muka | muka berpeluh sejuk | peluh | sejuk
+1F614	muka bertafakur	bosan | kecewa | mati | muka | muka bertafakur | sedih | tafakur
+1F615	muka keliru	bingung | kalut | keliru | maaf | muka | sedih | tidak pasti
+1F616	muka bingung	bingung | kecewa | marah | muka | sedih
+1F617	muka memberi ciuman	cinta | cium | muka | muka memberi ciuman
+1F618	muka melayangkan ciuman	cium | hati | malam | muka | muka melayangkan ciuman | percintaan | rindu
+1F619	muka memberi ciuman dengan mata tersenyum	cinta | cium | malam | mata | muka | muka memberi ciuman dengan mata tersenyum | senyum
+1F61A	muka memberi ciuman dengan mata tertutup	cium | mata | muka | muka memberi ciuman dengan mata tertutup | tertutup
+1F61B	muka menjelir lidah	cantik | lidah | manis | muka | muka menjelir lidah | parti
+1F61C	muka menjelir lidah dan mengenyit mata	jenaka | kelakar | kenyit | lidah | lucu | mata | muka | muka mengenyit | muka menjelir lidah dan mengenyit mata
+1F61D	muka menjelir lidah dan mata tertutup rapat	dahsyat | lidah | mata | muka | muka menjelir lidah dan mata tertutup rapat | rasa
+1F61E	muka kecewa	kalah | kecewa | muka | sedih
+1F61F	muka risau	bimbang | muka | risau | sedih
+1F620	muka marah	berang | kecewa | marah | muka | tidak suka
+1F621	muka mencebik	berang | marah | merah | merajuk | muka | muka mencebik | naik angin
+1F622	muka menangis	air mata | menangis | muka | sedih
+1F623	muka tekun	fokus | muka | sakit kepala | tekun
+1F624	muka bangga kemenangan	bangga | berang | berasap | geram | hidung | marah | menang | mengamuk | muka | tidak gembira
+1F625	muka kecewa namun lega	huh | kecewa | lega | muka | muka kecewa namun lega
+1F626	muka berkerut dengan mulut ternganga	berkerut | muka | muka berkerut dengan mulut ternganga | mulut | terbuka
+1F627	muka merana	merana | muka | sedih | tertekan
+1F628	muka ketakutan	bimbang | ketakutan | muka | seram | takut
+1F629	muka tak bermaya	letih | muka | muka tak bermaya | penat | sedih | tak bermaya
+1F62A	muka mengantuk	letih | menangis | muka | muka mengantuk | sedih | tidur
+1F62B	muka letih	bersin | merinap | muka | penat | rasa | sedih
+1F62C	muka menyeringai	doktor gigi | gigi | menyeringai | muka | senyum
+1F62D	muka meraung	air mata | menangis | muka | muka meraung | sedih
+1F62E	muka bermulut ternganga	muka | muka bermulut ternganga | mulut | simpati | ternganga
+1F62F	muka terkejut	aman | muka | terkejut | terperanjat
+1F630	muka gementar dan berpeluh sejuk	berpeluh sejuk | bimbang | biru | gementar | muka | mulut | peluh | runsing | tergesa-gesa | ternganga
+1F631	muka menjerit ketakutan	gentar | ketakutan | mengunyah | menjerit | muka | seram | takut
+1F632	muka terperanjat	hairan | muka | muka terperanjat | sama sekali | terkejut
+1F633	muka malu	bingung | memerah | muka | muka malu | tidak yakin
+1F634	muka tidur	bosan | katil | lena | letih | muka | selamat malam | tidur | zzz
+1F635	muka pening	letih | mata | mati | muka | penat | pening | pitam | sakit
+1F636	muka tanpa mulut	muka | muka tanpa mulut | mulut | senyap | serba salah | sulit | tenang
+1F637	muka memakai topeng perubatan	doktor | doktor gigi | muka | muka memakai topeng perubatan | perubatan | sakit | sejuk | topeng
+1F638	kucing tersengih dengan mata tersenyum	haiwan | kucing | mata | menyeringai | muka | sengih | senyum | tersengih
+1F639	kucing dengan air mata kegembiraan	air mata | gembira | haha | haiwan | kegembiraan | ketawa | kucing | muka
+1F63A	kucing tersengih	haiwan | kucing | muka | mulut | senyum | terbuka | tersengih | tersenyum
+1F63B	kucing tersenyum dengan mata berbentuk hati	bentuk hati | cinta | haiwan | hati | kucing | mata | senyum | tersenyum
+1F63C	muka kucing tersenyum sinis	ironis | kucing | muka | muka kucing tersenyum sinis | sinis
+1F63D	kucing melemparkan ciuman	cium | ciuman | haiwan | kucing | mata | melemparkan | muka | tertutup
+1F63E	muka kucing mulut muncung	haiwan | kucing | mencebik | muka
+1F63F	muka kucing menangis	air mata | haiwan | kucing | menangis | muka | sedih
+1F640	muka kucing keletihan	haiwan | kucing | letih | muka | oh! | terkejut
+1F641	muka berkerut sedikit	berkerut | muka | muka berkerut sedikit | sedih
+1F642	muka tersenyum sedikit	gembira | muka | muka tersenyum sedikit | senyum
+1F643	muka terbalik	ketawa | muka | terbalik
+1F644	muka dengan mata juling ke atas	bosan | juling | mata | muka | muka dengan mata juling ke atas | tak suka
+1F648	monyet tutup mata	bukan | jahat | jangan lihat perkara tak baik | kejahatan | larang | lihat | monyet | monyet tutup mata | muka | tegah | terlarang | tidak
+1F649	monyet tutup telinga	dengar | dilarang | gerak isyarat | haiwan | jahat | monyet | muka | rahsia | telinga | tidak
+1F64A	monyet tutup mulut	bukan | jahat | jangan sebut perkara tak baik | larang | monyet | monyet tutup mulut | muka | sebut | tegah | terlarang | tidak | tidak bercakap yang jahat
+1F910	muka mulut berzip	muka | muka mulut berzip | mulut | rahsia | zip
+1F911	muka dengan wang dalam mulut	muka | muka dengan wang dalam mulut | mulut | wang
+1F912	muka dengan termometer	muka | muka dengan termometer | sakit | termometer | tidak sihat
+1F913	muka nerda	cerdik | gek | muka | nerda
+1F914	muka sedang berfikir	apakah | berfikir | muka | muka sedang berfikir
+1F915	muka dengan kepala berbalut	cedera | kecederaan | muka | muka dengan kepala berbalut | pembalut
+1F916	robot	muka | raksasa | robot
+1F917	muka memberi pelukan	memeluk | muka | muka memberi pelukan | peluk
+1F920	muka koboi	koboi | muka | topi
+1F921	muka badut	badut | muka
+1F922	muka mual	loya | mual | muka | muntah | sakit
+1F923	ketawa tergolek-golek	gelak | jenaka | kelakar | ketawa | lantai | lucu | muka | tergolek | tergolek-golek
+1F924	muka meliur	meliur | muka
+1F925	muka bohong	bohong | muka | pinocchio
+1F926	tepuk dahi	bingung | dahi | muka | tak percaya | tepuk
+1F927	muka bersin	bersin | demam | muka | sakit
+1F928	muka dengan kening terangkat	apa | hmm | muka dengan bulu kening dinaikkan | muka dengan kening terangkat | pelik | pewaham | sangsi | tidak percaya | tidak setuju
+1F929	terpesona	bintang | mata | muka | senyum lebar | seringai | terpesona | tersengih | teruja | wow
+1F92A	muka gila-gila	besar | kecil | mata | muka gila | muka gila-gila
+1F92B	muka suruh senyap	bisu | diam | muka suruh senyap | rahsia | senyap | shh | shhh | tutup mulut
+1F92C	muka dengan simbol pada mulut	geram | kutuk | marah | mengutuk | menyumpah | muka dengan simbol pada mulut
+1F92D	muka dengan tangan atas mulut	alamak | menggeletar | muka dengan tangan atas mulut | oops | rahsia
+1F92E	muka muntah	loya | muka muntah | muntah | sakit | tidak sihat
+1F92F	kepala meletup	kepala | letup | meletup | otak | terkejut | tidak percaya
+1F970	muka tersenyum dengan hati	cinta | dilamun cinta | gembira | hati | jatuh cinta | muka | romantik | tersenyum
+1F971	muka menguap	apa-apalah | bosan | letih | mengantuk | menguap | muka menguap | penat | selamat malam | waktu tidur
+1F972	muka tersenyum dengan airmata	air mata | bangga | gembira | lega | menangis | muka | sakit | suka | terharu | tersentuh
+1F973	muka berparti	bergembira | ceria | hari lahir | hon | keraian | muka | muka berparti | parti | perayaan | teruja | topi
+1F974	muka kepeningan	mabuk | mabuk sedikit | mata juling | mata tidak rata | muka | muka kepeningan | mulut beralun | mulut berombak | pening
+1F975	muka sebak	bermuka merah | berpeluh | muka sebak | panas | rasa demam | strok haba
+1F976	muka dingin	beku | biru | dingin | gigi | isikel | luka beku | membeku | muka | pucat | sejuk
+1F978	muka samaran	cermin mata | hidung | kening | menyamar | misai | muka | muka samaran | orang | palsu | pengintip | penyamaran | perisik
+1F97A	muka merayu	belas kasihan | kasihan | mata besar | memujuk | merayu | minta | muka | sayu | sedih | tolong
+1FAE0	muka mencair	cair | cecair | hilang | lenyap | mencair | muka mencair
+1FAE1	muka sedang menabik	askar | cerah | muka sedang menabik | ok | tabik | ya
+1FAE2	muka dengan mata terbuka dan tangan atas mulut	kagum | kekaguman | malu | muka dengan mata terbuka dan tangan atas mulut | takut | terkejut | tidak percaya
+1FAE3	muka dengan mata mengintai	intai | muka dengan mata mengintai | renung | tertawan
+1FAE4	muka dengan mulut serong	kecewa | meh | muka dengan mulut serong | ragu-ragu | tidak pasti
+1FAE5	muka garis putus-putus	halimunan | introvert | lenyap | muka garis putus-putus | murung | sembunyi | tidak berminat
+1FAE7	buih	bawah air | bersih | buih | sabun | sendawa
+1FAE8	muka bergoyang	bergegar | bergetar | cemas | gelisah | gempa bumi | getaran | kejutan | muka | muka bergoyang | panik | terkejut
+1F381	bungkusan hadiah	berbungkus | bungkusan | cenderahati | hadiah | hari jadi | hari lahir | kotak | krismas | perayaan | reben
+1F389	pencetus bunyi parti	parti | pencetus bunyi | pencetus bunyi parti | perayaan | tada | teruja | woohoo
+1F38A	bebola konfeti	bebola konfeti | bola | konfeti | perayaan
+1F47B	hantu	boo | cerita dongeng | fantasi | hantu | makhluk | muka | raksasa
+1F47C	pari-pari bayi	bayi | cerita dongeng | fantasi | malaikat | muka | pari-pari bayi
+1F47D	makhluk asing	angkasa lepas | cerita dongeng | fantasi | makhluk | makhluk asing | muka | raksasa | ruang angkasa | UFO
+1F47E	raksasa angkasa lepas	angkasa lepas | asing | cerita dongeng | fantasi | makhluk | muka | raksasa | raksasa angkasa lepas | ruang angkasa | UFO
+1F47F	muka marah bertanduk	budak nakal | cerita dongeng | fantasi | muka | muka marah bertanduk | setan | syaitan | tanduk
+1F480	tengkorak	badan | cerita dongeng | kematian | mati | muka | raksasa | tengkorak
+1F481	pegawai kaunter pertanyaan	bantu | berani | maklumat | pegawai kaunter pertanyaan | tangan
+1F482	pengawal	helmet | istana | pengawal
+1F489	picagari	alat | doktor | jarum | perubatan | picagari | sakit | suntikan
+1F48A	pil	berubat | dadah | doktor | pil | sakit | ubat | vitamin
+1F4A2	simbol marah	berang | komik | marah | simbol marah
+1F4A4	zzz	komik | letih | malam | mengantuk | penat | selamat malam | tidur | zzz
+1F4A5	pelanggaran	bom | komik | ledakan | meletup | pelanggaran
+1F4A6	titis peluh	komik | peluh | percikan | titis peluh
+1F4A7	titisan air	cuaca | komik | peluh | sejuk | titisan | titisan air
+1F4A8	meluru	angin | awan | berlari | buang angin | komik | meluru
+1F4A9	selonggok najis	komik | muka | najis | raksasa | selonggok najis | selonggok tahi | tahi | tinja
+1F4AB	pening	bintang | komik | pening
+1F4AC	gelembung pertuturan	belon | dialog | gelembung | gelembung pertuturan | komik | ucapan
+1F4AD	gelembung fikir	awan | belon | cipta | fikir | gelembung | idea | kartun | khayal | komik | sedar
+1F4AE	bunga putih	bunga | bunga putih
+1F4A0	berlian berbintik	berlian | berlian berbintik | di dalam | geometri | komik
+1F4A1	mentol lampu	cahaya | elektrik | idea | komik | mentol | mentol lampu
+1F4A3	bom	bahaya | bom | boom | komik | letupan | panas
+1F4AF	seratus mata	100 | penuh | seratus | seratus mata | skor
+1F4B0	karung duit	bayar | beg | bilion | dibayar | dolar | juta | karung duit | kaya | membayar | wang
+1F4B1	pertukaran mata wang	bank | mata wang | pertukaran | pertukaran mata wang | wang
+1F4B2	tanda dolar tebal	bayar | bilion | caj | dolar | duit | juta | mata wang | tebal | tunai | wang
+1F4B8	wang kertas bersayap	bank | dolar | duit | duit kertas | sayap | terbang | wang | wang dengan sayap | wang kertas | wang kertas bersayap
+1F525	api	af | alat | kebakaran | litaf | menyala | nyala api | panas | terbakar
+1F52E	bola kristal	ajaib | alat | bola | cerita dongeng | fantasi | kristal | magik | nasib
+1F440	sepasang mata	badan | intai | lihat | mata | melihat | muka | sepasang mata
+1F441	mata	1 mata | badan | mata | satu mata
+1F442	telinga	badan | bunyi | dengar | mendengar | telinga
+1F443	hidung	badan | bau | berbau | hidung
+1F444	mulut	badan | bercium | bibir | cium | gincu | mulut
+1F445	lidah	badan | jilat | lidah
+1F446	jari telunjuk tunjuk hala ke atas	arah atas | atas | belakang tangan | hala ke atas | jari | tangan | telunjuk | tunjuk
+1F447	jari telunjuk belakang tangan tuding ke bawah	arah bawah | bawah | belakang tangan | hala ke bawah | jari | tangan | telunjuk | tuding ke bawah | tunjuk
+1F448	jari telunjuk tunjuk kiri	arah kiri | belakang tangan | jari | kiri | tangan | telunjuk | tunjuk
+1F449	jari telunjuk tunjuk kanan	arah kanan | belakang tangan | jari | kanan | tangan | telunjuk | tunjuk
+1F44A	penumbuk dari depan	badan | penumbuk | penumbuk dari arah depan | penumbuk dari depan | tangan | tergenggam | tumbuk
+1F44B	lambai tangan	apa khabar | helo | jumpa lagi | lambai | melambai | selamat tinggal | tangan
+1F44C	simbol OK	faham | ok | okey | simbol ok | simbol OK | simbol okey | tangan | tiada masalah
+1F44D	simbol bagus	+1 | atas | badan | bagus | hebat | ibu jari | sedap | simbol bagus | suka | tangan
+1F44E	simbol tidak bagus	-1 | badan | bawah | ibu jari | simbol tidak bagus | tangan | tidak bagus
+1F44F	bertepuk tangan	badan | bagus | berdoa | bertepuk tangan | hebat | tahniah | tangan | tepuk
+1F450	tangan terbuka	peluk | tangan | terbuka
+261D	jari telunjuk menunjuk ke atas	arah atas | atas | hala ke atas | jari | menunjuk | tangan | telunjuk | tunjuk
+270A	angkat penumbuk	angkat penumbuk | badan | penumbuk | penumbuk terangkat | tangan | tergenggam | tumbuk
+270B	angkat tangan	5 | angkat | berhenti | lima | tangan | tinggi
+270C	simbol kemenangan	aman | kejayaan | tangan | v
+270D	tangan menulis	badan | tangan | tangan menulis | tulis
+1F4AA	biseps dilenturtegang	badan | bisep | biseps | biseps dilenturtegang | komik | lentur | lentur tegang | otot
+1F590	tangan dengan jari terkepak	badan | jari | renggang | tangan | tangan dengan jari terkepak
+1F64C	orang mengangkat tangan	angkat | badan | hore | isyarat | menyerah | orang mengangkat tangan | perayaan | tangan
+1F64F	menyusun jari	doa | isyarat | menyusun jari | susun | tangan | tanya | terima kasih | tolong | tunduk
+1F90C	jari mencubit	gerak isyarat tangan | hah! | jari | mencubit | sabar | sarkastik | sekejap | sila diam | soal siasat | tunggu sebentar | wah!
+1F90F	tangan mencubit	jari mencubit | sedikit | tangan mencubit
+1F918	simbol tanduk	badan | jari | rock | simbol tanduk | tanduk | tangan
+1F919	telefon saya	tangan | telefon | telefon saya
+1F91A	angkat belakang tapak tangan	angkat | belakang tapak tangan | tangan
+1F91B	penumbuk ke kiri	ke kiri | penumbuk | penumbuk ke kiri
+1F91C	penumbuk ke kanan	ke kanan | penumbuk | penumbuk ke kanan
+1F91D	berjabat tangan	berjabat tangan | perjumpaan | persetujuan | tangan
+1F91E	silang jari	jari | nasib | silang | tangan
+1F91F	gerak isyarat cinta kamu	cinta | gerak isyarat | ILY | jari | kamu | sayang kamu | tangan | tiga
+1F932	tapak tangan rapat	berdoa | doa | tapak tangan rapat | telapak tangan
+1F9B4	tulang	anjing | rangka | selangka | tulang
+1F9B5	kaki	anggota badan | bahagian kaki | betis | kaki | kaki bengkok | lutut | peha | tapak kaki | tendang | tungkai
+1F9B6	hujung kaki	berjalan kaki | berkaki ayam | buku lali | hentak | hujung kaki | kaki | tendang
+1F9B7	gigi	doktor gigi | geraham | gigi | putih | putih mutiara
+1F9E0	otak	bijak | cerdik | otak | pandai | pintar
+1F9BE	lengan mekanikal	besi | kebolehcapaian | kuat | lengan | mekanikal | mesin | prostetik | robot | tangan | tangan palsu
+1FAC0	organ jantung	anatomi | degupan | hati yang sebenar | jantung | kardiolagi | merah | organ | rentak
+1FAC1	paru-paru	bernafas | menghembus | menyedut | organ | paru-paru | pernafasan
+1FAE6	menggigit bibir	bimbang | gelisah | menggigit bibir | menggoda | risau | takut | tidak selesa
+1FAF0	tangan dengan jari telunjuk dan ibu jari bersilang	bentuk hati | mahal | petik | suka | tangan dengan jari telunjuk dan ibu jari bersilang | wang
+1FAF1	tangan kanan	arah kanan | hulur | jabat tangan | kanan | pegang | salam | tangan
+1FAF2	tangan kiri	arah kiri | hulur | jabat tangan | kiri | pegang | salam | tangan
+1FAF3	tapak tangan ke bawah	abaikan | jatuhkan | syuh | tapak tangan ke bawah
+1FAF4	tapak tangan ke atas	ajak | mari | mengajak | tangkap | tapak tangan ke atas | tawarkan
+1FAF5	jari telunjuk menunjuk ke arah pemandang	anda | jari telunjuk menunjuk ke arah pemandang | tunjuk
+1FAF6	tangan berbentuk hati	cinta | tangan berbentuk hati
+1FAF7	tangan menolak ke arah kiri	arah kiri | berhenti | enggan | menolak | sabar | tangan menolak ke arah kiri | tepuk ria | tunggu
+1FAF8	tangan menolak ke arah kanan	berhenti | enggan | ke arah kanan | menolak | tangan menolak ke arah kanan | tepuk ria | tunggu
+2764	hati merah	cinta | emosi | hati | merah
+1F380	reben	perayaan | reben
+1F382	kek hari jadi	hari jadi | kek | kek hari jadi | keraian | manis | manisan | pastri | pemanis mulut | pencuci mulut | perayaan | sambutan
+1F383	tanglung labu	halloween | jack | perayaan | tanglung | tanglung labu
+1F384	pokok krismas	krismas | perayaan | pokok
+1F386	bunga api	bunga api | hiburan | mercun | perayaan
+1F387	mercun	berkilau | bunga api | mercun | perayaan
+1F388	belon	belon | hari jadi | perayaan
+1F9E7	angpau	angpau | hadiah | nasib baik | paket merah | sampul duit | sampul merah | tuah | wang
+1F9E8	petasan	api | bahan letupan | bahaya | bunga api | cahaya | dinamit | letupan | mercun | percikan api | petasan
+1F38B	pokok tanabata	jepun | perayaan | pokok | pokok tanabata | sepanduk
+1F38C	bendera bersilang	bendera bersilang | bersilang | Jepun | perayaan | silang
+1F38D	hiasan pain	bambu | buluh | hiasan pain | Jepun | pain | perayaan | tumbuhan
+1F38E	anak patung Jepun	anak patung | anak patung Jepun | jepun | perayaan | pesta
+1F38F	panji-panji kap	kap | panji-panji | perayaan
+1F390	peranggu loceng angin	angin | loceng | peranggu | perayaan
+1F391	upacara bulan	bulan | perayaan | upacara
+1F393	topi konvokesyen	kep | pakaian | perayaan | rai | tamat pengajian | topi | topi konvokesyen
+1F484	gincu	alat solek | gincu | kosmetik | solek
+1F485	pengilat kuku	bosan | kosmetik | kuku | pengilat | penjagaan | rias tangan
+1F48B	tanda ciuman	bibir | cium | ciuman | hati | percintaan | tanda
+1F48C	surat cinta	cinta | hati | mel | percintaan | surat
+1F48D	cincin	berkilau | berlian | cincin | kahwin | percintaan | perkahwinan
+1F48E	batu permata	batu permata | berlian | intan | percintaan | permata | pertunangan | tunang | wang
+1F48F	cium	cinta | cium | kekasih | pasangan | percintaan | sayang | ulang tahun | Valentine
+1F490	sejambak bunga	bunga | cinta | hari jadi | kasih | percintaan | sejambak bunga | tumbuhan | ulang tahun
+1F491	pasangan dengan simbol hati	bersama | cinta | cium | hati | kekasih | pasangan | pasangan dengan simbol hati | percintaan | ulang tahun | Valentine
+1F492	perkahwinan	gereja | percintaan | perkahwinan
+1F493	jantung berdegup	berdegup | degupan jantung | denyut | hati | jantung berdegup
+1F494	patah hati	hati | kecewa | patah | pecah | pilu | retak | sedih
+1F495	dua hati	cinta | cium | dua hati | emosi | hati | ulang tahun
+1F496	hati berkilauan	143 | baik | berkilauan | ciuman | emosi | hati | ILY | malam | pagi | teruja | XOXO
+1F497	hati membesar	berdebar | cium | denyutan jantung | gementar | hati | membesar | muah | teruja
+1F498	hati ditembusi anak panah	anak panah | dewa asmara | hati | hati ditembusi anak panah | percintaan
+1F499	hati biru	143 | biru | cinta | emosi | ILY | jantung | percintaan
+1F49A	hati hijau	143 | cinta | emosi | hijau | ILY | jantung | romantik
+1F49B	hati kuning	cinta | emosi | hati | kuning
+1F49C	hati ungu	cinta | emosi | hati | ungu
+1F49D	hati dengan reben	emosi | hati | hati dengan reben | reben | ulang tahun | valentine
+1F49E	hati berputar	143 | berputar | comel | emosi | hati | ulang tahun
+1F49F	hiasan hati	143 | emosi | hati | hiasan | pangkuan | putih | ungu
+1F90D	hati putih	143 | hati | putih
+1F90E	hati perang	hati | perang | sayang
+1F9E1	hati jingga	143 | hati | jingga
+1FA75	hati biru muda	biru muda | hati | hati biru muda | sian | teal
+1FA76	hati kelabu	hati | hati pucat | kelabu | perak | slat
+1FA77	hati merah jambu	143 | cinta | comel | emosi | hati | ILY | istimewa | manis | menawan | merah jambu | suka
+2763	tanda seru hati	tanda | tanda baca | tanda seru | tanda seru hati
+2733	asterisk berjejari lapan	* | asterisk | asterisk berjejari lapan
+2734	bintang berpenjuru lapan	* | bintang | bintang berpenjuru lapan
+2747	kilauan	* | kilauan
+1F3E0	rumah	bangunan | kediaman | ladang | negara | rumah | subbandar
+1F3E1	rumah dengan taman	bangunan | kediaman | rumah | rumah dengan taman | taman | tempat kediaman
+1F3E2	bangunan pejabat	bandar | bangunan | kerja | pejabat
+1F3E3	Pejabat pos Jepun	bangunan | jepun | pejabat pos jepun | Pejabat pos Jepun | pos
+1F3E4	pejabat pos	bangunan | eropah | pejabat pos | pos
+1F3E5	hospital	bangunan | doktor | hospital | perubatan
+1F3E6	bank	bangunan | bank
+1F3E7	tanda ATM	atm | automatik | bank | juruwang | tanda ATM
+1F3E8	hotel	bangunan | hotel
+1F3E9	hotel cinta	bangunan | cinta | hotel | hotel kasih
+1F3EA	kedai serbaneka	24 | 24 jam | bangunan | gedung | kedai | kedai runcit | serbaneka | stor
+1F3EB	sekolah	bangunan | sekolah
+1F3EC	gedung serbaneka	bangunan | gedung | serbaneka
+1F3ED	kilang	bangunan | kilang
+1F3EE	tanglung kertas merah	bar | cahaya | jepun | merah | restoran | tanglung | tanglung kertas merah
+1F3EF	istana Jepun	bangunan | istana | jepun
+1F3F0	istana	bangunan | eropah | istana
+1F463	jejak kaki	badan | cetak | jalan | jejak | jejak kaki | pakaian
+1F464	bayang dada	bayang | dada
+1F465	bayang beberapa dada	bayang | bayang beberapa dada | dada
+1F466	kanak-kanak lelaki	anak | cucu | kanak-kanak | lelaki | muda
+1F467	budak perempuan	anak | cucu | kanak-kanak | kecil | muda | perempuan | virgo | zodiak
+1F468	lelaki	dewasa | kawan | lelaki | teman
+1F469	perempuan	dewasa | perempuan | wanita
+1F46A	keluarga	bapa | ibu | kanak-kanak | keluarga
+1F46B	lelaki dan wanita berpegangan tangan	berpegangan tangan | lelaki | lelaki dan wanita berpegangan tangan | pasangan | pegang | tangan | wanita
+1F46C	dua lelaki berpegangan tangan	adik-beradik lelaki | berpegangan tangan | kawan | kekasih | kembar | lelaki | pasangan | pegang | rakan | tangan
+1F46D	dua wanita berpegangan tangan	berpegangan tangan | dua wanita berpegangan tangan | pasangan | tangan | wanita
+1F46E	pegawai polis	mata-mata | pakaian seragam | pegawai | penguatkuasa | polis | tangkap | undang-undang
+1F46F	orang dengan telinga arnab	berparti | kembar | orang | penari | rakan karib | serupa | telinga arnab
+1F470	orang memakai vel	orang | orang memakai vel | pengantin | perkahwinan | vel
+1F471	orang: rambut perang	berambut perang | orang | perang | rambut
+1F472	lelaki bertopi cina	gua pi mao | lelaki | lelaki bertopi cina | topi
+1F473	orang berserban	lelaki | orang berserban | serban
+1F474	lelaki tua	bijak | botak | datuk | lama | lelaki | manusia | tua
+1F475	wanita tua	bijak | nenek | rambut perang | tua | wanita
+1F476	bayi	bayi | hamil | mengandung | muda
+1F477	pekerja pembinaan	buruh | helmet | pekerja | pekerjaan | pembinaan | topi | topi kuning
+1F478	puteri	cerita dongeng | fantasi | puteri
+1F479	gergasi	cerita dongeng | fantasi | gergasi | jepun | makhluk | muka | raksasa
+1F47A	goblin	cerita dongeng | fantasi | goblin | jepun | makhluk | muka | raksasa
+1F483	perempuan menari	menari | penari | perempuan | pesta | salsa | wanita
+1F486	urut muka	berehat | kepala | muka | orang sedang diurut | pening | rawatan | sakit kepala | salun | spa | terapi | urut
+1F487	gunting rambut	gunting | gunting rambut | kecantikan | potong | salun | tukang gunting
+1F645	gerak isyarat tidak	bukan | gerak isyarat tidak | isyarat | larang | tangan | tegah | tidak | tidak boleh
+1F646	gerak isyarat okey	gerak isyarat okey | isyarat | okey | senaman | tangan
+1F647	orang menunduk	isyarat | maaf | meditasi | minta maaf | mohon maaf | orang menunduk | orang sedang tunduk | takut | tunduk
+1F64B	orang gembira mengangkat tangan	angkat | gembira | isyarat | orang gembira mengangkat tangan | saya tahu | tangan
+1F64D	orang berkerut dahi	berkerut dahi | bermasam muka | jengkel | kecewa | orang | sakit hati | sedih | tidak puas hati
+1F64E	orang mencebik	kecewa | marah | mencebik | merajuk | merengek | mulut muncung | orang | tidak puas hati
+1F930	wanita hamil	hamil | mengandung | wanita
+1F931	menyusu badan	bayi | menyusu | menyusu badan | payu dara | payudara | penyusuan susu ibu
+1F933	swafoto	kamera | selfie | swafoto | telefon
+1F934	putera	cerita dongeng | diraja | fantasi | mahkota | mulia | putera | raja
+1F935	orang bertuksedo	bertuksedo | formal | orang | pengantin | perkahwinan | rasmi | tuksedo
+1F936	Pn. Claus	ibu | krismas | natal | perayaan | Pn. Claus | puan | puan claus | santa
+1F937	angkat bahu	angkat bahu | bingung | sangsi | tak peduli | tidak tahu
+1F385	santa klaus	bapa | cerita dongeng | fantasi | krismas | perayaan | santa | santa klaus
+1F9B8	adiwira	adiwira | baik | sangat berkuasa | wira | wirawati
+1F9B9	ketua penjahat	jahat | ketua penjahat | penjahat | penjenayah | sangat berkuasa
+1F9BF	kaki mekanikal	besi | kaki | kaki palsu | kebolehcapaian | kuat | mekanikal | mesin | prostetik | robot
+1F9D0	muka dengan cermin mata satu kanta	berkelas | cermin mata satu kanta | formal | kaya | kolot | mewah
+1F9D1	dewasa	dewasa | gender-neutral
+1F9D2	kanak-kanak	anak | cucu | kanak-kanak | kecil | muda
+1F9D3	dewasa lebih tua	datuk | dewasa | dewasa lebih tua | nenek | orang | tua
+1F9D4	orang: janggut	berjanggut | jambang | janggut | misai | orang
+1F9D5	wanita bertudung	hijab | mantila | tichel | tudung | wanita bertudung
+1F9D6	orang dalam bilik berwap	bilik berwap | mandi wap | orang | santai | sauna | spa | tenang | wap
+1F9D7	orang mendaki	bukit | gunung | orang memanjat | orang mendaki | panjat | pemanjat | pendaki
+1F9D8	orang dalam kedudukan teratai	berehat | duduk bersilang kaki | kedudukan teratai | meditasi | orang dalam kedudukan teratai | tafakur | yoga
+1F9D9	ahli silap mata	ahli sihir | ahli silap mata | ajaib | dukun sihir | jampi | magik | mantera
+1F9DA	pari-pari	cerita dongeng | fantasi | kecil | mistik | orang | pari-pari | peri | sayap
+1F9DB	puntianak	darah | dracula | ghaib | gigi | hantu | mayat hidup | puntianak | taring
+1F9DC	manusia duyung	cerita dongeng | duyung | ikan duyung | lautan | makhluk | manusia duyung | manusia ikan | siren
+1F9DD	orang halus	ajaib | bunian | cerita dongeng | fantasi | magis | mitos | orang halus | sihir
+1F9DE	jin	jin
+1F9DF	zombi	bangkai bernyawa | halloween | mati | mayat hidup | menakutkan | takut | zombi | zombie
+1FAC2	orang berpelukan	belaian | helo | keselesaan | orang berpelukan | peluk | persahabatan | sahabat | sayang | selamat tinggal | silatulrahim | terima kasih
+1FAC3	lelaki bunting	berangin | hamil | lelaki bunting | penuh | perut
+1FAC4	orang hamil	buncit | hamil | kembung | kenyang | orang hamil | perut
+B9	nombor satu superskrip	nombor satu superskrip | satu | superskrip
+B2	nombor dua superskrip	dua | kuasa dua | nombor dua superskrip | superskrip
+B3	nombor tiga superskrip	kuasa tiga | nombor tiga superskrip | superskrip | tiga
+207B	tolak superskrip	superskrip | tolak
+B0	darjah	bukti | darjah | jam
+B1	campur - tolak	campur - tolak
+D7	simbol pendaraban	darab | kali | pendaraban | simbol pendaraban
+F7	simbol pembahagian	bahagi | obelus | pembahagian | simbol pembahagian
+B5	simbol mikro	simbol mikro | ukuran
+A9	hak cipta	c | hak cipta
+AE	berdaftar	berdaftar | r
+2122	tanda dagangan	tanda | tanda dagangan | tm
+A7	bahagian	bahagian | keratan | perenggan | seksyen
+B6	tanda perenggan	alinea | parap | perenggan | pilcrow | tanda perenggan
+B7	titik tengah	noktah tengah | tengah | titik
+2022	bulet	bulet | titik
+2013	sengkang en	en | sengkang
+2026	elipsis	elipsis | tanda tinggal | titik
+AB	sudut berganda kiri	chevron | karet | kiri | kurungan | petikan | sudut berganda kiri
+BB	sudut berganda kanan	chevron | kanan | karet | kurungan | petikan | sudut | sudut berganda kanan
+2030	per mille	per mille
+20AC	euro	EUR | euro | mata wang
+A3	paun	EGP | GBP | mata wang | paun
+A5	yen	CNY | JPY | mata wang | yen | yuan
+A2	sen	sen
+20B9	rupee india	mata wang | rupee | rupee india
+20BD	rouble	mata wang | rouble
+20A9	won	KPW | KRW | won
+20BA	Lira Turki	
+20BF	bitcoin	bitcoin | BTC
+20AA	Syekel Baharu Israel	
+20AB	Dong Vietnam	
+20B1	peso	peso
+20BC	Manat Azerbaijan	
+20B4	Hryvnia Ukraine	
+20A6	Naira Nigeria	
+20A1	Colon Costa Rica	
+20B2	Guarani Paraguay	
+20B5	Cedi Ghana	
+20B8	Tenge Kazakhstan	
+20BE	Lari Georgia	
+20AE	Tugrik Mongolia	
+20AD	Kip Laos	
+20A8	rupee	mata wang | rupee
+24	dolar	dolar | peso | USD | wang
+58F	Dram Armenia	
+9F3	Taka Bangladesh	
+E3F	Baht Thai	
+20A3	franc perancis	franc | franc perancis | mata wang
+20A4	lira	lira | mata wang
+20B0	peni jerman	mata wang | peni jerman | pfennig
+20B3	austral	ARA | austral | mata wang
+20A2	cruzeiro	BRB | cruzeiro | mata wang
+20A5	juta	juta
+20B6	livre tournois	livre tournois | mata wang
+20B7	spesmilo	mata wang | spesmilo
+A4	Mata Wang Tidak Diketahui	
+201E	tanda petikan bawah	petikan | tanda petik | tanda petikan | tanda petikan bawah
+201C	tanda petik kiri	petik | petikan | tanda petik | tanda petik kiri | tanda petikan
+201D	tanda petikan	petik | petikan | tanda petikan
+2018	koma atas kiri	koma atas | koma atas kiri | petik | tanda petik | tanda petik tunggal
+2019	koma atas kanan	koma atas | koma atas kanan | petik | tanda petik | tanda petik tunggal
+A1	tanda seru terbalik	bang | seruan | tanda seru | tanda seru terbalik | terbalik | titik seru
+BF	tanda soal terbalik	soalan | tanda soal | tanda soal terbalik | terbalik
+2020	tanda dagger	dagger | obelisk | obelus | tanda dagger
+2021	simbol dagger berganda	berganda | dagger | obelisk | obelus | simbol dagger berganda
+2044	garis condong pecahan	garis condong pecahan | garis miring | virgule
+2032	prima	prima
+2033	prima ganda dua	prima | prima ganda dua
+201A	koma bawah kanan	koma bawah | koma bawah kanan | petik | tanda petik bawah
+AC	penafian	nafi | penafian
+2117	hak cipta rakaman bunyi	bunyi | hak cipta | hak cipta rakaman bunyi | rakaman
+2212	tanda tolak	kurang | tanda tolak | tolak
+2213	tolak atau campur	tolak atau campur | tolak campur
+2248	hampir sama dengan	anggaran | hampir sama dengan | lebih kurang
+2260	tidak sama dengan	ketaksamaan | tak samaan | tidak sama dengan
+2261	bersamaan dengan	bersamaan | bersamaan dengan | sama | tiga kali ganda
+2264	kurang daripada atau sama dengan	ketaksamaan | kurang daripada | kurang daripada atau sama dengan | sama | sama dengan
+2265	lebih besar daripada atau sama dengan	ketaksamaan | lebih besar daripada | lebih besar daripada atau sama dengan | sama | sama dengan
+226A	jauh kurang daripada	jauh kurang daripada | ketaksamaan | matematik
+226B	jauh lebih besar daripada	jauh lebih besar daripada | ketaksamaan | matematik
+221E	simbol infiniti	infiniti | simbol infiniti
+221A	punca kuasa dua	punca | punca kuasa dua | radikal | radiks | sud
+221D	berkadaran	berkadar | berkadaran
+2211	hasil tambah n-ner	hasil tambah | hasil tambah n-ner | matematik
+220F	hasil darab n-ner	hasil | hasil darab n-ner | logik
+222B	kamiran	kalkulus | kamiran
+2202	pembezaan separa	pembezaan | pembezaan separa
+2206	kenaikan	kenaikan | segi tiga
+2207	nabla	nabla | segi tiga
+2200	untuk semua	sebarang | semua | universal | untuk semua
+2203	wujud	wujud
+2205	set kosong	matematik | operator set | set kosong
+2208	unsur	keahlian | mengandungi | set | unsur | unsur kepada
+2209	bukan unsur	bukan unsur | unsur
+2229	persilangan	persilangan | set
+222A	kesatuan	kesatuan | kumpulan | set
+2282	subset	set | subset | subset kepada
+2283	superset	matematik | operator set | superset
+2286	subset atau sama dengan	subset atau sama dengan
+2287	superset atau sama dengan	kesamaan | matematik | superset atau sama dengan
+2227	logik dan	baji | logik dan
+2295	tanda campur berbulat	tambah | tanda campur berbulat
+2297	tanda darab berbulat	hasil | tanda darab berbulat | tensor
+22A5	paku tekan ke atas	paku tekan ke atas
+2220	sudut	sudut | tirus
+2234	jadi	jadi | logik
+2235	sebab	logik | sebab
+2218	operator gelanggang	komposisi | operator | operator gelanggang
+2219	operator bulet	operator | operator bulet
+22C5	operator titik	operator | operator titik
+2215	garis condong pembahagian	garis condong | garis condong pembahagian | garis miring | virgule
+2190	anak panah menunjuk ke kiri	anak panah | anak panah menunjuk ke kiri | kiri
+2191	anak panah menunjuk ke atas	anak panah | anak panah menunjuk ke atas | atas
+2192	anak panah menunjuk ke kanan	anak panah | anak panah menunjuk ke kanan | kanan
+2193	anak panah menunjuk ke bawah	anak panah | anak panah menunjuk ke bawah | bawah
+2196	anak panah ke penjuru kiri atas	anak panah | anak panah ke atas ke kiri | anak panah ke penjuru kiri atas | antara kardinal | arah | barat laut
+2197	anak panah penjuru atas kanan	anak panah | anak panah ke atas ke kanan | anak panah penjuru atas kanan | antara kardinal | arah | timur laut
+2198	anak panah penjuru bawah kanan	anak panah | anak panah ke bawah ke kanan | anak panah penjuru bawah kanan | antara kardinal | arah | tenggara
+2199	anak panah ke penjuru kiri bawah	anak panah | anak panah ke bawah ke kiri | anak panah ke penjuru kiri bawah | antara kardinal | arah | barat daya
+2194	anak panah ke kiri ke kanan	anak panah | anak panah ke kiri ke kanan
+2195	anak panah ke atas ke bawah	anak panah | anak panah ke atas ke bawah
+21D0	anak panah berganda ke kiri	anak panah berganda ke kiri
+21D1	anak panah berganda ke atas	anak panah berganda ke atas
+21D2	anak panah berganda ke kanan	anak panah berganda ke kanan
+21D3	anak panah berganda ke bawah	anak panah berganda ke bawah
+21D6	anak panah berganda barat laut	anak panah berganda barat laut
+21D7	anak panah berganda timur laut	anak panah berganda timur laut
+21D8	anak panah berganda tenggara	anak panah berganda tenggara
+21D9	anak panah berganda barat daya	anak panah berganda barat daya
+21D4	anak panah berganda kiri kanan	anak panah berganda kiri kanan
+21A4	anak panah ke kiri dari palang	anak panah ke kiri dari palang
+21A6	anak panah ke kanan dari palang	anak panah ke kanan dari palang
+21A5	anak panah ke atas dari palang	anak panah ke atas dari palang
+21A7	anak panah ke bawah dari palang	anak panah ke bawah dari palang
+21A9	anak panah ke kanan melengkung ke kiri	anak panah | anak panah ke kanan melengkung ke kiri
+21AA	anak panah ke kiri melengkung ke kanan	anak panah | anak panah ke kiri melengkung ke kanan
+219E	anak panah dwikepala ke kiri	anak panah dwikepala ke kiri
+21A0	anak panah dwikepala ke kanan	anak panah dwikepala ke kanan
+219F	anak panah dwikepala ke atas	anak panah dwikepala ke atas
+21A1	anak panah dwikepala ke bawah	anak panah dwikepala ke bawah
+21A2	anak panah berekor ke kiri	anak panah berekor ke kiri
+21A3	anak panah berekor ke kanan	anak panah berekor ke kanan
+219A	garis miring anak panah ke kiri	garis miring anak panah ke kiri
+219B	garis miring anak panah ke kanan	garis miring anak panah ke kanan
+21AE	garis miring anak panah kiri kanan	garis miring anak panah kiri kanan
+21CD	garis miring anak panah berganda ke kiri	garis miring anak panah berganda ke kiri
+21CF	garis miring anak panah berganda ke kanan	garis miring anak panah berganda ke kanan
+21CE	garis miring anak panah berganda kiri kanan	garis miring anak panah berganda kiri kanan
+21C4	anak panah ke kanan di atas palang anak panah ke kiri	anak panah ke kanan di atas palang anak panah ke kiri
+21C6	anak panah tunjuk kiri di atas anak panah tunjuk kanan	anak panah | anak panah tunjuk kiri di atas anak panah tunjuk kanan | kanan | kiri
+21CB	serampang ke kiri di atas serampang ke kanan	serampang ke kiri di atas serampang ke kanan
+21CC	serampang ke kanan di atas serampang ke kiri	serampang ke kanan di atas serampang ke kiri
+21BC	ruit serampang ke kiri menuding ke atas	ruit serampang ke kiri menuding ke atas
+21BD	ruit serampang ke kiri menuding ke bawah	ruit serampang ke kiri menuding ke bawah
+21C0	ruit serampang ke kanan menuding ke atas	ruit serampang ke kanan menuding ke atas
+21C1	ruit serampang ke kanan menuding ke bawah	ruit serampang ke kanan menuding ke bawah
+21BE	ruit serampang ke atas menuding ke kanan	ruit serampang ke atas menuding ke kanan
+21BF	ruit serampang ke atas menuding ke kiri	ruit serampang ke atas menuding ke kiri
+21C2	ruit serampang ke bawah menuding ke kanan	ruit serampang ke bawah menuding ke kanan
+21C3	ruit serampang ke bawah menuding ke kiri	ruit serampang ke bawah menuding ke kiri
+21C7	anak panah berpasangan ke kiri	anak panah berpasangan ke kiri
+21C9	anak panah berpasangan ke kanan	anak panah berpasangan ke kanan
+21C8	anak panah berpasangan ke atas	anak panah berpasangan ke atas
+21CA	anak panah berpasangan ke bawah	anak panah berpasangan ke bawah
+21DA	anak panah ganda tiga ke kiri	anak panah ganda tiga ke kiri
+21DB	anak panah ganda tiga ke kanan	anak panah ganda tiga ke kanan
+219C	anak panah berombak-ombak ke kiri	anak panah berombak-ombak ke kiri
+219D	anak panah berombak-ombak ke kanan	anak panah berombak-ombak ke kanan
+21DC	anak panah berpintal ke kiri	anak panah berpintal ke kiri
+21DD	anak panah berpintal ke kanan	anak panah berpintal ke kanan
+21AD	anak panah kiri kanan berombak-ombak	anak panah kiri kanan berombak-ombak
+21AF	anak panah siku-sika ke bawah	anak panah siku-sika ke bawah
+21BA	anak panah bulatan terbuka arah lawan jam	anak panah bulatan terbuka arah lawan jam
+21BB	anak panah bulatan terbuka arah ikut jam	anak panah bulatan terbuka arah ikut jam
+1F400	tikus	haiwan | tikus
+1F401	Mencit	haiwan | mencit | tetikus | tikus
+1F402	lembu jantan	haiwan | ladang | lembu | lembu jantan | taurus | zodiak
+1F403	kerbau	air | haiwan | kerbau | zoo
+1F404	lembu	haiwan | ladang | lembu | moo | susu
+1F405	harimau	besar | haiwan | harimau | kucing | pemangsa | zoo
+1F406	harimau bintang	besar | haiwan | harimau bintang | kucing | pemangsa | zoo
+1F407	arnab	arnab | haiwan | haiwan peliharaan
+1F408	kucing	anak kucing | haiwan | haiwan peliharaan | kucing
+1F409	naga	cerita dongeng | cina | haiwan | naga
+1F40A	buaya	buaya | haiwan | zoo
+1F40B	ikan paus	haiwan | ikan paus | laut | pantai
+1F40C	siput	alam | binatang | haiwan | siput | taman
+1F40D	ular	belit | haiwan | ophiuchus | ular | zodiak
+1F40E	kuda	haiwan | kuda | ladang | lumba | tunggang kuda
+1F40F	biri-biri jantan	aries | binatang | biri-biri | biri-biri jantan | haiwan | zodiak
+1F410	kambing	binatang | capricorn | haiwan | kambing | zodiak
+1F411	biri-biri betina	binatang | biri-biri | biri-biri betina | biri-biri betina dewasa | bulu | haiwan | ladang
+1F412	monyet	haiwan | monyet | pisang
+1F413	ayam jantan	ayam | burung | haiwan | jantan | ornitologi
+1F414	ayam	ayam | burung | haiwan | ornitologi
+1F415	anjing	anjing | haiwan | haiwan peliharaan
+1F416	khinzir	haiwan | khinzir | khinzir betina | ladang
+1F417	babi hutan	babi hutan | haiwan | khinzir
+1F418	gajah	gajah | haiwan
+1F419	sotong kurita	haiwan | laut | sotong | sotong kurita
+1F41A	kulit kerang berpilin	berpilin | binatang | haiwan | kulit kerang | kulit kerang berpilin
+1F41B	ulat	binatang | haiwan | pepijat | serangga | ulat
+1F41C	semut	haiwan | semut | serangga | taman
+1F41D	lebah madu	alam semula jadi | haiwan | lebah | madu | serangga
+1F41E	kumbang kura-kura	alam semula jadi | kumbang | kumbang kura-kura | serangga | taman
+1F41F	ikan	haiwan | ikan | makan malam | pisces | zodiak
+1F420	ikan tropika	haiwan | ikan | tropika
+1F421	ikan buntal	haiwan | ikan | ikan buntal
+1F422	penyu	binatang | haiwan | kura-kura | penyu
+1F423	anak ayam menetas	anak | ayam | burung | haiwan | menetas | telur
+1F424	anak ayam	anak | ayam | burung | haiwan | ornitologi
+1F425	anak ayam menghadap depan	anak | ayam | baru lahir | burung | haiwan | menghadap depan | ornitologi
+1F426	burung	binatang | burung | haiwan
+1F427	penguin	antartica | binatang | haiwan | penguin
+1F428	koala	australia | beruang | haiwan | koala | marsupial | muka
+1F429	anjing poodle	anjing | gebu | haiwan | poodle
+1F42A	unta	binatang | bonggol | haiwan | unta | unta arab
+1F42B	unta bonggol dua	bactria | binatang | bonggol | haiwan | unta | unta bonggol dua
+1F42C	ikan lumba-lumba	binatang | haiwan | ikan lumba-lumba | pantai | sirip
+1F42D	muka tikus	haiwan | mencit | muka | tetikus | tikus
+1F42E	muka lembu	haiwan | ladang | lembu | moo | muka | susu
+1F42F	muka harimau	besar | haiwan | harimau | kucing | muka | pemangsa
+1F430	muka arnab	arnab | haiwan | haiwan peliharaan | muka
+1F431	muka kucing	anak kucing | haiwan | haiwan peliharaan | kucing | muka
+1F432	muka naga	binatang | cerita dongeng | haiwan | muka | naga
+1F433	ikan paus memancutkan air	air | haiwan | ikan paus | laut | memancut | muka | pantai
+1F434	muka kuda	haiwan | kuda | ladang | muka | pakaian
+1F435	muka monyet	haiwan | monyet | muka | pisang
+1F436	muka anjing	anak anjing | anjing | comel | haiwan | haiwan peliharaan
+1F437	muka khinzir	haiwan | khinzir | ladang | muka
+1F438	katak	haiwan | katak | muka
+1F439	hamster	haiwan | haiwan peliharaan | hamster | muka
+1F43A	serigala	haiwan | muka | serigala
+1F43B	beruang	beruang | beruang perang | haiwan | madu | muka
+1F43C	panda	bambu | buluh | china | haiwan | muka | panda
+1F43D	hidung khinzir	bau | hidung | khinzir | ladang | muka | muncung
+1F43E	tapak kaki haiwan	jejak | kaki | tapak kaki haiwan
+1F43F	tupai tanah	tupai tanah
+1F981	singa	alfa | haiwan | Leo | mengaum | muka | safari | singa | surai | zodiak
+1F982	kala jengking	kala jengking | scorpio | scorpius | zodiak
+1F983	ayam belanda	ayam belanda | burung | kelokok | kesyukuran
+1F984	unikorn	muka | unikorn
+1F985	helang	burung | haiwan | helang
+1F986	itik	burung | haiwan | itik
+1F987	kelawar	haiwan | kelawar
+1F988	jerung	haiwan | ikan | jerung
+1F989	burung hantu	bijak | burung | burung hantu | haiwan
+1F98A	rubah	haiwan | muka | rubah
+1F98B	rama-rama	cantik | rama-rama | serangga
+1F98C	rusa	haiwan | rusa
+1F98D	gorila	gorila | haiwan
+1F98E	cicak	cicak | haiwan | reptilia
+1F98F	badak sumbu	badak sumbu | haiwan
+1F990	udang	kecil | makanan | udang
+1F991	sotong	haiwan | makanan | moluska | sotong
+1F992	zirafah	bintik | zirafah
+1F993	zebra	belang | haiwan | jalur | kuda belang | zebra
+1F994	landak kecil	berduri | duri | haiwan | landak | landak kecil
+1F995	sauropod	brachiosaurus | brontosaurus | dinosaur | diplodocus | sauropod
+1F996	T-Rex	dinosaur | haiwan | t rex | T-Rex | Tyrannosaurus Rex
+1F997	cengkerik	belalang | cengkerik | pepijat | serangga
+1F998	kanggaru	anak kanggaru | Australia | haiwan | kanggaru | lompat | marsupial | melompat
+1F999	llama	alpaka | bulu | gentian | guanako | haiwan | llama | vikuna | wul
+1F99A	merak	bangga | berlagak | berwarna-warni | burung | burung cantik | haiwan | merak | merak betina | sombong
+1F99B	badak air	badak | badak air | berendam | haiwan | hippo
+1F99C	kakak tua	burung | cakap | haiwan | kakak tua | lanun | serindit
+1F99D	rakun	haiwan | ingin tahu | licik | rakun
+1F99E	udang karang	bisk | haiwan | hidupan laut | makanan laut | sepit | udang karang
+1F99F	nyamuk	Aedes | demam | malaria | menggigit | nyamuk | penyakit | perosak | serangga | virus
+1F9A0	mikrob	ameba | bakteria | mikrob | sains | virus
+1F9A1	bejar	badger | badger madu | bajing | bejar | bejar madu | haiwan | pengacau
+1F9A2	swan	anak angsa | anak itik hodoh | angsa | burung | haiwan | itik hodoh | putih | swan
+1F9A3	mamot	berbulu lebat | besar | gading | haiwan | haiwan yang sudah pupus | kepupusan | mamot
+1F9A4	dodo	besar | burung | dodo | kepupusan | Mauritius
+1F9A5	sloth	haiwan | malas | perlahan | sloth
+1F9A6	memerang	haiwan | memerang | menangkap ikan | suka main-main
+1F9A7	orang utan	beruk | haiwan | monyet | orang utan
+1F9A8	skunk	busuk | haiwan | skunk
+1F9A9	flamingo	burung | flamingo | haiwan | ranggi | tropikal
+1F9AA	tiram	makanan laut | menyelam | mutiara | tiram
+1F9AB	beaver	beaver | empangan | gigi | haiwan | memerang | sejenis haiwan Rodensia
+1F9AC	bison	bijak | bison | haiwan | kerbau | kumpulan
+1F9AD	anjing laut	anjing laut | binatang | haiwan | laut | Singa laut
+1F9AE	anjing pandu	anjing | buta | haiwan | kebolehcapaian | panduan
+1FABC	ubur-ubur	aduh | haiwan | invertebrata | jeli | marin | pedih | sengat | ubur-ubur
+1F330	buah berangan	buah badam | buah berangan | tanaman
+1F331	anak benih	anak benih | muda | tumbuh | tumbuhan | tunas
+1F332	malar hijau	hutan | krismas | malar hijau | natal | pain | pokok | tumbuhan
+1F333	pokok daun luruh	daun luruh | gugur | habitat | hijau | hutan | kebun | pokok
+1F334	pokok palma	palma | pokok | tropikal | tumbuhan
+1F335	kaktus	alam | gurun | kaktus | kemarau | padang pasir | tumbuhan
+1F337	bunga tulip	bunga | pertumbuhan | tulip | tumbuhan
+1F338	bunga sakura	bunga | mekar | sakura | tumbuhan
+1F339	bunga mawar	bunga | bunga mawar | merah | tumbuhan | valentine
+1F33A	bunga raya	bunga | bunga raya | tumbuhan
+1F33B	bunga matahari	bunga | matahari | tumbuhan
+1F33C	bunga mekar	bunga | dandelion | kuning muda | mekar | tumbuhan
+1F33D	tongkol jagung	jagung | ladang | setongkol | tanaman | tongkol jagung
+1F33E	seberkas padi	beras | bijian | padi | seberkas padi | telinga | tumbuhan
+1F33F	herba	daun | herba | tumbuhan
+1F340	daun bunga cengkih	4 | bunga cengkih | daun | empat | klover | nasib baik | semanggi | tumbuhan
+1F341	daun mapel	daun | luruh | mapel
+1F342	daun luruh	daun | luruh | tumbuhan
+1F343	daun melayang ditiup angin	angin | daun | ditiup | kibar | melayang | tiup | tumbuhan
+1F344	cendawan	cendawan | fungus | kulat
+1FAB0	lalat	berengga | lalat | mereput | penyakit | perosak | serangga
+1FAB1	cacing	anelid | cacing | cacing tanah | parasit
+1FAB2	kumbang	kumbang | pepijat | serangga
+1FAB3	lipas	haiwan | lipas | perosak | serangga
+1FAB4	pokok dalam pasu	hiasan | membesar | pasu | pokok | rumah | semai | tanam | tumbuh
+1FAB5	kayu	balak | batu | kayu | kayu gergaji | perkayuan
+1FAB6	bulu pelepah	bulu pelepah | buluan | ringan | terbang
+1FAB7	teratai	Budisme | bunga | Hinduisme | India | kesucian | teratai | Vietnam
+1FAB8	karang	karang | laut | terumbu
+1FAB9	sarang kosong	petarangan | sarang kosong
+1FABA	sarang dengan telur	petarangan | sarang dengan telur
+1FABB	keladi bunting	bluebonnet | bunga | bunga keladi bunting | keladi bunting | lavender | lembayung | lupine | snapdragon
+2618	syamrok	syamrok | tumbuhan
+1F347	anggur	anggur | buah anggur | buah-buahan
+1F348	tembikai susu	buah-buahan | tembikai susu
+1F349	tembikai	buah-buahan | tembikai
+1F34A	limau tangerin	buah-buahan | limau tangerin | oren | vitamin c
+1F34B	lemon	buah-buahan | lemon | limau | masam | sitrus
+1F34C	pisang	buah-buahan | pisang | potasium
+1F34D	nanas	buah-buahan | nanas | pina colada | tropik
+1F34E	epal merah	buah masak | buah-buahan | diet | epal | merah
+1F34F	epal hijau	buah-buahan | epal | hijau
+1F350	buah pear	buah pear | buah-buahan
+1F351	buah pic	buah pic | buah-buahan
+1F352	buah ceri	buah ceri | buah-buahan | ceri
+1F353	buah strawberi	beri | buah strawberi | buah-buahan
+1F336	cili api	cili api | lada | pedas
+1F354	hamburger	burger | hamburger | lapar | makan | makanan segera
+1F355	piza	keju | keping | lapar | makanan | peperoni | piza | potongan
+1F356	daging salut tulang	daging | daging salut tulang | tulang
+1F357	paha ayam	ayam | ayam/itik | kaki | paha ayam | tulang
+1F358	keropok beras	beras | keropok | makanan
+1F359	bebola nasi	bebola nasi | beras | bola | jepun | makanan
+1F35A	nasi masak	makanan | masak | nasi
+1F35B	nasi kari	kari | nasi
+1F35C	mangkuk kukus	berasap | makanan | mangkuk | mangkuk kukus | mi | penyepit | ramen
+1F35D	spageti	bebola daging | itali | pasta | restoran | spageti
+1F35E	roti	gandum | karbohidrat | makanan | restoran | roti | sebuku
+1F35F	kentang goreng	kentang goreng | perancis
+1F360	ubi keledek bakar	kentang | makanan | manis | panggang | ubi keledek bakar
+1F361	dango	dango | jepun | kayu | manis | pencuci mulut | sate
+1F362	oden	kebab | lidi | makanan | makanan laut | oden | pencucuk | restoran
+1F363	susyi	makanan | sushi | susyi
+1F364	udang goreng	goreng | tempura | udang
+1F365	kek ikan dengan corak pusar	ikan | kek | kek ikan dengan corak pusar | pastri | pusaran
+1F366	ais krim lembut	ais | krim | lembut | makanan | manis | pencuci mulut | restoran
+1F367	air batu campur	air batu campur | ais | kisar | manis | pencuci mulut | restoran
+1F368	ais krim	ais | krim | makanan | manis | pencuci mulut | restoran
+1F369	donat	donat | makanan | manis | pencuci mulut
+1F36A	biskut	biskut | cip coklat | manis | pencuci mulut
+1F36B	sekeping coklat	bar | coklat | manis | pencuci mulut | sekeping coklat
+1F36C	gula-gula	gula-gula | manis | pencuci mulut | restoran
+1F36D	lolipop	gula-gula | lolipop | makanan | manis | pencuci mulut | restoran
+1F36E	kastard	kastard | manis | pencuci mulut | puding
+1F36F	periuk madu	beruang | madu | manis | periuk
+1F370	sepotong kek	hirisan | kek | kek rapuh | keping | manis | manisan | pastri | pemanis mulut | pencuci mulut | sepotong kek
+1F371	kotak bento	bento | kotak | makanan
+1F372	seperiuk makanan	makanan | panas | periuk | seperiuk makanan | stew
+1F373	memasak	kuali | memasak | menggoreng | telur
+1F374	garpu dan pisau	garpu | makan | makan malam | makan pagi | makan tengah hari | masak | pisau | restoran | sarapan | sedap
+1F375	cawan teh tanpa tangkai	cawan | cawan teh tanpa tangkai | minum | minuman | teh
+1F376	sake	bar | botol | cawan | minum | minuman | restoran | sake
+1F377	gelas wain	arak | bar | gelas | minum | minuman | minuman keras | restoran | wain
+1F378	gelas koktel	arak | bar | gelas | kelab | kelab malam | koktel | minum | minuman | minuman keras
+1F379	minuman tropika	arak | bar | kelab | koktel | minum | minuman tropika | parti | tropika
+1F37A	kole bir	bar | bir | kole | minum
+1F37B	kole bir berdenting	bar | berdenting | bir | kole | minum
+1F37C	botol susu	bayi | botol | lahir | minum | susu
+1F37D	garpu dan pisau dengan pinggan	garpu | makan | makan malam | memasak | pinggan | pisau
+1F37E	botol dengan penutup gabus terbuka	bar | botol | gabus | meletus | minum
+1F37F	bertih jagung	bertih jagung | filem
+1F950	kroisan	bulan sabit | kroisan | makanan | perancis | roti perancis
+1F951	avokado	avokado | buah | makanan
+1F952	timun	jeruk | makanan | sayur | timun
+1F953	bakon	bakon | daging salai | makanan
+1F954	ubi kentang	makanan | sayur | ubi kentang
+1F955	lobak merah	lobak merah | makanan | sayur
+1F956	roti baguette	makanan | roti | roti baguette | roti perancis
+1F957	salad hijau	hijau | makanan | salad
+1F958	makanan dalam belanga	belanga | makanan | makanan dalam belanga | periuk
+1F959	roti kebab	berinti | falafel | kebab | makanan | roti kebab
+1F95A	telur	makanan | telur
+1F95B	segelas susu	gelas | minuman | segelas susu | susu
+1F95C	kacang tanah	kacang tanah | kekacang | makanan | sayur
+1F95D	buah kiwi	buah | kiwi | makanan
+1F95E	penkek	lempeng | makanan | penkek
+1F95F	ladu	empanada | gyoza | jiaozi | ladu | pierogi | potsticker
+1F960	biskut nasib	biskut nasib | cina | ramalan | restoran | tilikan
+1F961	kotak bungkus	baldi tiram | bungkus | kotak bungkus | penghantaran makanan | penyepit | tiram | tong tiram
+1F962	penyepit	hashi | penyepit
+1F963	mangkuk dan sudu	bijirin | bubur | kanji | mangkuk dan sudu | sarapan
+1F964	cawan dan straw	air | cawan | cawan dan straw | jus | malt | minuman ringan | soda
+1F965	kelapa	kelapa | palma | pina colada
+1F966	brokoli	brokoli | kubis liar
+1F967	pai	buah | inti | pai | pai epal | pai labu | pastri | sekeping pai
+1F968	pretzel	belit | berbelit-belit | berpintal | pintal | pretzel
+1F969	sepotong daging	cop | daging | kambing | khinzir | lembu | merah | potongan | stik
+1F96A	sandwic	roti | sandwic
+1F96B	makanan tin	makanan dalam tin | makanan tin | tin
+1F96C	sayuran hijau	berdaun | kubis | kubis daun | salad | sawi | sawi putih | sayur | sayuran hijau | selada
+1F96D	mangga	buah | makanan | mangga | tropika
+1F96E	kuih bulan	festival | kek bulan | kuih | kuih bulan | makanan | musim luruh | perayaan | yuebing
+1F96F	bagel	bagel | bakeri | donat | lepa | makanan | roti | sarapan
+1F9C0	sepotong keju	keju | sepotong keju
+1F9C1	kek cawan	bakeri | gula | kek | kek cawan | makanan | manis | pencuci mulut
+1F9C2	garam	botol | garam | makanan | marah | masin | penggoncang | perasa | rasa | sedih
+1F9C3	minuman air kotak	air buah | jus | kotak | manis | minuman | minuman air kotak | straw
+1F9C4	bawang putih	bawang putih | perisa
+1F9C5	bawang	bawang | perisa
+1F9C6	falafel	bebola daging | falafel | kacang kuda | makanan
+1F9C7	wafel	makan pagi | makanan | sarapan | wafel | zat besi
+1F9C8	mentega	mentega | tenusu
+1F9C9	mate	mate | minuman
+1F9CA	kiub ais	air batu | ais | aisberg | kiub ais | sejuk
+1F9CB	teh buih	air boba | buih | minuman | minuman dari Taiwan | mutiara | susu | teh
+1FAD0	beri biru	beri | bilberi | biru | buah | makanan
+1FAD1	cili kembung	cabai | cili kembung | lada | lada benggala | makanan | pedas | sayur
+1FAD2	buah zaitun	buah zaitun | makanan
+1FAD3	roti leper	arepa | lavash | makanan | naan | pita | roti | roti leper | sejenis roti
+1FAD4	tamale	berbungkus | kek jagung | makanan traditional orang Brazil | mexico | tamale
+1FAD5	fondue	cair | coklat | fondue | keju | makanan | periuk | Swiss
+1FAD6	teko teh	bancuh | membancuh | minum | minuman | teh | teko
+1FAD7	menuang cecair	gelas | kosong | menuang cecair | minum | tuang air | tumpah
+1FAD8	kacang	kacang | kacang buncis | legum | makanan
+1FAD9	balang	balang | bekas | kosong | rerempah | simpan | sos
+1FADA	akar halia	akar | bir | halia | herba | makanan | rempah
+1FADB	lenggai	edamame | kacang pea | kekacang | legum | lenggai | makanan | pea | sayuran
+2615	minuman panas	berasap | kafe | kafeina | kopi | minum | minuman | panas | teh
+2600	matahari	angkasa lepas | cahaya | cerah | cuaca | matahari | terang
+2601	awan	awan | cuaca
+2602	payung	cuaca | hujan | pakaian | payung
+2603	orang-orang salji	cuaca | orang salji | orang-orang salji | salji | sejuk
+2614	payung dengan titisan hujan	cuaca | hujan | pakaian | payung | payung dengan titisan hujan | rintik
+26A1	voltan tinggi	bahaya | elektrik | kilat | kuasa elektrik | pantas | voltan | voltan tinggi | zap
+26C4	orang-orang salji tanpa salji	lelaki | manusia salji | salji | sejuk
+26C5	matahari di sebalik awan	awan | cuaca | matahari | matahari di sebalik awan
+26C8	awan dengan kilat dan hujan	awan | awan dengan kilat dan hujan | cuaca | guruh | hujan
+2744	emping salji	cuaca | emping salji | salji | sejuk
+1F300	taufan	cuaca | pening | puting beliung | taufan
+1F301	berkabus	berkabus | cuaca | kabus
+1F302	payung tertutup	cuaca | hujan | pakaian | payung | payung tertutup
+1F303	malam berbintang	bintang | cuaca | malam | malam berbintang
+1F304	matahari terbit di banjaran pergunungan	gunung | matahari terbit | matahari terbit di banjaran pergunungan | pagi
+1F305	matahari terbit	alam semula jadi | matahari | matahari terbit | pagi
+1F306	panorama kota waktu senja	bandar | bangunan | cuaca | landskap | matahari | matahari terbenam | panorama kota waktu senja | petang | senja
+1F307	matahari terbenam	bangunan | cuaca | matahari | matahari terbenam | senja
+1F308	pelangi	alam semula jadi | cuaca | gay | genderqueer | glbt | glbtq | hujan | kebanggaan | lesbian | lgbt | lgbtq | lgbtqia | pelangi | pelik | trans | transgender
+1F309	jambatan pada waktu malam	cuaca | jambatan | jambatan pada waktu malam | malam
+1F30A	ombak laut	air | alam semula jadi | cuaca | laut | lautan | luncur air | ombak | pelayar | peluncur
+1F30B	gunung berapi	alam semula jadi | gunung | gunung berapi | letusan | volkano
+1F30C	bima sakti	angkasa lepas | bima sakti | cuaca
+1F30D	peta glob Eropah-Afrika	afrika | bumi | dunia | eropah | glob | peta glob Eropah-Afrika
+1F30E	peta glob Amerika	amerika | bumi | dunia | glob | peta glob Amerika
+1F30F	peta glob Asia-Australia	asia | australia | bumi | dunia | glob | peta glob Asia-Australia
+1F310	glob dengan garisan meridian	bumi | dunia | glob | glob dengan garisan meridian | Internet | meridian
+1F311	bulan baharu	anak bulan | angkasa lepas | bulan | bulan baru | gelap
+1F312	bulan sabit membesar	angkasa lepas | bulan | bulan sabit | membesar | mimpi
+1F313	bulan suku pertama	angkasa lepas | bulan | bulan suku pertama | cuaca | suku
+1F314	bulan hampir purnama mengambang	angkasa lepas | bulan | hampir purnama | membesar
+1F315	bulan purnama	angkasa lepas | bulan | penuh | purnama
+1F316	bulan hampir purnama memalap	angkasa lepas | bulan | bulan hampir purnama memalap | cuaca | hampir purnama | memalap
+1F317	bulan suku terakhir	angkasa lepas | bulan | bulan suku terakhir | cuaca | suku
+1F318	bulan sabit memalap	angkasa lepas | bulan | bulan sabit | bulan sabit memalap | cuaca | memalap
+1F319	bulan sabit	angkasa lepas | bulan | bulan sabit | cuaca | puasa | ramadan
+1F31A	muka bulan baharu	angkasa lepas | bulan | cuaca | muka | muka bulan baharu
+1F31B	muka bulan suku pertama	angkasa lepas | bulan | muka | pertama | suku
+1F31C	muka bulan suku terakhir	bulan | mimpi | muka | suku | terakhir
+1F31D	muka bulan purnama	bulan | muka | penuh | terang
+1F31E	matahari dengan muka	angkasa lepas | cuaca | matahari | matahari dengan muka | muka | terang
+1F31F	bintang bersinar	bercahaya | berkilau | berkilauan | bersinar | bintang
+1F320	tahi bintang	angkasa lepas | bintang | jatuh | malam | tahi bintang
+1F321	termometer	cuaca | termometer
+1F324	matahari di sebalik awan kecil	awan | cuaca | matahari | matahari di sebalik awan kecil
+1F325	matahari di sebalik awan besar	awan | cuaca | matahari | matahari di sebalik awan besar
+1F326	matahari di sebalik awan hujan	awan | cuaca | hujan | matahari | matahari di sebalik awan hujan
+1F327	awan dengan hujan	awan | awan dengan hujan | cuaca | hujan
+1F328	awan dengan salji	awan | awan dengan salji | cuaca | salji | sejuk
+1F329	awan dengan kilat	awan | awan dengan kilat | cuaca | kilat
+1F32A	puting beliung	awan | cuaca | puting beliung
+1F32B	kabus	awan | cuaca | kabus
+1F32C	muka angin	angin | awan | cuaca | meniup | muka
+2648	Aries	aries | Aries | horoskop | ram | zodiak
+2649	Taurus	horoskop | lembu | lembu jantan | Taurus | zodiak
+264A	Gemini	Gemini | horoskop | kembar | zodiak
+264B	Cancer	Cancer | horoskop | ketam | zodiak
+264C	Leo	horoskop | Leo | singa | zodiak
+264D	Virgo	horoskop | Virgo | zodiak
+264E	Libra	horoskop | keadilan | kira-kira | libra | Libra | neraca | penimbang | zodiak
+264F	Scorpio	horoskop | kala jengking | scorpio | Scorpio | zodiak
+2650	Sagittarius	horoskop | pemanah | Sagittarius | zodiak
+2651	Capricorn	Capricorn | horoskop | kambing | zodiak
+2652	Aquarius	air | aquarius | Aquarius | horoskop | pembawa | zodiak
+2653	Pisces	horoskop | ikan | Pisces | zodiak
+1F550	pukul satu	1 | 1:00 | jam | masa | pukul | satu
+1F551	pukul dua	2 | 2:00 | dua | jam | masa | pukul
+1F552	pukul 3	3 | 3:00 | jam | masa | pukul | tiga
+1F553	pukul empat	4 | 4:00 | empat | jam | masa | pukul
+1F554	pukul lima	5 | 5:00 | jam | lima | masa | pukul
+1F555	pukul enam	6 | 6:00 | enam | jam | masa | pukul
+1F556	pukul tujuh	0 | 7 | 7:00 | jam | pukul | tujuh
+1F557	pukul lapan	8 | 8:00 | jam | lapan | masa | pukul
+1F558	pukul sembilan	9 | 9:00 | jam | masa | pukul | sembilan
+1F559	pukul sepuluh	0 | 10 | 10:00 | jam | pukul | sepuluh
+1F55A	pukul sebelas	11 | 11:00 | jam | masa | pukul | sebelas
+1F55B	pukul dua belas	12 | 12:00 | dua belas | jam | masa | pukul
+1F55C	satu setengah	1 | 1:30 | 30 | jam | satu | satu setengah | tiga puluh
+1F55D	dua setengah	2 | 2:30 | 30 | dua | dua setengah | jam | tiga puluh
+1F55E	tiga setengah	3 | 3:30 | 30 | jam | tiga | tiga puluh | tiga setengah
+1F55F	empat setengah	30 | 4 | 4:30 | empat | empat setengah | jam | tiga puluh
+1F560	lima setengah	30 | 5 | 5:30 | jam | lima | lima setengah | tiga puluh
+1F561	enam setengah	30 | 6 | 6:30 | enam | enam setengah | jam | tiga puluh
+1F562	tujuh setengah	30 | 7 | 7:30 | jam | tiga puluh | tujuh | tujuh setengah
+1F563	lapan setengah	30 | 8 | 8:30 | jam | lapan | lapan setengah | tiga puluh
+1F564	sembilan setengah	30 | 9 | 9:30 | jam | sembilan | sembilan setengah | tiga puluh
+1F565	sepuluh setengah	10 | 10:30 | 30 | jam | sepuluh | sepuluh setengah | tiga puluh
+1F566	sebelas setengah	11 | 11:30 | 30 | jam | sebelas | sebelas setengah | tiga puluh
+1F567	dua belas setengah	12 | 12:30 | 30 | dua belas | dua belas setengah | jam | tiga puluh
+1FA90	planet bergelang	planet | planet bergelang | suram | zuhal | Zuhal
+2604	komet	angkasa lepas | komet
+26F0	gunung	gunung
+26F1	payung di atas tanah	cuaca | hujan | matahari | payung | payung di atas tanah
+26F2	air pancut	air pancut
+26F4	feri	bot | feri | penumpang
+26F5	perahu layar	berlayar | bot | kapal layar | kenderaan | laut | perahu layar | resort
+2708	kapal terbang	jet | kapal terbang | kenderaan | menerbang | perjalanan | terbang
+1F488	jalur kedai gunting rambut	gunting rambut | jalur | jalur kedai gunting rambut | tukang gunting
+1F4BA	tempat duduk	kerusi | tempat duduk
+1F680	roket	angkasa lepas | kenderaan | perjalanan | roket
+1F681	helikopter	helikopter | kenderaan
+1F682	lokomotif	enjin | kenderaan | kereta api | landasan kereta api | lokomotif | wap
+1F683	gerabak kereta api	bas letrik | elektrik | gerabak kereta api | kereta | kereta api | landasan kereta api | trem
+1F684	kereta api laju	kelajuan | kenderaan | kereta api | kereta api laju | shinkansen
+1F685	kereta api laju dengan muncung peluru	kelajuan | kenderaan | kereta api | kereta api laju dengan muncung peluru | peluru | shinkansen
+1F686	kereta api	kenderaan | kereta api | landasan kereta api | rel kereta api
+1F687	kereta api bawah tanah	kereta api bawah tanah | metro | perjalanan
+1F688	rel ringan	kenderaan | landasan kereta api | lrt | monorel | rel kereta api | rel ringan | tiba
+1F689	stesen	kenderaan | kereta api | landasan kereta api | rel kereta api | stesen
+1F68A	trem	bas letrik | bas troli | kenderaan | trem
+1F68B	gerabak trem	bas letrik | bas troli | gerabak trem | kenderaan | kereta | trem
+1F68C	bas	bas | kenderaan | sekolah
+1F68D	bas dari arah depan	bas | bas dari arah depan | dari arah depan | kenderaan | kereta
+1F68E	bas troli	bas | kenderaan | trem | troli
+1F68F	perhentian bas	bas | berhenti | perhentian bas
+1F690	bas mini	bas | bas mini | kenderaan | pandu | van
+1F691	ambulans	ambulans | kecemasan | kenderaan
+1F692	kereta bomba	api | enjin | kenderaan | kereta bomba | trak
+1F693	kereta polis	kenderaan | kereta | polis | ronda
+1F694	kereta polis dari arah depan	dari arah depan | kenderaan | kereta | kereta polis dari arah depan | polis
+1F695	teksi	kenderaan | kereta | kuning | pandu | teksi
+1F696	teksi dari arah depan	dari arah depan | kenderaan | kereta | kuning | pandu | teksi
+1F697	kereta	automobil | kenderaan | kereta | memandu
+1F698	kereta dari arah depan	automobil | dari arah depan | kenderaan | kereta | pandu
+1F699	kenderaan rekreasi	kenderaan | kereta | pandu | rekreasi | rv | sukan
+1F69A	trak penghantaran	kenderaan | lori | pandu | penghantaran | trak
+1F69B	lori bersendi	kenderaan | lori | lori bersendi | semi | trak
+1F69C	traktor	kenderaan | traktor
+1F69D	monorel	kenderaan | monorel
+1F69E	kereta api gunung	gunung | kenderaan | kereta | kereta api gunung | landasan kereta api | perjalanan | rel kereta api
+1F69F	kereta api landasan tergantung	kenderaan | kereta api landasan tergantung | landasan kereta api | rel kereta api | tergantung
+1F6A0	jalan kabel gunung	gondola | gunung | jalan kabel gunung | kabel | kenderaan
+1F6A1	jalan trem udara	gondola | jalan tali | jalan trem | jalan trem udara | kabel | kenderaan | kereta | udara
+1F6A2	kapal	bot | kapal | kenderaan | penumpang | perjalanan | titanic
+1F6A3	orang mendayung sampan	berkanu | bot | dayung | kapal | kayuh | memancing | orang | sampan | sungai | tasik
+1F6A4	bot laju	bot | bot laju | jutawan | kenderaan | mewah | musim panas | perjalanan
+1F6A5	lampu isyarat melintang	isyarat | lalu lintas | lampu | lampu isyarat melintang | trafik
+1F6A6	lampu isyarat menegak	isyarat | lalu lintas | lampu | lampu isyarat menegak | trafik
+1F6A7	pembinaan	halangan | pembinaan
+1F6A8	lampu kereta polis	amaran | berputar | kecemasan | kenderaan | kereta | lampu | penggera | polis | siren | suar
+1F6A9	bendera tiga segi	bendera tiga segi | tiang
+1F6AA	pintu	almari | belakang | hadapan | pintu
+1F6B0	air minum	air | boleh diminum | minum
+1F6B1	air tak boleh minum	air | air tak boleh minum | air tidak boleh minum | dilarang | ditegah | minum | tidak boleh minum
+1F6B3	basikal dilarang	basikal | bukan | dilarang | ditegah | kenderaan | sepeda | tidak
+1F6B7	pejalan kaki dilarang	bukan | dilarang | ditegah | pejalan kaki | pejalan kaki dilarang | tidak
+1F6B8	kanak-kanak melintas	kanak-kanak | lalu lintas | melintas | pejalan kaki | trafik
+1F6B9	tandas lelaki	bilik air | lelaki | tandas | wc
+1F6BA	tandas wanita	bilik air | tandas | wanita | wc
+1F6BB	bilik air	bilik air | tandas | wc
+1F6BC	simbol bayi	bayi | simbol bayi | tukar lampin
+1F6BD	mangkuk tandas	bilik air | tandas
+1F6BE	tandas pam	air | bilik | tandas | tandas pam | wc
+1F6BF	pancuran	air | pancuran
+1F6C0	orang sedang mandi	mandi | orang sedang mandi | tab mandi
+1F6C1	tab mandi	mandi | tab mandi
+1F6C2	kawalan pasport	kawalan | pasport
+1F6C3	kastam	kastam | pemeriksaan
+1F6C4	tuntutan bagasi	bagasi | beg | diperiksa | kapal terbang | kes | pembungkusan | perjalanan | sedia | tiba | tuntutan
+1F6C5	bagasi tertinggal	bagasi | bagasi tertinggal | lokar
+1F6D0	tempat ibadat	agama | doa | ibadah | tempat ibadat
+1F6D1	tanda berhenti	berhenti | oktagon | tanda
+1F6D2	troli beli-belah	beli-belah | troli
+2668	mata air panas	berasap | berwap | mata air | mata air panas | panas | wap
+26BD	bola sepak	bola | bola sepak | sukan
+26BE	besbol	besbol | bola | sukan
+26F3	bendera dalam lubang	bendera dalam lubang | golf | lubang
+1F392	beg galas sekolah	beg | beg galas | beg galas sekolah | pendidikan | sekolah
+1F3A0	kuda karusel	hiburan | karusel | kuda
+1F3A1	roda ferris	ferris | roda | taman hiburan
+1F3A2	roller coaster	coaster | roller | taman hiburan
+1F3A3	joran mengail	batang kail | hiburan | ikan | joran mengail | kail | sukan
+1F3A4	mikrofon	bunyi | karaoke | mike | mikrofon | muzik | nyanyi
+1F3A5	kamera filem	bollywood | filem | hollywood | kamera | pawagam | rakaman | wayang
+1F3A6	panggung	filem | kamera | panggung | wayang
+1F3A7	fon kepala	bunyi | fon kepala | fon telinga
+1F3A8	palet artis	hiburan | lukisan | muzium | palet | palet artis | seni | warna-warni
+1F3A9	topi tinggi	pakaian | tinggi | topi
+1F3AA	khemah sarkas	khemah | sarkas
+1F3AB	tiket	masuk | tiket
+1F3AC	papan pengetap	aksi | filem | papan pengetap | pengetap
+1F3AD	seni persembahan	hiburan | panggung | pelakon | persembahan | seni | teater | topeng
+1F3AE	permainan video	alat kawalan | hiburan | permainan | permainan video | playstation | ps
+1F3AF	balingan tepat	baling damak | balingan tepat | dart | hiburan | kena | permainan | pusat sasaran | sasaran | tepat
+1F3B0	mesin judi	judi | kasino | mesin judi | permainan | slot
+1F3B1	biliard	8 | biliard | bola | lapan | permainan
+1F3B2	dadu permainan	dadu | dadu-dadu | hiburan | permainan
+1F3B3	boling	bola | boling | permainan | sukan
+1F3B4	terup bunga	bermain | bunga | Jepun | kad | permainan | terup bunga
+1F3B5	nota muzik	bunyi | muzik | muzikal | not
+1F3B6	nota-nota muzik	muzik | muzikal | not | not-not
+1F3B7	saksofon	alat | muzik | saks | saksofon
+1F3B8	gitar	alat | gitar | muzik
+1F3B9	keyboard muzik	alat | instrumen | keyboard | muzik | papan nada | papan nada muzik | piano
+1F3BA	trompet	alat | muzik | trompet
+1F3BB	biola	alat | biola | muzik
+1F3BC	skor muzik	muzik | muzikal | not | skor
+1F3BD	baju larian	baju | baju larian | berlari | selemang
+1F3BE	tenis	bola | raket | sukan | tenis
+1F3BF	ski	salji | ski | sukan
+1F3C0	bola keranjang	bola | bola keranjang | jaring | sukan
+1F3C1	bendera pelepas	bendera pelepas | bercorak dam | berpetak | lumba | petak-petak
+1F3C2	peluncur papan salji	papan luncur salji | peluncur papan salji | salji | ski
+1F3C3	pelari	berlari | cepat | kelajuan | lari | lumba | maraton | pantas | pelari | perlumbaan
+1F3C4	peluncur air	lautan | meluncur | mengimbang badan | ombak | orang | pantai | peluncur air | sukan
+1F3C5	pingat sukan	emas | juara | medal sukan | pingat | pingat sukan
+1F3C6	piala	hadiah | juara | memenang | menang | piala
+1F3C7	lumba kuda	joki | kuda | lumba | menunggang | perlumbaan | sukan
+1F3C8	bola sepak amerika	amerika | bola | bola sepak | bola sepak amerika
+1F3C9	bola sepak ragbi	bola | bola sepak | bola sepak ragbi | ragbi
+1F3CA	perenang	berenang | orang | perenang | sukan | sukan air | triatlon
+1F3CB	ahli angkat berat	ahli angkat berat | berat | bina badan | pengangkat | senaman
+1F3CC	pemain golf	birdi | bola | golf | hijau | pemain golf | PGA | sukan
+1F3CD	motosikal	lumba | motosikal
+1F3CE	kereta lumba	kereta | lumba
+1F451	mahkota	mahkota | menang | pakaian | permaisuri | raja
+1F452	topi wanita	pakaian | topi | wanita
+1F453	cermin mata	cermin mata | kaca mata | mata | pakaian
+1F454	tali leher	baju | bekerja | pakaian | serius | tali leher
+1F455	kemeja-t	kemeja | kemeja-t | pakaian
+1F456	seluar jean	berpakaian | biru | denim | hujung minggu | membeli-belah | pakaian | santai | seluar | seluar jeans
+1F457	gaun	baju | gaun | membeli-belah | pakaian
+1F458	kimono	kimono | pakaian | selesa
+1F459	bikini	bikini | kolam renang | pakaian | pakaian mandi | pantai | renang
+1F45A	pakaian wanita	baju | blaus | membeli-belah | pakaian | wanita
+1F45B	dompet	beg tangan | dompet | duit syiling | pakaian
+1F45C	beg tangan	beg | beg tangan | dompet | membeli-belah | pakaian | wanita
+1F45D	pau	beg | beg tangan | dompet | pakaian | pau
+1F45E	kasut lelaki	beli-belah | kaki | kasut | lelaki | pakaian | perang | tendang
+1F45F	kasut lari	kasut | kasut lari | olahraga | pakaian | sneaker
+1F460	kasut tumit tinggi	kasut | kasut tumit tinggi | pakaian | tumit | wanita
+1F461	sandal wanita	kasut | pakaian | sandal | wanita
+1F462	but wanita	but | kasut | membeli-belah | pakaian | wanita
+1F6B2	basikal	basikal | kenderaan | memandu basikal | pandu basikal | pemandu basikal
+1F6B4	menunggang basikal	basikal | berbasikal | menunggang | orang | penunggang | sukan
+1F6B5	penunggang basikal bukit	basikal | bukit | gunung | penunggang | sepeda
+1F6B6	pejalan kaki	berjalan | berjalan perlahan | jalan | kembara jalan kaki | lelaki berjalan | mendaki | orang berjalan | pejalan kaki
+1F938	putar roda	aktif | balik kuang | berpusing | gimnastik | orang | putar roda | sukan
+1F939	menjugel	jugel | kemahiran | keseimbangan | lambung bola | menjugel | pelbagai aksi
+1F93A	pemain pedang	bermain pedang | orang | pemain pedang | sukan
+1F93C	bergusti	bergusti | gelanggang | gusti | lawan | orang | pertandingan | sukan
+1F93D	polo air	air | orang | polo | sukan
+1F93E	main bola baling	baling bola | bola | bola baling | main bola baling | orang main bola baling
+1F93F	topeng menyelam	alat menyelam | menyelam | skuba | snorkeling | topeng menyelam
+1F9E2	kep berbil	kep berbil | topi | topi baseball | topi besbol
+1F9E3	skaf	leher | sejuk | selendang | skaf
+1F9E4	sarung tangan	sarung tangan | tangan
+1F9E5	kot	brr | jaket | kot | sejuk
+1F9E6	stoking	sarung kaki | stoking
+1FA70	kasut balet	balet | kasut balet | tarian
+1FA71	sut renang terus	baju renang | sut mandi | sut renang terus
+1FA72	seluar dalam	pakaian dalam | seluar dalam | sut mandi | sut renang | terus
+1FA73	seluar pendek	baju mandi | pakaian dalam | seluar | seluar pendek
+1FA74	sandal tali kulit	sandal | sandal pantai | sandal tali kulit | santai | selipar | tali kulit | zōri
+1FA80	yo-yo	mainan | naik turun | yo-yo
+1FA81	layang-layang	layang-layang | melayang | terbang
+1FA82	paracut	geluncur angin | paracut | parasail | payung terjun | sukan udara | terjun udara
+1FA83	bumerang	australia | bertentangan | bumerang | gema | lantun
+1FA84	tongkat sakti	ahli sihir | ahli silap mata | bestari | magik | tongkat sakti
+1FA85	pinata	festival | gula-gula | parti | perayaan | pesta cinco de mayo | pinata
+1FA86	anak potong sekelompok	anak patung | anak patung tradisional Rusia | anak potong sekelompok | boneka | boneka kayu | kelompok | matryoshka | patung kayu | rusia
+1FA95	banjo	alat muzik | banjo | bertali | muzik
+1FA97	akordion	akordion | alat | konsertina | kotak himpit | muzik
+1FA98	karatung	bongo | dram | gendang | irama | karatung | konga | rentak
+265F	bidak catur	bidak catur | boleh kembang | catur | memperdaya
+2660	daun sped	daun | kad | permainan | sped
+2663	daun kelawar	daun | kad | kelab | kelawar | permainan
+2665	daun lekuk	daun | emosi | hati | kad | lekuk | permainan
+2666	daun daiman	berlian | daiman | daun | kad | permainan
+1F4B3	kad kredit	bank | bayar | kad | kredit | wang
+1F4B4	wang kertas yen	bank | duit | duit kertas | mata wang | wang | wang kertas | wang kertas yen | yen
+1F4B5	wang kertas dolar	bank | dolar | duit | duit kertas | mata wang | wang | wang kertas | wang kertas dolar
+1F4B6	wang kertas euro	bank | duit | duit kertas | euro | mata wang | wang | wang kertas | wang kertas euro
+1F4B7	wang kertas paun	bank | duit | duit kertas | mata wang | pound | wang | wang kertas | wang kertas paun
+1F4B9	carta yen meningkat	bank | carta | graf | ke atas | mata wang | meningkat | pasaran | pertumbuhan | wang | yen
+1F4BB	komputer riba	komputer | komputer riba | pc | pejabat | peribadi
+1F4BC	beg bimbit	beg bimbit | pejabat
+1F4BD	cakera komputer	cakera | cakera mini | komputer | optik
+1F4BE	cakera liut	cakera | komputer | liut
+1F4BF	cakera optik	blu-ray | cakera | cd | dvd | komputer | optik
+1F4C0	dvd	blu-ray | cakera | cd | dvd | komputer | optik
+1F4C1	folder fail	fail | folder
+1F4C2	folder buka fail	fail | folder | folder buka fail | terbuka
+1F4C3	halaman ikal	dokumen | halaman | ikal
+1F4C4	halaman menghadap atas	dokumen | halaman | halaman menghadap atas
+1F4C5	kalendar	kalendar | tarikh
+1F4C6	kalendar koyak	kalendar | kalendar koyak
+1F4C7	indeks kad	indeks | kad | rolodex
+1F4C8	carta menaik	arah aliran | carta | data | graf | menaik | pertumbuhan
+1F4C9	carta menurun	arah aliran | carta | data | graf | menurun
+1F4CA	carta bar	bar | carta | data | graf
+1F4CB	papan klip	nota | papan klip | senarai tugas
+1F4CC	paku tekan	paku tekan | pin
+1F4CD	paku tekan bulat	lokasi | paku tekan bulat | peta | pin | pin tekan | pin tekan bulat
+1F4CE	klip kertas	klip kertas
+1F4CF	pembaris lurus	pembaris | pembaris lurus | tepi lurus
+1F4D0	pembaris segi tiga	pembaris | pembaris segi tiga | segi tiga | set
+1F4D1	tab penanda halaman	penanda | penanda buku | penanda halaman | tab | tab penanda halaman | tanda
+1F4D2	lejar	buku nota | lejar
+1F4D3	buku nota	buku nota
+1F4D4	buku nota dengan kulit berhias	berhias | buku | buku nota | buku nota dengan kulit berhias | kulit | menulis | pendidikan | sekolah
+1F4D5	buku tertutup	buku | pendidikan | tertutup
+1F4D6	buka terbuka	buka terbuka | buku | ilmu | membaca | novel | pendidikan | perpustakaan | terbuka
+1F4D7	buku hijau	buku | hijau | membaca | pendidikan | perpustakaan
+1F4D8	buku biru	biru | buku | membaca | pendidikan | perpustakaan
+1F4D9	buku oren	buku | fantasi | jingga | membaca | pendidikan | perpustakaan
+1F4DA	buku	belajar | buku | ilmu | membaca | novel | pendidikan | perpustakaan | sekolah
+1F4DB	lencana nama	lencana | nama
+1F4DC	skrol	kertas | skrol
+1F4DD	memo	komunikasi | media | memo | nota | pensel
+1F4DE	gagang telefon	gagang telefon | penerima | telefon | voip
+1F4DF	alat kelui	alat kelui | komunikasi
+1F4E0	mesin faksimili	faks | komunikasi | mesin faksimili
+1F4E1	antena satelit	antena | hubungi | makhluk asing | piring | sains | satelit
+1F4E2	corong pembesar suara	bunyi | corong pembesar suara | komunikasi | kuat | siar raya
+1F4E3	megafon	bersorak | megafon
+1F4E4	dulang keluar	dihantar | dulang | dulang keluar | kotak | mel | peti keluar | surat
+1F4E5	dulang masuk	dulang | dulang masuk | kotak | mel | peti masuk | surat | terima
+1F4E6	pakej	bungkusan | komunikasi | kotak | pakej | penghantaran
+1F4E7	e-mel	e-mel | mel | surat
+1F4E8	sampul surat masuk	e-mel | emel | masuk | mel | sampul surat | sampul surat masuk | surat | terima
+1F4E9	sampul surat dengan anak panah	anak panah | dihantar | e-mel | emel | ke bawah | keluar | mel | sampul surat | sampul surat dengan anak panah | surat
+1F4EA	peti surat tertutup dengan bendera diturunkan	diturunkan | mel | peti mel | peti mel tertutup dengan bendera diturunkan | peti surat | peti surat tertutup dengan bendera diturunkan | tertutup
+1F4EB	peti surat tertutup dengan bendera dinaikkan	mel | peti mel | peti mel tertutup dengan bendera dinaikkan | peti surat | peti surat tertutup dengan bendera dinaikkan | tertutup
+1F4EC	peti surat terbuka dengan bendera dinaikkan	mel | peti mel | peti mel terbuka dengan bendera dinaikkan | peti surat | peti surat terbuka dengan bendera dinaikkan | terbuka
+1F4ED	peti surat terbuka dengan bendera diturunkan	diturunkan | mel | peti mel | peti mel terbuka dengan bendera diturunkan | peti surat | peti surat terbuka dengan bendera diturunkan | terbuka
+1F4EE	peti pos	mel | peti mel | peti pos
+1F4EF	hon pos	hon | pos | wakil pos
+1F4F0	akhbar	akhbar | berita | kertas | komunikasi
+1F4F1	telefon bimbit	komunikasi | mudah alih | sel | telefon | telefon bimbit
+1F4F2	telefon bimbit dengan anak panah	anak panah | komunikasi | mudah alih | panggil | sel | telefon | telefon bimbit dengan anak panah | terima
+1F4F3	mod getaran	fon | getaran | mod | mudah alih | sel | telefon
+1F4F4	telefon mudah alih dimatikan	fon | matikan | mudah alih | sel | telefon | telefon mudah alih dimatikan
+1F4F5	dilarang guna telefon bimbit	bukan | dilarang | dilarang guna telefon bimbit | fon | mudah alih | sel | telefon | telefon mudah alih dilarang | tidak
+1F4F6	palang antena	antena | fon | isyarat | mudah alih | palang | sel | telefon
+1F4F7	kamera	foto | gambar | kamera | swafoto | tangkap | video
+1F4F8	kamera dengan denyar	denyar | kamera | kamera dengan denyar | video
+1F4F9	kamera video	kamera | perakam video | video
+1F4FA	televisyen	televisyen | tv | video
+1F4FB	radio	hiburan | radio | video
+1F4FC	pita video	lama | pita | sekolah | vcr | vhs | video
+1F4FD	projektor filem	filem | pawagam | projektor | video | wayang
+1F4FF	tasbih	agama | doa | kalung | manik | pakaian | tasbih
+1F505	butang malap	butang malap | kecerahan | malap | rendah
+1F506	butang cerah	butang cerah | cerah | kecerahan
+1F507	pembesar suara dimatikan	kelantangan | pembesar suara | pembesar suara dimatikan | redam | senyap | tenang
+1F508	kelantangan rendah pembesar suara	bunyi | kelantangan | pembesar suara | perlahan | rendah | senyap
+1F509	kelantangan sederhana pembesar suara	bunyi | kelantangan | pembesar suara | sederhana
+1F50A	kelantangan tinggi pembesar suara	bunyi | kelantangan | kuat | lantang | muzik | pembesar suara | tinggi
+1F50B	bateri	bateri
+1F50C	palam elektrik	elektrik | kuasa elektrik | palam
+1F50D	kanta pembesar condong ke kiri	alat | carian | kanta | kanta pembesar condong ke kiri | kanta pembesar menunjuk ke kiri | pembesar | sains
+1F50E	kanta pembesar condong ke kanan	alat | carian | kanta | kanta pembesar condong ke kanan | kanta pembesar menunjuk ke kanan | pembesar | sains
+1F50F	mangga dengan pen	dakwat | kunci | mangga dengan pen | mata pen | pen | privasi
+1F510	mangga terkunci dengan anak kunci	berkunci | kunci | mangga terkunci dengan anak kunci | mengunci | selamat
+1F511	kunci	kata laluan | kunci
+1F512	bermangga	berkunci | bermangga | mangga | peribadi | tutup
+1F513	mangga terbuka	buka kunci | kunci | mangga terbuka | terbuka
+1F514	loceng	bunyi | gereja | loceng | masa rehat
+1F515	loceng berpalang	bukan | dilarang | ditegah | loceng | loceng berpalang | redam | senyap | tenang | tidak
+1F516	penanda buku	penanda buku | tanda
+1F517	pautan	pautan | rantai
+1F518	butang radio	butang | geometri | radio
+1F51E	bawah lapan belas tidak dibenarkan	18 | bawah lapan belas tidak dibenarkan | bawah umur | bukan | dilarang | lapan belas | sekatan umur | tiada sesiapa bawah lapan belas | tidak
+1F51F	butang kekunci: 10	butang kekunci
+1F526	lampu suluh	alat | cahaya | elektrik | lampu suluh
+1F527	perengkuh	alat | pembaikan rumah | perengkuh
+1F528	tukul	alat | baiki | pembaikan rumah | tukul
+1F529	nat dan bolt	alat | bolt | nat | nat dan bolt | pembaikan rumah
+1F52A	pisau dapur	alat | hocho | memasak | pisau | pisau dapur | senjata
+1F52B	pistol air	air | alat | pistol | revolver | senapang | senjata
+1F52C	mikroskop	alat | eksperimen | makmal | mikroskop | sains
+1F52D	teleskop	alat | hubung | sains | teleskop
+1F9BA	rompi keselamatan	kecemasan | keselamatan | rompi | ves keselamatan
+1F9BB	telinga dengan alat bantu dengar	alat | bantu | bantuan | dengar | kebolehcapaian | kesukaran | pendengaran | sukar | telinga
+1F9BC	kerosi roda bermotor	bermotor | kebolehcapaian | kerusi roda
+1F9BD	kerusi roda manual	kebolehcapaian | kerusi roda manual
+1F9E9	kepingan suai gambar	cantum | cantuman | jigsaw | kepingan | kepingan suai gambar | petunjuk | saling mengunci | suai gambar | susun | susun suai | teka-teki
+1F9EA	tabung uji	ahli kimia | bahan kimia | eksperimen | kimia | makmal | sains | tabung uji
+1F9EB	piring petri	ahli biologi | bakteria | biologi | kultur | makmal | piring petri | sains
+1F9EC	dna	ahli biologi | dna | evolusi | gen | genetik | hayat | kehidupan | sains
+1F9ED	kompas	arah | bermagnet | kompas | magnet | mengorientasi | navigasi | panduan
+1F9EE	sempua	abakus | cepua | kalkulator | kira | pengira | pengiraan | sempua
+1F9EF	alat pemadam api	alat pemadam api | api | lindap | memadamkan api | padam | pemadam api
+1F9F0	kotak alat	alat | alatan | kotak | kotak merah | mekanik | peralatan | perkakas | peti
+1F9F1	bata	bata | batu-bata | dinding | merah bata | mortar | tanah liat
+1F9F2	magnet	bentuk u | bermagnet | daya magnet | daya tarikan | ladam | ladam kuda | magnet | negatif | penarik | positif | tarikan
+1F9F3	bagasi	bagasi | beg | beg pakaian | beg tarik | berkemas | kembara | melancong | menyusun
+1F9F4	botol losyen	botol losyen | losyen | pelembab | pelembap | pelindung | penapis suria | pencuci | syampu
+1F9F5	benang	benang | gelendong | jarum | menjahit | tali
+1F9F6	yarn	bebola | benang | benang bulu | bola | kait | krusye | mengait | yan | yarn
+1F9F7	pin dawai	lampin | pin dawai | punk rock
+1F9F8	beruang teddy	anak patung beruang | anak patung lembut | barang mainan | beruang | beruang teddy | hadiah | mainan | plusy | sumbat
+1F9F9	penyapu	ahli sihir | membersih | menyapu | penyapu
+1F9FA	bakul	bakul | berkebun | berkelah | berladang | dobi | dobi-mendobi
+1F9FB	gulungan kertas	gulung | kertas | tandas | tuala
+1F9FC	sabun	bekas sabun | bersih | buih | cuci | mandi | membersih | mencuci | pembersihan | pencuci | sabun
+1F9FD	span	berliang | membersih | membersihkan | menyerap | poros | rendam | sental | span
+1F9FE	resit	bukti | invois | keterangan | penyata | perakaunan | resit | simpan kira | simpan kira-kira
+1F9FF	azimat nazar	azimat | biru | manik | mantera | mata syaitan | nazar | pesona | tangkal
+1FA78	titisan darah	cedera | darah | derma | haid | titisan | ubat
+1FA79	pembalut adhesif	luka | pembalut | pembalut adhesif | pembalut berpelekat
+1FA7A	stetoskop	doktor | jantung | perubatan | stetoskop
+1FA91	kerusi	duduk | kerusi | tempat duduk
+1FA92	pisau cukur	cukur | pisau cukur | tajam
+1FA93	kapak	belah | kapak | kapak kecil | kayu | tetak
+1FA94	lampu diya	diya | lampu | minyak
+1FA96	helmet tentera	askar | helmet | perang | perwira | tentera
+1FA99	syiling	dolar | duit | emas | euro | harta karun | kaya | logam | perak | syiling
+1FA9A	gergaji kayu	alat | gergaji | gergaji kayu | kayu gergaji | memangkas | memotong | tukang kayu
+1FA9B	pemutar skru	alat | alatan tangan | berguna | gajet | pemutar skru | pemutar skru berkepala rata | perkakas | skru
+1FA9C	tangga	anak tangga | daki | jejak | panjat | tangga
+1FA9D	cangkuk	bengkok | cangkuk | keluk | memancing | mengail | menjerat | tangkapan | titik jualan
+1FA9E	cermin	bersolek | cermin | pantulan | pemantul | spekulum
+1FA9F	tingkap	bingkai | bukaan | lutsinar | pandangan | tingkap
+260E	telefon	fon | telefon
+2620	tengkorak dan tulang bersilang	badan | kematian | muka | raksasa | tengkorak | tengkorak dan tulang bersilang | tulang bersilang
+2622	radioaktif	radioaktif | simbol
+2623	biobahaya	biobahaya | simbol
+267F	kerusi roda	akses | cacat | kerusi roda | simbol
+2692	tukul dan beliung	alat | beliung | tukul | tukul dan beliung
+2693	sauh	alat | kapal | sauh
+2694	pedang bersilang	bersilang | pedang | senjata
+2695	simbol perubatan	perubatan | simbol perubatan | staf
+2696	neraca timbang	alat | berat | keadilan | libra | neraca | neraca timbang | penimbang | zodiak
+2697	alembic	alat | alembic | kimia
+2699	gear	alat | gear
+269B	simbol atom	ateis | atom | simbol atom
+269C	fleur-de-lis	fleur-de-lis
+26A0	amaran	amaran
+26CF	beliung	alat | beliung | perlombongan | tukul
+26D1	topi keselamatan dengan palang putih	bantuan | helmet pekerja bantaun keselamatan | muka | palang | topi | topi keledar | topi keselamatan dengan palang putih
+26D3	rantai	rantai | rantaian
+26D4	dilarang masuk	bukan | dilarang | ditegah | lalu lintas | masuk | tidak | trafik
+2702	gunting	alat | gunting | kertas | menggunting
+2709	sampul surat	e-mel | emel | sampul surat | surat
+270F	pensel	pensel
+2712	mata pen hitam	mata pen | mata pen hitam | pen
+2714	tanda rait	✓ | betul | rait | selesai | semak | sudah | tanda | tanda semak tebal
+2716	darab	batal | darab | pendaraban | simbol | x
+2753	tanda soal	? | soalan | tanda | tanda baca | tanda soal
+2757	tanda seru merah	! | seru | tanda | tanda baca | tanda seru merah
+27A1	anak panah ke kanan	anak panah | anak panah ke kanan | arah | kardinal | timur
+1F500	butang rombak trek	anak panah | butang rombak trek | melintasi
+1F501	butang ulang	anak panah | butang ulang | ikut jam | ulang
+1F502	butang ulang sekali	anak panah | butang ulang sekali | ikut jam | sekali
+1F503	anak panah menegak ikut jam	anak panah | anak panah menegak ikut jam | ikut arah jam | muat semula | segar semula
+1F504	butang anak panah lawan jam	anak panah | arah lawan jam | bertentangan arah jam | butang anak panah lawan jam | lawan jam | segar semula
+1F519	anak panah ‘BACK’	anak panah | anak panah ‘BACK’ | kembali
+1F51A	anak panah ‘END’	anak panah | anak panah ‘END’ | tamat
+1F51B	anak panah ON!	anak panah | anak panah ON! | hidup | tanda
+1F51C	anak panah ‘SOON’	anak panah | anak panah ‘SOON’ | tidak lama lagi
+1F51D	anak panah ‘TOP’	anak panah | anak panah ‘TOP’ | atas | top
+1F520	huruf besar latin input	huruf | huruf besar | huruf besar latin input | input | latin
+1F521	huruf kecil latin input	abcd | huruf | huruf kecil | huruf kecil latin input | input | latin
+1F522	nombor input	1234 | input | nombor
+1F523	simbol input	input | simbol input
+1F524	huruf latin input	abc | abjad | huruf | input | latin
+21B5	anak panah ke bawah menukar arah ke kiri	anak panah ke bawah menukar arah ke kiri
+21B0	anak panah ke atas melencong ke kiri	anak panah ke atas melencong ke kiri
+21B1	anak panah ke atas melencong ke kanan	anak panah ke atas melencong ke kanan
+21B2	anak panah ke bawah melencong ke kiri	anak panah ke bawah melencong ke kiri
+21B3	anak panah ke bawah melencong ke kanan	anak panah ke bawah melencong ke kanan
+21B4	anak panah ke kanan menukar arah ke bawah	anak panah ke kanan menukar arah ke bawah
+21E4	palang anak panah ke kiri	palang anak panah ke kiri
+21E5	palang anak panah ke kanan	palang anak panah ke kanan
+21B9	palang anak panah ke kiri di atas palang anak panah ke kanan	palang anak panah ke kiri di atas palang anak panah ke kanan
+21E7	anak panah geronggang ke atas	anak panah geronggang ke atas
+21EA	anak panah geronggang ke atas dari palang	anak panah geronggang ke atas dari palang
+21E6	anak panah geronggang ke kiri	anak panah geronggang ke kiri
+21E8	anak panah geronggang ke kanan	anak panah geronggang ke kanan
+21E9	anak panah geronggang ke bawah	anak panah geronggang ke bawah
+21DE	garis berganda anak panah ke atas	garis berganda anak panah ke atas
+21DF	garis berganda anak panah ke bawah	garis berganda anak panah ke bawah
+21B8	palang panjang anak panah barat laut	palang panjang anak panah barat laut
+21B6	anak panah separuh bulatan atas arah lawan jam	anak panah separuh bulatan atas arah lawan jam
+21B7	anak panah separuh bulatan atas arah ikut jam	anak panah separuh bulatan atas arah ikut jam
+21C5	anak panah tunjuk atas dan tunjuk bawah	anak panah | anak panah tunjuk atas dan tunjuk bawah | atas | bawah
+21F5	anak panah ke bawah ke kiri anak panah ke atas	anak panah ke bawah ke kiri anak panah ke atas
+21A8	anak panah ke atas ke bawah berdasar	anak panah ke atas ke bawah berdasar
+21E0	anak panah garis berputus-putus ke kiri	anak panah garis berputus-putus ke kiri
+21E1	anak panah garis berputus-putus ke atas	anak panah garis berputus-putus ke atas
+21E2	anak panah garis berputus-putus ke kanan	anak panah garis berputus-putus ke kanan
+21E3	anak panah garis berputus-putus ke bawah	anak panah garis berputus-putus ke bawah
+21AB	anak panah ke kiri bergelung	anak panah ke kiri bergelung
+21AC	anak panah ke kanan bergelung	anak panah ke kanan bergelung
+2B05	anak panah ke kiri	anak panah | anak panah ke kiri | arah | barat | kardinal
+2B06	anak panah ke atas	anak panah | anak panah ke atas | arah | kardinal | utara
+2B07	anak panah ke bawah	anak panah | anak panah ke bawah | arah | kardinal | ke bawah | selatan

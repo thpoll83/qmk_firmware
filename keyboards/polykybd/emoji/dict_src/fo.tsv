@@ -1,0 +1,1160 @@
+# emoji search keywords, fo, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	grínandi andlit	andlit | grín | grínandi andlit
+1F601	strálandi andlit við brosandi eygum	andlit | bros | eyga | grín | smíl | strálandi andlit við brosandi eygum
+1F602	andlit við gleðistárum	andlit | andlit við gleðistárum | gleði | látur | tár
+1F603	grínandi andlit við stórum eygum	andlit | eygu | grín | grínandi andlit við stórum eygum | munnur | opin | stór
+1F604	grínandi andlit við brosandi eygum	andlit | grín | grínandi andlit við brosandi eygum | munnur | opin
+1F605	grínandi andlit við sveitta	andlit | bros | grín | grínandi andlit við sveitta | smíl | sveitti
+1F606	grínandi andlit við krympaðum eygum	andlit | eygu | grín | grínandi andlit við krympaðum eygum | krympa
+1F607	brosandi andlit við halgiboga	andlit | brosandi andlit við halgiboga | gloria | halgibogi | sakleys
+1F608	brosandi andlit við hornum	ævint´yr | andlit | bros | brosandi andlit við hornum | horn | smíl
+1F609	andlit við blunkandi eyga	andlit | andlit við blunkandi eyga | blunk
+1F60A	brosandi andlit við brosandi eygum	andlit | bros | brosandi andlit við brosandi eygum | eyga | rodna
+1F60B	andlit við matarlystið	andlit | andlit við matarlystið | lekkurt | matarlystur | tunga
+1F60C	lætna andlit	andlit | lætna
+1F60D	smílandi andlit við hjarta eygum	andlit | hjarta | kærleikur | smílandi andlit við hjarta eygum
+1F60E	smílandi andlit við sólbrillum	andlit | smílandi andlit við sólbrillum | sólbrillur
+1F60F	lúrt andlit	andlit | lúrin | lúrt andlit | snildur
+1F610	nevtralt andlit	andlit | nevtralt | ópartískt
+1F611	kensluleyst andlit	andlit | kensluleyst
+1F612	ikki stuttligt andlit	andlit | ikki stuttligt | ikki stuttligt andlit
+1F613	sveittandi andlit ið hyggur niðureftir	andlit | niður | sveittandi andlit ið hyggur niðureftir | sveitti
+1F614	grundandi andlit	andlit | dapur | grundandi | kedd | keddur
+1F615	forvirra andlit	andlit | forvirra | ørviti
+1F616	sera illbrýnt andlit	andlit | harmur | illbrýnt | illfýsið | keddur | óglaður | ólukkulig | sera illbrýnt andlit | sorgarbundin
+1F617	mussandi andlit	andlit | koss | muss | mussandi andlit
+1F618	andlit ið sendur hjarta koss	andlit | andlit ið sendur hjarta koss | koss | muss
+1F619	mussandi andlit við brosandi eygum	andlit | bros | eyga | koss | muss | mussandi andlit við brosandi eygum
+1F61A	mussandi andlit við afturlatnum eygum	afturlatin | andlit | eygu | koss | muss | mussandi andlit við afturlatnum eygum
+1F61B	gálvandi andlit	andlit | gálva | gálvandi andlit | tunga
+1F61C	gálvandi andlit við blunkandi eyga	andlit | blunka | eyga | gálva | gálvandi andlit við blunkandi eyga | tunga
+1F61D	gálvandi andlit við krympaðum eygum	andlit | eygu | gálva | gálvandi andlit við krympaðum eygum | krympa | tunga
+1F61E	skuffa andlit	andlit | harmur | illbrýnt | illfýsið | keddur | óglaður | ólukkulig | skuffa andlit | sorgarbundin
+1F61F	stúrt andlit	andlit | bangin | stúrin | stúrt andlit
+1F620	hóttandi andlit	andlit | hóttandi | ill | illur
+1F621	sera hóttandi andlit	andlit | hóttandi | ill | illur | sera hóttandi andlit
+1F622	andlit ið grætur	andlit | andlit ið grætur | grátur | kedd | keddur | tár
+1F623	ágrýti andlit	ágrýti andlit | ágrýtin | andlit
+1F624	andlit við royki úr nøsuni	andlit | andlit við royki úr nøsuni | argur | ill | vreiður
+1F625	sorgarbundi andlit og tár	andlit | dapur | sorgarbundi andlit og tár | sorgarbundin | tár
+1F626	skelka andlit	andlit | skelka
+1F627	pínt andlit	andlit | pínt
+1F628	bangi andlit	andlit | bangi | óttafult | óttast
+1F629	pøst andlit	andlit | pøst | troytt | troyttur
+1F62A	lint andlit	andlit | grætur | lint
+1F62B	troytt andlit	andlit | móð | móður | troytt | troyttur
+1F62C	andlit ið vísur tenn	andlit | andlit ið vísur tenn | snerkja | tenn
+1F62D	andlit sum grætur nógv	andlit | andlit sum grætur nógv | grátur | kedd | keddur | tár
+1F62E	andlit við opnum munni	andlit | andlit við opnum munni | munn | opin
+1F62F	bilsi andlit	andlit | bilsi andlit | ovfari | undrandi
+1F630	bangi andlit við sveitta	andlit | bangi | bangi andlit við sveitta | óttafult | óttast | sveitti
+1F631	skríggjandi andlit	andlit | angist | bangilsi | ótti | ræðsla | skríggjandi
+1F632	ovfari andlit	andlit | bilsi | ovfari andlit | undrandi
+1F633	rodna andlit	andlit | rodna
+1F634	sovandi andlit	andlit | sovandi | zzz
+1F635	svimbult andlit	andlit | svimbul | svimbult andlit
+1F636	andlit uttan munn	andlit | andlit uttan munn | munn
+1F637	andlit við masku	andlit | andlit við masku | maska | sjúk
+1F638	brosandi kettuandlit við smílandi eygum	andlit | brós | brosandi kettuandlit við smílandi eygum | ketta | smíl
+1F639	kettuandlit sum fellur gleðist´´ár	andlit | bros | gleði | ketta | kettuandlit sum fellur gleðist´´ár | smíl | tár
+1F63A	brosandi kettuandlit	andlit | brós | brosandi | brosandi kettuandlit | ketta | smíl
+1F63B	brosandi kettuandlit við hjartaeygum	andlit | brosandi kettuandlit við hjartaeygum | eygu | hjarta | ketta
+1F63C	kettuandlit við speiskum smíli	andlit | beiskt | ketta | kettuandlit við speiskum smíli | speiskt
+1F63D	mussandi kettuandlit	andlit | ketta | muss | mussandi kettuandlit
+1F63E	kettuandlit við gron	andlit | gron | ketta | kettuandlit við gron
+1F63F	grátandi kettuandlit	andlit | grætur | grátandi kettuandlit | grátur | ketta | tár
+1F640	bilsi kettuandlit	andlit | bilsi | bilsi kettuandlit | ketta | skelkur | undran
+1F641	eitt sindur illbrýnt andlit	andlit | eitt sindur illbrýnt andlit | harmur | illbrýnt | illfýsið | keddur | óglaður | ólukkulig | sorgarbundin
+1F642	andlit ið smílur eitt sindur	andlit | andlit ið smílur eitt sindur | bros | smíl
+1F643	andlit ið vendur á høvdinum	andlit | andlit ið vendur á høvdinum | upp og niður
+1F644	andlit við rullandi eygum	andlit | andlit við rullandi eygum | eygu | rullandi
+1F648	apuandlit við hondunum yvir eygunum	andlit | apa | apuandlit við hondunum yvir eygunum | eygu | hond
+1F649	apuandlit við hondunum yvir oyrunum	andlit | apa | apuandlit við hondunum yvir oyrunum | hond | oyru
+1F64A	apuandlit við hondunum yvir munninum	andlit | apa | apuandlit við hondunum yvir munninum | hond | munn
+1F910	lýnlás andlit	andlit | lýnlás
+1F911	peningaandlit	andlit | munn | pengar | peningaandlit
+1F912	andlit við fepurstokkið	andlit | andlit við fepurstokkið | fepurstokkur | sjúk
+1F913	nørd andlit	andlit | nørd
+1F914	hugsandi andlit	andlit | hugsandi
+1F915	andlit við bind um høvdið	andlit | andlit við bind um høvdið | bind | sár | skaði
+1F916	robottandlit	andlit | robottandlit | robottur | tólmenni
+1F917	klemmandi andlit	andlit | klemm | klemmandi andlit
+1F920	andlit við cowboyhatti	andlit | andlit við cowboyhatti | cowboy | hattur | kovboy
+1F921	klovn andlit	andlit | gekkur | klovn
+1F922	andlit ið vil spýggja	andlit | andlit ið vil spýggja | sjóverk | spýggj | vaml
+1F923	tárandi flennandi andlit	andlit | lofl | tár | tárandi flennandi andlit
+1F924	slevandi andlit	andlit | slev | slevandi andlit
+1F925	andlit sum lýgur	andlit | andlit sum lýgur | lygn | pinocchio
+1F926	vónbrotin persónur	facepalm | fólk | ørkymlan | persónur | vónbrot | vónbrotin persónur
+1F927	njósandi andlit	andlit | njós | njósandi andlit
+1F928	andlit við upplyftum eygnabrúni	andlit | andlit við upplyftum eygnabrúni | eygnabrún | ivi | skeptisk | skeptiskur
+1F929	stjørnuandlit	andlit | stjørna | stjørnuandlit
+1F92A	svakt andlit	andlit | eygu | ørt | svakt
+1F92B	hússjandi andlit	andlit | hússja | hússjandi andlit
+1F92C	bannandi andlit	andlit | banna | bannandi andlit | blóta | svørja
+1F92D	andlit við hond yvir munnin	andlit | andlit við hond yvir munnin | hond | munn | ups
+1F92E	spýggjandi andlit	andlit | sjóverk | spýggj | spýggjandi andlit | vaml
+1F92F	andlit í brestur	andlit | andlit í brestur | brestur | skelkur
+1F970	smílandi andlit við hjørtum	andlit | elska | hjarta | kærleikur | smílandi andlit við hjørtum
+1F971	geispandi andlit	geisp | geispandi andlit | keða | keðsemi | troytt | troyttur
+1F972	smílandi andlit ið tárar	andlit | bros | errin | smílandi andlit ið tárar | stolt | stoltur | takksamur | takksom
+1F973	veitslu andlit	hattur | veitsla | veitslu andlit | veitslu horn
+1F974	í ørviti andlit	í ørviti | í ørviti andlit | kenning | skít | svimbul
+1F975	heitt andlit	fepur | heitt | heitt andlit | hitasótt | sveitti
+1F976	kalt andlit	blátt andlit | frost | kalt | kalt andlit
+1F978	grýlu andlit	andlit | brillur | grýla | grýlu andlit | nøs
+1F97A	biðjandi andlit	biðjandi andlit | bønandi | náði
+1FAE0	smelta andlit	heitt | smelta andlit | smeltandi | speiorð
+1FAE1	heilsandi andlit	heilsan | heilsandi andlit | hermaður | hermannakvøða | kvøða
+1FAE2	andlit við opnum eygum og við hond yvir munnin	andlit við opnum eygum og við hond yvir munnin | bangin | omg | ræðsla
+1FAE3	lúrandi andlit	bangin | lúra | lúrandi andlit | omg | ræðsla | rukka | smæðin
+1FAE4	ivingarsamt andlit	ivast | ivi | ivingarsamt andlit | skeptisk | skeptiskur
+1FAE5	prikka andlit	prikka andlit | strika | strikut
+1FAE7	bløðrur	bløðra | bløðrur | sápa | vaska
+1FAE8	skelvandi andlit	omg | ør | ørur | ristandi | skelva | skelvandi andlit | svakur | svøk
+1F381	gáva	gáva
+1F389	borðbumba	borðbumba | veitsla
+1F38A	konfetti	konfetti
+1F47B	gálvandi spøkilsi	ævintýr | gálva | gálvandi spøkilsi | spøkilsi
+1F47C	pinkabarnaeingil	ævintýr | andlit | eingil | pinkabarnaeingil | pinkubarn | trúgv
+1F47D	rúmdarvera	ævintýr | alien | andlit | rúmdarvera | ufo
+1F47E	rúmdarvera skrímsl	ævintýr | alien | andlit | rúmdarvera | skrímsl | ufo
+1F47F	hóttandi andlit við hornum	ævint´yr | andlit | horn | hóttandi | hóttandi andlit við hornum | illur
+1F480	skøltur	andlit | deyði | skøltur
+1F481	persónur sum nertir við	fólk | nertir við | persónur | persónur sum nertir við
+1F482	vaktur	vaktur
+1F489	sproyta	amboð | heilivágur | innspræning | lækni | medisin | nál | sjúka | sproyta
+1F48A	pillari	heilivágur | lækni | medisin | pillari | sjúka
+1F4A2	vreiði tekin	tekin | vreiði
+1F4A4	zzz	snorkar | svevur | zzz
+1F4A5	samanstoytur	bang | samanbrestur | samanstoytur
+1F4A6	dropar	dropar | sveitti | vatn
+1F4A7	dropi	dropi | smádropi | sveitti | vatn | vatndropi
+1F4A8	fok	fok | renna | vindur
+1F4A9	kukkur	bros | kukkur | lortur | smíl
+1F4AB	svimbul	stjørna | stjørnuskot | svimbul | tekin
+1F4AC	talubløðra	bløðra | samtala | tala | talubløðra
+1F4AD	tankabløðra	hugskot | tankabløðra | tanki | umsorgan
+1F4AE	hvít blóma	blóma | blomstur | hvít blóma
+1F4A0	krossaður diamantur	diamantur | krossaður diamantur | mátingarfrøðiligur
+1F4A1	ljóspera	hugskot | ljós | ljóspera | pera
+1F4A3	bumba	bumba | vopn
+1F4AF	hundrað stig	100 | hundrað | stig | úrslit
+1F4B0	pengasekkur	dollarar | dollari | pengar | pengasekkur | peningasekkur | peningur | sekkur
+1F4B1	gjaldoyraveksil	børs | gjaldoyra | gjaldoyraveksil | veksil
+1F4B2	stórt dollartekn	dollarar | dollari | dollartekn | gjaldoyra | pengar | peningur | stórt dollartekn
+1F4B8	pengar við veingjum	dollarar | dollari | gjaldoyra | pengar við veingjum | pengaseðil | seðil | veingjar
+1F525	eldur	bál | eldsbruni | eldur | logi
+1F52E	krystalkúla	ævintýr | krystal | krystalkúla | kúla | lagna
+1F440	eygu	eyga | eygu
+1F441	eyga	eyga | kroppur
+1F442	oyra	kroppur | oyra
+1F443	nøs	kroppur | nøs
+1F444	munnur	kroppur | munnur | varrar
+1F445	tunga	gálva | kroppur | tunga
+1F446	fremstifingur peikar uppeftir	fingur | fremstifingur | fremstifingur peikar uppeftir | hond | peikifingur | upp | uppeftir
+1F447	longutong peikar niðureftir	fingur | hond | longutong | longutong peikar niðureftir | niður | niðureftir
+1F448	fremstifingur peikar til vinstru	fingur | fremstifingur | fremstifingur peikar til vinstru | hond | peikifingur | vinstru
+1F449	fremstifingur peikar til høgru	fingur | fremstifingur | fremstifingur peikar til høgru | høgru | hond | peikifingur
+1F44A	sláandi knýttur nevi	knýttur | nevi | sláandi knýttur nevi | slær
+1F44B	veitrandi hond	hond | veitra | veitrandi hond | vinka
+1F44C	ok tekin	gott | hond | ok | tekin | viðurkent
+1F44D	tummil upp	gott | samdur | tummil | tummil upp
+1F44E	tummil niður	niður | ósamdur | tummil | vánaligt
+1F44F	klappandi hendur	hendur | hond | klapp | klappandi hendur
+1F450	opnar hendur	hendur | hond | opin | opnar hendur
+261D	lógvi og fremstifingur peikar uppeftir	fingur | fremstifingur | hond | lógvi | lógvi og fremstifingur peikar uppeftir | peikifingur | upp | uppeftir
+270A	knýttur nevi	knýttur | nevi
+270B	hond	hond | lógvi
+270C	sigurstekin	hond | sigur | sigurstekin | tekin
+270D	skrivandi hond	hond | skriva | skrivandi hond
+1F4AA	spentur biseps	biseps | spentur | tvíhøvdavøddi
+1F590	fimm fingrar	fimm | fingrar | hond
+1F64C	upplyftar hendur	hendur | hond | upp | upplyftar hendur
+1F64F	falda hendur	bøn | eggja saman hendur | falda | hendur
+1F90C	samlaðir fingrar	fingrar | hond | hondtekin | samlaðir fingrar
+1F90F	fingrar sum vísa ikki nógv	eitt sindur | fingrar | fingrar sum vísa ikki nógv | hond | hondtekin | ikki nógv | lítið
+1F918	horntekin	horn | horntekin | rock | rokkur | tekin
+1F919	telefontekin	hond | tekin | telefon | telefontekin
+1F91A	handarbak	handarbak
+1F91B	nevi í vendur til vinstru	knýttur | nevi | nevi í vendur til vinstru | vinstru
+1F91C	nevi í vendur til høgru	høgru | knýttur | nevi | nevi í vendur til høgru
+1F91D	lógvatak	hendur | hond | lógvatak | taka í
+1F91E	krossaðir fingrar	eydna | fingrar | hond | krossaðir fingrar
+1F91F	kærleikshandabragd	hond | kærleiki | kærleikshandabragd
+1F932	lógvar sum eru saman	bøn | hendur | hond | lógvar | lógvar sum eru saman | lógvi | saman
+1F9B4	kjøtbein	bein | beinagrind | kjøtbein
+1F9B5	bein	bein | limur | sparka
+1F9B6	fótur	fótur | limur | sparka | trampa
+1F9B7	tonn	tannlækni | tonn
+1F9E0	heili	gløgg | gløggur | heili | klók | klókur | kroppur
+1F9BE	kunstigur armur	armur | kunstigur armur | maskinarmur | mekaniskur
+1FAC0	hjarta	hjarta | hjartasláttur | pulsur | yrkisgagn
+1FAC1	lungur	andadráttur | lungur | yrkisgagn
+1FAE6	bíta í vørruna	bíta | munnur | vørr
+1FAF0	krossa tummil og peikifingur	fingrar | hond | krossa | peikifingur | tummil
+1FAF1	hond til høgru	høgra | høgra hond | hond til høgru | lógvatak | taka í hond
+1FAF2	hond til vinstru	hond til vinstru | lógvatak | taka í hond | vinsta hond | vinstra
+1FAF3	lógvi niðureftir	hond | lógvi | lógvi niðureftir | missa | niður | sleppa | tak upp
+1FAF4	lógvi uppeftir	gev | hond | lofta | lógvi | lógvi uppeftir
+1FAF5	peikar eftir tær	hond | peikar | peikifingur | tú
+1FAF6	hjarta hendur	hendur | hjarta | hond | kærleiki
+1FAF7	hond skumpar til vinstru	hond skumpar til vinstru | nei | stop | stoppa | vinstra
+1FAF8	hond skumpar til høgru	høgra | hond skumpar til høgru | nei | stop | stoppa
+2764	reytt hjarta	hjarta | reytt
+1F380	band	band | prýðisrósa
+1F382	føðingardagskaka	føðingardagskaka | føðingardagur | kaka | ljós | matur
+1F383	graskarhøvd	allahalgannaaftan | graskar | graskarhøvd | halloween | høvd | lanterna
+1F384	jólatræ	jól | jólatræ | træ
+1F386	fýrverk	eldverk | fýrverk | skreyteldur
+1F387	stjørnukastari	stjørnukastari | stjørnuljós
+1F388	ballón	ballón | reyð
+1F9E7	reyður brævbjálvi	brævbjálvi | gáva | hóngbāo | lai see | reyður brævbjálvi
+1F9E8	kinesari	dynamitt | eldverk | kinesari | skreyteldur | spreingievni
+1F38B	tanabata træ	japanskt | tanabata | træ
+1F38C	krossa fløgg	fløgg | japan | krossa fløgg
+1F38D	kadomatsu	furutræ | japanskt | kadomatsu
+1F38E	japanskar dukkur	dukkur | japanskar
+1F38F	Koinobori	japanskt | Koinobori
+1F390	vindharpa	vindharpa
+1F391	tsukimi	japanskt | jugoya | otsukimi | tsukimi
+1F393	fráfaringarhúgva	fráfaring | fráfaringarhúgva | hattur | húgva | klæði | próvtøka
+1F484	varrastift	fríðkanarevni | makeup | sminka | varrastift
+1F485	neglalakk	fríðkanarevni | negl | neglalakk | vakurleikarøkt
+1F48B	muss merki	koss | muss | muss merki | varrar | varrastift
+1F48C	kærleiksbræv	bræv | kærleiksbræv | kærleikur
+1F48D	ringur	diamantur | ringur
+1F48E	gimsteinur	diamantur | gimsteinur
+1F48F	tvey íð mussast	hjarta | muss | par | tvey íð mussast
+1F490	blómutyssi	blóma | blomstur | blómutyssi | buket
+1F491	par og hjarta	hjarta | kærleiki | par | par og hjarta
+1F492	brúdleypshús	brúdleyp | brúdleypshús | bygningur | kapel
+1F493	bankandi hjarta	bankandi hjarta | bankar | hjarta | slær
+1F494	brotið hjarta	brotið | hjarta | sorgarbundin
+1F495	tvey hjørtu	kærleiki | tvey hjørtu
+1F496	glitrandi hjarta	glampandi | glitrandi | glógvandi | hjarta | ljómandi
+1F497	glógvandi hjarta	glógvandi | hjarta
+1F498	pílur ígjøgnum hjarta	Amor | amorina | hjarta | kærleikstekin | pílur | pílur ígjøgnum hjarta
+1F499	blátt hjarta	blátt | hjarta
+1F49A	grønt hjarta	grønt | hjarta
+1F49B	gult hjarta	gult | hjarta
+1F49C	korkalitt hjarta	bláreytt | hjarta | korkalitt | lilla | lillafarva | purpurlitt | purpurreytt
+1F49D	hjarta við bandi	band | hjarta | hjarta við bandi
+1F49E	hjørtu sum mela í klingur	hjarta | hjørtu | hjørtu sum mela í klingur | mala
+1F49F	hjarta pynt	hjarta | prýði | pynt
+1F90D	hvítt hjarta	hjarta | hvítt
+1F90E	brúnt hjarta	brúnt | hjarta
+1F9E1	appilsingult hjarta	appilsingult | hjarta
+1FA75	ljósablátt hjarta	hjarta | ljósablátt
+1FA76	grátt hjarta	grátt | hjarta
+1FA77	ljósareytt hjarta	hjarta | kærleiki | ljósareytt
+2763	hjarta rópitekn	hjarta | rópitekn | teknseting
+2733	áttatinda stjørna	áttatinda stjørna | stjørna
+2734	áttaspíska stjørna	áttaspíska stjørna | stjørna
+2747	glampi	glampa | glampi | glitra | glógva | ljóma | skyggja | stjørna
+1F3E0	hús	heim | hús
+1F3E1	hús við hava	havi | heim | hús | hús við hava
+1F3E2	skrivstovubygningur	bygningur | skrivstova | skrivstovubygningur
+1F3E3	japanskt posthús	japanskt | posthús | poststova | postverk
+1F3E4	posthús	posthús | poststova | postverk
+1F3E5	sjúkrahús	bygningur | sjúkrahús
+1F3E6	banki	banki | bygningur
+1F3E7	sjálvtøkuskeltið	automat | pengar | sjálvtøka | sjálvtøkuskeltið | út
+1F3E8	hotell	bygningur | gistingarhús | hotell
+1F3E9	kærleikshotell	bygningur | gistingarhús | hotell | kærleiki | kærleikshotell
+1F3EA	nærhandil	bygningur | handil | nærhandil
+1F3EB	skúli	bygningur | skúli
+1F3EC	vøruhús	handil | stórhandil | vøruhús
+1F3ED	verksmiðja	bygningur | ídnaðarvirki | verksmiðja | virki
+1F3EE	reyð pappírlanterna	lanterna | ljós | pappírlanterna | reyð
+1F3EF	japanskt slott	borg | japan | japanskt slott | slott
+1F3F0	slott	borg | slott
+1F463	fótaspor	fótaspor | føtur | il | slóð | spor
+1F464	skuggamynd av bringumynd	bringumynd | skuggamynd | skuggamynd av bringumynd
+1F465	skuggamynd av bringumyndum	bringumynd | bryngumyndir | skuggamynd | skuggamynd av bringumyndum
+1F466	drongur	drongur | piltur | smádrongur
+1F467	genta	genta | smágenta
+1F468	maður	maður | mannfólk | vaksin
+1F469	kona	kona | konufólk | kvinna | vaksin
+1F46A	familja	barn | familja | foreldur
+1F46B	kvinna or maður leiðast	kona | kvinna | kvinna or maður leiðast | leiðast | maður | par
+1F46C	menn leiðast	leiðast | maður | menn | par | stjørnutekin | tvíburar | Tvíburarnir
+1F46D	kvinnur leiðast	konur | kvinnur | leiðast | par
+1F46E	politistur	løgregla | politistur
+1F46F	fólk við haruoyrum	dansa | dansur | fólk | fólk við haruoyrum | haruoyru | persónar
+1F470	persónur í sløri	brúdleyp | brúður | persónur | persónur í sløri | slør
+1F471	ljóshærdur persónur	fólk | ljóshærd | ljóshærdur | ljóshærdur persónur
+1F472	persónur við kinesiskari húgvu	fólk | húgva | kinesisk | persónur við kinesiskari húgvu
+1F473	persónur við turban	fólk | persónur við turban | turban
+1F474	gamal maður	eldri | gamal | maður | mannfólk
+1F475	gomul kona	eldri | gomul | kona | konufólk | kvinna
+1F476	pinkubarn	barn | pinkubarn
+1F477	byggiverkfrøðingur	bygging | byggiverkfrøðingur | smíð
+1F478	prinsessa	fúrstakona | fúrstinna | kongsdóttir | prinsessa
+1F479	skrímsl	ævintýr | andlit | skrímsl | trøll
+1F47A	vættur	ævintýr | andlit | skrímsl | trøll | vættur
+1F483	kvinna sum dansar	dansar | dansur | kona | kvinna | kvinna sum dansar
+1F486	persónur sum fær massasju	fólk | massasja | persónur | persónur sum fær massasju
+1F487	persónur sum fær klipt hári	fólk | hár | hárklipping | hársnið | klipp | persónur | persónur sum fær klipt hári
+1F645	persónur sum veipar nei	fólk | nei | persónur | persónur sum veipar nei | veipar
+1F646	persónur sum veipar ok	fólk | ok | persónur | persónur sum veipar ok | veipar
+1F647	persónur sum bukkar	bukkar | fólk | persónur | persónur sum bukkar
+1F64B	persónur sum lyftur hondina upp	fólk | hond | lyft | persónur | persónur sum lyftur hondina upp | upp
+1F64D	illbrýntur persónur	fólk | illbrýnt | illbrýntur persónur | persónur
+1F64E	persónur við gron	fólk | gron | persónur | persónur við gron
+1F930	kvinna við barn	kona | kvinna | kvinna við barn | upp á vegin | við barn
+1F931	geva bróst	bróstaføði | bróstageving | geva bróst | mamma | móður | móðurmjólk | pinkubarn
+1F933	sjálvsmynd	selfie | sjálvsmynd
+1F934	prinsur	fúrsti | kongssonur | prinsur
+1F935	persónur í smoking	brúðgómur | persónur | persónur í smoking | smoking
+1F936	jólakonan	jól | jólakona | jólakonan | kona | kvinna
+1F937	persónur sum yppur øksl	akslaypp | fólk | ivast | ivi | persónur | persónur sum yppur øksl | veit ikki | yppa øksl
+1F385	jólamaðurin	jól | jólamaður | jólamaðurin | maður
+1F9B8	superhetja	góður | hetja | super | superhetja | yvirnátúrligur
+1F9B9	superskálkur	bakbeist | illmenni | óndur | skálkur | super | superskálkur
+1F9BF	kunstigt bein	bein | kunstigt bein | maskinbein | mekaniskt
+1F9D0	andlit við einglesi	andlit | andlit við einglesi | einglesi | monokul
+1F9D1	persónur	persónur | vaksin
+1F9D2	barn	barn | óviti
+1F9D3	tilkomin	eldri | tilkomin
+1F9D4	persónur við skeggi	persónur | persónur við skeggi | skegg
+1F9D5	kvinna við turriklæði	hijab | kona | kvinna | kvinna við turriklæði | kvinnuplagg | mantilla | turriklæði
+1F9D6	persónur í sauna	baðstova | fólk | persónur | persónur í sauna | sauna
+1F9D7	persónur sum klatrar	fólk | klatra | klintra | klíva | klúgva | persónur | persónur sum klatrar
+1F9D8	persónur í lotusstøðu	fólk | joga | lotus | lotusstøða | meditatión | persónur | persónur í lotusstøðu
+1F9D9	persónur sum dugir gand	ævintýr | fólk | galdur | persónur sum dugir gand
+1F9DA	álva	ævintýr | álva | álvur
+1F9DB	vampýrur	blóðsúgvari | drakula | vampýrur
+1F9DC	havfólk	hav | havfólk | havfrúgv | havmaður
+1F9DD	álvur	ævintýr | álva | álvur
+1F9DE	andi	ævintýr | andi
+1F9DF	sombi	sombi | uppvakningur | zombie
+1FAC2	fólk sum klemmast	bei | fólk sum klemmast | hey | klemm | takk
+1FAC3	maður við barn	búkur | eti ov nógv | maður | maður við barn | upp á vegin | við barn
+1FAC4	persónur við barn	búkur | eti ov nógv | persónur | persónur við barn | upp á vegin | við barn
+B9	háskrift eitt	eitt | háskrift
+B2	háskrift tvey	ferningur | háskrift | kvadrat | tvey
+B3	háskrift trý	háskrift | rúmtal | trý
+207B	háskrift minus	háskrift minus | minus
+B0	stig	prógv | stig
+B1	pluss-minusmerki	merki | minus | pluss | pluss-minus | tekin
+D7	faldingarmerki	falda | faldingarmerki | ganga | merki | tekin
+F7	býtingarmerki	býta | býtingarmerki | merki | tekin
+B5	mikrotekin	mikro | tekin
+A9	upphavsrættur	c | upphavsrætt | upphavsrættur
+AE	skrásett	r | skrásett | skrásettur
+2122	virkisrættindi	fyritøkumerki | fyritøkurættindi | virkismerki | virkisrættindi | vøruheiti | vørumerki
+A7	brot	brot | partur
+B6	reglubrottekn	reglubrot | reglubrottekn
+B7	miðprikkur	mið | miðprikkur | prikkur
+2022	punkt	prikkur | punkt
+2013	tankastrika	strika | tankastrika
+2026	ellipsa	burturúrløga | ellipsa
+AB	vinstra serlig gásareygu	fronsk | gásareygu | talutekn | vinstra serlig gásareygu
+BB	høgra serlig gásareygu	fronsk | gásareygu | talutekn | vinstra serlig gásareygu
+2030	promilla	av túsund | promilla | túsundapartur
+20AC	evra	evra | evrur | gjaldoyri
+A3	sterlingspund	gjaldoyri | pund | sterlingspund
+A5	jenn	gjaldoyra | jenn | jennur | yen
+A2	sentur	cent | gjaldoyra | sentur
+20B9	indiskur rupi	gjaldoyra | india | rupi
+20BD	rubil	gjaldoyra | rubil | rupil
+20A9	vonnur	gjaldoyra | vonnur | won
+20BA	Turkaland liri	
+20BF	bitcoin	bitcoin | gjaldoyra
+20AA	Ísrael new shekel	
+20AB	Vjetnam dong	
+20B1	peso	gjaldoyra | peso
+20BC	Aserbadjan manat	
+20B4	Ukraina hryvnia	
+20A6	Nigeria naira	
+20A1	Kosta Rika colón	
+20B2	Paraguai guarani	
+20B5	Gana cedi	
+20B8	Kasakstan tenge	
+20BE	Georgia lari	
+20AE	Mongolia tugrik	
+20AD	Laos kip	
+20A8	rupi	gjaldoyra | rupi
+24	dollari	dollar | dollari | gjaldoyra
+58F	Armenia dram	
+9F3	Bangladesj taka	
+E3F	Tailand baht	
+20A3	franskur frankur	frankur | franskur | gjaldoyra
+20A4	liri	gjaldoyra | liri
+20B0	týskur penny	gjaldoyra | penny | týskur
+20B3	austral	austral | gjaldoyra
+20A2	cruzeiro	cruzeiro | gjaldoyra
+20A5	mill	gjaldoyra | mill
+20B6	livre tournois	gjaldoyra | livre | livre tournois
+20B7	spesmilo	gjaldoyra | spesmilo
+A4	Ókent gjaldoyra	
+201E	lág høgra gásareygu	gásareygu | lág høgra gásareygu | talutekn
+201C	vinstra gásareygu	gásareygu | talutekn | vinstra gásareygu
+201D	høgra gásareygu	gásareygu | høgra gásareygu | talutekn
+2018	vinstra apostrofa	apostrofa | burturfalsmerki | hvørsfalsmerki | vinstra apostrofa
+2019	høgra apostrofa	apostrofa | burturfalsmerki | høgra apostrofa | hvørsfalsmerki
+A1	øvut rópitekn	øvut | róp | rópitekn | útróp
+BF	øvut spurnartekn	øvut | spurnartekn | spurningur
+2020	krossur	krosstekn | krossur
+2021	dupultur krossur	dupultur krossur | krosstekn | krossur
+2032	einkul gásareygu	einkul | gásaeygu | talutekn
+2033	gásareygu	gásareygu | talutekn
+201A	lág høgra apostrofa	burturfalsmerki | hvørsfalsmerki | lág høgra apostrofa
+AC	negasjón	negasjón | noktan | sýtan
+2117	ljóðupptøku høvundarættindi	høvundarættindi | ljóð | rættindi | upptøka
+2212	minusmerki	minus | minusmerki | tekin
+2248	næstan javnamerki	at kalla | ligvið | mestsum | næstan javnamerki | nørum
+2260	ikki javnamerki	ikki javnamerki | ligvið
+2261	eins við	eins við | samlíkt | samvorðin
+2264	minni enn ella javnt	javnt | ligvið | minni | minni enn ella javnt
+2265	størri enn ella javnt	javnt | ligvið | størri | størri enn ella javnt
+221E	óendaligtmerki	merki | óendaligt | óendaligtmerki | tekin
+221A	kvadratrót	ferrót | kvadratrót
+221D	lutfalsligur	lutfall | lutfalstal
+222B	heildi	heildarrokning | heildi | integral
+2206	vøkstur	hækkan | øking | trýkantur | vøkstur
+2207	nabla	nable | trýkantur
+2208	lutur í	lutur | lutur í
+2229	felagsmongd	felagsmongd | mongd
+222A	sammongd	mongd | sammongd
+2282	partmongd í	partmongd | partmongd í
+2283	partmongd	partmongd
+2286	partmongd javnt við	ligvið | partmongd javnt við
+2234	sostatt	logikkur | skilvísi | sostatt
+2235	tí	logikkur | skilvísi | tí
+2190	pílur til vinstru	pílur | pílur til vinstru | vinstru
+2191	pílur uppeftir	pílur | upp | uppeftir
+2192	pílur til høgru	høgru | pílur
+2193	pílur niðureftir	niður | niðureftir | pílur
+2196	pílur sum peikar uppeftir og til vinstru	ætt | k´ós | pílur | pílur sum peikar uppeftir og til vinstru | útnyrðingur
+2197	pílur sum peikar uppeftir og til høgru	ætt | k´ós | landnyrðingur | pílur | pílur sum peikar uppeftir og til høgru
+2198	pílur sum peikar niðureftir og til høgru	ætt | k´ós | landsynningur | pílur | pílur sum peikar niðureftir og til høgru
+2199	pílur sum peikar niðureftir og til vinstru	ætt | k´ós | pílur | pílur sum peikar niðureftir og til vinstru | útsynningur
+2194	pílur sum peikar til høgru og vinstu	pílur | pílur sum peikar til høgru og vinstu
+2195	pílur sum peikar upp og niður	pílur | pílur sum peikar upp og niður
+21A9	bogin pílur sum peikar til vinstru	bogin | bogin pílur sum peikar til vinstru | pílur
+21AA	bogin pílur sum peikar til høgru	bogin | bogin pílur sum peikar til høgru | pílur
+21C6	vinstravendur pílur omanfyri høgravendan píl	høgra | pílar | pílur | vinstra | vinstravendur pílur omanfyri høgravendan píl
+1F400	rotta	dýr | rotta
+1F401	mús	dýr | mús
+1F402	oksi	dýr | neyt | oksi | stjørnumerki
+1F403	búffil	bisonur | búffil | dýr | visundur
+1F404	kúgv	dýr | kúgv | neyt
+1F405	tikari	dýr | tikari
+1F406	leopardur	dýr | leopardur
+1F407	kanin	dýr | kanin | kelidýr
+1F408	ketta	dýr | kelidýr | ketta | køttur
+1F409	dreki	ævintýr | dreki
+1F40A	krokodilla	dýr | krokodilla
+1F40B	hvalur	dýr | hvalur
+1F40C	snigil	snigil
+1F40D	slanga	dýr | serpentin | slanga | stjørnumerki
+1F40E	hestur	dýr | hestur | kappríðingarross | kelidýr | ross
+1F40F	veðrur	dýr | seyður | stjørnumerki | veðrur
+1F410	geit	dýr | geit | stjørnumerki
+1F411	ær	ær | dýr | seyður
+1F412	apa	apa | dýr
+1F413	hani	dýr | fuglur | hani
+1F414	hønuandlit	andlit | høna | hønuandlit | høsnarungi
+1F415	hundur	dýr | hundur | kelidýr
+1F416	grísur	dýr | grísur | súgv | svín
+1F417	villsvínaandlit	andlit | gøltur | villsvín | villsvínaandlit
+1F418	fílur	dýr | fílur
+1F419	høgguslokkur við átta ørmum	áttaarmaður | áttermdur | dýr | høgguslokkur | høgguslokkur við átta ørmum
+1F41A	skel	skel | sniglahús | snyril
+1F41B	skordýr	skordýr
+1F41C	meyra	meyra | skordýr
+1F41D	býfluga	býfluga | skordýr
+1F41E	mariubjalla	klukka | mariubjalla | mariuhøna | skordýr
+1F41F	fiskur	dýr | fiskur | stjørnumerki
+1F420	tropiskur fiskur	dýr | fiskur | tropiskur
+1F421	ígulfiskur	dýr | fiskur | ígulfiskur
+1F422	skjaldbøka	dýr | havskjaldbøka | landskjaldbøka | mýriskjaldbøka | skjaldbøka
+1F423	høsnarungi í eggjaskali	eggjaskal | høsnarungi | høsnarungi í eggjaskali | klakt | kleking
+1F424	høsnarungaandlit	andlit | høsnarungaandlit | høsnarungi
+1F425	høsnarungi	dýr | fuglur | høsnarungi
+1F426	fuglaandlit	andlit | fuglaandlit | fuglur
+1F427	pingvinandlit	andlit | pingvin | pingvinandlit
+1F428	koalaandlit	andlit | koala | koalaandlit | pokabjørn
+1F429	puddilhundur	dýr | hundur | kelidýr | puddil | puddilhundur
+1F42A	dromedárur	bunga | dromedárur | dýr | kúla
+1F42B	kamelur	bunga | dýr | kamelur | kúla
+1F42C	delfin	delfin | dýr
+1F42D	músaandlit	andlit | mús | músaandlit
+1F42E	kúgvaandlit	andlit | kúgv | kúgvaandlit | neyt
+1F42F	tikaraandlit	andlit | tikaraandlit | tikari
+1F430	kaninandlit	andlit | kanin | kaninandlit
+1F431	kettuandlit	andlit | ketta | kettuandlit
+1F432	andlit á dreka	ævintýr | andlit | andlit á dreka | dreki
+1F433	hvalur sum sprænur	dýr | goysa | hvalur | hvalur sum sprænur | spræna | vatn
+1F434	rossaandlit	andlit | hestur | ross | rossaandlit
+1F435	apuandlit	andlit | apa | apuandlit
+1F436	hundaandlit	andlit | hundaandlit | hundur | kelidýr
+1F437	grísaandlit	andlit | grísaandlit | grísur | svín
+1F438	froskaandlit	andlit | froskaandlit | froskur
+1F439	hamstaraandlit	andlit | hamstaraandlit | hamstari
+1F43A	úlvur	andlit | úlvur
+1F43B	bjarnarandlit	andlit | bjarnarandlit | bjørn
+1F43C	pandaandlit	andlit | panda | pandaandlit
+1F43D	grísasnúti	grísasnúti | grísur | snúti | svín
+1F43E	labbaspor	labbar | labbaspor | slóð | spor
+1F43F	jarðaríkorn	dýr | íkorn | jarðaríkorn
+1F981	leyvuandlit	andlit | leyva | leyvuandlit | stjørnumerki
+1F982	skorpión	skorpión | sporðdreki | stjørnumerki
+1F983	kalkun	dýr | fuglur | kalkun
+1F984	einhyrningaandlit	andlit | einhyrningaandlit | einhyrningur
+1F985	ørn	dýr | fuglur | ørn
+1F986	dunna	dunna | dýr | fuglur | steggi
+1F987	flogmús	blóðsúgvari | dýr | flogmús | vampýrur
+1F988	hávur	dýr | hávur
+1F989	ugla	dýr | fuglur | gløgg | klók | ugla
+1F98A	revaandlit	andlit | revaandlit | revur
+1F98B	firvaldur	firvaldur | skordýr | summarfuglur
+1F98C	hjørtur	dýr | hjørtur
+1F98D	gorilla	apa | dýr | gorilla
+1F98E	oydla	dýr | edlur | ferføtlur | oydla
+1F98F	nashyrningur	dýr | nashyrningur
+1F990	rækja	dýr | havføði | matur | rækja | sjógæti
+1F991	høgguslokkur	dýr | høgguslokkur | høgguslokkur við tíggju ørmum | matur | tíggjuarmaður | tíggjuermdur
+1F992	giraffur	dýr | giraffur | prikkar
+1F993	sebra	dýr | sebra | strípur
+1F994	tindasvín	dýr | tindar | tindasvín | tornutur
+1F995	Brontosaurus	apatosaurus | Brontosaurus | dinosaurur | dýr
+1F996	T-rex	dinosaurur | dýr | T-rex | Tyrannosaurus rex
+1F997	veggjasmiður	grashoppa | veggjasmiður
+1F998	kenguru	Avstralia | kenguru | posadýr
+1F999	lama	alpaka | lama
+1F99A	páfuglur	erpin | fuglur | p´´afuglahøna | páfuglahani | páfuglur | reyp
+1F99B	áarross	áarross | vatnhestur
+1F99C	pappageykur	fuglur | pappageykur | prát | sjórænari
+1F99D	tváttarbjørn	forvitin | tváttarbjørn
+1F99E	hummari	dýr | havføði | hummari | sjógæti
+1F99F	mýggjabiti	farsótt | fepur | malaria | moskito | mýggjabiti | pest
+1F9A0	smávera	amøba | bakteria | skaploysingur | smávera | virus
+1F9A1	grevlingur	grevlingur
+1F9A2	svanur	fuglur | okn | svanur
+1F9A3	mammuttur	loðfílur | mammuttur | útdeyður | útdeytt
+1F9A4	dronta	dronta | fuglur | Mauritius | útdeyður
+1F9A5	letidýr	dovin | letidýr | sein | seinur
+1F9A6	otur	otur
+1F9A7	orangutang	apa | orangutang
+1F9A8	stinkdýr	skunkur | stinkdýr
+1F9A9	flamingo	flamingo | fuglur | litfagur | tropiskur
+1F9AA	ostra	dýr | ostra | perla
+1F9AB	bævur	bævur
+1F9AC	bisonur	bisonur | fylgi | visundur
+1F9AD	kópur	kópur | sjóljón
+1F9AE	førarahundur	blindur | førarahundur | hundur
+1FABC	hvalspýggja	dýr | hav | hvalspýggja | ryggleysur
+1F330	kastanja	kastanja | matur | nøt
+1F331	fræplanta	fræ | fræplanta | planta
+1F332	veturgrønt træ	træ | veturgrønt
+1F333	træ sum fellir bløðini	bløð | fellir | træ | træ sum fellir bløðini
+1F334	plámatræ	pálmi | plámatræ | træ
+1F335	kaktus	kaktus | planta
+1F337	tulipán	blóma | blomstur | tulipán
+1F338	kirsuberblóma	blóma | blomstur | kirsuber | kirsuberblóma
+1F339	rósa	blóma | blomstur | rósa
+1F33A	hawaiiblóma	blóma | blomstur | hawaiiblóma
+1F33B	sólblóma	blóma | blomstur | sólblóma
+1F33C	blóma	blóma | blomstur
+1F33D	maiskolba	aks | kolba | korn | mais | maisaks | maiskolba
+1F33E	ríshólgi	hólgi | rís | ríshólgi
+1F33F	urt	planta | urt
+1F340	smæra við fýra	4 | fýra | smæra | smæra við fýra
+1F341	ahornsblað	ahornsblað
+1F342	fallið blað	blað | falli | fallið blað
+1F343	flagsandi bløð	bløð | flagsandi | vindur
+1F344	soppur	hundaland | soppur
+1FAB0	fluga	fluga | pest | rot | sjúka | spilt
+1FAB1	maðkur	maðkur | ormur | reyðmaðkur | skriðkykt | sníkur | snultidýr
+1FAB2	klukka	klukka | skordýr
+1FAB3	kakkulakkur	farsótt | kakkulakkur | pest | skaðadýr | skaðakykt | skordýr
+1FAB4	urtapottur	planta | pottaplanta | pottur | urtapottur | veksur
+1FAB5	viður	bjálki | timbur | træ | viður
+1FAB6	fjøður	fjaðurhamur | fjøður | fjøðurhamur | flúgva | fuglur | lætt
+1FAB7	nyksblóma	blóma | buddatrúgv | buddisma | hinduatrúgv | hinduisma | lotus | nyksblóma
+1FAB8	korallur	hav | koral | korallur | riv
+1FAB9	tómt reiður	reiðrast | reiður | tómt
+1FABA	reiður við eggum	egg | reiðrast | reiðringartíð | reiður | reiður við eggum
+1FABB	hýasint	blóma | hýasint | planta
+2618	smæra	planta | smæra
+1F347	víndrúvur	frukt | víndrúva | víndrúvur
+1F348	melón	frukt | melón
+1F349	vatnmelón	frukt | vatnmelón
+1F34A	mandarin	frukt | mandarin
+1F34B	sitrón	frukt | sitrón | sitrus
+1F34C	banan	banan | frukt
+1F34D	ananas	ananas | frukt
+1F34E	reytt súrepli	frukt | reytt | súrepli
+1F34F	grønt súrepli	frukt | grønt | súrepli
+1F350	pera	frukt | pera
+1F351	ferska	ferska | frukt
+1F352	kirsuber	ber | frukt | kirsuber
+1F353	jarðber	ber | frukt | jarðber
+1F336	sterkt pipar	pipar | sterkt
+1F354	burgari	búfftvíflís | búffur | burgari | hamborgari | hamburgari | matur
+1F355	pitsaflís	flís | matur | pitsa | pitsaflís | pizza
+1F356	kjøt á beini	bein | kjøt | kjøt á beini | matur
+1F357	høsnaungalær	bein | høsnarungi | høsnaungalær | kjøt | lær | matur
+1F358	ríssmákaka	kaka | matur | rís | ríssmákaka | smákaka
+1F359	rísbolli	bolli | matur | rís | rísbolli
+1F35A	kókarís	kóka | kókarís | matur | rís
+1F35B	karryrís	karry | karryrís | matur | rís
+1F35C	nudlur	matur | nudlur
+1F35D	spaghetti	matur | pasta | spagetti | spaghetti | tomatsós
+1F35E	breyð	breyð | matur
+1F35F	kips	kips | matur
+1F360	søtt epli	epli | matur | søtt
+1F361	dango	dango | dessert | japansk | matur | pinnur | søtt
+1F362	matpinnur	grillspjót | kjøtpinnur | matpinnur | matur | pinnur | sprita | teinur
+1F363	sushi	matur | sushi | susji
+1F364	steikt rækja	matur | rækja | steikt
+1F365	kamaboko	fiskur | japansk | kaka | kamaboko | matur
+1F366	kramarhúsísur	ísur | kramarhús | kramarhúsísur | matur
+1F367	ísur í skál	dessert | ísur | ísur í skál | matur | skál
+1F368	rómaísur í skál	dessert | ísur | matur | rómaísur í skál | skál
+1F369	berlinarbolli	berlinarbolli | donut | matur
+1F36A	smákaka	matur | smákaka
+1F36B	sjokulátapláta	matur | pláta | sjokuláta | sjokulátapláta
+1F36C	bomm	bomm | góðgæti | matur
+1F36D	sleikisneis	matur | sleikipinnur | sleikisneis | slikkipinnur
+1F36E	lagkøka	budingur | dessert | krem | lagkøka | matur
+1F36F	hunangur	hunangur | matur | søtt
+1F370	kakustykki	dessert | kaka | kakustykki | matur | stykki
+1F371	bento matpakki	bento | matpakki | matur
+1F372	djúpur tallerkur við mati	borðiskur | djúpur | djúpur tallerkur við mati | matur
+1F373	matgerð	egg | matgerð | matur | panna | steikipanna | steikja
+1F374	gaffil og knívur	borðbúnaður | gaffil | gaffil og knívur | knívur
+1F375	koppur uttan handtak	drykkur | grønt | koppur | koppur uttan handtak | te
+1F376	sake	drykkur | japanskt | rísbrennivín | sake
+1F377	vínglas	drykkur | glas | reytt | vín | vínglas
+1F378	vínblandglas	barr | cocktail | drykkur | glas | vínbland | vínblandglas
+1F379	tropiskurdrykkur	barr | drykkur | tropiskur | tropiskurdrykkur
+1F37A	ølkrúss	barr | drykkur | krúss | øl | ølkrúss
+1F37B	ølkrúss sum skála	barr | drykkur | krúss | øl | ølkrúss | ølkrúss sum skála | skál
+1F37C	boppufløska	boppufløska | drykkur | fløska | mjólk
+1F37D	gaffil knívur og talerkur	borðbúnaður | borðiskur | gaffil | gaffil knívur og talerkur | knívur | talerkur
+1F37E	fløska við tundurproppi	drykkur | fløska | fløska við tundurproppi | tundurproppur
+1F37F	poppkorn	matur | poppkorn
+1F950	horn	croissant | franskbreyðshorn | horn | matur
+1F951	avokado	avokado | frukt
+1F952	agurk	agurk | agurka | grønmeti
+1F953	flesk	flesk | kjøt | matur
+1F954	epli	epli | grønmeti
+1F955	gularót	grønmeti | gularót
+1F956	flute	breyð | flute | matur | smábreyð
+1F957	salat	grønmeti | matur | salat
+1F958	grýturættur	fat | grýta | grýturættur | matur
+1F959	fylt flatbreyð	falafel | flatbreyð | fylt | kebabb | matur
+1F95A	egg	egg | matur
+1F95B	glas av mjólk	drykkur | glas | glas av mjólk | mjólk
+1F95C	jarðnøtur	jarðnøtur | matur | nøt
+1F95D	kivi	frukt | kivi
+1F95E	pannukaka	eggjakøka | matur | pannukaka
+1F95F	hveitibolli	empanada | gyōza | hveitibolli | jiaozi | matur | pierogi
+1F960	eydnukaka	eydnukaka | lukkukaka | matur | spádómur | spákaka
+1F961	tak við heim boks	boks | matur | tak við heim boks | takeaway | takeout
+1F962	etingarpinnar	etingarpinnar | pinnar
+1F963	bolli við skeið	bolli við skeið | kornflykrur | matur | morgunmatur
+1F964	koppur við súgvirøri	djús | drykkur | koppur við súgvirøri | saft | sodavatn
+1F965	kokusnøt	kokusnøt | pálmi
+1F966	brokkoli	brokkoli | spergilkál
+1F967	pai	dessert | kaka | matur | pai
+1F968	saltkringla	matur | saltkringla | saltstong
+1F969	kotelett	búffur | kjøt | kotelett | matur
+1F96A	tvíflís	breyð | matur | tvíflís
+1F96B	dósamatur	dós | dósamatur | matur
+1F96C	salatblað	blað | grønkál | grønmeti | salat | salatblað
+1F96D	mangofrukt	frukt | mango | mangofrukt | tropisk
+1F96E	mánakaka	hátíð | heyst | mánakaka | yuèbǐng
+1F96F	bagel	bagel | breyð | morgunbreyð
+1F9C0	osta stykki	matur | osta stykki | ostur
+1F9C1	koppakaka	formakaka | kaka | koppakaka | søtt
+1F9C2	salt	krydd | salt | saltílat
+1F9C3	sunkist	drykkur | saft | sevja | søtt | sunkist
+1F9C4	hvítleykur	hvítleykur | matur | smakkur
+1F9C5	leykur	leykur | matur | smakkur
+1F9C6	falafel	falafel | kjøtfrikadella | matur
+1F9C7	vafla	vafla
+1F9C8	smør	matur | mjólk | mjólkarvirki | rómi | smør
+1F9C9	mate	drykkur | mate
+1F9CA	ísterningur	ísfjall | ísterningur | ísur | kalt | terningur
+1F9CB	boba te	boba | Taivan | te
+1FAD0	bláber	ber | blá | bláber | frukt
+1FAD1	piparfrukt	grønmeti | pipar | piparfrukt
+1FAD2	oljuber	matur | olja | oljuber
+1FAD3	flatbreyð	breyð | flatbreyð | naan | ósúrgað | pitabreyð
+1FAD4	tamales	ball | matur | Meksiko | tamales
+1FAD5	fondue	fondue | matur | sjokuláta | smelta | Sveis
+1FAD6	tekanna	drykkur | te | tekanna
+1FAD7	stoyta niður	glas | skvøttur | stoyta | stoyta niður | ups | væta | vatn
+1FAD8	bønur	bøn | bøna | bønur | matur
+1FAD9	glas	glas | ílat | tómt
+1FADA	ingifer	ingifer | krydd | kryddurt | øl | urt
+1FADB	ertnabjølg	ertnabjølg | ertnabjølgur | ertur | grønmeti | matur
+2615	heitur drykkur	drykkur | heitur drykkur | kaffi | te
+2600	sól	sól | sólskin
+2601	skýggj	skýggj | veðrið | veður | yvirskýggja
+2602	paraplý	paraplý | regnskjól
+2603	kavamaður	kavamaður | kavi | snjókelling
+2614	paraplý og regndropar	dropar | paraplý | paraplý og regndropar | regn | regnskjól
+26A1	snarljós	elektrisitet | ravmagn | snarljós | spenningur | tora | torusláttur
+26C4	kavamaður við hatti	kavamaður | kavamaður við hatti | kavi | snjókelling
+26C5	sólin aftanfyri skyggj	sól | sólarglottar | sólglottur | sólin aftanfyri skyggj | veðrið | veður | yvirskýggja
+26C8	skýggj við regni og snarljósi	regn | skýggj | skýggj við regni og snarljósi | snarljós | tora | torusláttur | veðrið | veður
+2744	kavaflykra	flykra | frost | kavaflykra | kavar | kavi | snjóflykra
+1F300	meldurhvirla	meldurhvirla | ódn | stormur | tropisk ódn | veðrið | veður
+1F301	fjallatoppur og mjørki	fjallatoppur | fjallatoppur og mjørki | mjørki | toka
+1F302	afturlatin paraplý	afturlatin paraplý | paraplý | regnskjól
+1F303	nátt við stjørnum	kvøld | nátt | nátt við stjørnum | stjørnur
+1F304	sólarris ímillum fjøll	fjall | fjøll | morgun | sól | sólarris | sólarris ímillum fjøll
+1F305	sólarris	dagsbrún | lýsing | morgun | sól | sólarris
+1F306	skýming í stórbýi	kvøld | myrkja | skýming | skýming í stórbýi | sólsetur | stórbýur
+1F307	sólsetur	kvøld | myrkja | skýming | sólsetur
+1F308	ælabogi	ælabogi
+1F309	brúgv á nátt	brúgv | brúgv á nátt | nátt
+1F30A	alda	alda | brim | sjógvur
+1F30B	gosfjall	eldfjall | eldgos | gos | gosfjall | útbrot
+1F30C	vetrarbreytin	mjólkarvegur | rúmdin | stjørnubreyt | vetrarbreytin
+1F30D	globus har Evropa og Afrika síggjast	Afrika | Evropa | globus | globus har Evropa og Afrika síggjast | heimurin | jørðin | verðin
+1F30E	globus har Amerika sæst	Amerika | globus | globus har Amerika sæst | heimurin | jørðin | verðin
+1F30F	globus har Asia og Avstralia síggjast	Asia | Avstralia | globus | globus har Asia og Avstralia síggjast | heimurin | jørðin | verðin
+1F310	globus við longdarstigum	globus | globus við longdarstigum | heimurin | jørðin | longdarstig | meridianur | verðin
+1F311	nýmáni	máni | nýmáni
+1F312	lítil vaksandi hálvmáni	hálvmáni | lítil vaksandi hálvmáni | máni | vaksandi
+1F313	vaksandi hálvmáni	hálvmáni | máni | vaksandi
+1F314	stórur vaksandi hálvmáni	hálvmáni | máni | stórur vaksandi hálvmáni | vaksandi
+1F315	fullmáni	fullmáni | máni
+1F316	stórur minkandi hálvmáni	hálvmáni | máni | minkandi | stórur minkandi hálvmáni
+1F317	minkandi hálvmáni	hálvmáni | máni | minkandi
+1F318	lítil minkandi hálvmáni	hálvmáni | lítil minkandi hálvmáni | máni | minkandi
+1F319	hálvmáni	hálvmáni | máni
+1F31A	andlit á nýmána	andlit | andlit á nýmána | máni | nýmáni
+1F31B	andlit á vaksandi mána	andlit | andlit á vaksandi mána | hálvmáni | máni | vaksandi
+1F31C	andlit á minkandi mána	andlit | andlit á minkandi mána | hálvmáni | máni | minkandi
+1F31D	andlit á fullmána	andlit | andlit á fullmána | fullmáni | máni
+1F31E	andlit á sól	andlit | andlit á sól | sól
+1F31F	glógvandi stjørna	glógvandi stjørna | stjørna
+1F320	stjørnuskot	stjørna | stjørnuskot
+1F321	termometur	fepurstokkur | hitamálari | termometur
+1F324	sólin aftanfyri eitt lítið skýggj	sól | sólarglottar | sólglottur | sólin aftanfyri eitt lítið skýggj | sólskinsveður | veðrið | veður
+1F325	sólin aftanfyri eitt stórt skýggj	sól | sólarglottar | sólglottur | sólin aftanfyri eitt stórt skýggj | veðrið | veður | yvirskýggja
+1F326	sólin aftanfyri eitt regnskýggj	æl | avfall | regn | sól | sólarglottar | sólglottur | sólin aftanfyri eitt regnskýggj | veðrið | veður | yvirskýggja
+1F327	skýggj og regn	æl | avfall | regn | skýggj og regn | veðrið | veður
+1F328	skýggj og kavi	kavar | kavaveður | kavi | skýggj og kavi | veðrið | veður
+1F329	skýggj og snarljós	skýggj og snarljós | snarljós | tora | torusláttur | veðrið | veður
+1F32A	melduródn	hvirla | meldurhvirla | melduródn
+1F32B	mjørki	mjørki | toka
+1F32C	andlit sum blæsur vind	andlit | andlit sum blæsur vind | blás | skýggj | vind
+2648	Veðrurin	stjørnumerki | veðramerki | veðrur | Veðrurin
+2649	Tarvurin	oksi | stjørnumerki | tarvsmerkið | tarvur | Tarvurin
+264A	Tvíburarnir	stjørnumerki | tvíburamerki | tvíburar | Tvíburarnir
+264B	Krabbin	krabbamerkið | krabbi | Krabbin | stjørnumerki
+264C	Ljónið	leyva | Ljónið | ljónsmerkið | stjørnumerki
+264D	Moyggin	moyarmerkið | Moyggin | moyggj | stjørnumerki
+264E	Vágin	stjørnumerki | Vágin | vágmerkið | vágskál | vekt
+264F	Sporðdrekin	skorpión | sporðdrekamerkið | Sporðdrekin | stjørnumerki
+2650	Bogamaðurin	bogamaður | Bogamaðurin | skotmaður | stjørnumerki
+2651	Steingeitin	geit | steingeitarmerki | Steingeitin | stjørnumerki
+2652	Vatnberin	berari | stjørnumerki | vatn | Vatnberin
+2653	Fiskarnir	fiskamerkið | Fiskarnir | fiskur | stjørnumerki
+1F550	klokkan eitt	01:00 | 1 | 13:00 | eitt | klokka | klokkan
+1F551	klokkan tvey	02:00 | 14:00 | 2 | klokka | klokkan | tvey
+1F552	klokkan trý	03:00 | 15:00 | 3 | klokka | klokkan | trý
+1F553	klokkan fýra	04:00 | 16:00 | 4 | fýra | klokka | klokkan
+1F554	klokkan fimm	05:00 | 17:00 | 5 | fimm | klokka | klokkan
+1F555	klokkan seks	06:00 | 18:00 | 6 | klokka | klokkan | seks
+1F556	klokkan sjey	07:00 | 19:00 | 7 | klokka | klokkan | sjey
+1F557	klokkan átta	08:00 | 20:00 | 8 | átta | klokka | klokkan
+1F558	klokkan níggju	09:00 | 21:00 | 9 | klokka | klokkan | níggju
+1F559	klokkan tíggju	10 | 10:00 | 22:00 | klokka | klokkan | tíggju
+1F55A	klokkan ellivu	11 | 11:00 | 23:00 | ellivu | klokka | klokkan
+1F55B	klokkan tólv	00:00 | 12 | 12:00 | klokka | klokkan | tólv
+1F55C	hálvgun tvey	01:30 | 13:30 | hálvgun | klokka | klokkan | tvey
+1F55D	hálvgun trý	02:30 | 14:30 | hálvgun | klokka | klokkan | trý
+1F55E	hálvgun fýra	03:30 | 15:30 | fýra | hálvgun | klokka | klokkan
+1F55F	hálvgun fimm	04:30 | 16:30 | fimm | hálvgun | klokka | klokkan
+1F560	hálvgun seks	05:30 | 17:30 | hálvgun | klokka | klokkan | seks
+1F561	hálvgun sjey	06:30 | 18:30 | hálvgun | klokka | klokkan | sjey
+1F562	hálvgun átta	07:30 | 19:30 | átta | hálvgun | klokka | klokkan
+1F563	hálvgun níggju	08:30 | 20:30 | hálvgun | klokka | klokkan | níggju
+1F564	hálvgun tíggju	09:30 | 21:30 | hálvgun | klokka | klokkan | tíggju
+1F565	hálvgun ellivu	10:30 | 22:30 | ellivu | hálvgun | klokka | klokkan
+1F566	hálvgun tólv	11:30 | 23:30 | hálvgun | klokka | klokkan | tólv
+1F567	hálvgun eitt	00:30 | 12:30 | eitt | hálvgun | klokka | klokkan
+1FA90	gongustjørna við ringi	dapur | gongustjørna | gongustjørna við ringi | saturn | tunglyntur
+2604	komet	halastjørna | komet | rúmdin
+26F0	fjall	fjall
+26F1	sólskjól	sólskermur | sólskjól | sóltjald
+26F2	gosvatn	gosbrunnur | gosvatn
+26F4	ferja	bátur | ferðafólk | ferja
+26F5	seglbátur	bátur | segl | seglbátur | stuttleikabátur
+2708	flogfar	flogfar | flúgvari
+1F488	hárskeraskelti	hárklipping | hárskeraskelti | hárskering
+1F4BA	setur	setur | stólur
+1F680	rakett	rakett | rúmdin
+1F681	tyrla	tyrla
+1F682	lokomotiv	lokomotiv | tok
+1F683	jarnbreytarvognur	jarnbreytarvognur | sporvognur | tokvognur | tráðbussur
+1F684	háferðartok	háferðartok | tok
+1F685	snartok	snartok | tok
+1F686	tok	jarnbreyt | tok
+1F687	undirgrundarbreyt	metro | undirgrundarbreyt
+1F688	nærtok	nærtok | tok
+1F689	jarnbreytarstøð	jarnbreyt | jarnbreytarstøð | støð | tok
+1F68A	gron á sporvogni	gron á sporvogni | sporvognur | tráðbussur
+1F68B	sporvognur	sporvognur | tráðbussur
+1F68C	bussur	bussur
+1F68D	gron á bussi	bussur | gron á bussi
+1F68E	tráðbussur	sporvognur | tráðbussur
+1F68F	busssteðgipláss	busssteðgipláss | bussstopp | bussstoppistað | steðgipláss
+1F690	minibussur	bussur | minibussur
+1F691	sjúkrabilur	bilur | sjúkrabilur
+1F692	sløkkibilur	bilur | eldur | sløkkibilur | sløkkilið
+1F693	løgreglubilur	bilur | løgregla | løgreglubilur | politi
+1F694	gron á løgreglubili	bilur | gron á løgreglubili | løgregla | politi
+1F695	taxabilur	bilur | taxa | taxabilur
+1F696	gron á taxabili	bilur | gron á taxabili | taxa
+1F697	bilur	bilur
+1F698	bilgron	bilgron | bilur | gron
+1F699	húsbilur	bilur | húsbilur
+1F69A	vøruvognur	bilur | lastbilur | liðbussur | vørubilur | vøruvognur
+1F69B	liðlastbilur	bilur | lastbilur | liðbussur | liðlastbilur | vørubilur | vøruvognur
+1F69C	traktorur	traktorur
+1F69D	einsporað jarnbreyt	einsporað jarnbreyt | tok
+1F69E	fjallajarnbreyt	fjallajarnbreyt | jarnbreyt | tok
+1F69F	heingijarnbreyt	heingijarnbreyt | jarnbreyt | tok
+1F6A0	fjallarennistrongur	fjallarennistrongur | gondol | strongur
+1F6A1	rennistrongur	gondol | rennistrongur | strongur
+1F6A2	skip	ferðafólk | skip
+1F6A3	persónur í árabáti	árabátur | fólk | persónur | persónur í árabáti | rógva | rør
+1F6A4	rasarabátur	bátur | rasarabátur | snarbátur
+1F6A5	vatnrætt ferðsluljós	ferðsla | ferðsluljós | ljóskurv | vatnrætt ferðsluljós
+1F6A6	ferðsluljós	ferðsla | ferðsluljós | ljóskurv
+1F6A7	byrging	bummur | byrging | hindur | stongsil
+1F6A8	blunkljós	blunkljós | ljós | løgregla
+1F6A9	tríkanta flagg	flagg | tríkanta
+1F6AA	hurð	hurð
+1F6B0	drekkivatn	drekkandi | drekkingarvatn | drekkivatn | vatn
+1F6B1	ikki drekkandi vatn	drekkivatn | ikki drekkandi vatn | vatn
+1F6B3	ongar súkklur	forboð | ongar súkklur | súkkla
+1F6B7	bannað fyri gangandi fólki	bannað | bannað fyri gangandi fólki | forboð | ganga
+1F6B8	barnagonguteigur	ávaring | barnagonguteigur | børn | gonguteigur
+1F6B9	mannfólkaves	maður | mannfólkaves | ves | wc
+1F6BA	konufólkaves	kona | konufólkaves | kvinna | ves | wc
+1F6BB	ves symbol	ves | ves symbol | wc
+1F6BC	pinkubarna symbol	pinkubarna symbol | skiftingarrúm | skiftirúm
+1F6BD	ves	kumma | toilett | ves
+1F6BE	wc symbol	ves | vesi | wc | wc symbol
+1F6BF	brúsubað	brúsa | brúsubað | vatn
+1F6C0	persónur í baðikari	bað | baðikar | fólk | persónur | persónur í baðikari
+1F6C1	baðikar	bað | baðikar
+1F6C2	passeftirlit	eftirlit | landamark | pass | passeftirlit
+1F6C3	tolleftirlit	eftirlit | toll | tolleftirlit | tollur | tollverk
+1F6C4	viðførisútflýggjan	útflýggjan | viðføri | viðførisútflýggjan
+1F6C5	gloymt viðføri	gloymt | viðføri
+1F6D0	bønarstað	átrúnaður | bøn | bønarstað | religión | trúgv
+1F6D1	stoppskelti	áttakantaður | steðgingarmerki | steðgitekn | stopp | stoppskelti
+1F6D2	innkeypsvognur	innkeyp | innkeypsvognur | keypsvognur | vognur
+2668	heit kelda	heit | kelda
+26BD	fótbóltur	bóltur | fótbólt | fótbóltur
+26BE	baseball	baseball | hornabóltur
+26F3	golf	flagg | golf | hol
+1F392	skúlataska	herðataska | skúlataska | skúli | taska
+1F3A0	karusellhestur	hestur | karusell | karusellhestur | tivoli | undirhaldsgarður
+1F3A1	parísarhjól	parísarhjól | tivoli | undirhaldsgarður
+1F3A2	russjibani	glíðibreyt | øka | russjibani | tivoli | undirhaldsgarður
+1F3A3	tráða	fiskur | tráða
+1F3A4	mikrofon	karaoke | ljóðfatur | ljóðtak | mikrofon
+1F3A5	filmstól	biografur | filmstól | filmur | upptøkutól
+1F3A6	biograf	biograf | filmur | sjónbandsupptakari
+1F3A7	høvuðsett	høvuðsett | høvuðtelefon | oyramikrofon
+1F3A8	litafjøl	list | litaborð | litafjøl | mála | palett
+1F3A9	høgur hattur	hattur | høgur | klæði
+1F3AA	sirkustjald	sirkus | sirkustjald | tjald
+1F3AB	farseðil	atgongd | atgongumerki | farseðil
+1F3AC	klapptræ	filmur | klapptræ | upptøka
+1F3AD	útinnandi leiklistir	ballett | leikhús | list | sjónleikur | útinnandi leiklistir
+1F3AE	kontrollari	controller | kontrollari | telduspæl | teldustýri
+1F3AF	dart	beinrakið | bullseye | dart | kúgveyga
+1F3B0	spæliautomat	kasino | spæliautomat
+1F3B1	pul	billard | kúla | pool | pul
+1F3B2	terningur	terningar | terningur
+1F3B3	bowling	bowling | bowlingkúla | keyla
+1F3B4	hanafuda	hanafuda | japanskt | kort | spæl
+1F3B5	nóti	nóti | tónleikur
+1F3B6	nótar	nótar | tónleikur
+1F3B7	saksofon	ljóðføri | saksofon | tónleikur
+1F3B8	gittari	gittari | ljóðføri | tónleikur
+1F3B9	ljómborð	keyboard | ljóðføri | ljómborð | tónleikur
+1F3BA	trompet	ljóðføri | tónleikur | trompet
+1F3BB	violin	ljóðføri | tónleikur | violin
+1F3BC	fjølrøddabók	fjølrøddabók | partiturur | tónleikur
+1F3BD	ítróttatroyggja	frælsur | ítróttatroyggja | ítróttur | troyggja
+1F3BE	tennisbóltur	bóltur | tennis | tennisbóltur
+1F3BF	skíð	skíð
+1F3C0	kurvabóltur	bóltur | kurvabóltur
+1F3C1	puntut flagg	flagg | puntut | rútut
+1F3C2	persónur sum stendur á snjófjøl	fólk | persónur | persónur sum stendur á snjófjøl | snjófjøl | snowboard | snowboarder
+1F3C3	persónur sum rennur	fólk | maraton | persónur | persónur sum rennur | renn | rennur
+1F3C4	persónur sum skreiður á brimfjøl	brimfjøl | fólk | persónur | persónur sum skreiður á brimfjøl | surfa
+1F3C5	ítróttamedalja	ítróttamedalja | ítróttur | medalja
+1F3C6	steyp	steyp
+1F3C7	kappríðing	fólk | hestur | jockey | kappríðari | kappríðing | persónur | ross
+1F3C8	amerikanskur fótbóltur	amerikanskur fótbóltur | bóltur | nfl
+1F3C9	rugbybóltur	bóltur | rugby | rugbybóltur
+1F3CA	persónur sum svimur	fólk | persónur | persónur sum svimur | svimjari | svimur
+1F3CB	vektlyftari	fólk | lyftingarítrótt | persónur | vektlyftari | vektlyfting
+1F3CC	persónur sum spælir golf	fólk | golf | persónur | persónur sum spælir golf
+1F3CD	motorsúkkla	kappkoyring | koyra kapp | motorsúkkla
+1F3CE	rasarabilur	bilur | kappkoyring | kappkoyringarbilur | koyra kapp | rasarabilur
+1F451	krúna	drotning | kongur | krúna | prinsessa | prinsur
+1F452	konufólkahattur	hattur | klæði | kona | konufólk | konufólkahattur | kvinna
+1F453	brillur	brillur | eyga
+1F454	slips	klæði | skjúrta | slips
+1F455	t-shirt	klæði | skjúrta | t-shirt | tshirt
+1F456	cowboybuksur	buksur | cowboybuksur | klæði
+1F457	kjóli	kjóli | klæði
+1F458	kimono	kimono | klæði
+1F459	bikini	bikini | klæði | svimjiklæðir
+1F45A	konufólkaklæðir	klæði | kona | konufólk | konufólkaklæðir | kvinna | plagg
+1F45B	pungur	klæði | myntir | pengar | pungur
+1F45C	handtaska	handtaska | hondtaska | klæði | taska
+1F45D	taska	handtaska | hondtaska | klæði | pungur | taska
+1F45E	mannfólkaskógvur	klæði | mannfólk | mannfólkaskógvur | skógvur
+1F45F	renniskógvur	ítrótt | klæði | renniskógvur | skógvur | tennisskógvur
+1F460	høghælaður skógvur	høghælaður skógvur | klæði | kona | konufólk | kvinna | skógvur
+1F461	konufólkasandála	klæði | kona | konufólk | konufólkasandála | kvinna | sandála | skógvur
+1F462	konufólkastilvi	klæði | kona | konufólk | konufólkastilvi | kvinna | skógvur | stivli
+1F6B2	súkkla	súkkla
+1F6B4	persónur sum súkklar	fólk | persónur | persónur sum súkklar | súkkla | súkklar | súkklari
+1F6B5	persónur á fjallasúkklu	fjallasúkkla | fólk | persónur | persónur á fjallasúkklu | súkkla | súkklar | súkklari
+1F6B6	persónur sum gongur	fólk | gongur | gongutúr | persónur | persónur sum gongur | til gongu
+1F938	persónur sum ger myllulop	fimleik | fimleikur | fólk | myllulop | persónur | persónur sum ger myllulop
+1F939	persónur sum fimlar	fimla | fimlari | fólk | persónur | persónur sum fimlar
+1F93A	fektari	fektari | fiktar | fólk | persónur
+1F93C	glímingardystur	fólk | glíma | glíming | glímingardystur | persónar
+1F93D	persónur sum spælir vatnpolo	fólk | persónur | persónur sum spælir vatnpolo | vatnpolo
+1F93E	persónur sum spælir hondbólt	fólk | hondbólt | hondbóltur | persónur | persónur sum spælir hondbólt
+1F93F	kavaramaska	andingarpípa | kava | kavaramaska | kavari | luftpípa | maska | snorkul
+1F9E2	keppur	baseball | hattur | hornabóltur | kaskettur | keppur
+1F9E3	hálsturriklæði	háls | hálsturriklæði | klæði | turriklæði
+1F9E4	handskar	handskar | hond | klæði | vøttur
+1F9E5	jakki	frakki | jakki | klæði
+1F9E6	sokkar	hosur | klæði | sokkar
+1FA70	balletskógvar	ballet | balletskógvar | dansa | dansiskógvar | skógvar
+1FA71	svimjibúni	svimjibúni | svimjing
+1FA72	trussur	svimjibuksir | trussur | undirklæðir
+1FA73	shorts	brøkur | shorts | stuttar | svimjibrøkur
+1FA74	sandála	sandála | thong
+1FA80	jojo	jojo | leika | yo yo | yo-yo | yoyo
+1FA81	flúgvandi dreki	dreki | flúgvandi dreki
+1FA82	fallskíggi	fallskíggi | fallskíggjalop | loftkavari
+1FA83	boomerang	Avstralia | bomerang | boomerang | kastivápn
+1FA84	gandastavur	gandakallur | gandakelling | gandastavur | gandur | rúnakelvi
+1FA85	pinata	pinata | piñata | veitsla
+1FA86	babusjka	babusjka | matrjosjka | russisk dukka | Russland
+1FA95	banjo	banjo | ljóðføri | tónleikur
+1FA97	harmonika	dans | dansur | harmonika | ljóðføri | tónleikur
+1FA98	long trumma	ljóðføri | long trumma | tónleikur | trumma
+265F	finna	finna | talv
+2660	spaðari	kort | spaðari
+2663	kleyvari	kleyvari | kort
+2665	hjartari	hjartari | kort
+2666	rútari	kort | rútari
+1F4B3	kredittkort	keypskort | kontukort | kredittkort | kritkort | pengar | peningur
+1F4B4	jenn pengaseðil	gjaldoyra | jenn | jennur | pengaseðil | seðil
+1F4B5	dollari pengaseðil	dollarar | dollari | gjaldoyra | pengaseðil | seðil
+1F4B6	evra pengaseðil	evra | evrur | gjaldoyra | pengaseðil | seðil
+1F4B7	pund pengaseðil	gjaldoyra | pengaseðil | pund | seðil
+1F4B9	strikumynd við jenn tekni	gjaldoyra | hækkadi | hækkan | jenn | jennur | marknaður | strikumynd | strikumynd við jenn tekni
+1F4BB	fartelda	fartelda | telda
+1F4BC	skjalamappa	mappa | skjalamappa | taska
+1F4BD	teldudiskur	diskur | teldudiskur
+1F4BE	diskil	disketta | diskil
+1F4BF	sjónbandsfløga	cd | diskur | sjónbandsfløga
+1F4C0	margfløga	blu-ray | diskur | dvd | margfløga
+1F4C1	skjalalummi	faldari | fíl | lummi | mappa | skjalalummi | skjalamappa
+1F4C2	opin skjalalummi	faldari | fíl | lummi i skjalalummi | mappa | opin | opin skjalalummi | skjalamappa
+1F4C3	krúlla pappír	bræv | krúlla | pappír | prógv | skjal
+1F4C4	pappír sum vendur uppeftir	bræv | pappír | pappír sum vendur uppeftir | prógv | skjal
+1F4C5	kalendari	álmanakki | dagfesting | dagseting | dato | kalendari | tíðarfesting | tíðarmerking
+1F4C6	kalendari sum kann skræðast úr	álmanakki | dagfesting | dagseting | dato | kalendari | kalendari sum kann skræðast úr | skræða | tíðarfesting | tíðarmerking
+1F4C7	kartotek	kartotek | kortsavn | seðlasavn | seðlaskrá
+1F4C8	strikumynd við vøkstri	diagramm | rásmynd | strikumynd | strikumynd við vøkstri | upp | veksur | vøkstur
+1F4C9	strikumynd við lækking	diagramm | lækkar | lækking | minkar | minking | niður | rásmynd | strikumynd | strikumynd við lækking
+1F4CA	stabbamynd	diagramm | rásmynd | stabbamynd | strikumynd
+1F4CB	klemmuspjald	klemmuspjald | setiborð
+1F4CC	nipsnál	nál | nipsnál
+1F4CD	rund nipsnál	nál | nipsnál | rund nipsnál
+1F4CE	klips	klips | pappírsklemma
+1F4CF	lineal	lineal | strikfjøl
+1F4D0	tríkanta lineal	lineal | strikfjøl | tríkanta lineal | tríkantur
+1F4D1	bókamerkir	bókamerki | bókamerkir
+1F4D2	høvuðsbók	høvuðsbók | lummabók
+1F4D3	lummabók	blokkur | bók | lummabók | minnisbók | skriviblokkur | uppritsbók | uppskrivingarbók
+1F4D4	lummabók við prýðiligari perma	lummabók | lummabók við prýðiligari perma | perma | prýðilig | umslag
+1F4D5	afturlatin bók	afturlatin | bók
+1F4D6	opin bók	bók | opin
+1F4D7	grøn bók	bók | grøn
+1F4D8	blá bók	blá | bók
+1F4D9	appilsingul bók	appilsingul | bók
+1F4DA	bøkur	bók | bøkur
+1F4DB	navnaspjaldur	navn | navnaspjaldur | spjaldur
+1F4DC	skriftrulla	bókarrulla | rulla | skriftrulla
+1F4DD	skrivlig viðmerking	greinargerð | skrivlig viðmerking | upprit | uppskrift
+1F4DE	horn á telefon	horn á telefon | telefonhorn | telefonrør
+1F4DF	persónleitari	persónleitari
+1F4E0	telefaks	faks | telefaks
+1F4E1	parabolur	antenna | parabolur | skálkampur
+1F4E2	rópari	megafon | rópari
+1F4E3	megafon	megafon | rópari
+1F4E4	útgangandi brævabakki	bræv | brævabakki | postur | t-postur | teldupostur | útgangandi
+1F4E5	innkomandi brævabakki	bræv | brævabakki | innkomandi | postur | t-postur | teldupostur
+1F4E6	pakki	boks | eskja | farmavøra | kolli | pakki | vøra
+1F4E7	teldupostur	bræv | postur | t-postur | teldupostur
+1F4E8	innkomandi brævbjálvi	bræv | brævbjálvi | innkomandi | komandi | postur | t-postur | teldupostur
+1F4E9	brævbjálvi og pílur	bræv | brævbjálvi | brævbjálvi og pílur | postur | t-postur | teldupostur
+1F4EA	afturlatin postkassi við liggjandi flaggi	afturlatin | afturlatin postkassi við liggjandi flaggi | bræv | flagg | liggjandi | post | postkassi | postur
+1F4EB	afturlatin postkassi við standandi flaggi	afturlatin | afturlatin postkassi við standandi flaggi | bræv | flagg | post | postkassi | postur | standandi
+1F4EC	opin postkassi við standandi flaggi	bræv | flagg | opin | opin postkassi við standandi flaggi | post | postkassi | postur | standandi
+1F4ED	opin postkassi við liggjandi flaggi	bræv | flagg | liggjandi | opin | opin postkassi við liggjandi flaggi | post | postkassi | postur
+1F4EE	postkassi	bræv | post | postkassi | postur
+1F4EF	posthorn	horn | post | posthorn | postur
+1F4F0	tíðindablað	blað | nýggjheitir | tíðindablað | tíðindi
+1F4F1	fartelefon	fartelefon | telefon
+1F4F2	fartelefon við píli	fartelefon | fartelefon við píli | kall | uppkall | uppringing
+1F4F3	vibratiónstøða	fartelefon | støða | vibratión | vibratiónstøða
+1F4F4	sløk fartelefonina	fartelefon | sløk | sløk fartelefonina
+1F4F5	fartelefon ikki loyvd	bannað | fartelefon | fartelefon ikki loyvd | forboð
+1F4F6	antennstabbar	antenna | antennstabbar | fartelefon | samband | stabbi
+1F4F7	myndatól	fotografi | myndatól
+1F4F8	myndatól við blits	blits | fotografi | myndatól | myndatól við blits
+1F4F9	sjónupptøkutól	myndatól | sjónupptøkutól | upptøkutól | video
+1F4FA	sjónvarp	sjónvarp | sjónvarpsskíggi
+1F4FB	útvarp	útvarp
+1F4FC	sjónband	band | sjónband | sjónbandshúsi | video
+1F4FD	ljósvørpa	biografur | filmur | ljósvørpa | myndatól
+1F4FF	biðikransur	átrúnaður | biðikransur | bøn | perlukransur | religión | rósukransur | trúgv
+1F505	dimma knappur	dimma | dimma knappur | káma | skýma
+1F506	ger ljósari knappur	ger ljósari knappur | klárna | ljósari | lýsa
+1F507	doyvdur hátalari	doyvdur | doyvt | einki ljóð | hátalari | ljóðleyst
+1F508	lág ljóðstyrki á hátalara	hátalari | lág | lág ljóðstyrki á hátalara | ljóðstyrki
+1F509	miðal ljóðstyrki á hátalara	hátalari | ljóðstyrki | miðal | miðal ljóðstyrki á hátalara
+1F50A	høg ljóðstyrki á hátalara	hátalari | høg | høg ljóðstyrki á hátalara | ljóðstyrki
+1F50B	battarí	battarí | ravlað
+1F50C	stikkari	elektrisitet | ravmagn | stikkari | stikkproppur
+1F50D	luppur á skák til vinstru	lesiglas | luppur | luppur á skák til vinstru | sjóneyka | størkingarglas
+1F50E	luppur á skák til høgru	lesiglas | luppur | luppur á skák til høgru | sjóneyka | størkingarglas
+1F50F	lás og fyllipennur	afturlati | fyllipennur | heingilás | læst | lás | lás og fyllipennur | pennur | stongt
+1F510	heingilás og lykil	afturlati | ás | heingilás | heingilás og lykil | læst | lykil | stongt
+1F511	lykil	lás | loyniorð | lykil
+1F512	læst heingilás	afturlati | heingilás | læst | lás | stongt
+1F513	opi heingilás	heingilás | lás | ólæst | opi
+1F514	klokka	klokka | ljóð
+1F515	klokka við skrástriku	doyvdur | doyvt | einki ljóð | klokka | klokka við skrástriku | ljóðleyst
+1F516	bókamerki	bókamerki | bókamerkir
+1F517	liður	leinkja | liður | samband | sambinding | sambindingarliður
+1F518	radioknappur	radioknappur | radioknøttur
+1F51E	átjanára aldursmark	18 | aldursmark | átjan | átjanára aldursmark | bannað | forboð
+1F51F	Knappahetta: 10	Knappahetta
+1F526	lummalykt	ljós | lummalykt | lykt | stavlykt
+1F527	skrúvulykil	amboð | skiftilykil | skrúvulykil
+1F528	hamari	amboð | hamari | smíða
+1F529	møtrikkur og boltur	amboð | boltur | møtrikkur | møtrikkur og boltur
+1F52A	køksknívur	knívur | køksknívur | vápn
+1F52B	pistólur	handvápn | pistólur | revolvari | skotvápn | vápn
+1F52C	mikroskop	mikroskop | náttúruvísindi | sjóneyka | vísind
+1F52D	stjørnukikari	kikari | náttúruvísindi | spegilskikari | stjørnukikari | teleskop | vísindfjarvísi
+1F9BA	trygdarvestur	trygd | trygdarvestur | vestur
+1F9BB	oyra við hoyritólið	deyvur | hoyritól | oyra | oyra við hoyritólið
+1F9BC	motorkoyristólur	koyristólur | motorhjólstólur | motorkoyristólur | motorrullistólur
+1F9BD	koyristólur	hjólstólur | koyristólur | rullistólur
+1F9E9	putlispælbrot	brot | petti | puntur | putlispæl | putlispælbrot | spor
+1F9EA	royndarglas	evnafrøði | náttúruvísind | roynd | royndarglas
+1F9EB	petriskál	lívfrøði | náttúruvísind | petriskál | tilbúningarglas | tilbúningsglas
+1F9EC	dna	arvaeind | dna | ílega | lív | lívfrøði | lívmenning | náttúruvísind
+1F9ED	kumpass	ætt | kós | kumpass | tól
+1F9EE	kúluramma	abakus | kúluramma | roknibretti
+1F9EF	eldskøkkjari	eld | eldskøkkjari | eldur | sløkkja | trygd
+1F9F0	amboðskassi	amboð | amboðskassi | kassi
+1F9F1	múrsteinur	leirur | mørtil | múrkálk | múrsteinar | múrsteinur | veggur
+1F9F2	magnet	magnet | magnetisk | magnetiskur | sigul
+1F9F3	viðføri	bagasja | ferðast | pakka | viðføri
+1F9F4	lotiónfløska	fløska | húðkrem | lotión | lotiónfløska | smyrsl
+1F9F5	tráður	nál | seyma | spoli | tráður
+1F9F6	tógv	garn | noða | tógv
+1F9F7	trygdarnál	læsinál | nál | trygdarnál
+1F9F8	bamsa	bamsa | leikatoy | spælitoy
+1F9F9	kustur	gandakelling | kelling | kustur | sópa | vaska
+1F9FA	kurv	kurv
+1F9FB	vesipappír	kukka | toilettpappír | ves | vesipappír
+1F9FC	hondsápa	hendur | hond | hondsápa | sápa | vaska
+1F9FD	svampur	holutur | svampur | vaska
+1F9FE	kvittan	keyp | kvittan | prógv | søla
+1F9FF	nasaramulett	amulett | eydnulutur | kúla | nasar | nasaramulett | nazar | verndargripur
+1FA78	blóðdropi	blóð | blóðdropi | blóðgáva | blóðgevi | dropi
+1FA79	heftiplástur	heftiplástur | plástur
+1FA7A	stetoskop	læknalurt | læknapípa | lurt | stetoskop
+1FA91	stólur	sæti | sessur | setur | stólur
+1FA92	rakiknívur	barberblað | knívur | raka | rakiblað | rakiknívur
+1FA93	øks	amboð | høgg | høgga | hondøks | øks
+1FA94	diyalampa	diya | diyalampa | lampa | olja
+1FA96	herhjálmur	hereind | herhjálmur | hermaður | herur | hjálmur
+1FA99	myntur	gull | myntur | pengar | pengi | skattur
+1FA9A	sag	amboð | hondsag | sag
+1FA9B	skrúvublað	amboð | skrúva | skrúvublað
+1FA9C	stigi	klatra | stig | stigi | upp
+1FA9D	krókur	krókur
+1FA9E	spegil	spegil | spegilsmynd | spegl | speglast | sýna | vísa
+1FA9F	vindeyga	gluggi | rútar | rútur | vindeyga
+260E	telefon	telefon
+2620	skøltur og krossleggir	deyði | krossleggir | skøltur | skøltur og krossleggir | vandi
+2622	geislavirki	ávaring | geislavirki | geislavirkin
+2623	lívfrøðiligur vandi	ávaring | lívfrøðili | lívfrøðiligur vandi | vandi
+267F	koyristólur symbol	atgongd | hjólstólur | koyristólur symbol | rullistólur
+2692	hamari og hakkari	amboð | hakkari | hamari | hamari og hakkari
+2693	akker	akker | bátur | skip
+2694	krossa svørð	krossa | svørð | vápn
+2695	læknavísind symbol	eskulápusarstavur | læknafrøði | læknavísind symbol | læknavísindanna
+2696	vágskál	amboð | rættvísi | stjørnumerki | Vágmerkið | vágskál | vekt
+2697	dropadríva	amboð | dropadríva | evnafrøði | kemi
+2699	tannhjól	amboð | gir | tannhjól
+269B	atom symbol	ateistur | atom | atom symbol | gudloysingur | gudsnoktari
+269C	liljumynd sum skjaldarmerki	liljumynd | liljumynd sum skjaldarmerki | skjaldarmerki | svørðlilja
+26A0	ávaring	ávaring
+26CF	hakkari	amboð | hakkari | nám | námídnaður | námvinna | námvirki
+26D1	bjargingarhjálmur	bjargingarhjálmur | hjálmur | hjálp | krossur | reyði
+26D3	keta	keta | leinkja | liður | samband | sambinding | sambindingarliður
+26D4	innkoyring forboðið	ávaring | forboð | innkoyring forboðið
+2702	saksur	klipp | saksur
+2709	brævbjálvi	bræv | brævbjálvi | t-postur | teldupostur
+270F	blýantur	blýantur | skriva
+2712	svarur oddur á penni	oddur | pennur | svarur oddur á penni
+2714	tjúkt flugubein	flugubein | tjúkt flugubein
+2716	falda	× | annullera | falda | ganga | x
+2753	reytt spurnartekn	spurnartekn | spurningur | teknseting
+2757	reytt rópitekn	greinarmerki | rópitekn | teknseting
+27A1	pílur sum peikar til høgru	ætt | eystur | k´ós | pílur | pílur sum peikar til høgru
+1F500	blanda knappur	blanda | blanda knappur
+1F501	endurtak knappur	endurtak | endurtak knappur | endurtøka | umaftur
+1F502	endurtak einaferð knappur	einaferð | endurtak | endurtak einaferð knappur | endurtøka | umaftur
+1F503	loddrættir pílar sum ganga við urinum	loddrættir pílar sum ganga við urinum | lodrættir | pílar | við urinum
+1F504	vatnrættir pílar sum ganga ímóti urinum	ímóti urinum | pílar | vatnrættir | vatnrættir pílar sum ganga ímóti urinum
+1F519	BACK pílur	back | pílur
+1F51A	END pílur	end | pílur
+1F51B	ON! pílur	on | ON! pílur | pílur
+1F51C	SOON pílur	pílur | soon
+1F51D	TOP pílur	pílur top | TOP pílur
+1F520	stórir bókstavir	ABCD | stórir bókstavir
+1F521	smáir bókstavir	abcd | smáir bókstavir
+1F522	tøl	1234 | tøl
+1F523	symbol	〒♪&% | symbol
+1F524	bókstavir	abc | alfabet | bókstavarað | bókstavir | stavrað
+21C5	pílar sum peika upp og niður	niður | pílar | pílar sum peika upp og niður | pílur | upp
+2B05	pílur sum peikar til vinstru	ætt | k´ós | pílur | pílur sum peikar til vinstru | vestur
+2B06	pílur sum peikar uppeftir	ætt | k´ós | norður | pílur | pílur sum peikar uppeftir
+2B07	pílur sum peikar niðureftir	ætt | k´ós | niður | pílur | pílur sum peikar niðureftir | suður

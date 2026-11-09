@@ -1,0 +1,1259 @@
+# emoji search keywords, hu, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	nevető arc	arc | boldog | fogak | nevetés | nevető arc | szmájli | vidám
+1F601	mosolygó szemmel nevető arc	arc | boldog | fogak | mosoly | mosolygó szemmel nevető arc | nevet | szem | szmájli | teli szájjal nevet
+1F602	arc örömkönnyekkel	arc | arc örömkönnyekkel | haha | könnyek | nevetés | öröm | röhög | sírva nevet | sírva nevetős | szmájli | vicces
+1F603	nagyra nyílt szemmel mosolygó arc	arc | boldog | fogak | mosoly | nagyra nyílt szemmel mosolygó arc | nevet | nevetés | nyitott száj | nyitott szájjal mosolygó arc | szmájli | vidámság
+1F604	nevető arc mosolygó szemmel	arc | boldog | fogak | mosoly | nevet | nevető arc mosolygó szemmel | nyitott száj | nyitott szájjal mosolygó arc mosolygó szemmel | örül | száj | szem | szmájli | vidám szem
+1F605	nevető arc verejtékkel	arc | hideg verejték | ideges | izgatott | megúsztam | mosoly | nevető arc verejtékkel | nyitott száj | nyitott szájjal mosolygó arc hideg verejtékkel | stressz | szmájli
+1F606	nyitott szájjal és lehunyt szemmel mosolygó arc	arc | boldog | haha | kacag | nevetés | nyitott száj | nyitott szájjal és lehunyt szemmel mosolygó arc | szmájli
+1F607	mosolygó arc glóriával	áldott | angyal | arc | ártatlanság | békés | dicsfény | glória | jó | jóságos | lélek | mese | mosoly | mosolygó arc glóriával | szmájli
+1F608	mosolygó arc szarvakkal	arc | fantasy | gonosz | mese | mosoly | mosolygó arc szarvakkal | ördög | rosszindulatú | szarvak
+1F609	kacsintó arc	arc | flörtöl | húz | kacsintás | kacsintó arc | szmájli | ugrat
+1F60A	mosolygó arc mosolygó szemmel	boldog | elégdett | elpirul | elvörösödik | mosoly | mosolygó arc mosolygó szemmel | örül | szmájli | vidám szemek
+1F60B	finom ételt élvező arc	arc | fini | finom | finom ételt élvező arc | jóízű | megnyalja a száját utána | mosoly | nyami | nyelv | szmájli
+1F60C	megkönnyebbült arc	arc | béke | békés | megkönnyebbült | nyugodt | szmájli
+1F60D	mosolygó arc szív alakú szemmel	arc | mosoly | mosolygó arc szív alakú szemmel | szem | szerelem | szerelmes | szívek | szmájli
+1F60E	mosolygó arc napszemüveggel	arc | laza | menő | mosoly | mosolygó arc napszemüveggel | nap | napszemüveg | nyár | strand | szmájli
+1F60F	önelégült vigyor	arc | gyanakvó | önelégült | szmájli | viccelsz | vigyor
+1F610	semleges arc	arc | flegma | kifejezéstelen | közömbös | meh | nem nevet | nem vicces | pókerarc | rezzenéstelen | semleges | szmájli | unott
+1F611	kifejezéstelen arc	arc | érzéketlen | flegma | kifejezéstelen | meh | semleges | szmájli
+1F612	unott arc	arc | boldogtalan | mérges | szmájli | szomorú | unatkozik | unott
+1F613	lehangolt arc verejtékkel	arc | arc hideg verejtékkel | hideg verejték | ideges | izzad | izzadtság | kiveri a víz | lehangolt arc verejtékkel | szmájli | szomorú | verejték
+1F614	elgondolkodó arc	arc | borzasztó | csalódott | elgondolkodó | elkeseredett | rossz | szmájli | szomorú | tűnődő | unott | veszít
+1F615	zavart arc	arc | bizonytalan | nem tudom | sajnálom | szmájli | szomorú | zavart
+1F616	összezavarodott arc	arc | frusztrált | mérges | összezavarodott | szmájli | szomorú | zavart
+1F617	csókoló arc	arc | csók | csókoló arc | flört | puszi | randi | szerelem | szmájli
+1F618	csókot dobó arc	arc | csók | csókot dobó arc | flörtöl | puszi | szeret | szeretlek | szív | szmájli
+1F619	csókoló arc mosolygó szemmel	arc | csók | csókoló arc mosolygó szemmel | puszi | szem | szmájli
+1F61A	csókoló arc lehunyt szemmel	arc | behunyt szem | csók | csókoló arc lehunyt szemmel | csókot dob | csukott szem | lehunyt szem | puszi | puszit dob | szmájli
+1F61B	arc kinyújtott nyelvvel	arc | arc kinyújtott nyelvvel | csipkelődik | csúfolódik | fantasztikus | huncutkodik | kiöltött nyelv | király | nyelv | szmájli
+1F61C	arc kinyújtott nyelvvel és kacsintó szemmel	arc | arc kinyújtott nyelvvel és kacsintó szemmel | csipkelődik | csúfolódik | huncutkodik | kacsintás | kiöltött nyelv | mosoly | nyelv | szem | szmájli | vicc | viccelődik
+1F61D	arc kilógó nyelvvel és erősen behunyt szemmel	arc | arc kilógó nyelvvel és erősen behunyt szemmel | borzasztó | kiöltött nyelv | lehunyt szem | szmájli | szörnyű íz
+1F61E	csalódott arc	arc | boldogtalan | borzasztó | csalódott | lehangolt | levert | megbukik | nem sikerül | okol | szmájli | szomorú | veszít
+1F61F	aggódó arc	aggodalmas | aggódik | aggódó arc | arc | ideges | izgul | stresszes | szmájli | szomorú
+1F620	mérges arc	arc | dühös | mérges | szmájli
+1F621	duzzogó arc	arc | dühös | duzzog | duzzogó arc | ideges | mérges | szmájli | vörös
+1F622	síró arc	arc | boldogtalan | hiányzik | könnycsepp | sírás | síró arc | szmájli | szomorúság
+1F623	állhatatos arc	állhatatos arc | állhatatosság | arc | fáj a feje | fejfájás | koncentrál | szmájli
+1F624	orrából gőzt fújtató arc	arc | dühös | gőz | győzelem | mérges | orrából gőzt fújtató arc | siker | szmájli
+1F625	csalódott, de megkönnyebbült arc	aggódik | arc | boldogtalan | csalódott | csalódott, de megkönnyebbült arc | de megkönnyebbült arc | huhh | izzadság | megkönnyebbült | szmájli | szomorú
+1F626	rosszalló arc nyitott szájjal	arc | ijedt | ijesztő | meglepett | nyitott száj | rosszallás | rosszalló arc nyitott szájjal | szmájli
+1F627	elkínzott arc	arc | elgyötört | elkínzott | fél | ijedt | rémült | riadt | szmájli
+1F628	félelemmel teli arc	aggódik | arc | félelem | félelemmel teli arc | ijedt | rémült | szmájli
+1F629	kimerült arc	arc | boldogtalan | éhes | fáradt | kimerült | megviselt | síró | sírós | szmájli | szomorú
+1F62A	álmos arc	álmos | arc | ásít | fáradt | sír | szmájli | szomorú
+1F62B	fáradt arc	arc | fáradt arc | fáradtság | szmájli | szomorú | tüsszent
+1F62C	grimaszoló arc	arc | fogorvos | grimasz | grimaszoló arc | kellemetlen | kínos | mosoly | mosolyog | szmájli
+1F62D	zokogó arc	arc | boldogtalan | könnyek | sír | sírás | szmájli | szomorúság | zokogás | zokogó arc
+1F62E	arc nyitott szájjal	arc | arc nyitott szájjal | csodálkozás | csodálkozik | elképed | hihetetlen | megdöbben | meglepett | meglepődik | nyitott száj | ó | szmájli | tátva marad a szája
+1F62F	meglepődött arc	arc | döbbent | elképedt | meglepett | meglepődött | szmájli | tátott száj | tátva maradt a szája
+1F630	aggódó arc nyitott szájjal és verejtékkel	aggódó arc nyitott szájjal és verejtékkel | arc | arc nyitott szájjal és hideg verejtékkel | hideg verejték | ideges | izzad | kék | kiveri a víz | nyitott száj | rohanás | szmájli
+1F631	félelemtől sikoltó arc	arc | félelem | félelemtől sikoltó arc | ijedt | ijesztő | munch | Munch | rémület | sikolt | sikoly | szmájli
+1F632	lenyűgözött arc	arc | csodálkozó | döbbent | elcsodálkozott | elképedt | lenyűgözött | megdöbbent | szmájli
+1F633	elpirult arc	arc | elképedt | elpirul | elpirult arc | elvörösödik | hitetlen | kellemetlen | kételkedő | kétkedő | kidülledt szemek | kipirult | melege van | mi | okol | szmájli | zavarban van
+1F634	alvó arc	álmos | alszik | alvás | alvó arc | arc | fáradt | jó éjszakát | jó éjt | lefekvés | lefekvés ideje | szmájli | szundi | zzz
+1F635	szédülő arc	arc | beteg | fáradt | szédülés | szédülő arc | szmájli
+1F636	száj nélküli arc	arc | csendes | csöndes | kellemetlen | kifejezéstelen | néma | nincs szája | száj nélküli arc | szmájli
+1F637	arc egészségügyi maszkkal	arc | arc egészségügyi maszkkal | beteg | betegség | egészségügyi maszk | gyógyszer | maszk | orvos | szmájli
+1F638	nevető macska mosolygó szemmel	állat | arc | cica | macska | mosoly | mosolygó | nevetés | nevető macska mosolygó szemmel | nevető macskaarc mosolygó szemmel | szem
+1F639	macska örömkönnyekkel	állat | arc | cica | kicsordul a könnye | könny | macska | macska örömkönnyekkel | macskaarc örömkönnyekkel | mosoly | nevet | örömkönny | szmájli
+1F63A	nevető macska	állat | arc | cica | macska | mosoly | mosolygó macskaarc nyitott szájjal | nevető macska | nyitott | száj
+1F63B	mosolygó macska szív alakú szemmel	állat | arc | cica | macska | mosoly | mosolygó macska szív alakú szemmel | mosolygó macskaarc szív alakú szemmel | szerelem | szív | szmájli
+1F63C	macska fanyar mosollyal	arc | cica | fanyar | irónia | ironikus | macska | macska fanyar mosollyal | macskaarc fanyar mosollyal | mosoly | szmájli
+1F63D	csókoló macska	arc | cica | csók | csókoló | csókoló macskaarc lehunyt szemmel | csukott szem | macska | puszi | szmájli
+1F63E	duzzogó macska	állat | arc | cica | duzzogás | duzzogó | duzzogó macskaarc | macska | mérges | szmájli
+1F63F	síró macska	arc | cica | könny | macska | sírás | síró | síró macskaarc | szmájli | szomorú
+1F640	kimerült macska	állat | arc | fáradt | hűha | ijedt | kimerült | kimerült macskaarc | macska | meglepett | ó
+1F641	kissé komor arc	arc | kissé komor arc | rosszallás | szmájli | szomorú
+1F642	finoman mosolygó arc	arc | boldog | finoman mosolygó arc | mosoly | szmájli
+1F643	arc fejjel lefelé	arc | arc fejjel lefelé | fejjel lefelé | fejjel lefelé fordult arc | szmájli
+1F644	szemét forgató arc	arc | bosszús | forgatja a szemeit | forgó szemek | ideges | mérges | szemét forgató arc | szemforgatás | szmájli
+1F648	nem láttam semmit	állat | bújócska | elbújik | elfelejt | ijedt | majom | nem | nem figyelek | nem lát semmit | nem láttam semmit | tilos | zavarban van
+1F649	nem hallottam semmit	állat | fül | hall | majom | nem | nem figyel | nem hall semmit | nem hallottam semmit | tilos | titok
+1F64A	nem szólok semmit	állat | bocsánat | elnézést | elszóltam magam | hoppá | majom | nem | nem beszél | nem szól semmit | nem szólok semmit | tilos | titok
+1F910	arc összecipzározott szájjal	arc | arc összecipzározott szájjal | cipzár | nem mond el | száj | szmájli | titok
+1F911	arc dollárjelekkel	arc | arc dollárjelekkel | dollár | fizetett | pénz | száj | szmájli
+1F912	arc lázmérővel	arc | arc lázmérővel | beteg | láza van | lázas | lázmérő | szmájli
+1F913	kockaarc	arc | gépmániás | kocka | kockaarc
+1F914	gondolkodó arc	arc | elgondolkodó | gondolkodó arc | gondolkozik | megfontol | szmájli | tűnődő
+1F915	arc bekötött fejjel	arc | arc bekötött fejjel | beütötte a fejét | fáj | fej | kötés | sérülés | szmájli
+1F916	robot	arc | robot | robotarc | szörny
+1F917	ölelés	arc | kezek | ölelés | szmájli
+1F920	cowboykalapos fej	arc | boldog | cowboy | cowboy kalapos fej | cowboykalapos fej | fej | kalap | nevet | szmájli
+1F921	bohócfej	bohóc | bohócfej | cirkusz | fej
+1F922	émelygő arc	arc | beteg | émelygő | fej | hányás | hányingere van | rosszul van | szmájli
+1F923	gurul a nevetéstől	arc | boldog | fej | gurul | gurul a nevetéstől | kicsordul a könnye a nevetéstől | könny | nevet | nevetés | nevetséges | szmájli | vicces
+1F924	nyáladzó fej	arc | fej | folyik a nyála | nyál | nyáladzó | szmájli
+1F925	hazudó arc	arc | hazudik | hazudó | hazudó fej | hazudós | hazug | hosszú orr | orr | pinokkió | Pinokkió | szmájli
+1F926	kézbe temetett arc	arc | elkeseredés | kéz | kézbe temetett arc | nem hiszem el
+1F927	tüsszentő arc	arc | beteg | fej | fújja az orrát | hapci | meg van fázva | megfázott | szmájli | tüsszent | tüsszentő
+1F928	felhúzott szemöldökű arc	arc felvont szemöldökkel | bizalmatlan | felhúzott szemöldökű arc | gyanakvó | helytelenít | hitetlen | hitetlenkedő | hmm | kételkedő | kétkedő | meglepett | mit | nem bízik | nem hiszi el | szkeptikus | szmájli | tessék
+1F929	csillagszemű	arc | azta | csillag | csillagos szemű | csillagszemű | elbűvölt | elragadtatott | fülig ér a szája | hű | izgatott | szemek | szmájli | vigyorgó | vigyorog
+1F92A	őrült fej	bolond | dilis | dinnye | hülye | kicsi | lökött | nagy | őrült arc | őrült fej | őrült szemek | szem | szmájli | tökfej
+1F92B	csitító arc	arc | csend | csitító arc | csitt | csönd | csöndesen | csöndre int | elhallgattat | halkan | maradj csendben | pszt | szmájli
+1F92C	arc jelekkel a száján	arc jelekkel a száján | bosszús | cenzúra | csúnyán beszél | dühös | elátkoz | gyalázkodik | káromkodás | káromkodik | mérges | szimbólumok a szájon arc | szitkozódik | szmájli
+1F92D	arc szájra tett kézzel	arc szájra tett kézzel | hirtelen ráébred | hirtelen rájön | hoppá | kéz a száj előtt arc | kuncog | nevet | röhög | rötyög | szmájli | titok | vihog
+1F92E	hányó arc	arc | beteg | hány | hányó arc | kidobja a taccsot | köp | öklendezik | rosszul van | szmájli
+1F92F	felrobbanó fej	arc | egyáltalán nem | elképesztő | felfoghatatlan | felrobban | felrobbanó fej | megdöbbent | semmiképpen | sokkolt | szmájli
+1F970	mosolygó arc szívekkel	arc | három szív | i love you | imád | imádat | mosoly | mosolygó arc szívekkel | rajong | románc | szerelem | szerelmes | szeret | szeretlek | szív
+1F971	ásító arc	álmos | arc | ásít | ásítás | ásító | fáradt
+1F972	mosolygó arc könnycseppel	arc | büszke | hálás | könny | meghatott | megkönnyebbült | mosolygó arc könnycseppel | mosolyog
+1F973	bulizó arc	arc | buli | bulizó arc | csákó | duda | hurrá | izgatott | kalap | partiarc | party | születésnap | szülinap | ünnep | ünneplés
+1F974	részeges arc	arc | becsípett | ferde szemek | hullámvonalas száj | ittas | kába | kábult | kapatos | keresztbeálló szemek | részeg | részeges arc | spicces | szédül
+1F975	forró arc	arc | forró arc | forróság | haldoklik | hőguta | hőség | izzad | izzadás | izzadó | lázas | liheg | megsül | nyelv | piros arc | vörös arcú
+1F976	fagyos arc	arc | befagy | didereg | elkékült arc | fagyás | fagyos arc | fagyoskodik | fázik | hideg | hűvös | jégcsap | jégcsapok | jéghideg | kék | megfagy | mínusz | vacog
+1F978	álcázott arc	álbajusz | álca | álcázott arc | arc | bajusz | inkognító | kém | orr | szemöldök | szemüveg
+1F97A	esedező arc	arc | bociszemek | esedező arc | kegyelem | kerek szem | kérlek | kérlek szépen | kérlelő | kiskutyaszemek | könyörgős | könyörög | lécci | légyszi | megszán | miért ne | sóvárog | szomorú
+1FAE0	elolvadó arc	elolvadó arc | eloszlik | eltűnik | folyékony | olvad
+1FAE1	tisztelgő arc	derűs | igen | katonák | oké | tisztelgés | tisztelgő arc
+1FAE2	nyitott szemű, száját takaró arc	áhítat | ámulat | arc | csend | elakadt lélegzet | előtt | félelem | hitetlenkedés | kéz | meglepetés | nyitva | omg | sokk | száj | szemek | zavar
+1FAE3	kémlelő szemű arc	bámul | ijedt | kémlelő szemű arc | kukucskál | megbabonázott | pillant | riadt | szégyenlős
+1FAE4	átlós szájú arc	átlós szájú arc | bizonytalan | csalódott | kétkedő | meh
+1FAE5	pontozott vonalas arc	elrejtőzik | eltűnik | introvertált | láthatatlan | levert | pontozott vonalas arc
+1FAE7	buborékok	böfi | buborékok | szappan | szappanbuborékok | tiszta | víz alatti
+1FAE8	rázkódó arc	arc | földrengés | meglepődés | rázkódó | rezeg
+1F381	becsomagolt ajándék	ajándék | becsomagolt | doboz | karácsony | meglepetés | születésnap | ünnep | ünnepi hangulat | ünneplés
+1F389	partikellékek	buli | bulizik | konfetti | partikellékek | partizik | party | szerpentin | szilveszter | születésnap | ünnep | ünnepel | ünnepi hangulat | ünneplés
+1F38A	konfetti	buli | konfetti | parti | party | születésnap | ünnep | ünnepi hangulat | ünneplés
+1F47B	szellem	arc | fél | félelmetes | ijesztő | kísértet | lény | mese | szellem | szörny
+1F47C	babaangyal	angyal | arc | baba | babaangyal | mese
+1F47D	földönkívüli	földönkívüli | idegen | marslakó | ufó | űrlény
+1F47E	földönkívüli szörny	fantasy | földönkívüli | idegen | játék | pixel | pixeles | szörny | szörnyecske | ufó | űrlény
+1F47F	mérges arc szarvakkal	arc | démon | fantasy | gonosz | mérges arc szarvakkal | mese | ördög | rossz | szarvak | szmájli
+1F480	koponya	csont | halál | halálfej | halott | koponya | szörny
+1F481	ember az információs pultnál	borravaló | ember | kéz | mindegy | nyitott tenyér | pletyka | szarkasztikus | szarkazmus | szemtelen
+1F482	gárdista	Buckingham-palota | gárdista | London | őrség | őrségváltás | sisak
+1F489	fecskendő	eszköz | fecskendő | injekciós tű | orvos | véradás | vérvétel
+1F48A	tabletta	betegség | doktor | gyógyszer | kapszula | orvos | pirula | tabletta | vitamin
+1F4A2	a düh szimbóluma	a düh szimbóluma | dühös | képregény | mérges
+1F4A4	alvás	álmos | alszik | alvás | éjszaka | fáradt | jó éjszakát | képregény | zzz
+1F4A5	ütközés	bumm | csattanás | képregény | robbanás | ütközés
+1F4A6	izzadságcseppek	csepp | cseppek | csobbanás | edzés | fröccsenés | izzadság | izzadságcseppek | képregény | víz
+1F4A7	csepp	csepp | hideg | időjárás | izzadság | képregény | könny | könnycsepp | szomorú | vicces | víz
+1F4A8	rohanás	elillan | ereget | ereszt | felhő | füst | futás | gyors | képregény | puki | pukizik | púzik | rohanás | szellent
+1F4A9	kakihalom	arc | büdi | büdös | kaka | kaki | kakiarc | kakihalom | képregény
+1F4AB	szédülés	csillag | csillagokat lát | fényes | hullócsillag | képregény | szédülés
+1F4AC	szövegbuborék	beszéd | buborék | gépel | képregény | párbeszéd | sms | szövegbuborék | üzenet
+1F4AD	gondolatbuborék	álmodozik | álom | buborék | felhő | gondol | gondolat | gondolatbuborék | gondolkozik | képregény | ötlet
+1F4AE	fehér virág	fehér virág | növény | virág
+1F4A0	rombusz ponttal	alakzat | geometriai | gyémánt ponttal | képregény | rombusz | rombusz ponttal
+1F4A1	villanykörte	fény | képregény | ötlet | világítás | villanykörte
+1F4A3	bomba	bomba | képregény | robban | robbanás | veszélyes
+1F4AF	száz pont	100 | a+ | aha | egyértelműen | egyetértés | hűséges | IGAZ | igazság | megtartás | mindenképpen | mutatás | remek | száz | találat | teljes | tökéletes
+1F4B0	pénzeszsák	bank | dollár | drága | fizet | gazdag | nyer | pénz | pénzeszsák | zsák
+1F4B1	pénzváltás	átváltás | bank | pénz | pénzváltás | pénzváltó | valuta
+1F4B2	vastag dollárjel	dollár | fizet | pénz | pénznem | vastag dollárjel
+1F4B8	pénz szárnyakkal	bank | bankjegy | bankó | dollár | fizet | készpénz | kifizet | papírpénz | pénz | pénz szárnyakkal | repülés | szárnyak
+1F525	tűz	ég | felgyullad | forró | gyúlékony | gyullad | láng | meleg | perzsel | tűz
+1F52E	kristálygömb	gömb | jós | jóslás | jósnő | jövendő | jövendőmondás | jövő | kristálygömb | mese
+1F440	szemek	arc | les | néz | szem | szemek | test | testrész
+1F441	szem	szem | test | testrész
+1F442	fül	fej | fül | hall | hallás | hallgat | test | testrész
+1F443	orr	fej | orr | szag | szaglás | szagol | test | testrész
+1F444	száj	ajkak | rúzs | száj | test | testrész
+1F445	nyelv	kinyújtja a nyelvét | nyal | nyelv | test | testrész
+1F446	tenyér felfelé mutató ujjal	felfelé | kéz | kézfej | kézfej felfelé mutató ujjal | mutat | mutatóujj | tenyér | tenyér felfelé mutató ujjal | test | ujj
+1F447	tenyér lefelé mutató ujjal	kéz | kézfej | kézfej lefelé mutató ujjal | lefelé | mutat | mutatóujj | tenyér | tenyér lefelé mutató ujjal | test | ujj
+1F448	kéz balra mutató ujjal	kéz | kéz balra mutató ujjal | kézfej | mutat | mutatóujj | tenyér | test | ujj
+1F449	kéz jobbra mutató ujjal	arra | kéz | kéz jobbra mutató ujjal | kézfej | mutatóujj | tenyér | test | ujj
+1F44A	ütésre emelt ököl	egyetért | egyetértek | felemelt | haver | kéz | ököl | tesó | test | ütés | ütésre emelt ököl
+1F44B	integető kéz	hello | integet | integetés | integető kéz | kéz | szia | test | viszlát
+1F44C	ok jel	kéz | ok jel | oké | perfekt | rendben | szuper | test | ujj
+1F44D	felfelé mutató hüvelykujj	cool | felfelé mutató hüvelykujj | hüvelykujj | hüvelykujj felfelé | jó | kéz | like | megbeszéltük | ok | oké | rendben | test | ujj
+1F44E	lefelé mutató hüvelykujj	elvetés | hüvelykujj lefelé | kéz | lefelé mutató hüvelykujj | nem | rossz | test
+1F44F	tapsoló kéz	gratulál | kéz | szép munka volt | taps | tapsol | tapsoló kéz | test
+1F450	széttárt kéz	kéz | kitárva | széttárt kéz | test
+261D	kéz felfelé mutató ujjal	felfelé | kéz | kéz felfelé mutató ujjal | mutat | mutatóujj | test | ujj
+270A	felemelt ököl	felemelt | kéz | ököl | ökölbe szorított kéz | test | ütés
+270B	felemelt kéz	állj | fel | felemelt kéz | kéz | ne tovább | pacsi | stop | tenyér | test
+270C	győzelmi jelet mutató kéz	béke | betű | győzelem | győzelmi jelet mutató kéz | jel | kéz | kézjel | test | ujj | v
+270D	író kéz	írás | író kéz | kéz | test
+1F4AA	befeszített bicepsz	befeszített bicepsz | bicepsz | edzés | edzőterem | erős | izom | kar | karizom | képregény | kéz | test
+1F590	felemelt kéz szétálló ujjakkal	állj | felemelt kéz szétálló ujjakkal | kéz | ne tovább | stop | szétálló | test | ujj
+1F64C	kezét felemelő ember	felemelt kezek | hurrá | kéz | kezét felemelő ember | test | ünneplés | vidámság
+1F64F	összetett kéz	ima | imádkozik | kér | kérés | kérlek | kéz | könyörög | köszi | köszönet | köszönöm | összetett kéz | test
+1F90C	összecsippentett ujjak	gúnyos | kéz | kézmozdulat | kihallgatás | mi van | micsoda | mit akarsz | összecsippentett | türelem | ujjak | várj
+1F90F	csippentő kéz	csippentő kéz | kicsi | kicsit | kis összeg | ujjak
+1F918	metálvilla	kéz | metál | metálvilla | ördögvilla | rock | rock & roll | szarvak | ujj
+1F919	„hívj fel” kézjel	„hívj fel” kézjel | hívás | kéz
+1F91A	kézfej	felemelt | kéz | kézfej
+1F91B	balra néző ököl	bal szélső | balra néző ököl | kéz | ököl
+1F91C	jobbra néző ököl	jobb szélső | jobbra néző ököl | kéz | ököl
+1F91D	kézfogás	alku | alkut köt | kéz | kezet ráz | kézfogás | megállapodás | megegyezés | találkozás | üdvözlés
+1F91E	keresztezett ujjak	drukkolok | keresztezett | keresztezett ujjak | kéz | sok szerencsét | szerencse | szorítok | ujj
+1F91F	szeretlek kézmozdulat	3 ujj | három ujj | kéz | szeretlek | szeretlek jel | szeretlek kézmozdulat
+1F932	felfelé fordított tenyerek	felfelé fordított tenyerek | ima | imádkozik | imádság | kér | kéz | kezek | koldul | könyörgés | könyörög | köszönet | tenyér | tenyérrel felfelé | tölcsér | tölcsért formáz
+1F9B4	csont	csont | csontok | csontváz | kutya
+1F9B5	lábszár	behajlított láb | comb | láb | lábfej | lábszár | rúg | rúgás | térd | végtag
+1F9B6	lábfej	boka | dobogás | láb | lábfej | rúg | rúgás | tapos | tipor | topog | toporog
+1F9B7	fog	fehér | fog | fogak | fogász | fogorvos
+1F9E0	agy	agy | intelligens | okos
+1F9BE	mechanikus kar	akadálymentesség | mechanikus kar | prosztetikus kar | protézis
+1FAC0	szív	anatómia | kardiológia | középpont | piros | pulzus | szerv | szív | szívdobogás | szívverés
+1FAC1	tüdő	belégzés | kilégzés | légzés | lélegzet | levegő | oxigén | szerv | tüdő
+1FAE6	ajkába harapó száj	aggódó | ajkába harapó száj | félelem | flört | ideges | kényelmetlen | nyugtalan
+1FAF0	keresztezett mutató- és hüvelykujjú kéz	csettint | drága | keresztezett mutató- és hüvelykujjú kéz | pénz | szeretet | szív
+1FAF1	jobbra néző kéz	jobb | jobbra néző | jobbra néző kéz | kéz
+1FAF2	balra néző kéz	bal | balra néző | balra néző kéz | kéz
+1FAF3	lefelé néző kéz	elejt | hess | lefelé néző kéz | mellőz
+1FAF4	felfelé néző kéz	elkap | felajánl | felfelé néző kéz | hív | int
+1FAF5	felhasználóra mutató ujj	felhasználóra mutató ujj | mutat | te
+1FAF6	szívet formázó kezek	szeretet | szív | szívet formázó kezek
+1FAF7	balra toló kéz	balra | balra toló kéz | elutasít | pacsi | stop | tol | vár
+1FAF8	jobbra toló kéz	elutasít | jobbra | jobbra toló kéz | pacsi | stop | tol | vár
+2764	vörös szív	piros | szerelem | szeretlek | szív | vörös szív
+1F380	szalag	masni | szalag | ünnep | ünnepi hangulat | ünneplés
+1F382	születésnapi torta	desszert | édesség | étel | sütemény | süti | születésnap | születésnapi torta | szülinap | torta
+1F383	töklámpás	halloween | töklámpa | töklámpás | ünnep | ünnepi hangulat | ünneplés
+1F384	karácsonyfa	fa | fenyő | fenyőfa | karácsony | karácsonyfa | ünnep | ünnepi hangulat | ünneplés
+1F386	tűzijáték	tűzijáték | ünnep | ünnepi hangulat | ünneplés
+1F387	csillagszóró	csillagszóró | tűzijáték | ünnep | ünnepi hangulat | ünneplés
+1F388	léggömb	léggömb | lufi, születésnap, ünnepel | ünnep | ünnepi hangulat | ünneplés
+1F9E7	piros boríték	ajándék | hong bao | hóngbāo | lai see | pénz | piros boríték | szerencse | szerencsehozó
+1F9E8	petárda	dinamit | fény | petárda | pukkan | robban | robbanószer | szikra | tűz | tüzijáték | tűzijáték
+1F38B	tanabata ünnepi fa	fa | japán | tanabata ünnepi fa | ünnep | ünnepi hangulat | ünneplés
+1F38C	keresztbe tett zászlók	japán | keresztbe tett | keresztbe tett zászlók | ünnep | ünnepi hangulat | ünneplés | zászlók
+1F38D	fenyődekoráció	bambusz | fenyő | fenyődekoráció | japán | növény | ünnep | ünnepi hangulat | ünneplés
+1F38E	japán babák	baba | figura | japán | japán babák | ünnep | ünnepi hangulat | ünneplés
+1F38F	rizspapír pontyok	hal | lobogó | ponty | rizspapír | rizspapír pontyok | ünnep | ünnepi hangulat | ünneplés
+1F390	szélharang	csengő | harang | harangjáték | szél | szélcsengő | szélharang | ünnep | ünnepi hangulat | ünneplés
+1F391	holdünnep	hold | holdünnep | ünnep | ünnepi hangulat | ünneplés
+1F393	diplomaosztón használt kalap	diplomaosztó | diplomaosztón használt kalap | diplomázás | diplomázik | egyetem | kalap | oktatás | ruha | ruházat | ünneplés
+1F484	ajakrúzs	ajakrúzs | kozmetikum | randevú | randi | rúzs | smink | szépségápolás
+1F485	körömlakk	kéz | kifestés | körmös | köröm | körömápolás | körömfestés | körömlakk | lakk | lakkoz | manikűr | testrész
+1F48B	csóknyom	ajkak | csók | csóknyom | romantika | rúzs | rúzsfolt | rúzsnyom | szenvedély
+1F48C	szerelmes levél	levél | romantika | szerelem | szerelmes levél | szív
+1F48D	gyűrű	ékszer | eljegyez | eljegyzési gyűrű | gyémánt | gyűrű | házasság | jegyben jár | jegyes | lánykérés | megkéri a kezét | romantika
+1F48E	ékkő	drágakő | ékkő | ékszer | eljegyzés | érték | értékes | esküvő | gyémánt | romantika
+1F48F	csók	barát | barátnő | csók | évforduló | pár | randevú | randi | romantika | szerelem | szív
+1F490	csokor	csokor | évforduló | növény | randevú | randi | romantika | születésnap | virág | virágcsokor
+1F491	pár szívvel	csók | évforduló | pár | pár szívvel | romantika | szerelem | szív
+1F492	esküvő	épület | esküvő | kápolna | romantika
+1F493	dobogó szív	dobogó szív | érted dobog a szívem | szerelem | szív | szívdobogás
+1F494	összetört szív	egyedül | megszakad a szíve | összetört | szakít | szakítani | szív | szomorú
+1F495	két szív	évforduló | két szív | randevú | randi | szerelem | szerelmes szívek | szeretlek | szív | szívek
+1F496	ragyogó szív	csillog | izgatott | ragyogás | ragyogó szív | szív
+1F497	növekvő szív	idegesség | izgalom | növekvő szív | szív | szívdobogás
+1F498	nyíllal átlőtt szív	Ámor nyila | Cupido | nyíl | nyíllal átlőtt szív | romantika | szerelem | szív
+1F499	kék szív	kék | szív
+1F49A	zöld szív	szív | zöld
+1F49B	sárga szív	sárga | szív
+1F49C	lila szív	lila | szív
+1F49D	szív szalaggal	ajándék | csók | puszi | szalag | szerelem | szív | szív szalaggal | valentin-nap
+1F49E	forgó szívek	évforduló | forgás | forgó szívek | szerelem | szeretlek | szív
+1F49F	szív formájú dekoráció	dekoráció | dísz | fehér szív | lila szív | szív | szív formájú dekoráció
+1F90D	fehér szív	fehér | szív
+1F90E	barna szív	barna | szív
+1F9E1	narancssárga szív	narancssárga | narancssárga szív | szív, narancssárga szív, narancssárga
+1FA75	világoskék szív	cián | pávakék | szív | világoskék
+1FA76	szürke szív	ezüst | pala | szív | szürke
+1FA77	rózsaszín szív	cuki | rózsaszín | szerelem | szív | tetszik
+2763	nagy szív alakú felkiáltójel	írásjel | központozás | nagy szív alakú felkiáltójel | szív
+2733	nyolcágú csillag	csillag | nyolcágú csillag
+2734	nyolcas csillag	csillag | nyolcágú csillag | nyolcas csillag
+2747	szikra	szikra
+1F3E0	lakóház	családi ház | épület | ház | hétvégi ház | lak | lakóház | otthon | vidéki ház
+1F3E1	ház kerttel	családi ház | épület | ház | ház kerttel | hétvégi ház | kert | kertes ház | lak | nyaraló | otthon | vidéki ház
+1F3E2	irodaépület	épület | iroda | irodaépület | munka | munkahely
+1F3E3	japán postahivatal	épület | japán | japán postahivatal | posta
+1F3E4	postahivatal	épület | európai | posta | postahivatal
+1F3E5	kórház	doktor | épület | gyógyítás | kórház | orvos
+1F3E6	bank	bank | épület
+1F3E7	ATM-jel	atm | ATM | ATM-jel | automata | bank | bankautomata | készpénz | kiadó | pénzfelvétel
+1F3E8	hotel	épület | hotel
+1F3E9	szálló szerelmeseknek	épület | love hotel | szálló szerelmeseknek | szálloda | szerelmi fészek
+1F3EA	kisbolt	bolt | éjjel-nappali | épület | kisbolt | non-stop
+1F3EB	iskola	épület | iskola
+1F3EC	áruház	áruház | boltok | épület
+1F3ED	gyár	épület | gyár
+1F3EE	piros papírlámpa	bár | étterem | fény | japán | lámpa | lámpás | piros | piros papírlámpa
+1F3EF	japán kastély	épület | japán | kastély
+1F3F0	vár	épület | európai | kastély | vár
+1F463	lábnyomok	lábnyom | lábnyomok | mezítláb | nyom | nyomok | úton
+1F464	ember sziluettje melltől felfelé	árnyék | ember | ember sziluettje melltől felfelé | mellszobor | sziluett
+1F465	két ember sziluettje melltől felfelé	ember | emberek | két ember sziluettje melltől felfelé | mellszobor | sziluett
+1F466	fiú	fiú | kisfiú | srác
+1F467	lány	copf | fiatal lány | kislány | lány | lányka
+1F468	férfi	barát | báty | férfi | férj | fiú | haver | öcs | társ | testvér
+1F469	nő	felnőtt | hölgy | nő
+1F46A	család	család | gyerek
+1F46B	kézen fogva álló férfi és nő	barátok | férfi | fiú | kéz a kézben | kézen fogva álló férfi és nő | lány | nő | pár | randevú | randi | szerelem | szerelmesek
+1F46C	kézen fogva álló férfiak	barátok | barátság | báty | férfiak | fiúk | ikrek | kézen fogva | kézen fogva álló férfiak | öcs | pár | randevú | randi | testvérek
+1F46D	kézen fogva álló nők	barátnők | barátok | barátság | gyerekek | húg | kézen fogva | kézen fogva álló nők | kislányok | lányok | legjobb barátnők | nők | nővér | pár | randevú | randi | szövetség | testvérek
+1F46E	zsaru	foglalkozás | letartóztat | rendőr | rendőrség | rendőrtiszt | tiszt | törvény | zsaru
+1F46F	bulizó emberek	buli | bulizó emberek | lányok | nő | nyuszi | nyuszifül | parti
+1F470	ember fátyollal	ember | ember fátyollal | esküvő | fátyol | lakodalom | menyasszony | menyasszony fátyollal
+1F471	szőke hajú ember	ember | férfi | szőke | szőke hajú ember
+1F472	kínai sapkás ember	ember | kínai sapkás ember | sapka
+1F473	turbános ember	ember | turbán | turbános ember
+1F474	idős férfi	bácsi | idős | idős férfi | kopasz | nagyapa | nagypapa | öreg | öregember
+1F475	idős nő	anyóka | idős hölgy | idős nő | nagyi | nagymama | néni | öreg néni
+1F476	baba	baba | kisbaba | kisfiú | kisgyerek | újszülött
+1F477	építőmunkás	építkezés | építőmunkás | férfi | foglalkozás | munkás | sisak | védősisak
+1F478	hercegnő	fantasy | hercegnő | királykisasszony | királylány | királynő | korona | mese | mesehős
+1F479	ogre	arc | fantasy | félelmetes | ijesztő | japán | lény | maszk | mese | ogre | ördög | óriás | szörny
+1F47A	kobold	álarc | arc | fantasy | japán | kobold | lény | maszk | mérges | mese | szörny
+1F483	táncoló nő	nő | salsa | tánc | táncol | táncoló | táncos | táncosnő | tangó
+1F486	arcmasszázs	arc | arcmasszázs | fejfájás | feszültség | kozmetika | masszázs | masszíroz | relaxáció | relaxál | szalon | szépségszalon
+1F487	hajvágás	fodrász | fodrászat | haj | hajnyírás | hajvágás | nő fodrásznál | szépségápolás
+1F645	tiltás mutatása	kézjel | ki van zárva | kizárt | nem | nem szabad | szó sem lehet róla | tilos | tiltás mutatása | tiltást mutató nő | tiltott
+1F646	beleegyezés mutatása	beleegyezés mutatása | kézjel | ok | oké | rendben | tornázik
+1F647	meghajló ember	bocsánat | bocsánatkérés | elnézést | meditáció | meditál | meghajlás | meghajló ember | meghajol | sajnálat | sajnálom
+1F64B	vidáman intő ember	boldog | én tudom | felemeli a kezét | integet | intés | jelentkezik | kézmozdulat | vidám | vidáman intő ember
+1F64D	rosszalló ember	csüggedt | homlokát ráncolja | mérges | rosszallás | rosszalló ember | rosszalló tekintet | rosszkedvű | szemöldökét ráncolja | szomorú
+1F64E	duzzogó ember	biggyeszt | duzzogás | duzzogó ember | duzzogó lány | duzzogó nő | grimasz | lebiggyeszt | lebiggyesztett ajak | mérges
+1F930	terhes nő	nő | terhes | várandós
+1F931	szoptatás	baba | etet | kisbaba | mell | szoptat | szoptatás
+1F933	szelfi	fényképező | kamera | szelfi | telefon
+1F934	herceg	herceg | király | királyi | koronás
+1F935	szmokingos ember	elegáns | ember | férfi | öltöny | szmoking | szmokingos ember | szmokingos férfi | vőlegény
+1F936	mikulás ruhás anyó	anyó | karácsony | Mikulás felesége | mikulás ruhás anyó | ünnep
+1F937	vállrándítás	közömbös | nem érdekel | rándít | váll | vállrándítás
+1F385	mikulás	arc | fej | karácsony | mikulás | télapó | ünnep | ünneplés
+1F9B8	szuperhős	hős | jó | szupererő | szuperhős | szuperképesség
+1F9B9	főgonosz	bűnöző | ember | főgonosz | gazember | gonosz | gonosztevő | rossz | szupererő | szupergonosz | szuperképesség
+1F9BF	mechanikus láb	akadálymentesség | mechanikus láb | prosztetikus láb | protézis
+1F9D0	arc monoklival	arc félszemüveggel | arc monoklival | gazdag | kifinomult | klasszikus | mérges | szmájli | tehetős | vagyonos
+1F9D1	felnőtt	felnőtt
+1F9D2	gyerek	fiatal | gyerek | gyermek | kisgyerek | kölyök
+1F9D3	idősebb felnőtt	idős | idősebb felnőtt | nemi szempontból semleges | öreg
+1F9D4	szakállas ember	szakáll | szakállas | szakállas ember
+1F9D5	nő fejkendővel	fejkendő | hidzsáb | kendő | mantilla | nő fejkendővel | ruházat | tichel
+1F9D6	ember a gőzfürdőben	ember a gőzfürdőben | gőz | gőzfürdő | gőzszoba | nő szaunázik | szauna | szaunázás | szaunázik
+1F9D7	mászó ember	hegy | hegymászás | mászás | mászó | mászó ember | megmászik | sziklamászás | sziklamászó
+1F9D8	ember lótuszülésben	ember lótuszülésben | jóga | jógázik | lótuszülés | meditáció | meditál | nő lótuszülésben | relaxáció | relaxál
+1F9D9	varázsló	boszorkány | boszorkánymester | bűbáj | férfi boszorkány | mágia | mágus | mese | varázsige | varázslás | varázslat | varázsló
+1F9DA	tündér	lepke | mese | Oberon | pillangó | Puck | szárny | Titánia | tündér | tündérmese
+1F9DB	vámpír	Drakula | élőhalott | fogak | vámpír | vér
+1F9DC	sellő	hableány | hablegény | mese | óceán | sellő | szirén | tündérmese
+1F9DD	tünde	fantasy | kobold | mágikus | manó | mese | tünde | varázslat | varázslatos
+1F9DE	dzsinn	Dzsini | dzsinn | kívánság | lámpa | lámpás | lámpás szelleme | mese | olajlámpás | szellem | varázslámpás
+1F9DF	zombi	csontváz | élőhalott | élőholt | félelmetes | horror | ijesztő | sétáló halott | zombi
+1FAC2	egymást ölelő emberek	barátság | egymást ölelő emberek | helló | köszönet | ölel | ölelés | ölelkezés | ölelkező emberek | szerelem | üdv | viszlát
+1FAC3	terhes férfi	has | puffadt | teli | terhes | terhes férfi
+1FAC4	terhes személy	has | puffadt | teli | terhes | terhes személy
+B9	egyes felső index	egyes | egyes felső index | felső index
+B2	kettes felső index	felső index | kettes | kettes felső index | négyzeten
+B3	hármas felső index	felső index | hármas | hármas felső index | köbön
+207B	mínuszjel felső indexben	felső index | mínuszjel | mínuszjel felső indexben
+B0	fok	fok | malligand-fok | óra
+B1	plusz-mínusz	plusz-mínusz
+D7	szorzásjel	sokszorozás | szorzás | szorzásjel | szorzó
+F7	osztásjel	elosztás | obelus | osztás | osztásjel
+B5	mikro szimbólum	mérés | mikro szimbólum
+A9	copyright (szerzői jog által védett)	copyright (szerzői jog által védett) | szerzői jog | védett
+AE	registered (bejegyzett)	bejegyzett | registered (bejegyzett) | védjegy
+2122	védjegy	bejegyzett védjegy | tm | védjegy
+A7	szakasz	bekezdés | rész | silcrow | szakasz | szakaszjel
+B6	bekezdésjel	bekezdés | bekezdés vége jel | bekezdésjel
+B7	középvonali pont	felezőpont | közép | középvonali pont | pont
+2022	listajel	listajel | pont
+2013	félkvirt	fél | félkvirt | kvirt
+2026	három pont	hármaspont | három | pont
+AB	balra mutató belső idézőjel	bal | balra mutató belső idézőjel | balra néző belső idézőjel | beszúrási jelek | csúcsos | idézőjel | sávnyíl | zárójel
+BB	jobbra mutató belső idézőjel	beszúrási jelek | csúcsos | idézőjel | jobb | jobbra mutató belső idézőjel | jobbra néző belső idézőjel | sávnyíl | zárójel
+2030	ezrelékjel	ezrelék jel | ezrelékjel
+20AC	euró	EUR | euró | pénznem
+A3	font	EGP | font | GBP | pénznem
+A5	jen	CNY | jen | JPY | jüan | pénznem
+A2	cent	cent
+20B9	indiai rúpia	indiai rúpia | pénznem | rúpia
+20BD	rubel	pénznem | rubel
+20A9	von	KPW | KRW | von
+20BA	török líra	
+20BF	bitcoin	bitcoin | BTC
+20AA	izraeli új sékel	
+20AB	vietnámi dong	
+20B1	peso	peso
+20BC	azerbajdzsáni manat	
+20B4	ukrán hrivnya	
+20A6	nigériai naira	
+20A1	Costa Rica-i colon	
+20B2	paraguayi guarani	
+20B5	ghánai cedi	
+20B8	kazahsztáni tenge	
+20BE	grúz lari	
+20AE	mongóliai tugrik	
+20AD	laoszi kip	
+20A8	rúpia	pénznem | rúpia
+24	dollár	dollár | pénz | USD
+58F	örmény dram	
+9F3	bangladesi taka	
+E3F	thai baht	
+20A3	francia frank	francia frank | frank | pénznem
+20A4	líra	líra | pénznem
+20A7	Spanyol peseta	
+20B0	német pfennig	német pfennig | pénznem | pfennig
+20B3	austral	ARA | austral | pénznem
+20A2	cruzeiro	BRB | cruzeiro | pénznem
+20A5	mill	mil | mill
+20B6	livre tournois	livre tournois | pénznem
+20B7	spesmilo	pénznem | spesmilo
+A4	ismeretlen pénznem	
+201E	alsó kezdő idézőjel	alsó idézőjel | alsó kezdő idézőjel | dupla idézőjel | idézet | idézőjel
+201C	kezdő idézőjel	dupla idézőjel | idézet | kezdő idézőjel
+201D	záró idézőjel	idézet | idézőjel | záró idézőjel
+2018	kezdő egyszeres idézőjel	aposztróf | egyszeres idézőjel | idézőjel | kezdő egyszeres idézőjel
+2019	záró egyszeres idézőjel	aposztróf | egyszeres idézőjel | idézőjel | záró egyszeres idézőjel
+A1	fordított felkiáltójel	felkiáltás | felkiáltójel | fordított
+BF	fordított kérdőjel	fordított | kérdés | kérdőjel
+2020	kereszt szimbólum	kereszt | kereszt szimbólum | obeliszk | obelus
+2021	kettős kereszt szimbólum	kereszt | kettős | kettős kereszt szimbólum | obeliszk | obelus
+2044	törtvonás	törtvonás | virgula | vonás
+2032	felső vessző	felső vessző
+2033	dupla felső vessző	dupla felső vessző | felső vessző
+201A	alsó jobb egyszeres idézőjel	alsó idézőjel | alsó jobb egyszeres idézőjel | aposztróf | idézőjel
+AC	negáció	negáció | nem
+2117	hangrögzítési szerzői jog	hang | hangrögzítési szerzői jog | rögzítés | szerzői jog
+2212	mínuszjel	kivonás | mínusz | mínuszjel
+2213	mínusz vagy plusz	mínusz vagy plusz | plusz-mínusz
+2248	közelítőleg egyenlő	approximáció | közelítés | közelítőleg egyenlő
+2260	nem egyenlő	egyenlőtlenség | nem egyenlő
+2261	egyenlőségjel	azonos | egyenlőségjel | egyező | tripla
+2264	kisebb vagy egyenlő	egyenlő | egyenlőség | egyenlőtlenség | kisebb | kisebb vagy egyenlő | mint
+2265	nagyobb vagy egyenlő	egyenlő | egyenlőség | egyenlőtlenség | mint | nagyobb | nagyobb vagy egyenlő
+226A	sokkal kevesebb, mint	egyenlőtlenség | matematika | mint | sokkal kevesebb | sokkal kevesebb, mint
+226B	sokkal nagyobb, mint	egyenlőtlenség | matematika | mint | sokkal nagyobb | sokkal nagyobb, mint
+221E	végtelen szimbólum	végtelen | végtelen szimbólum
+221A	négyzetgyök	alapszám | gyök | gyökér | irracionális | négyzet | négyzetgyök
+221D	arányos	arányos | arányosság
+2211	n-áris szumma	matematika | n-áris szumma | szumma
+220F	n-áris produktum	logika | n-áris produktum | produktum
+222B	integrál	integrál | számítás
+2202	parciális differenciál	differenciál | parciális differenciál
+2206	növekmény	háromszög | növekmény
+2207	nabla	háromszög | nabla
+2200	univerzális kvantor	adott | bármely | mindnek | összes | univerzális | univerzális kvantor
+2203	létezik	létezik
+2205	üres halmaz	halmazműveleti jel | matematika | üres halmaz
+2208	eleme	elem | eleme | halmaz | tagság | tartalmazza
+2209	nem eleme	elem | nem eleme
+2229	metszet	halmaz | metszet
+222A	unió	csoport | halmaz | unió
+2282	valódi részhalmaza	halmaz | részhalmaz | valódi részhalmaza
+2283	szuperhalmaz	halmazműveleti jel | matematika | szuperhalmaz
+2286	részhalmaz egyenlő	részhalmaz egyenlő
+2287	szuperhalmaz egyenlő	egyenlőség | matematika | szuperhalmaz egyenlő
+2227	logikai és	ac | atque | hacsek | logikai és
+2295	pluszjel körben	plusz | pluszjel körben
+2297	szorzásjel körben	produktum | szorzásjel körben | tenzor
+22A5	felfelé mutató merőleges	felfelé mutató merőleges | merőleges
+2220	szög	hegyesszög | szög
+2234	tehát	logika | tehát
+2235	mert	logika | mert
+2218	gyűrű műveleti jel	gyűrű műveleti jel | kompozíció | műveleti jel
+2219	listajel műveleti jel	listajel műveleti jel | műveleti jel
+22C5	pont műveleti jel	műveleti jel | pont műveleti jel
+2215	osztási perjel	osztási perjel | perjel | virgula | vonás
+2190	bal oldalra mutató nyíl	bal | bal oldalra mutató nyíl | nyíl
+2191	felfelé néző nyíl	felfelé | felfelé néző nyíl | nyíl
+2192	jobb oldalra mutató nyíl	jobb | jobb oldalra mutató nyíl | nyíl
+2193	lefelé néző nyíl	lefelé | lefelé néző nyíl | nyíl
+2196	balra felfelé mutató nyíl	balra felfelé mutató nyíl | égtáj | északnyugat | irány | nyíl
+2197	jobbra felfelé mutató nyíl	égtáj | északkelet | felfelé | irány | jobbra felfelé mutató nyíl | nyíl
+2198	jobbra lefelé mutató nyíl	délkelet | égtáj | irány | jobbra lefelé mutató nyíl | nyíl
+2199	balra lefelé mutató nyíl	balra lefelé mutató nyíl | délnyugat | égtáj | irány | nyíl
+2194	balra-jobbra mutató nyíl	balra-jobbra mutató nyíl | kétirányú nyíl | nyíl
+2195	fel-le mutató nyíl	fel-le mutató nyíl | kétirányú nyíl | nyíl
+21D0	balra mutató kettős nyíl	balra mutató kettős nyíl
+21D1	felfelé mutató kettős nyíl	felfelé mutató kettős nyíl
+21D2	jobbra mutató kettős nyíl	jobbra mutató kettős nyíl
+21D3	lefelé mutató kettős nyíl	lefelé mutató kettős nyíl
+21D6	északnyugat felé mutató kettős nyíl	északnyugat felé mutató kettős nyíl
+21D7	északkelet felé mutató kettős nyíl	északkelet felé mutató kettős nyíl
+21D8	délkelet felé mutató kettős nyíl	délkelet felé mutató kettős nyíl
+21D9	délnyugat felé mutató kettős nyíl	délnyugat felé mutató kettős nyíl
+21D4	kettős balra-jobbra nyíl	kettős balra-jobbra nyíl
+21A4	balra mutató talpas nyíl	balra mutató talpas nyíl
+21A6	jobbra mutató talpas nyíl	jobbra mutató talpas nyíl
+21A5	felfelé mutató talpas nyíl	felfelé mutató talpas nyíl
+21A7	lefelé mutató talpas nyíl	lefelé mutató talpas nyíl
+21A9	balra görbülő jobb nyíl	balra görbülő jobb nyíl | nyíl
+21AA	jobbra görbülő bal nyíl	jobbra görbülő bal nyíl | nyíl
+219E	balra mutató duplafejű nyíl	balra mutató duplafejű nyíl
+21A0	jobbra mutató duplafejű nyíl	jobbra mutató duplafejű nyíl
+219F	felfelé mutató duplafejű nyíl	felfelé mutató duplafejű nyíl
+21A1	lefelé mutató duplafejű nyíl	lefelé mutató duplafejű nyíl
+21A2	balra mutató nyíl tolla	balra mutató nyíl tolla
+21A3	jobbra mutató nyíl tolla	jobbra mutató nyíl tolla
+219A	balra mutató nyíl vonással	balra mutató nyíl vonással
+219B	jobbra mutató nyíl vonással	jobbra mutató nyíl vonással
+21AE	kétirányú nyíl vonással	kétirányú nyíl vonással
+21CD	balra mutató áthúzott kettős nyíl	balra mutató áthúzott kettős nyíl
+21CF	jobbra mutató áthúzott kettős nyíl	jobbra mutató áthúzott kettős nyíl
+21CE	áthúzott kettős balra-jobbra nyíl	áthúzott kettős balra-jobbra nyíl
+21C4	jobbra mutató nyíl balra mutató nyíl felett	jobbra mutató nyíl balra mutató nyíl felett
+21C6	oda-vissza nyíl	bal | jobb | nyíl | oda-vissza nyíl
+21CB	balra mutató félhegyű nyíl jobbra mutató félhegyű nyíl felett	balra mutató félhegyű nyíl jobbra mutató félhegyű nyíl felett
+21CC	jobbra mutató félhegyű nyíl balra mutató félhegyű nyíl felett	jobbra mutató félhegyű nyíl balra mutató félhegyű nyíl felett
+21BC	balra mutató felső félhegyű nyíl	balra | felfelé | félhegyű | szigony
+21BD	balra mutató alsó félhegyű nyíl	balra mutató alsó félhegyű nyíl
+21C0	jobbra mutató felső félhegyű nyíl	felfelé | félhegyű | jobbra | szigony
+21C1	jobbra mutató alsó félhegyű nyíl	félhegyű | jobbra | lefelé | szigony
+21BE	felfelé mutató jobb félhegyű nyíl	felfelé | félhegyű | jobbra | szigony
+21BF	felfelé mutató bal félhegyű nyíl	balra | felfelé | félhegyű | szigony
+21C2	lefelé mutató jobb félhegyű nyíl	félhegyű | jobbra | lefelé | szigony
+21C3	lefelé mutató bal félhegyű nyíl	balra | félhegyű | lefelé | szigony
+21C7	balra mutató páros nyíl	balra mutató páros nyíl
+21C9	jobbra mutató páros nyíl	jobbra mutató páros nyíl
+21C8	felfelé mutató páros nyíl	felfelé mutató páros nyíl
+21CA	lefelé mutató páros nyíl	lefelé mutató páros nyíl
+21DA	balra mutató hármas nyíl	balra mutató hármas nyíl
+21DB	jobbra mutató hármas nyíl	jobbra mutató hármas nyíl
+219C	balra mutató hullámos nyíl	balra mutató hullámos nyíl
+219D	jobbra mutató hullámos nyíl	jobbra mutató hullámos nyíl
+21DC	balra mutató kígyózó nyíl	balra mutató kígyózó nyíl
+21DD	jobbra mutató kígyózó nyíl	jobbra mutató kígyózó nyíl
+21AD	hullámos balra-jobbra nyíl	hullámos balra-jobbra nyíl
+21AF	lefelé mutató cikcakkos nyíl	cikkcakkos | lefelé | nyíl
+21BA	óramutató járásával ellentétes nyílt körkörös nyíl	óramutató járásával ellentétes nyílt körkörös nyíl
+21BB	óramutató járásával megegyező nyílt körkörös nyíl	óramutató járásával megegyező nyílt körkörös nyíl
+1F400	patkány	állat | patkány
+1F401	egér	állat | egér
+1F402	ökör	állat | állatöv | bika | csillagjegy | ökör
+1F403	vízibölény	állat | bölény | víz | vízibölény
+1F404	tehén	állat | tehén | tej
+1F405	tigris	állat | nagymacska | ragadozó | tigris
+1F406	leopárd	állat | leopárd | nagymacska | párduc | ragadozó
+1F407	nyúl	állat | háziállat | kedvenc | kisállat | nyúl | nyuszi
+1F408	macska	állat | cica | kedvenc | kisállat | macska
+1F409	sárkány	állat | mese | sárkány
+1F40A	krokodil	állat | krokodil
+1F40B	bálna	állat | bálna | óceán | tengerpart
+1F40C	csiga	állat | csiga | lassú
+1F40D	kígyó	állat | állatöv | csillagjegy | kígyó | zodiákus
+1F40E	ló	állat | derbi | fogadás | ló | lovaglás | lovassport | lóverseny | lovi | sport | sportfogadás | versenyló | versenyzés
+1F40F	kos	állat | állatöv | csillagjegy | kos
+1F410	kecske	állat | állatöv | bak | bakkecske | csillagjegy | kecske | sajt
+1F411	birka	állat | anyajuh | bárány | birka | gyapjú | juh
+1F412	majom	állat | banán | majom
+1F413	kakas	állat | kakas | madár
+1F414	tyúk	állat | madár | tyúk
+1F415	kutya	állat | háziállat | kisállat | kutya
+1F416	disznó	állat | disznó | koca | kövér | malac
+1F417	vaddisznó	állat | disznó | vaddisznó
+1F418	elefánt	állat | elefánt
+1F419	polip	állat | óceán | oktopusz | polip
+1F41A	tengeri csiga	kagyló | spirális | tengeri csiga | tengerpart
+1F41B	rovar	állat | bogár | hernyó | kukac | rovar | százlábú
+1F41C	hangya	állat | hangya | kert | rovar
+1F41D	méh	állat | darázs | dongó | háziméh | méh | méhecske | rovar | tavasz | természet
+1F41E	katica	állat | bogár | katica | katicabogár | rovar
+1F41F	hal	állat | állatöv | csillagjegy | étel | hal | halak | halászat | halászik | horoszkóp
+1F420	trópusi hal	állat | díszhal | hal | trópusi
+1F421	gömbhal	állat | gömbhal | hal
+1F422	teknős	állat | teknőc | teknős | teknősbéka
+1F423	kikelő kiscsibe	állat | csibe | kikel | kikelés | kikelő kiscsibe | kiscsibe | kiscsirke | madár | naposcsibe | tojás
+1F424	naposcsibe	állat | csibe | kiscsibe | madár | naposcsibe
+1F425	előre néző kiscsibe	állat | csibe | előre néző kiscsibe | kiscsibe | madár | naposcsibe
+1F426	madár	állat | madár
+1F427	pingvin	állat | madár | pingvin
+1F428	koala	állat | fej | koala | koalamaci | maci | medve
+1F429	pudli	állat | háziállat | kedvenc | kisállat | kutya | pudli | uszkár
+1F42A	teve	állat | dromedár | egypúpú teve | púposteve | sivatag | teve
+1F42B	kétpúpú teve	állat | kétpúpú teve | púp | púposteve | sivatag | teve
+1F42C	delfin	állat | delfin | flipper | óceán | tengerpart
+1F42D	egérfej	állat | egér | egérfej | fej
+1F42E	tehénfej	állat | fej | tehén | tehénfej | tej
+1F42F	tigrisfej	állat | fej | nagymacska | ragadozó | tigris | tigrisfej
+1F430	nyúlfej	állat | fej | kedvenc | kisállat | nyúl | nyúlfej | nyuszi
+1F431	macskafej	állat | cica | fej | kedvenc | kisállat | macska | macskafej
+1F432	sárkányfej	állat | fantasy | fej | mese | sárkány | sárkányfej | tündérmese
+1F433	fröcskölő bálna	állat | bálna | fej | fröcskölés | fröcskölő bálna
+1F434	lófej	állat | farm | fej | ló | lófej
+1F435	majomfej	állat | fej | majom | majomfej
+1F436	kutyafej	állat | fej | kedvenc | kisállat | kiskutya | kutya | kutyafej
+1F437	malacfej	állat | disznó | disznófej | fej | malac | malacfej
+1F438	békafej	állat | béka | békafej | fej
+1F439	hörcsögfej	állat | fej | hörcsög | hörcsögfej | kedvenc | kisállat
+1F43A	farkasfej	állat | farkas | farkasfej | fej
+1F43B	medvefej	állat | fej | maci | medve | medvefej
+1F43C	pandafej	állat | fej | maci | panda | pandafej | pandamaci
+1F43D	malacorr	disznó | disznóorr | malac | malacorr | orr
+1F43E	mancsnyomok	lábak | lábnyomok | mancsnyomok
+1F43F	mókus	állat | mogyoró | mókus
+1F981	oroszlánfej	állat | állatöv | csillagjegy | fej | oroszlán | oroszlánfej
+1F982	skorpió	állat | állatöv | csillagjegy | skorpió
+1F983	pulyka	állat | hálaadás | madár | mérges | pulyka | szárnyas
+1F984	unikornisfej	egyszarvú | fej | unikornis | unikornisfej
+1F985	sas	állat | madár | sas
+1F986	kacsa	állat | kacsa | madár
+1F987	denevér	állat | denevér | drakula | vámpír
+1F988	cápa	állat | cápa | hal
+1F989	bagoly	állat | bagoly | bölcs | madár
+1F98A	rókafej	állat | fej | róka | rókafej
+1F98B	pillangó	állat | lepke | pillangó | rovar | szép
+1F98C	szarvas	agancs | állat | szarvas
+1F98D	gorilla	állat | gorilla
+1F98E	gyík	állat | gyík | hüllő
+1F98F	orrszarvú	állat | orrszarvú | rinocérosz
+1F990	garnélarák	étel | garnélarák | kicsi | rák | tengeri
+1F991	tintahal	állat | étel | tintahal
+1F992	zsiráf	állat | foltos | zsiráf
+1F993	zebra	állat | csíkos | zebra
+1F994	sün	állat | sündisznó | tüskés
+1F995	sauropoda	állat | brachiosaurus | brontosaurus | dínó | dinoszaurusz | diplodocus | kihalt | őslény | sauropoda
+1F996	T. rex	állat | dínó | dinoszaurusz | kihalt | őslény | T-rex | T. rex | T.-rex | Tyrannosaurus | Tyrannosaurus rex
+1F997	tücsök	állat | bogár | ciripel | rovar | szöcske | tücsök | ugrik
+1F998	kenguru	állat | Ausztrália | erszényes | kengu | kenguru | ugrás | ugrik
+1F999	láma	állat | alpaka | guanako | guanakó | gyapjas | gyapjú | láma | vicuña
+1F99A	páva	állat | büszke | hivalkodó | madár | páva | pávakakas | pávatyúk | szép madár | színes | színpompás
+1F99B	víziló	állat | víziló
+1F99C	papagáj	állat | beszél | kalóz | lóri | madár | papagáj
+1F99D	mosómedve	állat | kíváncsi | mosómaci | mosómedve | ravasz
+1F99E	homár	állat | homár | ollók | rák | rákleves | tenger gyümölcsei | tengeri étel
+1F99F	szúnyog	betegség | csípés | láz | malária | rovar | szúnyog | vírus
+1F9A0	mikróba	amőba | baktérium | mikróba | tudomány | vírus
+1F9A1	borz	állat | borz | méhészborz
+1F9A2	hattyú	állat | fiatal hattyú | hattyú | madár | rút kiskacsa
+1F9A3	mamut	állat | gyapjas | kihalt | mamut | nagy | ormányos
+1F9A4	dodó	állat | dodó | kihalt | madár | Mauritius | nagy
+1F9A5	lajhár	lajhár | lassú | lusta
+1F9A6	vidra	halászó | játékos | vidra
+1F9A7	orangután	állat | emberszabású majom | majom | orangután
+1F9A8	bűzösborz	borz | büdös | bűz | bűzborz | bűzös borz | bűzösborz
+1F9A9	flamingó	flamingó | színpompás | trópusi
+1F9AA	osztriga	búvárkodás | gyöngy | osztriga
+1F9AB	hód	állat | fog | gát | hód
+1F9AC	bölény	állat | bölény | csorda
+1F9AD	fóka	állat | fóka | oroszlánfóka | tenger
+1F9AE	vakvezető kutya	akadálymentesség | vak | vakvezető | vakvezető kutya
+1FABC	medúza	csíp | gerinctelen | jaj | kocsonyás | medúza | szúrószerv | tengeri
+1F330	gesztenye	étel | gesztenye | mogyoró | növény
+1F331	palánta	hajtás | kihajt | növény | palánta
+1F332	örökzöld	fa | fenyő | fenyőfa | karácsonyfa | növény | örökzöld
+1F333	lombhullató fa	erdő | fa | lombhullató | növény | zöld
+1F334	pálmafa	fa | növény | pálma | pálmafa | strand | tengerpart
+1F335	kaktusz	kaktusz | növény | sivatag | szárazság | természet
+1F337	tulipán	növény | tulipán | virág
+1F338	cseresznyevirág	cseresznye | cseresznyevirág | növény | virág
+1F339	rózsa	növény | romantika | rózsa | szenvedély | szerelem | szerelmes | virág | vörös rózsa
+1F33A	hibiszkusz	hibiszkusz | növény | virág
+1F33B	napraforgó	nap | napraforgó | növény | virág
+1F33C	virágzás	növény | virág | virágzás
+1F33D	kukoricacső	cső | csöves kukorica | étel | kukorica | kukoricacső | növény
+1F33E	rizs	gabona | gabonaféle | növény | rizs
+1F33F	gyógynövény	gyógynövény | levél | növény
+1F340	négylevelű lóhere	lóhere | négylevelű | növény | szerencse | szerencsés
+1F341	juharlevél	falevél | juhar | juharlevél | levél | növény | ősz
+1F342	lehullott levél	avar | falevél | lehullott | levél | növény | ősz
+1F343	szélfútta levél	hulló | lebegő | levél | növény | szél | szélfútta levél
+1F344	gomba	gomba | növény
+1FAB0	légy	állat | betegség | féreg | kártevő | légy | rohadás | rovar
+1FAB1	kukac	állat | féreg | földigiliszta | giliszta | gyűrűs féreg | gyűrűsféreg | kukac | parazita
+1FAB2	bogár	állat | bogár | cserebogár | rovar
+1FAB3	csótány	állat | csótány | kártevő | rovar | svábbogár | undi | undorító
+1FAB4	cserepes növény	cserepes növény | cserepes virág | gondozás | hasztalan | növény | szoba | szobanövény | unalmas
+1FAB5	fa	fa | faanyag | farönk | rönk
+1FAB6	madártoll	madár | madártoll | repülés | toll | tollazat
+1FAB7	lótusz	buddhizmus | hinduizmus | India | lótusz | lótuszvirág | tisztaság | Vietnam | virág
+1FAB8	korall	korall | korallzátony | óceán | zátony
+1FAB9	üres fészek	fészek | fészekrakás | üres fészek
+1FABA	fészek tojásokkal	fészek | fészek tojásokkal | fészekrakás | tojások
+1FABB	jácint	búzavirág | csillagfürt | jácint | levendula | tátika | virág
+2618	lóhere	lóhere | növény
+1F347	szőlő	étel | gyümölcs | növény | szőlő
+1F348	sárgadinnye	étel | gyümölcs | növény | sárgadinnye
+1F349	görögdinnye	dinnye | étel | görögdinnye | gyümölcs | növény
+1F34A	mandarin	c-vitamin | gyümölcs | mandarin | narancs | nektarin | növény
+1F34B	citrom	citrom | citrusféle | étel | gyümölcs | keserű | növény
+1F34C	banán	banán | gyümölcs | kálium
+1F34D	ananász	ananász | étel | gyümölcs | növény
+1F34E	piros alma	alma | egészség | érett | étel | gyümölcs | növény | piros
+1F34F	zöld alma	alma | egészség | étel | gyümölcs | növény | zöld
+1F350	körte	étel | gyümölcs | körte | növény
+1F351	őszibarack	barack | étel | gyümölcs | növény | őszibarack
+1F352	cseresznye	cseresznye | étel | gyümölcs | meggy | növény
+1F353	eper	eper | étel | gyümölcs | növény | szamóca
+1F336	erőspaprika	csípős | erős | erőspaprika | étel | növény | paprika
+1F354	hamburger	burger | étel | gyorskaja | hambi | hamburger | sajtburger
+1F355	pizza	étel | pepperoni | pizza | sajtos | szelet
+1F356	csontos hús	csont | csontos hús | étel | hús
+1F357	csirkecomb	baromfi | comb | csirke | csirkecomb | csontos | étel | hús | kacsacomb | libacomb
+1F358	rizskeksz	étel | japán | keksz | rizs | rizskeksz
+1F359	rizsgolyó	étel | golyó | japán | rizs | rizsgolyó
+1F35A	főtt rizs	étel | főtt rizs | főzött | rizs
+1F35B	currys rizs	curry | currys rizs | étel | rizs
+1F35C	gőzölgő tál	étel | evőpálcika | forró | gőzölgő tál | gőzölög | tál | tészta
+1F35D	spagetti	étel | makaróni | milánói | olasz étel | spagetti | tészta
+1F35E	kenyér	étel | kenyér | vekni
+1F35F	sült krumpli	étel | gyorsétel | gyorskaja | hasábburgonya | krumpli | sült krumpli | sültkrumpli
+1F360	sült édesburgonya	burgonya | édesburgonya | étel | krumpli | sült édesburgonya
+1F361	dango	dango | desszert | édesség | étel | gombóc | japán | nyárs | pálca
+1F362	oden	étel | grillezés | japán kebab | nyárs | oden | saslik
+1F363	szusi	étel | japán | szusi
+1F364	sült garnélarák	étel | garnélarák | rák | sült | tenger gyümölcsei
+1F365	csavart haltorta	csavart | étel | hal | haltorta | japán | torta
+1F366	lágyfagylalt	desszert | édesség | étel | fagyi | fagylalt | gépi fagylalt | lágyfagylalt | tölcséres fagylalt
+1F367	fagylalt öntettel	desszert | édesség | étel | fagyi | fagylalt | fagylalt öntettel | öntet
+1F368	fagylalt	desszert | édesség | étel | fagyi | fagylalt | fagylaltkehely
+1F369	fánk	desszert | édesség | étel | fánk
+1F36A	sütemény	desszert | édesség | étel | keksz | sütemény | süti
+1F36B	csokoládé	csoki | csokoládé | desszert | édesség | tábla csoki | táblás csokoládé
+1F36C	cukorka	bonbon | cukorka | desszert | édesség
+1F36D	nyalóka	cukorka | desszert | édesség | nyalóka
+1F36E	puding	desszert | édesség | étel | puding
+1F36F	mézes csupor	bödön | csupor | édes | méz | mézes bödön | mézes csupor
+1F370	gyümölcstorta	desszert | édesség | étel | gyümölcstorta | sütemény | süti | szelet | torta | tortaszelet
+1F371	japán ételdoboz	bento | doboz | étel | ételdoboz | japán ételdoboz
+1F372	egy tál étel	ebéd | egy tál étel | ennivaló | étel | tál
+1F373	sütés-főzés	étel | reggeli | serpenyő | sütés-főzés | tojás | tükörtojás
+1F374	kés és villa	ebéd | ebédszünet | éhes | evőeszköz | kaja | kés | kés és villa | tálalás | vacsora | villa
+1F375	fül nélküli teáscsésze	csésze | fül nélküli teáscsésze | ital | tea | teáscsésze
+1F376	szaké	alkohol | bár | csésze | ital | japán | szaké | üveg
+1F377	borospohár	alkohol | bár | bor | borospohár | étterem | ital | pohár | vörösbor
+1F378	koktélos pohár	alkohol | bár | ital | koktél | koktélos pohár | pohár
+1F379	trópusi ital	alkohol | bár | ital | koktél | trópusi
+1F37A	söröskorsó	alkohol | bár | ital | korsó | sör | söröskorsó
+1F37B	összekoccanó söröskorsók	alkohol | bár | ital | koccintás | korsó | összekoccanó söröskorsók | sör | söröskorsó
+1F37C	cumisüveg	baba | cumi | cumisüveg | ital | tej | újszülött
+1F37D	kés és villa tányérral	kés | kés és villa tányérral | tálalás | tányér | villa
+1F37E	üveg kiugró dugóval	bár | dugó | ital | kiugrik | kupak | pezsgő | pezsgőt pukkaszt | születésnap | ünneplés | üveg kiugró dugóval
+1F37F	pattogatott kukorica	étel | kukorica | mozi | pattogatott kukorica
+1F950	croissant	croissant | étel | francia | kifli | péksütemény | péksüti | reggeli
+1F951	avokádó	avokádó | étel | gyümölcs
+1F952	uborka	étel | kígyóuborka | kovászosuborka | uborka | zöldség
+1F953	szalonna	bacon | étel | hús | szalonna
+1F954	krumpli	burgonya | étel | krumpli | zöldség
+1F955	sárgarépa	étel | répa | sárgarépa | zöldség
+1F956	bagett	bagett | étel | francia | kenyér
+1F957	zöld saláta	étel | saláta | zöld | zöldsaláta
+1F958	serpenyős étel	étel | paella | serpenyő | serpenyős étel
+1F959	pita	étel | falafel | gírosz | gyros | kebab | pita | töltött
+1F95A	tojás	étel | tojás
+1F95B	egy pohár tej	egy pohár tej | ital | pohár | tej
+1F95C	földimogyoró	allergia | étel | földimogyoró | mogyoró
+1F95D	kivi	étel | gyümölcs | kivi
+1F95E	palacsinta	étel | palacsinta
+1F95F	gombóc	batyu | étel | gombóc | gyoza | japán | jiaozi | kínai | pierogi | tészta | töltött
+1F960	szerencsesüti	desszert | édesség | étel | jóslás | jóslat | szerencsesüti
+1F961	elviteles doboz	doboz | elviteles doboz | elviteles papírdoboz | elvitelre | étel | étel házhozszállítás | evőpálcika | kínai | pálcika
+1F962	evőpálcikák	evés | evőpálcika | evőpálcikák | hashi | pálcika
+1F963	tál kanállal	ebéd | étel | gabonapehely | leves | paradicsomleves | reggeli | rizskása | tál | tál kanállal
+1F964	pohár szívószállal	dzsúz | ital | ivólé | papírpohár | pohár | pohár szívószállal | szénsavas ital | szívószál | szóda | üdítő | üdítőital
+1F965	kókuszdió	étel | gyümölcs | kókusz | kókuszdió | növény | pálma | piña colada
+1F966	brokkoli	brokkoli | étel | vadkáposzta | zöldség
+1F967	pite	almáspite | desszert | édesség | étel | gyümölcsös | pite | sütemény | süti | tészta | töltelék | töltött
+1F968	perec	csavart | perec | perec, étel, csavart
+1F969	húsdarab	bárányszelet | étel | hús | húsdarab | hússzelet | nyers hús | sertésszelet | steak | szelet hús
+1F96A	szendvics	kenyér | szendvics
+1F96B	konzerv	étel | konzerv
+1F96C	leveles zöldség	burger | fodros kel | hamburger | káposzta | kel | kelkáposzta | kínai kel | leveles zöldség | saláta | zöldség
+1F96D	mangó	déligyümölcs | étel | gyümölcs | mangó | trópusi
+1F96E	holdsütemény	fesztivál | holdsütemény | ősz | őszközép | yuèbǐng
+1F96F	bagel	bagel | kenyér | pékáru | pékség | reggeli | szendvics | vajkrém | zsemle
+1F9C0	sajtdarab	ementáli | étel | lyukas sajt | sajt | sajtdarab
+1F9C1	cupcake	cukor | cupcake | desszert | édesség | finomság | pékáru | pékség
+1F9C2	só	dühös | fűszer | íz | só | sós | sószóró
+1F9C3	italos doboz	édes | gyümölcslé | gyümölcsleves doboz | italos doboz | ivólé | juice | szívószál
+1F9C4	fokhagyma	fokhagyma | ízesítés
+1F9C5	hagyma	hagyma | ízesítés | vöröshagyma
+1F9C6	falafel	csicseriborsó | falafel | húsgolyó
+1F9C7	gofri	gofri | gofrisütő | határozatlan | vas | waffle
+1F9C8	vaj	tejtermék | vaj
+1F9C9	maté	ital | maté
+1F9CA	jégkocka	hideg | jég | jéghegy | jégkocka
+1F9CB	buborékos tea	bubble tea | buborék | buborékos tea | étel | gyöngy | ital | tajvan | tea | tej
+1FAD0	áfonya	áfonya | bogyó | bogyós gyümölcs | étel | fekete áfonya | gyümölcs
+1FAD1	kaliforniai paprika	kaliforniai paprika | paprika | pritamin | pritaminpaprika | zöldség
+1FAD2	olajbogyó	étel | növény | olajág | olajbogyó | olíva | olívabogyó | olívaolaj
+1FAD3	laposkenyér	étel | kenyér | lapos kenyér | laposkenyér | lepénykenyér | naan | pita
+1FAD4	tamale	étel | felcsavart | mexikói | tamale
+1FAD5	fondü	csokoládé | étel | fondü | lábas | olvasztott | sajt | sí | svájci
+1FAD6	teáskanna	bögre | ital | kanna | tea | teáskanna
+1FAD7	ömlő folyadék	ital | kiönt | ömlő folyadék | pohár | üres
+1FAD8	bab	bab | étel | hüvelyes növény | vese | vesebab | vörösbab
+1FAD9	befőttesüveg	befőttesüveg | fűszer | szósz | tárolás | tároló | üres
+1FADA	gyömbérgyökér	fűszer | gyökér | gyömbér | gyömbérgyökér | sör
+1FADB	borsóhüvely	bab | borsó | borsóhüvely | edamame | hüvely | hüvelyes | zöldség
+2615	forró ital	forró | gőzölgő | ital | kávé | koffein | reggel | reggeli ital | tea
+2600	nap	fényes sugarak | időjárás | nap | napos | napsugarak
+2601	felhő	felhő | felhős | időjárás
+2602	esernyő	esernyő | eső | időjárás | kiegészítő
+2603	hóember	hideg | hó | hóember | hóesés | időjárás | tél
+2614	esernyő esőcseppekkel	csepp | ernyő | esernyő | esernyő esőcseppekkel | eső | időjárás | kiegészítő
+26A1	magasfeszültség	magasfeszültség | nagyfeszültség | veszély | vihar | villám | villámlás
+26C4	hóember hó nélkül	hideg | hó | hóember | hóember hó nélkül | időjárás | tél
+26C5	nap egy felhő mögött	felhő | felhős | időjárás | nap | nap egy felhő mögött
+26C8	felhő villámmal és esővel	eső | felhő | felhő villámmal és esővel | felhőszakadás | időjárás | mennydörgés | villámlás
+2744	hópehely	hideg | hó | hópehely | időjárás | tél | zúzmara
+1F300	ciklon	ciklon | hurrikán | időjárás | tájfun
+1F301	ködös	időjárás | köd | ködös
+1F302	becsukott esernyő	becsukott esernyő | ernyő | esernyő | eső | időjárás | kiegészítő
+1F303	éjszaka csillagokkal	csillag | derült idő | éjszaka | éjszaka csillagokkal | épület | város
+1F304	hegyek mögött felkelő nap	hajnal | hegyek | hegyek mögött felkelő nap | nap | napfelkelte | napkelte | reggel
+1F305	napfelkelte	felkelő nap | hajnal | nap | napfelkelte | napkelte | reggel
+1F306	városkép alkonyatkor	alkonyat | épület | este | nap | naplemente | napnyugta | város | városkép | városkép alkonyatkor
+1F307	naplemente	alkonyat | épületek | lemenő nap | nap | naplemente | város
+1F308	szivárvány	aszexuális | biszexuális | büszke | büszkeség | eső | homoszexuális | időjárás | interszexuális | kérdéses | kíváncsi | leszbikus | LGBT | LMBT | meleg | omniszexuális | pánszexuális | szivárvány | természet | transznemű | transzszexuális
+1F309	híd éjszaka	éjszaka | híd
+1F30A	vízhullám	hullám | hullám a vízen | időjárás | óceán | tenger | víz | vízhullám
+1F30B	vulkán	katasztrófa | kitörés | természet | tűzhányó | vulkán | vulkánkitörés
+1F30C	tejút	csillagrendszer | tejút | Tejút | Tejútrendszer | űr | világűr
+1F30D	Európát és Afrikát mutató földgömb	Afrika | Európa | Európát és Afrikát mutató földgömb | föld | földgömb | világ
+1F30E	Amerikát mutató földgömb	Amerika | Amerikát mutató földgömb | föld | földgömb | földrajz | világ
+1F30F	Ázsiát és Ausztráliát mutató földgömb	Ausztrália | Ázsia | Ázsiát és Ausztráliát mutató földgömb | föld | földgömb | földrajz | világ
+1F310	földgömb délkörökkel	délkörök | föld | földgömb | földgömb délkörökkel | földrajz | internet | világ
+1F311	újhold	ég | éjszaka | hold | holdfázisok | sötétség | újhold | űr
+1F312	növő, sarló alakú hold	ég | éjszaka | hold | holdfázisok | kifli | növő | növő, kifli alakú hold | növő, sarló alakú hold | sarló | sarló alakú hold | űr
+1F313	első negyedben lévő hold	ég | éjszaka | első negyedben lévő hold | hold | holdfázisok | negyed
+1F314	növő domború hold	domború | ég | éjszaka | hold | holdfázisok | növő domború hold | űr
+1F315	telihold	ég | éjszaka | hold | holdfázisok | telihold | űr
+1F316	fogyó domború hold	domború | ég | éjszaka | fogyó domború hold | hold | holdfázisok | homorú
+1F317	utolsó negyedben lévő hold	ég | éjszaka | hold | holdfázisok | utolsó negyed | utolsó negyedben lévő hold
+1F318	fogyó, sarló alakú hold	ég | fogyó | fogyó, kifli alakú hold | fogyó, sarló alakú hold | hold | holdfázisok | kifli | kifli alakú hold | sarló | sarló alakú hold
+1F319	növekvő hold	ég | éjszaka | hold | holdfázisok | kifli | kifli alakú hold | növekvő hold | sarló
+1F31A	újhold arccal	arc | ég | hold | holdfázisok | új hold arccal | újhold | újhold arccal
+1F31B	első negyedben lévő hold arccal	arc | ég | éjszaka | első negyed | első negyedben lévő hold arccal | hold | holdfázisok
+1F31C	utolsó negyedben lévő hold arccal	arc | ég | éjszaka | hold | holdfázisok | utolsó negyed | utolsó negyedben lévő hold arccal
+1F31D	telihold arccal	arc | ég | éjszaka | hold | holdfázisok | telihold | telihold arccal
+1F31E	nap arccal	arc | égitest | hőség | időjárás | nap | nap arccal | napfény | napos | strand
+1F31F	fénylő csillag	csillag | csillog | csillogás | éjszaka | fény | fényes | fénylő csillag
+1F320	hullócsillag	csillag | csillaghullás | ég | hullócsillag
+1F321	hőmérő	hőmérő | időjárás
+1F324	nap egy kis felhő mögött	felhő | időjárás | nap | nap egy kis felhő mögött | napos
+1F325	nap egy nagy felhő mögött	felhő | felhős | időjárás | nap | nap egy nagy felhő mögött
+1F326	nap a felhő mögött esővel	eső | felhő | időjárás | nap | nap a felhő mögött esővel
+1F327	felhő esővel	esik | eső | esőfelhő | felhő | felhő esővel | felhőszakadás | időjárás
+1F328	felhő hóval	felhő | felhő hóval | havazik | hideg | hó | időjárás
+1F329	felhő villámmal	felhő | felhő villámmal | időjárás | villám | villámlik
+1F32A	tornádó	felhő | forgószél | hurrikán | időjárás | szél | tornádó
+1F32B	köd	felhő | időjárás | köd
+1F32C	szélarc	arc | fúj | időjárás | szél | szélarc | szeles
+2648	kos csillagjegy	horoszkóp | kos | kos csillagjegy
+2649	bika csillagjegy	bika | bika csillagjegy | horoszkóp
+264A	ikrek csillagjegy	horoszkóp | ikrek | ikrek csillagjegy
+264B	rák csillagjegy	csillagjegy | horoszkóp | rák
+264C	oroszlán csillagjegy	horoszkóp | oroszlán | oroszlán csillagjegy
+264D	szűz csillagjegy	horoszkóp | szűz | szűz csillagjegy
+264E	mérleg csillagjegy	horoszkóp | mérleg | mérleg csillagjegy
+264F	skorpió csillagjegy	horoszkóp | skorpió | skorpió csillagjegy
+2650	nyilas csillagjegy	horoszkóp | nyilas | nyilas csillagjegy
+2651	bak csillagjegy	bak | bak csillagjegy | horoszkóp
+2652	vízöntő csillagjegy	horoszkóp | vízöntő | vízöntő csillagjegy
+2653	halak csillagjegy	halak | halak csillagjegy | horoszkóp
+1F550	egy óra	00 | 1 | 1:00 | egész óra | egy | idő | óra
+1F551	két óra	00 | 2 | 2:00 | egész óra | idő | két óra | kettő | óra
+1F552	három óra	00 | 3 | 3:00 | egész óra | három | idő | óra
+1F553	négy óra	00 | 4 | 4:00 | egész óra | idő | négy | óra
+1F554	öt óra	00 | 5 | 5:00 | egész óra | idő | óra | öt
+1F555	hat óra	00 | 6 | 6:00 | egész óra | hat | idő | óra
+1F556	hét óra	00 | 7 | 7:00 | egész óra | hét | óra
+1F557	nyolc óra	00 | 8 | 8:00 | egész óra | idő | nyolc | óra
+1F558	kilenc óra	00 | 9 | 9:00 | egész óra | kilenc | óra
+1F559	tíz óra	00 | 10 | 10:00 | egész óra | idő | óra | tíz
+1F55A	tizenegy óra	00 | 11 | 11:00 | egész óra | óra | tizenegy
+1F55B	tizenkét óra	00 | 12 | 12:00 | dél | egész óra | éjfél | óra | tizenkét óra | tizenkettő
+1F55C	fél kettő	1 | 1:30 | 30 | egy | fél kettő | harminc | idő | óra
+1F55D	fél három	2 | 2:30 | 30 | fél három | harminc | idő | kettő | óra
+1F55E	fél négy	3 | 3:30 | 30 | fél négy | harminc | három | idő | óra
+1F55F	fél öt	30 | 4 | 4:30 | fél öt | harminc | idő | négy | óra
+1F560	fél hat	30 | 5 | 5:30 | fél hat | harminc | idő | óra | öt
+1F561	fél hét	30 | 6 | 6:30 | fél hét | harminc | hat | idő | óra
+1F562	fél nyolc	30 | 7 | 7:30 | fél nyolc | harminc | hét | idő | óra
+1F563	fél kilenc	30 | 8 | 8:30 | fél kilenc | harminc | idő | nyolc | óra
+1F564	fél tíz	30 | 9 | 9:30 | fél tíz | harminc | idő | kilenc | óra
+1F565	fél tizenegy	10 | 10:30 | 30 | fél tizenegy | harminc | idő | óra | tíz
+1F566	fél tizenkettő	11 | 11:30 | 30 | fél tizenkettő | harminc | idő | óra | tizenegy
+1F567	fél egy	12 | 12:30 | 30 | fél egy | harminc | idő | óra | tizenkettő
+1FA90	gyűrűs bolygó	bolygó | gyűrűs bolygó | szaturnusz | Szaturnusz
+2604	üstökös	meteor | űr | üstökös
+26F0	hegy	hegy | hegység
+26F1	ernyő a földön	ernyő | ernyő a földön | eső | időjárás | nap | napernyő | nyár | strand
+26F2	szökőkút	szökőkút
+26F4	komp	hajó | komp | közlekedés | utasszállítás
+26F5	vitorlás hajó	hajó | jacht | közlekedés | tenger | vitorlás | vitorlázik | vízi jármű
+2708	repülőgép	közlekedés | légi jármű | repül | repülő | repülőgép | utazás
+1F488	fodrászcégér	borbély | cégér | fodrász | fodrászcégér | hajvágás
+1F4BA	ülés	szék | ülés
+1F680	rakéta	jármű | közlekedés | rakéta | űr | űrutazás
+1F681	helikopter	helikopter | jármű | közlekedés | légi jármű | utazás
+1F682	mozdony	gőz | gőzmozdony | jármű | játékmozdony | játékvasút | közlekedés | mozdony | utazás | vasút | vonat
+1F683	vasúti kocsi	elektromos | kocsi | közlekedés | vasút | vasúti kocsi | villamos | vonat
+1F684	gyorsvasút	gyorsvasút | gyorsvonat | jármű | közlekedés | személyszállítás | vasút
+1F685	golyóorrú gyorsvasút	golyóorrú | golyóorrú gyorsvasút | gyorsvonat | jármű | közlekedés | nagysebességű | sebes | személyszállítás | vasút | vonat
+1F686	vonat	jármű | közlekedés | vasút | vonat
+1F687	metró	földalatti | jármű | közlekedés | metró | utazás
+1F688	hév	hév | jármű | közlekedés | metró | vasút
+1F689	állomás	állomás | jármű | közlekedés | vasút | vonat
+1F68A	villamos	hév | jármű | közlekedés | közlekedési eszköz | metró | nagyvárosi közlekedés | személyszállítás | villamos
+1F68B	villamoskocsi	jármű | kocsi | közlekedés | villamos | villamoskocsi
+1F68C	busz	busz | jármű | közlekedés
+1F68D	érkező busz	busz | érkezés | érkező busz | jármű | közlekedés
+1F68E	trolibusz	busz | jármű | közlekedés | troli | trolibusz
+1F68F	buszmegálló	busz | buszmegálló | megálló
+1F690	mikrobusz	busz | jármű | kisbusz | közlekedés | mikrobusz | minibusz | teherautó | vezet
+1F691	mentő	jármű | közlekedés | mentő | mentőautó
+1F692	tűzoltóautó	jármű | közlekedés | tűz | tűzoltó | tűzoltóautó | tűzoltóság
+1F693	rendőrautó	autó | jármű | járőrautó | közlekedés | rendőr | rendőrautó | rendőrség
+1F694	érkező rendőrautó	autó | érkező | jármű | járőrautó | közlekedés | rendőrautó | rendőrség
+1F695	taxi	autó | jármű | közlekedés | személyszállítás | taxi
+1F696	érkező taxi	érkező | jármű | közlekedés | személyszállítás | taxi
+1F697	autó	autó | jármű | kocsi | közlekedés | vezet | vezetés
+1F698	érkező autó	autó | érkező | jármű | kocsi | közlekedés | vezet
+1F699	szabadidőautó	autó | jármű | közlekedés | lakókocsi | suv | SUV | szabadidő-autó | szabadidőautó | terepjáró | utcai terepjáró | városi terepjáró | vezet
+1F69A	teherautó	autó | jármű | költözés | költöztetés | közlekedés | szállítás | teherautó | teherfuvarozás
+1F69B	billenős teherautó	autó | billenős teherautó | fuvar | fuvaroz | jármű | kamion | költözik | költöztetés | közlekedés | szállít | szállítás | teherautó | teherfuvarozás | vezet
+1F69C	traktor	jármű | traktor
+1F69D	egysínű vasút	egysínű vasút | jármű | közlekedés | közlekedési eszköz | személyszállítás | vasút | vonat
+1F69E	hegyi vasút	hegyi vasút | jármű | kocsi | közlekedés | vasút
+1F69F	függővasút	függő | függővasút | jármű | közlekedés | vasút
+1F6A0	hegyi felvonó	hegyi | hegyi felvonó | jármű | kábelvasút | közlekedés | sílift
+1F6A1	kötélpályás felvonó	jármű | kábelvasút | kötélpálya | kötélpályás felvonó | közlekedés | levegő
+1F6A2	hajó	hajó | közlekedés | óceánjáró | utasszállítás | utazás | vízi jármű
+1F6A3	evező ember	csónak | evez | evezés | evező | evező ember | hajó | kenu | tutaj | vízi jármű
+1F6A4	motoros siklócsónak	csónak | hajó | kishajó | közlekedés | motorcsónak | motoros siklócsónak | vízi jármű
+1F6A5	vízszintes közlekedési lámpa	kereszteződés | közlekedési | lámpa | vízszintes közlekedési lámpa
+1F6A6	függőleges közlekedési lámpa	függőleges közlekedési lámpa | kereszteződés | közlekedési | lámpa
+1F6A7	útépítés	közlekedés | sorompó | útépítés
+1F6A8	rendőrautó villogója	autó | forgó | jármű | lámpa | mentő | rendőr | rendőrautó villogója | riaszt | sziréna | tűzoltó | vészhelyzet | villogó
+1F6A9	háromszög alakú zászló	építkezés | golf | háromszög alakú zászló | piros zászló | posta | zászló | zászlórúd
+1F6AA	ajtó	ajtó
+1F6B0	ivóvíz	fogyasztható víz | iható | ivóvíz | víz
+1F6B1	nem ivóvíz	ivás | ivóvíz | nem | nem iható | tilos | tiltott | víz
+1F6B3	kerékpározni tilos	bicikli | kerékpár | kerékpározni tilos | tilos | tiltott
+1F6B7	nem gyalogos zóna	gyalog | gyalogos | nem gyalogos zóna | tilos | tiltott
+1F6B8	átkelő gyermekek	átkelő gyermekek | gyalogos-átkelőhely | gyalogosok | gyermekek | iskola | közlekedési tábla | KRESZ-tábla
+1F6B9	férfimosdó	férfi mosdó | férfiak | férfimosdó | mosdó | toalett | vécé | wc | WC
+1F6BA	női mosdó	mosdó | női mosdó | nők | toalett | vécé | wc | WC
+1F6BB	mosdó	mosdó | toalett | vécé | WC
+1F6BC	baba szimbólum	baba szimbólum | kisbaba | pelenkázó
+1F6BD	vécé	mosdó | toalett | vécé | wc
+1F6BE	toalett	mellékhelyiség | mosdó | toalett | vécé | wc | WC
+1F6BF	zuhanyzó	víz | vízsugár | zuhany | zuhanyzik | zuhanyzó
+1F6C0	fürdő ember	fürdés | fürdik | fürdő ember | fürdőkád
+1F6C1	fürdőkád	fürdés | fürdőkád
+1F6C2	útlevél-ellenőrzés	ellenőrzés | utazás | útlevél | útlevél-ellenőrzés
+1F6C3	vám	ellenőrzés | poggyász átvizsgálása | vám | vizsgálat
+1F6C4	poggyászfelvétel	csomag | felvétel | poggyász | poggyászfelvétel | repülő | utazás
+1F6C5	csomagmegőrző	csomag | csomagmegőrző | megőrzés | poggyász | poggyászmegőrző
+1F6D0	imahely	ima | imád | imádkozik | imahely | vallás
+1F6D1	stoptábla	nyolcszög | stop | stoptábla
+1F6D2	bevásárlókocsi	bevásárlás | bevásárló | bevásárlókocsi | élelmiszer áruház | kocsi | közért | shopping | szupermarket | vásárlás
+2668	hőforrás	forrás | forró | gőz | gőzölgő | hőforrás
+26BD	foci	foci | focilabda | futball | labda | labdarúgás | sport
+26BE	baseball	baseball | baseball-labda | labda | sport
+26F3	zászló a lyuknál	golf | lyuk | sport | zászló a lyuknál
+1F392	iskolatáska	hátizsák | iskola | iskolatáska | kiegészítő | táska
+1F3A0	ló a körhintáról	játék | körhinta | ló a körhintáról | szórakozás | vidámpark
+1F3A1	óriáskerék	játék | kerék | óriáskerék | vidámpark
+1F3A2	hullámvasút	hullámnvasút | hullámvasút | játék | vidámpark
+1F3A3	horgászbot	bot | hal | hobbi | horgászbot | horgászik | horogra akadt | pecabot | pecázik | sport | szabadidő
+1F3A4	mikrofon	hangjegyek | karaoke | mikrofon | zene
+1F3A5	kamera	felvétel | felvevő | film | kamera | mozi
+1F3A6	mozi	film | kamera | mozi
+1F3A7	fülhallgató	fülhallgató | zenehallgatás
+1F3A8	festőpaletta	festészet | festő | festőpaletta | galéria | hobbi | kreatív | művészet | múzeum | paletta | színes
+1F3A9	cilinder	bűvész | cilinder | elegáns | kalap | ruha | ruházat
+1F3AA	cirkuszsátor	cirkusz | cirkuszsátor | sátor
+1F3AB	jegy	belépő | belépőjegy | jegy
+1F3AC	csapó	csapó | film | filmfelvétel | filmforgatás | forgatás | mozi
+1F3AD	előadóművészetek	előadás | előadóművészetek | játék | kikapcsolódás | maszkok | művészet | színész | színház | szórakozás
+1F3AE	videojáték	játék | kontroller | konzol | playstation | szórakozás | videojáték | xbox
+1F3AF	telitalálat	bullseye | cél | céltábla | darts | játék | szórakozás | találat | telitalálat
+1F3B0	nyerőgép	félkarú rabló | játékgép | nyerőgép | pénzbedobós | szerencsejáték | szerencsejátékot űz
+1F3B1	biliárd	8-as | biliárd | biliárdgolyó | golyó | játék
+1F3B2	dobókocka	dobókocka | játék | kocka | társas | társasjáték
+1F3B3	bowling	bowling | golyó | játék | sport
+1F3B4	virágos kártyajáték	japán | játék | kártya | virág | virágos kártyajáték
+1F3B5	hangjegy	dallam | hang | hangjegy | zene
+1F3B6	hangjegyek	hangjegy | hangjegyek | zene
+1F3B7	szaxofon	hangszer | szaxi | szaxofon | zene
+1F3B8	gitár	elektromos gitár | gitár | hangszer | zene
+1F3B9	zenei billentyűzet	billentyűzet | hangszer | szintetizátor | zene | zenei billentyűzet | zongora
+1F3BA	trombita	hangszer | trombita | zene
+1F3BB	hegedű	hangszer | hegedű | zene
+1F3BC	zenei kotta	G-kulcs | hangjegy | kotta | violinkulcs | zene | zenei kotta
+1F3BD	futómez	atlétika | futás | futómez | mez | trikó
+1F3BE	tenisz	labda | sport | tenisz | teniszlabda
+1F3BF	sílécek	hó | síel | síelés | sílécek | sport | téli sportok
+1F3C0	kosárlabda	kosár | kosárlabda | labda | sport
+1F3C1	kockás zászló	autóverseny | cél | Forma-1 | kockás | sport | versenyzés | zászló
+1F3C2	snowboardozó	hó | hódeszka | snowboard | snowboardozó | téli sportok
+1F3C3	futó	fut | futás | futó | gyors | maraton | siet | sport
+1F3C4	szörföző	hullám | sport | szörf | szörfös | szörfözik | szörföző | vízi sport
+1F3C5	sportérem	aranyérem | érem | győztes | medál | sportérem
+1F3C6	kupa	díj | győzelem | győzni | győztes | kupa | sport | trófea | verseny
+1F3C7	lóverseny	ló | lovaglás | lóverseny | lovi | sport | versenyló | zsoké
+1F3C8	amerikai foci	amerikai foci | amerikai foci, sport, Super Bowl | amerikai futball | amerikaifoci-labda | labda
+1F3C9	rögbi	labda | rögbi | rögbilabda | sport
+1F3CA	úszó	sport | triatlon | úszás | úszik | úszó
+1F3CB	súlyemelő	edzés | sport | sportoló | súly | súlyemelés | súlyemelő | súlyzó
+1F3CC	golfozó	golf | golflabda | golfozik | golfozó | golfütő | labda | sport | tee
+1F3CD	motorkerékpár	közlekedési eszköz | motor | motorkerékpár | sport | verseny | versenyzés
+1F3CE	versenyautó	autó | Forma-1 | közlekedés | verseny | versenyautó | versenyzés
+1F451	korona	fejdísz | kiegészítő | király | királynő | királyság | korona | középkori
+1F452	női kalap	kalap | női kalap | nők | ruha | ruházat
+1F453	szemüveg	kiegészítő | szem | szemüveg | viselet
+1F454	nyakkendő	elegancia | hivatalos | ing | ing nyakkendővel | komoly | nyakkendő | ruházat
+1F455	póló	alkalmi | gallér | galléros póló | ing | kék póló | póló | ruha | ruházat
+1F456	farmer	farmer | farmernadrág | nadrág | ruha | ruházat | vásárlás
+1F457	ruha	ruha | ruházat | vásárlás
+1F458	kimonó	japán | kimonó | ruha | ruházat
+1F459	bikini	bikini | fürdő | fürdőruha | medence | ruha | ruházat | úszás
+1F45A	női ruha	blúz | ing | női ruha | nők | ruha | ruházat
+1F45B	pénztárca	kiegészítő | női pénztárca | pénz | pénztárca | vásárlás
+1F45C	női táska	kézitáska | kiegészítő | női táska | táska | vásárlás
+1F45D	táska	kézitáska | kiegészítő | pénztárca | retikül | táska
+1F45E	férfi cipő	cipő | férfi | ruha | ruházat | vásárlás
+1F45F	futócipő	atlétika | cipő | edzőcipő | futás | futócipő | ruha | ruházat | sportcipő | tornacipő
+1F460	magas sarkú cipő	cipő | divat | kiegészítő | magas sarkú | magas sarkú cipő | magassarkú | nők | ruha | ruházat | sarok | vásárlás
+1F461	női szandál	cipő | kiegészítő | női szandál | nők | ruha | ruházat | szandál
+1F462	női csizma	csizma | kiegészítő | lábbeli | női csizma | nők | ruha | ruházat
+1F6B2	kerékpár	bicikli | biciklis | biciklizik | jármű | kerékpár | kerékpáros | kerékpározik | közlekedés | spinning | sport | teker | tekerés
+1F6B4	kerékpáros	bicikli | biciklis | biciklista | biciklizik | kerékpár | kerékpáros | kerékpározik | sport | sportoló | teker
+1F6B5	hegyikerékpáros	bicikli | biciklis | biciklista | hegy | hegyikerékpáros | kerékpár | mountain bike | sport | sportoló
+1F6B6	gyalogos	férfi | gyaloglás | gyalogos | séta | sétáló | túra
+1F938	cigánykerék	cigánykerék | sport | sportoló | torna
+1F939	zsonglőr	egyensúly | egyszerre | kézügyesség | multitask | ügyes | zsonglőr | zsonglőrködik
+1F93A	vívó	kard | sport | sportoló | vív | vívás | vívó
+1F93C	birkózók	birkózás | birkózó | birkózók | harc | sport | sportoló
+1F93D	vízilabda	póló | sport | víz | vízilabda
+1F93E	kézilabda	dob | kézilabda | labda | sport | sportoló
+1F93F	búvármaszk	búvár | búvárkodás | búvármaszk | búvárszemüveg | merülés | szabadtüdős merülés
+1F9E2	sildes sapka	baseball sapka | baseballsapka | kiegészítő | ruházat | sapka | sildes sapka
+1F9E3	sál	hideg | nyak | ruházat | sál
+1F9E4	kesztyű	kesztyű | kesztyű, kék kesztyű, kéz | kéz
+1F9E5	kabát	dzseki | hideg | kabát | ruházat | télikabát
+1F9E6	zokni	harisnya | zokni
+1FA70	balettcipő	balett | balettcipő | tánc
+1FA71	egyrészes fürdőruha	egyrészes fürdőruha | fürdőruha
+1FA72	fürdőnadrág	alsó | alsónadrág | egyrészes | fürdőgatya | fürdőnadrág
+1FA73	rövidnadrág	alsó | fürdőgatya | fürdőnadrág | gatya | rövidnadrág
+1FA74	tangapapucs	flip-flop | lábbeli | lábujjközes papucs | papucs | strandpapucs | szandál | tangapapucs
+1FA80	jojó	játék | jojó | jojózik
+1FA81	papírsárkány	papírsárkány | repül | sárkányrepülő | szárnyal
+1FA82	ejtőernyő	ejtőernyő | siklóernyő
+1FA83	bumeráng	ausztrália | bumeráng | fegyver | visszajön | visszarepül
+1FA84	varázspálca	boszi | boszorkány | mágus | pálca | varázslat | varázsló | varázspálca
+1FA85	pinyáta	buli | cukor | édesség | mexikó | pinyáta | ünnepség
+1FA86	matrjoska	baba | bábuska | egymásba rakható | matrjoska | orosz
+1FA95	bendzsó	bendzsó | húros | zene
+1FA97	harmonika	hangszer | harmonika | tangóharmonika | zene
+1FA98	hosszú dob	dob | hangszer | hosszú dob | konga | ritmus | ütem
+265F	gyalog	feláldozható | gyalog | paraszt | sakk
+2660	pikk szín	francia kártya | játék | kártya | pikk | szín
+2663	treff szín	francia kártya | játék | szín | treff
+2665	kőr szín	francia kártya | játék | kőr | szín | szív
+2666	káró szín	francia kártya | játék | káró | piros rombusz | rombusz | szín
+1F4B3	hitelkártya	bank | bankkártya | fizet | hitelkártya | kártya
+1F4B4	jen bankjegy	bank | bankjegy | bankó | jen | köteg | papírpénz | pénz | pénznem | valuta
+1F4B5	dollár bankjegy	bank | bankjegy | bankó | dollár | köteg | papírpénz | pénz | pénznem | valuta
+1F4B6	euró bankjegy	bank | bankjegy | bankó | euró | gazdag | papírpénz | pénz | pénznem | valuta
+1F4B7	font bankjegy	bank | bankjegy | bankó | font | gazdag | készpénz | papírpénz | pénz | pénznem | valuta
+1F4B9	növekvő jendiagram	bank | diagram | emelkedés | felfelé | jen | növekedés | növekvő jendiagram | pénz | pénznem | piac | trend | valuta
+1F4BB	laptop	laptop | munka | notebook | pc | számítógép
+1F4BC	aktatáska	aktatáska | iroda
+1F4BD	minidisk	CD | DVD | lemez | minidisc | minidisk | optikai | számítógép
+1F4BE	floppylemez	floppy | floppylemez | hajlékonylemez | lemez | számítógép
+1F4BF	optikai lemez	blu-ray | CD | dvd | DVD | lemez | optikai | számítógép
+1F4C0	dvd	blu-ray | cd | dvd | lemez | optikai | számítógép | zene
+1F4C1	fájlmappa	fájl | fájlmappa | mappa
+1F4C2	nyitott fájlmappa	dosszié | fájl | mappa | nyitott | nyitott fájlmappa
+1F4C3	kunkorodó lap	csavarodik | csavarodó | dokumentum | kunkorodik | kunkorodó lap | lap | oldal
+1F4C4	felfelé néző oldal	dokumentum | felfelé néző oldal | lap | oldal
+1F4C5	naptár	dátum | naptár
+1F4C6	fali naptár	fali naptár | falinaptár | naptár
+1F4C7	forgó névjegykártyatartó	forgó | kártya | névjegykártya | névjegykártyatartó | rolodex | tartó
+1F4C8	növekvő diagram	adat | diagram | emelkedés | emelkedő | felfelé | gráf | növekedés | növekvő diagram | trend
+1F4C9	csökkenő diagram	adat | csökkenés | csökkenő diagram | diagram | esik | gráf | lefelé | negatív | trend
+1F4CA	oszlopdiagram	ábra | adat | diagram | grafikon | oszlop | oszlopdiagram | sáv
+1F4CB	írótábla	írótábla | jegyzetek
+1F4CC	rajzszög	irodaszer | iskola | rajzszög
+1F4CD	kerek rajzszög	cím | helyzet | kerek rajzszög | kitűz | rajzszög | térkép
+1F4CE	gemkapocs	gemkapocs | irodaszer | papírkapocs
+1F4CF	egyenes vonalzó	egyenes | felszerelés | iskola | matek | matematika | mérés | vonalzó
+1F4D0	háromszögvonalzó	derékszögű | háromszög | háromszögvonalzó | matek | matematika | szög | vonalzó
+1F4D1	könyvjelzők	fülek | jelzés | könyvjelző | könyvjelzők
+1F4D2	főkönyv	főkönyv | füzet | jegyzetfüzet | könyv | notesz | spirálos füzet
+1F4D3	jegyzetfüzet	füzet | jegyzetek | jegyzetfüzet
+1F4D4	jegyzetfüzet díszkötésben	borító | díszes | díszkötés | egyetem | füzet | iskola | jegyzet | jegyzetfüzet | jegyzetfüzet díszkötésben | könyv | oktatás | olvas | olvasás | tanul | tanulás
+1F4D5	becsukott könyv	becsukott könyv | csukott | egyetem | iskola | könyv | oktatás | olvas | olvasás | piros könyv | tanul | tanulás | tudás
+1F4D6	nyitott könyv	iskola | könyv | könyvtár | nyitott | oktatás | olvas | tanul | tudás
+1F4D7	zöld könyv	iskola | könyv | könyvtár | kötet | oktatás | olvas | olvasás | regény | tanul | tanulás | zöld
+1F4D8	kék könyv	egyetem | iskola | kék | könyv | könyvtár | oktatás | olvas | olvasás | tanul | tanulás
+1F4D9	narancssárga könyv	egyetem | iskola | könyv | könyvtár | narancssárga | oktatás | olvas | olvasás | tanul | tanulás
+1F4DA	könyvek	iskola | könyv | könyvek | könyvtár | oktatás | olvas | olvasás | regény | tanul | tanulás | tanulmányok | tudás
+1F4DB	kitűző	jelvény | kitűző | név | névjegytábla
+1F4DC	tekercs	papír | papírtekercs | pergamen | tekercs
+1F4DD	feljegyzés	ceruza | feljegyzés | jegyzet | lap | üzenet
+1F4DE	telefonkagyló	kagyló | telefon | telefonkagyló
+1F4DF	személyhívó	személyhívó
+1F4E0	faxkészülék	fax | faxkészülék
+1F4E1	parabolaantenna	antenna | műhold | parabola antenna | parabolaantenna | tányér
+1F4E2	hangosbeszélő	hangos | hangosbeszélő | kikiált | közhírré tesz | közlemények | megafon
+1F4E3	megafon	hangosbeszélő | megafon | szurkolás
+1F4E4	kimenő tálca	doboz | e-mail | elküldött | email | kimenő | levél | posta | tálca
+1F4E5	beérkező tálca	beérkező | doboz | e-mail | email | fogadás | levél | posta | tálca
+1F4E6	csomag	csomag | doboz | szállítás
+1F4E7	e-mail	e-mail | email | levél
+1F4E8	beérkező boríték	beérkező | bejövő | boríték | e-mail | fogadás | kézbesíteni | küldött | levél | posta
+1F4E9	boríték nyíllal	boríték | boríték nyíllal | e-mail | elküldött | kimenő | levél | nyíl | posta
+1F4EA	csukott levelesláda leengedett zászlóval	csukott | csukott levelesláda leengedett zászlóval | leengedett | levél | levelesláda | posta | postaláda | zárt
+1F4EB	csukott levelesláda felemelt zászlóval	csukott | csukott levelesláda felemelt zászlóval | levél | levelesláda | postaláda
+1F4EC	nyitott levelesláda felemelt zászlóval	felemelt | levél | levelesláda | nyitott | nyitott levelesláda felemelt zászlóval | postaláda | postás
+1F4ED	nyitott levelesláda leengedett zászlóval	leengedett | levél | levelesláda | nyitott | nyitott levelesláda leengedett zászlóval | posta | postaláda | postás
+1F4EE	postaláda	doboz | levél | levelesláda | postaláda
+1F4EF	postakürt	kürt | posta | postai | postakürt
+1F4F0	újság	hírek | újság | újságos
+1F4F1	mobiltelefon	kommunikáció | mobil | mobiltelefon | rádiótelefon | telefon
+1F4F2	mobiltelefon nyíllal	hívás | kommunikáció, hívásfogadás | mobil | mobiltelefon | mobiltelefon nyíllal | nyíl | rádiótelefon | telefon
+1F4F3	rezgő mód	mobil | mobiltelefon | rádiótelefon | rezgés | rezgő mód | telefon | tiltott
+1F4F4	mobiltelefon kikapcsolva	kikapcsolva | mobil | mobiltelefon | rádiótelefon | telefon | tiltott
+1F4F5	mobiltelefon használata tilos	mobil | mobiltelefon | mobiltelefon használata tilos | telefon | tilos | tiltott
+1F4F6	antennasávok	antenna | antennasávok | mobil | mobiltelefon | térerő
+1F4F7	fényképezőgép	fényképezőgép | fotó | kamera | utazás
+1F4F8	fényképező vakuval	fényképező vakuval | fényképezőgép | kamera | vaku | videó
+1F4F9	videokamera	kamera | videó | videók | videokamera
+1F4FA	televízió	televízió | tévé | tévékészülék | tv
+1F4FB	rádió	rádió | rádiókészülék
+1F4FC	videokazetta	kazetta | szalag | vhs | videó | videokazetta
+1F4FD	filmvetítő	film | filmvetítő | mozi | vetítő | vetítőgép | videó
+1F4FF	imafüzér	gyöngyök | ima | imafüzér | nyaklánc | rózsafüzér | vallás
+1F505	sötétítés gomb	fényerő | sötétítés | sötétítés gomb
+1F506	világosítás gomb	fényerő | világosítás | világosítás gomb
+1F507	elnémított hangszóró	csendes | elnémított hangszóró | hangerő | hangszóró | néma | némított
+1F508	hangszóró	hangerő | hangszóró
+1F509	bekapcsolt hangszóró	hang | hangerő | hangszóró | közepes
+1F50A	hangos hangszóró	hangos | hangszóró | nagy hangerő | zene
+1F50B	elem	akkumulátor | elem
+1F50C	elektromos dugó	dugó | elektromos dugó | elektronika | hálózati csatlakozó | villamosság
+1F50D	balra mutató nagyító	balra mutató nagyító | keresés | lencse | nagyító | nyomozó
+1F50E	jobbra mutató nagyító	jobbra mutató nagyító | keresés | lencse | nagyító
+1F50F	lakat tollal	adatvédelem | lakat tollal | tinta | toll | töltőtoll | zár
+1F510	zárt lakat kulccsal	biztonságos | kulcs | lakat | zár | zárt | zárt lakat kulccsal | zárva
+1F511	kulcs	jelszó | kulcs
+1F512	lakat	lakat | zárt | zárva
+1F513	nyitott lakat	kinyitás | lakat | nyitott lakat | nyitva
+1F514	harang	csengő | harang | szünet | templom
+1F515	áthúzott harang	áthúzott harang | csengő | harang | nem | nem csörög | néma | némítás | némított | tilos | tiltott
+1F516	könyvjelző	könyvjelző
+1F517	kapocs	kapocs | láncszem
+1F518	választógomb	gomb | rádiógomb | választó | választógomb
+1F51E	18 év alatt tilos	18 év alatt tilos | 18-as karika | kiskorú | korhatár | szám | tilos | tiltás | tiltott | tizennyolc
+1F51F	gombfej: 10	gombfej
+1F526	zseblámpa	elektronikus | elemlámpa | fény | világítás | zseblámpa
+1F527	csavarkulcs	csavarkulcs | szerel | szerszám | villáskulcs
+1F528	kalapács	javít | kalapács | szerel | szerszám
+1F529	csavar és anya	anya | csavar | csavar és anya | szerel | szerszám
+1F52A	konyhakés	eszköz | fegyver | felszerelés | főzés | kés | konyha | konyhakés | séf | szakács
+1F52B	vízipisztoly	fegyver | játékpisztoly | kézifegyver | pisztoly | revolver | vízipisztoly
+1F52C	mikroszkóp	biológia | eszköz | felszerelés | kísérlet | laboratórium | mikroszkóp | tudomány
+1F52D	távcső	csillagászat | eszköz | felszerelés | távcső
+1F9BA	mentőmellény	biztonság | láthatósági mellény | mellény | mentő | mentőmellény | vészhelyzet
+1F9BB	fül hallókészülékkel	akadálymentesség | fül hallókészülékkel | hallássérült | nagyothalló
+1F9BC	motoros kerekesszék	akadálymentesség | kerekesszék | motoros kerekesszék
+1F9BD	kézi hajtású kerekesszék	akadálymentesség | kerekesszék | kézi hajtású kerekesszék | tolókocsi | tolószék
+1F9E9	kirakó	darab | illeszkedik | illeszkedő | kirakó | nyom | összekapcsolódó | puzzle
+1F9EA	kémcső	kémcső | kémia | kísérlet | labor | laboratórium | tudomány | vegyész | vegyészet | vegyi anyag | vegyipar
+1F9EB	Petri-csésze	baktérium | biológia | biológus | labor | laboratórium | petri-csésze | Petri-csésze | tenyészet | tenyésztés
+1F9EC	DNS	biológia | biológus | dns | DNS | élet | evolúció | fejlődés | gén | gének | genetika | tudomány
+1F9ED	iránytű	irány | iránytű | mágneses | navigáció | tájékozódás
+1F9EE	abakusz	abakusz | számítás | számolás | számológép
+1F9EF	tűzoltó készülék	elfojt | elolt | tűz | tüzet olt | tűzoltó | tűzoltó készülék
+1F9F0	szerszámosláda	barkácsolás | doboz | láda | piros doboz | szerelő | szerszám | szerszámok | szerszámos doboz | szerszámos láda | szerszámosláda
+1F9F1	tégla	agyag | fal | habarcs | malter | tégla | téglafal | téglák
+1F9F2	mágnes	mágnes | mágneses | negatív | patkó | patkómágnes | pozitív | vonz | vonzás | vonzódás
+1F9F3	bőrönd	bőrönd | csomag | csomagolás | gurulós | poggyász | utazás
+1F9F4	krémes flakon	hidratáló | krém | krémes flakon | naptej | napvédő krém | sampon | testápoló
+1F9F5	cérna	cérna | fonal | madzag | orsó | tű | varrás
+1F9F6	fonál	fonal | fonál | gombolyag | horgol | horgolás | köt | kötés | kötöget
+1F9F7	biztosítótű	biztosítótű | biztostű | pelenka | punk rock
+1F9F8	plüssmaci	játék | játékmackó | játszótárs | mackó | medve | plüss | plüssmaci | plüssmackó | tömött
+1F9F9	seprű	boszorkány | seper | sepreget | seprés | seprű | söpör | takarítás | tisztítás
+1F9FA	kosár	gazdálkodás | kosár | mosás | növénytermesztés | piknik | szennyes | tanya
+1F9FB	papírtekercs	papír | papírhenger | papírtekercs | papírtörlő | papírtörölköző | vécépapír | WC | WC-papír
+1F9FC	szappan	buborék | darab | fürdés | szappan | szappanhab | szappantartó | tiszta | tisztálkodás | tisztaság | zuhany
+1F9FD	szivacs	felszív | lyukacsos | nedvszívó | porózus | szivacs | takarít | tisztít | tisztítás
+1F9FE	nyugta	bizonyíték | bizonylat | könyvelés | nyugta | pénzügyek | számla | számvitel
+1F9FF	nazar amulett	amulett | bűbáj | gonoszűző | gyöngy | kék | nazar | rontás | szem | talizmán
+1FA78	vércsepp	gyógyszer | menstruáció | seb | sebesülés | sérülés | véradás | vércsepp | vérvétel | vérzés
+1FA79	ragtapasz	kötszer | ragtapasz | seb | tapasz
+1FA7A	sztetoszkóp	gyógyszer | orvos | szív | szívhang | sztetoszkóp
+1FA91	szék	szék | ül | ülés
+1FA92	borotva	borotva | borotvál | borotválkozik | éles | leborotvál | megborotválkozik
+1FA93	balta	balta | fa | favágás | fejsze | szekerce | vágás
+1FA94	olajlámpa	diya | lámpa | olaj | olajlámpa
+1FA96	katonai sisak	hadsereg | harcos | katona | katonai sisak | katonaság | sisak
+1FA99	érme	arany | dollár | érme | euró | ezüst | fém | kincs | pénz
+1FA9A	rókafarkú fűrész	ács | asztalos | fa | fűrész | rókafarkú | szerszám | vágás
+1FA9B	csavarhúzó	csavarhúzó | ezermester | laposfejű | szerszám
+1FA9C	létra	fok | létra | létrafok | mászás
+1FA9D	kampó	csapda | fogás | horog | kampó
+1FA9E	tükör	smink | tükör | tükröződés | visszaverődés
+1FA9F	ablak	ablak | átlátszó | friss levegő | keret | kilátás | nyílás
+260E	telefon	telefon
+2620	koponya csontokkal	arc | csont | csontok | halál | halálfej | kalóz | koponya | koponya csontokkal
+2622	radioaktív	jel | nukleáris veszély | radioaktív | sugárzás | veszély
+2623	biológiai veszély	biológiai | jel | veszély
+267F	kerekesszék	akadálymentesség | kerekesszék | mozgássérült | rokkant
+2692	kalapács és csákány	csákány | kalapács | kalapács és csákány | szerszám
+2693	vasmacska	hajózás | horgony | kikötés | lehorgonyoz | vasmacska
+2694	keresztezett kardok	fegyver | kardok | keresztbe tett | keresztezett | lovag
+2695	orvosi szimbólum	Aszklépiosz | bot | gyógyszer | gyógyszertár | kígyó | orvos | orvosi szimbólum | orvoslás | patika
+2696	kétkarú mérleg	eszköz | felszerelés | igazság | jog | kétkarú mérleg | mérleg | súly | tömeg
+2697	lombik	eszköz | felszerelés | kémia | lombik
+2699	fogaskerék	beállítások | fogaskerék | szerszám
+269B	atom szimbólum	ateista | atom | atom szimbólum
+269C	Anjou-liliom	Anjou | Anjou-liliom | liliom | lovag | lovagok
+26A0	figyelmeztetés	figyelem | figyelmeztetés
+26CF	csákány	bányász | bányászat | csákány | szerszám
+26D1	sisak vörös kereszttel	elsősegély | kereszt | ment | segítség | sisak | sisak vörös kereszttel | védősisak | vöröskereszt
+26D3	lánc	lánc | láncszemek
+26D4	behajtani tilos	behajtani tilos | behajtás | forgalom | közlekedési tábla | KRESZ-tábla | nincs behajtás | tilos | tiltott
+2702	olló	eszköz | olló | papírvágó olló | vág
+2709	boríték	boríték | e-mail | levél | üzenet
+270F	ceruza	ceruza | írószer | iskola
+2712	fekete tollhegy	fekete toll | fekete tollhegy | írószer | toll | tollhegy | töltőtoll
+2714	vastag pipa	jel | kész | pipa | vastag pipa
+2716	szorzás	× | jel | mégse | szorzás | vastag szorzásjel | x
+2753	piros kérdőjel	írásjel | kérdés | kérdőjel | központozás | piros kérdőjel
+2757	piros felkiáltójel	felkiáltás | felkiáltójel | írásjel | központozás | piros felkiáltójel
+27A1	jobbra mutató nyíl	égtáj | irány | jobbra | jobbra mutató nyíl | kelet | nyíl
+1F500	véletlenszerű lejátszás gomb	egymást keresztező nyilak | nyíl | nyilak | véletlenszerű lejátszás gomb
+1F501	ismétlés gomb	ismétlés | ismétlés gomb | megint | nyíl | nyilak | óra járásának megfelelően | újból | újra
+1F502	egy szám ismétlése gomb	egy szám ismétlése gomb | ismétlés egyszer | még egyszer | nyíl | nyilak | óra járásának irányában | óra járásának megegyezően | óra járásának megfelelően | újra
+1F503	óramutató járásával megegyező irányú függőleges nyilak	frissítés gomb | nyíl | óramutató járásával megegyező | óramutató járásával megegyező irányú függőleges nyilak | újratöltés
+1F504	óramutató járásával ellentétes irányú nyilak gombja	csavar | frissítés | frissítés gomb | megint | nyíl | óramutató járásával ellentétes | óramutató járásával ellentétes irányú nyilak gombja | teker | újból
+1F519	vissza nyíl	nyíl | vissza nyíl | visszafelé
+1F51A	vége nyíl	nyíl | vége
+1F51B	bekapcsolva nyíl	bekapcsolva | jelzés | nyíl
+1F51C	hamarosan nyíl	hamarosan | jön | nyíl | pill.
+1F51D	csúcsra nyíl	csúcsra nyíl | felfelé | nyíl | top
+1F520	latin nagybetűs bevitel	abcd | ABCD | betűk | bevitel | latin | nagybetűs
+1F521	latin kisbetűs bevitel	abcd | betűk | bevitel | kisbetűs | latin
+1F522	számbevitel	1234 | bevitel | számbevitel | számok
+1F523	szimbólumok bevitele	bevitel | szimbólum | szimbólumok bevitele
+1F524	latin betűk bevitele	abc | betűk | bevitel | gomb | latin | latin betűk bevitele
+21B5	lefelé induló és balra mutató nyíl	lefelé induló és balra mutató nyíl
+21B0	felfelé és balra mutató nyílhegy	felfelé és balra mutató nyílhegy
+21B1	felfelé és jobbra mutató nyílhegy	felfelé és jobbra mutató nyílhegy
+21B2	lefelé és balra mutató nyílhegy	lefelé és balra mutató nyílhegy
+21B3	lefelé és jobbra mutató nyílhegy	lefelé és jobbra mutató nyílhegy
+21B4	jobbra induló és lefelé mutató nyíl	jobbra induló és lefelé mutató nyíl
+21E4	balra és vonalig mutató nyíl	balra és vonalig mutató nyíl
+21E5	jobbra és vonalig mutató nyíl	jobbra és vonalig mutató nyíl
+21B9	balra mutató és vonalig érő nyíl és alatta jobbra mutató és vonalig érő nyíl	balra mutató és vonalig érő nyíl és alatta jobbra mutató és vonalig érő nyíl
+21E7	felfelé mutató üres nyíl	felfelé mutató üres nyíl
+21EA	felfelé mutató üres nyíl kiindulási vonallal	felfelé mutató üres nyíl kiindulási vonallal
+21E6	balra mutató üres nyíl	balra mutató üres nyíl
+21E8	jobbra mutató üres nyíl	jobbra mutató üres nyíl
+21E9	lefelé mutató üres nyíl	lefelé mutató üres nyíl
+21DE	felfelé mutató duplán áthúzott nyíl	felfelé mutató duplán áthúzott nyíl
+21DF	lefelé mutató duplán áthúzott nyíl	lefelé mutató duplán áthúzott nyíl
+21B8	északnyugat felé mutató és hosszú vonalig érő nyíl	északnyugat felé mutató és hosszú vonalig érő nyíl
+21B6	óramutató járásával ellentétes felső félköríves nyíl	óramutató járásával ellentétes felső félköríves nyíl
+21B7	óramutató járásával megegyező felső félköríves nyíl	óramutató járásával megegyező felső félköríves nyíl
+21C5	felfelé és lefelé mutató nyíl	felfelé | felfelé és lefelé mutató nyíl | lefelé | nyíl
+21F5	bal lefelé mutató és jobb felfelé mutató nyíl	bal lefelé mutató és jobb felfelé mutató nyíl
+21A8	felfelé és lefelé mutató nyíl alapvonallal	felfelé és lefelé mutató nyíl alapvonallal
+21E0	balra mutató szaggatott nyíl	balra mutató szaggatott nyíl
+21E1	felfelé mutató szaggatott nyíl	felfelé mutató szaggatott nyíl
+21E2	jobbra mutató szaggatott nyíl	jobbra mutató szaggatott nyíl
+21E3	lefelé mutató szaggatott nyíl	lefelé mutató szaggatott nyíl
+21AB	balra mutató nyíl hurokkal	balra mutató nyíl hurokkal
+21AC	jobbra mutató nyíl hurokkal	jobbra mutató nyíl hurokkal
+2B05	balra mutató nyíl	balra | balra mutató nyíl | égtáj | irány | nyíl | nyugat
+2B06	felfelé mutató nyíl	égtáj | észak | felfelé | felfelé mutató nyíl | gomb | irány | nyíl
+2B07	lefelé mutató nyíl	dél | égtáj | irány | lefelé | lefelé mutató nyíl | nyíl

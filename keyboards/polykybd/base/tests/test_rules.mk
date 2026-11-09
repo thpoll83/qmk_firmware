@@ -350,3 +350,17 @@ polykybd_idle_style_SRC := \
 polykybd_idle_style_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
+
+# emoji_dict.c is the emoji search dictionary's loader and search (emoji/EMOJI_SEARCH.md).
+# Dependency-free apart from crc32. The suite builds its bundles with python3 and
+# emoji/emoji_dict.py and compares the C search with that reference.
+polykybd_emoji_dict_SRC := \
+	$(POLY_BASE_PATH)/emoji_dict.c \
+	$(POLY_CRC32_PATH)/polymod_crc32.c \
+	$(POLY_BASE_PATH)/tests/emoji_dict_tests.cpp
+
+polykybd_emoji_dict_INC := \
+	$(POLY_BASE_PATH) \
+	$(POLY_BASE_PATH)/tests \
+	$(POLY_CRC32_PATH) \
+	keyboards/polykybd

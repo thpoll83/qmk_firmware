@@ -11,6 +11,17 @@
 
 // Emoji picker: 38 slots/page (rows 2-4; the top row is the MRU, row 1 the tabs).
 #define EMJ_SLOTS_PER_PAGE 38
+// Emoji search mode (emoji/EMOJI_SEARCH.md). Result index of each category tab, by
+// category: the number row holds cats 0 1 2 4 5 6 | 7 8 9 10 3 11 left to right.
+#define EMJ_SEARCH_RESULT_OF_CAT { 0, 1, 2, 10, 3, 4, 5, 6, 7, 8, 9, 11 }
+// Backspace and Space in search mode: the right-half key above the innermost
+// thumb (Enter on Stag!) and the key beside it. Neither is a letter on any of
+// the five base layouts ([ ] on Qwerty, Lang and App/Hyper/+/IME on the others).
+#define EMJ_SEARCH_BKSP_SLOT  31
+#define EMJ_SEARCH_SPACE_SLOT 32
+// A second Space on the left key above the innermost thumb (slot 18, MO(_NL) on
+// every base layout), mirroring the right side's row.
+#define EMJ_SEARCH_SPACE2_SLOT 18
 // Language picker: 38 slots/page (rows 1-3 + thumbs; top row = region tabs +
 // unicode-mode keys, bottom row = MRU). Mirrors the emoji slot layout.
 #define LANG_SLOTS_PER_PAGE 38

@@ -187,6 +187,13 @@ typedef struct _poly_sync_t {
     // fail in. Master-authoritative, RAM-only, never persisted: a reboot is a
     // fresh decision.
     uint32_t doom_pack_auth_crc;
+    // Emoji search mode (emoji_layer.h): the typed query as BMP codepoints, and
+    // {flags (bit 0 search mode), result page, query length, reserved}. Synced so
+    // the slave shows its half of the same search; it runs the search itself on
+    // its own dictionary copy. 2-byte members right after the 4-byte ones and a
+    // 4-byte group after them, so the struct stays padding-free.
+    uint16_t emj_query[16];
+    uint8_t  emj_search[4];
     uint8_t  lang;
     uint8_t  contrast;
     uint8_t  flags;

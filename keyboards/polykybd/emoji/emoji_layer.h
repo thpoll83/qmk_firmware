@@ -65,3 +65,53 @@ void emj_draw_tab_indicator(uint16_t keycode);
 
 // similar to above but draws a horizontal bar at the bottom of the tab
 void emj_draw_tab_bottom(uint16_t keycode);
+
+// ── Search mode (emoji/EMOJI_SEARCH.md) ─────────────────────────────────────
+// KC_EMJ_MODE switches the layer between the category tabs and a keyword search
+// through the emojidict bundle (base/emoji_dict.h). In search mode the emoji
+// slots type the letters of the base layer in the active language, the category
+// tabs show the results, and the page keys (top left, top right) page them.
+// Backspace and Space are two fixed emoji slots (EMJ_SEARCH_BKSP_SLOT,
+// EMJ_SEARCH_SPACE_SLOT); when the base layout has Backspace on the top-right
+// key, Backspace moves one row down to KC_EMJ_S_BKSP and Space takes its slot. KC_EMJ_S_CLEAR clears the query, and leaving the layer
+// clears it too. The mode key shows 🔍 (tab mode) or 🥳 (search mode) with a
+// vertical on/off toggle beside it, and is blank and inert while no dictionary
+// is loaded.
+
+// Result index of each category tab key, by category: the left-to-right order of
+// the tabs on the keymap. Identity unless the keymap's config.h says otherwise.
+#ifndef EMJ_SEARCH_RESULT_OF_CAT
+#  define EMJ_SEARCH_RESULT_OF_CAT { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 }
+#endif
+
+// Emoji slots that are Backspace and Space in search mode. Pick slots that are no
+// letter on any base layout. 0xFF = none.
+#ifndef EMJ_SEARCH_BKSP_SLOT
+#  define EMJ_SEARCH_BKSP_SLOT 0xFF
+#endif
+#ifndef EMJ_SEARCH_SPACE_SLOT
+#  define EMJ_SEARCH_SPACE_SLOT 0xFF
+#endif
+
+// Emoji slot that is a second Space in search mode (0xFF = none).
+#ifndef EMJ_SEARCH_SPACE2_SLOT
+#  define EMJ_SEARCH_SPACE2_SLOT 0xFF
+#endif
+
+#define EMJ_SEARCH_PAGE 12  // results per page: the category tab keys
+
+// Search mode is on and a dictionary is loaded.
+bool emj_search_active(void);
+// The typed query (for the status OLED); returns its length.
+uint8_t  emj_search_query(uint32_t *out, uint8_t max);
+// Results for the query (0 while the query is empty).
+uint16_t emj_search_total(void);
+
+// Called when the emoji layer turns off: clears the query (the mode stays).
+void emj_search_on_layer_exit(void);
+
+// Split sync: the master exports its search state, the slave applies it and runs
+// the same search on its own copy of the dictionary.
+void emj_search_export(uint8_t *flags, uint8_t *page, uint8_t *qlen, uint16_t *query);
+void emj_search_apply(uint8_t flags, uint8_t page, uint8_t qlen, const uint16_t *query);
+

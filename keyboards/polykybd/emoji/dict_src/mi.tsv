@@ -1,0 +1,911 @@
+# emoji search keywords, mi, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	kanohi pakiri	kanohi | pakiri
+1F601	kanohi pakiri karu menemene	kanohi | karu | menemene | pakiri
+1F602	kanohi roimata harikoa	harikoa | kanohi | kata | roimata
+1F603	kanohi menemene waha tuwhera	kanohi | menemene | tuwhera | waha
+1F604	kanohi menemene waha tuwhera me ngā karu menemene	kanohi | kanohi menemene waha tuwhera me ngā karu menemene | karu | menemene | tuwhera | waha
+1F605	kanohi menemene waha tuwhera me te werawera mātao	kanohi | kanohi menemene waha tuwhera me te werawera mātao | mātao | menemene | tuwhera | werawera
+1F606	kanohi menemene waha tuwhera me ngā karu kopi	kanohi | kanohi menemene waha tuwhera me ngā karu kopi | kata | menemene | ngata | tuwhera | waha
+1F607	kanohi menemene whai āwheo	anahera | āwheo | hēkore | kanohi | kanohi menemene whai āwheo | kōrero pakiwaitara | menemene | moemoeā
+1F608	kanohi menemene whai pihi	kanohi | kanohi menemene whai pihi | kōrero pakiwaitara | menemene | moemoeā | pihi
+1F609	kanohi kimokimo	kanohi | kanohi kimokimo | kimo
+1F60A	kanohi menemene karu menemene	kanohi | karu | menemene | mumura
+1F60B	kanohi tāwara kai reka	ā | kanohi | kanohi tāwara kai reka | menemene | reka | tāwara | um
+1F60C	kanohi whakaoraora	kanohi | whakaoraora
+1F60D	kanohi menemene karu-manawa	aroha | kanohi | kanohi menemene karu-manawa | karu | menemene
+1F60E	kanohi menemene mau mōhitirā	kanapa | kanohi | kanohi menemene mau mōhitirā | karu | menemene | mōhiti | mōhitirā | rā | rawe
+1F60F	kanohi tāpahi	kanohi | tāpahi
+1F610	kanohi kūpapa	kanohi | kūpapa | whakaririka
+1F611	kanohi whakaririka	kanohi | kore ngangahau | whakaririka
+1F612	kanohi katakore	kanohi | katakore | pōuri
+1F613	kanohi werawera mātao	kanohi | mātao | werawera
+1F614	kanohi whakaaro	kanohi | kanohi whakaaro | pāpōuri | whakaaroaro
+1F615	kanohi pōraru	kanohi | pōraru
+1F616	kanohi whakahēhē	kanohi | whakahēhē
+1F617	kanohi kihikihi	kanohi | kanohi kihikihi | kihi
+1F618	kanohi pupuhi kihi	kanohi | kanohi pupuhi kihi | kihi
+1F619	kanohi kihikihi karu menemene	kanohi | kanohi kihikihi karu menemene | karu | kihi | menemene
+1F61A	kanohi kihikihi karu kopi	kanohi | kanohi kihikihi karu kopi | karu | kihi | kopi
+1F61B	kanohi whātero	arero | kanohi | kanohi whātero
+1F61C	kanohi whātero karu kimokimo	arero | hangarau | kanohi | kanohi whātero karu kimokimo | karu | kimo
+1F61D	kanohi whātero karu kopi	arero | kanohi | kanohi whātero karu kopi | karu | tāwara | weriweri
+1F61E	kanohi pāpōuri	kanohi | pāpōuri
+1F61F	kanohi āwangawanga	āwangawanga | kanohi
+1F620	kanohi riri	kanohi | pōrangi | riri
+1F621	kanohi tupere	kanohi | nguha | pōrangi | riri | tupere | whero
+1F622	kanohi tatangi	kanohi | kanohi tatangi | pōuri | roimata | tangi
+1F623	kanohi pāuaua	kanohi | pāuaua
+1F624	kanohi ihu korohū	kanohi | kanohi ihu korohū | toa | wini
+1F625	kanohi pāpouri engari whakaoraora	kanohi | kanohi pāpouri engari whakaoraora | pāpōuri | whakaoraora | whiu
+1F626	kanohi poururu waha tuwhera	kanohi | poururu | tuwhera | waha
+1F627	kanohi aurere	aurere | kanohi
+1F628	kanohi mataku	kanohi | mataku | wehi | wewehi
+1F629	kanohi ruha	kanohi | ngenge | ruha
+1F62A	kanohi hiamoe	kanohi | kanohi hiamoe | moe
+1F62B	kanohi ngenge	kanohi | ngenge
+1F62C	kanohi whāita	kanohi | whāita
+1F62D	kanohi tangi reonui	hotu | kanohi | kanohi tangi reonui | pōuri | roimata | tangi
+1F62E	kanohi waha tuwhera	aroha | kanohi | tuwhera | waha
+1F62F	kanohi hanea	hanea | kanohi | mae | ohorere
+1F630	kanohi waha tuwhera me te werawera mātao	kanohi | kanohi waha tuwhera me te werawera mātao | kikorangi | mātao | tuwhera | waha | werawera | whāwhai
+1F631	kanohi ūmere i te wehi	kanohi | kanohi ūmere i te wehi | mataku | ngangau | ūmere | wehi | wewehi
+1F632	kanohi ohorere	kanohi | katoa | oho | ohorere
+1F633	kanohi werawera	kanohi | pōro | werawera
+1F634	kanohi moe	kanohi | moe | zzz
+1F635	kanohi takaanini	kanohi | takaanini
+1F636	kanohi kore waha	hū | kanohi | kanohi kore waha | ngū | waha
+1F637	kanohi mau ārai rongoā	ārai | kanohi | kanohi mau ārai rongoā | mātao | mate | rata | rongoā
+1F638	kanohi ngeru pakiri karu menemene	kanohi | karu | menemene | ngeru | pakiri
+1F639	kanohi ngeru me ngā roimata harikoa	harikoa | kanohi | kanohi ngeru me ngā roimata harikoa | ngeru | roimata
+1F63A	kanohi ngeru menemene waha tuwhera	kanohi | menemene | ngeru | tuwhera | waha
+1F63B	kanohi ngeru menemene karu-manawa	aroha | kanohi | kanohi ngeru menemene karu-manawa | karu | menemene | ngeru
+1F63C	kanohi ngeru menemene pūkawa	kanohi | menemene | ngeru | pūkawa | takahiri
+1F63D	kanohi ngeru kihikihi karu kopi	kanohi | kanohi ngeru kihikihi karu kopi | karu | kihi | ngeru
+1F63E	kanohi ngeru tupere	kanohi | ngeru | tupere
+1F63F	kanohi ngeru tatangi	kanohi | kanohi ngeru tatangi | ngeru | pōuri | roimata | tangi
+1F640	kanohi ngeru ruha	kanohi | ngeru | oho | ohorere | ruha
+1F641	kanohi āhua poururu	kanohi | kanohi āhua poururu | poururu
+1F642	kanohi menemene iti	kanohi | kanohi menemene iti | menemene
+1F643	kanohi huripoki	huripoki | kanohi
+1F644	kanohi karu takahuri	kanohi | karu | takahuri
+1F648	makimaki kore-kite-kino	kanohi | kāo | kāore | kino | kite | makimaki | makimaki kore-kite-kino | tohu ā-ringa | whakakāhore | whakakore
+1F649	makimaki kore-rongo-kino	kanohi | kāo | kāore | kino | makimaki | makimaki kore-rongo-kino | rongo | tohu ā-ringa | whakakāhore | whakakore
+1F64A	makimaki kore-kōrero-kino	kanohi | kāo | kāore | kino | kōrero | makimaki | makimaki kore-kōrero-kino | tohu ā-ringa | whakakāhore | whakakore
+1F910	kanohi waha-kōtui	kanohi | kanohi waha-kōtui | kōtui | waha
+1F911	kanohi waha-moni	kanohi | kanohi waha-moni | moni | waha
+1F912	kanohi whai inemahana	inemahana | kanohi | kanohi whai inemahana | mate | māuiui
+1F913	kanohi nere	kanohi | kīki | nere
+1F914	kanohi whakaaroaro	kanohi | whakaaroaro
+1F915	kanohi mau takai-upoko	kanohi | kanohi mau takai-upoko | mamae | takai | whara
+1F916	kanohi karetao	kanohi | karetao | taniwha
+1F917	kanohi awhiawhi	awhi | awhiawhi | kanohi
+1F920	kanohi pōtae kaupoi	kanohi | kauhine | kaupoi | pōtae
+1F921	kanohi hangareka	hangareka | kanohi
+1F922	kanohi kanekane	kanekane | kanohi | ruaki
+1F923	takaoriori ana i te papa me te katakata	kanohi | katakata | papa | takaoriori | takaoriori ana i te papa me te katakata
+1F924	kanohi hāware	hāware | kanohi
+1F925	kanohi teka	kanohi | pinōkio | teka
+1F926	tangata ringakanohi	hohoia | kanohi | kapu o te ringa | tangata ringakanohi | whakaparau
+1F927	kanohi matihe	kanohi | matihe | ngā manaaki
+1F928	kanohi tukemata rewa	kaitaunu | kanohi tukemata rewa | matakana
+1F929	tino mīharotia	kanohi | karu | pakiri | tino mīharotia | whetū
+1F92A	kanohi pōrangi	iti | kanohi pōrangi | karu | rahi
+1F92B	kanohi whakahū	hū | kanohi whakahū | turituri
+1F92C	kanohi tohu runga waha	kanga ana | kanohi tohu runga waha
+1F92D	kanohi ringa runga waha	aue | kanohi ringa runga waha
+1F92E	kanohi ruaki	kanohi ruaki | mate | ruaki
+1F92F	māhunga pahū	māhunga pahū | oho
+1F381	perehana takai	koha | perehana | pouaka | takai | whakanuinga
+1F389	pahū whakangahau	pahū | tarā | whakangahau | whakanuinga
+1F38A	pōro wāhi pepa	pōro | pōro wāhi pepa | wāhi-pepa ririki | whakanuinga
+1F47B	kēhua	kanohi | kēhua | kīrehe | kōrero pakiwaitara | moemoeā | taniwha
+1F47C	pīpī anahera	anahera | kanohi | kōrero pakiwaitara | moemoeā | pēpi | pīpī anahera
+1F47D	manene aokē	kanohi | kīrehe | kīrehe aokē | kōrero pakiwaitara | manene aokē | moemoeā | taniwha | ufo
+1F47E	ngārara aokē	kanohi | kīrehe | kōrero pakiwaitara | manene aokē | moemoeā | ngārara aokē | taniwha | ufo
+1F47F	kanohi riri whai pihi	kanohi | kanohi riri whai pihi | kōrero pakiwaitara | moemoeā | patupaiarehe | rēwera | tēmoni
+1F480	angaanga	angaanga | kanohi | kōrero pakiwaitara | mate | taniwha
+1F481	tangata ringa tāringi	āwhina | mōhiohio | ringa | tangata ringa tāringi | tāringi | whakatete
+1F482	tautieki	tautieki
+1F489	ngira	mate | ngira | pota | rata | rongoā | utauta
+1F48A	pire	mate | pire | rata | rongoā
+1F4A2	tohu riri	pōrangi | pukuriri | tohu riri | whakakata
+1F4A4	zzz	moe | whakakata | zzz
+1F4A5	tutukitanga	pahū | tutukitanga | whakakata
+1F4A6	ngā kōpata werawera	ngā kōpata werawera | paratī | werawera | whakakata
+1F4A7	kōpata wai	kōpata | kōpata wai | makariri | werawera | whakakata
+1F4A8	rere atu ana	oma ana | rere | rere atu ana | whakakata
+1F4A9	putunga tiko	kanohi | putunga tiko | tae | taniwha | tiko | tūtae | whakakata
+1F4AB	whakaamai	whakaamai | whakakata | whetū
+1F4AC	pūangi kōrero	kōrero | mirumiru | pūangi | whakakata
+1F4AD	pūangi whakaaro	mirumiru | pūangi | whakaaro | whakakata
+1F4AE	putiputi mā	putiputi | putiputi mā
+1F4A0	taimana whai ira	āhuahanga | roto | taimana | taimana whai ira | whakakata
+1F4A1	puku mārama	hiko | mārama | puku | whakaaro | whakakata
+1F4A3	pōma	pōma | whakakata
+1F4AF	rau piro	100 | kī | kotahi rau | piro | rau piro
+1F4B0	pēke moni	moni | pēke | tāra
+1F4B1	whakawhitinga momo moni	momo moni | moni | pēke | whakawhitinga momo moni | whakawhitiwhiti
+1F4B2	tohu tāra taumaha	momo moni | moni | tāra | tohu tāra taumaha
+1F4B8	moni whai parirau	moni | moni whai parirau | monipepa | parirau | pēke | pepa | pire | rere | tāra
+1F525	ahi	ahi | mura | utauta
+1F52E	pōro atamaha	atamaha | matakite | moemoeā | pakiwaitara | pōro | utauta
+1F440	ngā karu	kanohi | karu | ngā karu
+1F441	karu	karu | tinana
+1F442	taringa	taringa | tinana
+1F443	ihu	ihu | tinana
+1F444	waha	ngā ngutu | waha
+1F445	arero	arero | tinana
+1F446	kōroa tāmuri tohu ake	ake | kōroa | matimati | ringa | tāmuri | tohu
+1F447	kōroa tāmuri tohu iho	iho | kōroa | matimati | ringa | tāmuri | tohu
+1F448	kōroa tāmuri tohu mauī	kōroa | kōroa tāmuri tohu mauī | matimati | ringa | tāmuri | tohu
+1F449	kōroa tāmuri tohu matau	kōroa | kōroa tāmuri tohu matau | matimati | ringa | tāmuri | tohu
+1F44A	meke anga mai	kumu | meke | meke anga mai | ringa | tuki
+1F44B	ringa pōhirihiri	pōhiri | pōhirihiri | ringa
+1F44C	ringa ĀE	ĀE | ringa
+1F44D	kōnui ake	+1 | ake | kōnui | ringa
+1F44E	kōnui iho	-1 | iho | kōnui | ringa
+1F44F	ringa pakipaki	pakipaki | ringa
+1F450	ringa tuwhera	ringa | tuwhera
+261D	kōroa tohu ake	ake | kōroa | matimati | ringa | tohu
+270A	meke tū	kumu | meke | meke tū | ringa | tuki
+270B	ringa tū	ringa | ringa tū
+270C	ringa wikitōria	ringa | v | wikitōria
+270D	ringa tuhituhi	ringa | ringa tuhituhi | tuhi
+1F4AA	uarua whakapakari	uarua | uaua | whakakata | whakapakari
+1F590	ringa tū matimati paraha	matimati | paraha | ringa | ringa tū matimati paraha
+1F64C	ngā ringa tū	āhaha | ngā ringa tū | ringa | tohu ā-ringa | tū | whakanuinga
+1F64F	ringa whiri	ihoi | koa | pōkai | ringa | ringa whiri | tohu | tuohu | ui | whakawhetai
+1F918	tohu o ngā pihi	kai kaha | matimati | pihi | ringa | tohu o ngā pihi
+1F919	ringa waea mai	ringa | ringa waea mai | waea
+1F91A	tāmuri tū	tāmuri | tū
+1F91B	meke anga-mauī	meke | meke anga-mauī | whakatemauī
+1F91C	meke anga-matau	meke | meke anga-matau | whakatematau
+1F91D	rūrū	ringa | rūrū | tūtaki | whakaaetanga
+1F91E	matimati whiri	matimati | ringa | waimarie | whiri
+1F91F	tohu aroha-ki-a-koe	aroha | ringa | tohu aroha-ki-a-koe
+1F932	ringa rewa tahi	inoi | ringa rewa tahi
+1F9E0	roro	mōhio | roro
+2764	manawa whero	manawa | manawa whero
+1F380	rīpene	rīpene | whakanuinga
+1F382	keke rāwhānau	keke | pōhā | puruni | rāwhānau | reka | whakanuinga
+1F383	rama kanohi paukena	haki | harowēne | rama | rama kanohi paukena | whakanuinga
+1F384	rākau Kirihimete	Kirihimete | rākau | whakanuinga
+1F386	pahūahi	pahūahi | whakanuinga
+1F387	whakakorakora	korakora | pahūahi | whakakorakora | whakanuinga
+1F388	pūangi	pūangi | whakanuinga
+1F38B	rākau tanapata	Hapanīhi | kara | rākau | rākau tanapata | whakanuinga
+1F38C	kara whakawhiri	Hapanīhi | kara whakawhiri | whakanuinga | whakawhiri | whiri
+1F38D	whakarei rākau paina	Hapanīhi | inanga | paina | whakanuinga | whakarei rākau paina
+1F38E	karetao Hapanīhi	Hapanīhi | karetao | taurima | whakanuinga
+1F38F	haki ika	haki | ika | whakanuinga
+1F390	pere hau	hau | pere | whakanuinga
+1F391	taurima tiro marama	marama | taurima | taurima tiro marama | whakanuinga
+1F393	kape whiwhinga tohu	kākahu | kape | kape whiwhinga tohu | paetahi | pōtae | whakanuinga
+1F484	paningutu	ngā whakanako | paningutu | whakapaipai kanohi
+1F485	pani maikūkū	maikūkū | pani | tiaki | whakapai maikūkū | whakapaipai
+1F48B	tohu kihi	kihi | ngutu | tohu kihi
+1F48C	reta aroha	aroha | manawa | mēra | reta
+1F48D	mōwhiti matimati	mōwhiti matimati | taimana
+1F48E	kōhatu māpuna	kōhatu māpuna | māpuna | rei | taimana
+1F48F	kihi	kihi | tokorua
+1F490	tākai putiputi	putiputi | tākai putiputi
+1F491	tokorua me te manawa	aroha | tokorua | tokorua me te manawa
+1F492	mārenatanga	mārenatanga | whakawhaiāipo | whare karakia
+1F493	manawa patupatu	kapakapa | manawa patupatu | patu manawa | patupatu
+1F494	manawa whati	manawa whati | pakaru | whati
+1F495	rua manawa	aroha | rua manawa
+1F496	manawa tīaho	hiamo | manawa tīaho | tīaho
+1F497	manawa tipu haere	hiamo | kapakapa | manawa tipu haere | taiatea | tipu ana
+1F498	manawa me te pere	kupiti | manawa me te pere | pere
+1F499	manawa kikorangi	kikorangi | manawa kikorangi
+1F49A	manawa kākāriki	kākariki | manawa kākāriki
+1F49B	manawa kōwhai	kōwhai | manawa kōwhai
+1F49C	manawa poroporo	manawa poroporo | poroporo
+1F49D	manawa mau rīpene	manawa mau rīpene | rīpene | tohu aroha
+1F49E	ngā manawa takahurihuri	ngā manawa takahurihuri | takahurihuri
+1F49F	rākeitanga manawa	manawa | rākeitanga manawa
+1F9E1	manawa karaka	karaka | manawa karaka
+2763	tohuhā manawa pā	tohu | tohu reo | tohuhā | tohuhā manawa pā
+2733	whetūriki waru-pito	whetūriki | whetūriki waru-pito
+2734	whetū waru-pito	whetū | whetū waru-pito
+2747	korakora	korakora
+1F3E0	whare	kainga | whare
+1F3E1	whare me te māra	kāinga | māra | whare | whare me te māra
+1F3E2	hanganga tari	hanganga | hanganga tari
+1F3E3	poutāpeta Hapanīhi	Hapanīhi | pōhi | poutāpeta Hapanīhi
+1F3E4	poutāpeta	pōhi | poutāpeta | Uropi
+1F3E5	hōhipera	hōhipera | rata | rongoā
+1F3E6	pēke	hanganga | pēke
+1F3E7	tohu ATM	atm | kaiwhitimoni | pēke | tohu ATM | whakaaunoa
+1F3E8	hōtēra	hanganga | hōtēra
+1F3E9	hōtēra aroha	aroha | hōtēra
+1F3EA	pātaka haratau	haratau | pātaka
+1F3EB	kura	hanganga | kura
+1F3EC	pātaka taiwhanga maha	pātaka | pātaka taiwhanga maha | taiwhanga maha
+1F3ED	wheketere	hanganga | wheketere
+1F3EE	rātana pepa whero	mārama | pae | rama | rātana pepa whero | whero
+1F3EF	whare kīngi Hapanīhi	Hapanīhi | whare kīngi | whare kīngi Hapanīhi
+1F3F0	whare kīngi	Uropi | whare kīngi
+1F463	ngā tapuwae	kākahu | ngā tapuwae | tā | tapuwae
+1F464	poho rō ataata	ataata | poho | poho rō ataata
+1F465	ngā poho rō ataata	ataata | ngā poho rō ataata | poho
+1F466	tamatāne	tama | tamariki | tamatāne
+1F467	kōtiro	kōtiro | poutiriao | tamariki | Virgo
+1F468	tāne	tāne
+1F469	wahine	wahine
+1F46A	whānau	whānau
+1F46B	tāne me te wahine mau ringa	pupuri | ringa | tāne | tāne me te wahine mau ringa | tokorua | wahine
+1F46C	tokorua tāne mau ringa	Gemini | māhanga | poutiriao | pupuri | ringa | tāne | tokorua | tokorua tāne mau ringa
+1F46D	tokorua wāhine mau ringa	pupuri | ringa | tokorua | tokorua wāhine mau ringa | wahine
+1F46E	āpiha pirihimana	āpiha | kapa | pirihimana
+1F46F	tāngata taringa rāpeti whakangahau	kaikanikani | tāngata taringa rāpeti whakangahau | taringa rāpeti | whakangahau
+1F470	wahine mārena mau ārai	ārai | mārenatanga | wahine mārena | wahine mārena mau ārai
+1F471	tangata mākekehu	mākekehu | tangata mākekehu
+1F472	tāne mau kape hainīhi	gua pi mao | pōtae | tāne | tāne mau kape hainīhi
+1F473	tangata mau pōtae kameta	pōtae kameta | tangata mau pōtae kameta
+1F474	koroua	kaumātua | koroua | tāne
+1F475	kuia	kaumātua | kuia | wahine
+1F476	pēpi	pēpi | tamariki
+1F477	kaimahi hangatanga	hangatanga | kaimahi | pōtae
+1F478	pirinihi	kōrero pakiwaitara | moemoeā | pirinihi
+1F479	kaurehe	kanohi | kaurehe | kīrehe | kōrero pakiwaitara | moemoeā | taniwha
+1F47A	taipō	kanohi | kīrehe | kōrero pakiwaitara | moemoeā | taipō | taniwha
+1F483	wahine kanikani	kanikani | wahine
+1F486	tangata whiwhi mirimiri	harono | kanohi | mirimiri | tangata whiwhi mirimiri
+1F487	tangata whiwhi kutinga makawe	ātaahua | harono | kaikuti makawe | kutinga makawe | tangata whiwhi kutinga makawe
+1F645	tangata tohu ana KĀO	kāo | kore | ringa | tangata tohu ana KĀO | tohu ā-ringa | whakakāhore | whakakore
+1F646	tangata tohu ana ĀE	ĀE | ringa | tangata tohu ana ĀE | tohu ā-ringa
+1F647	tangata tuohu	aroha | tangata tuohu | tohu | tuohu | whakapāha
+1F64B	tangata ringa tū	koa | ringa | tangata ringa tū | tohu ā-ringa | tū
+1F64D	tangata poururu	poururu | tangata poururu | tohu ā-ringa
+1F64E	tangata tupere	tangata tupere | tohu ā-ringa | tupere
+1F930	wahine hapū	hapū | wahine
+1F931	whāngote-ū	pēpi | ū | whakangote ana | whāngote-ū
+1F933	kiriāhua	kāmera | kiriāhua | waea
+1F934	piriniha	piriniha
+1F935	tāne mau hūtu ōkawa	hūtu ōkawa | tāne | tāne mārena | tāne mau hūtu ōkawa
+1F936	kuia koko	kirihimete | koko | kuia | whaea | whakanuinga
+1F937	tangata hiki-pakihiwi	haumāruru | hiki-pakihiwi | kūare | rangirua | tangata hiki-pakihiwi
+1F385	hana koko	hana | kirihimete | koko | matua | whakanuinga
+1F9D0	kanohi mau mōhititahi	kanohi mau mōhititahi | māuiui
+1F9D1	pakeke	ira-kūpapa | pakeke
+1F9D2	tamaiti	ira-kūpapa | tamaiti | tamariki
+1F9D3	kaumātua	ira-kūpapa | kaumātua
+1F9D4	tangata pāhau	pāhau | tangata pāhau
+1F9D5	wahine mau kāmeta	hijab | kāmeta māhunga | mantilla | tichel | wahine mau kāmeta
+1F9D6	tangata rō taiwhanga mamaoa	hāuna | taiwhanga mamaoa | tangata rō taiwhanga mamaoa
+1F9D7	tangata piki	kaipiki | tangata piki
+1F9D8	tangata tūranga rotu	tangata tūranga rotu | whakaaro | yoga
+1F9D9	tāngata matakite	rūānuku | tāngata matakite | tohunga mākutu | wahine mākutu
+1F9DA	patupaiarehe	Oberon | patupaiarehe | Puck | Titania
+1F9DB	kaitoto	Dracula | kaitoto | oramate
+1F9DC	tangata-ika	tāne-ika | tangata-ika | wahine-ika
+1F9DD	erepe	erepe | mākutu
+1F9DE	tūrehu	djinn | tūrehu
+1F9DF	tūpāpaku	oramate | tūpāpaku | tūpāpaku hīkoi
+A9	manatārua	manatārua
+AE	rēhitatia	rēhitatia
+2122	tohu hoko	tohu | tohu hoko | tohuhoko
+20BA	Lira Tākei	
+20AA	Shekel Hou Iharaira	
+20AB	Dong Whitināmu	
+20BC	Manat Atepaihānia	
+20B4	Hryvnia Ukareinga	
+20A6	Naira Ngāitīria	
+20A1	Colon Koto Rika	
+20B2	Guarani Parakai	
+20B5	Cedi Kāna	
+20B8	Tenge Katatānga	
+20BE	Lari Hōria	
+20AE	tugrik Mongōria	
+20AD	kip Rāoho	
+58F	Dram Āmenia	
+9F3	Taka Pākaratēhi	
+E3F	Baht Tairanga	
+A4	Moni Tē Mōhiotia	
+2196	pere ake-mauī	ahunga | pere | pere ake-mauī | uru-mā-raki | waenga-matua
+2197	pere ake-matau	ahunga | pere | pere ake-matau | rāwhiti-mā-raki | waenga-matua
+2198	pere iho-matau	ahunga | pere | pere iho-matau | rāwhiti-mā-tonga | waenga-matua
+2199	pere iho-mauī	ahunga | pere | pere iho-mauī | uru-mā-tonga | waenga-matua
+2194	pere mauī-matau	pere | pere mauī-matau
+2195	pere ake-iho	pere | pere ake-iho
+21A9	pere matau piko mauī	pere | pere matau piko mauī
+21AA	pere mauī piko matau	pere | pere mauī piko matau
+1F400	kiore rahi	kiore rahi
+1F401	kiore iti	kiore iti
+1F402	ōkiha	ōkiha | poutiriao | pūru | Taurus
+1F403	pūru wai	pūru | wai
+1F404	kau	kau
+1F405	taika	taika
+1F406	reparo	reparo
+1F407	rāpeti	mōkai | rāpeti
+1F408	ngeru	mōkai | ngeru
+1F409	tarakona	pakiwaitara | tarakona
+1F40A	nguturoa	nguturoa
+1F40B	tohorā	tohorā
+1F40C	hātaretare	hātaretare
+1F40D	nākahi	kaihāpai | nākahi | Ophiuchus | poutiriao
+1F40E	hōiho	hōiho | hoiho tauomaoma | hoihotanga | tauomaoma
+1F40F	hipi toa	Aries | hipi | poutiriao | toa
+1F410	koati	Capricorn | koati | poutiriao
+1F411	uha hipi	hipi | uha
+1F412	makimaki	makimaki
+1F413	tameheihei	manu | tameheihei
+1F414	heihei	heihei | manu
+1F415	kurī	kurī | mōkai
+1F416	poaka	poaka | poaka uha
+1F417	poaka toa	poaka | poaka toa
+1F418	erewhana	erewhana
+1F419	wheke	wheke
+1F41A	anga tōrino	anga | tōrino
+1F41B	tātaka	pēpeke | tātaka
+1F41C	pōpokorua	pēpeke | pōpokorua
+1F41D	hanipī	hanipī | ngārara | pī
+1F41E	pāpapa kōpure	pāpapa | pāpapa kōpure | pēpeke
+1F41F	ika	ika | Pisces | poutiriao
+1F420	ika pārūrū	ika | pārūrū
+1F421	ikapupuhi	ika | ikapupuhi
+1F422	honu	honu | terapine
+1F423	pīpī timotimo	manu | pī | pīpī | pīpī timotimo | timotimo ana
+1F424	pīpī manu	manu | pī | pīpī
+1F425	pīpī manu anga mua	manu | pī | pīpī | pīpī manu anga mua
+1F426	manu	manu
+1F427	kororā	kororā | manu
+1F428	koara	koara | pea
+1F429	kurī poipoi	kurī | kurī poipoi
+1F42A	kāmera	kāmera | taromitari | tuapuku
+1F42B	kāmera rua-tuapuku	kāmera | rua-tuapuku | tuapuku
+1F42C	aihe	aihe | pakihau
+1F42D	kanohi kiore	kanohi | kiore
+1F42E	kanohi kau	kanohi | kau
+1F42F	kanohi taika	kanohi | taika
+1F430	kanohi rāpeti	kanohi | mōkai | rāpeti
+1F431	kanohi ngeru	kanohi | mōkai | ngeru
+1F432	kanohi tarakona	kanohi | pakiwaitara | tarakona
+1F433	tohorā pupuhi	kanohi | pupuhi | tohorā
+1F434	kanohi hōiho	hoiho | kanohi | kanohi hōiho
+1F435	kanohi makimaki	kanohi | makimaki
+1F436	kanohi kurī	kanohi | kurī | mōkai
+1F437	kanohi poaka	kanohi | poaka
+1F438	kanohi poraka	kanohi | poraka
+1F439	kanohi hamikiore	hamikiore | kanohi | mōkai
+1F43A	kanohi wūruhi	kanohi | wūruhi
+1F43B	kanohi pea	kanohi | pea
+1F43C	kanohi panara	kanohi | panara
+1F43D	ihu poaka	ihu | kanohi | poaka
+1F43E	ngā tā tapuwae	ngā tā tapuwae | tā tapuwae | tapuwae | waewae
+1F43F	timahaki	timahaki
+1F981	kanohi raiona	kanohi | Leo | poutiriao | raiona
+1F982	kopiona	kopiona | poutiriao | scorpio | Scorpius
+1F983	korukoru	korukoru | manu
+1F984	kanohi hōiho pihi	hoiho pihi | kanohi | kanohi hōiho pihi
+1F985	ekara	ekara | manu
+1F986	parera	manu | parera
+1F987	pekapeka	pekapeka | pekapeka kaitoto
+1F988	mangō	ika | mangō
+1F989	ruru	manu | mōhio | ruru
+1F98A	kanohi pōkiha	kanohi | pōkiha
+1F98B	pūrerehua	ātaahua | pēpeke | pūrerehua
+1F98C	tia	tia
+1F98D	makimaki nui	makimaki nui
+1F98E	mokomoko	mokomoko | ngārara
+1F98F	rinorino	rinorino
+1F990	kōuraura	kai | kōuraura | mātaitai | ririki
+1F991	ngū	kai | kota | ngū
+1F992	kakīroa	kakīroa | ngā kōiraira
+1F993	hepapa	hepapa | tāheke
+1F994	tuatete	pūtaratara | tuatete
+1F995	sauropod	brachiosaurus | brontosaurus | diplodocus | sauropod
+1F996	T-Rex	T-Rex | Tyrannosaurus Rex
+1F997	kirikiti	kirikiti | māwhitiwhiti
+1F330	hetenati	hetenati | tipu
+1F331	tipu	hōu | tipu
+1F332	rākau māota	rākau | rākau māota
+1F333	rākau whakamakere rau	rākau | rākau whakamakere rau | tukurau | whakamakere rau
+1F334	nīkau	nīkau | rākau
+1F335	tātā tiotio	tātā tiotio | tipu
+1F337	tūripi	putiputi | tūripi
+1F338	putiputi tieri	puāwai | putiputi | tieri
+1F339	rōhi	putiputi | rōhi
+1F33A	puarangi	puarangi | putiputi
+1F33B	putiputirā	putiputi | putiputirā | rā
+1F33C	puāwai	puāwai | putiputi
+1F33D	puku kānga	kānga | puku kānga | taringa
+1F33E	kākati raihi	kākati raihi | pata | puku | raihi
+1F33F	amiami	amiami | rau
+1F340	koroa whā rau	4 | koroa | rau | whā
+1F341	rau mapera	hinga | mapera | rau
+1F342	rau makere	makere ana | rau | rau makere
+1F343	rau kapakapa hau	hau | kapakapa | puhi | rau
+1F344	harore	harore | tūruporaka
+2618	hamitoka	hamitoka | tipu
+1F347	ngā karepe	hua | karepe | ngā karepe
+1F348	merengi	hua | merengi
+1F349	merengiwai	hua | merengiwai
+1F34A	tāngarīni	ārani | hua | tāngarīni
+1F34B	rēmana	hua | rēmana | waikawa
+1F34C	panana	hua | panana
+1F34D	paināporo	hua | paināporo
+1F34E	āporo whero	āporo | hua | whero
+1F34F	āporo kākāriki	āporo | hua | kākāriki
+1F350	pea	hua | pea
+1F351	pītiti	hua | pītiti
+1F352	ngā tieri	hua | ngā tieri | tieri
+1F353	rōpere	hua | pere | rōpere
+1F336	pepa wera	pepa | wera
+1F354	hāmipēka	hāmipēka | pāki
+1F355	parehe	parehe | poro | tīhi
+1F356	mīti runga kōiwi	kōiwi | mīti | mīti runga kōiwi
+1F357	waewae manu	heihei | kōiwi | manu | waewae
+1F358	pihikete raihi	pihikete | raihi
+1F359	pōro raihi	Hapanīhi | pōro | raihi
+1F35A	raihi maoa	maoa | raihi
+1F35B	raihi kari	kari | raihi
+1F35C	paepae korohū	korohū | nūru | paepae | ramen
+1F35D	pakēti	pakēti | parāoa rimurapa
+1F35E	parāoa	parāoa | rohi
+1F35F	ngā parai wīwī	ngā parai wīwī | parai | wīwī
+1F360	kūmara tunutunu	kūmara tunutunu | reka | rīwai | tukutuku
+1F361	tāngoro	Hapanīhi | puruni | rākau | reka | tāngoro | wero
+1F362	otene	kaimoana | kepapa | otene | rākau | wero
+1F363	hūhi	hūhi
+1F364	kōuraura parai	kōura | kōuraura | parai | temepura
+1F365	keke ika whai koru	ika | keke | keke ika whai koru | koru | pōhā
+1F366	aihikirīmi ngohengohe	aihikirīmi | huka | kirīmi | ngohengohe | puruni | reka
+1F367	huka heuheu	heua | huka | huka heuheu | puruni | reka
+1F368	aihikirīmi	aihikirīmi | huka | kirīmi | puruni
+1F369	tōnati	puruni | reka | tōnati
+1F36A	pihikete	pihikete | puruni | reka
+1F36B	pae tiokorete	pae | pae tiokorete | puruni | reka | tiokoreti
+1F36C	rare	puruni | rare | reka
+1F36D	rarepapa	puruni | rare | rarepapa | reka
+1F36E	katete	katete | puruni | reka
+1F36F	paepae honi	honi | kōhua | paepae honi | reka
+1F370	kekepoto	keke | kekepoto | pōhā | poro | puruni | reka
+1F371	pouaka peneto	pouaka peneto
+1F372	kōhua kai	kōhua | kōhua kai | tiu
+1F373	tao ana	hēki | parai | pēne | tao ana
+1F374	paoka me te naihi	naihi | paoka | paoka me te naihi | tao ana
+1F375	tīkapu kore kakau	kapu | tī | tīkapu | tīkapu kore kakau | unu
+1F376	hake	hake | kapu | pae | pātara | unu
+1F377	karāhe waina	karāhe | pae | unu | waina
+1F378	karāhe unuranu	karāhe | pae | unu | unuranu
+1F379	unu pārūrū	pae | pārūrū | unu
+1F37A	maka pia	maka | pae | pia | unu
+1F37B	ngā maka pia tutuki	maka | ngā maka pia tutuki | pae | pia | tutuki | unu
+1F37C	pātara pēpi	miraka | pātara | pēpi | unu
+1F37D	paoka me naihi me pereti	naihi | paoka | paoka me naihi me pereti | pereti | tao ana
+1F37E	pātara puru pahū	pae | pahū ana | pātara | pātara puru pahū | puru | unu
+1F37F	kāngapahū	kāngapahū
+1F950	parāoarīpeka	kai | parāoa | parāoarīpeka | pōkai pewa | wīwī
+1F951	awakāro	awakāro | huarākau | kai
+1F952	kūkama	huawhenua | kai | kūkama | pīkara
+1F953	pēkana	kai | mīti | pēkana
+1F954	rīwai	huawhenua | kai | rīwai
+1F955	kāroti	huawhenua | kai | kāroti
+1F956	parāoa pakete	kai | pakete | parāoa | wīwī
+1F957	huamata kākāriki	huamata | kai | kākāriki
+1F958	pēne kai pāpaku	kaherora | kai | paera | pāpaku | pēne
+1F959	parāoapapa whakakī	kai | kepapa | parāoapapa | tōrino | whakakī | wharawhere
+1F95A	hēki	hēki | kai
+1F95B	karāhe miraka	karāhe | miraka | unu
+1F95C	pīnati	huawhenua | kai | nati | pīnati
+1F95D	hua kiwi	hua | kai | kiwi
+1F95E	panekeke	kai | kekewera | kerēpe | panekeke
+1F95F	parāoa kinikini	empanada | gyōza | jiaozi | parāoa kinikini | pierogi
+1F960	pihikete matapae	pihikete matapae | poropititanga
+1F961	pouaka kaweatu	paepae tio | pouaka kaweatu
+1F962	rākaukai	hashi | rākaukai
+1F963	paepae me te pūnu	congee | hereara | paepae me te pūnu | parakuihi
+1F964	kapu me te ngongo	kapu me te ngongo | wai huarākau | wai reka
+1F965	kokonati	kokonati | nīkau | pīna korara
+1F966	porokori	kāpeti kōraha | porokori
+1F967	pāi	pāi | pōhā | whakakī
+1F968	pretzel	pretzel | whiri
+1F969	tapahitanga mīti	rara | rara poaka | rara reme | tapahitanga mīti | tēki
+1F96A	hanewiti	hanewiti | parāoa
+1F96B	kai kēne	kai kēne | kēne
+1F9C0	matakahi tīhi	matakahi tīhi | tīhi
+2615	unu wera	mamaoa | puruni | reka wera | tī | unu wera
+2600	rā	ihi | kanapa | paki | rā
+2601	kapua	huarere | kapua
+2602	hāmarara	hāmarara | kākahu | ua
+2603	tāne-hukarere	hukarere | makariri | tāne-hukarere
+2614	hāmarara me ngā kōpata ua	hāmarara | hāmarara me ngā kōpata ua | kākahu | kōpata | ua
+26A1	ngaohiko teitei	hiko | mōrearea | ngaohiko | ngaohiko teitei | uira | whana
+26C4	tāne-hukarere kore hukarere	hukarere | makariri | tāne-hukarere | tāne-hukarere kore hukarere
+26C5	rā muri kapua	kapua | rā | rā muri kapua
+26C8	kapua me te uira me te ua	kapua | kapua me te uira me te ua | ua | whatitiri
+2744	whā hukarere	hukarere | makariri | whā hukarere
+1F300	kurahau awatea	āmaimai | huripari | kurahau awatea | paroro
+1F301	kohukohu	kohu | kohukohu
+1F302	hāmarara kopi	hāmarara | hāmarara kopi | kākahu | ua
+1F303	pō whai whetū	pō | pō whai whetū | whetū
+1F304	whitinga rā runga maunga	ata | maunga | rā | rā whiti | whitinga rā runga maunga
+1F305	whitinga o te rā	ata | rā | whitinga o te rā
+1F306	whakahuahua tāonenui porehu	ahiahi | paewhenua | porehu | rā | rātō | tāonenui | whakahuahua tāonenui porehu
+1F307	tōnga o te rā	porehu | rā | tōnga o te rā
+1F308	kahukura	kahukura | ua
+1F309	arawhata i te pō	arawhata | arawhata i te pō | pō
+1F30A	ngaru wai	moana | ngaru | wai
+1F30B	puia	maunga | puia
+1F30C	ikarangi	ātea | ikarangi
+1F30D	ao whakakite Uropi-Āwherika	ao | ao whakakite Uropi-Āwherika | Āwherika | Uropi | whenua
+1F30E	ao whakakite i ngā Amerika	ao | ao whakakite i ngā Amerika | ngā Amerika | whenua
+1F30F	ao whakakite Āhia-Ahitereiria	Āhia | Ahitereiria | ao | ao whakakite Āhia-Ahitereiria | whenua
+1F310	ao whai poutūmārō	ao | ao whai poutūmārō | ngā poutūmārō | whenua
+1F311	marama kōhiti	marama | marama kōhiti | pōuri
+1F312	marama hua tipihori	hua | marama | marama hua tipihori | pewa
+1F313	marama ahotū	hauwhā | marama | marama ahotū
+1F314	marama hua	hua | kipuha | marama
+1F315	rākaunui	marama | rākaunui
+1F316	marama roroku	kipuha | marama | roroku
+1F317	marama korekore	hauwhā | marama | marama korekore
+1F318	marama tohi	marama | marama tohi | pewa | roroku
+1F319	marama pewa	marama | pewa
+1F31A	mata marama kōhiti	marama | mata | mata marama kōhiti
+1F31B	marama ahotū whai mata	hauwhā | marama | marama ahotū whai mata | mata
+1F31C	marama korekore whai mata	hauwhā | marama | marama korekore whai mata | mata
+1F31D	rākaunui whai mata	kanapa | kī | marama | mata | rākaunui whai mata
+1F31E	rā whai mata	kanapa | mata | rā | rā whai mata
+1F31F	whetū mumura	hana | korakora | tīaho | wheriko | whetū | whetū mumura
+1F320	unahi o takero	hinga ana | unahi | unahi o takero | whetū
+1F321	inemahana	huarere | inemahana
+1F324	rā muri kapua iti	kapua | rā | rā muri kapua iti
+1F325	rā muri kapua nui	kapua | rā | rā muri kapua nui
+1F326	rā muri kapua ua	kapua | rā | rā muri kapua ua | ua
+1F327	kapua me te ua	kapua | kapua me te ua | ua
+1F328	kapua me te hukarere	hukarere | kapua | kapua me te hukarere | makariri
+1F329	kapua me te uira	kapua | kapua me te uira | uira
+1F32A	āwhā	āwhā | kapua | paroro
+1F32B	kohu	kapua | kohu
+1F32C	kanohi hau	hau | kanohi | kapua | pupuhi
+2648	Aries	Aries | poutiriao | rāme
+2649	Taurus	poutiriao | pūru | Taurus
+264A	Gemini	Gemini | ngā māhanga | poutiriao
+264B	Cancer	Cancer | pāpaka | poutiriao
+264C	Leo	Leo | poutiriao | raiona
+264D	Virgo	poutiriao | Virgo
+264E	Libra	Libra | ōrite | poutiriao | whakawā | whārite
+264F	Scorpius	kopio | kopiona | poutiriao | Scorpius
+2650	Sagittarius	kaikōpere | poutiriao | Sagittarius
+2651	Capricorn	Capricorn | koati | poutiriao
+2652	Aquarius	Aquarius | kaikawe | poutiriao | wai
+2653	Pisces	ika | Pisces | poutiriao
+1F550	te tahi o ngā hāora	00 | 1 | 1:00 | karaka | o ngā hāora | tahi | te tahi o ngā hāora
+1F551	te rua o ngā hāora	00 | 2 | 2:00 | karaka | o ngā hāora | rua | te rua o ngā hāora
+1F552	te toru o ngā hāora	00 | 3 | 3:00 | karaka | o ngā hāora | te toru o ngā hāora | toru
+1F553	te whā o ngā hāora	00 | 4 | 4:00 | karaka | o ngā hāora | te whā o ngā hāora | whā
+1F554	te rima o ngā hāora	00 | 5 | 5:00 | karaka | o ngā hāora | rima | te rima o ngā hāora
+1F555	te ono o ngā hāora	00 | 6 | 6:00 | karaka | o ngā hāora | ono | te ono o ngā hāora
+1F556	te whitu o ngā hāora	00 | 7 | 7:00 | karaka | o ngā hāora | te whitu o ngā hāora | whitu
+1F557	te waru o ngā hāora	00 | 8 | 8:00 | karaka | o ngā hāora | te waru o ngā hāora | waru
+1F558	te iwa o ngā hāora	00 | 9 | 9:00 | iwa | karaka | o ngā hāora | te iwa o ngā hāora
+1F559	te tekau o ngā hāora	00 | 10 | 10:00 | karaka | o ngā hāora | te tekau o ngā hāora | tekau
+1F55A	te tekau-mā-tahi o ngā hāora	00 | 11 | 11:00 | karaka | o ngā hāora | te tekau-mā-tahi o ngā hāora | tekau-ma-tahi
+1F55B	te tekau-mā-rua o ngā hāora	00 | 12 | 12:00 | karaka | o ngā hāora | te tekau-mā-rua o ngā hāora | tekau-mā-rua
+1F55C	te tahi me te toru tekau meneti	1 | 1:30 | 30 | karaka | tahi | te tahi me te toru tekau meneti | toru tekau
+1F55D	te rua me te toru tekau meneti	2 | 2:30 | 30 | karaka | rua | te rua me te toru tekau meneti | toru tekau
+1F55E	te toru me te toru tekau meneti	3 | 3:30 | 30 | karaka | te toru me te toru tekau meneti | toru | toru tekau
+1F55F	te whā me te toru tekau meneti	30 | 4 | 4:30 | karaka | te whā me te toru tekau meneti | toru tekau | whā
+1F560	te rima me te toru tekau meneti	30 | 5 | 5:30 | karaka | rima | te rima me te toru tekau meneti | toru tekau
+1F561	te ono me te toru tekau meneti	30 | 6 | 6:30 | karaka | ono | te ono me te toru tekau meneti | toru tekau
+1F562	te whitu me te toru tekau meneti	30 | 7 | 7:30 | karaka | te whitu me te toru tekau meneti | toru tekau | whitu
+1F563	te waru me te toru tekau meneti	30 | 8 | 8:30 | karaka | te waru me te toru tekau meneti | toru tekau | waru
+1F564	te iwa me te toru tekau meneti	30 | 9 | 9:30 | iwa | karaka | te iwa me te toru tekau meneti | toru tekau
+1F565	te tekau me te toru tekau meneti	10 | 10:30 | 30 | karaka | te tekau me te toru tekau meneti | tekau | toru tekau
+1F566	te tekau-mā-tahi me te toru tekau meneti	11 | 11:30 | 30 | karaka | te tekau-mā-tahi me te toru tekau meneti | tekau-ma-tahi | toru tekau
+1F567	te tekau-mā-rua me te toru tekau meneti	12 | 12:30 | 30 | karaka | te tekau-mā-rua me te toru tekau meneti | tekau-mā-rua | toru tekau
+2604	unahiroa	ātea | unahiroa
+26F0	maunga	maunga
+26F1	hāmarara i te papa	hāmarara | hāmarara i te papa | rā | ua
+26F2	puna torotī	puna torotī
+26F4	waka kawekawe	pāhihi | poti | waka kawekawe
+26F5	waka pere	moana | pere rua | poti | wāhi hararei | waka pere
+2708	waka rererangi	rererangi | waka rererangi
+1F488	pou kaikuti-makawe	kaikuti-makawe | kutinga-makawe | pou
+1F4BA	nohoanga	nohoanga | tūru
+1F680	tākirirangi	ātea | tākirirangi
+1F681	toparere	toparere | waka
+1F682	pūkaha tereina	mamaoa | pūkaha | rerewē | tereina
+1F683	waka rerewē	pūhiko | rerewē | tarāme | tereina | waka | waka pāhiko
+1F684	tereina tino tere	rerewē | shinkansen | tere | tereina | tereina tino tere
+1F685	tereina tino tere ihu matā	matā | rerewē | shinkansen | tere | tereina | tereina tino tere ihu matā
+1F686	tereina	rerewē | tereina
+1F687	rarowhenua	rarowhenua | rerewē rarowhenua
+1F688	rerewē māmā	rerewē | rerewē māmā
+1F689	teihana	rerewē | teihana | tereina
+1F68A	tarāme	tarāme | waka pāhiko
+1F68B	waka tarāme	tarāme | waka | waka pāhiko
+1F68C	pahi	pahi | waka
+1F68D	pahi anga mai	anga mai | pahi | pahi anga mai
+1F68E	waka pāhiko	pahi | tarāme | waka pāhiko
+1F68F	tūnga pahi	pahi | tūnga
+1F690	pahi iti	pahi | pahi iti
+1F691	waka tūroro	waka | waka tūroro
+1F692	waka tinei ahi	ahi | mīhini | taraka | waka tinei ahi
+1F693	waka pirihimana	motokā | pirihimana | tira | waka pirihimana
+1F694	waka pirihimana anga mai	anga mai | motokā | pirihimana | waka pirihimana anga mai
+1F695	takihī	takihī | waka
+1F696	takihī anga mai	anga mai | takihī | takihī anga mai
+1F697	motokā	motokā
+1F698	motokā anga mai	anga mai | motokā | motokā anga mai
+1F699	taraka hākinakina	hākinakina | taraka hākinakina
+1F69A	taraka tiki	taraka | tiki
+1F69B	taraka tautō	hemi | taraka | taraka tautō
+1F69C	tarakita	tarakita | waka
+1F69D	rōautahi	rōautahi | waka
+1F69E	rerewē maunga	maunga | rerewē | waka
+1F69F	rerewē whakairi	rerewē | whakairi
+1F6A0	arataura maunga	arataura maunga | maunga | taura | waka taura
+1F6A1	aratarāme rererangi	ā-rangi | aratarāme | aratarāme rererangi | taura | waka
+1F6A2	kaipuke	kaipuke | pāhihi | poti
+1F6A3	tangata hoe waka	poti | tangata hoe waka | waka hoe
+1F6A4	wakatere	poti | wakatere
+1F6A5	rama huarahi haupae	ngā waka | poutohu | rama | rama huarahi haupae
+1F6A6	rama huarahi poutū	ngā waka | poutohu | rama | rama huarahi poutū
+1F6A7	hangatanga	hangatanga | tauārai
+1F6A8	rama waka pirihimana	hurihuri | māmā | motokā | pirihimana | rama | rama waka pirihimana
+1F6A9	kara tapatoru	kara tapatoru | pou
+1F6AA	kūwaha	kūwaha
+1F6B0	wai pai hei unu	inu | wai | wai pai | wai pai hei unu
+1F6B1	wai kāore e pai hei unu	kaua e unu | wai | wai kāore e pai hei unu
+1F6B3	kaua he pahikara	kāo | kaua he pahikara | kore | kua whakakore | pahikara | rāhuitia
+1F6B7	kaua he kaihīkoi	kaihīkoi | kāo | kaua he kaihīkoi | kore | kua whakakore | rāhuitia
+1F6B8	tamariki e whakawhiti ana	kaihīkoi | ngā waka huarahi | tamaiti | tamariki e whakawhiti ana | whakawhiti
+1F6B9	taiwhanga tāne	heketua | rūma whakatā | taiwhanga tāne | tāne | wharepaku
+1F6BA	taiwhanga wāhine	heketua | rūma whakatā | taiwhanga wāhine | wahine | wharepaku
+1F6BB	rūma whakatā	heketua | rūma whakatā | wharepaku
+1F6BC	tohu pēpi	pēpi | tohu pēpi | whakapaipai
+1F6BD	heketua	heketua
+1F6BE	wharepaku	heketua | rūma whakatā | taiwhanga | wai | wharepaku
+1F6BF	uwhiuwhi	uwhiuwhi | wai
+1F6C0	tangata kaukau ana	kaukau | tangata kaukau ana | tāpu kaukau
+1F6C1	tāpukaukau	kaukau | tāpukaukau
+1F6C2	mana uruwhenua	mana | uruwhenua
+1F6C3	tari taupare	tari taupare
+1F6C4	kerēme pāhi	kerēme | pāhi
+1F6C5	pāhi mahue	pāhi | pāhi mahue | raraka
+1F6D0	wāhi karakia	karakia | momo karakia | wāhi karakia
+1F6D1	tohu tū	tapawaru | tohu | tū
+1F6D2	tāiki panapana	hokohoko | kāta | tāiki panapana
+2668	wai ariki	korohuhū | puna | wai ariki | waiariki | wera
+26BD	poi whana	poi whana | poiwhana | pōro | whutupōro
+26BE	pēhipōro	pēhipōro | pōro
+26F3	kara rō kōhao	haupōro | kara rō kōhao | kōhao
+1F392	pēketuarā kura	kura | pēke | pēke tari | pēketuarā kura
+1F3A0	hōiho porowhawhe	hōiho | porowhawhe
+1F3A1	wīra pērihi	papa whakangahau | pērihi | wīra
+1F3A2	tereina tō-ā-papa whakangahau	papa whakangahau | pūkawe | takataka | tereina tō-ā-papa whakangahau
+1F3A3	matira hī ika	ika | matira | matira hī ika
+1F3A4	hopuoro	hopuoro | karaoke
+1F3A5	pū hopuata	kāmera | pū hopuata | whare whitiāhua | whitiāhua
+1F3A6	whare whitiāhua	pūwhakaahua | rīpene whitiāhua | whare whitiāhua | whitiāhua
+1F3A7	maupane	maupane | purutaringa
+1F3A8	papapeita tohunga toi	papa tongarewa | papapeita | papapeita tohunga toi | toi | toi peita
+1F3A9	pōtae tihi	kākahu | pōtae | tihi
+1F3AA	tēneti manini rau	manini rau | tēneti | tēneti manini rau
+1F3AB	tīkiti	tīkiti | tomonga
+1F3AC	papa papaki	papa papaki | papaki | whitiāhua
+1F3AD	ngā toi whakaaturanga	ārai | ngā toi whakaaturanga | toi | whakaaturanga | whare tapere
+1F3AE	kēmu ataata	kēmu | kēmu ataata | pūwhakahaere
+1F3AF	pā hāngai	karu | kēmu | pā | pā hāngai | pere | pironga | pūru
+1F3B0	mīhini kaimoni	kāniwha | kēmu | mīhini kaimoni
+1F3B1	piriota 8 pōro	8 | kēmu | piriota | pōro | waru
+1F3B2	tapaono kēmu	kēmu | tapaono
+1F3B3	poipīrori	kēmu | poipīrori | pōro
+1F3B4	kāri purei putiputi	Hapanīhi | kāri | kēmu | purei | putiputi
+1F3B5	tohu waiata	puoro | tohu waiata
+1F3B6	ngā tohu waiata	ngā tohu | ngā tohu waiata | puoro | tohu
+1F3B7	pūtohe	puoro | pūtohe | whakatangi
+1F3B8	kitā	kitā | puoro | whakatangi
+1F3B9	papapurei puoro	papapurei | piana | puoro | whakatangi
+1F3BA	pūawanui	pūawanui | puoro | whakatangi
+1F3BB	tōiri	puoro | tōiri | whakatangi
+1F3BC	tuhinga puoro	puoro | tuhinga
+1F3BD	hāte omaoma	hāte | omaoma | rīpene | whakataetae
+1F3BE	tēnehi	pōro | rākete | tēnehi
+1F3BF	papa retihuka	hukarere | papa retihuka | retihuka
+1F3C0	poitūkohu	mōwhiti | poitūkohu | pōro
+1F3C1	kara pātikitiki	kara pātikitiki | pātikitiki | tauwhāinga motokā
+1F3C2	kaipaparetihuka	hukarere | kaipaparetihuka | paparetihuka | retihuka
+1F3C3	tangata oma	maratono | oma ana | tangata oma
+1F3C4	tangata whakaheke ngaru	tangata whakaheke ngaru | whakaheke ngaru
+1F3C5	mētara hākinakina	mētara | mētara hākinakina
+1F3C6	tohu toa	paraihe | tohu toa
+1F3C7	tauomaoma hoiho	hoiho | hoiho tauoma | kaieke | tauomaoma
+1F3C8	whutupōro amerikana	amerikana | pōro | whutupōro
+1F3C9	whutupōro rakapi	pōro | rakapi | whutupōro
+1F3CA	tangata kauhoe	kauhoe | tangata kauhoe
+1F3CB	tangata hiki taumaha	kaihiki | tangata hiki taumaha | taumaha
+1F3CC	tangata haupōro	haupōro | pōro | tangata haupōro
+1F3CD	motopaika	motopaika | tauwhainga
+1F3CE	motokā tauwhainga	motokā | tauwhainga
+1F451	karauna	kākahu | karauna | kīngi | kuini
+1F452	pōtae wahine	kākahu | pōtae | wahine
+1F453	mōhiti karu	kākahu | karu | mōhiti
+1F454	neketai	kākahu | neketai
+1F455	tī-hāte	hāte | kākahu | tī-hāte
+1F456	tarau tāngari	kākahu | tarau | tarau tāngari
+1F457	kākahu	kākahu
+1F458	kimono	kākahu | kimono
+1F459	pikīni	kākahu | kaukau | pikīni
+1F45A	kākahu wahine	kākahu | wahine
+1F45B	pāhi	kākahu | moni uka | pāhi
+1F45C	pāhi ā-ringa	kākahu | pāhi | pāhi ā-ringa | pēke
+1F45D	pāhi hopu	kākahu | pāhi hopu | pēke | pūkoro
+1F45E	hū tāne	hū | kākahu | tāne
+1F45F	hū omaama	hū | hū ngohengohe | hū omaama | kākahu | whakataetae
+1F460	hū rekereke-teitei	hū | hū rekereke-teitei | kākahu | rekereke | wahine
+1F461	kopa wahine	hū | kākahu | kopa | wahine
+1F462	pūtu wahine	hū | kākahu | pūtu | wahine
+1F6B2	pahikara	pahikara
+1F6B4	tangata eke pahikara	eke pahikara | kaieke pahikara | pahikara | tangata eke pahikara
+1F6B5	tangata eke pahikara maunga	kaieke pahikara | maunga | pahikara | tangata eke pahikara maunga
+1F6B6	tangata hīkoi	hīkoi | hīkoi ana | hīkoi roa | tangata hīkoi
+1F938	tangata kātawīra	kātawīra | takaporepore | tangata kātawīra
+1F939	tangata whiuwhiu	mahitakimaha | pūkenga | tangata whiuwhiu | whakataurite | whiuwhiu
+1F93A	tangata matātuhi	hoari | kaimatātuhi | matātuhi hoari | tangata matātuhi
+1F93C	tāngata mamau	kaimamau | mamau | tāngata mamau
+1F93D	tangata tākaro poro wai	poro | tangata tākaro poro wai | wai
+1F93E	tangata tākaro poiringa	poiringa | pōro | tangata tākaro poiringa
+1F9E2	kape ngutu-parera	kape ngutu-parera | kape pēhipōro
+1F9E3	kāmeta	kakī | kāmeta
+1F9E4	karapu	karapu | ringa
+1F9E5	koti	koti
+1F9E6	tōkena	tōkena
+2660	hūtu pēti	hūtu pēti | kāri | kēmu
+2663	hūtu karapu	hūtu karapu | kāri | kēmu
+2665	hūtu hāte	hūtu hāte | kāri | kēmu
+2666	hūtu taimana	hūtu taimana | kāri | kēmu
+1F4B3	kāri tāwere	kāri | moni | pēke | tāwere
+1F4B4	monipepa Yen	momo moni | moni | monipepa | pēke | pepa | pire | yen
+1F4B5	monipepa tāra	momo moni | moni | monipepa | pēke | pepa | pire | tāra
+1F4B6	monipepa uro	momo moni | moni | monipepa | pēke | pepa | pire | uro
+1F4B7	monipepa pauna	momo moni | moni | monipepa | pauna | pēke | pepa | pire
+1F4B9	tūtohi aupiki me te yen	au | aupiki | kauwhata | mākete | momo moni | moni | pēke | tipunga | tūtohi | tūtohi aupiki me te yen | whakarunga | yen
+1F4BB	paparorohiko	paparorohiko | rorohiko | rw | whaiaro
+1F4BC	kopamārō	kopamārō
+1F4BD	kōpae rorohiko	kōpae | kōpae-iti | rorohiko | whatu
+1F4BE	kōpae pīngore	kōpae | pīngore | rorohiko
+1F4BF	kōpae whatu	kōpae | kōpaepae | rorohiko | whatu
+1F4C0	kam	blu-ray | kam | kōpae | rorohiko | whatu
+1F4C1	kōpaki kōnae	kōnae | kōpaki
+1F4C2	kōpaki kōnae tuwhera	kōnae | kōpaki | tuwhera
+1F4C3	whārangi whai piko	piko | tuhinga | whārangi | whārangi whai piko
+1F4C4	whārangi anga ake	tuhinga | whārangi | whārangi anga ake
+1F4C5	maramataka	maramataka | te rā
+1F4C6	maramataka tīhae	maramataka | maramataka tīhae
+1F4C7	kuputohu ā-kāri	kāri | kuputohu | kuputohu ā-kāri | rolodex
+1F4C8	tūtohi aupiki	au | kauwhata | tipunga | tūtohi | tūtohi aupiki | whakarunga
+1F4C9	tūtohi auheke	au | kauwhata | tūtohi | tūtohi auheke | whakaheke
+1F4CA	tūtohi pae	kauwhata | pae | tūtohi
+1F4CB	paparawhi	paparawhi
+1F4CC	pinepana	pine | pinepana
+1F4CD	pinepana porohita	pine | pinepana | pinepana porohita
+1F4CE	rawhipepa	rawhipepa
+1F4CF	rūri torotika	rūri | torotika
+1F4D0	rūri tapatoru	huinga | rūri | tapatoru
+1F4D1	ripa tohuwāhi	ngā ripa | ripa tohuwāhi | tohu | tohuwāhi
+1F4D2	puka kaute	puka kaute | pukatuhipoka
+1F4D3	pukatuhipoka	pukatuhipoka
+1F4D4	pukatuhipoka whai uhi whakairoiro	pukapuka | pukatuhipoka | pukatuhipoka whai uhi whakairoiro | uhi | whakairoiro
+1F4D5	pukapuka kopi	kopi | pukapuka
+1F4D6	pukapuka tuwhera	pukapuka | tuwhera
+1F4D7	pukapuka kākāriki	kākāriki | pukapuka
+1F4D8	pukapuka kikorangi	kikorangi | pukapuka
+1F4D9	pukapuka karaka	karaka | pukapuka
+1F4DA	ngā pukapuka	ngā pukapuka | pukapuka
+1F4DB	tohu ingoa	ingoa | tohu
+1F4DC	tuhinga pōkai	pepa | tuhinga pōkai
+1F4DD	manatu	manatu | penerākau
+1F4DE	pūwhiwhi waea	pūwhiwhi | waea
+1F4DF	pūoho	pūoho
+1F4E0	mīhini waeatuhi	mīhini waeatuhi | waeatuhi
+1F4E1	pūhihi amiorangi	amiorangi | pūhihi | rīhi
+1F4E2	tukuoro	kōrero tūmatanui | nui | tukuoro
+1F4E3	pūwhakarahireo	pūwhakarahireo | umere ana
+1F4E4	heri pouakaputa	heri | kua tuku | mēra | pouaka | pouakaputa | reta
+1F4E5	heri pouakauru	heri | mēra | pouaka | pouakauru | reta | whiwhi
+1F4E6	mōkihi	mōkī | mōkihi | pouaka
+1F4E7	īmēra	īmēra | mēra | reta
+1F4E8	kōpaki taumai	ī-mēra | īmēra | kōpaki | kōpaki taumai | mēra | reta | tau mai | whiwhi
+1F4E9	kōpaki whai kōpere	ī-mēra | iho | īmēra | kōpaki | kōpaki whai kōpere | kua tuku | mēra | pere | reta | tuku atu
+1F4EA	pouakamēra kopi whai kara whakaheke	kati | mēra | pouaka pōhi | pouakamēra | pouakamēra kopi whai kara whakaheke | whakaheke
+1F4EB	pouakamēra kopi whai kara whakarewa	kati | mēra | pouaka pōhi | pouakamēra | pouakamēra kopi whai kara whakarewa
+1F4EC	pouakamēra tuwhera whai kara whakarewa	mēra | pouaka pōhi | pouakamēra | pouakamēra tuwhera whai kara whakarewa | tuwhera
+1F4ED	pouakamēra tuwhera whai kara whakaheke	mēra | pouaka pōhi | pouakamēra | pouakamēra tuwhera whai kara whakaheke | tuwhera | whakaheke
+1F4EE	pouaka poutāpeta	mēra | pouaka poutāpeta | pouakamēra
+1F4EF	haona poutāpeta	haona | pōhi | poutāpeta
+1F4F0	nūpepa	nūpepa | pepa | rongo
+1F4F1	waea pūkoro	pūkoro | waea | waeakawe
+1F4F2	waea pūkoro me te pere	pere | pūkoro | pūwhiwhi | waea | waea pūkoro me te pere | waeakawe
+1F4F3	aratau wiriwiri	aratau | pūkoro | waea | wiriwiri
+1F4F4	waea pūkoro weto	pūkoro | waea | weto
+1F4F5	kaua te waea pūkoro	kāo | kaua te waea pūkoro | kore | pūkoro | rāhuitia | waea | whakakorea
+1F4F6	pae pūhīhī	irirangi | pae | pūhīhī | pūkoro | waea
+1F4F7	pūwhakaahua	ataata | pūwhakaahua
+1F4F8	pūwhakaahua whai hikohiko	ataata | hikohiko | pūwhakaahua | pūwhakaahua whai hikohiko
+1F4F9	pūwhakaahua ataata	ataata | pūwhakaahua
+1F4FA	pouaka whakaata	ataata | pouaka whakaata
+1F4FB	irirangi	ataata | irirangi
+1F4FC	rīpene-ataata	ataata | rīpene | rīpene-ataata | vhs
+1F4FD	tukuata whitiāhua	ataata | tukuata | whare whitiāhua | whitiāhua
+1F4FF	ngā poria inoi	inoi | kākahu | karakia | ngā poria inoi | poria | reikakī
+1F505	pātene whakakaurehu	kanapa | kaurehu | pāpaku | pātene whakakaurehu
+1F506	pātene kanapa	kanapa | kanapatanga | pātene kanapa
+1F507	tukuoro whakangū	hū | ngū | tukuoro | tukuoro whakangū
+1F508	tukuoro kahaoro pāpaku	pāpaku | tukuoro kahaoro pāpaku
+1F509	tukuoro kahaoro waenga	tukuoro kahaoro waenga | waenga
+1F50A	tukuoro kahaoro teitei	nui | tukuoro kahaoro teitei
+1F50B	pūhiko	pūhiko
+1F50C	puru hiko	hiko | puru
+1F50D	kārāhe whārahi anga mauī	karāhe | kārāhe whārahi anga mauī | rapu | utauta | whārahi
+1F50E	karāhe whārahi anga matau	karāhe | karāhe whārahi anga matau | rapu | utauta | whārahi
+1F50F	maukati mā te pene	maukati | maukati mā te pene | pene | timopene | tūmataitinga | waituhi
+1F510	maukati mā te kī	haumaru | kati | kī | maukati | maukati mā te kī
+1F511	kī	kī | kupuhipa | maukati
+1F512	kua maukati	kua kati | kua maukati
+1F513	wetemaukati	maukati | wetemaukati | whakatuwhera
+1F514	pere	pere
+1F515	pere whai rītaha	hū | kāo | kore | ngū | pere | pere whai rītaha | rāhuitia | whakakore
+1F516	tohuwāhi	tohu | tohuwāhi
+1F517	hononga	hononga
+1F518	pātene irirangi	āhuahanga | irirangi | pātene
+1F51E	kia tekau-mā-waru ake	18 | kāo | kia tekau-mā-waru ake | kore | rahuitanga pakeke | rāhuitia | tamariki tonu | tekau-mā-waru | whakakorea
+1F51F	uhi pātuhi: 10	uhi pātuhi
+1F526	kōrama	hiko | kōrama | mārama | utauta
+1F527	wāwāhi	mauhiri | utauta | wāwāhi
+1F528	hama	hama | utauta
+1F529	nati me te whaowiri	nati | nati me te whaowiri | utauta | whaowiri
+1F52A	naihi kīhini	hocho | naihi | naihi kīhini | rākau-riri | tao ana | utauta
+1F52B	pū	pū | pū ā-ringa | pū hurihuri | rākau-riri | utauta
+1F52C	pūwhārahi	pūtaiao | pūwhārahi | utauta
+1F52D	karu whakatata	karu whakatata | pūtaiao | utauta
+260E	waea	waea
+2620	angaanga me ngā kōiwi-whiri	angaanga | angaanga me ngā kōiwi-whiri | kanohi | kōiwi-whiri | mate | taniwha
+2622	ira-rukeruke	ira-rukeruke | tohu
+2623	pūmate koiora	pūmate koiora | tohu
+267F	tohu kōrea	tohu kōrea | urunga
+2692	hama me te keriwhenua	hama | hama me te keriwhenua | keriwhenua | utauta
+2693	punga	punga | utauta | waipuke
+2694	hoari whakawhiri	hoari | rākau-riri | whakawhiri
+2695	tohu rongoā	pou | rata | rongoā | tohu rongoā
+2696	ōrite whārite	Libra | ōrite | poutiriao | taumaha | utauta | whakawā | whārite
+2697	taputapu iheunga	mātai matū | taputapu iheunga | utauta
+2699	taputapu	taputapu | utauta
+269B	tohu ngota	kaiwhakakāhore-atua | ngota | tohu ngota
+269C	putiputi rengarenga	putiputi rengarenga
+26A0	whakatūpato	whakatūpato
+26CF	keriwhenua	keri kōhuke | keriwhenua | utauta
+26D1	pōtae mārō kaimahi whakaora	āwhina | kanohi | pōtae | pōtae mārō | pōtae mārō kaimahi whakaora | rīpeka
+26D3	ngā mekameka	mekameka | ngā mekameka
+26D4	kaua e tomo	kāo | kaua e tomo | kore | ngā waka huarahi | rāhuitia | tāuru | whakakāhore
+2702	kutikuti	kutikuti | tapahitanga | utauta
+2709	kōpaki	īmēra | kōpaki | reta
+270F	penerākau	penerākau
+2712	timopene pango	pene | timopene | timopene pango
+2714	tohu taki taumaha	taki | tohu | tohu taki taumaha
+2716	x whakarea taumaha	whakakore | whakarea | whakareatanga | x | x whakarea taumaha
+2753	tohu pātai	pātai | tohu | tohutuhi
+2757	tohuhā	tohu | tohu reo | tohuhā
+27A1	pere matau	ahunga | matua | pere | pere matau | rāwhiti
+1F500	pātene ranu riu	pātene ranu riu | pere | whakawhiri
+1F501	pātene tukurua	pātene tukurua | pere | tukurua | whakatekaraka
+1F502	pātene tukurua kotahi	pātene tukurua kotahi | pere | wā kotahi | whakatekaraka
+1F503	pere poutū whakatekaraka	pere | pere poutū whakatekaraka | uta anō | whakatekaraka
+1F504	pātene pere kōaro	kōaro | pātene pere kōaro | pere
+1F519	pere HOKI	hoki | pere
+1F51A	pere MUTUNGA	mutunga | pere
+1F51B	pere KĀ!	kā | pere | pere KĀ! | tohu
+1F51C	pere ĀKUANEI	ākuanei | pere
+1F51D	pere RUNGA	ake | pere | runga
+1F520	tāuru pūmatua ratini	ABCD | ngā pū | pūmatua | ratini | tāuru
+1F521	tāuru pūriki ratini	abcd | ngā pū | pūriki | ratini | tāuru
+1F522	tāuru tau	1234 | ngā tau | tāuru | tāuru tau
+1F523	tāuru tohu	〒♪&% | tāuru | tāuru tohu
+1F524	tāuru pū ratini	abc | ngā pū | ratini | tātai reta | tāuru | tāuru pū ratini
+2B05	pere mauī	ahunga | matua | pere | pere mauī | uru
+2B06	pere ake	ahunga | matua | pere | pere ake | raki
+2B07	pere iho	ahunga | iho | matua | pere | tonga

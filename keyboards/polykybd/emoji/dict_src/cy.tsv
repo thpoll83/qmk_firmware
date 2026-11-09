@@ -1,0 +1,1258 @@
+# emoji search keywords, cy, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	wyneb yn gwenu â cheg agored	lledwenu | wyneb | wyneb yn gwenu â cheg agored
+1F601	wyneb yn lledwenu â gwên yn y llygaid	gwenu | lledwenu | llygaid | wyneb | wyneb yn lledwenu â gwên yn y llygaid
+1F602	wyneb â dagrau hapusrwydd	chwerthin | dagrau | hapusrwydd | wyneb | wyneb â dagrau hapusrwydd
+1F603	wyneb yn gwenu â cheg agored a llygaid mawr	agored | ceg | gwenu | wyneb | wyneb yn gwenu â cheg agored a llygaid mawr
+1F604	wyneb yn gwenu â cheg agored a gwên yn y llygaid	ceg | gwenu | llygad | wyneb | wyneb yn gwenu â cheg agored a gwên yn y llygaid
+1F605	wyneb yn gwenu â cheg agored a chwys	chwys | gofid | gwenu | wyneb | wyneb yn gwenu â cheg agored a chwys
+1F606	wyneb yn gwenu â cheg agored a llygaid ynghau	bodlon | ceg | chwerthin | wyneb | wyneb yn gwenu â cheg agored a llygaid ynghau
+1F607	wyneb yn gwenu ag eurgylch	angel | diniwed | eurgylch | wyneb | wyneb yn gwenu ag eurgylch
+1F608	wyneb yn gwenu â chyrn	cyrn | ffantasi | gwên | wyneb | wyneb yn gwenu â chyrn
+1F609	llygaid yn wincio	llygaid yn wincio | winc | wyneb
+1F60A	wyneb yn gwenu â gwên yn y llygaid	cochi | gwenu | llygad | wyneb | wyneb yn gwenu â gwên yn y llygaid
+1F60B	wyneb yn blasu bwyd blasus	blasu | blasus | gwenu | wyneb | wyneb yn blasu bwyd blasus
+1F60C	wyneb o ryddhad	rhyddhad | wyneb | wyneb o ryddhad
+1F60D	wyneb yn gwenu â chalonnau yn y llygaid	calon | cariad | gwên | wyneb | wyneb yn gwenu â chalonnau yn y llygaid
+1F60E	wyneb yn gwenu â sbectol haul	gwên | llygad | sbectol haul | wyneb | wyneb yn gwenu â sbectol haul
+1F60F	wyneb yn cilwenu	cilwen | wyneb | wyneb yn cilwenu
+1F610	wyneb niwtral	niwtral | wyneb
+1F611	wyneb difynegiant	ddifynegiant | dring | wyneb | wyneb difynegiant
+1F612	wyneb ddi-ddifyr	anhapus | di-ddifyr | wyneb | wyneb ddi-ddifyr
+1F613	wyneb yn chwysu o ofid	chwys | gofid | wyneb | wyneb yn chwysu o ofid
+1F614	wyneb synfyfyriol	digalon | synfyfyriol | wyneb
+1F615	wyneb cymysglyd	cymysglyd | wyneb
+1F616	wyneb dryslyd	dryslyd | wyneb
+1F617	wyneb yn rhoi cusan	cusan | wyneb | wyneb yn rhoi cusan
+1F618	wyneb yn chwythu cusan	calon | cusan | wyneb | wyneb yn chwythu cusan
+1F619	wyneb yn rhoi cusan â gwên yn y llygaid	cusan | gwên | llygad | wyneb | wyneb yn rhoi cusan â gwên yn y llygaid
+1F61A	wyneb yn rhoi cusan â llygaid ynghau	caeedig | cusan | llygad | wyneb | wyneb yn rhoi cusan â llygaid ynghau
+1F61B	wyneb â thafod yng ngolwg	tafod | wyneb | wyneb â thafod yng ngolwg
+1F61C	wyneb â thafod yng ngolwg a llygaid yn wincio	jôc | tafod | winc | wyneb | wyneb â thafod yng ngolwg a llygaid yn wincio
+1F61D	wyneb â thafod yng ngolwg a llygaid ynghau	afiach | blasu | tafod | wyneb | wyneb â thafod yng ngolwg a llygaid ynghau
+1F61E	wyneb siomedig	siomedig | wyneb
+1F61F	wyneb gofidio	gofid | wyneb | wyneb gofidio
+1F620	wyneb dig	dig | gwallgof | wyneb
+1F621	wyneb pwdu	coch | dig | pwdu | wyneb
+1F622	wyneb yn crio	crio | deigryn | trist | wyneb | wyneb yn crio
+1F623	wyneb dyfal	dyfal | wyneb
+1F624	wyneb â stêm yn dod o’r trwyn	buddugoliaeth | ennill | wyneb | wyneb â stêm yn dod o’r trwyn
+1F625	wyneb siomedig ond â rhyddhad	rhyddhad | siomedig | wyneb | wyneb siomedig ond â rhyddhad
+1F626	wyneb gwgus â cheg agored	agored | ceg | gwg | wyneb | wyneb gwgus â cheg agored
+1F627	wyneb dirboen	dirboen | ing | wyneb
+1F628	wyneb ofnus	ofn | ofnus | wyneb
+1F629	wyneb lluddedig	blinedig | lluddedig | wyneb
+1F62A	wyneb cysglyd	cysgu | wyneb | wyneb cysglyd
+1F62B	wyneb blinedig	blinedig | blino | wyneb
+1F62C	wyneb ag ystum	wyneb | wyneb ag ystum | ystum
+1F62D	wyneb yn beichio crio	crio | deigryn | trist | wyneb | wyneb yn beichio crio
+1F62E	wyneb â cheg agored	agored | ceg | cydymdeimlad | wyneb | wyneb â cheg agored
+1F62F	wyneb distewi	distewi | syfrdanu | wyneb
+1F630	wyneb â cheg agored a chwys o ofid	agored | ceg | chwys | gofid | wyneb â cheg agored a chwys o ofid
+1F631	wyneb yn sgrechian ag ofn	arswyd | braw | ofn | wyneb | wyneb yn sgrechian ag ofn
+1F632	wyneb wedi rhyfeddu	hollol | rhyfeddu | syfrdanu | wyneb | wyneb wedi rhyfeddu
+1F633	wyneb yn gwrido	cochi | gwrido | synnu | wyneb | wyneb yn gwrido
+1F634	wyneb yn cysgu	cysgu | wyneb | wyneb yn cysgu | zzz
+1F635	wyneb wedi llorio	marw | wedi llorio | wyneb | wyneb wedi llorio
+1F636	wyneb heb geg	ceg | distaw | wyneb | wyneb heb geg
+1F637	wyneb â mwgwd meddygol	annwyd | doctor | masg | sâl | wyneb â mwgwd meddygol
+1F638	wyneb cath yn gwenu â cheg agored a gwên yn y llygaid	cath | gwenu | lledwenu | llygaid | wyneb cath yn gwenu â cheg agored a gwên yn y llygaid
+1F639	wyneb cath â dagrau o hapusrwydd	cath | deigryn | hapusrwydd | wyneb | wyneb cath â dagrau o hapusrwydd
+1F63A	wyneb cath yn gwenu â cheg agored	agored | cath | ceg | gwên | wyneb cath yn gwenu â cheg agored
+1F63B	cath yn gwenu â chalonnau yn y llygaid	calonnau | cariad | cath | cath yn gwenu â chalonnau yn y llygaid | llygaid | wyneb cath yn gwenu â chalonnau yn y llygaid
+1F63C	wyneb cath â gwên ar gam	ar gam | cath | eironig | gwên | wyneb cath â gwên ar gam
+1F63D	wyneb cath yn cusanu â llygaid ynghau	cath | cusan | llygad | wyneb | wyneb cath yn cusanu â llygaid ynghau
+1F63E	wyneb cath yn pwdu	cath | pwdu | wyneb | wyneb cath yn pwdu
+1F63F	wyneb cath yn crio	cath | crio | deigryn | trist | wyneb cath yn crio
+1F640	wyneb cath luddedig	cath | lluddedig | syfrdanol | wyneb | wyneb cath luddedig
+1F641	wyneb â pheth gwg arni	cuchio | gwg | wyneb | wyneb â pheth gwg arni
+1F642	wyneb ag ychydig o wên arni	gwenu | gwyneb | wyneb ag ychydig o wên arni
+1F643	wyneb â’i ben i waered	ben i waered | wyneb | wyneb â’i ben i waered
+1F644	wyneb â llygaid yn rholio	llygaid | rolio | wyneb | wyneb â llygaid yn rholio
+1F648	mwnci gweld dim drwg	drwg | gwaharddedig | gweld | gweld dim drwg | mwnci | mwnci gweld dim drwg | wyneb
+1F649	clywed dim drwg	clywed | clywed dim drwg | drwg | gwaharddedig | mwnci | wyneb
+1F64A	siarad dim drwg	drwg | gwaharddedig | mwnci | siarad | siarad dim drwg | wyneb
+1F910	wyneb â sip dros y geg	caeedig | ceg | sip | wyneb | wyneb â sip dros y geg
+1F911	wyneb symbol arian	arian | ceg | wyneb | wyneb symbol arian
+1F912	wyneb â thermomedr	sâl | thermomedr | wyneb | wyneb â thermomedr
+1F913	wyneb clyfar	clyfar | wyneb
+1F914	wyneb yn meddwl	meddwl | wyneb | wyneb yn meddwl
+1F915	wyneb â rhwymyn i’r pen	dolur | niwed | rhwymyn | wyneb | wyneb â rhwymyn i’r pen
+1F916	wyneb robot	anghenfil | robot | wyneb
+1F917	wyneb yn rhoi cwtsh	cwtsh | wyneb | wyneb yn rhoi cwtsh
+1F920	wyneb het cowboi	cowboi | cowmones | het | wyneb
+1F921	wyneb clown	clown | wyneb
+1F922	wyneb chwydlyd	chwydlyd | chwydu | wyneb
+1F923	rholio ar y llawr yn chwerthin	chwerthin | llawr | rholio | rholio ar y llawr yn chwerthin | wyneb
+1F924	wyneb glafoerio	glafoerio | wyneb
+1F925	wyneb celwydd	celwydd | pinocchio | wyneb
+1F926	cledr i’r wyneb	anghrediniaeth | cledr | cledr i’r wyneb | cythrudd | wyneb
+1F927	wyneb tisian	gesundheit | tisian | wyneb
+1F928	wyneb gydag ael wedi codi	amheuaeth | sgeptig | wyneb gydag ael wedi codi
+1F929	wyneb â ser yn y llygaid	llygaid | seren | wyneb | wyneb â ser yn y llygaid | yn wên o glust i glust
+1F92A	wyneb penwan	bach | llygad | mawr | wyneb penwan
+1F92B	wyneb hisht	hisht | tawelwch | wyneb hisht
+1F92C	wyneb â symbolau dros y ceg	rhegi | wyneb â symbolau dros y ceg
+1F92D	wyneb gyda llaw dros y geg	wps | wyneb gyda llaw dros y geg
+1F92E	wyneb yn chwydu	chwyd | sic | wyneb yn chwydu
+1F92F	pen yn ffrwydro	pen yn ffrwydro | syn
+1F970	wyneb yn gwenu â thair calon	dwli | gwirioni | mewn cariad | wyneb yn gwenu â thair calon
+1F971	wyneb yn dylyfu gên	blino | diflasu | dylyfu gên | wyneb yn dylyfu gên
+1F972	wyneb yn gwenu gyda deugryn	balch | cyffwrdd | deugryn | diolchgar | gwenu | rhyddhad | wyneb yn gwenu gyda deugryn
+1F973	wyneb yn partïo	corn | dathliad | het | parti | wyneb yn partïo
+1F974	wyneb meddw	ceg tonnog | lled feddw | llygaid anghyson | meddw | pendro | wyneb meddw
+1F975	wyneb poeth	chwysu | llawn twymyn | poeth | trawiad gwres | wyneb poeth
+1F976	wyneb oer	clychau iâ | ewinrhew | oer | rhewi | wyneb las | wyneb oer
+1F978	wyneb mewn cuddwisg	cuddwisg | incognito | sbectol | trwyn | wyneb | wyneb mewn cuddwisg
+1F97A	wyneb yn pledio	crefu | llygaid ci bach | trugaredd | wyneb yn pledio
+1FAE0	wyneb toddi	diflannu | hydoddi | hylif | toddi | wyneb toddi
+1FAE1	wyneb saliwt	heulog | iawn | ie | milwyr | saliwt | wyneb saliwt
+1FAE2	wyneb gyda llygaid agored a llaw dros geg	anghrediniaeth | arswyd | embaras | ofnus | syndod | wyneb gyda llygaid agored a llaw dros geg
+1FAE3	wyneb gyda llygad sy’n sbïo	sbïo | swynol | syllu | wyneb gyda llygad sy’n sbïo
+1FAE4	wyneb â cheg letraws	amheugar | ansicr | meh | siomedig | wyneb â cheg letraws
+1FAE5	wyneb llinell dotiog	anweledig | cuddio | diflannu | digalon | isel | mewnblyg | wyneb llinell dotiog
+1FAE7	swigod	bytheirio | glân | sebon | swigod | tanddwr | torri gwynt
+1FAE8	wyneb sydd ysgwyd	daeargryn | dirgrynu | sioc | wyneb | wyneb sydd ysgwyd | ysgwyd
+1F381	anrheg wedi’i lapio	anrheg | anrheg wedi’i lapio | bocs | dathliad
+1F389	popiwr parti	dathliad | parti | popiwr | tada
+1F38A	pelen gonffeti	conffeti | dathliad | pêl | pelen gonffeti
+1F47B	ysbryd	anghenfil | creadur | ffantasi | wyneb | ysbryd
+1F47C	babi angel	angel | babi | ffantasi | wyneb
+1F47D	estron	allfydol | creadur | estron | fantasi | peth hedegog anhysbys | wyneb
+1F47E	anghenfil estron	allfydol | anghenfil | creadur | estron | gofod | peth hedegog anhysbys
+1F47F	wyneb dig â chyrn	diafol | ffantasi | wyneb | wyneb dig â chyrn
+1F480	penglog	anghenfil | corff | marwolaeth | penglog | wyneb
+1F481	person yn gwyro llaw	gwybodaeth | help | llaw | person yn gwyro llaw | tipio
+1F482	gwarchodfilwr	gwarchod | gwarchodfilwr
+1F489	chwistrell	chwistrell | doctor | meddygaeth | nodwydd | sâl
+1F48A	pilsen	doctor | meddygaeth | pilsen | sâl
+1F4A2	symbol dicter	comig | dig | gwallgof | symbol dicter
+1F4A4	zzz	comig | cysgu | zzz
+1F4A5	trawiad	comig | trawiad | trwst
+1F4A6	defnynnau chwys	chwys | comig | defnynnau chwys | splash
+1F4A7	defnyn	chwys | comig | defnyn | diferyn | oer
+1F4A8	rhuthro	comig | rhedeg | rhuthro
+1F4A9	pentwr o faw	anghenfil | baw | cachu | pentwr o faw | wyneb
+1F4AB	penysgafn	comig | penysgafn | seren
+1F4AC	balŵn deialog	balŵn | comig | deialog | swigen
+1F4AD	cwmwl meddwl	balŵn | comig | cwmwl meddwl | swigen
+1F4AE	blodyn gwyn	blodyn | blodyn gwyn
+1F4A0	diemwnt â dot	comig | diemwnt | diemwnt â dot | geometric | tu fewn
+1F4A1	bwlb golau	bwlb | bwlb golau | comig | syniad | trydanol
+1F4A3	bom	bom | comig
+1F4AF	cant o bwyntiau	100 | cant | cant o bwyntiau | llawn | sgôr
+1F4B0	bag arian	arian | bag | doler
+1F4B1	cyfnewid arian cyfredol	arian | arian cyfredol | banc | cyfnewid | cyfnewid arian cyfredol
+1F4B2	arwydd doler drom	arian | arian cyfredol | arwydd doler drom | doler
+1F4B8	arian gydag adenydd	adenydd | arian cyfredol | arian gydag adenydd | banc | papur arian
+1F525	tân	fflam | offer | tân
+1F52E	pêl grisial	crisial | ffantasi | pêl | pêl grisial | tylwyth teg
+1F440	llygaid	corff | llygad | llygaid | wyneb
+1F441	llygad	corff | llygad
+1F442	clust	clust | corff
+1F443	trwyn	corff | trwyn
+1F444	ceg	ceg | corff | gwefusau
+1F445	tafod	corff | tafod
+1F446	mynegfys yr wrthlaw yn pwyntio i fyny	bys | corff | gwrthlaw | mynegfys | mynegfys yr wrthlaw yn pwyntio i fyny
+1F447	mynegfys yr wrthlaw yn pwyntio i lawr	bys | corff | gwrthlaw | mynegfys | mynegfys yr wrthlaw yn pwyntio i lawr
+1F448	mynegfys yr wrthlaw yn pwyntio i’r chwith	bys | corff | gwrthlaw | llaw | mynegfys yr wrthlaw yn pwyntio i’r chwith
+1F449	mynegfys yr wrthlaw yn pwyntio i’r dde	bys | corff | gwrthlaw | llaw | mynegfys yr wrthlaw yn pwyntio i’r dde
+1F44A	dwrn yn agosáu	cau | corff | dwrn | dwrn yn agosáu | llaw
+1F44B	llaw yn chwifio	chwifio | llaw | llaw yn chwifio
+1F44C	llaw ocê	corff | llaw | llaw ocê | ok
+1F44D	bys bawd i fyny	bys bawd | bys bawd i fyny | corff | ok
+1F44E	bys bawd i lawr	bys bawd | bys bawd i lawr | corff | i lawr | llaw
+1F44F	dwylo yn curo	corff | curo | dwylo yn curo | llaw
+1F450	dwylo agored	agored | corff | dwylo agored | llaw
+261D	mynegfys yn pwyntio i fyny	corff | i fyny | mynegfys | mynegfys yn pwyntio i fyny | pwyntio
+270A	dwrn wedi codi	cau | corff | dwrn | dwrn wedi codi | llaw
+270B	llaw wedi codi	corff | llaw | llaw wedi codi
+270C	llaw fuddugol	buddugoliaeth | corff | llaw | llaw fuddugol | v
+270D	dwylo yn ysgrifennu	corff | dwylo yn ysgrifennu | llaw | ysgrifennu
+1F4AA	cyhyrau deuben wedi eu hystwytho	corff | cyhyrau | cyhyrau deuben wedi eu hystwytho | ystwytho
+1F590	llaw wedi ei chodi â bysedd wedi eu lledu	bys | corff | llaw | llaw wedi ei chodi â bysedd wedi eu lledu | wedi lledu
+1F64C	person yn codi dwylo	corff | dathliad | llaw | person yn codi dwylo | ystum
+1F64F	dwylo wedi plygu	corff | dwylo wedi plygu | gweddi | plygu | ystum
+1F90C	bysedd wedi’u pinsio	arwydd â llaw | bysedd | bysedd wedi’u pinsio | holi | sarcastig | wedi pinsio
+1F90F	bysedd yn pinshio	bach iawn | bysedd yn pinshio
+1F918	arwydd y cyrn	arwydd y cyrn | bys | corff | cyrn | llaw
+1F919	llaw ffonia fi	ffonio | llaw | llaw ffonia fi
+1F91A	cefn llaw wedi’i chodi	cefn llaw | cefn llaw wedi’i chodi | wedi’i chodi
+1F91B	dwrn tua’r chwith	dwrn | dwrn tua’r chwith | tua’r chwith
+1F91C	dwrn tua’r dde	dwrn | dwrn tua’r dde | tua’r dde
+1F91D	ysgwyd dwylo	cyfarfod | cytuno | llaw | ysgwyd | ysgwyd dwylo
+1F91E	bysedd wedi’u croesi	bys | bysedd wedi’u croesi | croesi | llaw | lwc
+1F91F	arwydd caru ti	arwydd caru ti | caru ti | llaw
+1F932	cledrau dwylo yn yr awyr gyda’u gilydd	cledrau dwylo yn yr awyr gyda’u gilydd | gweddïo
+1F9B4	asgwrn	asgwrn | ysgerbwd
+1F9B5	coes	cicio | coes
+1F9B6	troed	cic | stomp | troed
+1F9B7	dant	dant | deintydd
+1F9E0	ymennydd	deallus | ymennydd
+1F9BE	braich fecanyddol	braich fecanyddol | hygyrchedd | prosthetig
+1FAC0	Y galon	canol | cardioleg | curiad y galon | organ | pwlse | Y galon
+1FAC1	Yr ysgyfaint	allanadliad | anadl | anadlu | mewnanadliad | organ | Yr ysgyfaint
+1FAE6	brathu gwefus	anghyfforddus | brathu gwefus | fflyrtio | nerfus | ofn | poeni | pryderus
+1FAF0	llaw gyda bys mynegai a bawd wedi’u croesi	arian | calon | cariad | clecian | drud | llaw gyda bys mynegai a bawd wedi’i chroesi
+1FAF1	llaw i’r dde	de | i’r dde | llaw | llaw i’r dde
+1FAF2	llaw i’r chwith	chwith | i’r chwith | llaw | llaw i’r chwith
+1FAF3	llaw palmwydd i lawr	anfon | gollwng | llaw palmwydd i lawr | sîw
+1FAF4	llaw palmwydd i fyny	cynnig | dal | dod | galw | llaw palmwydd i fyny
+1FAF5	bys mynegai yn pwyntio at y gwyliwr	bys mynegai yn pwyntio at y gwyliwr | chi | pwynt | ti
+1FAF6	dwylo calon	cariad | dwylo calon
+1FAF7	llaw yn gwthio i’r chwith	aros | chwith | gwrthod | gwthio | llaw yn gwthio i’r chwith | pump uchel | rhwystro | seibio | stopio
+1FAF8	llaw yn gwthio i’r dde	aros | gwrthod | gwthio | i’r dde | llaw yn gwthio i’r dde | pump uchel | rhwystro | seibio | stopio
+2764	calon goch	calon | calon goch
+1F380	rhuban	dathliad | rhuban
+1F382	cacen pen-blwydd	cacen | dathliad | parti | pen-blwydd
+1F383	jack-o-lantern	calan gaeaf | dathliad | jack-o-lantern | llusern | pwmpen
+1F384	coeden nadolig	coeden | dathliad | nadolig
+1F386	tân gwyllt	dathliad | tân gwyllt
+1F387	ffon wreichion	dathliad | ffon wreichion | gwreichion | tân gwyllt
+1F388	balŵn	balŵn | dathliad
+1F9E7	amlen goch	amlen goch | anrheg | arian | hóngbāo | lai see | pob lwc
+1F9E8	gwialen tân	dynameit | ffrwydrol | gwialen tân | tân gwyllt
+1F38B	coeden tanabata	baner | coeden | coeden tanabata | dathliad | Japaneaidd
+1F38C	baneri wedi croesi	baneri wedi croesi | croes | dathliad | Japaneaidd | wedi croesi
+1F38D	addurn pinwydden	addurn pinwydden | bambŵ | dathliad | pinwydden | planhigyn
+1F38E	doliau Japaneaidd	dathliad | doli | doliau Japaneaidd | Japaneaidd
+1F38F	baner y carp	baner | baner y carp | carp | dathliad
+1F390	clychsain wynt	cloch | clychsain | clychsain wynt | dathliad | gwynt
+1F391	seremoni’r lleuad	dathliad | lleuad | seremoni | seremoni’r lleuad
+1F393	cap graddio	cap | cap graddio | dathlu | dillad | het
+1F484	minlliw	colur | minlliw
+1F485	farnais ewinedd	corff | ewyn | farnais ewinedd | gofal | triniaeth
+1F48B	ôl cusan	cusan | gwefusau | ôl cusan
+1F48C	llythyr caru	calon | cariad | llythyr | llythyr caru | post
+1F48D	modrwy	diemwnt | modrwy
+1F48E	gemfaen	diemwnt | gem | gemfaen | tlws
+1F48F	cusan	cusan | pâr
+1F490	tusw	blodyn | planhigyn | tusw
+1F491	pâr a chalon	calon | cariad | pâr | pâr a chalon
+1F492	priodas	capel | priodas | rhamant
+1F493	calon yn curo	calon | calon yn curo | curo
+1F494	calon wedi torri	calon | calon wedi torri | torri
+1F495	dwy galon	calon | cariad | dwy galon
+1F496	calon yn disgleirio	calon | calon yn disgleirio | cynhyrfu | disgleirio
+1F497	calon yn tyfu	calon | calon yn tyfu | cynhyrfu | nerfus | tyfu
+1F498	calon â saeth trwyddi	calon | calon â saeth trwyddi | saeth
+1F499	calon las	calon | calon las | glas
+1F49A	calon werdd	calon | calon werdd | gwyrdd
+1F49B	calon felen	calon | calon felen | melyn
+1F49C	calon borffor	calon | calon borffor | porffor
+1F49D	calon â rhuban	calon | calon â rhuban | ffolant | rhuban
+1F49E	calonnau yn troelli	calon | calonnau yn troelli | troelli
+1F49F	addurn calon	addurn calon | calon
+1F90D	calon wen	calon | calon wen | gwyn
+1F90E	calon frown	brown | calon | calon frown
+1F9E1	calon oren	calon oren | oren
+1FA75	calon las golau	143 | arbennig | calon | calon las golau | caru | ciwt | emosiwn | glas golau | gwyrddlas | hoffi
+1FA76	calon lwyd	143 | arbennig | arian | calon | calon lwyd | emosiwn | llechi | llwyd
+1FA77	calon binc	143 | arbennig | calon | calon binc | caru | ciwt | emosiwn | hoffi | melys | pert | pinc
+2763	ebychiad trwm galon	atalnodiad | calon | ebychiad | ebychiad trwm galon | marc
+2733	asterics wyth pwynt	* | asterics | asterics wyth pwynt
+2734	seren wyth pwynt	* | seren | seren wyth pwynt
+2747	fflachiad	* | fflachiad
+1F3E0	tŷ	adeilad | cartref | tŷ
+1F3E1	tŷ gyda gardd	adeilad | cartref | gardd | tŷ gyda gardd
+1F3E2	adeilad o swyddfa	adeilad | adeilad o swyddfa
+1F3E3	swyddfa bost Japaneaidd	adeilad | Japaneaidd | post | swyddfa bost Japaneaidd
+1F3E4	swyddfa bost	adeilad | Ewropeaidd | post | swyddfa bost
+1F3E5	ysbyty	adeilad | meddyg | ysbyty
+1F3E6	banc	adeilad | banc
+1F3E7	arwydd peiriant codi arian	arwydd peiriant codi arian | atm | awtomataidd | banc | clerc
+1F3E8	gwesty	adeilad | gwesty
+1F3E9	gwesty cariad	adeilad | cariad | gwesty
+1F3EA	siop gyfleus	adeilad | cyfleus | siop | siop gyfleus
+1F3EB	ysgol	adeilad | ysgol
+1F3EC	siop adrannol	adeilad | adran | siop | siop adrannol
+1F3ED	ffatri	adeilad | ffatri
+1F3EE	llusern bapur coch	bar | coch | Japaneaidd | llusern | llusern bapur coch
+1F3EF	castell Japaneaidd	adeilad | castell | Japaneaidd
+1F3F0	castell	adeilad | castell | Ewropeaidd
+1F463	olion traed	corff | dilledyn | olion traed
+1F464	penddelw mewn silwét	penddelw | penddelw mewn silwét | silwét
+1F465	penddelwau mewn silwét	penddelw | penddelwau mewn silwét | silwét
+1F466	bachgen	bachgen | gwrywaidd
+1F467	merch	benywaidd | ifanc | merch | y Forwyn
+1F468	dyn	dyn | oedolyn
+1F469	menyw	menyw | oedolyn
+1F46A	teulu	mam | plentyn | tad | teulu
+1F46B	dyn a menyw yn dal dwylo	dal | dwylo | dyn a menyw yn dal dwylo | pâr
+1F46C	dau ddyn yn dal dwylo	dal | dau ddyn yn dal dwylo | dwylo | dyn | dynion | pâr | sidydd | yr Efeilliaid
+1F46D	dwy fenyw yn dal dwylo	dal dwylo | dwy fenyw yn dal dwylo | dwylo | menyw | pâr
+1F46E	heddwas	heddlu | heddwas | plismon | swyddog
+1F46F	pobl mewn parti	clust | dawnsiwr | menyw | merch | pobl mewn parti
+1F470	person yn gwisgo llen	llen | person yn gwisgo llen | priodas | priodferch
+1F471	person â gwallt golau	gwallt golau | person â gwallt golau
+1F472	dyn â chap Tsieineaidd	dyn | dyn â chap Tsieineaidd | gua pi mao | het
+1F473	person yn gwisgo twrban	person yn gwisgo twrban | twrban
+1F474	hen ddyn	dyn | gwrywaidd | hen | hen ddyn
+1F475	hen fenyw	benywaidd | hen | hen fenyw | menyw
+1F476	babi	babi | ifanc
+1F477	adeiladwr	adeiladu | adeiladwr | gweithiwr | het
+1F478	tywysoges	ffantasi | tywysoges
+1F479	anghenfil	anghenfil | creadur | ffantasi | stori dylwyth teg | wyneb
+1F47A	bwgan	anghenfil | bwgan | creadur | ffantasi | stori dylwyth teg | wyneb
+1F483	menyw yn dawnsio	dawnsio | menyw | menyw yn dawnsio
+1F486	person yn derbyn tyluniad	person yn derbyn tyluniad | salon | tyluniad | wyneb
+1F487	person yn cael ei wallt wedi’u torri	barbwr | gwallt | harddwch | person yn cael ei wallt wedi’u torri | torri
+1F645	person yn ystumio nad yw’n iawn	gwaharddedig | llaw | na | person yn ystumio nad yw’n iawn | ystum
+1F646	person yn ystumio iawn	iawn | llaw | ok | person yn ystumio iawn | ystum
+1F647	person yn ymgrymu	person yn ymgrymu | sori | ymddiheuriad | ymgrymiad | ystum
+1F64B	person yn codi llaw	hapus | llaw | person yn codi llaw | ystum
+1F64D	person yn gwgu	gwg | person yn gwgu | ystum
+1F64E	person yn pwdu	person yn pwdu | pwdu | ystum
+1F930	menyw feichiog	beichiog | menyw | menyw feichiog
+1F931	bwydo o’r fron	babi | bron | bwydo o’r fron | nyrsio
+1F933	hunlun	camera | ffôn | hunlun
+1F934	tywysog	tywysog
+1F935	person mewn siaced ginio	person | person mewn siaced ginio | priodfab | siaced ginio
+1F936	Siân Corn	mam | Siân Corn | y Nadolig
+1F937	codi gwar	amheuaeth | anwybodaeth | codi gwar | difaterwch
+1F385	Siôn Corn	dathliad | Nadolig | santa | Siôn Corn
+1F9B8	archarwr	archarwr | archbŵer | arwr | arwres | da
+1F9B9	archleidr	archbŵer | archleidr | drwg | dyn drwg | troseddwr
+1F9BF	coes fecanyddol	coes fecanyddol | hygyrchedd | prosthetig
+1F9D0	wyneb gyda monocl	clòs | wyneb gyda monocl
+1F9D1	person	niwtral o ran rhywedd | oedolyn | person
+1F9D2	plentyn	ifanc | niwtral o ran rhyw | plentyn
+1F9D3	oedolyn oedranus	hen | niwtral o ran rhyw | oedolyn oedranus
+1F9D4	person: barf	barf | dyn â barf | person barfog | person: barf
+1F9D5	menyw â phensgarff	hijab | mantilla | menyw â phensgarff | pensgarff | tichel
+1F9D6	person mewn ystafell llawn stêm	person mewn ystafell llawn stêm | sawna | ystafell stêm
+1F9D7	person yn dringo	dringwr | person yn dringo
+1F9D8	person mewn ystum lingroes	myfyrdod | person mewn ystum lingroes | yoga
+1F9D9	dewin	dewin | gwrach | swynwr | swynwraig
+1F9DA	tylwyth teg	Oberon | Puck | Titania | tylwyth teg
+1F9DB	fampir	Draciwla | fampir | meirw byw
+1F9DC	môrberson	môr-fenyw | môr-forwyn | môrberson | morwas
+1F9DD	coblyn	coblyn | hudol
+1F9DE	genie	djinn | genie
+1F9DF	sombi	meirw ar droed | meirw byw | sombi
+1FAC2	pobl yn cofleidio	cwtsh | diolch | helo | hwyl fawr | pobl yn cofleidio
+1FAC3	dyn beichiog	beichiog | bol | chwyddedig | dyn beichiog | llawn
+1FAC4	person beichiog	beichiog | bol | chwyddedig | llawn | person beichiog
+B9	uwchysgrifen un	un | uwchysgrifen
+B2	uwchysgrifen dau	dau | sgwâr | uwchysgrifen
+B3	uwchysgrifen tri	ciwbiedig | tri | uwchysgrifen
+207B	uwchysgrifen minws	minws | uwchysgrifen
+B0	gradd	awr | gradd | prawf
+B1	plws-minws	plws-minws
+D7	arwydd lluosi	arwydd lluosi | lluosi | lluosiad
+F7	arwydd rhannu	arwydd rhannu | obelws | rhaniad | rhannu
+B5	arwydd micro	arwydd micro | mesur
+A9	hawlfraint	c | hawlfraint
+AE	cofrestredig	cofrestredig | r
+2122	nod masnach	marc | nod masnach
+A7	adran	adran | arwydd adran | paragraff | rhan
+B6	marc paragraff	alinea | marc paragraff | paraff | paragraff | pilcrow
+B7	dot canol	canol | dot
+2022	bwled	bwled | dot
+2013	llinell doriad en	en | llinell doriad | llinell doriad en
+2026	elipsis	dotiau | elipsis | ellipsis | hepgor
+AB	dyfynodau saethau dwbl i’r chwith	bracedi | caretau | chevron | dyfyniad | dyfynodau saethau dwbl i’r chwith | dyfynodau saethau i’r chwith | i’r chwith | ongl
+BB	dyfynodau saethau dwbl i’r dde	bracedi | caretau | chevron | dyfyniad | dyfynodau saethau dwbl i’r dde | dyfynodau saethau i’r dde | i’r dde | ongl
+2030	y filltir	y filltir
+20AC	ewro	arian cyfred | EUR | ewro
+A3	punt	arian cyfred | EGP | GBP | punt
+A5	ien	arian cyfred | CNY | ien | iwan | JPY
+A2	sent	sent
+20B9	rwpî indiaidd	arian cyfred | rwpî | rwpî indiaidd
+20BD	rwbl	arian cyfred | rwbl
+20A9	won	KPW | KRW | won
+20BA	Lira Twrci	
+20BF	bitcoin	bitcoin | BTC
+20AA	Shegel Newydd Israel	
+20AB	Dong Fietnam	
+20B1	peso	peso
+20BC	Manat Azerbaijan	
+20B4	Hryvnia Wcráin	
+20A6	Naira Nigeria	
+20A1	Colón Costa Rica	
+20B2	Guarani Paraguay	
+20B5	Cedi Ghana	
+20B8	Tenge Kazakstan	
+20BE	Lari Georgia	
+20AE	Tugrik Mongolia	
+20AD	Kip Laos	
+20A8	rwpî	arian cyfred | rwpî
+24	doler	arian | doler | peso | USD
+58F	Dram Armenia	
+9F3	Taka Bangladesh	
+E3F	Baht Gwlad Thai	
+20A3	ffranc Ffrengig	arian cyfred | ffranc | ffranc Ffrengig
+20A4	lira	arian cyfred | lira
+20B0	ceiniog yr Almaen	arian cyfred | ceiniog yr Almaen | pfennig
+20B3	deheuol	ARA | arian cyfred | deheuol
+20A2	crwseiro	arian cyfred | BRB | crwseiro
+20A5	milfed	milfed
+20B6	llyfr twrnamaint	arian cyfred | llyfr twrnamaint
+20B7	spesmilo	arian cyfred | spesmilo
+A4	Arian Cyfred Anhysbys	
+201E	dyfynnod dde isel	dyfynnod | dyfynnod craff | dyfynnod dde isel | dyfynnod dwbl | dyfynnod isel
+201C	dyfynnod chwith	dyfynnod | dyfynnod chwith | dyfynnod craff | dyfynnod dwbl
+201D	dyfynnod dde	dyfynnod | dyfynnod craff | dyfynnod dde | dyfynnod dwbl
+2018	collnod chwith	collnod | collnod chwith | dyfynnod | dyfynnod craff | dyfynnod sengl
+2019	collnod de	collnod | collnod de | dyfynnod | dyfynnod craff | dyfynnod sengl
+A1	pwynt ebychnod gwrthdro	bang | ebychnod | gwrthdro | pwynt ebychnod | pwynt ebychnod gwrthdro
+BF	gofynnod gwrthdro	cwestiwn | gofynnod | gwrthdro
+2020	arwydd dager	arwydd dager | dager | obelisg | obelws
+2021	arwydd dager dwbl	arwydd dager dwbl | dager | dwbl | obelisg | obelws
+2044	slaes ffracsiwn	dewisnod | slaes ffracsiwn | strôc
+2032	cysefin	cysefin
+2033	cysefin dwbl	cysefin | cysefin dwbl
+201A	collnod de isel	collnod | collnod de isel | dyfynnod | dyfynnod isel
+AC	negyddu	ddim | negyddu
+2117	hawlfraint recordio sain	hawlfraint | recordio | sain
+2212	arwydd minws	arwydd minws | minws | tynnu
+2213	minws neu blws	minws neu blws | plws-minws
+2248	bron yn gyfartal	bras | brasamcan | bron yn gyfartal
+2260	ddim yn gyfartal	anghydraddoldeb | ddim yn gyfartal
+2261	union yr un fath â	triphlyg | union | union yr un fath | union yr un fath â
+2264	llai na neu’n gyfartal	anghydraddoldeb | cyfartal | hafal | llai na | llai na neu’n gyfartal
+2265	mwy na neu’n gyfartal	anghydraddoldeb | cyfartal | hafal | mwy na | mwy na neu’n gyfartal
+226A	llawer llai na	anhafaledd | llawer llai na | mathemateg
+226B	llawer mwy na	anhafaledd | llawer mwy na | mathemateg
+221E	arwydd anfeidredd	anfeidredd | arwydd anfeidredd
+221A	ail isradd	ail isradd | gwreiddyn | isradd | radical | sgwâr | swrd
+221D	cyfrannol	cyfrannol | cymesuredd
+2211	crynhoad n-ary	crynhoad | crynhoad n-ary | mathemateg
+220F	cynnyrch n-ary	cynnyrch | cynnyrch n-ary | rhesymeg
+222B	integrol	calcwlws | integrol
+2202	differyn rhannol	differyn | differyn rhannol
+2206	cynyddran	cynyddran | triongl
+2207	nabla	nabla | triongl
+2200	i bawb	a roddir | cyffredinol | i bawb | i gyd | unrhyw
+2203	mae yn bodoli	mae yn bodoli
+2205	set wag	gweithredwr set | mathemateg | set wag
+2208	elfen o	aelodaeth | elfen | elfen o | set | yn cynnwys
+2209	ddim yn elfen	ddim yn elfen | elfen
+2229	croestoriad	croestoriad | set
+222A	uno	casgliad | set | uno
+2282	is-set o	is-set | is-set o | set
+2283	uwchset	gweithredwr set | mathemateg | uwchset
+2286	is-set hafal	is-set hafal
+2287	uwchset hafal	hafaledd | mathemateg | uwchset hafal
+2227	rhesymegol a	a | ac | lletem | rhesymegol a
+2295	plws mewn cylch	plws | plws mewn cylch
+2297	amseroedd mewn cylch	amseroedd mewn cylch | cynnyrch | tensor
+22A5	tac i fyny	eet | ffalswm | tac | tac i fyny
+2220	ongl	acíwt | ongl
+2234	felly	felly | rhesymeg
+2235	oherwydd	oherwydd | rhesymeg
+2218	gweithredwr cylch	cyfansoddiad | gweithredwr | gweithredwr cylch
+2219	gweithredwr bwled	gweithredwr | gweithredwr bwled
+22C5	gweithredwr dot	gweithredwr | gweithredwr dot
+2215	slaes rhannu	dewisnod | slaes | slaes rhannu | strôc
+2190	saeth yn pwyntio i’r chwith	i’r chwith | saeth | saeth yn pwyntio i’r chwith
+2191	saeth yn pwyntio i fyny	i fyny | saeth | saeth yn pwyntio i fyny
+2192	saeth yn pwyntio i’r dde	i’r dde | saeth | saeth yn pwyntio i’r dde
+2193	saeth yn pwyntio i lawr	i lawr | saeth | saeth yn pwyntio i lawr
+2196	saeth i fyny-chwith	cyfeiriad | Gogledd-orllewin | saeth | saeth i fyny-chwith
+2197	saeth i fyny-dde	cyfeiriad | Gogledd-ddwyrain | saeth | saeth i fyny-dde
+2198	saeth i lawr-dde	cyfeiriad | De-ddwyrain | saeth | saeth i lawr-dde
+2199	saeth i lawr-chwith	cyfeiriad | De-orllewin | saeth | saeth i lawr-chwith
+2194	saeth chwith-dde	saeth | saeth chwith-dde
+2195	saeth i fyny-lawr	saeth | saeth i fyny-lawr
+21D0	saeth ddwbl i’r chwith	saeth ddwbl i’r chwith
+21D1	saeth ddwbl i fyny	saeth ddwbl i fyny
+21D2	saeth ddwbl i’r dde	saeth ddwbl i’r dde
+21D3	saeth ddwbl i lawr	saeth ddwbl i lawr
+21D6	saeth ddwbl gogledd orllewin	saeth ddwbl gogledd orllewin
+21D7	saeth ddwbl gogledd ddwyrain	saeth ddwbl gogledd ddwyrain
+21D8	saeth ddwbl de ddwyrain	saeth ddwbl de ddwyrain
+21D9	saeth ddwbl de orllewin	saeth ddwbl de orllewin
+21D4	saeth ddwbl chwith dde	saeth ddwbl chwith dde
+21A4	saeth i’r chwith o’r bar	saeth i’r chwith o’r bar
+21A6	saeth i’r dde o’r bar	saeth i’r dde o’r bar
+21A5	saeth i fyny o’r bar	saeth i fyny o’r bar
+21A7	saeth i lawr o’r bar	saeth i lawr o’r bar
+21A9	saeth i’r dde yn troi i’r chwith	saeth | saeth i’r dde yn troi i’r chwith
+21AA	saeth i’r chwith yn troi i’r dde	saeth | saeth i’r chwith yn troi i’r dde
+219E	saeth ddeuben i’r chwith	saeth ddeuben i’r chwith
+21A0	saeth ddeuben i’r dde	saeth ddeuben i’r dde
+219F	saeth ddeuben i fyny	saeth ddeuben i fyny
+21A1	saeth ddeuben i lawr	saeth ddeuben i lawr
+21A2	saeth i’r chwith gyda chynffon	saeth i’r chwith gyda chynffon
+21A3	saeth i’r dde gyda chynffon	saeth i’r dde gyda chynffon
+219A	saeth i’r chwith strôc	saeth i’r chwith strôc
+219B	saeth i’r dde strôc	saeth i’r dde strôc
+21AE	saeth dde chwith strôc	saeth dde chwith strôc
+21CD	saeth ddwbl i’r chwith strôc	saeth ddwbl i’r chwith strôc
+21CF	saeth ddwbl i’r dde strôc	saeth ddwbl i’r dde strôc
+21CE	saeth ddwbl chwith dde strôc	saeth ddwbl chwith dde strôc
+21C4	saeth i’r dde dros saeth i’r chwith	saeth i’r dde dros saeth i’r chwith
+21C6	saethau i’r chwith dros ben saethau i’r dde	chwith | i’r dde | saeth | saethau i’r chwith dros ben saethau i’r dde | saethau yn pwyntio i’r chwith dros ben saethau yn pwyntio i’r dde
+21CB	tryfer i’r chwith dros dryfer i’r dde	tryfer i’r chwith dros dryfer i’r dde
+21CC	tryfer i’r dde dros dryfer i’r chwith	tryfer i’r dde dros dryfer i’r chwith
+21BC	tryfer i’r chwith gyda’r adfach i fyny	adfach | tryfer i’r chwith gyda’r adfach i fyny
+21BD	tryfer i’r chwith gyda’r adfach i lawr	tryfer i’r chwith gyda’r adfach i lawr
+21C0	tryfer i’r dde gyda’r adfach i fyny	adfach | tryfer i’r dde gyda’r adfach i fyny
+21C1	tryfer i’r dde gyda’r adfach i lawr	adfach | tryfer i’r dde gyda’r adfach i lawr
+21BE	tryfer i fyny gyda’r adfach i’r dde	adfach | tryfer i fyny gyda’r adfach i’r dde
+21BF	tryfer i fyny gyda’r adfach i’r chwith	adfach | tryfer i fyny gyda’r adfach i’r chwith
+21C2	tryfer i lawr gyda’r adfach i’r dde	adfach | tryfer i lawr gyda’r adfach i’r dde
+21C3	tryfer i lawr gyda’r adfach i’r chwith	adfach | tryfer i lawr gyda’r adfach i’r chwith
+21C7	saethau pâr i’r chwith	saethau pâr i’r chwith
+21C9	saethau pâr i’r dde	saethau pâr i’r dde
+21C8	saethau pâr i fyny	saethau pâr i fyny
+21CA	saethau pâr i lawr	saethau pâr i lawr
+21DA	saeth driphlyg i’r chwith	saeth driphlyg i’r chwith
+21DB	saeth driphlyg i’r dde	saeth driphlyg i’r dde
+219C	saeth donnog i’r chwith	saeth donnog i’r chwith
+219D	saeth donnog i’r dde	saeth donnog i’r dde
+21DC	saeth grych i’r chwith	saeth grych i’r chwith
+21DD	saeth grych i’r dde	saeth grych i’r dde
+21AD	saeth donnog chwith dde	saeth donnog chwith dde
+21AF	saeth igam-ogam i lawr	igam-ogam | saeth igam-ogam i lawr
+21BA	saeth cylch agored gwrthglocwedd	saeth cylch agored gwrthglocwedd
+21BB	saeth cylch agored clocwedd	saeth cylch agored clocwedd
+1F400	llygoden fawr	llygoden fawr
+1F401	llygoden	llygoden
+1F402	ych	Sidydd | tarw | y Tarw | ych
+1F403	byfflo dwr	byfflo | byfflo dwr | dŵr
+1F404	buwch	buwch
+1F405	teigr	teigr
+1F406	llewpard	llewpard
+1F407	cwningen	anifail anwes | bwni | cwningen
+1F408	cath	anifail anwes | cath
+1F409	draig	draig | stori dylwyth teg
+1F40A	crocodeil	crocodeil
+1F40B	morfil	morfil
+1F40C	malwoden	malwoden
+1F40D	neidr	neidr | ophiuchus | sidydd
+1F40E	ceffyl	ceffyl | marchogaeth | rasio
+1F40F	hwrdd	defaid | gwryw | hwrdd | Sidydd | yr Hwrdd
+1F410	gafr	gafr | Sidydd | yr Afr
+1F411	dafad	benyw | dafad
+1F412	mwnci	mwnci
+1F413	ceiliog	aderyn | ceiliog
+1F414	iâr	aderyn | iâr
+1F415	ci	anifail anwes | ci
+1F416	mochyn	hwch | mochyn
+1F417	baedd	baedd | mochyn
+1F418	eliffant	eliffant
+1F419	octopws	octopws
+1F41A	cragen droellog	cragen | cragen droellog | troellog
+1F41B	pryf	chwilen | pryf
+1F41C	morgrugyn	chwilen | morgrugyn
+1F41D	gwenynen	chwilen | gwenynen
+1F41E	chwilen y wraig	chwilen | chwilen y wraig
+1F41F	pysgodyn	pysgod | pysgodyn | Sidydd | y Pysgod
+1F420	pysgod trofannol	pysgod trofannol | pysgodyn | trofannol
+1F421	chwydd bysgodyn	chwydd bysgodyn | pysgod
+1F422	crwban y môr	crwban | crwban y môr | terapin
+1F423	deoriad cywion	babi | cyw | deor | deoriad cywion
+1F424	cyw bach	babi | cyw | cyw bach
+1F425	cyw iâr yn blaen-wynebu	babi | cyw | cyw iâr yn blaen-wynebu
+1F426	aderyn	aderyn
+1F427	pengwin	aderyn | pengwin
+1F428	coala	arth | coala
+1F429	pwdl	ci | pwdl
+1F42A	camel	camel | dromedari | twmpath
+1F42B	camel dau dwmpath	bactriaidd | camel | camel dau dwmpath | twmpath
+1F42C	dolffin	dolffin | flipper
+1F42D	wyneb llygoden	llygoden | wyneb
+1F42E	wyneb buwch	buwch | wyneb
+1F42F	wyneb teigr	teigr | wyneb
+1F430	wyneb cwningen	anifail anwes | bwni | cwningen | wyneb
+1F431	wyneb cath	anifail anwes | cath | wyneb
+1F432	wyneb draig	draig | stori dylwyth teg | wyneb
+1F433	morfil yn chwythu dŵr	dŵr | morfil | morfil yn chwythu dŵr | wyneb
+1F434	wyneb ceffyl	ceffyl | wyneb
+1F435	wyneb mwnci	mwnci | wyneb
+1F436	wyneb ci	anifail anwes | ci | wyneb
+1F437	wyneb mochyn	mochyn | wyneb
+1F438	broga	broga | wyneb
+1F439	wyneb bochdew	anifail anwes | bochdew | wyneb
+1F43A	blaidd	blaidd | wyneb
+1F43B	wyneb arth	arth | wyneb
+1F43C	wyneb panda	panda | wyneb
+1F43D	trwyn mochyn	mochyn | trwyn | wyneb
+1F43E	olion pawen	olion | pawen | traed
+1F43F	gwiwer resog	gwiwer | gwiwer resog
+1F981	wyneb llew	llew | wyneb
+1F982	sgorpion	sgorpio | sgorpion | Sidydd | y Sgorpion
+1F983	twrci	aderyn | twrci
+1F984	wyneb uncorn	uncorn | wyneb
+1F985	eryr	aderyn | eryr
+1F986	hwyaden	aderyn | hwyaden
+1F987	ystlum	fampir | ystlum
+1F988	siarc	pysgodyn | siarc
+1F989	tylluan	aderyn | doeth | tylluan
+1F98A	llwynog	llwynog | wyneb
+1F98B	pili-pala	pert | pili-pala | pryfyn
+1F98C	carw	carw
+1F98D	gorila	gorila
+1F98E	madfall	madfall | ymlusgiad
+1F98F	rhinoseros	anifail | rhinoseros
+1F990	berdysyn	bach | berdysyn | bwyd | pysgodyn cragen
+1F991	ystifflog	bwyd | molwsg | ystifflog
+1F992	jiráff	jiráff | smotiau
+1F993	sebra	sebra | streipen
+1F994	draenog	draenog | pigog
+1F995	sawropod	braciosor | brontosor | diplodocws | sawropod
+1F996	T-Rex	T-Rex | Tyranosor Rex
+1F997	criciedyn	ceiliog rhedyn | criciedyn
+1F998	cangarŵ	Awstralia | bolgodog | cangarŵ | joey | neidio
+1F999	lama	alpaca | guanaco | gwlân | lama | vicuña
+1F99A	paun	aderyn | balch | paun | peunes | trawiadol
+1F99B	afonfarch	afonfarch | hipo
+1F99C	parot	aderyn | môr-leidr | parot | siarad
+1F99D	racŵn	chwilfrydig | racŵn | slei
+1F99E	cimwch	bisg | bwyd môr | cimwch | crafangau
+1F99F	mosgito	clefyd | feirws | malaria | mosgito | pryfyn | twymyn
+1F9A0	microb	ameba | bacteria | feirws | microb
+1F9A1	mochyn daear	moch daear mêl | mochyn daear | poeni
+1F9A2	alarch	aderyn | alarch | cyw alarch | hwyaden fach hyll
+1F9A3	mamoth	diflannu | gwlanog | mamoth | mawr | ysgwthr
+1F9A4	dodo	diflanedig | dodo | mawr | Mawrisiws
+1F9A5	diogyn	araf | diog | diogyn
+1F9A6	dyfrgi	chwareus | dyfrgi | pysgota
+1F9A7	orangwtan	epa | orangwtan
+1F9A8	drewgi	drewdod | drewgi
+1F9A9	fflamingo	cyhydeddol | fflamingo | llachar
+1F9AA	wystrys	cragen | perl | wystrys
+1F9AB	afanc	afanc | argae
+1F9AC	bual	bual | byfflo | haid | ych gwyllt
+1F9AD	morlo	morlew | morlo
+1F9AE	ci tywys	ci tywys | dall | hygyrchedd | tywys
+1FABC	slefren fôr	anifail | aw | infertebrat | jeli | llosgi | môr | morol | pigo | pigyn | plancton | slefren fôr
+1F330	castan	castan | planhigyn
+1F331	eginblanhigyn	blodyn | eginblanhigyn | ifanc
+1F332	bythwyrdd	bythwyrdd | coeden | planhigyn
+1F333	coeden gollddail	coeden | coeden gollddail | collddail | planhigyn
+1F334	palmwydden	coeden | palmwydden | planhigyn
+1F335	cactws	cactws | planhigyn
+1F337	tiwlip	blodyn | tiwlip
+1F338	blodeuyn ceirios	blodeuyn | blodyn | ceirios | planhigyn
+1F339	rhosyn	blodyn | rhosyn
+1F33A	hibisgws	blodyn | hibisgws | planhigyn
+1F33B	blodyn haul	blodyn | blodyn yr haul | haul
+1F33C	blodeuyn	blodeuyn | blodyn
+1F33D	tywysen o gorn	corn | tywysen | tywysen o gorn
+1F33E	ysgub o reis	gronyn | planhigyn | reis | ysgub o reis
+1F33F	llysieuyn	deilen | llysieuyn | planhigyn
+1F340	meillionen pedair deilen	4 | deilen | meillionen | meillionen pedair deilen | pedwar
+1F341	deilen masarnen	cwympo | deilen | masarnen
+1F342	deilen yn cwympo	cwympo | deilen | deilen yn cwympo | planhigyn
+1F343	deilen yn crynu yn y gwynt	chwythu | crynu | deilen | deilen yn crynu yn y gwynt | planhigyn
+1F344	madarch	madarch | planhigyn
+1FAB0	pry	clefyd | cynrhonyn | pla | pry | wedi pydru
+1FAB1	mwydyn	anelid | arfilyn | mwydyn | pryf genwair
+1FAB2	chwilen	chwilen | cleren | pryfyn
+1FAB3	chwilen ddu	chwilen ddu | cochiad | pla | pryfyn
+1FAB4	planhigyn mewn pot	diddefnydd | diflas | meithrin | planhigyn | planhigyn mewn pot | tŷ | tyfu
+1FAB5	pren	boncyff | coed cadw | coedwydd | pren
+1FAB6	pluen	aderyn | hediad | plu | pluen | ysgafn
+1FAB7	lotws	blodyn | Bwdhaeth | Fietnam | Hindŵaeth | India | lotws | purdeb
+1FAB8	cwrel	cefnfor | cwrel | riff
+1FAB9	nyth gwag	nyth gwag | nythu
+1FABA	nythu gydag wyau	nythu | nythu gydag wyau
+1FABB	hiasinth	blodeuo | blodeuyn | bluebonnet | bysedd y blaidd | gwanwyn | hiasinth | indigo | lafant | llwyn | planhigyn | proffor | safn y llew
+2618	samrog	planhigyn | samrog
+1F347	grawnwin	ffrwyth | grawnwin | planhigyn
+1F348	melon	ffrwyth | melon | planhigyn
+1F349	melon dŵr	ffrwyth | melon dŵr | planhigyn
+1F34A	tanjerin	ffrwyth | oren | planhigyn | tanjerin
+1F34B	lemwn	ffrwyth | lemwn | sitrws
+1F34C	banana	banana | ffrwyth | planhigyn
+1F34D	pinafal	ffrwyth | pinafal | planhigyn
+1F34E	afal coch	afal | coch | ffrwyth
+1F34F	afal gwyrdd	afal | ffrwyth | gwyrdd
+1F350	peren	ffrwyth | peren
+1F351	eirinen wlanog	eirinen wlanog | ffrwyth
+1F352	ceirios	aeron | ceirios | coch | ffrwyth
+1F353	mefus	aeronen | ffrwyth | mefus
+1F336	pupur twym	planhigyn | pupur | twym
+1F354	hambyrgyr	byrgyr | hambyrgyr
+1F355	pitsa	caws | darn | pitsa
+1F356	cig ar yr asgwrn	asgwrn | cig | cig ar yr asgwrn
+1F357	coes o ffowls	asgwrn | coes | coes o ffowls | cyw iâr | ffowls
+1F358	cracer reis	cracer | reis
+1F359	pêl reis	Japaneaidd | pêl | reis
+1F35A	reis wedi’i goginio	reis | reis wedi’i goginio
+1F35B	reis cyrri	cyrri | reis
+1F35C	bowlen yn stemio	bowl | bowlen yn stemio | nwdl | ramen | stêm
+1F35D	sbageti	pasta | sbageti
+1F35E	bara	bara | torth
+1F35F	sglodion	sglodion
+1F360	taten felys wedi’i rostio	melys | rostio | taten felys wedi’i rostio | tato
+1F361	dango	dango | Japaneaidd | melys | pwdin | sgiwer
+1F362	oden	bwyd môr | cebab | oden | sgiwer
+1F363	swshi	swshi
+1F364	berdysyn wedi’i ffrio	berdysyn | berdysyn wedi’i ffrio | corgimwch
+1F365	cacen bysgod gyda chwyrlïad	cacen | cacen bysgod gyda chwyrlïad | pysgodyn | toes
+1F366	hufen iâ meddal	hufen | iâ | meddal | melys | pwdin
+1F367	iâ wedi’i siafio	hufen | iâ | iâ wedi’i siafio | melys | pwdin
+1F368	hufen iâ	hufen | iâ | melys | pwdin
+1F369	toesen	melys | pwdin | toesen
+1F36A	bisgeden	bisgeden | melys | pwdin
+1F36B	bar o siocled	bar | bar o siocled | melys | siocled
+1F36C	losin	losin | melys | pwdin
+1F36D	lolipop	lolipop | losin | melys | pwdin
+1F36E	cwstard	cwstard | melys | pwdin
+1F36F	pot mêl	mêl | melys | pot mêl
+1F370	cacen fer	cacen | cacen fer | melys | pwdin
+1F371	bocs bento	bento | bocs
+1F372	llestr o fwyd	llestr | llestr o fwyd | stiw
+1F373	coginio	coginio | ffrio | padell | wy
+1F374	fforc a chyllell	coginio | cyllell | fforc | fforc a chyllell
+1F375	cwpan te heb ddolen	cwpan | cwpan te heb ddolen | diod | te
+1F376	sake	bar | botel | cwpan | diod | sake
+1F377	gwydr gwin	bar | diod | gwin | gwydr
+1F378	gwydr coctel	bar | coctel | diod | gwydr
+1F379	diod drofannol	bar | diod | diod drofannol | trofannol
+1F37A	mwg cwrw	bar | cwrw | diod | mwg
+1F37B	mygiau cwrw yn clincian	bar | cwrw | diod | mygiau cwrw yn clincian
+1F37C	botel babi	babi | botel | diod | llaeth
+1F37D	fforc a chyllell gyda phlât	coginio | cyllell | fforc | fforc a chyllell gyda phlât | plât
+1F37E	potel gyda chorcyn yn popian	bar | botel | corcyn | diod | potel gyda chorcyn yn popian
+1F37F	popgorn	popgorn
+1F950	croissant	bara | brecwast | bwyd | croissant | ffrengig | rhôl cilgant
+1F951	afocado	afocado | bwyd | ffrwyth
+1F952	ciwcymber	bwyd | ciwcymber | llysieuyn | piclen
+1F953	bacwn	bacwn | bwyd | cig
+1F954	taten	bwyd | llysieuyn | taten
+1F955	moron	bwyd | llysieuyn | moron
+1F956	ffon fara	bara | bwyd | ffon fara | ffrengig
+1F957	salad gwyrdd	bwyd | gwyrdd | salad
+1F958	padell fas o fwyd	bas | bwyd | casserol | padell | padell fas o fwyd | paella
+1F959	bara gwastad wedi’i stwffio	bara gwastad | bara gwastad wedi’i stwffio | bwyd | cebab | ffalaffel | gyro | wedi stwffio
+1F95A	wy	brecwast | bwyd | wy
+1F95B	gwydraid o laeth	diod | gwydraid | gwydraid o laeth | llaeth
+1F95C	cnai ddaear	bwyd | cnai ddaear | cneuen | cneuen ddaear | llysieuyn
+1F95D	ffrwyth ciwi	bwyd | ciwi | ffrwyth
+1F95E	crempogau	bwyd | cacennau poeth | crempog | crempogau | crêpe
+1F95F	twmplen	empanada | gyōza | jiaozi | pierogi | potsticker | twmplen
+1F960	bisgeden lwcus	bisgeden lwcus | proffwydoliaeth
+1F961	bocs prydau parod	bocs prydau parod | bwced wystrys
+1F962	gweill bwyta	gweill bwyta
+1F963	bowlen â llwy	bowlen â llwy | brecwast | congee | grawnfwyd
+1F964	cwpan â gwellt yfed	cwpan â gwellt yfed | soda | sudd
+1F965	cneuen goco	cneuen goco | palmwydden | piña colada
+1F966	brocoli	bresych gwyllt | brocoli
+1F967	pei	llenwad | pei | toes
+1F968	pretsel	pretsel | troellog
+1F969	toriad o gig	golwyth | golwyth cig oen | golwyth porc | stecen | toriad o gig
+1F96A	brechdan	bara | brechdan
+1F96B	bwyd tun	bwyd tun | tun
+1F96C	gwyrdd deiliog	bok choy | cêl | gwyrdd deiliog | kale | letys
+1F96D	mango	ffrwyth | mango | trofannol
+1F96E	cacen lleuad	cacen lleuad | gŵyl | hydref | yuèbǐng
+1F96F	bagel	bagel | brecwast | pâst | siop fara
+1F9C0	darn o gaws	caws | darn o gaws
+1F9C1	cacen cwpan	becws | cacen cwpan | melys
+1F9C2	halen	condiment | halen | siglwr
+1F9C3	blwch diodydd	blwch diodydd | blwch sudd ffrwythau
+1F9C4	garlleg	cyflas | garlleg
+1F9C5	winwns	cyflas | winwns
+1F9C6	ffalaffel	ffalaffel | gwygbysen | peli cig
+1F9C7	woffl	ansicr | brecwast | haearn | waffl | woffl
+1F9C8	menyn	cynnyrch llaeth | menyn
+1F9C9	maté	diod | maté
+1F9CA	ciwb iâ	ciwb iâ | iâ | mynydd iâ | oer
+1F9CB	te swigod	llaeth | perl | swigod | te
+1FAD0	llus	glas | llus | llusen | llusi duon bach | mwyar
+1FAD1	pupryn	llysieuyn | pupryn
+1FAD2	olewydd	bwyd | olewydd | olif
+1FAD3	Bara fflat	arepa | bara | bara fflat | bwyd | gordita | lafash | naan | pita
+1FAD4	tamale	mecsicanaidd | tamale | wedi ei lapio
+1FAD5	fondue	caws | fondue | pot | siocled | Swisaidd | wedi toddi
+1FAD6	tebot	diod | pot | te | tebot
+1FAD7	arllwys hylif	arllwys hylif | arllwysiad | diod | gwag | gwydr
+1FAD8	ffa	aren | bwyd | codlys | ffa
+1FAD9	jar	cynhwysydd | gwag | jar | saws | storfa
+1FADA	gwraidd sinsir	cwrw | gwraidd | iechyd | llysieuyn | naturiol | sbeis | sinsir
+1FADB	pod pys	codlysiau | edamame | ffa | llysieuyn | pod | pys
+2615	diod boeth	coffi | diod | diod boeth | te | twym
+2600	haul	golau | haul | heulog | pelydrau | tywydd
+2601	cwmwl	cwmwl | tywydd
+2602	ymbarél	dillad | glaw | tywydd | ymbarél
+2603	dyn eira	dyn eira | eira | oerfel | tywydd
+2614	ymbarél gyda glaw	diferyn | dillad | glaw | tywydd | ymbarél gyda glaw
+26A1	foltedd uchel	foltedd | foltedd uchel | perygl | trydan
+26C4	dyn eira heb eira	dyn eira | dyn eira heb eira | eira | oer | tywydd
+26C5	haul tu ôl i gwmwl	cwmwl | haul | haul tu ôl i gwmwl | tywydd
+26C8	cwmwl â mellt a glaw	cwmwl | cwmwl â mellt a glaw | glau | storm | tywydd
+2744	pluen eira	eira | oer | pluen eira | tywydd
+1F300	seiclon	corwynt | penysgafn | seiclon | twister | typhoon
+1F301	niwlog	niwl | niwlog
+1F302	ymbarél ar gau	dillad | glaw | tywydd | ymbarél | ymbarél ar gau
+1F303	noson â sêr	nos | noson â sêr | seren
+1F304	codiad haul dros fynyddoedd	bore | codiad | codiad haul dros fynyddoedd | haul | mynydd
+1F305	codiad haul	bore | codiad haul | haul
+1F306	dinaslun cyfnos	cyfnos | dinas | dinaslun cyfnos | machlud haul | tirwedd
+1F307	machlud haul	cyfnos | dinas | machlud haul
+1F308	enfys	enfys | glaw | tywydd
+1F309	pont gyda’r nos	nos | pont | pont gyda’r nos | tywydd
+1F30A	ton ddŵr	cefnfor | dŵr | ton | ton ddŵr | tywydd
+1F30B	llosgfynydd	echdoriad | llosgfynydd | mynydd | tywydd
+1F30C	y llwybr llaethog	gofod | tywydd | y llwybr llaethog
+1F30D	glôb yn dangos Ewrop-Affrica	Affrica | byd | Ewrop | glôb yn dangos Ewrop-Affrica | y ddaear
+1F30E	glôb yn dangos yr Americas	Americas | byd | glôb yn dangos yr Americas | y ddaear
+1F30F	glôb yn dangos Asia-Awstralia	Asia | Awstralia | byd | glôb yn dangos Asia-Awstralia | y ddaear
+1F310	glôb gyda meridianau	byd | glôb gyda meridianau | y ddaear
+1F311	lleuad newydd	gofod | lleuad | lleuad newydd | tywydd | tywyllwch
+1F312	lleuad gilgant ar ei chynnydd	cilgant | cwyro | gofod | lleuad | lleuad gilgant ar ei chynnydd | lleuad gilgant ar ei mesurydd | tywydd
+1F313	lleuad chwarter cyntaf	cilgant | gofod | lleuad | lleuad chwarter cyntaf
+1F314	lleuad amgrwm ar ei chynnydd	chwarter | gofod | lleuad | lleuad amgrwm ar ei chynnydd
+1F315	lleuad lawn	amgrwm | gofod | lleuad | lleuad lawn
+1F316	lleuad amgrwm ar ei chil	gofod | llawn | lleuad | lleuad amgrwm ar ei chil
+1F317	lleuad chwarter olaf	amgrwm | gofod | lleuad | lleuad chwarter olaf
+1F318	lleuad cilgant ar ei chil	chwarter | gofod | lleuad | lleuad cilgant ar ei chil
+1F319	lleuad gilgant	cilgant | gofod | lleuad | lleuad gilgant
+1F31A	wyneb lleuad newydd	cilgant | gofod | lleuad | wyneb lleuad newydd
+1F31B	lleuad chwarter cyntaf gydag wyneb	chwarter | gofod | lleuad | lleuad chwarter cyntaf gydag wyneb | wyneb
+1F31C	lleuad chwarter olaf gydag wyneb	chwarter | gofod | lleuad | lleuad chwarter olaf gydag wyneb | wyneb
+1F31D	lleuad lawn gydag wyneb	llachar | llawn | lleuad | lleuad lawn gydag wyneb | wyneb
+1F31E	lleuad ag wyneb	haul | llachar | lleuad ag wyneb | tywydd | wyneb
+1F31F	seren yn tywynnu	disgleirio | pelydru | seren yn tywynnu | tywynnu
+1F320	seren wib	gofod | gwibio | seren wib | syrthio
+1F321	thermomedr	thermomedr | tywydd
+1F324	haul tu ôl i gwmwl bach	cwmwl | haul | haul tu ôl i gwmwl bach | tywydd
+1F325	haul tu ôl i gwmwl mawr	cwmwl | haul | haul tu ôl i gwmwl mawr | tywydd
+1F326	haul tu ôl i gwmwl gyda glaw	cwmwl | glaw | haul | haul tu ôl i gwmwl gyda glaw | tywydd
+1F327	cwmwl gyda glaw	cwmwl | cwmwl gyda glaw | glaw | tywydd
+1F328	cwmwl gydag eira	cwmwl | cwmwl gydag eira | eira | oer | tywydd
+1F329	cwmwl gyda mellt	cwmwl | cwmwl gyda mellt | mellt | tywydd
+1F32A	corwynt	chwyrlwynt | corwynt | cwmwl | tywydd
+1F32B	niwl	cwmwl | niwl
+1F32C	wyneb gwyntog	chwythu | cwmwl | wyneb | wyneb gwyntog
+2648	yr Hwrdd	hwrdd | sidydd | yr Hwrdd
+2649	y Tarw	sidydd | tarw | y Tarw | ych
+264A	yr Efeilliaid	efeilliaid | sidydd | yr Efeilliaid
+264B	y Cranc	cranc | sidydd | y Cranc
+264C	y Llew	llew | sidydd | y Llew
+264D	y Forwyn	morwyn | sidydd | y Forwyn
+264E	y Fantol	clorian | cyfiawnder | mantol | sidydd | y Fantol
+264F	y Sgorpion	sgorpio | sgorpion | sidydd | y Sgorpion
+2650	y Saethydd	saethwr | sidydd | y Saethydd
+2651	yr Afr	gafr | sidydd | yr Afr
+2652	y Dyfrwr	cludwr | dŵr | sidydd | y Dyfrwr
+2653	y Pysgod	pysgod | sidydd | y Pysgod
+1F550	un o’r gloch	00 | 1 | 1:00 | cloc | un o’r gloch
+1F551	dau o’r gloch	00 | 2 | 2:00 | cloc | dau o’r gloch
+1F552	tri o’r gloch	00 | 3 | 3:00 | cloc | tri o’r gloch
+1F553	pedwar o’r gloch	00 | 4 | 4:00 | cloc | pedwar o’r gloch
+1F554	pump o’r gloch	00 | 5 | 5:00 | cloc | pump o’r gloch
+1F555	chwech o’r gloch	00 | 6 | 6:00 | chwech o’r gloch | cloc
+1F556	saith o’r gloch	00 | 7 | 7:00 | cloc | saith o’r gloch
+1F557	wyth o’r gloch	00 | 8 | 8:00 | cloc | wyth o’r gloch
+1F558	naw o’r gloch	00 | 9 | 9:00 | cloc | naw o’r gloch
+1F559	deg o’r gloch	00 | 10 | 10:00 | cloc | deg o’r gloch
+1F55A	un ar ddeg o’r gloch	00 | 11 | 11:00 | cloc | un ar ddeg o’r gloch
+1F55B	deuddeg o’r gloch	00 | 12 | 12:00 | cloc | deuddeg o’r gloch
+1F55C	hanner awr wedi un	1 | 1:30 | 30 | cloc | hanner awr wedi un
+1F55D	hanner awr wedi dau	2 | 2:30 | 30 | cloc | hanner awr wedi dau
+1F55E	hanner awr wedi tri	3 | 3:30 | 30 | cloc | hanner awr wedi tri
+1F55F	hanner awr wedi pedwar	30 | 4 | 4:30 | cloc | hanner awr wedi pedwar
+1F560	hanner awr wedi pump	30 | 5 | 5:30 | cloc | hanner awr wedi pump
+1F561	hanner awr wedi chwech	30 | 6 | 6:30 | cloc | hanner awr wedi chwech
+1F562	hanner awr wedi saith	30 | 7 | 7:30 | cloc | hanner awr wedi saith
+1F563	hanner awr wedi wyth	30 | 8 | 8:30 | cloc | hanner awr wedi wyth
+1F564	hanner awr wedi naw	30 | 9 | 9:30 | cloc | hanner awr wedi naw
+1F565	hanner awr wedi deg	10 | 10:30 | 30 | cloc | hanner awr wedi deg
+1F566	hanner awr wedi un ar ddeg	11 | 11:30 | 30 | cloc | hanner awr wedi un ar ddeg
+1F567	hanner awr wedi deuddeg	12 | 12:30 | 30 | cloc | hanner awr wedi deuddeg
+1FA90	planed cylchog	planed | planed cylchog | sadwrn
+2604	comed	comed | gofod
+26F0	mynydd	mynydd
+26F1	ymbarél ar lawr	glaw | haul | tywydd | ymbarél | ymbarél ar lawr
+26F2	ffynnon	ffynnon
+26F4	fferi	cwch | fferi | teithiwr
+26F5	cwch hwylio	cwch | cwch hwylio | cyrchfan | môr
+2708	awyren	awyren
+1F488	polyn barbwr	barbwr | polyn | toriad gwallt
+1F4BA	sedd	cadair | sedd
+1F680	roced	cerbyd | gofod | roced
+1F681	hofrennydd	cerbyd | hofrennydd
+1F682	locomotif	locomotif | peiriant | rheilffordd | stêm | trên
+1F683	car rheilffordd	car | rheilffordd | trên | trydan
+1F684	trên tra chyflym	cyflymder | rheilffordd | shinkansen | trên | trên tra chyflym
+1F685	trên tra chyflym gyda thrwyn fel bwled	bwled | cyflymder | rheilffordd | trên | trên tra chyflym gyda thrwyn fel bwled
+1F686	trên	cerbyd | rheilffordd | trên
+1F687	metro	metro | tanlwybr
+1F688	rheilffordd ysgafn	rheilffordd | rheilffordd ysgafn
+1F689	gorsaf	gorsaf | rheilffordd | trên
+1F68A	tram	bysys trydan | tram
+1F68B	car tram	bysys trydan | car | tram
+1F68C	bws	bws | cerbyd
+1F68D	bws yn dod i’ch cwrdd	bws | bws yn dod i’ch cwrdd
+1F68E	bws trydan	bws | bws trydan | cerbyd | tram | troli
+1F68F	arhosfan bws	arhosfan | bws | stop
+1F690	bws mini	bws | bws mini
+1F691	ambiwlans	ambiwlans | cerbyd
+1F692	peiriant tân	cerbyd | peiriant | tân
+1F693	car yr heddlu	car | car yr heddlu | cerbyd | heddlu | patrôl
+1F694	car heddlu sy’n dod i’ch cwrdd	car | car heddlu sy’n dod i’ch cwrdd | dod i’ch cwrdd | heddlu
+1F695	tacsi	cerbyd | tacsi
+1F696	tacsi sy’n dod i’ch cwrdd	dod i’ch cwrdd | tacsi | tacsi sy’n dod i’ch cwrdd
+1F697	modur	car | modur
+1F698	modur sy’n dod i’ch cwrdd	car | dod i’ch cwrdd | modur | modur sy’n dod i’ch cwrdd
+1F699	cerbyd hamdden	cerbyd | hamdden
+1F69A	lori dosbarthu	cerbyd | dosbarthu | lori
+1F69B	lori gymalog	cerbyd | lori | lori gymalog | rhannol
+1F69C	tractor	cerbyd | tractor
+1F69D	trên un gledren	cerbyd | trên un gledren
+1F69E	rheilffordd fynydd	car | mynydd | rheilffordd | rheilffordd fynydd
+1F69F	rheilffordd grog	cerbyd | crogiant | rheilffordd | rheilffordd grog
+1F6A0	rhaffbont fynydd	cebl | gondola | mynydd | rhaffbont fynydd
+1F6A1	tramffordd awyrol	awyrol | car | cebl | gondola | tramffordd awyrol
+1F6A2	llong	cwch | llong | teithiwr
+1F6A3	person yn rhwyfo cwch	cwch | person yn rhwyfo cwch | rhwyfo
+1F6A4	cwch gwib	cerbyd | cwch | cwch gwib
+1F6A5	golau traffig llorweddol	arwydd | golau | golau traffig llorweddol | traffig
+1F6A6	golau traffig fertigol	arwydd | golau | golau traffig fertigol | traffig
+1F6A7	adeiladwaith	adeiladwaith | rhwystr
+1F6A8	golau car yr heddlu	car | golau | golau car yr heddlu | heddlu
+1F6A9	baner drionglog	baner drionglog | post
+1F6AA	drws	drws
+1F6B0	dŵr yfed	diod | dŵr | yfed
+1F6B1	dŵr na ellir ei yfed	dŵr | dwr na ellir ei yfed | dŵr na ellir ei yfed | gwahardd
+1F6B3	dim beiciau	beic | cerbyd | dim beiciau | gwahardd
+1F6B7	dim cerddwyr	cerddwr | dim | dim cerddwyr | gwahardd
+1F6B8	plant yn croesi	cerddwr | croesi | plant yn croesi | plentyn | traffig
+1F6B9	ystafell ymolchi i ddynion	dyn | toiled | tŷ bach | ystafell ymolchi i ddynion
+1F6BA	ystafell ymolchi i fenywod	menyw | toiled | tŷbach | ystafell ymolchi i fenywod
+1F6BB	ystafell ymolchi	toiled | ystafell ymolchi
+1F6BC	symbol babi	babi | newid | symbol babi
+1F6BD	toiled	toiled
+1F6BE	tŷ bach	dŵr | toiled | tŷ bach | tŷbach
+1F6BF	cawod	cawod | dŵr
+1F6C0	person mewn bath	bath | person mewn bath | twba
+1F6C1	twba bath	bath | twba bath
+1F6C2	arolygaeth pasbort	arolygaeth | pasbort
+1F6C3	tollau	tollau
+1F6C4	hawlio bagiau	bagiau | hawlio
+1F6C5	bagiau wedi’u gadael	bagiau | bagiau wedi’u gadael | coffor
+1F6D0	man addoli	addoli | crefydd | man addoli
+1F6D1	arwydd stop	arwydd | stop | wythonglog
+1F6D2	troli siopa	cert | siopa | troli
+2668	tarddelli poeth	poeth | stêm | tarddelli
+26BD	pêl droed	pêl | pêl droed
+26BE	pêl fas	pêl | pêl fas
+26F3	baner mewn twll	baner mewn twll | golff | twll
+1F392	bag ysgol	bag | ysgol
+1F3A0	ceffyl carwsél	carwsél | ceffyl
+1F3A1	olwyn fawr	olwyn | olwyn fawr | parc diddanu
+1F3A2	cert sglefrio	cert | parc diddanu | sglefrio
+1F3A3	polyn pysgota	polyn | polyn pysgota | pysgodyn
+1F3A4	meicroffon	caraoce | meic | meicroffon
+1F3A5	camera ffilm	camera | ffilm | sinema
+1F3A6	sinema	camera | ffilm | sinema
+1F3A7	clustffon	clustffon
+1F3A8	palet arlunydd	amgueddfa | celf | paentiad | palet arlunydd
+1F3A9	het silc	dillad | het | het silc
+1F3AA	tent syrcas	syrcas | tent
+1F3AB	tocyn	mynediad | tocyn
+1F3AC	clepiwr	clepiwr | ffilm
+1F3AD	celfyddydau perfformiadol	celf | celfyddydau perfformiadol | mwgwd | perfformiadol | theatr
+1F3AE	gêm fideo	gêm | gêm fideo | rheolydd
+1F3AF	ergyd uniongyrchol	ergyd uniongyrchol | gêm | llygad | targed | tarw
+1F3B0	peiriant slot	gêm | peiriant slot | slot
+1F3B1	biliards	biliards | gêm | wyth
+1F3B2	dis	dis | gêm
+1F3B3	bowlio	bowlio | gêm | pêl
+1F3B4	cardiau chwarae blodau	blodyn | cardiau | cardiau chwarae blodau | Japaneaidd
+1F3B5	nodyn cerddorol	cerddoriaeth | nodyn | nodyn cerddorol
+1F3B6	nodau cerddorol	cerddoriaeth | nodau cerddorol | nodyn
+1F3B7	sacsoffon	cerddoriaeth | offeryn | sacs | sacsoffon
+1F3B8	gitâr	cerddoriaeth | gitâr | offeyrn
+1F3B9	allweddell	allweddell | cerddoriaeth | offeryn | piano
+1F3BA	trwmped	cerddoriaeth | offeryn | trwmped
+1F3BB	ffidl	cerddoriaeth | ffidl | offeryn
+1F3BC	sgôr cerddorol	cerddoriaeth | sgôr | sgôr cerddorol
+1F3BD	crys rhedeg	crys | rhedeg | sash
+1F3BE	tenis	pêl | raced | tenis
+1F3BF	sgîs	eira | sgi | sgîs
+1F3C0	pêl fasged	cylch | pêl | pêl fasged
+1F3C1	baner frith	baner frith | frith | rasio | sgwariog
+1F3C2	eirafyrddiwr	eira | eirafyrddio | eirafyrddiwr | sgi
+1F3C3	person yn rhedeg	marathon | person yn rhedeg | rhedeg
+1F3C4	person yn syrffio	person yn syrffio | syrffio
+1F3C5	medal chwaraeon	medal | medal chwaraeon
+1F3C6	tlws	gwobr | tlws
+1F3C7	rasio ceffylau	ceffyl | joci | rasio | rasio ceffylau
+1F3C8	pêl droed Americanaidd	americanaidd | pêl | pêl droed | pêl droed Americanaidd
+1F3C9	pêl rygbi	pêl | pêl droed | rygbi
+1F3CA	person yn nofio	nofio | person yn nofio
+1F3CB	person yn codi pwysau	codwr | person yn codi pwysau | pwysau
+1F3CC	person yn chwarae golff	golff | pêl | person yn chwarae golff
+1F3CD	beic modur	beic modur | rasio
+1F3CE	car rasio	car | rasio
+1F451	coron	brenhines | brenin | coron | dillad
+1F452	het fenyw	dillad | het | het fenyw | menyw
+1F453	sbectol	dillad | llygad | sbectol
+1F454	tei	dillad | tei
+1F455	crys T	crys | crys T | dillad
+1F456	jîns	dillad | jîns | trwser
+1F457	ffrog	dillad | ffrog
+1F458	cimono	cimono | dillad
+1F459	bicini	bicini | dillad | nofio
+1F45A	dillad menywod	dillad | dillad menywod | menyw
+1F45B	pwrs	darn arian | dillad | pwrs
+1F45C	bag llaw	bag | bag llaw | dillad
+1F45D	cwd	bag | cwd | dillad
+1F45E	esgid dyn	dillad | dyn | esgid
+1F45F	esgidiau rhedeg	athletig | dillad | esgid | esgidiau rhedeg | rhedeg
+1F460	esgidiau sodlau uchel	dillad | esgid | esgidiau sodlau uchel | menyw | sawdl
+1F461	sandal menyw	dillad | esgid | menyw | sandal
+1F462	esgid fenyw	dillad | esgid | esgid fenyw | menyw
+1F6B2	beic	beic
+1F6B4	person yn beicio	beic | beicio | person yn beicio
+1F6B5	person yn beicio mynydd	beic | beicio | mynydd | person yn beicio mynydd
+1F6B6	person yn cerdded	cerdded | heicio | person yn cerdded
+1F938	olwyn droi	chwaraeon | gymnasteg | olwyn droi | person
+1F939	jyglo	amldasgio | cydbwyso | jyglo | sgil
+1F93A	ffensiwr	chwaraeon | cleddyf | ffensio | ffensiwr | person
+1F93C	taflwyr codwm	chwaraeon | person | taflu codwm | taflwr codwm | taflwyr codwm
+1F93D	polo dŵr	chwaraeon | dŵr | person | polo
+1F93E	pêl-law	chwaraeon | pêl | pêl-law | person
+1F93F	masg deifio	deifio | deifio sgwba | masg deifio | snorcel
+1F9E2	cap pêl fas	cap pel fâs | cap pêl fas
+1F9E3	scarff	gwddf | scarff
+1F9E4	menyg	llaw | menyg
+1F9E5	côt	côt | siaced
+1F9E6	sanau	hosan | sanau
+1FA70	esgidiau bale	bale | dawnsio | esgidiau bale
+1FA71	siwt nofio	gwisg nofio | siwt nofio
+1FA72	trôns	gwisg nofio | siwt nofio | trôns
+1FA73	siorts	dillad isa | siorts | siwt nofio | trôns
+1FA74	sandal thong	sandal thong | sandalau | sandalau thong | sandalau traeth | thongs | zōri
+1FA80	io-io	fyny ac i lawr | io-io | tegan
+1FA81	barcud	barcud | esgyn | hedfan
+1FA82	parasiwt	barcuta | neidio o awyren | parasiwt
+1FA83	bwmerang	adlam | Awstralia | bwmerang | ôl-effaith
+1FA84	ffon hud	dewin | dewines | ffon hud | hud
+1FA85	piñata	dathliad | parti | piñata
+1FA86	doliau sy’n nythu	dol | doliau sy’n nythu | nythu | rwsia
+1FA95	banjo	banjo | cerddoriaeth | llinynnau
+1FA97	acordion	acordion | blwch gwasgu | consertina
+1FA98	drwm hir	conga | curiad | drwm | drwm hir | rhythm
+265F	gwerinwr gwyddbwyll	gwariadwy | gwerinwr gwyddbwyll | gwyddbwyll | twyllo
+2660	siwt rhofiau	cardiau | gêm | rhofiau | siwt
+2663	siwt clybiau	cardiau | clybiau | gêm | siwt
+2665	siwt calonnau	calonnau | cardiau | gêm | siwt
+2666	siwt diemwntau	cardiau | diemwntau | gêm | siwt
+1F4B3	cerdyn credyd	arian | banc | card | cerdyn credyd | credyd
+1F4B4	papur arian yen	arian cyfredol | banc | papur arian | papur arian yen | yen
+1F4B5	papur arian doler	arian cyfredol | banc | doler | papur arian | papur arian doler
+1F4B6	papur arian ewro	arian cyfredol | banc | ewro | papur arian | papur arian ewro
+1F4B7	papur arian punt	arian cyfredol | banc | papur arian | papur arian punt | punt
+1F4B9	siart yn cynyddu â yen	banc | marchnad | siart | siart yn cynyddu â yen | twf
+1F4BB	cluniadur	cluniadur | cyfrifiadur | personol
+1F4BC	cas friff	cas friff
+1F4BD	disg mini	cyfrifiadur | disg | disg mini | optegol
+1F4BE	disg hyblyg	cyfrifiadur | disg | hyblyg
+1F4BF	disg optegol	blu-ray | cd | computer | disg optegol | disk | dvd | optical
+1F4C0	dvd	blu-ray | cd | cyfrifiadur | disg | dvd
+1F4C1	ffolder ffeiliau	ffeil | ffolder | ffolder ffeiliau
+1F4C2	agor ffolder ffeiliau	agor | agor ffolder ffeiliau | ffeil | ffolder
+1F4C3	tudalen gyda chwrl	cwrl | dogfen | tudalen | tudalen gyda chwrl
+1F4C4	tudalen yn wynebu i fyny	dogfen | tudalen | tudalen yn wynebu i fyny
+1F4C5	calendr	calendr | dyddiad
+1F4C6	calendr rwygo	calendr | calendr rwygo
+1F4C7	mynegai cardiau	card | mynegai | mynegai cardiau | rolodex
+1F4C8	siart yn cynyddu	graff | i fyny | siart | siart yn cynyddu | twf
+1F4C9	siart yn gostwng	graff | i lawr | siart | siart yn gostwng | trend
+1F4CA	siart bar	bar | graff | siart
+1F4CB	clipfwrdd	clipfwrdd
+1F4CC	pin	pin | pin gwthio
+1F4CD	pin crwn	pin | pin crwn
+1F4CE	clip papur	clip papur
+1F4CF	pren mesur	pren mesur | ymyl syth
+1F4D0	pren mesur trionglog	pren mesur | pren mesur trionglog | set | triongl
+1F4D1	tabiau nodau tudalen	llyfrnod | marc | nod tudalen | tabiau | tabiau nodau tudalen
+1F4D2	cyfriflyfr	cyfriflyfr | llyfr nodiadau
+1F4D3	llyfr nodiadau	llyfr nodiadau
+1F4D4	llyfr nodiadau gyda chlawr addurnol	addurnol | clawr | llyfr | llyfr nodiadau | llyfr nodiadau gyda chlawr addurnol
+1F4D5	llyfr ynghau	llyfr | ynghau
+1F4D6	llyfr agored	agored | llyfr
+1F4D7	llyfr gwyrdd	gwyrdd | llyfr
+1F4D8	llyfr glas	glas | llyfr
+1F4D9	llyfr oren	llyfr | oren
+1F4DA	llyfrau	llyfr | llyfrau
+1F4DB	bathodyn enw	bathodyn | enw
+1F4DC	sgrôl	papur | sgrôl
+1F4DD	memo	memo | pensil
+1F4DE	derbynnydd ffôn	derbyniwr | derbynnydd ffôn | ffôn
+1F4DF	peiriant galw	galwr | peiriant galw
+1F4E0	peiriant ffacs	ffacs | peiriant ffacs
+1F4E1	antena lloeren	antena | lloeren
+1F4E2	uchelseinydd	cyhoeddus | uchel | uchelseinydd
+1F4E3	megaffon	megaffon | sirioli
+1F4E4	hambwrdd blwch allan	blwch | blwch allan | hambwrdd | hambwrdd blwch allan | llythyr
+1F4E5	hambwrdd mewnflwch	blwch | hambwrdd | mewnflwch
+1F4E6	parsel	blwch | parsel
+1F4E7	e-bost	e-bost | llythyren | post
+1F4E8	amlen yn dyfod i mewn	amlen | amlen yn dyfod i mewn | derbyn | e-bost | llythyr
+1F4E9	amlen gyda saeth	amlen | amlen gyda saeth | e-bost | i lawr | saeth
+1F4EA	blwch post caeedig gyda banner wedi’i gostwng	blwch post | blwch post caeedig gyda banner wedi’i gostwng | caeedig | wedi’i gostwng
+1F4EB	blwch post caeedig gyda banner wedi’i chodi	blwch post | blwch post caeedig gyda banner wedi’i chodi | caeedig | post
+1F4EC	blwch post agored gyda banner wedi’i chodi	agored | blwch post | blwch post agored gyda banner wedi’i chodi | post
+1F4ED	blwch post agored gyda banner wedi’i gostwng	agored | blwch post | blwch post agored gyda banner wedi’i gostwng | wedi’i gostwng
+1F4EE	blwch post	blwch post | post
+1F4EF	corn bost	corn | corn bost | post
+1F4F0	papur newydd	newyddion | papur | papur newydd
+1F4F1	ffôn symudol	ffôn | symudol
+1F4F2	ffôn symudol â saeth	ffôn | ffôn symudol â saeth | galw | saeth | symudol
+1F4F3	modd dirgryniad	dirgryniad | ffôn | modd
+1F4F4	ffôn symudol wedi’i ddiffodd	cell | diffodd | ffôn | ffôn symudol wedi’i ddiffodd
+1F4F5	dim ffonau symudol	dim ffonau symudol | ffôn | gwahardd | symudol
+1F4F6	barau antena	antena | bar | barau antena | cell | symudol
+1F4F7	camera	camera | fideo
+1F4F8	camera â fflach	camera | camera â fflach | fflach | fideo
+1F4F9	camera fideo	camera | fideo
+1F4FA	teledu	fideo | teledu
+1F4FB	radio	fideo | radio
+1F4FC	casét fideo	casét fideo | fideo | tap | vhs
+1F4FD	taflunydd ffilm	ffilm | fideo | sinema | taflunydd
+1F4FF	gleiniau gweddïo	dillad | gleiniau | gleiniau gweddïo | gweddi | mwclis
+1F505	botwm pylu	botwm pylu | disgleirdeb | isel | pylu
+1F506	botwm disglair	botwm disglair | disglair | disgleirdeb
+1F507	seinydd wedi’i ddiffodd	mud | sain | seinydd wedi’i ddiffodd | tawelwch
+1F508	seinydd	seinydd | sŵn
+1F509	seinydd ymlaen	isel | seinydd ymlaen | siarad | ton
+1F50A	seinydd uchel	3 | seinydd | uchel
+1F50B	batri	batri
+1F50C	plwg trydanol	plwg | trydan | trydanol
+1F50D	chwyddwydr yn wynebu’r chwith	chwilio | chwyddwydr | chwyddwydr yn wynebu’r chwith | gwydr | offeryn
+1F50E	chwyddwydr yn wynebu’r dde	chwilio | chwyddo | chwyddwydr yn wynebu’r dde | gwydr | offeryn
+1F50F	clô ac ysgrifbin	clô ac ysgrifbin | cloi | inc | nib | ysgrifbin
+1F510	clô ynghau gydag allwedd	allwedd | clô | clô ynghau gydag allwedd | cloi | diogel
+1F511	allwedd	allwedd | allweddair | cloi
+1F512	clô	ar gau | clô | dan glo
+1F513	clô agored	agor | clô agored | cloi | datgloi
+1F514	cloch	cloch
+1F515	cloch a slaes	cloch | cloch a slaes | gwaharddedig | mud | na
+1F516	nod tudalen	marc | nod tudalen
+1F517	dolen	dolen | linc
+1F518	botwm radio	botwm | geometrig | radio
+1F51E	neb o dan un deg wyth oed	18 | dan oed | neb o dan un deg wyth oed | oedran | un deg wyth
+1F51F	gorchudd bysell: 10	gorchudd bysell
+1F526	tortsh	golau | offeryn | tortsh | trydanol
+1F527	sbaner	offeryn | sbaner
+1F528	morthwyl	morthwyl | offeryn
+1F529	nyten a bollt	bollt | nyten | nyten a bollt | offeryn
+1F52A	cyllell cegin	cegin | coginio | cyllell
+1F52B	pistol dŵr	arf | dryll | llawddryll | pistol | pistol dŵr | rifolfer
+1F52C	microsgop	microsgop | offeryn
+1F52D	telesgop	offeryn | telesgop
+1F9BA	siaced ddiogelwch	argyfwng | diogelwch | siaced | siaced ddiogelwch
+1F9BB	clust gyda chymorth clyw	clust gyda chymorth clyw | hygyrchedd | trwm eu clyw
+1F9BC	cadair olwyn â pheiriant	cadair olwyn â pheiriant | hygyrchedd
+1F9BD	cadair olwyn heb beiriant	cadair olwyn heb beiriant | hygyrchedd
+1F9E9	jig-so	cliw | cydgloi | darn | jig-so | pos
+1F9EA	tiwb profi	arbrawf | cemeg | fferyllydd | gwyddoniaeth | lab | tiwb profi
+1F9EB	dysgl petri	bacteria | bioleg | biologydd | dysgl petri | lab | meithrin
+1F9EC	dna	biolegydd | bywyd | dna | esblygiad | geneteg | genyn
+1F9ED	cwmpawd	cwmpawd | cyfeiriadu | llywio | magnetig
+1F9EE	abacws	abacws | cyfrifiad
+1F9EF	diffoddydd tân	diffodd | diffoddwr tân | diffoddydd tân | disychedu | tân
+1F9F0	blwch offer	blwch offer | cist | mecanydd | offer
+1F9F1	bricsen	briciau | bricsen | clai | morter | wal
+1F9F2	magnet	atyniad | magnet | magnetig | pedol
+1F9F3	bagiau	bagiau | pacio | teithio
+1F9F4	potel hufen	eli haul | hufen | lleithydd | potel hufen | siampw
+1F9F5	edafedd	edafedd | gwnïo | llinyn | nodwydd | rîl
+1F9F6	edau	crosio | edau | gwau | pêl
+1F9F7	pin diogelwch	cewyn | pin diogelwch | roc pync
+1F9F8	tedi bêr	moethus | tedi bêr | tegan | wedi’i stwffio
+1F9F9	ysgubell	glanhau | wrach | ysgubell | ysgubo
+1F9FA	basged	basged | ffermio | golchi dillad | picnic
+1F9FB	rholyn o bapur	papur toiled | rholyn o bapur | tywelion papur
+1F9FC	sebon	bar | dysgl sebon | glanhau | sebon | trochion sebon | ymolchi
+1F9FD	sbwng	amsugno | glanhau | mandyllog | sbwng
+1F9FE	derbynneb	cadw llyfrau | cyfrifyddu | derbynneb | prawf | tystiolaeth
+1F9FF	amwled nazar	amwled nazar | glain | haid | llygad drwg | nazar | talismon
+1FA78	diferyn o waed	diferyn o waed | meddyginiaeth | mislif | rhoi gwaed
+1FA79	bandej glynu	bandej | bandej glynu
+1FA7A	stethosgop	calon | meddyg | meddyginiaeth | stethosgop
+1FA91	cadair	cadair | eistedd | sedd
+1FA92	rasel	eillio | miniog | rasel | siafio
+1FA93	bwyell	bwyell | coed | hollti | pren | torri
+1FA94	lamp diya	diya | lamp | olew
+1FA96	helmed filitaraidd	byddin | helmed | helmed filitaraidd | milwr | rhyfelwr
+1FA99	darn arian	arian | aur | darn arian | metel | trysor
+1FA9A	llif gwaith coed	coed cadw | llif | llif gwaith coed | offeryn | saer
+1FA9B	sgriwdreifar	offeryn | sgriw | sgriwdreifar
+1FA9C	ysgol ddringo	cam | dringo | gris | ysgol | ysgol ddringo
+1FA9D	bachyn	bachyn | cromlin | dal | maglu | pwynt gwerthu | troseddwr
+1FA9E	drych	adlewyrchiad | adlewyrchydd | drych | sbecwlwm
+1FA9F	ffenestr	agoriad | awyr iach | ffenestr | ffrâm | golwg | tryloyw
+260E	ffôn	ffôn | teleffon
+2620	penglog ac esgyrn croes	corff | esgyrn croes | marwolaeth | penglog | penglog ac esgyrn croes
+2622	ymbelydrol	arwydd | ymbelydrol
+2623	bioberyg	arwydd | bioberyg
+267F	cadair olwyn	cadair olwyn | mynediad
+2692	morthwyl a chaib	caib | morthwyl | morthwyl a chaib | offeryn
+2693	angor	angor | llong | offer
+2694	cleddyfau wedi croesi	arf | cleddyfau | cleddyfau wedi croesi | wedi croesi
+2695	arwydd meddygol	arwydd meddygol | esgwlapaidd | meddyginiaeth | staff
+2696	clorian	clorian | mantol | offeryn | pwysau
+2697	distyllydd	cemeg | distyllydd | offeryn
+2699	gêr	gêr | offeryn
+269B	symbol o atom	anffyddiwr | atom | symbol o atom
+269C	gellesgen	gellesgen
+26A0	rhybudd	rhybudd
+26CF	caib	caib | cloddio | offeryn
+26D1	helmed â chroes wen	croes | cymorth | helmed â chroes wen | het | wyneb
+26D3	cadwyni	cadwyn | cadwyni
+26D4	dim mynediad	dim mynediad | gwahardd | mynediad | traffig
+2702	siswrn	offeryn | siswrn
+2709	amlen	amlen | e-bost
+270F	pensil	pensil
+2712	nib du	nib | nib du | pen
+2714	marc tic trwm	✓ | marc | marc tic trwm | tic
+2716	lluosi	× | arwydd | canslo | lluosi | lluosiad | x
+2753	marc cwestiwn	? | atalnodiad | cwestiwn | marc
+2757	ebychnod	! | atalnodiad | ebychnod | marc
+27A1	saeth i’r dde	cyfeiriad | Dwyrain | saeth | saeth i’r dde
+1F500	botwm cymysgu traciau	botwm cymysgu traciau | saeth | wedi’i chroesi
+1F501	botwm ailadrodd	ailadrodd | botwm ailadrodd | clocwedd | saeth
+1F502	botwm ailadrodd sengl	botwm ailadrodd sengl | clocwedd | saeth | unwaith
+1F503	saethau clocwedd fertigol	ail-lwytho | clocwedd | saeth | saethau clocwedd fertigol
+1F504	botwm saethau gwrthglocwedd	botwm saethau gwrthglocwedd | gwrthglocwedd | o chwith | saeth
+1F519	saeth BACK	saeth | saeth BACK | yn ôl
+1F51A	saeth END	diwedd | saeth | saeth END
+1F51B	saeth ON!	marc | saeth | saeth ON! | ymlaen
+1F51C	saeth SOON	cyn bo hir | saeth | saeth SOON
+1F51D	saeth TOP	i fyny | saeth | top
+1F520	mewnbwn llythrennau mawr ladin	lladin | llythrennau | llythrennau mawr | mewnbwn | mewnbwn llythrennau mawr ladin
+1F521	mewnbwn llythrennau bach lladin	abcch | lladin | llythrennau bach | mewnbwn | mewnbwn llythrennau bach lladin
+1F522	mewnbwn rhifedd	1234 | mewnbwn | mewnbwn rhifedd | rhifau
+1F523	mewnbwn symbylau	mewnbwn | mewnbwn symbylau
+1F524	mewnbwn llythrennau lladin	abc | gwyddor | lladin | mewnbwn | mewnbwn llythrennau lladin
+21B5	saeth i lawr gyda’r gornel i’r chwith	saeth i lawr gyda’r gornel i’r chwith
+21B0	saeth i fyny gyda’r pwynt i’r chwith	saeth i fyny gyda’r pwynt i’r chwith
+21B1	saeth i fyny gyda’r pwynt i’r dde	saeth i fyny gyda’r pwynt i’r dde
+21B2	saeth i lawr gyda’r pwynt i’r chwith	saeth i lawr gyda’r pwynt i’r chwith
+21B3	saeth i lawr gyda’r pwynt i’r dde	saeth i lawr gyda’r pwynt i’r dde
+21B4	saeth i’r dde gyda’r gornel i lawr	saeth i’r dde gyda’r gornel i lawr
+21E4	saeth i’r chwith bar	saeth i’r chwith bar
+21E5	saeth i’r dde bar	saeth i’r dde bar
+21B9	bar saeth i’r chwith dros far saeth i’r dde	bar saeth i’r chwith dros far saeth i’r dde
+21E7	saeth wag i fyny	saeth wag i fyny
+21EA	saeth wag i fyny o’r bar	saeth wag i fyny o’r bar
+21E6	saeth wag i’r chwith	saeth wag i’r chwith
+21E8	saeth wag i’r dde	saeth wag i’r dde
+21E9	saeth wag i lawr	saeth wag i lawr
+21DE	saeth i fyny strôc ddwbl	saeth i fyny strôc ddwbl
+21DF	saeth i lawr strôc ddwbl	saeth i lawr strôc ddwbl
+21B8	bar hir saeth y gogledd orllewin	bar hir saeth y gogledd orllewin
+21B6	saeth hanner cylch uchaf gwrthglocwedd	saeth hanner cylch uchaf gwrthglocwedd
+21B7	saeth hanner cylch uchaf clocwedd	saeth hanner cylch uchaf clocwedd
+21C5	saethau yn pwyntio i fyny ac i lawr	i fyny | i lawr | saeth | saethau yn pwyntio i fyny ac i lawr
+21F5	saeth i lawr i’r chwith saeth i fyny	saeth i lawr i’r chwith saeth i fyny
+21A8	saeth i fyny i lawr gyda sail	saeth i fyny i lawr gyda sail
+21E0	saeth doriedig i’r chwith	saeth doriedig i’r chwith
+21E1	saeth doriedig i fyny	saeth doriedig i fyny
+21E2	saeth doriedig i’r dde	saeth doriedig i’r dde
+21E3	saeth doriedig i lawr	saeth doriedig i lawr
+21AB	saeth i’r chwith gyda dolen	saeth i’r chwith gyda dolen
+21AC	saeth i’r dde gyda dolen	saeth i’r dde gyda dolen
+2B05	saeth i’r chwith	cyfeiriad | Gorllewin | saeth | saeth i’r chwith
+2B06	saeth i fyny	cyfeiriad | Gogledd | saeth | saeth i fyny
+2B07	saeth i lawr	cyfeiriad | De | saeth | saeth i lawr

@@ -582,11 +582,23 @@ typedef struct _poly_eeconf_t {
     // layer comes up in search mode. Appended at the tail. No sentinel is needed: an
     // EEPROM written before this field reads 0 here, which is tab mode, as before.
     // The datablock version stays 159 (EECONFIG_USER_DATA_VERSION in the keymap
-    // config.h), so growing the block does not reset it.
+    // config.h), so growing the block does not reset it; tail_fmt below covers it.
     uint8_t  emj_search_mode;
+    // ⚠️ TAIL_FMT_OK when the bytes from tapping_term up to here were written by a
+    // build that knows them. Until 2026-08-13 the stored keymap began at user offset
+    // 128, and with the datablock version fixed at 159 nothing has cleared offsets
+    // 159 and up since, so on a board that old they can hold keymap bytes rather
+    // than 0. load (poly_keymap.c) resets them to 0 ("never chosen") and stamps the
+    // marker once, via stamp_tail_fmt(). Offset 162 was the HIGH byte of a keycode
+    // (big-endian, at most 0x7F), so it can never read as 0xA5 by accident.
+    uint8_t  tail_fmt;
 } poly_eeconf_t;
 
 #define EMJ_SEARCH_MODE_ON  0x01   // poly_eeconf_t.emj_search_mode: search mode chosen
+#define TAIL_FMT_OK         0xA5   // poly_eeconf_t.tail_fmt: the tail bytes are real
+_Static_assert(offsetof(poly_eeconf_t, tail_fmt) == 162, "tail_fmt must stay at user offset 162 (an even, high-byte offset of the old keymap)");
+_Static_assert(offsetof(poly_eeconf_t, tail_fmt) == offsetof(poly_eeconf_t, tapping_term) + 3,
+               "stamp_tail_fmt() writes tapping_term..tail_fmt as one 4-byte block");
 
 #define BOOT_INTRO_DONE     0x5A   // sentinel written after the startup animation has played
 #define IDLE_STYLE_FMT_OK   0x3C   // poly_eeconf_t.idle_style holds a real choice (see above)
@@ -686,6 +698,8 @@ void load_user_mru(void);
 
 // Saves both settings and latin table (convenience wrapper around the two above).
 void stamp_keymap_layers_fmt(void);
+// Zeroes tapping_term, flow_tap_term and emj_search_mode and writes TAIL_FMT_OK.
+void stamp_tail_fmt(void);
 void save_user_eeconf(void);
 
 // Loads user keyboard configuration from EEPROM with brightness validation against maximum.

@@ -7559,6 +7559,17 @@ void keyboard_post_init_user(void) {
     load_auto_brightness(ee.auto_brightness);
     note_idle_style(ee.idle_style);
     note_idle_timeout(ee.idle_timeout);   // BEFORE the banner below, which prints it
+    // The tail bytes (tapping_term..emj_search_mode) may hold old keymap data on a
+    // board older than 2026-08-13 (state.h, tail_fmt): use their "never chosen"
+    // value and stamp the marker, once.
+    if (ee.tail_fmt != TAIL_FMT_OK) {
+        uprintf("Settings tail unmarked (tail_fmt 0x%02X): tap terms and emoji search mode reset to defaults\n",
+                (unsigned)ee.tail_fmt);
+        ee.tapping_term    = 0;
+        ee.flow_tap_term   = 0;
+        ee.emj_search_mode = 0;
+        stamp_tail_fmt();
+    }
     note_poly_tap_terms(tapping_term_unpack(ee.tapping_term), flow_tap_term_unpack(ee.flow_tap_term));
     emit_idle_config();   // the style is only known here — the banner tick re-emits it
     note_glyph_script(ee.glyph_script);
@@ -7927,6 +7938,7 @@ void eeconfig_init_user(void) {
     // Biased like idle_timeout, for the same reason (base/tap_terms.h).
     ee.tapping_term   = tap_term_pack(POLY_DEFAULT_TAPPING_TERM_MS);
     ee.flow_tap_term  = tap_term_pack(POLY_DEFAULT_FLOW_TAP_TERM_MS);
+    ee.tail_fmt       = TAIL_FMT_OK;
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.

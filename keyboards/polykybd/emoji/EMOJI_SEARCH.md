@@ -103,7 +103,7 @@ split72, search mode:
 
 | position | tab mode | search mode |
 |---|---|---|
-| Tab (`KC_NO` before) | mode key: 🔍 with a vertical toggle, knob down (off) | 🥳 with the toggle knob up (on) |
+| Tab (`KC_NO` before) | mode key: 🔍 with an upright toggle, round knob down (off) | 🥳 with the knob up (on) |
 | Fn, below Tab (`KC_NO` before) | blank, inert | Clear: empty the query |
 | letter keys | emoji slots | letters of the active language layout; other keys there blank and inert |
 | top row, 12 number keys | category tabs | results 1–12, best match first |

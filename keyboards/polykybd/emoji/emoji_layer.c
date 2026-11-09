@@ -644,7 +644,13 @@ const uint32_t *emj_display_text(uint16_t keycode) {
     //    adds the vertical on/off toggle on the right ──
     if (keycode == KC_EMJ_MODE) {
         if (!emjdict_present()) return (const uint32_t *)U"";
-        return make_slot_str(s_search ? 0x1F973 : 0x1F50D);
+        // One leading space, not make_slot_str()'s two: room for the toggle.
+        const uint32_t cp = s_search ? 0x1F973 : 0x1F50D;
+        if (kdisp_gfx_glyph(g_all_fonts, g_all_font_count, cp) == NULL) return s_missing_glyph;
+        s_disp_buf[0] = ' ';
+        s_disp_buf[1] = cp;
+        s_disp_buf[2] = 0;
+        return s_disp_buf;
     }
     if (emj_search_active()) {
         const uint32_t *t = search_display_text(keycode);
@@ -785,20 +791,22 @@ void emj_apply_sync(uint8_t category, uint8_t page) {
 uint8_t emj_active_category(void) { return s_category; }
 uint8_t emj_active_page(void)     { return s_page; }
 
-// The mode key's vertical on/off toggle: a 9x20 rounded outline at panel x 62..70,
-// y 10..29, with a 5x7 knob up (search mode on) or down (off). The emoji's ink
-// ends at x 58 and its 3 px courtyard at x 61, so neither touches the toggle
-// (measured with the keycap-layout-preview model for 🔍 and 🥳: 0 px collision,
-// 0 px erased, nothing off the panel).
-#define EMJ_TOGGLE_X 62
-#define EMJ_TOGGLE_Y 10
-#define EMJ_TOGGLE_W 9
-#define EMJ_TOGGLE_H 20
+// The mode key's on/off toggle: the switch icon turned upright, without its words.
+// A 15x34 pill (2 px ring, radius 6) at panel x 56..70, y 3..36, with a round
+// 9x9 knob up (search mode on) or down (off). The emoji is drawn one space-width
+// left (one leading space, not two): its ink ends at x 51 and its 3 px courtyard
+// at x 54, so neither touches the pill. Measured with the keycap-layout-preview
+// model for 🔍 and 🥳: 0 px collision, 0 px erased, nothing off the panel.
+#define EMJ_TOGGLE_X 56
+#define EMJ_TOGGLE_Y 3
+#define EMJ_TOGGLE_W 15
+#define EMJ_TOGGLE_H 34
+#define EMJ_KNOB     9
 
 static void draw_mode_toggle(void) {
-    kdisp_draw_round_rect(BUFFER_X + EMJ_TOGGLE_X, EMJ_TOGGLE_Y, EMJ_TOGGLE_W, EMJ_TOGGLE_H, 4);
-    const int8_t knob_y = s_search ? EMJ_TOGGLE_Y + 2 : EMJ_TOGGLE_Y + EMJ_TOGGLE_H - 2 - 7;
-    kdisp_fill_rect(BUFFER_X + EMJ_TOGGLE_X + 2, knob_y, 5, 7);
+    kdisp_draw_badge_rect(BUFFER_X + EMJ_TOGGLE_X, EMJ_TOGGLE_Y, EMJ_TOGGLE_W, EMJ_TOGGLE_H, 6, 2);
+    const int8_t knob_y = s_search ? EMJ_TOGGLE_Y + 4 : EMJ_TOGGLE_Y + EMJ_TOGGLE_H - 4 - EMJ_KNOB;
+    kdisp_draw_badge_rect(BUFFER_X + EMJ_TOGGLE_X + 3, knob_y, EMJ_KNOB, EMJ_KNOB, 3, 0);
 }
 
 void emj_draw_tab_indicator(uint16_t keycode) {

@@ -574,6 +574,8 @@ typedef struct _poly_eeconf_t {
     // Emoji layer search mode (emoji/EMOJI_SEARCH.md): EMJ_SEARCH_MODE_ON when the
     // layer comes up in search mode. Appended at the tail. No sentinel is needed: an
     // EEPROM written before this field reads 0 here, which is tab mode, as before.
+    // The datablock version stays 159 (EECONFIG_USER_DATA_VERSION in the keymap
+    // config.h), so growing the block to 160 does not reset it.
     uint8_t  emj_search_mode;
 } poly_eeconf_t;
 

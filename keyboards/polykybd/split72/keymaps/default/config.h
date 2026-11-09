@@ -9,6 +9,15 @@
                                      // next field of any kind would relocate the keymap, so
                                      // the one-time reset is paid here rather than twice.
 
+// ⚠️ The user datablock's VERSION is fixed at 159 and must never change. QMK
+// defaults it to EECONFIG_USER_DATA_SIZE and re-initialises (zeroes) the whole block
+// when the stored version differs, and a zeroed keymap_layers_fmt then discards the
+// stored keymap and macros too. Fixing it lets a tail byte be appended without that
+// reset: the new byte reads 0 on a board that never wrote it, so every appended
+// field must take 0 as its default (state.h, poly_eeconf_t). 159 is the size the
+// 1.11.0 release wrote, so boards on 1.11.0 keep their settings.
+#define EECONFIG_USER_DATA_VERSION 159
+
 // Emoji picker: 38 slots/page (rows 2-4; the top row is the MRU, row 1 the tabs).
 #define EMJ_SLOTS_PER_PAGE 38
 // Emoji search mode (emoji/EMOJI_SEARCH.md). Result index of each category tab, by

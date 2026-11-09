@@ -300,6 +300,11 @@ Twelve custom transaction IDs send state to the slave with CRC32 and up to 10 re
 - ⚠️ **An unwritten EEPROM byte reads `0x00`, not `0xFF`**, after wear levelling. Gate a
   new field on the format version, and retire a broken version value rather than reuse
   it.
+- ⚠️ **`EECONFIG_USER_DATA_VERSION` is fixed at 159 (keymap `config.h`); never change it.**
+  QMK defaults it to `EECONFIG_USER_DATA_SIZE`, so every appended `poly_eeconf_t` byte
+  up to 1.11.0 zeroed all settings on upgrade, and the zeroed `keymap_layers_fmt` then
+  discarded the stored keymap and macros. Now a tail byte appends without a reset, and
+  its default must be 0.
 - **`g_user_brightness` changes only at deliberate set-points**, never from idle or
   suspend transients.
 - **Idle tracking is a `bool` plus a `uint32_t` timestamp**, never a signed sentinel.

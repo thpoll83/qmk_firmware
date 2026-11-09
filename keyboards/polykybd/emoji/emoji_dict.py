@@ -90,6 +90,9 @@ DICT_HEADER_SIZE = 44
 # EMJDICT_MAX_CPS (base/emoji_dict.h): the firmware refuses a bundle with more.
 # Below the 12-bit posting index (4096), so that bound is covered too.
 MAX_CPS = 2304
+# The revision of a hand-built dictionary (build --user). Shipped dictionaries use
+# 1..254, so the host never takes a user build for the shipped one, or the reverse.
+USER_REVISION = 0xFF
 ALPHA_MAX = 63                # 6-bit codes 1..63; 0 ends a word; 0xFF = typed letter not in the alphabet
 LETTER_BITS = 6
 WORD_MAX = 64                 # letters in one word (EMJDICT_WORD_MAX); longer words are dropped
@@ -459,8 +462,8 @@ def content_version(did: str) -> int:
     holds, and how new it is, without a command of its own."""
     for d in dictionaries():
         if d["id"] == did:
-            if d["number"] > 0xFF or not 0 < d["revision"] <= 0xFF:
-                raise SystemExit(f"{did}: number or revision past 8 bits")
+            if d["number"] > 0xFF or not 0 < d["revision"] < USER_REVISION:
+                raise SystemExit(f"{did}: number past 8 bits, or revision not 1..{USER_REVISION - 1}")
             return (d["number"] << 8) | d["revision"]
     raise SystemExit(f"{did} is not in dict_src/dictionaries.tsv")
 
@@ -622,7 +625,10 @@ def cmd_build_all(args: argparse.Namespace) -> int:
 
 
 def cmd_build(args: argparse.Namespace) -> int:
-    blob = build(args.lang, args.revision)
+    revision = args.revision
+    if args.user:
+        revision = (content_version(args.lang) & 0xFF00) | USER_REVISION
+    blob = build(args.lang, revision)
     out = Path(args.out or f"{args.lang}.plyd")
     out.write_bytes(blob)
     print(f"{out}: {len(blob)} B ({len(blob) * 100 // SLOT_SIZE}% of the 128 KB slot)")
@@ -826,6 +832,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("lang")
     p.add_argument("--revision", type=int, default=None,
                    help="content_version override; default: from dict_src/dictionaries.tsv")
+    p.add_argument("--user", action="store_true",
+                   help=f"a hand-built dictionary for the host's dictionary file setting "
+                        f"(revision {USER_REVISION})")
     p.add_argument("-o", "--out")
     p.set_defaults(fn=cmd_build)
     p = sub.add_parser("build-all", help="every dictionary in dictionaries.tsv + manifest.json")

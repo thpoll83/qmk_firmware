@@ -28,6 +28,22 @@ class FirmwareLimitTest(unittest.TestCase):
         self.assertLessEqual(ed.MAX_CPS, ed.POST_INDEX_MASK + 1)
 
 
+class UserBuildTest(unittest.TestCase):
+    def test_user_build_keeps_the_number_and_takes_revision_255(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            out = os.path.join(tmp, "de.plyd")
+            self.assertEqual(ed.main(["build", "de", "--user", "-o", out]), 0)
+            with open(out, "rb") as f:
+                ver = struct.unpack_from("<I", f.read(), 8)[0]
+        self.assertEqual(ver, (ed.content_version("de") & 0xFF00) | ed.USER_REVISION)
+        self.assertNotEqual(ver, ed.content_version("de"))
+
+    def test_shipped_revisions_stay_below_the_user_revision(self):
+        for d in ed.dictionaries():
+            self.assertLess(d["revision"], ed.USER_REVISION, d["id"])
+
+
 class FoldTest(unittest.TestCase):
     def test_latin_greek_cyrillic_lose_diacritics(self):
         self.assertEqual(ed.fold("Lächeln"), "lacheln")

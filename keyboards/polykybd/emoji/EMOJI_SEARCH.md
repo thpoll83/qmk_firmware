@@ -248,6 +248,24 @@ After an edit:
    ```
 4. Commit `dict_src/` here and `polyhost/res/emojidict/` in PolyKybdHost.
 
+### Your own dictionary, without a new host release
+
+Build the edited file with `--user` and point the host at it:
+
+```bash
+python3 emoji_dict.py build de --user -o ~/my-de.plyd
+polyctl emoji-dict file ~/my-de.plyd       # or tray: Emoji Search Language → Own dictionary file...
+```
+
+- `--user` sets the revision to 255, which no shipped dictionary uses, so the host
+  always flashes the file in place of a shipped one, and the reverse.
+- After the next edit, rebuild and choose the same file again. Choosing the file
+  that is in use flashes it again; its version is the same for every user build.
+- `polyctl emoji-dict set <id>` or a language in the tray menu returns to a shipped
+  dictionary. `polyctl emoji-dict file --clear` returns to the selected one.
+- A file the host cannot read or that is not a dictionary is not flashed, and the
+  keyboard keeps what it has. `polyctl emoji-dict status` shows why.
+
 A new dictionary is a new last line in `dictionaries.tsv` (the list is append only,
 because a dictionary's line number is part of its version) plus its `dict_src/<id>.tsv`.
 

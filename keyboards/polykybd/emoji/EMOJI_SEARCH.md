@@ -3,9 +3,10 @@
 Status: prototype on split72. The dictionary builder (`emoji_dict.py`), the
 firmware loader and search (`base/emoji_dict.c`, suite `polykybd_emoji_dict`), font-pack
 layout v4 with the `emojidict` slot, and the search mode on `_EMJ` are in place.
-PolyKybdHost ships all 79 dictionaries and flashes the one its `emoji_search_dict`
-setting names (tray: Selected Language → Emoji Search Language). Not done: split42's
-two-step search. To flash a dictionary without the host:
+The host side is in PolyKybdHost#739, not in a release yet (the latest is 1.20.0):
+it ships all 79 dictionaries and flashes the one its `emoji_search_dict` setting
+names (tray: Selected Language → Emoji Search Language). Not done: split42's
+two-step search. Until that host release, flash a dictionary by hand:
 
 ```bash
 python3 keyboards/polykybd/emoji/emoji_dict.py build en -o en.plyd
@@ -233,7 +234,8 @@ it on an edited dictionary.
 
 After an edit:
 
-1. Increase the dictionary's `revision` in `dict_src/dictionaries.tsv` (1 to 255).
+1. Increase the dictionary's `revision` in `dict_src/dictionaries.tsv` (1 to 254; 255 is
+   reserved for `build --user`).
    The host flashes a keyboard whose dictionary revision differs from the shipped
    one, so without this step no keyboard gets the change.
 2. Check it builds and fits the 128 KB slot, and try a few searches:

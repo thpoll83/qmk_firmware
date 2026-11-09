@@ -153,26 +153,24 @@ split72, search mode:
 | top row, 12 number keys | category tabs | results 1–12, best match first |
 | Esc (top left) | previous page | previous result page |
 | top right | next page | next result page |
-| right half, row 3, column 0 (slot 31) | emoji slot | Backspace (Space on Qwerty) |
-| right half, row 3, column 1 (slot 32) | emoji slot | Space (blank on Qwerty) |
-| `\`, below the top-right key (`KC_NO` before) | blank, inert | Backspace on Qwerty, blank otherwise |
-| left half, row 3, inner end (slot 18, above the innermost thumb) | emoji slot | Space |
+| left Shift (`KC_EMJ_S_SPACE`, `KC_NO` before) | blank, inert | Space |
+| right Shift (`KC_EMJ_S_BKSP`, `KC_NO` before) | blank, inert | Backspace |
 | bottom row | recents | recents, all 12 |
 
-Backspace sits above the right innermost thumb key (Enter on Stag!), Space beside
-it. When the base layout has Backspace on the top-right key (Qwerty), Backspace
-moves one row down to the `\` position and Space takes the key above the thumb. None of these keys is a letter on any of the five base layouts in
-English.
+Space and Backspace are on the two Shift positions, which are Shift on all five
+base layouts, so they never take a letter's key and need no per-layout handling.
+Every emoji slot is a letter or blank. Up to 1.11.0, Space and Backspace were on
+emoji slots 31, 32 and 18, and Backspace moved to the `\` key on layouts with
+Backspace on the top-right key.
 
-A letter of the active language whose key has a search function (Space,
-Backspace, a result, a recent) moves to the free emoji slot nearest to where its
+A letter of the active language whose key has a search function (a page key, a
+result, a recent) moves to the free emoji slot nearest to where its
 key sits on a standard keyboard (`[` one key right of P, `.` two right of M), on
 the same half as its own key. When that neighbour is on the other half, the
 distance is measured from the key itself; a letter never changes sides. Only a letter no other key can type moves: Russian х
 and ю on Qwerty do, French é does not (e finds the same words, see `fold()`).
-`build_slot_letters()` does this in three passes. With Russian, Qwerty moves х
-under з and ю to the end of row 3, Neo moves ъ, Workman ъ and ё, and all 33
-letters can be typed.
+`build_slot_letters()` does this in two passes. With Russian, all 33 letters can
+be typed on all five base layouts.
 
 The letters are read from the base layout when search mode starts, from the
 stored keymap, so a remapped layout is followed too. There is no Enter or Delete

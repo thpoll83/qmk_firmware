@@ -180,7 +180,7 @@ Handle a custom keycode in `process_record_user()` and return false, never on th
 release edge: on an `OSL()` layer a release action fires up to three times. Real
 keycodes stay on the release edge. [`KEYCODE_HANDLING.md`](keyboards/polykybd/KEYCODE_HANDLING.md).
 
-- ⚠️ **The tapping term and the Flow Tap term are runtime settings since v28** (cmd 44,
+- ⚠️ **The tapping term and the Flow Tap term are runtime settings since v29** (cmd 44,
   `base/tap_terms.h`). `TAPPING_TERM` / `FLOW_TAP_TERM` in `split72/config.h` are only
   the defaults, asserted equal to `POLY_DEFAULT_*_MS`. Read them through
   `get_poly_tapping_term()`, never the macro.
@@ -191,7 +191,7 @@ keycodes stay on the release edge. [`KEYCODE_HANDLING.md`](keyboards/polykybd/KE
 ### HID protocol
 
 Byte 0 report ID, byte 1 command ID, byte 2+ payload; replies `"P\xNN."` (ACK) or
-`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (28, `config.h`) gates host features. Read
+`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (29, `config.h`) gates host features. Read
 [`PROTOCOL_HISTORY.md`](keyboards/polykybd/PROTOCOL_HISTORY.md) before changing any
 command; several were shaped by a contrast the wire format does not show. A new command
 goes through the `add-gated-hid-command` skill.

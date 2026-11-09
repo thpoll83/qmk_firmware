@@ -170,6 +170,8 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
         request_disp_refresh();
     }
     emj_apply_sync(incoming->emj_category, incoming->emj_page);
+    emj_search_apply(incoming->emj_search[0], incoming->emj_search[1], incoming->emj_search[2],
+                     incoming->emj_query);
     lang_apply_sync(incoming->lang_page);
     if(newly_set & OVERLAY_ACTION_FLAGS) {
         apply_overlay_action_flags(newly_set);

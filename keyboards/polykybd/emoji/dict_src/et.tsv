@@ -1,0 +1,1259 @@
+# emoji search keywords, et, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	laia naeratusega nägu	hambad | irve | irvitamine | naer | naeratamine | naeratus | nägu | õnnelik | rõõmsameelne | rõõmus | tore
+1F601	naerul silmade ja laia naeratusega nägu	hambad | irve | irvitamine | naer | naeratamine | naerul | nägu | õnnelik | silm | silmad | tore
+1F602	rõõmupisaratega nägu	haha | hehe | lmao | lol | naer | nägu | naljakas | nutmine | õnnelik | pisar | rofl | roflmao | rõõm | tunded | ülinaljakas
+1F603	suurte silmadega naerunägu	avatud | hambad | irve | irvitamine | jee | lahe | naeratamine | naeratus | nägu | rõõmus | silmad | suur
+1F604	avatud suu ja naeratavate silmadega naerunägu	avatud | irve | irvitamine | lol | naer | naeratamine | naeratus | nägu | rõõmus | silm | silmad | suu
+1F605	higipiisa ja avatud suuga naerunägu	avatud | elevil | higi | külm | masendunud | naeratamine | naeratus | naermine | nägu | närvis | stress | stressis | suu
+1F606	avatud suu ja suletud silmadega naerunägu	avatud | haha | hahaha | irve | kissitamine | lol | naer | naeratamine | naeratus | nägu | õnnelik | rofl | silmad | suletud | suu
+1F607	aupaistega naerunägu	aupaiste | fantaasia | haldjas | ingel | ingellik | inglid | jutt | muinasjutt | naeratamine | naeratus | nägu | õnnelik | õnnistatud | rahulik | süütu | vaim
+1F608	sarviline naerunägu	deemon | fantaasia | kuri | lilla | muinasjutt | naeratav | naeratus | nägu | saatan | sarved
+1F609	silma pilgutav nägu	flirtima | libe | nägu | õrritama | pilgutama | pilgutav | seksikas | silmapilgutus | südametemurdja
+1F60A	naeratavate silmadega naerunägu	naeratamine | naeratus | nägu | punastama | rahul | rõõmus | silm | silmad
+1F60B	maitsvat toitu nautiv nägu	maitsev | naeratamine | naeratus | nägu | näljane | nautima | sööma | täis | toit
+1F60C	kergendust tundev nägu	kergendunud | kergendus | nägu | rahu | rahulik | zen
+1F60D	südamekujuliste silmadega naerunägu	armastus | naeratus | nägu | romantika | romantiline | silmad | südamed | südamekujulised silmad | suudlused | tunded | xoxo
+1F60E	päikeseprillidega naerunägu	äge | ere | lahe | naeratus | nägu | päikeseprillid | prillid | rand | stiil | vinge | võit
+1F60F	muigav nägu	boss | flirtima | irvitama | kahtlane | kaval | kelmikas | lahe | libe | meeldiv | muie | muigama | nägu | nägus | nali | vennas
+1F610	erapooletu nägu	aa | ebamugav | emotsioonitu | erapooletu | igav | ilmetu | kade | meh | mida iganes | nägu | õnnetu | piinlik | sirge | tõsine | tühi
+1F611	ilmetu nägu	aa | emotsioonitu | igav | ilmetu | kade | meh | mida iganes | mittemidagiütlev | nägu | omg | õnnetu | piinlik | sirge | surnud | väheütlev
+1F612	põlglik nägu	... | hästi | igavlev | imelik | kade | mida iganes | nägu | õnnetu | pahane | põlglik
+1F613	külma higiga kaetud nägu	higi | hirmul | külm | kurb | nägu | närvis | norgus | peavalu | suletud | tunded
+1F614	mõtlik nägu	igav | jube | kaotamine | kaotus | kurb | mõtlik | nägu | nõme | nukker | pettnud | surnud
+1F615	segaduses nägu	ebakindel | ei tea | hmm | kulmukortsutus | kurb | meh | nägu | segaduses | segane | vabandust
+1F616	kimbatuses nägu	frustreerunud | häiritud | kimbatuses | kurb | nägu | närvis | segaduses | tunded | vastik | vihane
+1F617	suudlev nägu	armastan | flirtima | kohtama | kohting | musi | musid | nägu | sind | suudlus | xoxo
+1F618	suudlust saatev nägu	armas | armastan | armsam | flirtima | igatsema | muahh | musi | nägu | õhusuudlus | romantiline | sind | süda | suudlus | xoxo
+1F619	naeratavate silmadega suudlev nägu	armastus | flirtima | kohtama | kohting | naeratama | naeratus | nägu | öö | silm | silmad | suletud | suudlemine | suudlus | suudlused
+1F61A	suletud silmadega suudlev nägu	flirtima | kohtama | kohting | musid | nägu | punastama | silm | silmad | suletud | suudlus | suudlused | xoxo
+1F61B	suust väljas keelega nägu	äge | keel | keel väljas | lahe | magus | nägu | pidu | vägev
+1F61C	suust väljas keelega ja silma pilgutav nägu	äge | hull | imelik | keel | keel väljas | nägu | nali | naljakas | pidu | pilgutus | segane | segi | silm | silmapilgutus | yolo
+1F61D	keelt näitav suletud silmadega nägu	keel | keel väljajs | kissitamine | maitsma | mida iganes | nägu | omg | rõve | silm | silmad | suletud | vastik | yolo
+1F61E	pettunud nägu	ebaõnn | jube | kaotus | kurb | nägu | nukker | õnnetu | pettunud | süüdi
+1F61F	murelik nägu	ärevil | kurb | liblikad | mure | murelik | nägu | närvid | närviline | stress | stressis | üllatunud
+1F620	tige nägu	ärritunud | frustreerunud | nägu | õnnetu | pahane | raev | süüdi | tige | tunded | viha | vihaleajav | vihane
+1F621	mossitav nägu	ärritunud | mossitav | nägu | õnnetu | pahane | punane | raevunud | tige | tunded | viha | vihaleajav | vihane
+1F622	nuttev nägu	igatsev | jube | kurb | nägu | nutt | nuttev | õnnetu | pisar | tunded
+1F623	sihikindel nägu	fookus | keskendunud | nägu | peavalu | pühendunud | sihikindel | sihikindlus
+1F624	ninast auru ajav nägu	aur | nägu | nina | õnnetu | pahane | raev | raevukas | suits | suitsev | triumf | tunded | viha | vihane | võit
+1F625	pettunud, kuid kergendust tundev nägu	aeg | ärev | higi | keeruline | kergendus | kõne | kurb | nägu | napikas | pettunud
+1F626	avatud suuga mossitav nägu	avatud | hirmul | hirmus | kulmukortsutamine | kulmukortsutus | mida | nägu | suu | tabatud | üllatus | valves | vau
+1F627	ahastuses nägu	ahastus | hirmul | hirmus | mida | nägu | õnnetu | stressis | üllatunud | unustamine | vau
+1F628	hirmunud nägu	ärev | hirm | hirmunud nägu | hirmus | kartlik | murelik | nägu
+1F629	rammestunud nägu	ebaõnn | ei | kurb | nägu | näljane | nuttev | õnnetu | rammestunud | tunded | unine | väsinud | vihane
+1F62A	unine nägu	head | kurb | magamine | nägu | nuttev | ööd | uni | unine | väsinud
+1F62B	väsinud nägu	aevastus | kahju | kurb | nägu | tunded | uinak | väsinud
+1F62C	grimassitav nägu	grimass | grimassitav | hambaarst | irvitav | naeratav | naeratus | nägu | piinlik
+1F62D	valjusti nuttev nägu	kurb | nägu | nutt | nuttev | õnnetu | pisar | pisarad | röökiv | valjusti
+1F62E	avatud suuga nägu	avatud | kaastunne | lahti | nägu | omg | šokeeritud | suu | üllatunud | unustasin | uskuma | uskumatu | vau
+1F62F	vaigistatud nägu	äge | hämmingus | nägu | omg | üllatunud | vaigistatud | vau
+1F630	külma higiga kaetud ja avatud suuga nägu	ärev | ärevil | avatud | higi | hirmul | kiirustav | külm | nägu | sinine | suu
+1F631	hirmunult karjuv nägu	hirm | hirmul | hirmunud | hirmunult karjuv nägu | karje | munch | nägu
+1F632	hämmastunud nägu	ehmunud | hämmastus | löödud | nägu | omg
+1F633	punastav nägu	hämmastunud | kuum | mida | nägu | palavus | piinlik | punastav | segaduses | segane | surnud | üllatunud | umbusk | vau
+1F634	magav nägu	haigutus | head | headööd | magamine | mida iganes | nägu | ööd | uinak | uneaeg | uni | väsinud | voodi | zzz
+1F635	oimetu nägu	haige | nägu | oimetu | pearinglus | silmad | surnud | tunded | väsinud
+1F636	ilma suuta nägu	ilmetu | nägu | piinlik | saladus | sõnatu | suu | suuta | tasa | tühi | tumm | vaikne | vaikus
+1F637	kirurgimaskiga kaetud nägu	arst | dermatoloog | doktor | haige | hambaarst | kirurg | mask | nägu | pisikud | ravim
+1F638	lõbusate silmadega irvitav kass	irve | kass | lõbusate silmadega irvitav kass | naeratus | nägu | silm
+1F639	rõõmupisarais kass	kass | nägu | pisar | rõõm | rõõmupisarais kass
+1F63A	avatud suuga naeratav kass	avatud suuga naeratav kass | kass | lahti | naeratus | nägu | suu
+1F63B	südamekujuliste silmadega naeratav kass	armastus | kass | naeratus | nägu | süda | südamekujuliste silmadega naeratav kass
+1F63C	virilalt naeratav kass	irooniline | kass | naeratus | nägu | viril | virilalt naeratav kass
+1F63D	suletud silmadega suudlev kass	kass | nägu | silm | suletud silmadega suudlev kass | suudlus
+1F63E	mossitav kass	kass | mossis | mossitav kass | nägu
+1F63F	nuttev kass	kass | kurb | nägu | nutt | nuttev kass | pisar
+1F640	üllatunud kass	kass | nägu | ootamatu | üllatunud | üllatus
+1F641	veidi kulmu kortsutav nägu	kortsutama | kulm | kurb | nägu | veidi
+1F642	naeratusega nägu	naeratamine | naeratus | nägu | õnnelik | pisut
+1F643	tagurpidi nägu	hehe | naeratus | nägu | tagurpidi
+1F644	pööritavate silmadega nägu	mida iganes | nägu | pööritav | silmad | silmapööritus
+1F648	kaetud silmadega ahv	ahv | kaetud silmadega ahv | keelatud | keeld | kuri | nägu | vaatamine
+1F649	kaetud kõrvadega ahv	ahv | kaetud kõrvadega ahv | keelatud | keeld | kuri | kuulamine | nägu
+1F64A	kaetud suuga ahv	ahv | kaetud suuga ahv | keelatud | keeld | kuri | nägu | rääkimine
+1F910	tõmblukusuuga nägu	nägu | saladus | suletud | suu | tasa | tõmblukk | tõmblukusuuga nägu | vait
+1F911	nägu, millel on raha suus	nägu | palgapäev | raha | raha suus | suu
+1F912	kraadiklaasiga nägu	haige | kraadiklaas | nägu
+1F913	nohiku nägu	andekas | arukas | friik | intelligentne | nägu | nohik | nutikas | prillid | tark
+1F914	mõtlev nägu	hmm | juurdlema | kaaluma | lõug | mõtisklema | mõtlema | nägu
+1F915	kinniseotud peaga nägu	ai | haige | kinniseotud | nägu | peaside | side | vigastus
+1F916	robot	koletis | nägu | robot | roboti nägu
+1F917	kallistav nägu	avatud | käed | kalli | kallistus | naeratus | nägu
+1F920	kauboimütsiga nägu	kauboi | müts | nägu
+1F921	klouninägu	kloun | klouninägu | nägu
+1F922	iiveldust tundev nägu	iiveldus | nägu | okse | paha | rõve | vastik
+1F923	naerust kõveras	haha | hehe | lmao | lol | naer | nägu | naljakas | nutmine | õnnelik | pisar | põrand | rofl | roflmao | rõõm | rullimine | ülinaljakas
+1F924	ilastav nägu	ilastav | nägu
+1F925	valetav nägu	nägu | pinocchio | vale | valetaja | valetav
+1F926	meeleheide	aa | ei | hämming | inimene | jälle | lööma | meeleheide | mitte | nägu | omg | segadus | šokk
+1F927	aevastav nägu	aevastav | aevastus | gripp | haige | nägu | palavik | terviseks
+1F928	kergitatud kulmudega nägu	emotikon | hmm | kergitatud kulmuga nägu | kulm | mida | nägu | pahameel | skeptik | skeptiline | üllatunud | umbusaldav
+1F929	staariga silmitsi	nägu | silmad | staar | staariga silmitsi | suu kõrvuni
+1F92A	pöörase ilmega nägu	pöörase ilmega nägu | silm | suur | väike
+1F92B	sõrme suul hoidev nägu	kuss! | sõrme suul hoidev nägu | vaikust
+1F92C	suul olevate sümbolitega nägu	ärritunud | nägu | ropendav | sümbolid | suu | tsensuur | vanduv | vihane
+1F92D	kätt suul hoidev nägu	avastus | itsitama | itsitamine | järsk | käsi | nägu | oih | saladus | šokk | suu | üllatus | ups
+1F92E	oksendav nägu	iiveldus | okse | oksendav nägu
+1F92F	plahvatav pea	plahvatav pea | šokeeritud
+1F970	naeratav südametega nägu	armunud | imetlev | naeratav kolme südamega nägu | naeratav südametega nägu | sisse võetud
+1F971	haigutav nägu	haigutav | haigutus | headööd | igav | mida iganes | nägu | öö | uinak | uneaeg | uni | unine | väsinud | zzz
+1F972	naeratav pisaraga nägu	kergendus | liigutatud | naeratav | naeratav pisaraga nägu | naeratus | naerunägu | pisar | rõõm | tänulik | uhke | valu
+1F973	pidutsev nägu	elev | hurraa | müts | nägu | õnnelik | palju õnne | pasun | peovile | pidu | pidutsemine | sünnipäev | tähistamine
+1F974	uimane nägu	alkoholiuimas | joobnud | lainelised huuled | oimetu | uimane nägu | üks silm poolkinni
+1F975	higistav nägu	higistav | higistav nägu | kuumarabandus | näost punane | palavikuline
+1F976	külmunud nägu	jääpurikad | jäätunud | jäätuv | külmakahjustus | külmunud | külmunud nägu | näost sinine
+1F978	maskeeritud nägu	inimene | inkognito | kulmud | maskeerima | maskeering | maskeeritud nägu | nägu | nina | prillid | spioon | vuntsid
+1F97A	anuv nägu	anuv | halastus | ilus | kurb | kutsikasilmad | miks | mitte | nägu | palun | paluv | silmad | suur
+1FAE0	sulav nägu	haha | kaduma | kuumus | lahustuma | lol | nägu | palav | piinlik | sarkasm | sarkastiline | sulama | sulamine | vedel
+1FAE1	au andev nägu	au | au andma | edu | jah | just nii | nägu | OK | saluut | sõjavägi
+1FAE2	kätt suul hoidev pärani silmadega nägu	aukartus | hämming | kartlikkus | kätt suul hoidev pärani silmadega nägu | omg | piinlikkus | šokeeritud | šokk | üllatunud | üllatus | uskumatus | vaikne
+1FAE3	käte vahelt piiluva silmaga nägu	haaratud | häbelik | kartlik | käte vahelt piiluva silmaga nägu | peidus | peitma | piiluma | piiluv | vahtima
+1FAE4	diagonaalse suuga nägu	diagonaal | frustratsioon | frustreerunud | kahtlev | kahtlus | meh | mida iganes | mis iganes | pettunud | segadus | segaduses | skeptiline | suu
+1FAE5	punktiirjoonega nägu	depressiivne | introvertne | kaduma | masenduses | mis iganes | nähtamatu | peidus | peitma | punktiirjoonega nägu
+1FAE7	mullid	hõljuma | mull | mullid | pärl | puhas | röhitsema | seep | vee all
+1FAE8	värisev nägu	hämmastus | maavärin | nägu | ohoo | omg | paanika | segane | šokk | üllatus | värisev | vau | vibreeriv
+1F381	kingipakk	karp | kingipakk | kink | pakitud
+1F389	pidupäev	pidu | pidupäev | sünnipäev | üllatus
+1F38A	konfetid	konfetid | pidu | tähistama
+1F47B	kummitus	kummitus | muinasjutt | nägu | olend | tont | viirastus
+1F47C	inglibeebi	ingel | inglibeebi | inglilaps | laps | lapsenägu | muinasjutt
+1F47D	tulnukas	fantaasia | maaväline | nägu | olend | tulnukas
+1F47E	tulnukkoletis	fantaasia | koletis | kosmos | maaväline | mäng | mängud | mängur | muinasjutt | nägu | olend | pikslitud | tulnukas | tulnukkoletis | ufo
+1F47F	deemon	deemon | fantaasia | kurat | kuri | lilla | muinasjutt | nägu | saatan | sarved | vallatu | vihane
+1F480	kolp	kolp | kondid | luud | muinasjutt | nägu | pealuu | surm
+1F481	infoleti töötaja	abi | info | infoleti töötaja | inimene | käsi | kõmu | kuulujutt | mida iganes | naine | sarkasm | sarkastiline | teave | tõsiselt
+1F482	valvur	buckingham | kiiver | london | palee | valvur
+1F489	süstal	arst | haigus | nõel | ravim | süstal
+1F48A	tablett	arst | haige | ravim | tablett
+1F4A2	viha sümbol	koomiks | tige | viha sümbol | vihane
+1F4A4	zzz	head | koomiks | magamine | ööd | uni | unine | väsinud | zzz
+1F4A5	piraki	kokkupõrge | koomiks | pauk | plahvatama | pomm | põrkuma
+1F4A6	higipiisad	higi | koomiks | märg | piisad | piisk | pritsima | pritsimine | tilgad | tilk | töö | trenn | vesi
+1F4A7	piisk	higi | ilm | koomiks | külm | piisk | pisar
+1F4A8	kiirustamine	jooksmine | kiirustamine | koomiks
+1F4A9	kakahunnik	kaka | kakahunnik | koletis | koll | koomiks | nägu | sõnnik
+1F4AB	peadpööritav	koomiks | peadpööritav | täht
+1F4AC	jutumull	dialoog | jutt | jutumull | koomiks | mull
+1F4AD	mõttemull	koomiks | mõte | mõttemull | mull
+1F4AE	valge lill	lill | õis | valge
+1F4A0	punktiga romb	geomeetria | koomiks | punktiga romb | romb | sees | teemant
+1F4A1	lamp	elekter | idee | lamp | pirn | valgus
+1F4A3	pomm	koomiks | kuum | ohtlik | plahvatus | pomm
+1F4AF	sada punkti	100 | punkt | sada | sada punkti | täis
+1F4B0	rahapaun	dollar | kott | raha | rahakott | rahapaun
+1F4B1	valuutavahetus	pank | raha | vahetus | valuuta | valuutavahetus
+1F4B2	suur dollarimärk	dollar | raha | suur dollarimärk | valuuta
+1F4B8	tiibadega raha	dollar | pank | raha | tiibadega raha | tiivad
+1F525	tuli	leek | tuli
+1F52E	kristallkuul	ennustamine | kristallkuul | muinasjutt | tööriist
+1F440	silmad	keha | nägu | silm | silmad
+1F441	silm	keha | silm
+1F442	kõrv	heli | keha | kõrv | kõrvad | kuulama | kuulen | kuulma | kuulmine
+1F443	nina	keha | nina
+1F444	suu	huuled | suu
+1F445	keel	keel | keha | lakkuma | limpsima
+1F446	üles osutav sõrm tagantvaates	käsi | keha | nimetissõrm | osutamine | sõrm | üles osutav sõrm tagantvaates
+1F447	alla osutav sõrm	alla osutav sõrm | käsi | keha | nimetissõrm | osutamine | sõrm
+1F448	vasakule osutav sõrm	käsi | keha | nimetissõrm | osutamine | sõrm | vasakule osutav sõrm
+1F449	paremale osutav sõrm	käsi | keha | nimetissõrm | osutamine | paremale osutav sõrm | sõrm
+1F44A	rusikalöök	käsi | keha | löök | rusikalöök | rusikas
+1F44B	lehvitav käsi	head aega | hei | käsi | lehvitav käsi | lehvitus | nägemist | tere | tervitus | tsau
+1F44C	OK-käemärk	äge | hästi | käsi | kindlasti | kolm | korras | näpistama | OK | okei | selge | vinge
+1F44D	meeldib	käsi | keha | meeldib | pöial | püstine pöial
+1F44E	ei meeldi	ei meeldi | käsi | keha | pöial | pöial alla
+1F44F	plaksutavad käed	aplaus | käsi | keha | plaksutamine | plaksutavad käed
+1F450	avatud käed	avatud | avatud käed | käsi | keha
+261D	üles osutav sõrm	käsi | keha | nimetissõrm | osutamine | sõrm | üles osutav sõrm
+270A	ülestõstetud rusikas	käsi | keha | löök | rusikas | ülestõstetud rusikas
+270B	ülestõstetud käsi	käsi | keha | ülestõstetud käsi
+270C	võit	käsi | rahu | v | võit
+270D	kirjutav käsi	käsi | keha | kirjutamine | kirjutav käsi
+1F4AA	pingutatud biitseps	biitseps | bro | fleksima | jõusaal | käsi | kasv | kätekõverdused | kulturist | lihas | lihaseline | loom | musklis | pink | press | tõstmine | tugev
+1F590	harali sõrmedega käsi	harali | harali sõrmedega käsi | käsi | keha | sõrm
+1F64C	ülestõstetud käed	hurraa | käed | tähistamine | ülestõstetud käed | žest
+1F64F	palveasendis käed	aitäh | käed | palve | palveasendis käed | tänan | žest
+1F90C	kokkusurutud sõrmed	hoidma | kannatlkkus | käsi | kokkusurutud | küsima | lõõgastus | mida | sarkastiline | sõrmed | žest
+1F90F	näpistav käsi	näpistav käsi | pisut | pöialt ja nimetissõrme lähestikku hoidev käsi | väike | väike kogus
+1F918	sarvede märk	käsi | märk | rokk | sarved | sõrmed
+1F919	helista mulle	helista | helista mulle | käsi
+1F91A	tõstetud käsi	käsi | tõstetud
+1F91B	vasakule suunatud rusikas	rusikas | vasakule | vasakule suunatud rusikas
+1F91C	paremale suunatud rusikas	paremale | paremale suunatud rusikas | rusikas
+1F91D	käepigistus	käepigistus | käsi | kohtumine | tervitus
+1F91E	sõrmed risti	käsi | õnn | risti | sõrmed
+1F91F	armastust väljendav žest	armastan | armastus | käsi | kolm | sind | sõrmed | žest
+1F932	peopesad üleval koos	palve | peopesad üleval koos
+1F9B4	kont	koer | kont | luu | luustik
+1F9B5	jalg	jalalöök | jalg | jäse
+1F9B6	jalalaba	jalalaba | jalalöök | jalg | pahkluu | trampimine
+1F9B7	hammas	hambaarst | hambad | hammas
+1F9E0	aju	aju | intelligentne | tark
+1F9BE	mehaaniline käsi	ligipääs | mehaaniline käsi | protees
+1FAC0	süda	anatoomia | keskpunkt | organ | pulss | punane | süda | südamelöök
+1FAC1	kopsud	anatoomia | hingamine | hingetõmme | kops | kopsud | organ | sissehingamine | väljahingamine
+1FAE6	huulde hammustav	ebamugav | flirt | flirtimine | hirm | huul | huulde hammustav | huulepulk | murelik | mures | närviline | põnevil | seksikas
+1FAF0	pöialt ja nimetissõrme risti hoidev käsi	<3 | armastus | kallis | käsi | nips | pöialt ja nimetissõrme risti hoidev käsi | raha | süda
+1FAF1	käsi paremale	hoidma | käepigistus | käsi | parem | paremale | sirutama
+1FAF2	käsi vasakule	hoidma | käepigistus | käsi | sirutama | vasak | vasakule
+1FAF3	käsi peopesaga allapoole	käsi | käsi peopesaga allapoole | kõss | kukkuma | kukutama | lahti laskma | loobuma | üles võtma
+1FAF4	käsi peopesaga ülespoole	ei tea | hoidma | käsi | käsi peopesaga ülespoole | kutsuma | pakkuma | püüdma | tõstma | tule | ütle mulle
+1FAF5	vaataja poole osutav nimetissõrm	käsi | osutama | sina | sõrm | torkima | vaataja poole osutav nimetissõrm
+1FAF6	südant moodustavad käed	<3 | armastan sind | armastus | käed | süda | südant moodustavad käed
+1FAF7	vasakule lükkav käsi	käsi | keeldu | keeldumine | lükka | lükkamine | oota | stopp | vasakule | vasakule lükkav käsi | viska viis
+1FAF8	paremale lükkav käsi	käsi | keeldu | keeldumine | lükka | lükkamine | oota | paremale | paremale lükkav käsi | stopp | viska viis
+2764	punane süda	armastus | emotsioon | punane süda | süda
+1F380	lint	lint | lips
+1F382	sünnipäevatort	kook | küünlad | magustoit | söök | sünnipäev | sünnipäevatort | tort
+1F383	kõrvitsalatern	halloween | kõrvits | kõrvitsalatern | latern
+1F384	jõulupuu	jõulud | jõulupuu | kuusk | pühad
+1F386	ilutulestik	ilutulestik | tähistamine
+1F387	säraküünal	ilutulestik | säraküünal
+1F388	õhupall	õhupall | tähistamine
+1F9E7	punane ümbrik	edu | hóngbāo | kingitus | õnn | punane ümbrik | raha
+1F9E8	ilutulestikurakett	dünamiit | ilutulestik | lõhkeaine | pauk | rakett | säde | valgus
+1F38B	tanabata soovipuu	pidu | puu | tanabata soovipuu
+1F38C	ristatud lipud	Jaapan | lipp | pidu | ristatud lipud | risti
+1F38D	väravamänd	bambus | mänd | puu | taim | väravamänd
+1F38E	Jaapani nukud	festival | Jaapani nukud | nukk
+1F38F	kalakujuline vimpel	kala | kalakujuline vimpel | lipp | vimpel
+1F390	tuulekell	kell | tuul | tuulekell
+1F391	kuutseremoonia	festival | kuu | kuutseremoonia | tseremoonia
+1F393	koolilõpumüts	koolilõpumüts | lõpetamine | müts | riided
+1F484	huulepulk	huulepulk | kosmeetika | meik
+1F485	küünelakk	hooldus | keha | kosmeetika | küünelakk | küüs | lakk | maniküür
+1F48B	suudluse jälg	huuled | musi | romantika | süda | suudluse jälg
+1F48C	armastuskiri	armastus | armastuskiri | kiri | romantika | süda
+1F48D	sõrmus	abielus | kihlatud | kihlus | pulmad | romantika | sädelev | särav | sõrmus | teemant
+1F48E	kalliskivi	juveel | kalliskivi | romantika | teemant
+1F48F	musi	aastapäev | armastus | inimene | kallim | kohting | koos | muahh | musi | paar | romantika | süda | suudlus | xoxo
+1F490	kimp	kimp | lill | romantika | taim
+1F491	paarike südamega	armastus | paarike südamega | romantika | süda
+1F492	pulmad	kabel | kirik | pulmad | romantika
+1F493	tukslev süda	löök | pulss | süda | tukslev süda
+1F494	murtud süda	emotsioon | kurb | murtud | süda | üksik
+1F495	kaks südant	armastus | kaks südant | süda
+1F496	sädelev süda	elevil | sädelev süda | sära | süda
+1F497	kasvav süda	kasvav | närviline | põnev | pulss | süda
+1F498	noolega süda	nool | noolega süda | romantika | süda
+1F499	sinine süda	armastus | emotsioon | romantika | sinine | süda
+1F49A	roheline süda	armastus | emotsioon | roheline | romantika | süda
+1F49B	kollane süda	armastus | emotsioon | kollane | süda
+1F49C	lilla süda	armastus | emotsioon | lilla | parimat | süda
+1F49D	lindiga süda	lindiga süda | lint | sõbrapäev | süda
+1F49E	pöörlevad südamed	pöörlev | pöörlevad südamed | süda
+1F49F	südamekujuline kaunistus	süda | südamekujuline kaunistus
+1F90D	valge süda	süda | valge
+1F90E	pruun süda	pruun | süda
+1F9E1	oranž süda	oranž | oranž süda
+1FA75	helesinine süda	armas | armastan | armastus | emotsioon | eriline | helesinine | meeldib | rohekassinine | sinakasroheline | süda | taevasinine | tsüaan
+1FA76	hall süda	armastan | armastus | emotsioon | eriline | hall | hõbedane | meeldib | paehall | süda
+1FA77	roosa süda	armas | armastan | armastus | emotsioon | eriline | meeldib | nunnu | roosa | süda | tunne
+2763	südamega hüüumärk	hüüumärk | kirjavahemärk | märk | süda | südamega hüüumärk
+2733	kaheksa tipuga tärn	* | kaheksa tipuga tärn | tärn
+2734	kaheksa tipuga täht	* | kaheksa tipuga täht | täht
+2747	sädelus	* | sädelus
+1F3E0	maja	kodu | maja
+1F3E1	aiaga maja	aed | aiaga maja | kodu | maja
+1F3E2	kontorihoone	hoone | kontorihoone | maja
+1F3E3	Jaapani postkontor	hoone | Jaapani postkontor | post
+1F3E4	postkontor	hoone | post | postkontor
+1F3E5	haigla	arst | haigla | hoone | meditsiin
+1F3E6	pank	hoone | pank
+1F3E7	pangaautomaat	märk | pangaautomaat | pank | silt | sularaha | teller
+1F3E8	hotell	hoone | hotell
+1F3E9	armuhotell	armastus | armuhotell | hoone | hotell
+1F3EA	kauplus	hoone | kauplus | pood
+1F3EB	kool	hoone | kool
+1F3EC	kaubamaja	hoone | kaubamaja | pood
+1F3ED	tehas	hoone | tehas
+1F3EE	punane paberlatern	lamp | latern | punane | punane paberlatern | valgus
+1F3EF	Jaapani loss	Jaapan | Jaapani loss | loss
+1F3F0	loss	hoone | loss
+1F463	jalajäljed	jalajälg | jalajäljed | jälg | keha
+1F464	büsti siluett	büst | salapärane | siluett | vari
+1F465	büstide siluetid	büst | büstid | inimesed | kõik | siluett | sõber | sõbrad
+1F466	poiss	laps | lapselaps | noor | noorem | poeg | poiss | särasilm
+1F467	tüdruk	laps | lapselaps | neitsi | noor | noorem | särasilm | tähtkuju | tüdruk | tütar
+1F468	mees	mees | täiskasvanu | tüüp
+1F469	naine	daam | naine | täiskasvanu
+1F46A	perekond	laps | perekond
+1F46B	mees ja naine hoiavad käest kinni	flirt | käed | kaksikud | kallim | kinni | kohting | naised | paar | parim | sõber | sõbrad | tüdrukud
+1F46C	käest kinni hoidvad mehed	flirt | käed | kaksikud | kallim | kinni | kohting | mehed | paar | parim | sõber | sõbrad | vennad
+1F46D	käest kinni hoidvad naised	flirt | käed | kaksikd | kallim | kinni | kohting | naised | õed | paar | parim | sõber | sõbrad | tüdrukud
+1F46E	politseinik	arreteerimine | konstaabel | politsei | politseinik | salapolitseinik | seadus | tee äärde
+1F46F	pidutsevad jänesekõrvadega inimesed	hingesugulased | identne | inimesed | jänes | kaaslane | kaksik | kaksikud | kõrv | paar | parim | pidu | pidutsemine | sõber | tantsija | topelt
+1F470	loori kandev inimene	inmene | loor | pulm
+1F471	inimene: blondide juustega	blond | blondiin | inimene | isik
+1F472	Hiina mütsiga mees	gua | guapi | hiina | inimene | mao | müts | pi | pigimüts
+1F473	turbaniga inimene	inimene | turban
+1F474	eakas mees	eakas | kiilakas | mees | täiskasvanud | tark | vana | vanaisa
+1F475	eakas naine	daam | eakas | naine | täiskasvanu | tark | vana | vanaema
+1F476	beebi	beebi | beebid | imik | lapsed | noor | rase | vastsündinu
+1F477	ehitaja	ehitaja | ehitus | inimene | kiiver | mees | parandus | remont | renvoeerimine | töö | tööline
+1F478	printsess	fantaasia | kroon | kuninganna | kuninglik | muinasjutt | printsess
+1F479	sookoll	fantaasia | koletis | koll | muinasjutt | nägu | olend | sookoll
+1F47A	mäekoll	fantaasia | koletis | koll | mäekoll | muinasjutt | nägu | olend
+1F483	tantsiv naine	elegantne | flamenko | inimene | naine | pidulik | salsa | tango | tants | tantsimine
+1F486	näomassaaž	hooldus | inimene | lõõgastav | lõõgastus | massaaž | naine | näomassaaž | peavalu | pinge | salong | spaa | teraapia
+1F487	juukselõikus	ilu | ilusalong | inimene | juukselõikus | juuksur | juuste lõikamine | kosmetoloogia | salong | soengu tegemine | stiil
+1F645	eitav žest	ei | eitav | inimene | käsi | keelama | keelatud | žest
+1F646	nõustuv žest	inimene | käsi | liigutus | OK | omg | võimlemine | žest
+1F647	kummardav inimene	andestus | anumine | haletsus | inimene | kahetsus | kummardav inimene | kummardus | meditatsioon | mediteerimine | mees | vabandus | vabandust | žest
+1F64B	kätt tõstev rõõmus inimene	inimene | käed | käsi | kätt tõstev inimene | kätt tõstev rõõmus inimene | küsimus | mina tean | õnnelik | rõõmus | saan aidata | žest
+1F64D	kulmu kortsutav inimene	ärritunud | häiritud | ilme | inimene | kulm kortsus | kulmu kortsutav inimene | kulmukortsutus | naine | pettunud
+1F64E	mossitav inimene	ärritunud | grimass | ilme | inimene | kulmukortsutus | mossis | mossitav | pettunud | vinguv
+1F930	rase naine	naine | rase
+1F931	rinnaga toitmine	ema | imetamine | imik | naine | rind | rinnaga toitmine
+1F933	selfi	kaamera | käsi | selfi | telefon
+1F934	prints	fantaasia | kroon | kuningas | kuninglik | muinasjutt | prints
+1F935	inimene smokingus	inimene | pidulik | pulm | smoking
+1F936	jõuluvana abikaasa	abikaasa | ema | fantaasia | jõulud | jõuluvana | pühad | tähistamine
+1F937	õlakehitus	ei tea | idk | inimene | kehitus | kes teab | ma ei tea | mida iganes | õlakehitus | õlg | teadmatus | ükskõiksus | võib-olla
+1F385	jõuluvana	fantaasia | isa | jõulud | jõuluvana | pühad | tähistamine
+1F9B8	superkangelane	hea | kangelane | superkangelane | supervõime
+1F9B9	superkurikael	inimene | kuri | kurikael | kurjategija | kurjus | paha | pahalane | superkurikael | supervõimed
+1F9BF	mehaaniline jalg	ligipääs | mehaaniline jalg | protees
+1F9D0	monokliga nägu	elegantne | monokkel | nägu | rikas | uhke | vanamoeline
+1F9D1	täiskasvanu	inimene | täiskasvanu
+1F9D2	laps	laps | lapselaps | noor | noorem | särasilm
+1F9D3	eakas	eakas | isik | täiskasvanu | tark | vana | vanavanem
+1F9D4	mees: habemega	habe | habemega | inimene | vuntsid
+1F9D5	pearätiga naine	bandana | hijab | mantilla | naine | pea | pearätt | rätik | tichel
+1F9D6	inimene leiliruumis	aurusaun | hoolitsus | inimene | leil | lõõgastav | lõõgastus | luksuslik | päev | ruum | saun | spaa
+1F9D7	mäkke roniv inimene	alpinism | alpinist | mägi | mägironija | ronimine | üles
+1F9D8	lootosasendis inimene	jalad risti | jooga | joogi | lõõgastav | lõõgastus | lootosasendis inimene | lootoseasendis inimene | meditatsioon | mediteerimine | rahu | rätsepaiste | rististe | zen
+1F9D9	maag	fantaasia | loits | maag | maagia | manamine | mäng | nõiamoor | nõid | võlur | võluvägi
+1F9DA	haldjas	fantaasia | haldjas | inimene | lillehaldjas | muinasjutt | müüt | tiivad
+1F9DB	vampiir	Dracula | ebasurnu | elav surnu | halloween | hambad | hirmus | kihvad | kostüüm | õudne | surematu | üleloomulik | vampiir | veri
+1F9DC	näkk	folkloor | kolmhark | meri | muinasjutt | näkk | olend | ookean | sireen
+1F9DD	päkapikk	fantaasia | folkloor | haldjad | haldjas | maagiline | müstiline | müütiline | päkapikk | päkapikud | võluvägi
+1F9DE	džinn	džinn | fantaasia | hõõruma | lamp | müstiline | müütiline | soovid
+1F9DF	zombi	ebasurnu | elav surnu | halloween | hirmus | maailmalõpp | õudne | õudus | surematu | zombi
+1FAC2	kallistavad inimesed	aitäh | armastus | embus | hüvastijätt | inimesed | kallistus | mugavus | sõprus | tänu | tere | tervitus
+1FAC3	rase mees	kõht | mees | puhitus | rase | täis | ülesöömine
+1FAC4	rase inimene	inimene | kõht | puhitus | rase | täis | ülesöömine
+B9	astmel 1	aste | astmel 1 | üks
+B2	astmel 2	2 | aste | astmel 2 | ruudus
+B3	astmel 3	aste | astmel 3 | kolm | kuubis
+207B	ülamiinus	miinus | ülakiri | ülamiinus
+B0	kraad	kraad | proov | tund
+B1	pluss-miinus	pluss-miinus
+D7	korrutusmärk	korda | korrutamine | korrutusmärk
+F7	jagamismärk	jaga | jagamine | jagamismärk
+B5	mikro märk	mikro | mikro märk | mõõtühik
+A9	autoriõigus	autoriõigus | c
+AE	registreeritud	r | registreeritud
+2122	kaubamärk	kaubamärk | märk
+A7	paragrahv	jaotis | osa | paragrahv
+B6	paragrahvimärk	paragrahv | paragrahvimärk
+B7	keskmine punkt	keskmine | punkt | vahepunkt
+2022	mumm	mumm | punkt
+2013	enn-kriips	enn-kriips | kriips | N | N-kriips
+2026	mõttepunktid	kolm punkti | mõttepunktid | väljajätt
+AB	topeltnool vasakule	nurk | nurksulud | topeltnool vasakule | tsitaat | vasak | vasaknooled
+BB	topeltnool paremale	nurk | nurksulud | parem | paremnooled | topeltnool paremale | tsitaat
+2030	promillimärk	promill | promillimärk
+20AC	euro	EUR | euro | valuuta
+A3	nael	EGP | GBP | nael | valuuta
+A5	jeen	CNY | jeen | JPY | jüaan | valuuta
+A2	sent	sent
+20B9	India ruupia	India ruupia | valuuta
+20BD	rubla	rubla | valuuta
+20A9	vonn	KPW | KRW | vonn
+20BA	Türgi liir	
+20BF	bitcoin	bitcoin | BTC
+20AA	Iisraeli uus seekel	
+20AB	Vietnami dong	
+20B1	peeso	peeso
+20BC	Aserbaidžaani manat	
+20B4	Ukraina grivna	
+20A6	Nigeeria naira	
+20A1	Costa Rica koloon	
+20B2	Paraguay guaranii	
+20B5	Ghana sedi	
+20B8	Kasahstani tenge	
+20BE	Gruusia lari	
+20AE	Mongoolia tugrik	
+20AD	Laose kiip	
+20A8	ruupia	ruupia | valuuta
+24	dollar	dollar | peeso | raha | USD
+58F	Armeenia dramm	
+9F3	Bangladeshi taka	
+E3F	Tai baat	
+20A3	Prantsuse frank	Prantsuse frank
+20A4	liir	liir | valuuta
+20A7	Hispaania peseeta	
+20B0	Saksa penn	penn | pfennig | saksa | valuuta
+20B3	austral	ARA | austral | valuuta
+20A2	kruseiro	kruseiro
+20A5	mill	mil | mill
+20B6	Toursi livr	livr | Toursi | valuuta
+20B7	spesmilo	spesmilo | valuuta
+A4	määramata rahaühik	
+201E	alumine jutumärk	alumine jutumärk | jutumärgid | nutikad jutumärgid | tsitaat | viitamine
+201C	vasakule kaldu jutumärk	jutumärgid | nutikad jutumärgid | tsitaat | vasakule kaldu jutumärk | viitamine
+201D	paremale kaldu jutumärk	jutumärgid | nutikad jutumärgid | paremale kaldu jutumärk | tsitaat | viitamine
+2018	vasakule kaldu ülakoma	jutumärgid | nutikad jutumärgid | ühekordsed jutumärgid | ülakoma | vasakule kaldu ülakoma | viide
+2019	paremale kaldu ülakoma	jutumärgid | nutikad jutumärgid | paremale kaldu ülakoma | ühekordsed jutumärgid | ülakoma | viide
+A1	pöördhüüumärk	hüüatus | hüüumärk | pöördhüüumärk | tagurpidi
+BF	pöördküsimärk	küsimärk | küsimus | pöördküsimärk | tagurpidi
+2020	ristimärk	pistoda | rist | ristimärk
+2021	topeltristi märk	pistoda | topelt | topeltristi märk
+2044	murru kaldkriips	kaldkriips | kriips | murru kaldkriips
+2032	priim	priim
+2033	topeltpriim	priim | topeltpriim
+201A	alumine ühekordne jutumärk	alumine jutumärk | alumine ühekordne jutumärk | jutumärgid | ühekordne jutumärk
+AC	eitus	eitus | mitte
+2117	helisalvestise autoriõigus	autoriõigus | heli | helisalvestise autoriõigus | salvestamine
+2212	miinusmärk	lahutamine | miinus | miinusmärk
+2213	miinus või pluss	miinus | pluss | pluss-miinus | või
+2248	võrdub ligikaudu	ligikaudne | ligikaudsus | võrdub ligikaudu
+2260	ei võrdu	ebavõrdsus | ei võrdu | mittevõrdne
+2261	identne	identne | kolm kriipsu | täpselt
+2264	väiksem või võrdne	ebavõrdsus | väiksem kui | väiksem või võrdne | võrdne | võrdub
+2265	suurem või võrdne	ebavõrdsus | suurem kui | suurem või võrdne | võrdne | võrdub
+226A	palju väiksem kui	ebavõrdsus | kui | matemaatika | palju | väiksem
+226B	palju suurem kui	ebavõrdsus | kui | matemaatika | palju | suurem
+221E	lõpmatuse märk	lõpmatus | lõpmatuse märk
+221A	ruutjuur	juur | radikaal | ruut | ruutjuur | surd
+221D	proportsionaalne	proportsionaalne | proportsionaalsus
+2211	summa	matemaatika | n-ary | summa
+220F	korrutis	korrutis
+222B	integraal	arvutus | integraal
+2202	osatuletis	osatuletis
+2206	juurdekasv	juurdekasv | kolmnurk
+2207	nabla	kolmnurk | nabla
+2200	kõigi jaoks	antud | kõigi jaoks | kõik | mis tahes | universaalne
+2203	on olemas	on olemas
+2205	tühihulk	hulk | matemaatika | operaator | tühi
+2208	element	element | hulk | kuulub hulka | sisaldab
+2209	ei kuulu hulka	ei kuulu hulka
+2229	lõikumine	hulk | lõikumine
+222A	union	hulk | kogu | union
+2282	pärisalamhulk	alamhulk | hulk | kuulub alamhulka | pärisalamhulk
+2283	pärisülemhulk	hulgaoperaator | matemaatika | pärisülemhulk
+2286	alamhulk	alamhulk
+2287	ülemhulk	matemaatika | ülemhulk | võrdus
+2227	loogiline ja	loogiline ja
+2295	plussmärk ringis	plussmärk ringis
+2297	korrutusmärk ringis	korrutusmärk ringis
+22A5	falsum	eet | falsum
+2220	nurk	nurk | terav
+2234	järelikult	järelikult | loogika
+2235	sest	loogika | sest
+2218	ringimärk	kompositsioon | ringimärk | tehtemärk
+2219	täppmärk	operaator | täppmärk
+22C5	täpi operaator	operaator | täpi operaator
+2215	jagamise kaldkriips	jagamise kaldkriips | kaldkriips | kriips
+2190	vasaknool	nool | vasak | vasaknool
+2191	ülesnool	nool | üles | ülesnool
+2192	paremnool	nool | parem | paremnool
+2193	allanool	alla | allanool | nool
+2196	nool üles vasakule	loe | nool | nool üles vasakule | suund
+2197	nool üles paremale	kirre | nool | nool üles paremale | suund
+2198	nool alla paremale	kagu | nool | nool alla paremale | suund
+2199	nool alla vasakule	edel | nool | nool alla vasakule | suund
+2194	nool paremale-vasakule	nool | nool paremale-vasakule
+2195	nool üles-alla	nool | nool üles-alla
+21D0	topelt-vasaknool	topelt-vasaknool
+21D1	topelt-ülesnool	topelt-ülesnool
+21D2	topelt-paremnool	nool | parem | topelt
+21D3	topelt-allanool	topelt-allanool
+21D6	topeltnool loodesse	topeltnool loodesse
+21D7	topeltnool kirdesse	topeltnool kirdesse
+21D8	topeltnool kagusse	topeltnool kagusse
+21D9	topeltnool edelasse	topeltnool edelasse
+21D4	vasakule-paremale topeltnool	nool | parem | topelt | vasak
+21A4	vasakule nool ribast	vasakule nool ribast
+21A6	paremale nool ribast	nool | paremale | riba
+21A5	ülesnool ribast	ülesnool ribast
+21A7	allanool ribast	allanool ribast
+21A9	kaardus nool vasakule	kaardus nool vasakule | nool | vasak
+21AA	kaardus nool paremale	kaardus nool paremale | nool | parem
+219E	kahe peaga vasaknool	kahe peaga vasaknool
+21A0	kahe peaga paremnool	kahe peaga paremnool
+219F	kahe peaga ülesnool	kahe peaga ülesnool
+21A1	kahe peaga allanool	kahe peaga allanool
+21A2	sabaga vasaknool	sabaga vasaknool
+21A3	sabaga paremnool	sabaga paremnool
+219A	sirge vasaknool	sirge vasaknool
+219B	sirge paremnool	sirge paremnool
+21AE	sirge vasak-paremnool	sirge vasak-paremnool
+21CD	läbikriipsutatud topelt-vasaknool	läbikriipsutatud topelt-vasaknool
+21CF	läbikriipsutatud topelt-paremnool	läbikriipsutatud | nool | parem | topelt
+21CE	vasak-parem läbikriipsutatud topeltnool	läbikriipsutatud | nool | parem | topelt | vasak
+21C4	paremnool vasaknoole kohal	paremnool vasaknoole kohal
+21C6	vasaknool paremnoole kohal	nool | parem | vasak | vasaknool paremnoole kohal
+21CB	vasakharpuun paremharpuuni peal	vasakharpuun paremharpuuni peal
+21CC	paremharpuun vasakharpuuni peal	paremharpuun vasakharpuuni peal
+21BC	vasakule harpuun ülemise kiskuga	harpuun | kisk | ülemine | vasak
+21BD	vasakule harpuun alumise kiskuga	alumine | harpuun | kisk | vasak
+21C0	paremale harpuun ülemise kiskuga	kisk | paremale harpuun ülemise kiskuga
+21C1	paremale harpuun alumise kiskuga	alumine | harpuun | kisk | parem
+21BE	üles harpuun parema kiskuga	harpuun | kisk | parem | üles
+21BF	üles harpuun vasaku kiskuga	kisk | üles harpuun vasaku kiskuga
+21C2	alla harpuun parema kiskuga	alla | harpuun | kisk | parem
+21C3	alla harpuun vasaku kiskuga	alla | harpuun | kisk | vasak
+21C7	paaris vasaknooled	paaris vasaknooled
+21C9	paaris paremnooled	paaris paremnooled
+21C8	paaris ülesnooled	paaris ülesnooled
+21CA	paaris allanooled	paaris allanooled
+21DA	kolmiknool vasakule	kolmiknool vasakule
+21DB	kolmiknool paremale	kolmiknool paremale
+219C	laineline vasaknool	laineline vasaknool
+219D	laineline paremnool	laineline paremnool
+21DC	väänlev vasaknool	väänlev vasaknool
+21DD	väänlev paremnool	väänlev paremnool
+21AD	vasakule-paremale laineline nool	vasakule-paremale laineline nool
+21AF	sakiline allanool	sakiline allanool
+21BA	vastupäeva avatud ringiga nool	avatud | nool | ringiga | vastupäeva
+21BB	päripäeva avatud ringiga nool	avatud | nool | päripäeva | ringiga
+1F400	rott	loom | rott
+1F401	hiir	hiir | loom
+1F402	härg	farm | härg | loom | sodiaak | sõnn | tähtkuju | veis
+1F403	vesipühvel	loom | pühvel | vesi | zoo
+1F404	lehm	ammuu | farm | lehm | loom | piim
+1F405	tiiger	kass | kiskja | loom | suur | tiiger | zoo
+1F406	leopard	kass | kiskja | leopard | loom | suur | zoo
+1F407	jänes	jänes | lemmikloom | loom
+1F408	kass	kass | kassipoeg | koer | lemmikloom | loom
+1F409	draakon	draakon | lohe | loom | muinasjutt | rüütlid
+1F40A	krokodill	krokodill | loom
+1F40B	vaal	loom | ookean | rand | vaal
+1F40C	tigu	aed | loom | nälkjas | tigu
+1F40D	madu	loom | madu | maokandja | sodiaak | tähtkuju
+1F40E	hobune	farm | hobune | loom | ratsutamine | võiduajamine
+1F40F	oinas	jäär | lammas | loom | oinas | sarved | sodiaak | tähtkuju | zoo
+1F410	kits	farm | kaljukits | kits | loom | piim | sodiaak | tähtkju
+1F411	lammas	farm | kohev | lammas | loom | mää | tall | utt | vill
+1F412	ahv	ahv | banaan | loom
+1F413	kukk	kukk | lind | loom | ornitoloogia
+1F414	kana	kana | lind | loom | ornitoloogia
+1F415	koer	koer | lemmikloom | loom
+1F416	siga	emis | farm | loom | peekon | siga
+1F417	metssiga	kult | loom | metssiga
+1F418	elevant	elevant | loom
+1F419	kaheksajalg	elukas | kaheksajalg | loom | ookean
+1F41A	spiraalne teokarp	karp | spiraalne | teokarp
+1F41B	röövik	aed | loom | putukas | röövik
+1F41C	sipelgas	aed | loom | putukas | sipelgas
+1F41D	mesilane	kevad | loodus | loom | mesi | mesilane | putukas
+1F41E	lepatriinu	lepatriinu | loodus | loom | põrnikas | putukas
+1F41F	kala	kala | kalad | loom | õhtusöök | sodiaak | tähtkuju
+1F420	troopiline kala	kala | loom | troopiline
+1F421	siilkala	kala | loom | siilkala
+1F422	kilpkonn	kilpkonn | loom
+1F423	kooruv tibu	koorumine | loom | muna | tibu
+1F424	väike tibu	lind | loom | ornitoloogia | tibu
+1F425	väike tibu eestvaates	eestvaates | lind | loom | ornitoloogia | tibu
+1F426	lind	lind | loom | ornitoloogia
+1F427	pingviin	antarktika | lind | loom | ornitoloogia | pingviin
+1F428	koaala	austraalia | karu | koaala | kukkurloom | loom | nägu
+1F429	puudel	koer | kohev | loom | puudel
+1F42A	kaamel	dromedar | kaamel | kõrb | küür | loom
+1F42B	kahe küüruga kaamel	baktrian | kaamel | kahe küüruga kaamel | küür | loom
+1F42C	delfiin	delfiin | loib | loom | ookean | rand
+1F42D	hiire nägu	hiir | loom | nägu
+1F42E	lehma nägu	ammuu | farm | lehm | loom | nägu | piim
+1F42F	tiigri nägu	kiskja | loom | nägu | suur | tiiger
+1F430	jänese nägu	jänes | lemmikloom | loom | nägu
+1F431	kassi nägu	kass | kassipoeg | kiisu | lemmikloom | loom | nägu
+1F432	draakoni nägu	draakon | loom | muinasjutt | nägu
+1F433	vett pritsiv vaal	loom | nägu | ookean | rand | vaal | vesi
+1F434	hobuse nägu	farm | hobune | loom | nägu | ratsutamine
+1F435	ahvi nägu	ahv | banaan | loom | nägu
+1F436	koera nägu	armas | koer | kutsikas | lemmikloom | loom | nägu
+1F437	sea nägu	farm | loom | nägu | peekon | siga
+1F438	konn	konn | loom | nägu
+1F439	hamster	hamster | lemmikloom | loom | nägu
+1F43A	hunt	hunt | loom | nägu
+1F43B	karu	grisli | karu | loom | mesi | möire | nägu
+1F43C	panda	bambus | loom | nägu | panda
+1F43D	sea kärss	farm | kärss | loom | nägu | nina | nuusutama | siga
+1F43E	käpajäljed	jalg | jälg | käpajäljed | käpp
+1F43F	vöötorav	loom | orav | vöötorav
+1F981	lõvi nägu	alfa | lakk | loom | lõvi | möire | nägu | safari | sodiaak | tähtkuju | tugev
+1F982	suur skorpion	loom | skorpion | sodiaak | tähtkuju
+1F983	kalkun	kalkun | lind | tänupüha
+1F984	ükssarvik	nägu | ükssarvik
+1F985	kotkas	kotkas | lind | loom | ornitoloogia
+1F986	part	lind | loom | ornitoloogia | part
+1F987	nahkhiir	loom | nahkhiir | vampiir
+1F988	hai	hai | kala | loom
+1F989	öökull	lind | loom | öökull | ornitoloogia | tark
+1F98A	rebane	loom | nägu | rebane | rebase nägu
+1F98B	liblikas	ilus | liblikas | putukas
+1F98C	hirv	hirv | loom
+1F98D	gorilla	gorilla | loom
+1F98E	sisalik	loom | roomaja | sisalik
+1F98F	ninasarvik	loom | ninasarvik
+1F990	krevett	koorikloom | krevett | söök | toit | väike
+1F991	kalmaar	kalmaar | mollusk | söök | toit
+1F992	kaelkirjak	kaelkirjak | laigud | loom
+1F993	sebra	loom | sebra | triibud | vöödid
+1F994	siil	loom | okkaline | siil
+1F995	sauropood	brahhiosaurus | brontosaurus | diplodookus | sauropod | sauropood
+1F996	türannosaurus	dinosaurus | loom | T-rex | türannosaurus
+1F997	kilk	kilk | loom | putukas | rohutirts
+1F998	känguru	hüpe | känguru | kukkur | kukkurloom | loom
+1F999	laama	alpaka | guanako | laama | loom | vikunja | vill
+1F99A	paabulind	edev | ilus | lind | loom | ornitoloogia | paabulind | uhke | värviline
+1F99B	jõehobu	jõehobu | jõehobuke | loom
+1F99C	papagoi	lind | loom | ornitoloogia | papagoi | piraat | rääkima
+1F99D	pesukaru	kaval | loom | pesukaru | uudishimulik
+1F99E	homaar	homaar | homaarisupp | mereannid | söök | sõrad
+1F99F	sääsk	haigus | loom | malaaria | palavik | putukas | sääsk | viirus
+1F9A0	mikroob	amööb | bakter | mikroob | viirus
+1F9A1	mäger	loom | mäger | meemäger | nuhtlus
+1F9A2	luik	inetu pardipoeg | lind | luigepoeg | luik
+1F9A3	mammut	karvane | kihv | loom | mammut | suur | väljasurnud
+1F9A4	dodo	dodo | lind | loom | ornitoloogia | suur | väljasurev
+1F9A5	laiskloom	aeglane | laisik | laisk | laiskloom
+1F9A6	saarmas	jõgi | kala | saarmas | udras
+1F9A7	orangutan	ahv | inimahv | loom | orangutan
+1F9A8	skunk	hais | loom | skunk
+1F9A9	flamingo	flamingo | lind | troopiline
+1F9AA	auster	auster | elus | karp | pärl | sukeldumine
+1F9AB	kobras	hambad | kobras | loom | tamm
+1F9AC	piison	kari | loom | piison | pühvel | pürg
+1F9AD	hüljes	hüljes | merilõvi
+1F9AE	juhtkoer	abi | juht | juhtkoer | koer | pime | vaegnägija
+1FABC	meduus	akvaarium | kombitsad | kõrvetus | loom | meduus | mereelukas | meri | mollusk | ookean | plankton | põletus | selgrootu
+1F330	kastan	kastan | söök | taim
+1F331	võrse	idu | loom | noor | taim | võrse
+1F332	igihaljas puu	igihaljas | puu | taim
+1F333	lehtpuu	leht | lehtpuu | puu | taim
+1F334	palmipuu	loom | palm | puu | rand | taim
+1F335	kaktus	kaktus | kõrb | loodus | põud | taim
+1F337	tulp	kasv | lill | õis | taim | tulp
+1F338	kirsiõis	kirsiõis | kirss | lill | õis | taim
+1F339	roos	armastus | elegantne | ilu | lill | õis | punane | roos | taim | valentin
+1F33A	hibisk	hibisk | lill | taim
+1F33B	päevalill	lill | päevalill | päike | taim
+1F33C	õis	lill | õis | taim
+1F33D	maisitõlvik	mais | maisitõlvik | söök | taim | tõlvik
+1F33E	riisitaim	riis | riisitaim | taim | vihk
+1F33F	maitsetaim	leht | maitsetaim | taim
+1F340	nelja lehega ristik	leht | neli | nelja lehega ristik | ristik | taim
+1F341	vahtraleht	langev | leht | taim | vaher | vahtraleht
+1F342	langenud leht	langenud | leht | sügis
+1F343	tuules lendlev leht	leht | taim | tuul | tuules lendlev leht
+1F344	seen	kärbseseen | mürgiseen | seen
+1FAB0	kärbes	haigus | kärbes | loom | parm | roiskumine | toakärbes | tõuk
+1FAB1	uss	loom | parasiit | rõnguss | uss | vihmauss
+1FAB2	mardikas	loom | mardikas | põrnikas | putukas
+1FAB3	prussakas	prussakas | putukas | tarakan
+1FAB4	potilill	hoolitsema | kasvatama | kaunistus | kodu | potilill | pott | taim
+1FAB5	puit	ehituspuit | känd | palk | puit | puu | saepuit
+1FAB6	sulg	kerge | lendama | suled | sulg
+1FAB7	lootos	budism | hinduism | ilu | lill | lootos | puhtus | rahu
+1FAB8	korall	kliimamuutus | korall | meri | ookean | riff
+1FAB9	tühi pesa	kodu | pesa | pesitsemine | tühi
+1FABA	munadega pesa	lind | muna | munad | oks | pesa | pesitsemine
+1FABB	hüatsint	hüatsint | indigo | lavendel | lill | lilla | lõvilõug | lupiin | taim
+2618	ristik	ristik | taim
+1F347	viinamarjad	puuvili | taim | viinamari | viinamarjad
+1F348	melon	melon | puuvili
+1F349	arbuus	arbuus | puuvili
+1F34A	mandariin	apelsin | c | mandariin | nektariin | puuvili | tsitrus | vitamiin
+1F34B	sidrun	puuvili | sidrun | söök | taim
+1F34C	banaan	banaan | kaalium | puuvili
+1F34D	ananass	ananass | colada | pina | puuvili | troopiline
+1F34E	punane õun	dieet | küps | õun | punane | puuvili | söök | tervis
+1F34F	roheline õun	õun | puuvili | roheline
+1F350	pirn	pirn | puuvili
+1F351	virsik	puuvili | virsik
+1F352	kirsid	kirsid | kirss | marjad | punane | puuvili
+1F353	maasikas	maasikas | mari | puuvili
+1F336	tuline pipar	pipar | tuline
+1F354	hamburger	burger | hamburger | kiirtoit | näljane | söök
+1F355	pitsa	juust | näljane | pepperoni | pitsa | pizza | söök | viil
+1F356	kondiga liha	kont | liha
+1F357	kanakoib	kalkun | kana | kanakoib | koib | kont | linnuliha | luu | söök
+1F358	riisiküpsis	leib | riis | söök
+1F359	riisipall	jaapani | pall | riis | söök
+1F35A	keedetud riis	keedetud | riis | söök
+1F35B	karriga riis	karri | riis | söök
+1F35C	aurav kauss	aurav | kauss | nuudlid | pho | pulgad | ramen | söök | supp
+1F35D	spagetid	lihapallid | pasta | restoran | söök | spagetid
+1F35E	leib	leib | nisu | päts | restoran | sai | süsivesikud | teravili | toit
+1F35F	friikartulid	friikartul | kiirtoit | söök
+1F360	röstitud bataat	bataat | kartul | röstitud | söök
+1F361	dango	dango | jaapani | magus | magustoit | pulk | söök
+1F362	oden	kebab | mereannid | oden | pulk | söök
+1F363	suši	söök | sushi | suši
+1F364	praetud krevett	krevett | praetud | söök | tempura
+1F365	keerdudega kalakotlet	kala | keerdudega | kook | kotlet | pirukas | restoran | söök | spiraal
+1F366	pehme jäätis	jäätis | magus | magustoit | pehme | restoran | söök
+1F367	mahlajää	jää | jäätis | magus | magustoit | mahlajää | restoran
+1F368	jäätis	jäätis | magus | magustoit | restoran | söök
+1F369	sõõrik	hommikusöök | magus | magustoit | sõõrik | toit
+1F36A	küpsis	küpsis | magus | magustoit | söök
+1F36B	šokolaaditahvel	magus | magustoit | šokolaad | šokolaaditahvel | söök
+1F36C	komm	komm | kommipaber | magus | magustoit | restoran | söök
+1F36D	pulgakomm	komm | magus | magustoit | pulgakomm | restoran | söök
+1F36E	vanillipuding	magus | magustoit | puding | söök
+1F36F	meepott	karu | magus | meepott | mesi | purk | söök
+1F370	liivataignakook	kook | lõik | magus | magustoit | söök
+1F371	bento einekarp	bento | karp | söök | toit
+1F372	potitäis toitu	hautis | pott | söök | supp
+1F373	toiduvalmistamine	hommikusöök | kokkamine | muna | pann | praadimine | restoran | toiduvalmistamine
+1F374	kahvel ja nuga	hommikusöök | kahvel | kokkamine | lõuna | maitsev | näljane | nuga | õhtusöök | restoran | söögiriistad | sööma | söömine | toit
+1F375	kõrvata teetass	jook | tass | tee | teetass
+1F376	riisiviin	baar | jook | pudel | riisiviin | tass
+1F377	veiniklaas	baar | jook | klaas | vein | veiniklaas
+1F378	kokteiliklaas	baar | jook | klaas | kokteil | kokteiliklaas
+1F379	troopiline jook	baar | jook | troopiline
+1F37A	õllekann	baar | jook | kann | õllekann | õlu
+1F37B	kõlisevad õllekannud	baar | jook | kann | kõlisevad õllekannud | õlu
+1F37C	lutipudel	beebi | lutipudel | piim | pudel
+1F37D	kahvel, nuga ja taldrik	kahvel | kokkamine | nuga | õhtusöök | söömine | taldrik
+1F37E	pudeli avamine	baar | jook | kork | pudel | pudeli avamine
+1F37F	popkorn	film | mais | popkorn
+1F950	sarvesai	croissant | hommikusöök | prantsuse | sai | sarvesai | söök | toit
+1F951	avokaado	avokaado | puuvili | söök | toit
+1F952	kurk	köögivili | kurk | söök | toit
+1F953	peekon	hommikusöök | liha | peekon | toit
+1F954	kartul	juurvili | kartul | söök | toit
+1F955	porgand	juurvili | porgand | söök | toit
+1F956	baguette	baguette | pikk | prantsuse | sai | söök | toit
+1F957	roheline salat	roheline | salat | söök | toit
+1F958	panniroog	paella | panniroog | söök | toit | ühepajatoit
+1F959	täidetud pita	falafel | gyro | kebab | pita | täidetud | toit
+1F95A	muna	hommikusöök | muna | toit
+1F95B	klaas piima	jook | klaas | klaas piima | piim
+1F95C	maapähklid	maapähkel | maapähklid | pähkel | söök | toit
+1F95D	kiivi	kiivi | puuvili | söök | toit
+1F95E	pannkoogid	crêpe | hommikusöök | pannkoogid | pannkook | toit
+1F95F	pelmeen	empanada | gyōza | jiaozi | pelmeen | pierogi | söök
+1F960	õnneküpsis	ennustus | õnneküpsis
+1F961	kaasamüügikarp	kaasamüügikarp | kiirtoidukarp
+1F962	söögipulgad	hashi | söögipulgad
+1F963	lusikaga kauss	helbed | hommikusöök | lusikas | puder | riisipuding | söök
+1F964	kõrrega tops	jook | kõrs | mahl | tops | vesi limonaad
+1F965	kookospähkel	kookospähkel | palm | piña colada | söök
+1F966	brokoli	brokoli | metskapsas
+1F967	pirukas	kõrvits | liha | lõik | õun | pirukas | puuvili | söök | täidis
+1F968	soolakringel	keerutatud | kringel | soolakringel
+1F969	lihalõik	karbonaad | lambalihakarbonaad | liha | lihalõik | praelõik | punane | sealihakarbonaad | söök | steik
+1F96A	võileib	leib | võileib
+1F96B	toidukonserv	konserv | söök | toit
+1F96C	lehtköögivili	hiina kapsas | kapsas | lehed | lehtkapsas | lehtköögivili | lehtsalat | roheline
+1F96D	mango	mango | puuvili | söök | troopiline
+1F96E	kuukook	festival | kuukook | söök | sügis | yuèbǐng
+1F96F	rõngassai	hommikusöök | määre | pagaritoode | rõngassai
+1F9C0	juustutükk	juust | juustutükk
+1F9C1	muffin	magus | magustoit | muffin | pagaritoode | söök
+1F9C2	sool	maitseaine | sool | soolatoos
+1F9C3	joogipakk	joogipakk | jook | kõrs | magus | mahl | mahlapakk
+1F9C4	küüslauk	küüslauk | maitseaine
+1F9C5	sibul	maitseaine | sibul
+1F9C6	falafel	falafel | kikerhernes | lihapall
+1F9C7	vahvel	hommikusöök | kõhklev | söök | vahvel | vahvliraud
+1F9C8	või	piimatoode | või
+1F9C9	mate	jook | mate | tee
+1F9CA	jääkuubik	jää | jääkuubik | jäämägi | külm | kuubik
+1F9CB	pärlitee	mull | mullitee | pärl | pärlitee | piim | tee
+1FAD0	mustikad	mari | mustikad | mustikas | sinine | toit
+1FAD1	paprika	köögivili | paprika | pipar | söök | toit
+1FAD2	oliiv	oliiv | toit
+1FAD3	lameleib	arepa | lameleib | lavašš | naan | pita
+1FAD4	tamale	maisikakk | mehhiko | pamonha | täidetud | tamale | toit
+1FAD5	fondüü	fondüü | juust | nõu | šokolaad | sulatatud | šveitsi
+1FAD6	teekann	jooma | kann | tee | teekann | toit
+1FAD7	vedeliku kallamine	jooma | kallama | klaas | oih | õnnetus | tühi | vesi
+1FAD8	oad	kaunvili | oad | toit | uba | väike
+1FAD9	purk	anum | kaste | maitseaine | purk | säilitama | tühi
+1FADA	ingver	ingver | juur | looduslik | õlu | vürts
+1FADB	hernekaun	edamame | hernekaun | hernes | kaun | kaunvili | köögivili | oad
+2615	kuum jook	jook | kohv | kuum | tee
+2600	päike	ere | ilm | kiired | kosmos | päike
+2601	pilv	ilm | pilv
+2602	vihmavari	ilm | riided | vihm | vihmavari
+2603	lumememm	ilm | külm | lumememm | lumi
+2614	piiskadega vihmavari	ilm | piisk | piiskadega vihmavari | riided | vihm | vihmavari
+26A1	kõrgepinge	elekter | kõrgepinge | oht | pinge | šokk | välk
+26C4	lumeta lumememm	ilm | külm | lumememm | lumeta lumememm | lumi
+26C5	päike pilve taga	ilm | päike | päike pilve taga | pilv
+26C8	äikese- ja vihmapilv	äike | äikese- ja vihmapilv | ilm | pilv | vihm
+2744	lumehelves	ilm | külm | lumehelves | lumi
+1F300	tsüklon	ilm | orkaan | taifuun | tornaado | tsüklon
+1F301	udune	ilm | udu | udune
+1F302	suletud vihmavari	ilm | riided | suletud vihmavari | vihm | vihmavari
+1F303	öine tähistaevas	ilm | öine tähistaevas | öö | täht
+1F304	päikesetõus mägedes	hommik | ilm | mägi | päike | päikesetõus | päikesetõus mägedes
+1F305	päikesetõus	hommik | ilm | päike | päikesetõus
+1F306	linna siluett videvikus	hoone | ilm | linna siluett videvikus | loojang | õhtu | päike | siluett | videvik
+1F307	päikeseloojang	hoone | ilm | loojang | päike | päikeseloojang
+1F308	vikerkaar	ilm | vihm | vikerkaar
+1F309	sild öösel	ilm | öö | sild | sild öösel
+1F30A	veelaine	ilm | laine | meri | ookean | veelaine | vesi
+1F30B	vulkaan	laava | mägi | purse | vulkaan
+1F30C	Linnutee	kosmos | Linnutee | tähed
+1F30D	Euroopa ja Aafrika gloobusel	Aafrika | Euroopa | Euroopa-Aafrika | gloobus | maa | maailm
+1F30E	Ameerika mandrid gloobusel	Ameerika | gloobus | maa | maailm
+1F30F	Aasia ja Austraalia gloobusel	Aasia | Aasia-Austraalia | Austraalia | gloobus | maa | maailm
+1F310	meridiaanidega gloobus	gloobus | maa | maailm | meridiaanid | meridiaanidega gloobus
+1F311	noorkuu	ilm | kosmos | kuu | noorkuu | pime
+1F312	kasvav kuusirp	ilm | kasvav kuusirp | kosmos | kuu | noorkuu | sirp
+1F313	kasvav poolkuu	ilm | kasvav poolkuu | kosmos | kuu | poolkuu
+1F314	kasvav kuu	ilm | kasvav | kuu | poolkuu
+1F315	täiskuu	ilm | kosmos | kuu | täiskuu
+1F316	kahanev kuu	ilm | kahanev | kosmos | kuu
+1F317	kahanev poolkuu	ilm | kahanev poolkuu | kosmos | kuu | poolkuu
+1F318	kahanev kuusirp	ilm | kahanev | kahanev kuusirp | kosmos | kuu | sirp
+1F319	kuusirp	ilm | kosmos | kuu | kuusirp | sirp
+1F31A	näoga noorkuu	ilm | kosmos | kuu | nägu | näoga noorkuu
+1F31B	näoga kasvav kuu	ilm | kosmos | kuu | nägu | näoga kasvav kuu | poolkuu
+1F31C	näoga kahanev kuu	ilm | kosmos | kuu | nägu | näoga kahanev kuu | poolkuu
+1F31D	näoga täiskuu	ere | ilm | kosmos | kuu | nägu | näoga täiskuu | täiskuu
+1F31E	näoga päike	ere | ilm | kosmos | nägu | näoga päike | päike
+1F31F	helendav täht	helendav | sära | täht
+1F320	langev täht	komeet | kosmos | langev | täht
+1F321	kraadiklaas	ilm | kraadiklaas
+1F324	päike väikese pilve taga	ilm | päike | päike väikese pilve taga | pilv
+1F325	päike suure pilve taga	ilm | päike | päike suure pilve taga | pilv
+1F326	päike vihmapilve taga	ilm | päike | päike vihmapilve taga | pilv | vihm
+1F327	vihmapilv	ilm | pilv | vihm | vihmapilv
+1F328	lumepilv	ilm | külm | lumepilv | lumi | pilv
+1F329	äikesepilv	äike | äikesepilv | ilm | pilv | välk
+1F32A	keeristorm	ilm | keeris | keeristorm | tornaado
+1F32B	udu	ilm | pilv | udu
+1F32C	näoga tuul	ilm | nägu | näoga tuul | tuul
+2648	Jäär	Jäär | sodiaak
+2649	Sõnn	sodiaak | Sõnn
+264A	Kaksikud	Kaksikud | sodiaak
+264B	Vähk	sodiaak | Vähk
+264C	Lõvi	Lõvi | sodiaak
+264D	Neitsi	Neitsi | sodiaak
+264E	Kaalud	Kaalud | sodiaak
+264F	Skorpion	Skorpion | sodiaak
+2650	Ambur	Ambur | sodiaak
+2651	Kaljukits	Kaljukits | sodiaak
+2652	Veevalaja	sodiaak | Veevalaja
+2653	Kalad	Kalad | sodiaak
+1F550	kell üks	00 | 1 | 1:00 | kell | üks
+1F551	kell kaks	00 | 2 | 2:00 | kaks | kell
+1F552	kell kolm	00 | 3 | 3:00 | kell | kolm
+1F553	kell neli	00 | 4 | 4:00 | kell | neli
+1F554	kell viis	00 | 5 | 5:00 | kell | viis
+1F555	kell kuus	00 | 6 | 6:00 | kell | kuus
+1F556	kell seitse	00 | 7 | 7:00 | kell | seitse
+1F557	kell kaheksa	00 | 8 | 8:00 | kaheksa | kell
+1F558	kell üheksa	00 | 9 | 9:00 | kell | üheksa
+1F559	kell kümme	00 | 10 | 10:00 | kell | kümme
+1F55A	kell üksteist	00 | 11 | 11:00 | kell | üksteist
+1F55B	kell kaksteist	00 | 12 | 12:00 | kaksteist | kell
+1F55C	kell pool kaks	1 | 1:30 | 30 | kaks | kell | pool
+1F55D	kell pool kolm	2 | 2:30 | 30 | kell | kolm | pool
+1F55E	kell pool neli	3 | 3:30 | 30 | kell | neli | pool
+1F55F	kell pool viis	30 | 4 | 4:30 | kell | pool | viis
+1F560	kell pool kuus	30 | 5 | 5:30 | kell | kuus | pool
+1F561	kell pool seitse	30 | 6 | 6:30 | kell | pool | seitse
+1F562	kell pool kaheksa	30 | 7 | 7:30 | kaheksa | kell | pool
+1F563	kell pool üheksa	30 | 8 | 8:30 | kell | pool | üheksa
+1F564	kell pool kümme	30 | 9 | 9:30 | kell | kümme | pool
+1F565	kell pool üksteist	10 | 10:30 | 30 | kell | pool | üksteist
+1F566	kell pool kaksteist	11 | 11:30 | 30 | kell | kell pool kaksteist | pool kaksteist
+1F567	kell pool üks	12 | 12:30 | 30 | kell | pool | üks
+1FA90	rõngastega planeet	rõngastega planeet | Saturn
+2604	komeet	komeet | kosmos
+26F0	mägi	mägi
+26F1	päikesevari maas	ilm | päike | päikesevari maas | vihm | vihmavari | vihmavari maas
+26F2	purskkaev	purskkaev
+26F4	praam	laev | praam | sõiduk
+26F5	purjepaat	jaht | meri | paat | puhkus | purjepaat | sõiduk
+2708	lennuk	lennuk | sõiduk
+1F488	habemeajaja tähis	habemeajaja | hambemeajamine | juukselõikus | lõikus | post
+1F4BA	iste	iste | tool
+1F680	rakett	kosmos | rakett | sõiduk
+1F681	helikopter	helikopter | kopter | reis | sõiduk
+1F682	vedur	aur | raudtee | rong | sõiduk | vedur
+1F683	rongivagun	elekter | rong | rongivagun | rööpad | sõiduk | tramm | troll | vagun
+1F684	kiirrong	kiirrong | kiirus | raudtee | rong | shinkansen
+1F685	terava ninaga kiirrong	kiirrong | nina | raudtee | rong | shinkansen | sõiduk | terav
+1F686	rong	raudtee | rong | sõiduk
+1F687	metroo	metroo | rong | sõiduk
+1F688	kergraudtee	kergraudtee | raudtee | rong | saabunud | sõiduk
+1F689	jaam	jaam | raudtee | rong
+1F68A	tramm	tramm | troll
+1F68B	trammivagun	tramm | trammivagun | troll | vagun
+1F68C	buss	buss | sõiduk
+1F68D	buss eestvaates	auto | buss | eestvaates
+1F68E	trollibuss	buss | tramm | troll | trollibuss
+1F68F	bussipeatus	buss | bussipeatus | peatus
+1F690	väikebuss	buss | sõiduk | väikebuss
+1F691	kiirabiauto	kiirabi | kiirabiauto | sõiduk
+1F692	tuletõrjeauto	auto | sõiduk | tuletõrje | tuletõrjeauto
+1F693	politseiauto	auto | patrull | politsei | politseiauto | sõiduk
+1F694	politseiauto eestvaates	auto | eestvaade | politsei | politseiauto eestvaates | sõiduk
+1F695	takso	sõiduk | takso
+1F696	takso eestvaates	eestvaade | sõiduk | takso | takso eestvaates
+1F697	auto	auto | sõiduk
+1F698	auto eestvaates	auto | auto eestvaates | eestvaade | sõiduk
+1F699	mahtuniversaal	auto | mahtuniversaal | sõiduk | universaal
+1F69A	kulleriauto	kuller | kulleriauto | sõiduk | veoauto
+1F69B	veok	sõiduk | veoauto | veok
+1F69C	traktor	sõiduk | traktor
+1F69D	üherööpmeline raudtee	raudtee | rong | sõiduk | üherööpmeline raudtee
+1F69E	mägiraudtee	mägi | raudtee | reis | vagun
+1F69F	rippraudtee	raudtee | rippraudtee | sõiduk | vagun
+1F6A0	köistee mägedes	gondel | köis | köistee | mägi | suusatamine
+1F6A1	köisraudtee	gondel | köis | köisraudtee | raudtee | sõiduk | vagun
+1F6A2	laev	laev | sõiduk
+1F6A3	aerupaadiga inimene	aer | aerutamine | inimene | järv | kalapüük | kanuu | mõla | paadisõit | paat | parv | sõiduk
+1F6A4	kiirkaater	järv | kaater | kiirkaater | luksus | miljardär | miljonär | paat | reis | suvi
+1F6A5	horisontaalne foor	foor | horisontaalne foor | liiklus
+1F6A6	vertikaalne foor	foor | liiklus | vertikaalne foor
+1F6A7	ehitustööd	barjäär | ehitustööd | tõke
+1F6A8	politseiauto vilkur	auto | politsei | politseiauto vilkur | pöörlemine | sõiduk | vilkur
+1F6A9	kolmnurkne lipp	kolmnurk | kolmnurkne lipp | lipp
+1F6AA	uks	uks
+1F6B0	joogivesi	joodav | joogivesi | vesi
+1F6B1	joomiseks kõlbmatu vesi	joodav | joomiseks kõlbmatu vesi | keelatud | vesi
+1F6B3	jalgrattad keelatud	jalgratas | jalgrattad keelatud | keelatud | sõiduk
+1F6B7	jalakäijad keelatud	jalakäija | jalakäijad keelatud | keelatud
+1F6B8	lapsed teel	jalakäija | laps | lapsed teel | liiklus | tänav
+1F6B9	meeste-WC	mees | meeste | tualett | vets | WC
+1F6BA	naiste-WC	naine | naiste | tualett | vets | WC
+1F6BB	tualett	tualett | wc
+1F6BC	beebi sümbol	beebi | beebi sümbol | imik | mähe
+1F6BD	WC-pott	tualett | wc | WC-pott
+1F6BE	WC	tualett | vesi | wc | WC
+1F6BF	dušš	dušš | vesi
+1F6C0	inimene vannis	inimene | inimene vannis | vann
+1F6C1	vann	vann
+1F6C2	passikontroll	kontroll | pass | passikontroll
+1F6C3	toll	toll
+1F6C4	pagasi kättesaamine	kättesaamine | pagas | pagasi kättesaamine
+1F6C5	hoiukapid	hoiukapid | kapp | pagas
+1F6D0	pühakoda	palvetamine | pühakoda | usk
+1F6D1	stoppmärk	kaheksanurk | märk | stopp
+1F6D2	ostukäru	käru | ostma | ostud | ostukäru | poodlemine
+2668	kuumaveeallikad	allikad | aur | kuum | kuumaveeallikad
+26BD	jalgpall	jalgpall | pall | sport
+26BE	pesapall	pall | pesapall | sport
+26F3	golfilipp	auk | golf | lipp | sport
+1F392	ranits	kool | kott | ranits
+1F3A0	karussellihobune	hobune | karussell | karussellihobune
+1F3A1	vaateratas	lõbustuspark | vaateratas
+1F3A2	Ameerika mäed	ameerika | Ameerika | lõbustuspark | mäed
+1F3A3	õng	kala | kalastamine | meelelahutus | õng | sport
+1F3A4	mikrofon	heli | karaoke | laulmine | mikrofon | muusika
+1F3A5	filmikaamera	film | filmikaamera | kaamera | video
+1F3A6	kino	film | kaamera | kino
+1F3A7	kõrvaklapid	kõrvaklapid
+1F3A8	kunstniku palett	kunst | kunstniku palett | maal | muuseum | palett
+1F3A9	torukübar	kübar | müts | riided | torukübar
+1F3AA	tsirkusetelk	telk | tsirkus | tsirkusetelk
+1F3AB	pilet	pääse | pilet
+1F3AC	klapptahvel	film | klapptahvel | video
+1F3AD	lavakunst	kunst | lava | lavakunst | mask | teater
+1F3AE	videomäng	mäng | pult | videomäng
+1F3AF	täistabamus	mäng | meelelahutus | noolemäng | sihtmärk | tabamus | täistabamus
+1F3B0	mänguautomaat	automaat | mäng | mänguautomaat
+1F3B1	piljardikuul	8 | kuul | mäng | piljard | piljardikuul
+1F3B2	täring	mäng | täring
+1F3B3	keegel	keegel | kurikas | kuul | mäng | sport
+1F3B4	mängukaardid	Jaapan | kaardid | kaart | lill | mäng
+1F3B5	noot	muusika | noot
+1F3B6	noodid	muusika | noodid | noot
+1F3B7	saksofon	muusika | pill | saksofon
+1F3B8	kitarr	kitarr | muusika | pill
+1F3B9	klahvpill	klahvpill | klaver | muusika | pill
+1F3BA	trompet	muusika | pill | trompet
+1F3BB	viiul	muusika | pill | viiul
+1F3BC	noodijoonestik	muusika | noodijoonestik | noot
+1F3BD	jooksusärk	jooks | kergejõustik | särk
+1F3BE	tennis	pall | reket | sport | tennis
+1F3BF	suusad	lumi | sport | suusad | suusk
+1F3C0	korvpall	korvpall | pall | sport
+1F3C1	ruudulipp	finiš | lipp | lipud | mäng | ralli | ruuduline | ruudulipp | sport | võidusõit | võit
+1F3C2	lumelaudur	lumelaud | lumelaudur | lumi | sport | suusk
+1F3C3	jooksja	inimene | jooks | jooksja | jooksuvõistlus | kiire | kiirus | kiirustamine | liikumine | maraton
+1F3C4	surfar	inimene | lained | ookean | rand | sport | surfamine | surfar
+1F3C5	medal	kuld | medal | sport | võit
+1F3C6	karikas	auhind | karikas | sport | trofee | tšempion | võit
+1F3C7	hobuste võiduajamine	hobune | ratsutaja | ratsutamine | sport | võiduajamine
+1F3C8	Ameerika jalgpall	ameerika | jalgpall | pall | sport
+1F3C9	ragbipall	jalgpall | pall | ragbi | sport
+1F3CA	ujuja	inimene | sport | triatlon | ujuja | ujumine | vabastiil
+1F3CB	jõutõstja	inimene | jõutõstmine | jõutreening | kang | kulturist | raskused | tõstja | tõstmine | trenn
+1F3CC	golfimängija	golf | golfikepp | golfimängija | griin | pall | pga | tii
+1F3CD	mootorratas	mootorratas | võidusõit
+1F3CE	võidusõiduauto	auto | kiire | võidusõiduauto
+1F451	kroon	kroon | kuninganna | kuningas | riided
+1F452	naistekübar	kübar | müts | naine | naistekübar | riided
+1F453	prillid	mood | prillid | silm
+1F454	lips	lips | riided
+1F455	T-särk	riided | särk | t-särk | T-särk
+1F456	teksad	püksid | riided | teksad
+1F457	kleit	kleit | riided
+1F458	kimono	kimono | riided
+1F459	bikiinid	bikiinid | riided | ujumine
+1F45A	naisteriided	naine | naisteriided | riided
+1F45B	ridikül	käekott | kott | münt | ostma | rahakott | ridikül | riided | riietus
+1F45C	käekott	käekott | kott | riided
+1F45D	kott	kott | riided
+1F45E	meesteking	king | mees | meesteking | riided
+1F45F	jooksuking	jooksuking | king | riided | sport | toss
+1F460	kõrge kontsaga king	king | konts | kõrge kontsaga king | naine | riided
+1F461	naistesandaal	king | naine | naistesandaal | riided | sandaal
+1F462	naistesaabas	king | naine | naistesaabas | riided | saabas
+1F6B2	jalgratas	jalgratas | ratas | sõiduk
+1F6B4	jalgrattur	inimene | jalgratas | jalgrattur | ratas | rattur | sport
+1F6B5	mägirattur	jalgratas | jalgrattur | mees | ratas | rattur | sport
+1F6B6	jalakäija	inimene | jalakäija | jalutamine | jalutuskäik | kõndimine | kõndiv inimene | kõnnak | lonkimine | mees | samm
+1F938	hundiratast viskav inimene	aktiivne | elevil | iluvõimlemine | inimene | kukerpall | rõõmus | salto | sport
+1F939	žonglöör	inimene | käsitsemine | oskused | rööprähklemine | tasakaal | tasakaalutrikk | žongleerimine | žonglöör
+1F93A	vehkleja	inimene | mõõk | sport | vehkleja | vehklemine
+1F93C	maadlejad	inimesed | kahevõitlus | maadlejad | maadlus | ringis | sport | turniir | võitlus
+1F93D	veepalli mängiv inimene	inimene | mängiv | polo | sport | ujumine | veepall | vesi
+1F93E	käsipalli mängiv inimene	heitmine | inimene | käsipall | loopimine | pall | püüdmine | sport | viskamine
+1F93F	sukeldumismask	akvalang | snorgeldamine | sukeldumine | sukeldumismask
+1F9E2	nokkmüts	müts | nokk | pesapall
+1F9E3	sall	kael | külm | sall
+1F9E4	kindad	käsi | kindad
+1F9E5	mantel	jakk | mantel
+1F9E6	sokid	sokid | sokk | sukad | sukk
+1FA70	balletikingad	balletikingad | ballett | tants
+1FA71	ujumistrikoo	trikoo | ujumiskostüüm | ujumistrikoo
+1FA72	ujumispüksid	aluspesu | ujumiskostüüm | ujumispüksid | ujumisriie
+1FA73	šortsid	aluspesu | aluspüksid | lühikesed | püksid | šortsid | ujumispüksid
+1FA74	varbavahesandaalid	plätud | rannajalatsid | rannasandaalid | sandaalid | varbavahesandaalid
+1FA80	jojo	edasi-tagasi | jojo | mänguasi | yoyo
+1FA81	tuulelohe	lennutamine | lohe | tuul | tuulelohe
+1FA82	langevarjur	langevari | langevarjuga hüppamine | langevarjuhüpe | langevarjur
+1FA83	bumerang	bumerang | relv | tagasilend | tagasipöördumine
+1FA84	võlukepp	maagia | nõid | võlukepp | võlukunst | võlur
+1FA85	piñata	kommid | mehhiko | peomäng | pidu | pinata | piñata
+1FA86	matrjoška	matrjoška | matrjoškad | nukk | vene
+1FA95	bandžo	bandžo | keelpill | muusika
+1FA97	akordion	akordion | instrument | lõõts | muusika | pill
+1FA98	aafrika trumm	aafrika | djembe | rütm | trumm
+265F	ettur	ettur | kõrvalejäetav | male | tüssamine
+2660	poti	kaart | mäng | mast | poti
+2663	risti	kaart | mäng | mast | risti
+2665	ärtu	ärtu | kaart | mäng | mast
+2666	ruutu	kaart | mäng | mast | ruutu
+1F4B3	krediitkaart	kaart | krediit | krediitkaart | pank | raha
+1F4B4	jeeni rahatäht	jeen | jeeni rahatäht | pank | raha | rahatäht | valuuta
+1F4B5	dollari rahatäht	dollar | dollari rahatäht | pank | raha | rahatäht | valuuta
+1F4B6	euro rahatäht	euro | pank | raha | rahatäht | valuuta
+1F4B7	naela rahatäht	nael | naela rahatäht | naelsterling | pank | rahatäht | valuuta
+1F4B9	tõusev graafik jeenisümboliga	graafik | jeen | kasv | tõusev graafik jeenisümboliga | turg | valuuta
+1F4BB	sülearvuti	arvuti | sülearvuti
+1F4BC	portfell	kohver | portfell
+1F4BD	arvutiketas	arvuti | arvutiketas | ketas | optiline
+1F4BE	diskett	arvuti | diskett | ketas
+1F4BF	optiline ketas	arvuti | CD | DVD | ketas | optiline
+1F4C0	DVD	arvuti | blu-ray | cd | DVD | ketas | optiline
+1F4C1	kaust	dokument | fail | kaust | toimik
+1F4C2	avatud kaust	avatud | dokument | fail | kaust | toimik
+1F4C3	kaardunud paberileht	dokument | kaardunud paberileht | leht
+1F4C4	paberilehe eestvaade	dokument | leht | paberilehe eestvaade
+1F4C5	kalender	kalender | kuupäev
+1F4C6	rebitav kalender	kalender | kuupäev | rebitav kalender
+1F4C7	kataloog	kaart | kataloog | register
+1F4C8	tõusev graafik	graafik | kasv | tendents | tõusev graafik | üles
+1F4C9	langev graafik	alla | graafik | langev graafik | langus | tendents
+1F4CA	tulpdiagramm	diagramm | graafik | tulp | tulpdiagramm
+1F4CB	kirjutamisalus	alus | kirjutamisalus | leht | paber
+1F4CC	nööpnõel	nõel | nööpnõel
+1F4CD	ümara peaga nööpnõel	nõel | nööpnõel | ümara peaga nööpnõel
+1F4CE	kirjaklamber	kirjaklamber | klamber
+1F4CF	sirge joonlaud	sirge | sirge joonlaud
+1F4D0	kolmnurkne joonlaud	joonlaud | kolmnurk | kolmnurkne joonlaud
+1F4D1	järjehoidjad	järjehoidja | järjehoidjad | märgis | marker
+1F4D2	arveraamat	arve | arveraamat | raamat
+1F4D3	päevik	päevik | raamat
+1F4D4	dekoratiivse kaanega märkmik	dekoratiivse kaanega märkmik | kaaned | märkmik | raamat
+1F4D5	suletud raamat	raamat | suletud
+1F4D6	avatud raamat	avatud | raamat
+1F4D7	roheline raamat	raamat | roheline
+1F4D8	sinine raamat	raamat | sinine
+1F4D9	oranž raamat	oranž | raamat
+1F4DA	raamatud	fantaasia | haridus | kool | lugemine | õppimine | raamat | raamatud | raamatukogu | romaanid | teadmised
+1F4DB	nimesilt	märk | nimesilt | nimi
+1F4DC	käsikiri	käsikiri | paber
+1F4DD	memo	märge | memo | pliiats
+1F4DE	telefonitoru	telefon | telefonitoru | toru
+1F4DF	piipar	peiler | piipar
+1F4E0	faksimasin	faks | faksimasin | masin
+1F4E1	satelliitantenn	antenn | satelliit | satelliitantenn | taldrik
+1F4E2	valjuhääldi	avalik | kõne | vali | valjuhääldi
+1F4E3	megafon	kõne | megafon
+1F4E4	väljaminev post	alus | kast | kiri | post | väljaminev post
+1F4E5	sissetulev post	alus | kast | kiri | post | sissetulev post
+1F4E6	pakk	karp | kast | pakk | saadetis | saatmine | suhtlus
+1F4E7	meilisõnum	kiri | meil | meilisõnum | ümbrik
+1F4E8	sissetulev ümbrik	e-post | kiri | meil | sissetulev ümbrik | ümbrik
+1F4E9	noolega ümbrik	alla | e-kiri | kiri | meil | nool | noolega ümbrik | saadetud | saatma | suhtlus | ümbrik | väljaminev
+1F4EA	suletud postkast langetatud lipuga	postkast | suletud | suletud postkast langetatud lipuga
+1F4EB	suletud postkast tõstetud lipuga	postkast | suletud | suletud postkast tõstetud lipuga
+1F4EC	avatud postkast tõstetud lipuga	avatud | avatud postkast tõstetud lipuga | postkast
+1F4ED	avatud postkast langetatud lipuga	avatud | avatud postkast langetatud lipuga | postkast
+1F4EE	postkast	post | postkast
+1F4EF	postisarv	post | postisarv | sarv
+1F4F0	ajaleht	ajaleht | uudised
+1F4F1	mobiiltelefon	mobiil | mobiiltelefon | telefon
+1F4F2	noolega mobiiltelefon	kõne | mobiil | nool | noolega mobiiltelefon | telefon
+1F4F3	värinarežiim	mobiil | režiim | telefon | värin | värinarežiim
+1F4F4	väljalülitatud mobiiltelefon	mobiil | telefon | väljalülitatud mobiiltelefon | väljas
+1F4F5	telefonid on keelatud	ei | keelatud | mobiil | telefon | telefonid on keelatud
+1F4F6	levi	antenn | levi | mobiil | signaal | telefon
+1F4F7	kaamera	kaamera | video
+1F4F8	välguga kaamera	foto | kaamera | pildistamine | välguga kaamera | välk
+1F4F9	videokaamera	kaamera | video | videokaamera
+1F4FA	teler	teler | tv | video
+1F4FB	raadio	meelelahutus | raadio | video
+1F4FC	videokassett	kassett | video | videokassett
+1F4FD	filmiprojektor	film | filmiprojektor | kino | projektor | video
+1F4FF	palvehelmed	helmed | kaelakee | palvehelmed | palvetamine | riided | usk
+1F505	tuhmistamisnupp	eredus | hämar | tuhm | tuhmistamisnupp
+1F506	ereduse nupp	ere | eredus | ereduse nupp
+1F507	vaigistatud kõlar	heli | kõlar | vaigistatud kõlar | vaikne
+1F508	vaikse heliga kõlar	heli | kõlar | vaikne
+1F509	poolvalju heliga kõlar	heli | kõlar | poolvalju heliga kõlar | vaikne
+1F50A	valju heliga kõlar	heli | kõlar | vali | valju heliga kõlar
+1F50B	aku	aku | patarei
+1F50C	elektripistik	elekter | elektripistik | pistik
+1F50D	vasakule kallutatud luup	otsi | suurendusklaas | tööriist | vasakule kallutatud luup
+1F50E	paremale kallutatud luup	otsi | paremale kallutatud luup | suurendusklaas | tööriist
+1F50F	lukk ja pastakas	lukk | lukk ja pastakas | lukk ja sulepea | privaatsus | sulepea | tint
+1F510	suletud lukk võtmega	lukk | lukus | suletud | tabalukk | võti
+1F511	võti	lukk | parool | võti
+1F512	lukk	lukk | lukus | privaatne | suletud | tabalukk
+1F513	avatud lukk	avatud | lukk | tabalukk
+1F514	kelluke	heli | kell | kelluke | kirik
+1F515	vaigistatud kelluke	keelatud | kelluke | kelluke keelumärgiga | vaigistatud kelluke | vaigistus | vaikne | vaikus
+1F516	järjehoidja	järjehoidja
+1F517	lüli	ahel | lüli
+1F518	raadionupp	geomeetria | nupp | raadio | raadionupp
+1F51E	alla 18-aastastele keelatud	18 | alaealine | alla 18-aastastele keelatud | kaheksateist | keelatud | vanusepiirang
+1F51F	klahv: 10	klahv
+1F526	taskulamp	elekter | taskulamp | tööriist | valgus
+1F527	mutrivõti	mutrivõti | tööriist
+1F528	haamer	haamer | tööriist
+1F529	polt ja mutter	mutter | polt | polt ja mutter | tööriist
+1F52A	kööginuga	kööginuga | köök | nuga | relv | tööriist
+1F52B	veepüstol	püstol | relv | revolver | tööriist | veepüstol
+1F52C	mikroskoop	eksperiment | labor | mikroskoop | teadus | tööriist
+1F52D	teleskoop	kontakt | maaväline | teadus | teleskoop | tööriist
+1F9BA	ohutusvest	hädaolukord | ohutus | ohutusvest | vest
+1F9BB	kuuldeaparaadiga kõrv	juurdepääs | kuuldeaparaadiga kõrv | kuulmispuue
+1F9BC	elektriratastool	elektriratastool | juurdepääs | ligipääs | ratastool
+1F9BD	manuaalratastool	juurdepääs | ligipääs | manuaalratastool | ratastool
+1F9E9	pusletükk	pusle | pusletükk | tükk | ühendamine
+1F9EA	katseklaas	katse | katseklaas | keemia | keemik | labor | teadus
+1F9EB	Petri tass	bakterid | bioloog | bioloogia | kultuur | labor | Petri tass
+1F9EC	DNA	bioloog | DNA | elu | evolutsioon | geen | geneetika
+1F9ED	kompass	kompass | magnetiline | navigeerimine | orienteerumine
+1F9EE	arvelaud	arvelaud | arvutamine
+1F9EF	tulekustuti	kustutamine | summutamine | tulekustuti | tuli
+1F9F0	tööriistakast	kast | laegas | tööriistad | tööriistakast
+1F9F1	telliskivi	mört | savi | sein | telliskivi | telliskivid
+1F9F2	magnet	atraktsioon | hobuseraud | kuju | külgetõmbejõud | magnet | negatiivne | positiivne | u
+1F9F3	kohver	kohver | pakkimine | reis
+1F9F4	emulsioonipudel	emulsioon | emulsioonipudel | niisutav kreem | päevituskreem | šampoon
+1F9F5	niit	niidirull | niit | nõel | õmblemine
+1F9F6	lõng	heegeldamine | kera | kudumine | lõng | lõngakera
+1F9F7	haaknõel	haaknõel | mähe | punkrokk
+1F9F8	mängukaru	lelu | mänguasi | mängukaru | pehme | plüüs
+1F9F9	luud	luud | nõid | puhastamine | pühkimine
+1F9FA	korv	korv | pesu | piknik | taluelu
+1F9FB	paberirull	paberirull | paberkäterätid | tualettpaber
+1F9FC	seep	pesemine | puhastamine | seebialus | seebivaht | seep | tükiseep
+1F9FD	pesukäsn	imav | pesemine | pesukäsn | poorne | svamm
+1F9FE	kviitung	arvepidamine | dokument | kviitung | raamatupidamine | tõend
+1F9FF	Nazari amulett	amulett | helmes | kuri silm | Nazari amulett | Nazari silm | talisman
+1FA78	veretilk	doonorlus | meditsiin | menstruatsioon | tilk | veri | vigastus
+1FA79	plaaster	meditsiin | plaaster
+1FA7A	stetoskoop	arst | kuuldetoru | meditsiin | stetoskoop | süda
+1FA91	tool	iste | istumine | tool
+1FA92	habemenuga	habe | habemenuga | raseerimine | terav
+1FA93	kirves	kirves | lõhkumine | puud | raiumine
+1FA94	diya-lamp	diya | diya-lamp | lamp | õli
+1FA96	sõdurikiiver	armee | kaitsevägi | kiiver | sõda | sõdur | sõjavägi
+1FA99	münt	dollar | euro | hõbe | kuld | metall | münt | raha | rikas | varandus
+1FA9A	käsisaag	käsisaag | puit | puusepp | saag | tööriist
+1FA9B	kruvikeeraja	kruvi | kruvikeeraja | lapikpea | tööriist
+1FA9C	redel	aste | redel | ronima | trepp
+1FA9D	konks	kala | kinnitamine | konks | kõver | müümine | püük | tõstmine
+1FA9E	peegel	meik | peegel | peegeldi | peegeldus
+1FA9F	aken	aken | avamine | läbipaistev | raam | vaade
+260E	telefon	punane | telefon
+2620	kolp ja sääreluud	koletis | kolp | kolp ja sääreluud | kondid | luud | pealuu | surm
+2622	radioaktiivne	oht | radioaktiivne
+2623	bioloogiline oht	bioloogiline | oht | sümbol
+267F	ratastool	juurdepääs | ratastool
+2692	haamer ja kirka	haamer | haamer ja kirka | kirka | tööriist
+2693	ankur	ankur | laev | tööriist
+2694	ristatud mõõgad	mõõgad | relv | ristatud mõõgad | risti
+2695	meditsiinisümbol	Asklepios | meditsiin | meditsiinisümbol
+2696	kaalukausid	kaalud | kaalukausid | sodiaak | tööriist
+2697	destilleerimisnõu	destilleerimisnõu | keemia | tööriist
+2699	hammasratas	hammasratas | tööriist
+269B	aatomi sümbol	aatom | aatomi sümbol | ateist
+269C	prantsuse liilia	Bourbonide liilia | fleur-de-lis | prantsuse liilia | rüütlid
+26A0	hoiatus	ettevaatust | hoiatus
+26CF	kirka	kirka | tööriist
+26D1	valge ristiga kiiver	abi | kiirabi | kiiver | müts | nägu | rist | valge ristiga kiiver
+26D3	ahelad	ahel | ahelad | kett
+26D4	sisenemine keelatud	keelatud | liiklus | sisenemine
+2702	käärid	käärid | tööriist
+2709	ümbrik	e-post | kiri | post | ümbrik
+270F	pliiats	pliiats
+2712	must sulepea	must sulepea | pastakas | sulepea
+2714	märge	✓ | linnuke | märge | märgitud | suur | tehtud
+2716	korrutamine	korrutamine | korrutusmärk | tühistama | x
+2753	punane küsimärk	? | kirjavahemärk | küsimärk | küsimus | punane küsimärk
+2757	punane hüüumärk	! | hüüumärk | kirjavahemärk | punane hüüumärk
+27A1	nool paremale	ida | nool | nool paremale | suund
+1F500	juhusliku järjekorra nupp	juhuslik | juhusliku järjekorra nupp | nool | risti
+1F501	kordamisnupp	kordus | nool | nupp | päripäeva
+1F502	ühe korduse nupp	kordus | nool | nupp | päripäeva | ühe
+1F503	vertikaalsed nooled päripäeva	laadimine | nool | päripäeva | vertikaalsed nooled päripäeva
+1F504	nooled vastupäeva	nool | nooled vastupäeva | vastupäeva
+1F519	nool BACK	nool | nool BACK | tagasi
+1F51A	nool END	lõpp | nool | nool END
+1F51B	nool ON!	märk | nool | ON! | sees
+1F51C	nool SOON	nool | nool SOON | varsti
+1F51D	nool TOP	nool | nool TOP | üles
+1F520	ladina suurtähed	abcd | ladina | suurtähed | tähed
+1F521	ladina väiketähed	abcd | ladina | tähed | väiketähed
+1F522	numbrid	1234 | numbrid
+1F523	sümbolid	sisestus | sümbolid
+1F524	ladina tähed	abc | ladina | tähed | tähestik
+21B5	alla nurgaga vasakule nool	alla nurgaga vasakule nool
+21B0	üles vasakule pöörav nool	üles vasakule pöörav nool
+21B1	üles paremale pöörav nool	üles paremale pöörav nool
+21B2	alla vasakule pöörav nool	alla vasakule pöörav nool
+21B3	alla paremale pöörav nool	alla paremale pöörav nool
+21B4	paremale nurgaga alla nool	paremale nurgaga alla nool
+21E4	vasaknool ribani	vasaknool ribani
+21E5	paremnool ribani	paremnool ribani
+21B9	ribaga vasaknool ribaga paremnoole peal	nool | parem | peal | riba | vasak
+21E7	seest tühi ülesnool	seest tühi ülesnool
+21EA	seest tühi ülesnool tulbast	seest tühi ülesnool tulbast
+21E6	seest tühi vasaknool	seest tühi vasaknool
+21E8	seest tühi paremnool	seest tühi paremnool
+21E9	seest tühi allanool	seest tühi allanool
+21DE	topeltkriipsudega ülesnool	topeltkriipsudega ülesnool
+21DF	topeltkriipsudega allanool	topeltkriipsudega allanool
+21B8	loodesse nool pika ribaga	loodesse nool pika ribaga
+21B6	vastupäeva ülemise poolkaarega nool	vastupäeva ülemise poolkaarega nool
+21B7	päripäeva ülemise poolkaarega nool	päripäeva ülemise poolkaarega nool
+21C5	ülesnool ja allanool	alla | nool | üles | ülesnool ja allanool
+21F5	allanool vasakul ülesnool paremal	alla | nool | üles | vasak
+21A8	ülesnool alusega	ülesnool alusega
+21E0	katkendlik vasaknool	katkendlik vasaknool
+21E1	katkendlik ülesnool	katkendlik ülesnool
+21E2	katkendlik paremnool	katkendlik paremnool
+21E3	katkendlik allanool	katkendlik allanool
+21AB	vasakule noolega silmus	vasakule noolega silmus
+21AC	paremale noolega silmus	paremale noolega silmus
+2B05	nool vasakule	lääs | nool | nool vasakule | suund
+2B06	nool üles	nool | nool üles | põhi | suund
+2B07	nool alla	lõuna | nool | nool alla | suund

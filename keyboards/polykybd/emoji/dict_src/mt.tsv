@@ -1,0 +1,894 @@
+# emoji search keywords, mt, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	wiċċ jidħak ħafna	jidħaq ħafna | wiċċ | wiċċ jidħak ħafna
+1F601	wiċċ jidħak ħafna b’għajnejn jitbissmu	għajn | jidħaq ħafna | jitbissem | wiċċ | wiċċ jidħak ħafna b’għajnejn jitbissmu
+1F602	wiċċ bi dmugħ ta’ ferħ	daħq | demgħa | ferħ | wiċċ | wiċċ bi dmugħ ta’ ferħ
+1F603	wiċċ jidħaq bil-ħalq miftuħ	ħalq | jitbissem | miftuħ | wiċċ | wiċċ jidħaq bil-ħalq miftuħ
+1F604	wiċċ jidħaq b’ħalq miftuħ u għajnejn jitbissmu	għajn | ħalq | jitbissem | miftuħ | wiċċ | wiċċ jidħaq b’ħalq miftuħ u għajnejn jitbissmu
+1F605	wiċċ jidħaq b’ħalq miftuħ u għaraq kiesaħ	għaraq | jitbissem | kiesaħ | miftuħ | wiċċ | wiċċ jidħaq b’ħalq miftuħ u għaraq kiesaħ
+1F606	wiċċ jidħaq b’ħalq miftuħ u għajnejn magħluqa	ħalq | jidħq | jitbissem | miftuħ | sodisfatti | wiċċ | wiċċ jidħaq b’ħalq miftuħ u għajnejn magħluqa
+1F607	wiċċ jitbissem b’raġġiera	anġlu | fantasija | ħrafa | innoċenti | jitbissem | raġġiera | wiċċ | wiċċ jitbissem b’raġġiera
+1F608	wiċċ jitbissem bil-qrun	fantasija | ħrafa | qrun | tbissem | wiċċ | wiċċ jitbissem bil-qrun
+1F609	wiċċ jehmeż	hemeż | wiċċ | wiċċ jehmeż
+1F60A	wiċċ jitbissem b’għajnejn jitbissmu	għajn | jiħmar | jitbissem | wiċċ | wiċċ jitbissem b’għajnejn jitbissmu
+1F60B	wiċċ iduq ikel delizzjuż	delizzjuż | iduq | jitbissem | um | wiċċ | wiċċ iduq ikel delizzjuż | yum
+1F60C	wiċċ sollevat	sollevat | wiċċ
+1F60D	wiċċ jitbissem b’għajnejn bil-qlub	għajn | imħabba | jitbissem | wiċċ | wiċċ jitbissem b’għajnejn bil-qlub
+1F60E	wiċċ jitbissem b’nuċċali tax-xemx	għajn | imdawwal | jitbissem | modern | nuċċali | nuċċali tax-xemx | nuċċalijiet | wiċċ | wiċċ jitbissem b’nuċċali tax-xemx | xemx
+1F60F	wiċċ jitkerraħ	jitkerraħ | wiċċ
+1F610	wiċċ newtrali	mingħajr emozzjoni | newtrali | wiċċ
+1F611	wiċċ mingħajr espressjoni	m’għandux espressjoni | mingħajr espressjoni | nieqes minn espressjoni | wiċċ | wiċċ mingħajr espressjoni
+1F612	wiċċ mhux ferrieħi	mhux ferrieħi | mhux kuntent | wiċċ | wiċċ mhux ferrieħi
+1F613	wiċċ b’għaraq kiesaħ	għaraq | kiesaħ | wiċċ | wiċċ b’għaraq kiesaħ
+1F614	wiċċ imħasseb	imħasseb | skoraġġut | wiċċ
+1F615	wiċċ konfuż	konfuż | wiċċ
+1F616	wiċċ imħawwad	imħawwad | wiċċ
+1F617	wiċċ ibewwes	bewsa | wiċċ | wiċċ ibewwes
+1F618	wiċċ jitfa’ bewsa	bewsa | wiċċ | wiċċ jitfa’ bewsa
+1F619	wiċċ ibewwes b’għajnejn jitbissmu	bewsa | għajn | jitbissem | wiċċ | wiċċ ibewwes b’għajnejn jitbissmu
+1F61A	wiċċ ibewwes b’għajnejn magħluqin	bewsa | għajn | magħluqin | wiċċ | wiċċ ibewwes b’għajnejn magħluqin
+1F61B	wiċċ b’ilsien barra	ilsien | wiċċ | wiċċ b’ilsien barra
+1F61C	wiċċ b’ilsien barra u għajn tehmeż	ċajta | għajn | hemża | ilsien | wiċċ | wiċċ b’ilsien barra u għajn tehmeż
+1F61D	wiċċ b’ilsien barra u għajnejn magħluqin	għajnejn | ilsien | orribbli | togħma | wiċċ | wiċċ b’ilsien barra u għajnejn magħluqin
+1F61E	wiċċ diżappuntat	diżappuntat | wiċċ
+1F61F	wiċċ inkwetat	inkwetat | wiċċ
+1F620	wiċċ irrabjat	irrabjat | irrabjat ħafna | wiċċ
+1F621	wiċċ jisporġi x-xofftejn	aħmar | irrabjat | irrabjat ħafna | rabja kbira | sporġa xofftejh | wiċċ | wiċċ jisporġi x-xofftejn
+1F622	wiċċ jibki	dmugħ | imdejjaq | jibki | wiċċ
+1F623	wiċċ perseveranti	perseveranti | wiċċ
+1F624	wiċċ bid-duħħan ħiereġ mill-imnieħer	rebaħ | rebbieħ | wiċċ | wiċċ bid-duħħan ħiereġ mill-imnieħer
+1F625	wiċċ diżappuntat iżda sollevat	diżappuntat | għall-erwieħ | sollevat | wiċċ | wiċċ diżappuntat iżda sollevat
+1F626	wiċċ imkemmex b’ħalq miftuħ	ħalq | imkemmex | tiftaħ | wiċċ | wiċċ imkemmex b’ħalq miftuħ
+1F627	wiċċ imdejjaq ħafna	imdejjaq ħafna | wiċċ | wiċċ imdejjaq ħafna
+1F628	wiċċ imbeżża’	biża’ | imbeżża’ | tal-biża’ | wiċċ
+1F629	wiċċ mimli għeja	għajjien | għeja | wiċċ | wiċċ mimli għeja
+1F62A	wiċċ bi ngħas	rieqed | wiċċ | wiċċ bi ngħas
+1F62B	wiċċ għajjien	għajjien | wiċċ
+1F62C	wiċċ jistmerraħ	jistmerraħ | wiċċ
+1F62D	wiċċ jibki jgħajjat	dmugħ | imdejjaq | jibki | jolfoq | wiċċ | wiċċ jibki jgħajjat
+1F62E	wiċċ b’ħalq miftuħ	ħalq | miftuħ | simpatiku | wiċċ | wiċċ b’ħalq miftuħ
+1F62F	wiċċ imsikket	imsikket | sorpriż | stordut | wiċċ
+1F630	wiċċ b’ħalq miftuħ u għaraq kiesaħ	blu | għaraq | ħalq | kiesaħ | mgħaġġel | miftuħ | wiċċ | wiċċ b’ħalq miftuħ u għaraq kiesaħ
+1F631	wiċċ iwerżaq bil-biża’	biża’ | għomod | imbeżża’ | tal-biża’ | werżaq | wiċċ | wiċċ iwerżaq bil-biża’
+1F632	wiċċ skantat	ixxokkjat | skantat | totalment | wiċċ
+1F633	wiċċ ruxxan	ruxxan | sturdut | wiċċ
+1F634	wiċċ rieqed	rieqed | wiċċ | żżż
+1F635	wiċċ sturdut	sturdut | wiċċ
+1F636	wiċċ mingħajr ħalq	ħalq | kwieta | siekta | wiċċ | wiċċ mingħajr ħalq
+1F637	wiċċ bil-maskra medika	kiesaħ | maskra | mediċina | morda | tabib | wiċċ | wiċċ bil-maskra medika
+1F638	wiċċ ta’ qattus jidħak ħafna b’għajnejn jitbissmu	għajn | jidħaq | jitbissem | qattus | wiċċ | wiċċ ta’ qattus jidħak ħafna b’għajnejn jitbissmu
+1F639	wiċċ ta’ qattus bi dmugħ ta’ ferħ	dmugħ | kant | qattus | wiċċ | wiċċ ta’ qattus bi dmugħ ta’ ferħ
+1F63A	wiċċ ta’ qattus jitbissem b’ħalq miftuħ	ħalq | jitbissem | miftuħ | qattus | wiċċ | wiċċ ta’ qattus jitbissem b’ħalq miftuħ
+1F63B	wiċċ ta’ qattus jitbissem b’għajnejn bil-qlub	għajn | imħabba | jitbissem | qattus | wiċċ | wiċċ ta’ qattus jitbissem b’għajnejn bil-qlub
+1F63C	wiċċ ta’ qattus bi tbissima mqarrsa	imqarras | ironiku | jitbissem | qattus | wiċċ | wiċċ ta’ qattus bi tbissima mqarrsa
+1F63D	wiċċ ta’ qattus ibewwes b’għajnejn magħluqin	bewsa | għajn | qattus | wiċċ | wiċċ ta’ qattus ibewwes b’għajnejn magħluqin
+1F63E	wiċċ ta’ qattus jisporġi x-xofftejn	jisporġi x-xofftejn | qattus | wiċċ | wiċċ ta’ qattus jisporġi x-xofftejn
+1F63F	wiċċ ta’ qattus jibki	dmugħ | imdejjaq | jibki | qattus | wiċċ | wiċċ ta’ qattus jibki
+1F640	wiċċ ta’ qattus għajjien	għajjien | mistgħaġeb | oh | qattus | wiċċ | wiċċ ta’ qattus għajjien
+1F641	wiċċ imkemmex ftit	imkemmex | wiċċ | wiċċ imkemmex ftit
+1F642	wiċċ jitbissem ftit	jitbissem | wiċċ | wiċċ jitbissem ftit
+1F643	wiċċ ta’ taħt fuq	ta’ taħt fuq | wiċċ | wiċċ ta’ taħt fuq
+1F644	wiċċ b’għajnejn iduru	għajnejn | iduru | wiċċ | wiċċ b’għajnejn iduru
+1F648	xadina li ma tara ebda ħażen	ara | ġesti | ħażen | ma | mhux | pprojbit | pprojbiti | wiċċ | xadina | xadina li ma tara ebda ħażen
+1F649	xadina li ma tisma’ ebda ħażen	ġesti | ħażen | isma’ | ma | mhux | pprojbit | pprojbiti | wiċċ | xadina | xadina li ma tisma’ ebda ħażen
+1F64A	xadina li ma titkellem ebda ħażen	ġesti | ħażen | ma | mhux | pprojbit | pprojbiti | tkellem | wiċċ | xadina | xadina li ma titkellem ebda ħażen
+1F910	wiċċ b’ħalq b’żipp	ħalq | wiċċ | wiċċ b’ħalq b’żipp | żipp
+1F911	wiċċ b’ħalq tal-flus	flus | ħalq | wiċċ | wiċċ b’ħalq tal-flus
+1F912	wiċċ b’termometru	marid | morda | termometru | wiċċ | wiċċ b’termometru
+1F913	wiċċ nerd	nerd | stramb | wiċċ
+1F914	wiċċ ħosbien	ħosbien | wiċċ
+1F915	wiċċ b’faxxa mar-ras	faxxa | ħsara | muġugħ | wiċċ | wiċċ b’faxxa mar-ras
+1F916	wiċċ ta’ robot	mostru | robot | wiċċ | wiċċ ta’ robot
+1F917	wiċċ jgħannaq	jgħannaq | qed jgħannaq | wiċċ
+1F920	wiċċ b’kappell tal-cowboys	cowboy | cowgirl | kappell | wiċċ | wiċċ b’kappell tal-cowboys
+1F921	wiċċ ta’ buffu	buffu | wiċċ | wiċċ ta’ buffu
+1F922	wiċċ jirremetti	jirremetti | vomtu | wiċċ
+1F923	jirrombla mal-art jidħaq	art | irrumblar | jidħaq | jirrombla mal-art jidħaq | wiċċ
+1F924	wiċċ ibeżlaq	ibeżlaq | wiċċ
+1F925	wiċċ jigdeb	jigdeb | pinocchio | wiċċ
+1F926	persuna tagħmel facepalm	eżasperazzjoni | ma jitwemminx | pala | persuna tagħmel facepalm | wiċċ
+1F927	wiċċ jagħtas	gesundheit | għatsa | wiċċ | wiċċ jagħtas
+1F928	wiċċ b’ħuġbejn imtella’	nuqqas ta’ fiduċja | wiċċ b’ħuġbejn imtella’ | xettiku
+1F929	star-struck	għajnejn | jitbissem | star | star-struck | wiċċ
+1F92A	wiċċ miġnun	għajnejn | kbar | wiċċ miġnun | żgħar
+1F92B	wiċċ qed isikket	kwiet | skiet | wiċċ qed isikket
+1F92C	wiċċ bis-simboli fuq il-ħalq	dagħa | wiċċ bis-simboli fuq il-ħalq
+1F92D	wiċċ bl-idejn fuq il-ħalq	whoops | wiċċ bl-idejn fuq il-ħalq
+1F92E	wiċċ qed jirremetti	mard | remettar | wiċċ qed jirremetti
+1F92F	ras tisplodi	maħsud | ras tisplodi
+1F381	rigal imgeżwer	ċelebrazzjoni | kaxxa | mgeżwra | rigal | rigal imgeżwer
+1F389	party popper	ċelebrazzjoni | party | popper | tada
+1F38A	ballun konfetti	ballun | ċelebrazzjoni | konfetti
+1F47B	fatat	fantasija | fatat | ħrafa | kreatura | mostru | wiċċ
+1F47C	anġlu tarbija	anġlu | fantasija | ħrafa | tarbija | wiċċ
+1F47D	aljen	aljen | extraterrestrijali | fantasija | ħrafa | kreatura | mostru | UFO | wiċċ
+1F47E	mostru aljen	aljen | extraterrestrijali | fantasija | ħrafa | mostru | UFO | wiċċ
+1F47F	wiċċ irrabjat bil-qrun	dimonju | fantasija | għafrit | ħrafa | wiċċ | wiċċ irrabjat bil-qrun | xitan
+1F480	kranju	ħrafa | kranju | mewt | mostru | wiċċ
+1F481	persuna tbaxxi idha	għajnuna | idha | l-informazzjoni | persuna tbaxxi idha | tbaxxi | tost
+1F482	gwardjan	gwardjan
+1F489	siringa	għodda | labra | marid | mediċina | siringa | tabib | vaċċin
+1F48A	pillola	marid | mediċina | pillola | tabib
+1F4A2	simbolu ta’ rabja	irrabjat | irrabjat ħafna | komiku | simbolu ta’ rabja
+1F4A4	zzz	irqad | komiku | zzz
+1F4A5	ħabta	boom | ħabta | komiku
+1F4A6	qtar tal-għaraq	għaraq | komiku | qed itajjar | qtar tal-għaraq
+1F4A7	qattra	għaraq | kiesaħ | komiku | qattra
+1F4A8	jaħrab ’l hemm	jaħrab ’l hemm | komiku | qed jiġri | sing
+1F4A9	munzell ħmieġ	demel | ħmieġ | komiku | mostru | munzell ħmieġ | purgar | wiċċ
+1F4AB	stordut	kewkba | komiku | stordut
+1F4AC	bużżieqa tad-diskors	buzzieqa | bużżieqa | bużżieqa tad-diskors | djalogu | komik | taħdit
+1F4AD	bużżieqa tal-ħsibijiet	bużżieqa | bużżieqa tal-ħsibijiet | djalogu | komiku | taħdit
+1F4AE	fjura bajda	fjura | fjura bajda
+1F4A0	djamant b’tikka	djamant b’tikka | djamanti | ġeometrika | ġewwa | komiku
+1F4A1	bozza	bozza | dawl | elettriku | idea | komiku
+1F4A3	bomba	bomba | komiku
+1F4AF	mitt punt	100 | mija | mitt punt | punteġġ | sħiħ
+1F4B0	borża tal-flus	borża | borża tal-flus | dollaru | flus
+1F4B1	kambju tal-munita	bank | flus | kambju tal-munita | munita | skambju
+1F4B2	sinjal tad-dollaru grassett	dollaru | flus | munita | sinjal tad-dollaru grassett
+1F4B8	flus bil-ġwienaħ	bank | dollaru | flus | flus bil-ġwienaħ | fly | ġwienaħ | karta | karta tal-flus | nota
+1F525	nar	fjamma | għodda | nar
+1F52E	boċċa tal-kristal	ballun | boċċa tal-kristal | fantasija | fortuna | għodda | ħrafa | kristall
+1F440	għajnejn	għajn | għajnejn | wiċċ
+1F441	għajn	għajn
+1F442	widna	ġisem | widna
+1F443	imnieħer	ġisem | imnieħer
+1F444	ħalq	ħalq | xufftejn
+1F445	ilsien	ilsien
+1F446	indiċi b’lura li jipponta ’l fuq	’l fuq | id | indiċ | indiċi b’lura | indiċi b’lura li jipponta ’l fuq | ipponta | suba’
+1F447	indiċi b’lura li jipponta ’l isfel	’l isfel | id | indiċi | indiċi b’lura | indiċi b’lura li jipponta ’l isfel | punt | suba’
+1F448	indiċi b’lura iipponta lejn ix-xellug	b’lura | idejn | indiċi | indiċi b’lura iipponta lejn ix-xellug | punt | suba’
+1F449	indiċi b’lura li jipponta lejn il-lemin	b’lura | idejn | indiċi | indiċi b’lura li jipponta lejn il-lemin | punt | suba’
+1F44A	ponn dieħel	daqqa ta’ ponn | ħafen | id | ponn | ponn dieħel
+1F44B	id ixxejjer	id | id ixxejjer | qed ixejjer | xejjer
+1F44C	id OK	id | OK
+1F44D	behem ’il fuq	’il fuq | +1 | behem | behem ’il fuq | id
+1F44E	behem ’l isfel	-1 | ’l isfel | behem | behem ’l isfel | id
+1F44F	idejn iċapċpu	ċapċap | id | idejn iċapċpu
+1F450	idejn miftuħa	id | idejn miftuħa | miftuħa
+261D	indiċi li jipponta ’l fuq	’l fuq | id | indiċi | indiċi li jipponta ’l fuq | ipponta | suba’
+270A	ponn mgħolli	daqqa ta’ ponn | ħafen | id | ponn | ponn mgħolli
+270B	id mgħollija	id | id mgħollija
+270C	id tar-rebħa	id | id tar-rebħa | rebħa | v
+270D	id li tikteb biha	id | id li tikteb biha | tikteb
+1F4AA	biceps bil-muskoli	biceps | biceps bil-muskoli | flex | komiku | muskoli
+1F590	id mgħollija bl-iswaba’ mfettħa	id | id mgħollija bl-iswaba’ mfettħa | mfettħa | suba’
+1F64C	idejn mgħollija	bl-idejn | ċelebrazzjoni | ġesti | hooray | idejn mgħollija | mgħollija
+1F64F	idejn magħluqa	bl-idejn | ġesti | grazzi | idejn magħluqa | inkina | jekk jogħġbok | jitolbu | magħluqa | Staqsi
+1F918	sinjal tal-qrun	id | qrun | rock-on | sinjal tal-qrun | suba’
+1F919	id ċempilli	id | id ċempilli | sejħa
+1F91A	id minn wara mgħollija	id minn wara | id minn wara mgħollija | mgħollija
+1F91B	ponn iħares lejn ix-xellug	l-ewwel | lejn ix-xellug | ponn iħares lejn ix-xellug
+1F91C	ponn iħares lemin	l-ewwel | lejn il-lemin | ponn iħares lemin
+1F91D	ħu bl-idejn	b’idejn | ftehim | handshake | ħu | ħu bl-idejn | laqgħa
+1F91E	swaba nkroċjati	bl-idejn | inkroċja | subgħa | swaba nkroċjati | xorti
+1F91F	ġest ta’ mħabba	ġest ta’ mħabba | id | ILY
+1F932	pali tal-idejn flimkien	pali tal-idejn flimkien | talb
+1F9E0	moħħ	intelliġenti | moħħ
+2764	qalb ħamra	qalb | qalb ħamra
+1F380	żigarella	ċelebrazzjoni | żigarella
+1F382	kejk ta’ għeluq is-snin	ċelebarazzjoni | deżerta | għaġina | għeluq is-snin | ħelwa | kejk | kejk ta’ għeluq is-snin
+1F383	jack-o-lantern	ċelebrazzjoni | halloween | jack | jack-o-lantern | lantern
+1F384	siġra tal-Milied	ċelebrazzjoni | Milied | siġra | siġra tal-Milied
+1F386	logħob tan-nar	ċelebrazzjoni | logħob tan-nar
+1F387	sparkler	ċelebrazzjoni | logħob tan-nar | sparkler | tlellex
+1F388	bużżieqa	bużżieqa | ċelebrazzjoni
+1F38B	siġra tat-tanabata	ċelebrazzjoni | Ġappuniż | siġra | siġra tat-tanabata | strixxun
+1F38C	bnadar inkroċjati	bnadar inkroċjati | ċelebrazzjoni | Ġappuniż | inkroċja | inkroċjati
+1F38D	dekorazzjoni tal-arżnu	arżnu | bambù | ċelebrazzjoni | dekorazzjoni tal-arżnu | Ġappuniż
+1F38E	pupi Ġappuniżi	ċelebrazzjoni | festival | Ġappuniż | pupa | pupi Ġappuniżi
+1F38F	streamer ta’ karpjun	ċelebrazzjoni | karpjun | streamer | streamer ta’ karpjun
+1F390	qniepen tar-riħ	ċelebrazzjoni | qanpiena | qniepen tar-riħ | riħ
+1F391	ċerimonja biex tara l-qamar	ċelebrazzjoni | ċerimonja | ċerimonja biex tara l-qamar | qamar
+1F393	berettin tal-gradwazzjoni	berettin | berettin tal-gradwazzjoni | ċelebrazzjoni | gradwazzjoni | ħwejjeġ | kappell
+1F484	lipstick	kosmetiċi | lipstick | makeup
+1F485	nail polish	dwiefer | kosmetiċi | kura | manicure | nail polish | polish
+1F48B	marka ta’ bewsa	bews | marka ta’ bewsa | xofftejn
+1F48C	ittra ta’ mħabba	imħabba | ittra | ittra ta’ mħabba | posta | qalb
+1F48D	ċurkett	ċurkett | djamanti
+1F48E	ġawhra	djamanti | ġawhra | ħadra
+1F48F	bewsa	bewsa | koppja
+1F490	bukkett	bukkett | fjura
+1F491	koppja b’qalb	imħabba | koppja | koppja b’qalb
+1F492	tieġ	imħabba | kappella | tieġ
+1F493	qalb tħabbat	qalb tħabbat | taħbita tal-qalb | tħabbat
+1F494	qalb maqsuma	kisser | maqsuma | qalb maqsuma
+1F495	żewġt iqlub	imħabba | żewġt iqlub
+1F496	qalb tfexfex	eċċitat | qalb tfexfex | tfexfex
+1F497	qalb tikber	eċċitat | nervuża | polz | qalb tikber | tkabbir
+1F498	qalb bi vleġġa	kupidu | qalb bi vleġġa | vleġġa
+1F499	qalb blu	blu | qalb blu
+1F49A	qalb ħadra	aħdar | qalb ħadra
+1F49B	qalb safra	isfar | qalb safra
+1F49C	qalb vjola	qalb vjola | vjola
+1F49D	qalb b’ċoff	qalb b’ċoff | valentinu | żigarella
+1F49E	qlub iduru	iduru | qlub iduru
+1F49F	dekorazzjoni ta’ qalb	dekorazzjoni ta’ qalb | qalb
+1F9E1	qalb oranġjo	oranġjo | qalb oranġjo
+2763	esklamazzjoni ta’ qalb miġugħa	esklamazzjoni | esklamazzjoni ta’ qalb miġugħa | marka | punteġġjatura
+2733	stilla bi tmien linji	stilla | stilla bi tmien linji
+2734	stilla bi tmien ponot	stilla | stilla bi tmien ponot
+2747	ileħħ	ileħħ
+1F3E0	binja	binja | dar
+1F3E1	dar bil-ġnien	dar | dar bil-ġnien | ġnien
+1F3E2	bini tal-uffiċċju	bini | bini tal-uffiċċju
+1F3E3	uffiċċju tal-posta Ġappuniż	Ġappuniż | posta | uffiċċju tal-posta Ġappuniż
+1F3E4	uffiċċju tal-posta	Ewropea | posta | uffiċċju tal-posta
+1F3E5	sptar	mediċina | sptar | tabib
+1F3E6	bank	bank | bini
+1F3E7	tabella tal-ATM	atm | awtomatiku | bank | kaxxiera | tabella tal-ATM
+1F3E8	lukanda	bini | lukanda
+1F3E9	lukanda tal-imħabba	imħabba | lukanda | lukanda tal-imħabba
+1F3EA	ħanut tal-merċa	ħanut | tal-merċa
+1F3EB	skola	bini | skola
+1F3EC	stabbiliment	stabbiliment
+1F3ED	fabbrika	bini | fabbrika
+1F3EE	lanterna tal-karti ħamra	aħmar | bar | dawl | lanterna | lanterna tal-karti ħamra
+1F3EF	kastell Ġappuniż	Ġappuniż | kastell
+1F3F0	kastell	Ewropew | kastell
+1F463	marki tas-saqajn	ħwejjeġ | impronta | ipprintja | marki tas-saqajn
+1F464	bust f’silwett	bust | bust f’silwett | silwett
+1F465	busti f’silwett	bust | busti f’silwett | silwett
+1F466	tifel	tifel | żagħżugħ
+1F467	tifla	tifla | Virgo | żgħażagħ | żodjaku
+1F468	raġel	raġel
+1F469	mara	mara
+1F46A	familja	familja
+1F46B	raġel u mara jżommu jdejhom	idejn | koppja | mara | raġel | raġel u mara jżommu jdejhom | żomm
+1F46C	żewġt irġiel iżommu jdejhom	Gemini | idejn | koppja | raġel | tewmin | żewġt irġiel iżommu jdejhom | żodjaku | żomm
+1F46D	żewġ nisa jżommu jdejhom	idejn | koppja | mara | żewġ nisa jżommu jdejhom | żomm
+1F46E	uffiċjal tal-pulizija	pulizija | tal-pulizija | uffiċjal
+1F46F	persuni b’widnejn ta’ fenek jiddevertu	jiddevertu | persuni b’widnejn ta’ fenek jiddevertu | widnejn ta’ fenek | żeffien
+1F470	għarusa b’velu	għarusa | għarusa b’velu | velu | żwieġ
+1F471	persuna b’xagħar isfar	persuna b’xagħar isfar | xagħara isfar
+1F472	raġel b’kappell Ċiniż	gua pi mao | kappell | raġel | raġel b’kappell Ċiniż
+1F473	persuna liebsa turban	persuna liebsa turban | turban
+1F474	raġel xiħ	raġel | xiħ
+1F475	mara xiħa	mara | xiħa
+1F476	tarbija	tarbija
+1F477	ħaddiem tal-kostruzzjoni	ħaddiem | ħaddiem tal-kostruzzjoni | kappell | kostruzzjoni
+1F478	prinċipessa	fantasija | ħrafa | prinċipessa
+1F479	orku	fantasija | ħrafa | kreatura | mostru | orku | wiċċ
+1F47A	goblin	fantasija | goblin | ħrafa | kreatura | mostru | wiċċ
+1F483	mara tiżfen	mara | tiżfen
+1F486	persuna tingħata massaġġ	massaġġi | persuna tingħata massaġġ | salon | wiċċ
+1F487	persuna taqta’ xagħarha	ħanut | parrukkier | persuna taqta’ xagħarha | qatgħa xagħar | tas-sbuħija
+1F645	persuna tagħmel sinjal ta’ LE	bl-idejn | ġesti | ma | mhux | persuna tagħmel sinjal ta’ LE | pprojbiti | projbit
+1F646	persuna tagħmel sinjal ta’ OK	bl-idejn | ġesti | OK | persuna tagħmel sinjal ta’ OK
+1F647	persuna tinkina	apoloġija | ġesti | inkina | jiddispjaċina | persuna tinkina
+1F64B	persuna tgħolli idha	bl-idejn | ġesti | għolli | kuntentizza | persuna tgħolli idha
+1F64D	persuna titkerrah	ġesti | persuna titkerrah | titkerrah
+1F64E	persuna tisporġi x-xofftejn	ġesti | jisporġi x-xofftejn | persuna tisporġi x-xofftejn
+1F930	mara tqila	mara | tqila
+1F931	irdigħ	irdigħ | sider | tarbija | treddigħ
+1F933	stessu	kamera | stessu | telefown
+1F934	prinċep	prinċep
+1F935	raġel b’tuxedo	għarus | raġel | raġel b’tuxedo | tuxedo
+1F936	Is-Sinjura Klaws	ċelebarazzjoni | il-Milied | Is-Sinjura | Klaws | omm
+1F937	persuna xxengel spallejha	dubju | indifferenza | injoranza | persuna xxengel spallejha | xengel spallejn
+1F385	Santa Klaws	ċelebarazzjoni | klaws | Milied | missier | santa
+1F9D0	wiċċ bil-monokolu	bla arja | wiċċ bil-monokolu
+1F9D1	adult	adult | newtrali fil-ġeneru
+1F9D2	tfal	newtrali fil-ġeneru | tfal | żgħażagħ
+1F9D3	adulti anzjan	adulti anzjan | anzjan | newtrali fil-ġeneru
+1F9D4	persuna bil-baffi	baffi | persuna bil-baffi
+1F9D5	mara b’velu	hijab | mantilla | mara b’velu | tichel | velu
+1F9D6	persuna f’kamra tal-fwar	kamra tal-fwar | persuna f’kamra tal-fwar | sawna
+1F9D7	persuna tiela’	persuna li titla’ | persuna tiela’
+1F9D8	persuna fil-pożizzjoni ta’ lotus	joga | meditazzjoni | persuna fil-pożizzjoni ta’ lotus
+1F9D9	magu	magu | saħħar | saħħara
+1F9DA	fatatina	fatatina | Oberon | Puck | Titania
+1F9DB	vampira	Dracula | qam mil-mewt | vampira
+1F9DC	merperson	merman | merperson | merwoman | serena
+1F9DD	għafrit	għafrit | maġiku
+1F9DE	ġenju	djinn | ġenju
+1F9DF	żombi	mejtin jimxu | qam mil-mewt | żombi
+A9	drittijiet tal-awtur	drittijiet tal-awtur
+AE	reġistrati	reġistrati
+2122	trade mark	marka | tm | trade mark | trademark
+A4	Munita Mhix Magħrufa jew Mhix Valida	
+2196	vleġġa xellugija ’l fuq	direzzjoni | interkardinal | majjistral | vleġġa | vleġġa xellugija ’l fuq
+2197	vleġġa ’l fuq leminija	direzzjoni | grigal | interkardinal | vleġġa | vleġġa ’l fuq leminija
+2198	vleġġa ’l isfel leminija	direzzjoni | interkardinal | vleġġa | vleġġa ’l isfel leminija | xlokk
+2199	vleġġa xellugija ’l isfel	direzzjoni | interkardinal | lbiċ | vleġġa | vleġġa xellugija ’l isfel
+2194	vleġġa ’l isfel xellugija	vleġġa | vleġġa ’l isfel xellugija
+2195	vleġġa ’l isfel u ’l isfel	vleġġa | vleġġa ’l isfel u ’l isfel
+21A9	vleġġa leminija mgħawġa lejn ix-xellug	vleġġa | vleġġa leminija mgħawġa lejn ix-xellug
+21AA	vleġġa tax-xellug mgħawġa lejn il-lemin	vleġġa | vleġġa tax-xellug mgħawġa lejn il-lemin
+1F400	far	far
+1F401	ġurdien	ġurdien
+1F402	bhima	barri | bhima | Taurus | żodjaku
+1F403	buflu tal-ilma	buflu | buflu tal-ilma | ilma
+1F404	baqra	baqra
+1F405	tigra	tigra
+1F406	leopard	leopard
+1F407	fenek	fenek | pet
+1F408	qattus	pet | qattus
+1F409	dragun	dragun | ħrafa
+1F40A	kukkudrill	kukkudrill
+1F40B	baliena	baliena
+1F40C	bebbuxu	bebbuxu
+1F40D	serp	Ophiuchus | portatur | serp | serpent | żodjaku
+1F40E	żiemel	ekwestri | tlielaq | żiemel | żiemel tat-tiġrija
+1F40F	muntun	Aries | maskili | muntun | nagħaġ | żodjaku
+1F410	mogħża	Capricorn | mogħża | żodjaku
+1F411	nagħġa	femminil | nagħaġ | nagħġa
+1F412	xadina	xadina
+1F413	serduk	għasfur | serduk
+1F414	tiġieġa	għasfur | tiġieġ | tiġieġa
+1F415	kelb	kelb | pet
+1F416	ħanżir	ħanżir | ħanżira
+1F417	ċingjal	ċingjal | ħanżir
+1F418	iljunfant	iljunfant
+1F419	qarnita	qarnita
+1F41A	qoxra spirali	qoxra | spirali
+1F41B	insett	insett
+1F41C	nemla	insett | nemla
+1F41D	żunżana	insett | naħal | żunżana
+1F41E	ħanfusa	ħanfusa | insett | nanna kola
+1F41F	ħut	ħut | Pisces | żodjaku
+1F420	ħut tropikali	ħut | tropikali
+1F421	blowfish	blowfish | ħut
+1F422	fekruna	fekruna | terrapin
+1F423	fellus qed ifaqqas	fellus | fellus qed ifaqqas | għasfur | tfaqqis | żgħir
+1F424	fellus żgħir	fellus | għasfur | żgħir
+1F425	fellus żgħir iħares ’il quddiem	fellus | fellus żgħir iħares ’il quddiem | għasfur | żgħir
+1F426	għasfur	għasfur
+1F427	pingwin	għasfur | pingwin
+1F428	koala	koala | ors
+1F429	poodle	kelb | poodle
+1F42A	ġemel	dromedarju | ġemel | ħotba
+1F42B	ġemel b’żewġ ħotob	baktrijan | ġemel | ġemel b’żewġ ħotob | ħotba
+1F42C	denfil	denfil | ġewnaħ
+1F42D	wiċċ ta’ ġurdien	ġurdien | wiċċ | wiċċ ta’ ġurdien
+1F42E	wiċċ ta’ baqra	baqra | wiċċ | wiċċ ta’ baqra
+1F42F	wiċċ ta’ tigra	tigra | wiċċ | wiċċ ta’ tigra
+1F430	wiċċ ta’ fenek	fenek | pet | wiċċ | wiċċ ta’ fenek
+1F431	wiċċ ta’ qattus	pet | qattus | wiċċ | wiċċ ta’ qattus
+1F432	wiċċ ta’ dragun	dragun | ħrafa | wiċċ | wiċċ ta’ dragun
+1F433	baliena tfawwar l-ilma	baliena | baliena tfawwar l-ilma | tfawwar | wiċċ
+1F434	wiċċ ta’ żiemel	wiċċ | wiċċ ta’ żiemel | żiemel
+1F435	wiċċ ta’ xadina	wiċċ | wiċċ ta’ xadina | xadina
+1F436	wiċċ ta’ kelb	kelb | pet | wiċċ | wiċċ ta’ kelb
+1F437	wiċċ ta’ ħanżir	majjal | wiċċ | wiċċ ta’ ħanżir
+1F438	wiċċ ta’ żrinġ	wiċċ | wiċċ ta’ żrinġ | żrinġ
+1F439	wiċċ ta’ ħamster	ħamster | pet | wiċċ | wiċċ ta’ ħamster
+1F43A	wiċċ ta’ lupu	lupu | wiċċ | wiċċ ta’ lupu
+1F43B	wiċċ ta’ ors	ors | wiċċ | wiċċ ta’ ors
+1F43C	wiċċ ta’ panda	panda | wiċċ | wiċċ ta’ panda
+1F43D	imnieħer ta’ ħanżir	imnieħer | imnieħer ta’ ħanżir | majjal | wiċċ
+1F43E	marki tas-saqajn ta’ annimal	ipprintja | marki tas-saqajn ta’ annimal | saqajn | saqajn ta’ annimal
+1F43F	chipmunk	chipmunk
+1F981	wiċċ ta’ ljun	Iljun | Leo | wiċċ | wiċċ ta’ ljun | żodjaku
+1F982	skorpjun	scorpio | Scorpius | skorpjun | żodjaku
+1F983	dundjan	dundjan | għasfur
+1F984	wiċċ ta’ unikornu	unikornu | wiċċ | wiċċ ta’ unikornu
+1F985	ajkla	ajkla | għasfur
+1F986	papra	għasfur | papra
+1F987	farfett il-lejl	farfett il-lejl | vampira
+1F988	kelb il-baħar	ħut | kelb il-baħar
+1F989	kokka	għaqli | għasfur | kokka
+1F98A	wiċċ ta’ volpi	volpi | wiċċ | wiċċ ta’ volpi
+1F98B	farfett	farfett | insett | sabiħ
+1F98C	ċerva	ċerva
+1F98D	gorilla	gorilla
+1F98E	wiża’	rettili | wiża’
+1F98F	rinoċeronti	rinoċeronti
+1F990	gamblu	frott tal-baħar | gamblu | ikel | żgħir
+1F991	klamari	ikel | klamari | mollusk
+1F992	ġiraff	ġiraff | tikek
+1F993	żebra	strixxa | żebra
+1F994	qanfud	bix-xewk | qanfud
+1F995	sawropodu	brakkjosawru | brontosawru | diplodoku | sawropodu
+1F996	T-Rex	T-Rex | Tirannosawru Rex
+1F997	cricket	cricket | ġurat
+1F330	qastan	pjanta | qastan
+1F331	żerriegħa	żerriegħa | żgħażagħ
+1F332	siġra tħaddar	siġra | siġra tħaddar
+1F333	siġra deċiduża	deċiduża | iwaqqgħu | siġra
+1F334	siġra tal-palm	palm | siġra | siġra tal-palm
+1F335	kaktus	kaktus | pjanta
+1F337	tulipan	fjura | tulipan
+1F338	fjur taċ-ċirasa	ċirasa | fjur | fjur taċ-ċirasa | fjuri
+1F339	warda	fjura | warda
+1F33A	hibiscus	fjura | hibiscus
+1F33B	ġirasol	fjura | ġirasol | xemx
+1F33C	fjur	fjur | fjura
+1F33D	widna tal-qamħ	qamħ | qamħirrum | qamħirrun | widna | widna tal-qamħ
+1F33E	għarma ross	għarma ross | qamħ | ross | widna
+1F33F	ħwawar	ħwawar | werqa
+1F340	silla ta’ erba’ werqiet	4 | erba’ | silla | silla ta’ erba’ werqiet | werqa
+1F341	werqa tal-aġġru	aġġru | jaqgħu | werqa | werqa tal-aġġru
+1F342	werqa mwaqqa’	jaqgħu | werqa | werqa mwaqqa’
+1F343	werqa tixxejjer fir-riħ	onfoħ | riħ | tixxejjer | werqa | werqa tixxejjer fir-riħ
+1F344	faqqiegħa	faqqiegħa | fungu velenuż
+2618	xamrok	pjanta | xamrok
+1F347	għeneb	frott | għenba | għeneb
+1F348	bettieħa	bettieħa | frott
+1F349	dulliegħa	dulliegħa | frott
+1F34A	mandolina	frott | larinġa | mandolina
+1F34B	lumija	ċitru | frott | lumija
+1F34C	banana	banana | frott
+1F34D	ananas	ananas | frott
+1F34E	tuffieħa ħamra	aħmar | frott | tuffieħa | tuffieħa ħamra
+1F34F	tuffieħa ħadra	aħdar | frott | tuffieħa | tuffieħa ħadra
+1F350	lanġasa	frott | lanġasa
+1F351	ħawħa	frott | ħawħa
+1F352	ċirasa	ċirasa | frott
+1F353	frawla	berry | frawla | frott
+1F336	bżar jaħraq	bżar | jaħraq
+1F354	hamburger	burger | hamburger
+1F355	pizza	ġobon | pizza | slajs
+1F356	laħam fuq l-għadma	għadma | laħam | laħam fuq l-għadma
+1F357	sieq ta’ tjur	għadma | sieq | sieq ta’ tjur | tiġieġa | tjur
+1F358	rice cracker	craker | rice cracker | ross
+1F359	pulpetta tar-ross	ballun | Ġappuniż | pulpetta tar-ross | ross
+1F35A	ross imsajjar	imsajjar | ross
+1F35B	ross tal-karì	karì | ross | ross tal-karì
+1F35C	bieqja tal-fwar	bieqja | bieqja tal-fwar | fwar | noodle | ramen
+1F35D	spagetti	għaġin | spagetti
+1F35E	ħobż	ħobż | ħobża
+1F35F	ċips	ċips
+1F360	patata ħelwa mixwija	ħelwa | mixwija | patata
+1F361	dango	dango | deżerta | Ġappuniż | ħelwa | skewer | stikka
+1F362	oden	frott tal-baħar | kebab | oden | skewer | stikka
+1F363	sushi	sushi
+1F364	gambli moqli	gambli | moqli | tempura
+1F365	pulpetta tal-ħut innokklata	għaġina | ħut | innokkla | pulpetta | pulpetta tal-ħut innokklata
+1F366	ġelat artab	artab | deżerta | ġelat | ħelu | krema | silġ
+1F367	silġ imqaxxar	deżerta | ħelu | imqaxxar | silġ
+1F368	ġelat	deżerta | ġelat | ħelu | krema | silġ
+1F369	doughnut	deżerta | donut | doughnut | ħelu
+1F36A	gallettina	deżerta | gallettina | ħelwa
+1F36B	biċċa ċikkulata	biċċa | ċikkulata | deżerta | ħelwa
+1F36C	ħelu	deżerta | ħelu | ħelwa
+1F36D	lolipop	deżerta | ħelu | ħelwa | lolipop
+1F36E	kastard	deżerta | ħelwa | kastard | pudina
+1F36F	vażett għasel	għasel | ħelu | vażett | vażett tal-għasel
+1F370	shortcake	deżerta | għaġina | ħelu | kejk | shortcake | slajs
+1F371	bento box	bento | box
+1F372	borma tal-ikel	borma | borma tal-ikel | stuffat
+1F373	tisjir	bajda | borma | qali | tisjir
+1F374	furketta u sikkina	furketta | furketta u sikkina | sikkina | tisjir
+1F375	kikkra tat-te mingħajr manku	kikkra | kikkra tat-te mingħajr manku | tazza | te | xarba
+1F376	sake	bar | flixkun | sake | tazza | xarba | xorb
+1F377	tazza nbid	bar | inbid | tazza | tazza nbid | xarba | xorb
+1F378	tazza tal-cocktails	bar | cocktail | tazza | tazza tal-cocktails | xarba
+1F379	xarba tropikali	bar | tropikali | xarba
+1F37A	magg birra	bar | birra | magg | xarba
+1F37B	maggijiet tal-birra jċekċku	bar | birra | iċekċku | magg | maggijiet tal-birra jċekċku | xarba
+1F37C	flixkun tat-trabi	flixkun | flixkun tat-trabi | ħalib | tarbija | xarba
+1F37D	furketta u sikkina ma’ platt	furketta | furketta u sikkina ma’ platt | platt | sikkina | tisjir
+1F37E	flixkun b’tapp tas-sufra jinfetaħ	bar | flixkun | flixkun b’tapp tas-sufra jinfetaħ | jinfetaħ | sufra | xarba
+1F37F	popcorn	popcorn
+1F950	croissant	croissant | franċiż | ħobż | ikel | panina forma ta’ nofs qamar
+1F951	avokado	avokado | frott | ikel
+1F952	ħjara	ħaxix | ħjara | ikel | immarinat
+1F953	bejken	bejken | ikel | laħam
+1F954	patata	ħaxix | ikel | patata
+1F955	zunnerija	ħaxix | ikel | zunnerija
+1F956	ħobż baguette	baguette | franċiż | ħobż | ikel
+1F957	insalata ħadra	ħadra | ikel | insalata
+1F958	taġen baxx tal-Ikel	baxx | ikel | paella | pagna | taġen | taġen baxx tal-Ikel
+1F959	ħobż ċatt mimli	falafel | gyro | ħobż ċatt | ħobż ċatt mimli | ikel | kebab | mimli
+1F95A	bajda	bajda | ikel
+1F95B	tazza ħalib	ħalib | tazza | xarba
+1F95C	karawett	ħaxix | ikel | karawett | lewż
+1F95D	frotta tal-kiwi	frotta | frotta tal-kiwi | ikel | kiwi
+1F95E	pancakes	crêpe | hotcake | ikel | pancake | pancakes
+1F95F	dumpling	dumpling | empanada | gyōza | jiaozi | pierogi | potsticker
+1F960	fortune cookie	fortune cookie | profezija
+1F961	kaxxa tat-takeout	kaxxa tat-takeout | oyster pail
+1F962	chopsticks	chopsticks | hashi
+1F963	skutella b’mgħarfa	ċereali | congee | kolazzjon | skutella b’mgħarfa
+1F964	tazza bi stro	luminata | meraq | tazza bi stro
+1F965	ġewż tal-indi	ġewż tal-indi | palma | piña colada
+1F966	brokkoli	brokkoli | kaboċċa selvaġġa
+1F967	torta	għaġina | mili | torta
+1F968	pretzel	mibruma | pretzel
+1F969	biċċa laħam	biċċa | biċċa laħam | kustilja tal-majjal | kustilja tal-muntun | steak
+1F96A	sandwich	ħobż | sandwich
+1F96B	ikel fil-laned	ikel fil-laned | landa
+1F9C0	biċċa ġobon	biċċa ġobon | ġobon
+2615	xarba sħuna	fwar | kafè | sħun | te | xarba | xarba sħuna | xorb
+2600	xemx	raġġi | tleqq | xemx | xemxi
+2601	sħaba	sħaba | temp
+2602	umbrella	ħwejjeġ | umbrella | xita
+2603	borrinu	borrinu | kiesaħ | silġ
+2614	umbrella bi qtar tax-xita	ħwejjeġ | qattra | umbrella | umbrella bi qtar tax-xita | xita
+26A1	vultaġġ għoli	elettriku | l-elettriku | periklu | sajjetti | vultaġġ | vultaġġ għoli | żap
+26C4	borrinu mingħajr borra	borrinu | borrinu mingħajr borra | kiesaħ | silġ
+26C5	xemx wara sħaba	sħaba | xemx | xemx wara sħaba
+26C8	sħaba b’sajjetti u x-xita	ragħad | sħaba | sħaba b’sajjetti u x-xita | xita
+2744	farka borra	farka borra | kiesaħ | silġ
+1F300	ċiklun	ċiklun | stordut | tifun | twister
+1F301	imċajpar	ċpar | imċajpar
+1F302	umbrella magħluqa	ħwejjeġ | umbrella | umbrella magħluqa | xita
+1F303	lejl bl-istilel	bil-lejl | lejl bl-istilel | stilla
+1F304	tlugħ ix-xemx fuq il-muntanji	filgħodu | muntanja | tlugħ ix-xemx | tlugħ ix-xemx fuq il-muntanji | xemx
+1F305	tlugħ ix-xemx	filgħodu | tlugħ ix-xemx | xemx
+1F306	silwett tal-belt fi nżul ix-xemx	belt | fl-għaxija | inżul ix-xemx | pajsaġġ | silwett tal-belt fi nżul ix-xemx | xemx | żerniq
+1F307	nżul ix-xemx	nżul ix-xemx | xemx | żerniq
+1F308	qawsalla	qawsalla | xita
+1F309	pont billejl	billejl | pont
+1F30A	mewġa ilma	ilma | mewġa | oċean
+1F30B	vulkan	eruzzjoni | muntanja | vulkan
+1F30C	triq ta’ Sant’Anna	spazju | triq ta’ Sant’Anna
+1F30D	globu juri l-Ewropa-Afrika	Afrika | dinja | globu | globu juri l-Ewropa-Afrika | l-Ewropa
+1F30E	globu juri l-Ameriki	dinja | globu | globu juri l-Ameriki | l-Ameriki
+1F30F	globu juri l-Asja-Awstralja	dinja | globu | globu juri l-Asja-Awstralja | l-Asja | l-Awstralja
+1F310	globu bil-meridjani	dinja | globu | globu bil-meridjani | meridjani
+1F311	qamar ġdid	qamar | qamar ġdid | skur
+1F312	felli qamar qed jikber	felli | felli qamar qed jikber | qamar | qed jikber
+1F313	l-ewwel kwart tal-qamar	kwart | l-ewwel kwart tal-qamar | qamar
+1F314	qamar akbar minn nofs li qed jikber	akbar minn nofs | qamar | qamar akbar minn nofs li qed jikber | qed jikber
+1F315	qamar sħiħ	qamar | sħiħ
+1F316	qamar akbar minn nofs li qed jonqos	akbar minn nofs | qamar | qamar akbar minn nofs li qed jonqos | qed jonqos
+1F317	l-aħħar kwart tal-qamar	kwart | l-aħħar kwart tal-qamar | qamar
+1F318	felli qamar li qed jonqos	felli | felli qamar li qed jonqos | qamar | qed jonqos
+1F319	felli qamar	felli | qamar
+1F31A	wiċċ ta’ qamar ġdid	qamar | wiċċ | wiċċ ta’ qamar ġdid
+1F31B	wiċċ tal-ewwel kwart tal-qamar	kwart | qamar | wiċċ | wiċċ tal-ewwel kwart tal-qamar
+1F31C	wiċċ tal-aħħar kwart tal-qamar	kwart | qamar | wiċċ | wiċċ tal-aħħar kwart tal-qamar
+1F31D	wiċċ ta’ qamar sħiħ	qamar | sħiħ | tleqq | wiċċ | wiċċ ta’ qamar sħiħ
+1F31E	xemx b’wiċċ	tleqq | wiċċ | xemx b’wiċċ | xemxi
+1F31F	stilla tiddi	jiddi | stilla | tiddi | tlellex | tleqq
+1F320	stilla feġġa	feġġa | stilla | taqa’
+1F321	termometru	temp | termometru
+1F324	xemx wara sħaba żgħira	sħaba | xemx | xemx wara sħaba żgħira
+1F325	xemx wara sħaba kbira	sħaba | xemx | xemx wara sħaba kbira
+1F326	xemx wara sħaba tax-xita	sħaba | xemx | xemx wara sħaba tax-xita | xita
+1F327	sħaba bix-xita	sħaba | sħaba bix-xita | xita
+1F328	sħaba bis-silġ	kiesaħ | sħaba | sħaba bis-silġ | silġ
+1F329	sħaba bis-sajjetti	sajjetti | sħaba | sħaba bis-sajjetti
+1F32A	tornado	buffuri | sħaba | tornado
+1F32B	ċpar	ċpar | sħaba
+1F32C	wiċċ tar-riħ	jonfoħ | riħ | sħaba | wiċċ | wiċċ tar-riħ
+2648	Aries	Aries | muntun | żodjaku
+2649	Taurus	barri | bhima | Taurus | żodjaku
+264A	Gemini	Gemini | it-tewmin | żodjaku
+264B	Cancer	Cancer | granċ | żodjaku
+264C	Leo	iljun | Leo | żodjaku
+264D	Virgo	Virgo | żodjaku
+264E	Libra	bilanċ | ġustizzja | Libra | miżien | żodjaku
+264F	Scorpius	scorpio | Scorpius | skorpjun | żodjaku
+2650	Sagittarius	arċier | Sagittarius | żodjaku
+2651	Capricorn	Capricorn | mogħża | żodjaku
+2652	Aquarius	Aquarius | ilma | portatur | żodjaku
+2653	Pisces	ħut | Pisces | żodjaku
+1F550	is-siegħa	00 | 1 | 1:00 | arloġġ | is-siegħa
+1F551	is-sagħtejn	00 | 2 | 2:00 | arloġġ | is-sagħtejn
+1F552	it-tlieta	00 | 3 | 3:00 | arloġġ | it-tlieta
+1F553	l-erbgħa	00 | 4 | 4:00 | arloġġ | l-erbgħa
+1F554	il-ħamsa	00 | 5 | 5:00 | arloġġ | ħames | il-ħamsa
+1F555	is-sitta	00 | 6 | 6:00 | arloġġ | is-sitta
+1F556	is-sebgħa	00 | 7 | 7:00 | arloġġ | is-sebgħa
+1F557	it-tmienja	00 | 8 | 8:00 | arloġġ | it-tmienja
+1F558	id-disgħa	00 | 9 | 9:00 | arloġġ | id-disgħa
+1F559	l-għaxra	00 | 10 | 10:00 | arloġġ | l-għaxra
+1F55A	il-ħdax	00 | 11 | 11:00 | clock | il-ħdax
+1F55B	nofsinhar	00 | 12 | 12:00 | arloġġ | nofsinhar
+1F55C	is-siegħa u nofs	1 | 1:30 | 30 | arloġġ | is-siegħa u nofs
+1F55D	is-sagħtejn u nofs	2 | 2:30 | 30 | arloġġ | is-sagħtejn u nofs
+1F55E	it-tlieta u nofs	3 | 3:30 | 30 | arloġġ | it-tlieta u nofs
+1F55F	l-erbgħa u nofs	00 | 4 | 4:00 | arloġġ | l-erbgħa u nofs
+1F560	il-ħamsa u nofs	00 | 5 | 5:00 | arloġġ | ħames | il-ħamsa u nofs
+1F561	is-sitta u nofs	30 | 6 | 6:30 | arloġġ | is-sitta u nofs
+1F562	is-sebgħa u nofs	30 | 7 | 7:30 | arloġġ | is-sebgħa u nofs
+1F563	it-tmienja u nofs	00 | 8 | 8:00 | arloġġ | it-tmienja u nofs
+1F564	id-disgħa u nofs	00 | 9 | 9:00 | arloġġ | id-disgħa u nofs
+1F565	l-għaxra u nofs	10 | 10:30 | 30 | arloġġ | l-għaxra u nofs
+1F566	il-ħdax u nofs	11 | 11:30 | 30 | arloġġ | il-ħdax u nofs
+1F567	in-nofs siegħa	12 | 12:30 | 30 | arloġġ | in-nofs siegħa
+2604	kometa	kometa | spazju
+26F0	muntanja	muntanja
+26F1	umbrella fuq art	umbrella | umbrella fuq art | xemx | xita
+26F2	funtana	funtana
+26F4	lanċa	dgħajsa | lanċa | passiġġieri
+26F5	dgħajsa bil-qlugħ	baħar | dgħajsa | dgħajsa bil-qlugħ | jott | resort
+2708	ajruplan	ajruplan
+1F488	arblu tal-barbier	arblu | arblu tal-barbier | barbier | qatgħa xagħar
+1F4BA	sedil	sedil | siġġu
+1F680	rokit	rokit | spazju
+1F681	elikotteru	elikotteru | vettura
+1F682	lokomottiva	ferrovija | lokomottiva | magna | tal-fwar
+1F683	karozza tal-ferrovija	elettriku | ferrovija | karozza | karozza tal-ferrovija | tramm | trolleybus
+1F684	ferrovija b’velocità għolja	ferrovija | ferrovija b’velocità għolja | shinkansen | veloċità
+1F685	ferrovija b’veloċità għolja bil-bullet nose	bullet | ferrovija | ferrovija b’veloċità għolja bil-bullet nose | shinkansen | veloċità
+1F686	ferrovija	ferrovija
+1F687	metro	metro | subway
+1F688	ferrovija ħafifa	ferrovija | ferrovija ħafifa
+1F689	stazzjon	ferrovija | stazzjon
+1F68A	tramm	tramm | trolleybus
+1F68B	karozza tat-tramm	karozza tat-tramm | karozzi | tramm | trolleybus
+1F68C	xarabank	vettura | xarabank
+1F68D	xarabank ġejja ’l hawn	ġejja ’l hawn | xarabank | xarabank ġejja ’l hawn
+1F68E	trolleybus	tramm | trolley | trolleybus | xarabank
+1F68F	bus stop	bus stop | busstop | Waqqaf | xarabank
+1F690	minibus	minibus | xarabank
+1F691	ambulanza	ambulanza | vettura
+1F692	vettura tat-tifi tan-nar	magna | nar | trakk | vettura tat-tifi tan-nar
+1F693	karozza tal-pulizija	karozza | karozza tal-pulizija | pulizija | ronda
+1F694	karozza tal-pulizija ġejja ’l hawn	ġejja ’l hawn | karozza | karozza tal-pulizija ġejja ’l hawn | pulizija
+1F695	taxi	taxi | vettura
+1F696	taxi ġejja ’l hawn	ġejja ’l hawn | taxi | taxi ġejja ’l hawn
+1F697	karozza	karozza
+1F698	karozza ġejja ’l hawn	ġejja ’l hawn | karozza | karozza ġejja ’l hawn
+1F699	vettura għal utilità sportiva	rikreazzjoni | utilità sportiva | vettura għal utilità sportiva
+1F69A	trakk tal-konsenji	konsenji | trakk | trakk tal-konsenji
+1F69B	trakk artikolat	semi | trakk | trakk artikolat
+1F69C	trattur	trattur | vettura
+1F69D	monorail	monorail | vettura
+1F69E	ferrovija tal-muntanji	ferrovija | ferrovija tal-muntanji | karozza | muntanja
+1F69F	ferrovija fuq sospensjoni	ferrovija | ferrovija fuq sospensjoni | sospensjoni
+1F6A0	funikular tal-muntanji	funikular tal-muntanji | gondola | kejbil | muntanja
+1F6A1	linja tat-ramm fl-ajru	gondola | karozai | kejbil | linja tat-ramm fl-ajru | linja tat-tramm | mill-ajru
+1F6A2	vapur	dgħajsa | passiġġieri | vapur
+1F6A3	persuna taqdef dgħajsa	dgħajsa | dgħajsa bil-moqdief | persuna taqdef dgħajsa
+1F6A4	speedboat	dgħajsa | speedboat
+1F6A5	dawl tat-traffiku orizzontali	dawl | dawl tat-traffiku orizzontali | sinjal | traffiku
+1F6A6	dawl tat-traffiku vertikali	dawl | dawl tat-traffiku vertikali | sinjal | traffiku
+1F6A7	kostruzzjoni	barriera | kostruzzjoni
+1F6A8	dawl tal-karozza tal-pulizija	dawl | dawl tal-karozza tal-pulizija | karozza | li jduru | pulizija
+1F6A9	bandiera trijangolari	bandiera trijangolari | posta
+1F6AA	bieb	bieb
+1F6B0	ilma tax-xorb	ilma | tax-xorb | xorb
+1F6B1	ilma mhux tajjeb għax-xorb	ilma | ilma mhux tajjeb għax-xorb | mhux tajjeb għax-xorb
+1F6B3	ebda rota	ebda rota | ma | mhux | pprojbit | projbit | rota
+1F6B7	ebda nies pedonali	ebda nies pedonali | ma | mhux | pedonali | pprojbit | pprojbiti
+1F6B8	tfal jaqsmu	pedonali | qsim | tfal | tfal jaqsmu | traffiku
+1F6B9	kamra tal-irġiel	kamra tal-irġiel | latrina | raġel | toilet | wc
+1F6BA	kamra tan-nisa	kamra tan-nisa | latrina | mara | toilet | wc
+1F6BB	toilets	lavatory | toilet | toilets | WC
+1F6BC	simbolu ta’ trabi	simbolu ta’ trabi | tarbija | tbiddel
+1F6BD	toilet	toilet
+1F6BE	wc	ilma | kmajra | latrina | toilet | wc
+1F6BF	doxxa	doxxa | ilma
+1F6C0	persuna tieħu banju	banju | persuna tieħu banju
+1F6C1	banju	banju
+1F6C2	kontroll tal-passaport	kontroll | kontroll tal-passaport | passaport
+1F6C3	dwana	dwana
+1F6C4	uffiċċju tal-bagalji	bagalji | uffiċċju | uffiċċju tal-bagalji
+1F6C5	bagalji mitlufa	bagalji | bagalji mitlufa | loker
+1F6D0	post ta’ qima	post ta’ qima | qima | reliġjon
+1F6D1	sinjal biex tieqaf	ieqaf | ottagonali | sinjal | sinjal biex tieqaf
+1F6D2	basket tax-xiri	basket | basket tax-xiri | troli | xiri
+2668	nixxigħat sħan	fwar | nixxigħat | nixxigħat sħan | sħun
+26BD	ballun tal-futbol	ballun | ballun tal-futbol | futbol | soccer
+26BE	baseball	ballun | baseball
+26F3	bandiera fit-toqba	bandiera fit-toqba | golf | toqba
+1F392	basket tal-iskola	basket tal-iskola | borża | satchel | skola
+1F3A0	żiemel tal-karusell	karusell | żiemel | żiemel tal-karusell
+1F3A1	ferris wheel	ferris | ferris wheel | park tad-divertiment | rota
+1F3A2	roller coaster	coaster | park tad-divertiment | roller
+1F3A3	qasba tas-sajd	ħut | qasba | qasba tas-sajd
+1F3A4	mikrofonu	karaoke | mik | mikrofonu
+1F3A5	kamera tal-films	ċinema | filmat | kamera | kamera tal-films
+1F3A6	ċinema	ċinema | film | filmat | kamera
+1F3A7	headphone	earbud | headphone
+1F3A8	tavlozza	arti | mużew | pittura | tavlozza
+1F3A9	kpiepel top	ħwejjeġ | kappell | kpiepel top | quċċata | tophat
+1F3AA	tinda taċ-ċirklu	ċirklu | tinda | tinda taċ-ċirklu
+1F3AB	biljett	biljett | dħul
+1F3AC	clapper board	clapper | clapper board | filmat
+1F3AD	arti, żfin u mużika	arti | arti, żfin u mużika | maskra | performattivi | teatru | żfin u mużika
+1F3AE	video game	kontrollur | logħba | video game
+1F3AF	tir dirett	-mira | bull | bullseye | għajn | logħba | tir | tir dirett | vleġġa
+1F3B0	slot machine	logħba | slot | slot machine
+1F3B1	ballun ta’ pool 8	8 | ballun | ballun ta’ pool 8 | billiard | logħba | tmien
+1F3B2	dadi tal-logħob	dada | dadi | dadi tal-logħob | logħba
+1F3B3	bowling	ballun | bowling | logħba
+1F3B4	fjuri tal-karti tal-logħob	fjuri | fjuri tal-karti tal-logħob | Ġappuniż | jilgħab | karta | logħba
+1F3B5	nota mużikali	mużika | nota | nota mużikali
+1F3B6	noti mużikali	mużika | nota | noti | noti mużikali
+1F3B7	sassofonu	mużika | sassafonu | sassofonu | strument
+1F3B8	kitarra	kitarra | mużika | strument
+1F3B9	tastiera mużikali	mużika | pjanu | strument | tastiera | tastiera mużikali
+1F3BA	trumbetta	mużika | strument | trumbetta
+1F3BB	vjolin	mużika | strument | vjolin
+1F3BC	partitura mużikali	mużika | partitura | partitura mużikali
+1F3BD	qmis tal-ġiri	ġiri | l-atletika | qmis | qmis tal-ġiri | terħa
+1F3BE	tennis	ballun | pala | tennis
+1F3BF	skis	silġ | skis
+1F3C0	basketball	ballun | basketball | hoop
+1F3C1	bandiera bil-kaxxi	bandiera bil-kaxxi | bil-kaxxi | tlielaq
+1F3C2	snowboarder	silġ | skis | snowboard | snowboarder
+1F3C3	persuna tiġri	maratona | persuna tiġri | qed jiġri
+1F3C4	persuna surfing	persuna surfing | surfing
+1F3C5	midalja sportiva	midalja | midalja sportiva
+1F3C6	trofew	premju | trofew
+1F3C7	żiemel itellaq	itellaq | jockey | żiemel | żiemel tat-tlielaq
+1F3C8	futbol Amerikan	amerikan | ballun | futbol
+1F3C9	futbol tar-rugby	ballun | futbol | futbol tar-rugby | rugby
+1F3CA	persuna tgħum	għawma | persuna tgħum
+1F3CB	persuna terfa’ l-piż	irfigħ | jerfa’ | persuna terfa’ l-piż | piż
+1F3CC	persuna tilgħab il-golf	ballun | golf | persuna tilgħab il-golf
+1F3CD	mutur	mutur | tlielaq
+1F3CE	tlielaq tal-karozzi	karozza | tlielaq | tlielaq tal-karozzi
+1F451	kuruna	ħwejjeġ | kuruna | re | reġina
+1F452	kappell ta’ mara	ħwejjeġ | kappell | kappell ta’ mara | mara
+1F453	nuċċali	għajn | ħwejjeġ | nuċċali | nuċċalijiet
+1F454	ingravata	ħwejjeġ | ingravata
+1F455	t-shirt	ħwejjeġ | qmis | t-shirt | tshirt
+1F456	jeans	ħwejjeġ | jeans | qalziet | qliezet
+1F457	libsa	ħwejjeġ | libsa
+1F458	kimono	ħwejjeġ | kimono
+1F459	bikini	bikini | għawm | ħwejjeġ
+1F45A	ħwejjeġ ta’ mara	ħwejjeġ | ħwejjeġ ta’ mara | mara
+1F45B	portmoni	ħwejjaġ | munita | portmoni
+1F45C	handbag	borża | handbag | ħwejjeġ | portmoni
+1F45D	kartiera	borża | ħwejjeġ | kartiera | pouch
+1F45E	żarbun tal-irġiel	ħwejjeġ | raġel | żarbun | żarbun tal-irġiel
+1F45F	papoċċ tal-ġiri	atletika | ħwejjeġ | papoċċ tal-ġiri | sneaker | żarbun
+1F460	żarbun b’takkuna għolja	ħwejjeġ | mara | takkuna | żarbun | żarbun b’takkuna għolja
+1F461	sandli ta’ mara	ħwejjeġ | mara | sandli | sandli ta’ mara | żarbun
+1F462	buts ta’ mara	buts | buts ta’ mara | ħwejjeġ | mara | żarbun
+1F6B2	rota	rota
+1F6B4	persuna ssuq rota	ċiklist | ġiri bir-rota | persuna ssuq rota | rota
+1F6B5	persuna ssuq mountain bike	ċiklist | muntanja | persuna ssuq mountain bike | persuna ssuq rota | rota
+1F6B6	persuna timxi	bil-mixi | ħajk | mixja | persuna timxi
+1F938	persuna tagħmel gabrijoli	gabrijola | ġinnastika | persuna tagħmel gabrijoli
+1F939	persuna tagħmel il-juggling	bilanċ | ħila | juggle | multitask | persuna tagħmel il-juggling
+1F93A	persuna fencing	fencer | fencing | persuna fencing | xabla
+1F93C	persuna jagħmlu r-wrestling	persuna jagħmlu r-wrestling | wrestle | wrestler
+1F93D	persuna tilgħab il-waterpolo	ilma | persuna tilgħab il-waterpolo | polo
+1F93E	persuna tilgħab il-handball	ballun | handball | persuna tilgħab il-handball
+1F9E2	kappell	beritta tal-baseball | kappell
+1F9E3	xalpa	għonq | xalpa
+1F9E4	ingwanti	id | ingwanti
+1F9E5	kowt	ġakketta | kowt
+1F9E6	kalzetti qosra	kalzetti qosra | stoking
+2660	taqsima tal-ispati	karta | logħba | taqsima tal-ispati
+2663	taqsima tal-fjuri	karta | logħba | taqsima tal-fjuri
+2665	taqsima tal-kwori	karta | logħba | taqsima tal-kwori
+2666	taqsima tad-denari	karta | logħba | taqsima tad-denari
+1F4B3	karta tal-kreditu	bank | flus | karta | karta tal-kreditu | kreditu
+1F4B4	karta tal-flus yen	bank | flus | karta | karta tal-flus | karta tal-flus yen | munita | nota | yen
+1F4B5	karta tal-flus dollaru	bank | dollaru | flus | karta | karta tal-flus | karta tal-flus dollaru | munita | nota
+1F4B6	karta tal-flus ewro	bank | euro | flus | karta | karta tal-flus | karta tal-flus ewro | munita | nota
+1F4B7	karta tal-flus lira sterlina	bank | flus | karta | karta tal-flus | karta tal-flus lira sterlina | lira | munita | nota
+1F4B9	ċart tiżdied bil-yen	’l fuq | bank | ċart | ċart tiżdied bil-yen | flus | graff | munita | suq | tendenza | tkabbir | tlugħ | yen
+1F4BB	kompjuter laptop	kompjuter | kompjuter laptop | pc | personali
+1F4BC	briefcase	briefcase
+1F4BD	diska tal-kompjuter	diska | diska tal-kompjuter | kompjuter | minidisk | ottiċi
+1F4BE	diskett	diska | diskett | floppy | kompjuter
+1F4BF	diska ottika	cd | diska | diska ottika | kompjuter | ottiċi
+1F4C0	dvd	blu-ray | diska | dvd | kompjuter | ottiċi
+1F4C1	fowlder tal-fajls	fajl | fowlder | fowlder tal-fajls
+1F4C2	fowlder tal-fajls miftuħ	fajl | fowlder | fowlder tal-fajls miftuħ | miftuħ
+1F4C3	paġna b’nokkla	dokument | nokkla | paġna | paġna b’nokkla
+1F4C4	paġna wiċċha ’l fuq	dokument | paġna | paġna wiċċha ’l fuq
+1F4C5	kalendarju	data | kalendarju
+1F4C6	kalendarju bil-karti jitqaċċtu	kalendarju | kalendarju bil-karti jitqaċċtu
+1F4C7	indiċi tal-kards	indiċi | indiċi tal-kards | kard | rolodex
+1F4C8	ċart tiżdied	’il fuq | ċart | ċart tiżdied | graff | tendenza | tkabbir
+1F4C9	ċart tonqos	’l isfel | ċart | ċart tonqos | graff | tendenza
+1F4CA	barċart	bar | barċart | ċart | graff
+1F4CB	klibbord	klibbord
+1F4CC	pushpin	pin | pushpin
+1F4CD	pushpin tond	pin | pushpin | pushpin tond
+1F4CE	paperclip	paperclip
+1F4CF	riga dritta	riga | riga dritta | xifer dritt
+1F4D0	riga trijangulari	riga | riga trijangulari | set | trijangolu
+1F4D1	tabs tal-bookmarks	bookmarks | marka | markatur | tabs | tabs tal-bookmarks
+1F4D2	leġer	leġer | notebook
+1F4D3	notebook	notebook
+1F4D4	notebook b’kopertura dekorattiva	imżejna | kopertura | ktieb | notebook | notebook b’kopertura dekorattiva
+1F4D5	ktieb magħluq	ktieb | magħluq
+1F4D6	ktieb miftuħ	ktieb | miftuħ
+1F4D7	ktieb aħdar	aħdar | ktieb
+1F4D8	ktieb blu	blu | ktieb
+1F4D9	ktieb oranġjo	ktieb | oranġjo
+1F4DA	kotba	kotba | ktieb
+1F4DB	beġġ bl-isem	beġġ | beġġ bl-isem | isem
+1F4DC	skrollja	karta | skrollja
+1F4DD	memo	lapes | memo
+1F4DE	riċevitur tat-telefon	riċevitur | riċevitur tat-telefon | telefon
+1F4DF	pejġer	pejġer
+1F4E0	magna tal-fax	fax | magna tal-fax
+1F4E1	antenna tas-satellita	antenna | antenna tas-satellita | dixx | satellita
+1F4E2	loudspeaker	ħsejjes għolja | indirizz pubbliku | loudspeaker
+1F4E3	megafonu	cheering | megafonu
+1F4E4	trej tal-posta ħierġa	ittra | jintbagħtu | kaxxa | messaġġi ħerġin | posta | trej | trej tal-posta ħierġa
+1F4E5	trej tal-posta rċivuta	ittra | kaxxa | messaġġi ħerġin | posta | rċivuta | trej | trej tal-posta rċivuta
+1F4E6	pakkett	kaxxa | pakkett
+1F4E7	posta elettronika	indirizz elettroniku | ittra | posta | posta elettronika
+1F4E8	envelop dieħel	deħlin | envelop | envelop dieħel | indirizz elettroniku | ittra | jirċievu | posta | posta elettronika
+1F4E9	envelop bi vleġġa	’ | barra | envelop | envelop bi vleġġa | indirizz elettroniku | isfel | ittra | mibgħuta | posta | posta elettronika | vleġġa
+1F4EA	kaxxa tal-ittri magħluqa bil-bandiera mniżżla	kaxxa tal-ittri | kaxxa tal-ittri magħluqa bil-bandiera mniżżla | kaxxa tal-posta | magħluqa | mniżżla
+1F4EB	kaxxa tal-ittri magħluqa bil-bandiera mtellgħa	kaxxa tal-ittri | kaxxa tal-ittri magħluqa bil-bandiera mtellgħa | kaxxa tal-posta | magħluqa | posta
+1F4EC	kaxxa tal-ittri miftuħa bil-bandiera mtellgħa	aħbarijiet | Iftaħ | kaxxa tal-ittri miftuħa bil-bandiera mtellgħa | posta | postbox
+1F4ED	kaxxa tal-ittri miftuħa bil-bandiera mniżżla	kaxxa tal-ittri | kaxxa tal-ittri miftuħa bil-bandiera mniżżla | kaxxa tal-posta | miftuħa | mniżżla | posta
+1F4EE	kaxxa tal-ittri	kaxxa tal-ittri | posta
+1F4EF	tromba postali	posta | postali | qrun | tromba postali
+1F4F0	gazzetta	gazzetta | l-aħbarijiet | tal-karta
+1F4F1	mowbajl	mowbajl | telefown
+1F4F2	mowbajl bi vleġġa	ċempel | jirċievu | mowbajl | mowbajl bi vleġġa | telefon | telefown | vleġġa
+1F4F3	mod ta’ vibrazzjoni	mod | mod ta’ vibrazzjoni | mowbajl | telefown | vibrazzjoni
+1F4F4	mowbajl mitfi	mitfi | mowbajl | telefown
+1F4F5	ebda mowbajl	ebda mowbajl | ma | mhux | mowbajl | pprojbiti | telefown
+1F4F6	virgi tal-antenna	antenna | mowbajl | sinjal | telefown | virga | virgi tal-antenna
+1F4F7	kamera	kamera | vidjo
+1F4F8	kamera bi flash	flash | kamera | kamera bi flash | vidjo
+1F4F9	vidjo kamera	kamera | vidjo
+1F4FA	televiżjoni	televiżjoni | tv | vidjo
+1F4FB	radju	radju | vidjo
+1F4FC	videocassette	tejp | vhs | videocassette | vidjo
+1F4FD	projettur tal-filmati	ċinema | film | filmat | projettur | projettur tal-filmati | vidjo
+1F4FF	żibeġ tat-talb	ġiżirana | ħwejjeġ | misteru | reliġjon | żibeġ | żibeġ tat-talb
+1F505	buttuna dim	baxx | buttuna dim | dim | qawwa tad-dawl
+1F506	buttuna bright	bright | buttuna bright | qawwa tad-dawl
+1F507	muted ta ’ l-ispiker	kwieta | muted ta ’ l-ispiker | mutes | siekta | spiker
+1F508	speaker volum baxx	artab | speaker volum baxx
+1F509	speaker volum medju	medju | speaker volum medju
+1F50A	speaker volum għoli	ħsejjes għolja | speaker volum għoli
+1F50B	batterija	batterija
+1F50C	plagga elettrika	elettriku | Ipplaggja | l-elettriku | plagga elettrika
+1F50D	lenti tat-tkabbir tipponta xellug	fittex | għodda | ħġieġ | lenti tat-tkabbir tipponta xellug | tkabbir ottiku
+1F50E	lenti tat-tkabbir tipponta Lemin	fittex | għodda | ħġieġ | lenti tat-tkabbir tipponta Lemin | tkabbir ottiku
+1F50F	imsakkar b’pinna	imsakkar | imsakkar b’pinna | linka | pinna | ponta | privatezza
+1F510	msakkar b’ċavetta	ċavetta | imsakkar | magħluqa | msakkar b’ċavetta | sigur
+1F511	ċavetta	ċavetta | password | sakkar
+1F512	imsakkar	imsakkar | magħluqa
+1F513	mhux imsakkar	iftaħ | mhux imsakkar | sakkar
+1F514	qanpiena	qanpiena
+1F515	qanpiena bi slash	kwieta | ma | mhux | mute | pprojbiti | qanpiena | qanpiena bi slash | siekta
+1F516	bookmark	bookmark | marka
+1F517	katina	katina
+1F518	buttuna tal-għażla	buttuna | buttuna tal-għażla | ġeometrika | radju
+1F51E	ħadd taħt it-tmintax	18 | ħadd taħt it-tmintax | ma | mhux | pprojbiti | restrizzjoni tal-età | taħt l-età | tmintax
+1F526	torċ	dawl | elettriku | għodda | torċ
+1F527	spanner	martell | spaner | spanner
+1F528	martell	għodda | martell
+1F529	vit u skorfina	għodda | skorfina | vit | vit u skorfina
+1F52A	sikkina tal-kċina	arma | għodda | hocho | sikkina | sikkina tal-kċina | tisjir
+1F52B	pistola	arma | għodda | pistola | revolvers | xkubetta
+1F52C	mikroskopju	għodda | mikroskopju | xjenza
+1F52D	teleskopju	għodda | teleskopju | xjenza
+260E	telefon	telefon | telefown
+2620	kranju u crossbones	crossbones | kranju | kranju u crossbones | mewt | mostru | wiċċ
+2622	radjoattiv	radjoattiv | sinjal
+2623	perikolu bijoloġiku	perikolu bijoloġiku | sinjal
+267F	simbolu ta’ siġġu tar-roti	aċċess | simbolu ta’ siġġu tar-roti
+2692	martell u fies	fies | għodda | martell | martell u fies
+2693	ankra	ankra | bastiment | għodda
+2694	xwabel inkroċjati	arma | inkroċjati | xwabel
+2695	simbolu mediku	aesculapius | mediċina | persunal | simbolu mediku
+2696	miżien	bilanċ | għodda | ġustizzja | Libra | miżien | piż | zodjaku
+2697	lampik	għodda | kimika | lampik
+2699	apparat	apparat | għodda
+269B	simbolu tal-atomu	ateu | atomu | simbolu tal-atomu
+269C	fleur-de-lis	fleur-de-lis
+26A0	twissija	twissija
+26CF	agħżel	agħżel | għodda | mini
+26D1	l-elmu tal-ħaddiem tas-salvataġġ	elmu | għajnuna | jaqsmu | kappell | l-elmu tal-ħaddiem tas-salvataġġ | wiċċ
+26D3	ktajjen	katina | ktajjen
+26D4	ebda dħul	dħul | ebda dħul | ma | mhux | pprojbit | pprojbiti | traffiku
+2702	imqass	għodda | imqass | qtugħ
+2709	envelop	envelop | indirizz elettroniku | ittra
+270F	lapes	lapes
+2712	ponta sewda	pinna | ponta | ponta sewda
+2714	marka ta’ verifika grassett	marka | marka ta’ verifika grassett | verifika
+2716	multiplikazzjoni grassett x	ikkanċella | immoltiplika | multiplikazzjoni | multiplikazzjoni grassett x | x
+2753	punt interrogattiv	marka | mistoqsija | punt interrogattiv | punteġġjatura
+2757	punt esklamattiv	esklamazzjoni | marka | punt esklamattiv | punteġġjatura
+27A1	vleġġa leminija	direzzjoni | il-lvant | kardinal | vleġġa | vleġġa leminija
+1F500	buttuna shuffle tracks	buttuna shuffle tracks | inkroċjata | vleġġa
+1F501	buttuna irrepeti	buttuna irrepeti | favur l-arloġġ | irrepeti | vleġġa
+1F502	buttuna irrepeti darba	buttuna irrepeti darba | darba | favur l-arloġġ | vleġġa
+1F503	vleġeġ vertikali favur l-arloġġ	favur l-arloġġ | terġa’ ttella’ | vleġeġ vertikali favur l-arloġġ | vleġġa
+1F504	buttuna vleġeġ kontra l-arloġġ	buttuna vleġeġ kontra l-arloġġ | kontra l-arloġġ | vleġġa | withershins
+1F519	vleġġa BACK	lura | vleġġa | vleġġa BACK
+1F51A	vleġġa END	tmiem | vleġġa | vleġġa END
+1F51B	vleġġa ON!	fuq | marka | vleġġa | vleġġa ON!
+1F51C	vleġġa SOON	mill-aktar fis | vleġġa | vleġġa SOON
+1F51D	vleġġa TOP	’il fuq | fuq | vleġġa | vleġġa TOP
+1F520	input latin kapitali	ABCD | input | ittri | kapitali | latin
+1F521	input latin ittra żgħira	abcd | input | input latin ittra żgħira | ittra żgħira | ittri | latin
+1F522	numri tal-input	1234 | input | numri | numri tal-input
+1F523	simboli tal-input	〒♪&% | input | simboli tal-input
+1F524	input ittri latin	abc | alfabett | input | ittri | latin
+2B05	vleġġa xellugija	direzzjoni | il-punent | kardinal | vleġġa | vleġġa xellugija
+2B06	vleġġa ’l fuq	direzzjoni | kardinal | tramuntana | vleġġa | vleġġa ’l fuq
+2B07	vleġġa ’l isfel	’l isfel | direzzjoni | kardinal | nofsinhar | vleġġa | vleġġa ’l isfel

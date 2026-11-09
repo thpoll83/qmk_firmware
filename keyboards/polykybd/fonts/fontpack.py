@@ -555,8 +555,18 @@ def compute_bundle_layout(cfg: dict) -> dict:
     """Resolve fonts.yaml `bundles:` into concrete slot offsets/sizes.
 
     Returns {layout_version, region, dir_offset, dir_size, sector, slots:[{id,
-    index, offset, size}]}. Offsets are relative to the fontpack region base
-    (FW_RESOURCE_OFFSET). The last slot may use slot_kb: rest to claim the tail."""
+    index, offset, size, kind}]}. Offsets are relative to the fontpack region base
+    (FW_RESOURCE_OFFSET). Slots follow each other in list order. The last slot may
+    use slot_kb: rest to claim the tail.
+
+    Two optional fields let an appended bundle use space inside an earlier one
+    without moving any slot after it (the list is append-only, so ids cannot be
+    reordered):
+      reserve_kb  the space this entry advances the running offset by, when it is
+                  larger than its slot_kb (emoji: a 384 KB slot in 512 KB).
+      offset_kb   an explicit slot start; the entry does not advance the running
+                  offset (emojidict inside emoji's reserve).
+    Every slot is checked against every other one and the directory for overlap."""
     b = cfg["bundles"]
     region = int(b["region_kb"]) * 1024
     dir_size = int(b.get("dir_sectors", 1)) * SECTOR_SIZE
@@ -570,10 +580,28 @@ def compute_bundle_layout(cfg: dict) -> dict:
         if size <= 0 or size % SECTOR_SIZE:
             raise ValueError(f"bundle {e['id']!r}: slot size {size} not a positive "
                              f"multiple of {SECTOR_SIZE}")
-        slots.append({"id": e["id"], "index": i, "offset": off, "size": size})
-        off += size
+        if "offset_kb" in e:
+            start = int(e["offset_kb"]) * 1024
+            if start % SECTOR_SIZE:
+                raise ValueError(f"bundle {e['id']!r}: offset_kb not sector-aligned")
+        else:
+            start = off
+            advance = int(e.get("reserve_kb", 0)) * 1024 or size
+            if advance < size or advance % SECTOR_SIZE:
+                raise ValueError(f"bundle {e['id']!r}: reserve_kb must be a sector "
+                                 f"multiple of at least slot_kb")
+            off += advance
+        slots.append({"id": e["id"], "index": i, "offset": start, "size": size,
+                      "kind": e.get("kind", "fonts")})
     if off > region:
         raise ValueError(f"bundle slots ({off} B) exceed the {region} B fontpack region")
+    spans = sorted([(0, dir_size, "directory")] +
+                   [(s["offset"], s["offset"] + s["size"], s["id"]) for s in slots])
+    for (a0, a1, an), (b0, b1, bn) in zip(spans, spans[1:]):
+        if b0 < a1:
+            raise ValueError(f"bundle slots {an!r} and {bn!r} overlap")
+    if spans[-1][1] > region:
+        raise ValueError(f"bundle {spans[-1][2]!r} ends past the {region} B fontpack region")
     return {"layout_version": int(b["layout_version"]), "region": region,
             "dir_offset": 0, "dir_size": dir_size, "sector": SECTOR_SIZE, "slots": slots}
 
@@ -615,10 +643,11 @@ def build_bundles(order: list[str], resident: set[str], parsed: dict[str, Parsed
             sym2bi[s] = i
 
     # A `kind: icons` entry reserves a slot for the host-built PlyI icon bundle
-    # (OVERLAY_ICON_LIBRARY_DESIGN.md): it has no fonts and no .plyf here.
+    # (OVERLAY_ICON_LIBRARY_DESIGN.md), and `kind: emojidict` one for the emoji
+    # search dictionary (emoji/emoji_dict.py): neither has fonts or a .plyf here.
     font_idx = [i for i, e in enumerate(lst) if e.get("kind", "fonts") == "fonts"]
     for i, e in enumerate(lst):
-        if e.get("kind", "fonts") not in ("fonts", "icons"):
+        if e.get("kind", "fonts") not in ("fonts", "icons", "emojidict"):
             raise ValueError(f"bundle {e['id']!r}: unknown kind {e['kind']!r}")
     members: list[list[tuple[int, ParsedFont]]] = [[] for _ in lst]
     extra_n = 0
@@ -683,7 +712,7 @@ def bundles_manifest_json(bundles: list[dict], layout: dict) -> str:
                         "fonts": b["fonts"]} for b in bundles]}
     font_ids = {b["id"] for b in bundles}
     doc["bundle_count"] = len(layout["slots"])
-    doc["reserved_slots"] = [{"id": s["id"], "index": s["index"], "kind": "icons",
+    doc["reserved_slots"] = [{"id": s["id"], "index": s["index"], "kind": s["kind"],
                               "slot_offset": s["offset"], "slot_size": s["size"]}
                              for s in layout["slots"] if s["id"] not in font_ids]
     return json.dumps(doc, indent=2) + "\n"
@@ -703,14 +732,18 @@ def bundle_layout_header(bundles: list[dict], layout: dict) -> str:
         f"#define FONTPACK_BUNDLE_COUNT   {len(layout['slots'])}u", ""]
     # Every slot, font bundles and the icon library alike: the X-list is the slot
     # table the firmware flashes into and reports versions for.
-    font_ids = {b["id"] for b in bundles}
-    icons = [s for s in layout["slots"] if s["id"] not in font_ids]
-    if len(icons) > 1:
-        raise ValueError("more than one icon bundle slot")
+    icons = [s for s in layout["slots"] if s["kind"] == "icons"]
+    dicts = [s for s in layout["slots"] if s["kind"] == "emojidict"]
+    if len(icons) > 1 or len(dicts) > 1:
+        raise ValueError("more than one icon or emojidict bundle slot")
     if icons:
         lines += ["// The PlyI overlay icon library (HID cmd 42): validated by its own loader,",
                   "// never by the font loader.",
                   f"#define FONTPACK_ICONS_BUNDLE_ID {icons[0]['index']}u", ""]
+    if dicts:
+        lines += ["// The emoji search dictionary (emoji/emoji_dict.py): validated by its own",
+                  "// loader, never by the font loader.",
+                  f"#define FONTPACK_EMOJIDICT_BUNDLE_ID {dicts[0]['index']}u", ""]
     lines += ["// X(id, index, slot_offset, slot_size)",
               "#define FONTPACK_BUNDLE_LIST \\"]
     for s in layout["slots"]:

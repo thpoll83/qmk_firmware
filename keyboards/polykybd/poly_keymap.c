@@ -895,6 +895,10 @@ void sync_and_refresh_displays(void) {
 
         access_local_state()->emj_category = emj_active_category();
         access_local_state()->emj_page     = emj_active_page();
+        {
+            poly_sync_t *ls = access_local_state();
+            emj_search_export(&ls->emj_search[0], &ls->emj_search[1], &ls->emj_search[2], ls->emj_query);
+        }
         access_local_state()->lang_page    = lang_pack_state();
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
@@ -1177,6 +1181,11 @@ layer_state_t layer_state_set_user(layer_state_t state) {
         // deliberate act on every visit rather than a mode you can leave armed.
         // That is the whole safety argument for putting QK_BOOT behind the gate.
         access_local_state()->settings_more = 0;
+    }
+    if(get_highest_layer(state) != _EMJ) {
+        // Leaving the emoji layer drops the search query, so the next visit starts
+        // with an empty search (the chosen mode stays).
+        emj_search_on_layer_exit();
     }
     if(get_highest_layer(state) != _ADDLANG1) {
         // Leaving Intl closes the picker. Without this the latched Ctrl would stay

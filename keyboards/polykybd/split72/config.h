@@ -373,7 +373,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // TAP, disabling hold behaviour mid-word during fast typing. QMK's own docs call
 // this "particularly useful for home row mods to avoid accidental mod triggers" and
 // recommend 150 ms as the starting point.
-// Since protocol v28 this enables Flow Tap and is the DEFAULT term; the live value
+// Since protocol v29 this enables Flow Tap and is the DEFAULT term; the live value
 // is a setting (HID cmd 44) returned by get_flow_tap_term() in poly_keymap.c.
 #define FLOW_TAP_TERM 150
 

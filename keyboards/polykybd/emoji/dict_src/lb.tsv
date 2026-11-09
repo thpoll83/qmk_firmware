@@ -1,0 +1,911 @@
+# emoji search keywords, lb, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	Grinsgesiicht	Gesiicht | Grinsen | Grinsgesiicht
+1F601	Grinsgesiicht mat laachenden Aen	A | Gesiicht | Grinsen | Grinsgesiicht mat laachenden Aen | Laachen
+1F602	Gesiicht mat Freedtréinen	Freed | Gesiicht | Gesiicht mat Freedtréinen | Laachen | Tréin
+1F603	laachend Gesiicht mat oppenem Mond	Gesiicht | Laachen | laachend Gesiicht mat oppenem Mond | Mond | oppen
+1F604	laachend Gesiicht mat oppenem Mond a laachenden Aen	A | Gesiicht | Laachen | laachend Gesiicht mat oppenem Mond a laachenden Aen | Mond | oppen
+1F605	laachend Gesiicht mat oppenem Mond a kalem Schweess	Gesiicht | kal | Laachen | laachend Gesiicht mat oppenem Mond a kalem Schweess | oppen | Schweess
+1F606	laachend Gesiicht mat oppenem Mond an zouen Aen	Gesiicht | Laachen | laachend Gesiicht mat oppenem Mond an zouen Aen | Mond | oppen | zefridden
+1F607	laachend Gesiicht mat Hellegeschäin	Engel | Fantasie | Gesiicht | Hellegeschäin | Laachen | laachend Gesiicht mat Hellegeschäin | Mäerchen | onschëlleg
+1F608	laachend Gesiicht mat Haren	Fantasie | Gesiicht | Haren | Laachen | laachend Gesiicht mat Haren | Mäerchen
+1F609	A zoudréckend	A zoudrécken | A zoudréckend | Gesiicht
+1F60A	laachend Gesiicht mat laachenden Aen	A | Gesiicht | Laachen | laachend Gesiicht mat laachenden Aen | rout ginn
+1F60B	gutt Iesse genéissend	genéissen | Gesiicht | gutt | gutt Iesse genéissend | Laachen | mmh
+1F60C	erliichtert	erliichtert | Gesiicht
+1F60D	laachend Gesiicht mat Häerzeraen	A | Gesiicht | Laachen | laachend Gesiicht mat Häerzeraen | Léift
+1F60E	laachend Gesiicht mat Sonnebrëll	A | Brëll | cool | Gesiicht | hell | Laachen | laachend Gesiicht mat Sonnebrëll | Sonn | Sonnebrëll
+1F60F	schmunzelend	Gesiicht | schmunzelen | schmunzelend
+1F610	neutraalt Gesiicht	Gesiicht | neutraalt Gesiicht | neutral | ouni Ausdrock
+1F611	Gesiicht ouni Ausdrock	Gesiicht | Gesiicht ouni Ausdrock | inexpressiv | onexpressiv | ouni Ausdrock
+1F612	onzefridden	Gesiicht | onglécklech | onzefridden
+1F613	mat kalem Schweess eroflafend	Gesiicht | kal | mat kalem Schweess eroflafend | Schweess
+1F614	besuergt	bedréckt | besuergt | Gesiicht
+1F615	konfus	Gesiicht | konfus
+1F616	frustréiert	frustréiert | Gesiicht
+1F617	kussend	Gesiicht | Kuss | kussend
+1F618	e Kuss schéckend	e Kuss schéckend | Gesiicht | Kuss
+1F619	kussend mat laachenden Aen	A | Gesiicht | Kuss | kussend mat laachenden Aen | Laachen
+1F61A	kussend mat zouen Aen	A | Gesiicht | Kuss | kussend mat zouen Aen | zouen
+1F61B	d’Zong erausstreckend	d’Zong erausstreckend | Gesiicht | Zong
+1F61C	d’Zong erausstreckend mat zougedrécktem A	A | A zoudrécken | d’Zong erausstreckend mat zougedrécktem A | Gesiicht | Witz | Zong
+1F61D	d’Zong erausstreckend mat zouen Aen	A | d’Zong erausstreckend mat zouen Aen | Gesiicht | Goût | schrecklech | Zong
+1F61E	enttäuscht	enttäuscht | Gesiicht
+1F61F	beonrouegt	beonrouegt | Gesiicht
+1F620	rosent Gesiicht	Gesiicht | queesch | rosen | rosent Gesiicht
+1F621	motzend Gesiicht	Gesiicht | motzen | motzend Gesiicht | queesch | rosen | Roserei | rout
+1F622	kräischend	Gesiicht | kräischen | kräischend | traureg | Tréin
+1F623	duerhalend	duerhalen | duerhalend | Gesiicht
+1F624	mat Damp aus der Nues	Gesiicht | gewonnen | mat Damp aus der Nues | Triumph
+1F625	enttäuscht mä erliichtert	enttäuscht | enttäuscht mä erliichtert | erliichtert | Gesiicht | ouf
+1F626	d’Stir fronzend Gesiicht mat oppenem Mond	d’Stir fronzend Gesiicht mat oppenem Mond | Gesiicht | Mond | oppen | Stir fronzen
+1F627	gequäält Gesiicht	gequäält | Gesiicht
+1F628	verängschtegt Gesiicht	Angscht | baang | Gesiicht | verängschtegt
+1F629	erschëpft Gesiicht	erschëpft | Gesiicht | midd
+1F62A	schléifreg	Gesiicht | schléifreg | Schlof
+1F62B	midd	Gesiicht | midd
+1F62C	Grimass schneidend Gesiicht	Gesiicht | Grimass | Grimass schneidend Gesiicht
+1F62D	haart kräischend Gesiicht	Gesiicht | haart kräischend Gesiicht | kräischen | schluchzen | traureg | Tréin
+1F62E	Gesiicht mat oppenem Mond	Gesiicht | Gesiicht mat oppenem Mond | Matgefill | Mond | oppen
+1F62F	flüsterend	erstaunt | flüsterend | Gesiicht | iwwerrascht
+1F630	Gesiicht mat oppenem Mond a kalem Schweess	blo | Gesiicht | Gesiicht mat oppenem Mond a kalem Schweess | kal | Mond | oppen | presséiert | Schweess
+1F631	vun Angscht jäizend Gesiicht	Angscht | baang | Gesiicht | jäizen | verängschtegt | verschléngen | vun Angscht jäizend Gesiicht
+1F632	erstaunt	absolut | erstaunt | Gesiicht | schockéiert
+1F633	rout ugelafent Gesiicht	beniwwelt | Gesiicht | rout ugelaf | rout ugelafent Gesiicht
+1F634	ageschlof	ageschlof | Gesiicht | Schlof | zzz
+1F635	schwindelegt Gesiicht	Gesiicht | schwindeleg | schwindelegt Gesiicht
+1F636	Gesiicht ouni Mond	Gesiicht | Gesiicht ouni Mond | Mond | roueg
+1F637	Gesiicht mat Doktersmask	Dokter | Gesiicht | Gesiicht mat Doktersmask | kal | krank | Mask | Medezin
+1F638	grinsend Kazegesiicht mat laachenden Aen	A | Gesiicht | Grinsen | grinsend Kazegesiicht mat laachenden Aen | Kaz | Laachen
+1F639	Kazegesiicht mat Freedtréinen	Freed | Gesiicht | Kaz | Kazegesiicht mat Freedtréinen | Tréin
+1F63A	laachend Kazegesiicht mat oppenem Mond	Gesiicht | Kaz | Laachen | laachend Kazegesiicht mat oppenem Mond | Mond | oppen
+1F63B	laachend Kazegesiicht mat Häerzeraen	A | Gesiicht | Kaz | Laachen | laachend Kazegesiicht mat Häerzeraen | Léift
+1F63C	Kazegesiicht mat dreckegem Grinsen	dreckeg | Gesiicht | Grinsen | ironesch | Kaz | Kazegesiicht mat dreckegem Grinsen
+1F63D	kussend Kazegesiicht mat zouen Aen	A | Gesiicht | Kaz | Kuss | kussend Kazegesiicht mat zouen Aen
+1F63E	motzend Kazegesiicht	Gesiicht | Kaz | motzend | motzend Kazegesiicht
+1F63F	kräischend Kazegesiicht	Gesiicht | Kaz | kräischen | kräischend Kazegesiicht | traureg | Tréin
+1F640	erschëpft Kazegesiicht	erschëpft | erschëpft Kazegesiicht | Gesiicht | iwwerrascht | Kaz | oh
+1F641	d’Stir liicht fronzend	d’Stir liicht fronzend | Gesiicht | Stir fronzen
+1F642	Gesiicht mat engem liichte Laachen	Gesiicht | Gesiicht mat engem liichte Laachen | Laachen
+1F643	op der Kopp	Gesiicht | op der Kopp
+1F644	Ae verdréinend	Ae verdréinend | Aen | Gesiicht | verdréinen
+1F648	Aen zouhalenden Af	Aen | Aen zouhalenden Af | Af | béis | Gesiicht | gesinn | Geste | net | verbueden | zouhalen
+1F649	Oueren zouhalenden Af	Af | béis | Gesiicht | Geste | héieren | net | Oueren | Oueren zouhalenden Af | verbueden | zouhalen
+1F64A	Mond zouhalenden Af	Af | béis | Gesiicht | Geste | Mond | Mond zouhalenden Af | net | schwätzen | verbueden | zouhalen
+1F910	verschlossene Mond	Gesiicht | Mond | Tirett | verschlossene Mond
+1F911	geldgiereg	geldgiereg | Gesiicht | Mond | Suen
+1F912	Gesiicht mat Thermometer	Gesiicht | Gesiicht mat Thermometer | krank | Thermometer
+1F913	Nerd	Geek | Gesiicht | Nerd
+1F914	nodenklech	Gesiicht | nodenklech
+1F915	Gesiicht mat Kappverband	Gesiicht | Gesiicht mat Kappverband | Verband | verletzt | Verletzung
+1F916	Roboter	Gesiicht | Monster | Roboter
+1F917	Ëmaarmung	ëmaarmen | Ëmaarmung | Gesiicht
+1F920	Gesiicht mat Cowboyshutt	Cowboy | Cowgirl | Gesiicht | Gesiicht mat Cowboyshutt | Hutt
+1F921	Clownegesiicht	Clown | Clownegesiicht | Gesiicht
+1F922	iwwelt Gesiicht	Gesiicht | iwwel | iwwelt Gesiicht | sech iwwerginn
+1F923	vu Laache rullend	Buedem | Gesiicht | laachen | rullen | vu Laache rullend
+1F924	sabbelend Gesiicht	Gesiicht | sabbelend
+1F925	Ligenergesiicht	Gesiicht | léien | Ligenergesiicht | Pinocchio
+1F926	Persoun, déi sech d’Hand widder de Kapp schléit	déi sech d’Hand widder de Kapp schléit | Frust | Gesiicht | Hand | Persoun | Persoun, déi sech d’Hand widder de Kapp schléit | Zweiwel
+1F927	néitsend Gesiicht	Gesiicht | Gesondheet | néitsen | néitsend Gesiicht
+1F928	Gesiicht mat gehuewenem Aperhoer	Gesiicht mat gehuewenem Aperhoer | mësstrauesch | skeptesch
+1F929	Stärenaen	Aen | Gesiicht | grinsend | Stär | Stärenaen
+1F92A	verréckt Gesiicht	A | grouss | kleng | verréckt Gesiicht
+1F92B	Gesiicht mam Fanger virum Mond	Gesiicht mam Fanger virum Mond | pscht | roueg
+1F92C	Gesiicht mat Zeeche virum Mond	fluchend | Gesiicht mat Zeeche virum Mond
+1F92D	Gesiicht mat Hand virum Mond	Gesiicht mat Hand virum Mond | Oups | Uups
+1F92E	Gesiicht wat sech iwwergëtt	Gesiicht wat sech iwwergëtt | iwwerginn | krank
+1F92F	explodéierende Kapp	explodéierende Kapp | schockéiert
+1F381	Kaddo	agepak | Feier | Geschenk | Kaddo | Këscht
+1F389	Pochette-surprise	Feier | Iwwerraschung | Party | Pochette | Pochette-surprise | Surprise
+1F38A	Konfettiball	Ball | Feier | Konfetti | Konfettiball
+1F47B	Geescht	Fantasie | Geescht | Gesiicht | Kreatur | Mäerchen | Monster
+1F47C	Engelchen	Bëbee | Engel | Engelchen | Fantasie | Gesiicht | Mäerchen | Puppelchen
+1F47D	Alien	Alien | ausserierdesch | Fantasie | Gesiicht | Kreatur | Mäerchen | Monster | Ufo
+1F47E	Alienmonster	Alien | Alienmonster | ausserierdesch | Fantasie | Gesiicht | Kreatur | Mäerchen | Monster | Ufo
+1F47F	rosent Gesiicht mat Haren	Däiwel | Dämon | Fantasie | Gesiicht | Kobold | Mäerchen | rosent Gesiicht mat Haren
+1F480	Doudekapp	Doud | Doudekapp | Gesiicht | Mäerchen | Monster
+1F481	Persoun, déi d’Hand op hält	déi d’Hand op hält | frech | Hand | Hëllef | Informatiounen | ophalen | Persoun | Persoun, déi d’Hand op hält
+1F482	Wiechter(in)	Wiechter(in)
+1F489	Sprëtz	Dokter | krank | Medezin | Nol | Sprëtz | Utensil
+1F48A	Pëll	Dokter | krank | Medezin | Pëll
+1F4A2	Rosereiszeechen	béis | Comic | rosen | Rosereiszeechen
+1F4A4	zzz	Comic | Schlof | zzz
+1F4A5	Kollisioun	Boom | Comic | Kollisioun
+1F4A6	Schweessdrëpsen	Comic | platschen | Schweess | Schweessdrëpsen
+1F4A7	Drëpschen	Comic | Drëps | Drëpschen | kal | Schweess
+1F4A8	séier fort	Comic | jauwen | lafen | séier fort
+1F4A9	Koup Schäiss	Gesiicht | Kaka | Koup Schäiss | Mëscht | Monster | Schäiss | witzeg
+1F4AB	Schwindel	Comic | Schwindel | Stär
+1F4AC	Spriechblos	Ball | Blos | Comic | Dialog | schwätzen | Spriechblos
+1F4AD	Denkblos	Ball | Blos | Comic | Denkblos | Gedanken
+1F4AE	wäiss Blumm	Blumm | wäiss Blumm
+1F4A0	Raut mat engem Punkt an der Mëtt	Comic | geometresch | Raut | Raut mat engem Punkt an der Mëtt | rout
+1F4A1	Bir	Bir | Comic | elektresch | Iddi | Liicht | Luucht
+1F4A3	Bomm	Bomm | Comic
+1F4AF	honnert Punkten	100 | honnert | honnert Punkten | Score | voll
+1F4B0	Geldsak	Dollar | Geld | Geldsak | Sak | Suen
+1F4B1	Wiesselcours	Bank | Geld | Suen | Währung | Wiesselcours
+1F4B2	déckt Dollarzeechen	déckt Dollarzeechen | Dollar | Geld | Suen | Währung
+1F4B8	Geldschäiner mat Flilleken	Bank | Dollar | fléien | Flilleken | Geld | Geldschäin | Geldschäiner mat Flilleken | Rechnung | Schäin | Suen
+1F525	Feier	Feier | Flam | Handwierksgeschir
+1F52E	Kristallkugel	Fantasie | Kristall | Kristallkugel | Kugel | Mäerchen | Utensil | Zukunft
+1F440	Aen	A | Aen | Gesiicht
+1F441	A	A | Kierper
+1F442	Ouer	Kierper | Ouer
+1F443	Nues	Kierper | Nues
+1F444	Mond	Lëpsen | Mond
+1F445	Zong	Kierper | Zong
+1F446	no uewe weisende Fanger vun hanne gesinn	Fanger | Hand | no uewe weisende Fanger vun hanne gesinn | no uewen | Réckhand | weisen | Zeigefanger
+1F447	no ënne weisende Fanger vun hanne gesinn	Fanger | Hand | no ënne weisende Fanger vun hanne gesinn | no ënnen | Réckhand | weisen | Zeigefanger
+1F448	no lénks weisende Fanger vun hanne gesinn	Fanger | Hand | no lénks weisende Fanger vun hanne gesinn | Réckhand | weisen | Zeigefanger
+1F449	no riets weisende Fanger vun hanne gesinn	Fanger | Hand | no riets weisende Fanger vun hanne gesinn | Réckhand | weisen | Zeigefanger
+1F44A	entgéintkommend Fauscht	boxen | entgéintkommend Fauscht | Fauscht | Hand | zouen
+1F44B	wénkend Hand	Hand | wénken | wénkend
+1F44C	OK-Handzeechen	Hand | OK | OK-Handzeechen | Zeechen
+1F44D	Daum no uewen	+1 | Daum | Daum no uewen | Hand | no uewen
+1F44E	Daum no ënnen	-1 | Daum | Daum no ënnen | Hand | no ënnen
+1F44F	klappend Hänn	Hand | klappen | klappend Hänn
+1F450	oppen Hänn	Hand | oppen | oppen Hänn
+261D	no uewe weisende Fanger	Fanger | Hand | no uewe weisende Fanger | no uewen | weisen | Zeigefanger
+270A	héichgehale Fauscht	boxen | Fauscht | Hand | héichgehale Fauscht | zouen
+270B	héichgehalen Hand	Hand | héichgehalen Hand
+270C	Victoire-Handzeechen	Hand | V | Victoire | Victoire-Handzeechen
+270D	schreiwend Hand	Hand | schreiwen | schreiwend Hand
+1F4AA	ugespaante Bizeps	Bizeps | Comic | Muskel | ugespaante Bizeps | uspanen
+1F590	gehuewen Hand mat ausgestreckte Fanger	ausgestreckt | Fanger | gehuewen Hand mat ausgestreckte Fanger | Hand
+1F64C	Hänn an d’Luucht	an der Luucht | Feier | Geste | Hand | Hänn an d’Luucht | hurra
+1F64F	gefaalten Hänn	bieden | froen | gefaalt | gefaalten Hänn | Geste | Hand | Merci | vernäipen | wann ech gelift
+1F918	Mano cornuta, Harenzeechen	Fanger | Hand | Haren | Harenzeechen | Mano cornuta | Mano cornuta, Harenzeechen | rocken
+1F919	Telefon-Handzeechen	Hand | Telefon-Handzeechen | uruffen
+1F91A	héichgehalenen Handréck	Handréck | héichgehalen | héichgehalenen Handréck
+1F91B	lénksgeriicht Fauscht	Fauscht | lénksgeriicht
+1F91C	rietsgeriicht Fauscht	Fauscht | rietsgeriicht
+1F91D	Handdrock	drécken | Hand | Handdrock | Ofkommes | Reunioun
+1F91E	gekräizt Fanger	Fanger | gekräizt Fanger | Gléck | Hand | kräizen
+1F91F	Léift-Geste	Hand | ILY | Léift-Geste
+1F932	zesummegefaalten Hänn	Gebiet | zesummegefaalten Hänn
+1F9E0	Gehir	Gehir | intelligent
+2764	rout Häerz	Häerz | rout Häerz
+1F380	Band	Band | Feier
+1F382	Gebuertsdagskuch	Dessert | Feier | Gebäck | Gebuertsdag | Gebuertsdagskuch | Kuch | séiss
+1F383	Halloweenkürbis	Feier | Halloween | Halloweenkürbis | Kürbis | Lampion
+1F384	Chrëschtbeemchen	Bam | Chrëschtbeemchen | Chrëschtdag | Feier
+1F386	Freedefeier	Feier | Freedefeier
+1F387	Späizmännchen	Feier | Fonken | Freedefeier | Späizmännchen
+1F388	Ballon	Ballon | Feier
+1F38B	Tanabata-Bam	Bam | Banner | Feier | japanesch | Tanabata-Bam
+1F38C	gekräizt Fändelen	Feier | gekräizt | gekräizt Fändelen | japanesch | Kräiz
+1F38D	Dännendekoratioun	Bambus | Dänn | Dännendekoratioun | Feier | japanesch
+1F38E	Japanesch Poppen	Feier | Festival | japanesch | Japanesch Poppen | Popp
+1F38F	Koi-Kaarpe-Fändelen	Fändel | Feier | Kaarp | Koi-Kaarpe-Fändelen
+1F390	Wandspill	Feier | Klack | Klackespill | Wand | Wandspill
+1F391	Moundbetruechtungszeremonie	Feier | Mound | Moundbetruechtungszeremonie | Zeremonie
+1F393	Diplomiwwerreechungshutt	Diplomiwwerreechung | Diplomiwwerreechungshutt | Feier | Hutt | Kap | Kleedung
+1F484	Lëppestëft	Kosmetik | Lëppestëft | Schmink
+1F485	Neellack	fleegen | Kosmetik | Lack | Manikür | Neel | Neellack
+1F48B	Kussmond	Kuss | Kussmond | Lëpsen
+1F48C	Libesbréif	Bréif | Häerz | Léift | Libesbréif | Post
+1F48D	Rank	Diamant | Rank
+1F48E	Diamant	Diamant | Juwel | Steen
+1F48F	Kuss	Koppel | Kuss
+1F490	Blummebouquet	Blumm | Blummebouquet
+1F491	verléift Koppel	Koppel | Léift | verléift Koppel
+1F492	Hochzäit	Hochzäit | Kapell | Romanz
+1F493	klappend Häerz	Häerzklappen | klappend | klappend Häerz | Schlag | schloend
+1F494	gebrachent Häerz	briechen | gebrach | gebrachent Häerz
+1F495	zwee Häerzer	Léift | zwee Häerzer
+1F496	glënnerend Häerz	glënneren | glënnerend Häerz | opgereegt
+1F497	wuessend Häerz	nervös | opgereegt | Schlag | wuessend | wuessend Häerz
+1F498	Häerz mat Feil	Cupidon | Feil | Häerz mat Feil
+1F499	blot Häerz	blo | blot Häerz
+1F49A	gréngt Häerz	gréng | gréngt Häerz
+1F49B	gielt Häerz	giel | gielt Häerz
+1F49C	mooft Häerz	mof | mooft Häerz
+1F49D	Häerz mat Putsch	Häerz mat Putsch | Putsch | Valentin
+1F49E	dréiend Häerzer	dréiend | dréiend Häerzer
+1F49F	Häerzdekoratioun	Häerz | Häerzdekoratioun
+1F9E1	oranget Häerz	orange | oranget Häerz
+2763	fettgedréckt Häerzausruffzeechen	Ausruff | fettgedréckt Häerzausruffzeechen | Interpunktioun | Zeechen
+2733	aachtzackege Stärchen	aachtzackege Stärchen | Asterisk
+2734	aachtzackege Stär	aachtzackege Stär | Stär
+2747	Fonken	Fonken
+1F3E0	Haus	Doheem | Haus
+1F3E1	Haus mat Gaart	Doheem | Gaart | Haus | Haus mat Gaart
+1F3E2	Bürosgebai	Bürosgebai | Gebai
+1F3E3	japanesche Postbüro	japanesch | japanesche Postbüro | Post
+1F3E4	Postbüro	europäesch | Post | Postbüro
+1F3E5	Spidol	Dokter | Medezin | Spidol
+1F3E6	Bank	Bank | Gebai
+1F3E7	Bancomat	ATM | Bancomat | Bank | ophiewen
+1F3E8	Hotel	Gebai | Hotel
+1F3E9	Love Hotel	Hotel | Léift | Love Hotel
+1F3EA	Supermarché	Geschäft | Supermarché
+1F3EB	Schoul	Gebai | Schoul
+1F3EC	Akafszenter	Akafszenter | Geschäft
+1F3ED	Fabrik	Fabrik | Gebai
+1F3EE	roude Lampion	Bar | Lampion | Lanter | Luucht | roude Lampion | rout
+1F3EF	japanescht Schlass	japanesch | japanescht Schlass | Schlass
+1F3F0	Schlass	europäesch | Schlass
+1F463	Foussofdréck	Foussofdréck | Foussofdrock | Kleeder | Ofdrock
+1F464	mënschlech Silhouette	Büst | mënschlech | Silhouette
+1F465	mënschlech Silhouetten	Büst | mënschlech | mënschlech Silhouetten | Silhouette
+1F466	Jong	Jong | jonk | klengen
+1F467	Meedchen	Jongfra | jonk | Meedchen | Stärzeechen
+1F468	Mann	Mann
+1F469	Fra	Fra
+1F46A	Famill	Famill
+1F46B	Mann a Fra Hand an Hand	Fra | halen | Hand | Koppel | Mann | Mann a Fra Hand an Hand
+1F46C	zwee Männer Hand an Hand	halen | Hand | Koppel | Mann | Stärzeechen | zwee Männer Hand an Hand | Zwilling | Zwillingen
+1F46D	zwou Fraen Hand an Hand	Fra | halen | Hand | Koppel | zwou Fraen Hand an Hand
+1F46E	Polizist(in)	Flick | Police | Polizist | Polizist(in)
+1F46F	Persoun mat Huesoueren	Dänzer | feieren | Huesoueren | Party | Persoun mat Huesoueren
+1F470	Braut mat Schleier	Braut | Braut mat Schleier | Hochzäit | Schleier
+1F471	blond Persoun	blond | blond Persoun
+1F472	Mann mat chineseschem Hutt	gua pi mao | Hutt | Mann | Mann mat chineseschem Hutt
+1F473	Persoun mat Turban	Persoun mat Turban | Turban
+1F474	ale Mann	al | ale Mann | Mann
+1F475	al Fra	al | Fra
+1F476	Puppelchen	Bëbee | jonk | Puppelchen
+1F477	Bauaarbechter(in) mat Helm	Aarbechter | Bau | Bauaarbechter(in) mat Helm | Hutt
+1F478	Prinzessin	Fantasie | Mäerchen | Prinzessin
+1F479	Ongeheier	Fantasie | Gesiicht | Kreatur | Mäerchen | Monster | Ongeheier
+1F47A	Kobold	Fantasie | Gesiicht | Kobold | Kreatur | Mäerchen | Monster
+1F483	danzend Fra	danzend | Fra
+1F486	Persoun, déi eng Kappmassage kritt	déi eng Kappmassage kritt | Gesiicht | Massage | Persoun | Persoun, déi eng Kappmassage kritt | Salon
+1F487	Persoun, déi d’Hoer geschnidde kritt	Coiffer | Coupe | déi d’Hoer geschnidde kritt | Hoer | Persoun | Persoun, déi d’Hoer geschnidde kritt | Salon | Schéinheet | schneiden
+1F645	Persoun, déi NEEN weist	déi NEEN weist | Geste | Hand | neen | net | Persoun | Persoun, déi NEEN weist | Verbueden
+1F646	Persoun, déi OK weist	déi OK weist | Geste | Hand | OK | Persoun | Persoun, déi OK weist
+1F647	sech vernäipend Persoun	entschëllegt | Entschëllegung | Geste | sech vernäipend Persoun | Verneigung
+1F64B	Persoun, déi d’Hand hieft	déi d’Hand hieft | gehuewen | Geste | glécklech | Hand | Persoun | Persoun, déi d’Hand hieft
+1F64D	d’Stir fronzend Persoun	d’Stir fronzend Persoun | fronzen | Geste | Stir
+1F64E	motzend Persoun	Geste | motzen | motzend Persoun
+1F930	schwanger Fra	Fra | schwanger
+1F931	stëllend Fra	Bëbee | Broscht | fleegen | stëllend Fra
+1F933	Selfie	Handy | Kamera | Selfie
+1F934	Prënz	Prënz
+1F935	Mann am Kostüm	Bräitchemann | Kostüm | Mann | Mann am Kostüm
+1F936	Dem Kleesche seng Fra	Chrëschtdag | Dem Kleesche seng Fra | Feier | Fra | Kleeschen | Mamm
+1F937	Persoun, déi d’Schëlleren hieft	déi d’Schëlleren hieft | Ignoranz | Indifferenz | Persoun | Persoun, déi d’Schëlleren hieft | Schëlleren hiewen | Zweiwel
+1F385	Kleeschen	Chrëschtdag | Feier | Kleeschen | Papp
+1F9D0	Gesiicht mat Monokel	Gesiicht mat Monokel | langweileg
+1F9D1	Erwuessenen	Erwuessenen | neutral
+1F9D2	Kand	jonk | Kand | neutral
+1F9D3	eeleren Erwuessenen	al | eeleren Erwuessenen | neutral
+1F9D4	Persoun mat Baart	Baart | Persoun mat Baart
+1F9D5	Fra mat Schleier	Fra mat Schleier | Hijab | Kappduch | Schleier | Voile
+1F9D6	Persoun am Dampbad	Dampbad | Persoun am Dampbad | Sauna
+1F9D7	Klëmmer(in)	Biergsteiger | Klëmmer(in)
+1F9D8	Persoun a Lotuspositioun	Meditatioun | Persoun a Lotuspositioun | Yoga
+1F9D9	Zauberer(in)	Hex | Hexemeeschter | Zauberer | Zauberer(in)
+1F9DA	Fee	Fee | Oberon | Puck | Titania
+1F9DB	Vampir	Dracula | ondout | Vampir
+1F9DC	Mierpersoun	Mierjonfra | Miermann | Mierpersoun
+1F9DD	Elf	Elf | magesch
+1F9DE	Genie	Djinn | Genie
+1F9DF	Zombie	ondout | Zombie
+A9	Copyright	Copyright
+AE	agedroen	agedroen
+2122	Markenzeechen	Markenzeechen | TM | Trademark | Zeechen
+20BA	Tierkesch Lira	
+20AA	Israeleschen Neie Schekel	
+20AB	Vietnameseschen Dong	
+20BC	Aserbaidschan-Manat	
+20B4	Ukraineschen Hrywnja	
+20A6	Nigerianeschen Naira	
+20A1	Costa-Rica-Colón	
+20B2	Paraguayeschen Guaraní	
+20B5	Ghanaeschen Cedi	
+20B8	Kasacheschen Tenge	
+20BE	Georgesche Lari	
+20AE	Mongoleschen Tögrög	
+20AD	Laoteschen Kip	
+58F	Armeneschen Dram	
+9F3	Bangladesch-Taka	
+E3F	Thailännesche Baht	
+20A7	Spuenesch Peseta	
+A4	Onbekannt Währung	
+2196	Feil no uewen a lénks	Feil | Feil no uewen a lénks | Himmelsrichtung | Nordwesten | Richtung
+2197	Feil no uewen a riets	Feil | Feil no uewen a riets | Himmelsrichtung | Nordosten | Richtung
+2198	Feil no ënnen a riets	Feil | Feil no ënnen a riets | Himmelsrichtung | Richtung | Südosten
+2199	Feil no ënnen a lénks	Feil | Feil no ënnen a lénks | Himmelsrichtung | Richtung | Südwesten
+2194	Feil no lénks a riets	Feil no lénks a riets | Feiler
+2195	Feil no uewen an ënnen	Feil no uewen an ënnen | Feiler
+21A9	Rietsfeil mat Lénkskéier	Feiler | Rietsfeil mat Lénkskéier
+21AA	Lénksfeil mat Rietskéier	Feiler | Lénksfeil mat Rietskéier
+1F400	Rat	Rat
+1F401	Maus	Maus
+1F402	Ochs	Ochs | Stärzeechen | Stéier
+1F403	Waasserbüffel	Büffel | Waasser | Waasserbüffel
+1F404	Kou	Kou
+1F405	Tiger	Tiger
+1F406	Leopard	Leopard
+1F407	Hues	Hausdéier | Hues | Kanéngchen
+1F408	Kaz	Hausdéier | Kaz
+1F409	Draach	Draach | Mäerchen
+1F40A	Krokodil	Krokodil
+1F40B	Wal	Wal
+1F40C	Schleek	Schleek
+1F40D	Schlaang	Ophiuchus | Schlaang | Schlaangenträger | Stärzeechen
+1F40E	Päerd	Course | Coursepäerd | Päerd | reiden
+1F40F	Widder	Männchen | Schof | Stärzeechen | Widder
+1F410	Geess	Geess | Stärzeechen | Steebock
+1F411	Mudderschof	Mudder | Mudderschof | Schof | Weibchen
+1F412	Af	Af
+1F413	Hunn	Hunn | Vugel
+1F414	Hong	Hong | Vugel
+1F415	Hond	Hausdéier | Hond
+1F416	Schwäin	Sau | Schwäin
+1F417	Wëllschwäin	Schwäin | Wëllschwäin
+1F418	Elefant	Elefant
+1F419	Tëntefësch	Tëntefësch
+1F41A	Spiralmuschel	Muschel | Spiral | Spiralmuschel
+1F41B	Kiewerlek	Insekt | Kiewerlek
+1F41C	Seejomes	Insekt | Seejomes
+1F41D	Bei	Bei | Insekt
+1F41E	Himmelsdéierchen	Himmelsdéierchen | Insekt | Kiewerlek
+1F41F	Fësch	Fësch | Stärzeechen
+1F420	tropesche Fësch	Fësch | tropesch | tropesche Fësch
+1F421	Kugelfësch	Fësch | Kugelfësch
+1F422	Deckelsmouk	Deckelsmouk | Douseschildkröt | Schildkröt
+1F423	Jippelchen am Ee	am Ee | Bëbee | Hong | Jippelchen | Jippelchen am Ee | kleng | Vugel
+1F424	Jippelchen	Bëbee | Hong | Jippelchen | Vugel
+1F425	Jippelche vu vir	Bëbee | Hong | Jippelche vu vir | Jippelchen | Vugel
+1F426	Vugel	Vugel
+1F427	Pinguin	Pinguin | Vugel
+1F428	Koalabier	Bier | Koalabier
+1F429	Puddel	Hond | Puddel
+1F42A	Dromedar	Bockel | Dromedar
+1F42B	Kaméil	Bockel | Kaméil | zwee
+1F42C	Delfin	Delfin | Flipper
+1F42D	Mausgesiicht	Gesiicht | Maus | Mausgesiicht
+1F42E	Kousgesiicht	Gesiicht | Kou | Kousgesiicht
+1F42F	Tigersgesiicht	Gesiicht | Tiger | Tigersgesiicht
+1F430	Huesgesiicht	Gesiicht | Hausdéier | Hues | Huesgesiicht | Kanéngchen
+1F431	Kazegesiicht	Gesiicht | Hausdéier | Kaz | Kazegesiicht
+1F432	Draachegesiicht	Draach | Draachegesiicht | Gesiicht | Mäerchen
+1F433	sprëtzende Wal	Gesiicht | sprëtzend | sprëtzende Wal | Wal
+1F434	Päerdsgesiicht	Gesiicht | Päerd | Päerdsgesiicht
+1F435	Afegesiicht	Af | Afegesiicht | Gesiicht
+1F436	Hondsgesiicht	Gesiicht | Hausdéier | Hond | Hondsgesiicht
+1F437	Schwéngsgesiicht	Gesiicht | Schwäin | Schwéngsgesiicht
+1F438	Fräschegesiicht	Fräsch | Fräschegesiicht | Gesiicht
+1F439	Hamstersgesiicht	Gesiicht | Hamster | Hamstersgesiicht | Hausdéier
+1F43A	Wollefsgesiicht	Gesiicht | Wollef | Wollefsgesiicht
+1F43B	Bieregesiicht	Bier | Bieregesiicht | Gesiicht
+1F43C	Pandasgesiicht	Gesiicht | Panda | Pandasgesiicht
+1F43D	Schwéngsnues	Gesiicht | Nues | Schwäin | Schwéngsnues
+1F43E	Pattenofdréck	Féiss | Ofdrock | Patt | Pattenofdréck
+1F43F	Kaweechelchen	Kaweechelchen
+1F981	Léifsgesiicht	Gesiicht | Léif | Léifsgesiicht | Stärzeechen
+1F982	Skorpioun	Skorpioun | Stärzeechen
+1F983	Schnuddelhong	Schnuddelhong | Vugel
+1F984	Einhornsgesiicht	Einhorn | Einhornsgesiicht | Gesiicht
+1F985	Adler	Adler | Vugel
+1F986	Int	Int | Vugel
+1F987	Fliedermaus	Fliedermaus | Vampir
+1F988	Hai	Fësch | Hai
+1F989	Eil	Eil | klug | Vugel
+1F98A	Fuussgesiicht	Fuuss | Fuussgesiicht | Gesiicht
+1F98B	Päiperlek	Insekt | Päiperlek | schéin
+1F98C	Hirsch	Hirsch
+1F98D	Gorilla	Gorilla
+1F98E	Eidechs	Eidechs | Reptil
+1F98F	Nashorn	Nashorn
+1F990	Crevette	Crevette | Iessen | kleng | Mieresfruucht
+1F991	Calamar	Calamar | Iessen | Mollusk
+1F992	Giraff	Flecken | Giraff
+1F993	Zebra	Sträif | Zebra
+1F994	Kéiseker	däreg | Kéiseker
+1F995	Dinosaurier	Brachiosaurus | Brontosaurus | Dinosaurier | Diplodokus
+1F996	T-Rex	T-Rex | Tyrannosaurus Rex
+1F997	Cricket	Cricket | Heesprénger
+1F330	Käscht	Käscht | Planz
+1F331	Keimling	jonk | Keimling
+1F332	Dännebam	Bam | Dännebam
+1F333	Lafbam	Bam | falen | Laf | Lafbam
+1F334	Palm	Bam | Palm
+1F335	Kaktus	Kaktus | Planz
+1F337	Tulp	Blumm | Tulp
+1F338	Kiischtebléi	Bléi | Blumm | Kiischt | Kiischtebléi
+1F339	Rous	Blumm | Rous
+1F33A	Hibiskus	Blumm | Hibiskus
+1F33B	Sonneblumm	Blumm | Sonn | Sonneblumm
+1F33C	Margréitchen	Blumm | Margréitchen
+1F33D	Mais	Kolben | Labyrinth | Mais
+1F33E	Räishallem	Hallem | Kär | Räis | Räishallem
+1F33F	Kräider	Blat | Kräider
+1F340	véierbliederegt Kléiblat	4 | Blat | Kléi | véier | véierbliederegt Kléiblat
+1F341	Ahornblat	Ahorn | Ahornblat | Blat | falend
+1F342	Hierschtblat	Blat | falend | Hierschtblat
+1F343	am Wand fléiend Blat	am Wand fléiend Blat | Blat | blosen | fléien | Wand
+1F344	Champignon	Champignon | Gëftpilz | Pilz
+2618	Kléi	Kléi | Planz
+1F347	Drauwen	Drauf | Drauwen | Uebst
+1F348	Meloun	Meloun | Uebst
+1F349	Waassermeloun	Uebst | Waassermeloun
+1F34A	Mandarine	Mandarine | Orange | Uebst
+1F34B	Zitroun	Uebst | Zitroun | Zitrusfriicht
+1F34C	Banann	Banann | Uebst
+1F34D	Ananas	Ananas | Uebst
+1F34E	rouden Apel	Apel | rouden Apel | rout | Uebst
+1F34F	gréngen Apel	Apel | gréng | gréngen Apel | Uebst
+1F350	Bir (Fruucht)	Bir (Fruucht) | Uebst
+1F351	Piisch	Piisch | Uebst
+1F352	Kiischten	Kiischt | Kiischten | Uebst
+1F353	Äerdbier	Äerdbier | Bier | Uebst
+1F336	Peperoni	Peperoni | schaarf
+1F354	Hamburger	Burger | Hamburger
+1F355	Pizza	Kéis | Pizza | Stéck
+1F356	Fleeschschank	Fleesch | Fleeschschank | Schank
+1F357	Pouletssträmpel	Been | Poulet | Pouletssträmpel | Schank | Stämpel
+1F358	Räiskichelcher	Kichelchen | Räis | Räiskichelcher
+1F359	Räisball	Ball | japanesch | Räis | Räisball
+1F35A	gekachte Räis	gekacht | gekachte Räis | Räis
+1F35B	Curry mat Räis	Curry | Curry mat Räis | Räis
+1F35C	Schossel mat Nuddelen	dämpend | Nuddelen | Ramen | Schossel | Schossel mat Nuddelen
+1F35D	Spagetti	Pasta | Spagetti
+1F35E	Brout	Brout
+1F35F	Fritten	Fritten
+1F360	Séissgromper	gebroden | Gromper | séiss | Séissgromper
+1F361	Dango	Brochett | Dango | Dessert | japanesch | séiss
+1F362	Oden	Broschett | Kebab | Mieresfriichten | Oden
+1F363	Sushi	Sushi
+1F364	Scampi-Tempura	Crevette | frittéiert | Scampi | Scampi-Tempura | Tempura
+1F365	gerullte Fëschkichelchen	Fësch | gerullt | gerullte Fëschkichelchen | Kichelchen | Kuch
+1F366	Softice	Äis | Crème | Dessert | Glace | séiss | Softice
+1F367	Waasserglace	Dessert | Glace | séiss | Waasser | Waasserglace
+1F368	Glace	Äis | Dessert | Glace | séiss
+1F369	Donut	Dessert | Donut | séiss
+1F36A	Kichelchen	Dessert | Kichelchen | séiss
+1F36B	Tablett Schockela	Dessert | Schokela | séiss | Tablett | Tablett Schockela
+1F36C	Kamell	Dessert | Kamell | séiss
+1F36D	Lutsch	Dessert | Kamell | Lutsch | séiss
+1F36E	Pudding	Dessert | Pudding | séiss
+1F36F	Hunneg	Glas | Hunneg | Hunnegglas | séiss
+1F370	Stéck Kuch	Dessert | Gebäck | Kuch | séiss | Stéck
+1F371	Bento-Box	Bento | Bento-Box | Box | Këscht
+1F372	Plat an enger Kasseroll	Eintopf | Kasseroll | Plat an enger Kasseroll
+1F373	Pan mat Spigelee	broden | Ee | Pan | Pan mat Spigelee
+1F374	Forschett a Messer	Forschett | Forschett a Messer | kachend | Messer
+1F375	Taass ouni Hänk	drénken | Gedrénks | Taass | Taass ouni Hänk | Téi | Téitaass
+1F376	Sake	Bar | drénken | Fläsch | Gedrénks | Sake | Taass
+1F377	Wäiglas	Bar | drénken | Gedrénks | Glas | Wäiglas | Wäin
+1F378	Cocktailglas	Bar | Cocktail | Cocktailglas | Gedrénks | Glas
+1F379	exotescht Gedrénks	Bar | exotesch | exotescht Gedrénks | Gedrénks
+1F37A	Klensch	Bar | Béier | Gedrénks | Klensch
+1F37B	prostend Béierklenschen	Bar | Béier | Gedrénks | Klensch | prosten | prostend Béierklenschen
+1F37C	Biberon	Biberon | drénken | Fläsch | Mëllech | Puppelchen
+1F37D	Forschett a Messer mat Teller	Forschett | Forschett a Messer mat Teller | kachend | Messer | Teller
+1F37E	Fläsch mat knallendem Stopp	Bar | drénken | Fläsch | Fläsch mat knallendem Stopp | knallend | Stopp
+1F37F	Popcorn	Popcorn
+1F950	Croissant	Brout | Croissant | franséisch | Iessen
+1F951	Avocado	Avocado | Fruucht | Iessen
+1F952	Kornischong	Geméis | Iessen | Kornischong
+1F953	Speck	Fleesch | Iessen | Speck
+1F954	Gromper	Geméis | Gromper | Iessen
+1F955	Wuerzel	Geméis | Iessen | Wuerzel
+1F956	Baguette	Baguette | Brout | franséisch | Iessen
+1F957	gréng Zalot	gréng | Iessen | Zalot
+1F958	Kasseroll mat Iessen	flaach | Iessen | Kasseroll | Kasseroll mat Iessen | Paella | Pan
+1F959	Kebab	Falafel | flaacht Brout | gefëllt | Gyros | Iessen | Kebab
+1F95A	Ee	Ee | Iessen
+1F95B	Glas Mëllech	Gedrénks | Glas | Mëllech
+1F95C	Kakuett	Geméis | Iessen | Kakuett | Noss
+1F95D	Kiwi	Iessen | Kiwi | Uebst
+1F95E	Paangecher	Crêpe | Iessen | Paangech | Paangecher | Pancake
+1F95F	Ravioli	Empanada | Gyoza | Jiaozi | Pierogi | Ravioli
+1F960	Gléckskichelchen	Gléckskichelchen | Prophezeiung
+1F961	Takeout-Këscht	Austerkëscht | Takeout-Këscht
+1F962	asiatesch Béngelen	asiatesch Béngelen | Hashi
+1F963	Boll mat Läffel	Boll mat Läffel | Frühstück | Kaffi | Müsli
+1F964	Glas mat Stréihallem	Glas mat Stréihallem | Jus | Softdrink
+1F965	Kokosnoss	Kokosnoss | Palm | Piña Colada
+1F966	Brokkoli	Brokkoli | wëlle Kabes
+1F967	Taart	Fëllung | Gebäck | Taart
+1F968	Bretzel	Bretzel | gedréit
+1F969	Stéck Fleesch	Bifdeck | Hämmelskotlett | Kotlett | Schwéngskotlett | Stéck Fleesch
+1F96A	Sandwich	Brout | Sandwich
+1F96B	Iessen an der Béchs	Béchs | Iessen an der Béchs
+1F9C0	Stéck Kéis	Kéis | Stéck Kéis
+2615	waarmt Gedrénks	dämpend | drénken | Gedrénks | Kaffi | Téi | waarm | waarmt Gedrénks
+2600	Sonn	hell | Sonn | sonneg | Stralen
+2601	Wollek	Wieder | Wollek
+2602	Prabbeli	Kleedung | Prabbeli | Reen
+2603	Schnéimännchen	kal | Schnéi | Schnéimännchen
+2614	Prabbeli mat Reendrëpsen	Drëps | Kleedung | Prabbeli | Prabbeli mat Reendrëpsen | Reen
+26A1	Héichspannung	Blëtz | elektresch | Gefor | Héichspannung | Spannung | Stroum
+26C4	Schnéimännchen ouni Schnéi	kal | Schnéi | Schnéimännchen | Schnéimännchen ouni Schnéi
+26C5	Sonn hannert Wolleken	Sonn | Sonn hannert Wolleken | Wollek
+26C8	Wollek mat Blëtz a Reen	Donnerwieder | Reen | Wollek | Wollek mat Blëtz a Reen
+2744	Schnéiflack	kal | Schnéi | Schnéiflack
+1F300	Zyklon	Schwindel | Taifun | Twister | Zyklon
+1F301	niwweleg	Niwwel | niwweleg
+1F302	zoue Prabbeli	Kleedung | Prabbeli | Reen | zoue Prabbeli
+1F303	Stärenhimmel	Himmel | Nuecht | Stär | Stärenhimmel
+1F304	Sonnenopgang an de Bierger	Bierg | Moien | Sonn | Sonnenopgang | Sonnenopgang an de Bierger
+1F305	Sonnenopgang	Moien | Sonn | Sonnenopgang
+1F306	Stad an der Dämmerung	Dämmerung | Landschaft | Owend | Sonn | Sonnenënnergang | Stad | Stad an der Dämmerung
+1F307	Sonnenënnergang	Dämmerung | Sonn | Sonnenënnergang
+1F308	Reebou	Reebou | Reen
+1F309	Bréck nuets	Bréck | Nuecht | nuets
+1F30A	Waasserwell	Ozean | Waasser | Waasserwell | Well
+1F30B	Vulkan	Bierg | Eruptioun | Vulkan
+1F30C	Mëllechstrooss	Mëllechstrooss | Weltall
+1F30D	Globus (zentréiert op Europa an Afrika)	Äerd | Afrika | Europa | Globus | Globus (zentréiert op Europa an Afrika) | Welt
+1F30E	Globus (zentréiert op Nord-/Südamerika)	Äerd | Globus | Globus (zentréiert op Nord-/Südamerika) | Nordamerika | Südamerika | Welt
+1F30F	Globus (zentréiert op Asien an Australien)	Äerd | Asien | Australien | Globus | Globus (zentréiert op Asien an Australien) | Welt
+1F310	Meridianglobus	Äerd | Globus | Meridian | Meridianglobus | Welt
+1F311	Neimound	däischter | Mound | Neimound
+1F312	Séchelmound am éischte Véierel	éischte Véierel | Mound | Séchelmound | Séchelmound am éischte Véierel
+1F313	zouhuelenden Hallefmound	Hallef | Mound | Véierel | zouhuelenden Hallefmound
+1F314	Séchelmound am zweete Véierel	Mound | Séchelmound | Séchelmound am zweete Véierel | zweete Véierel
+1F315	Vollmound	Mound | voll | Vollmound
+1F316	Séchelmound am drëtte Véierel	drëtte Véierel | Mound | Séchelmound | Séchelmound am drëtte Véierel
+1F317	ofhuelenden Hallefmound	Hallef | Mound | ofhuelenden Hallefmound | Véierel
+1F318	Séchelmound am leschte Véierel	leschte Véierel | Mound | Séchelmound | Séchelmound am leschte Véierel
+1F319	Moundséchel	Mound | Moundséchel | Séchel
+1F31A	Neimoundgesiicht	Gesiicht | Mound | Neimoundgesiicht
+1F31B	zouhuelenden Hallefmoundgesiicht	Gesiicht | Hallef | Mound | Véierel | zouhuelenden Hallefmoundgesiicht
+1F31C	ofhuelenden Hallefmoundgesiicht	Gesiicht | Hallef | Mound | ofhuelenden Hallefmoundgesiicht | Véierel
+1F31D	Vollmoundgesiicht	Gesiicht | hell | Mound | voll | Vollmoundgesiicht
+1F31E	Sonnegesiicht	Gesiicht | hell | Sonn | Sonnegesiicht
+1F31F	liichtende Stär	blénkeg | blénken | glënnerend | liichtend | liichtende Stär | Stär
+1F320	Stäreschnäiz	falend | Stär | Stäreschnäiz
+1F321	Thermometer	Thermometer | Wieder
+1F324	Sonn hannert kleng Wolleken	Sonn | Sonn hannert kleng Wolleken | Wollek
+1F325	Sonn hannert grouss Wolleken	Sonn | Sonn hannert grouss Wolleken | Wollek
+1F326	Sonn hannert Reewollek	Reen | Sonn | Sonn hannert Reewollek | Wollek
+1F327	Wollek mat Reen	Reen | Wollek | Wollek mat Reen
+1F328	Wollek mat Schnéi	kal | Schnéi | Wollek | Wollek mat Schnéi
+1F329	Wollek mat Blëtz	Blëtz | Wollek | Wollek mat Blëtz
+1F32A	Tornado	Tornado | Wirbelwand | Wollek
+1F32B	Niwwel	Niwwel | Wollek
+1F32C	Wandgesiicht	blosen | Gesiicht | Wand | Wandgesiicht | Wollek
+2648	Widder (Stärzeechen)	Stärzeechen | Widder | Widder (Stärzeechen)
+2649	Stéier	Ochs | Stärzeechen | Stéier
+264A	Zwilling	Stärzeechen | Zwilling
+264B	Kriibs (Stärzeechen)	Kriibs | Kriibs (Stärzeechen) | Stärzeechen
+264C	Léif	Léif | Stärzeechen
+264D	Jongfra	Jongfra | Stärzeechen
+264E	Wo (Stärzeechen)	Geriicht | Justiz | Stärzeechen | Wo | Wo (Stärzeechen)
+264F	Skorpioun (Stärzeechen)	Skorpioun | Skorpioun (Stärzeechen) | Stärzeechen
+2650	Schütze	Bouschéisser | Schütze | Stärzeechen
+2651	Steebock	Gees | Stärzeechen | Steebock
+2652	Waassermann	Stärzeechen | Träger | Waasser | Waassermann
+2653	Fësch (Stärzeechen)	Fësch | Fësch (Stärzeechen) | Stärzeechen
+1F550	eng Auer	00 | 1 | 1:00 | Auer | Auerzäit | eng
+1F551	zwou Auer	00 | 2 | 2:00 | Auer | Auerzäit | zwou
+1F552	dräi Auer	00 | 3 | 3:00 | Auer | Auerzäit | dräi
+1F553	véier Auer	00 | 4 | 4:00 | Auer | Auerzäit | véier
+1F554	fënnef Auer	00 | 5 | 5:00 | Auer | Auerzäit | fënnef
+1F555	sechs Auer	00 | 6 | 6:00 | Auer | Auerzäit | sechs
+1F556	siwen Auer	00 | 7 | 7:00 | Auer | Auerzäit | siwen
+1F557	aacht Auer	00 | 8 | 8:00 | aacht | Auer | Auerzäit
+1F558	néng Auer	00 | 9 | 9:00 | Auer | Auerzäit | néng
+1F559	zéng Auer	00 | 10 | 10:00 | Auer | Auerzäit | zéng
+1F55A	eelef Auer	00 | 11 | 11:00 | Auer | Auerzäit | eelef
+1F55B	zwielef Auer	00 | 12 | 12:00 | Auer | Auerzäit | zwielef
+1F55C	hallwer zwou	1 | 1:30 | 30 | Auer | drësseg | eng | hallwer | zwou
+1F55D	hallwer dräi	2 | 2:30 | 30 | Auer | dräi | drësseg | hallwer | zwou
+1F55E	hallwer véier	3 | 3:30 | 30 | Auer | dräi | drësseg | hallwer | véier
+1F55F	hallwer fënnef	30 | 4 | 4:30 | Auer | drësseg | fënnef | hallwer | véier
+1F560	hallwer sechs	30 | 5 | 5:30 | Auer | drësseg | fënnef | hallwer | sechs
+1F561	hallwer siwen	30 | 6 | 6:30 | Auer | drësseg | hallwer | sechs | siwen
+1F562	hallwer aacht	30 | 7 | 7:30 | aacht | Auer | drësseg | hallwer | siwen
+1F563	hallwer néng	30 | 8 | 8:30 | aacht | Auer | drësseg | hallwer | néng
+1F564	hallwer zéng	30 | 9 | 9:30 | Auer | drësseg | hallwer | néng | zéng
+1F565	hallwer eelef	10 | 10:30 | 30 | Auer | drësseg | eelef | hallwer | zéng
+1F566	hallwer zwielef	11 | 11:30 | 30 | Auer | drësseg | eelef | hallwer | zwielef
+1F567	hallwer eng	12 | 12:30 | 30 | Auer | drësseg | eng | hallwer | zwielef
+2604	Komet	Komet | Weltall
+26F0	Bierg	Bierg
+26F1	Prabbeli um Buedem	Prabbeli | Prabbeli um Buedem | Reen | Sonn
+26F2	Sprangbuer	Sprangbuer
+26F4	Fähr	Boot | Fähr | Passagéier
+26F5	Segelboot	Boot | Mier | Resort | Segelboot | Yacht
+2708	Fliger	Fliger
+1F488	Coifferssail	Coiffer | Coifferssail | Coupe | Sail
+1F4BA	Sëtz	Sëtz | Sëtzplaz
+1F680	Rakéit	Rakéit | Weltall
+1F681	Helikopter	Gefier | Helikopter
+1F682	Lokomotiv	Damp | Eisebunn | Lokomotiv | Motor | Zuch
+1F683	Zuchwaggon	Eisebunn | elektresch | Tram | Trolleybus | Waggon | Zuch | Zuchwaggon
+1F684	Schnellzuch	Eisebunn | Schnellzuch | Shinkansen | Vitess | Zuch
+1F685	Schnellzuch mat Fligernues	Eisebunn | Fliger | Schnellzuch mat Fligernues | Shinkansen | Vitess | Zuch
+1F686	Zuch	Eisebunn | Zuch
+1F687	Metro	Metro | U-Bahn
+1F688	Stadbunn	Eisebunn | Stadbunn
+1F689	Haltestell	Eisebunn | Haltestell | Zuch
+1F68A	Tram	Tram | Trolleybus
+1F68B	Tramwaggon	Tram | Tramwaggon | Trolleybus | Waggon
+1F68C	Bus	Bus | Gefier
+1F68D	entgéintkommende Bus	Bus | entgéintkommend | entgéintkommende Bus
+1F68E	Trolleybus	Bus | Tram | Trolley | Trolleybus
+1F68F	Bushaltestell	Arrêt | Bus | Bushaltestell
+1F690	Minibus	Bus | Minibus
+1F691	Ambulanz	Ambulanz | Gefier
+1F692	Pompjeeswon	Camion | Feier | Motor | Pompjeeswon
+1F693	Policeauto	Auto | Patrull | Police | Policeauto
+1F694	entgéintkommende Policeauto	Auto | entgéintkommend | entgéintkommende Policeauto | Police
+1F695	Taxi	Gefier | Taxi
+1F696	entgéintkommenden Taxi	entgéintkommend | entgéintkommenden Taxi | Taxi
+1F697	Auto	Auto | Automobil
+1F698	entgéintkommenden Auto	Auto | Automobil | entgéintkommend | entgéintkommenden Auto
+1F699	SUV	Fräizäit | Sportswon | SUV
+1F69A	Liwwerwon	Liwwerung | Liwwerwon | Won
+1F69B	Sattelschlepper	Camion | Sattelschlepper | Schlepper | Semi
+1F69C	Trakter	Gefier | Trakter
+1F69D	Monorail	Gefier | Monorail
+1F69E	Biergzuch	Bierg | Biergzuch | Eisebunn | Waggon
+1F69F	Schwiefbunn	Bunn | Schwiefbunn | schwiewen
+1F6A0	Biergseelbunn	Bierg | Biergseelbunn | Gondel | Kabel | Seelbunn
+1F6A1	Loftseelbunn	Bunn | Gondel | Kabel | Loft | Loftseelbunn | Seel | Tram | Waggon
+1F6A2	Schëff	Boot | Passagéier | Schëff
+1F6A3	rudderend Persoun	Boot | Rudderboot | rudderend Persoun
+1F6A4	Schnellboot	Boot | Schnellboot
+1F6A5	horizontal rout Luucht	horizontal rout Luucht | Luucht | Verkéier | Zeechen
+1F6A6	vertikal rout Luucht	Luucht | Verkéier | vertikal rout Luucht | Zeechen
+1F6A7	Stroossebarrière	Barrière | Stroossebarrière
+1F6A8	Gyrophar	Auto | dréiend | Gyrophar | Luucht | Police | Signal
+1F6A9	dräieckege Fändel	dräieckege Fändel | Post
+1F6AA	Dier	Dier
+1F6B0	Drénkwaasser	drénkbar | drénken | Drénkwaasser | Waasser
+1F6B1	keen Drénkwaasser	keen | keen Drénkwaasser | net drénkbar | Waasser
+1F6B3	keng Vëloen	keng | keng Vëloen | neen | net | Vëlo | verbueden
+1F6B7	Foussgänger verbueden	Foussgänger | neen | net | verbueden
+1F6B8	opgepasst Kanner	eriwwergoen | Foussgänger | Kand | opgepasst Kanner | Verkéier
+1F6B9	Männertoilett	Mann | Männer | Männertoilett | Toilett | WC
+1F6BA	Fraentoilett	Fra | Fraen | Fraentoilett | Toilett | WC
+1F6BB	Toiletten	Toilett | Toiletten | WC
+1F6BC	Bëbeeszeechen	Bëbee | Bëbeeszeechen | wéckelen
+1F6BD	Toilett	Toilett
+1F6BE	WC-Zeechen	Toilett | Toiletten | Waasser | WC | WC-Zeechen
+1F6BF	Dusch	Dusch | Waasser
+1F6C0	Persoun an der Bidden	Bidden | Buedbidden | Persoun an der Bidden
+1F6C1	Buedbidden	Bidden | Buedbidden
+1F6C2	Passkontroll	Kontroll | Pass | Passkontroll
+1F6C3	Douane	Douane
+1F6C4	Gepäckausgab	Ausgab | Gepäck | Gepäckausgab
+1F6C5	Gepäckschléissfach	Casier | Gepäck | Gepäckschléissfach | Schléissfach
+1F6D0	Gotteshaus	Gotteshaus | Relioun | Veréierung
+1F6D1	Stoppschëld	aachteckeg | Schëld | Stopp | Stoppschëld
+1F6D2	Akafsweenchen	akafen | Akafsweenchen | Shopping | Weenchen
+2668	waarm Quellen	dämpend | Quellen | waarm
+26BD	Fussball	Ball | Fussball
+26BE	Baseball	Ball | Baseball
+26F3	Golflach mat Fändel	Golf | Golflach mat Fändel | Lach
+1F392	Schoulsak	Posch | Schoul | Schoulsak
+1F3A0	Karussellpäerdchen	Karussell | Karussellpäerdchen | Päerdchen
+1F3A1	Riserad	Fouer | Fräizäitpark | Rad | Riserad
+1F3A2	Achterbahn	Achterbahn | Fräizäitpark
+1F3A3	Fëscheraangel	Aangel | Fësch | Fëscheraangel
+1F3A4	Mikro	Karaoke | Mikro
+1F3A5	Kamera	Film | Kamera | Kino
+1F3A6	Kino	Film | Kamera | Kino
+1F3A7	Kopfhörer	Kopfhörer
+1F3A8	Faarfpalett	Bild | Faarfpalett | Konscht | Musée | Palett | Tableau
+1F3A9	Zilinder	héich | Hutt | Kleedung | Zilinder
+1F3AA	Zirkuszelt	Zelt | Zirkus | Zirkuszelt
+1F3AB	Billjee	Billjee | Entrée
+1F3AC	Filmklapp	Film | Filmklapp | Klapp
+1F3AD	duerstellend Konscht	duerstellend | Konscht | Mask | Theater
+1F3AE	Videospill	Controller | Manette | Spill | Videospill
+1F3AF	an d’Mëtt getraff	an d’Mëtt getraff | Dart | Match | Mëtt | Spill | treffen | Volltreffer | Zilscheif
+1F3B0	Spillautomat	Automat | Spill | Spillautomat
+1F3B1	Billardkugel	8 | 8-Ball | aacht | Billardkugel | Billiard | Kugel | Spill
+1F3B2	Spillwierfel	Spill | Spillwierfel | Wierfel | wierfelen
+1F3B3	Bowling	Bowling | Kugel | Spill
+1F3B4	Spillkaarte mat Blummen	Blumm | japanesch | Kaart | Spill | spillen | Spillkaarte mat Blummen
+1F3B5	Museksnout	Musek | Museksnout | Nout
+1F3B6	Museksnouten	Musek | Museksnouten | Nout | Nouten
+1F3B7	Saxofon	Instrument | Musek | Sax | Saxofon
+1F3B8	Gittar	Gittar | Instrument | Musek
+1F3B9	Keyboard	Instrument | Keyboard | Musek | Piano
+1F3BA	Trompett	Instrument | Musek | Trompett
+1F3BB	Gei	Gei | Instrument | Musek
+1F3BC	Partitioun	Musek | Partitioun
+1F3BD	Laftricot	lafen | Laftricot | Schärp | Sport | Tricot
+1F3BE	Tennis	Ball | Rackett | Tennis
+1F3BF	Skier	Schnéi | Ski | Skier
+1F3C0	Basketball	Ball | Basketball | Kuerf | Reef
+1F3C1	karéierte Fändel	Course | karéiert | karéierte Fändel
+1F3C2	Snowboarder	Schnéi | Ski | Snowboard | Snowboarder
+1F3C3	lafend Persoun	lafen | lafend Persoun | Marathon
+1F3C4	Surfer(in)	Surfen | Surfer(in)
+1F3C5	Sportsmedail	Medail | Sportsmedail
+1F3C6	Coupe	Coupe | Präis
+1F3C7	Päerdscourse	Course | Coursepäerd | Jockey | Päerd | Päerdscourse
+1F3C8	American Football	American Football | amerikanesch | Ball | Fussball
+1F3C9	Rugby	Ball | Fussball | Rugby
+1F3CA	Schwëmmer(in)	schwammen | Schwëmmer(in)
+1F3CB	Gewiichthiewer(in)	Gewiicht | Gewiichthiewer(in) | Hiewer
+1F3CC	Golferspiller	Ball | Golf | Golferspiller
+1F3CD	Motorrad	Course | Motorrad
+1F3CE	Courseauto	Auto | Course | Courseauto
+1F451	Kroun	Kinnek | Kinnigin | Kleedung | Kroun
+1F452	Fraenhutt	Fra | Fraenhutt | Hutt | Kleedung
+1F453	Brëll	A | Brëll | Kleedung
+1F454	Krawatt	Kleedung | Krawatt
+1F455	T-Shirt	Hiem | Kleedung | T-Shirt
+1F456	Jeans	Box | Jeans | Kleedung
+1F457	Rack	Kleedung | Rack
+1F458	Kimono	Kimono | Kleedung
+1F459	Bikini	Bikini | Kleedung | schwammen
+1F45A	Fraekleedung	Fra | Fraekleedung | Kleedung
+1F45B	Portmonni	Geld | Kleedung | Portmonni | Suen
+1F45C	Posch	Kleedung | Portmonni | Posch
+1F45D	Clutch	Clutch | Kleedung | Posch
+1F45E	Männerschong	Kleedung | Mann | Männerschong | Schong
+1F45F	Lafschong	Kleedung | Lafschong | Schong | Sport | Turnschlappen
+1F460	Tallekeschong	Fra | Kleedung | Schong | Tallek | Tallekeschong
+1F461	Fraesandal	Fra | Fraesandal | Kleedung | Sandal | Schong
+1F462	Fraestiwwel	Fra | Fraestiwwel | Kleedung | Schong | Stiwwel
+1F6B2	Vëlo	Vëlo
+1F6B4	Vëlosfuerer(in)	Vëlo | Vëlofueren | Vëlosfuerer | Vëlosfuerer(in)
+1F6B5	Mountainbikesfuerer(in)	Bierg | Mountainbike | Mountainbikesfuerer(in) | Vëlo | Vëlofueren | Vëlosfuerer
+1F6B6	spadséierend Persoun	spadséieren | spadséierend | spadséierend Persoun | wanderen
+1F938	Persoun, déi d’Rad schléit	déi d’Rad schléit | Persoun | Persoun, déi d’Rad schléit | Rad | Turnen
+1F939	jongléierend Persoun	Geschéck | Gläichgewiicht | jongléieren | jongléierend Persoun | Multitasking
+1F93A	fechtend Persoun	fechten | fechtend Persoun | Fechter | Schwäert
+1F93C	Wrestling	catchen | Wrestler | Wrestling
+1F93D	Waasserballspiller(in)	Polo | Waasser | Waasserballspiller(in)
+1F93E	Handballspiller(in)	Ball | Handball | Handballspiller(in)
+1F9E2	Kap mat Bild	Baseballkap | Kap mat Bild
+1F9E3	Schal	Hals | Schal
+1F9E4	Händchen	Hand | Händchen
+1F9E5	Mantel	Jackett | Mantel
+1F9E6	Strëmp	Collant | Strëmp
+2660	Schëppen	Kaart | Schëppen | Spill
+2663	Kräizer	Kaart | Kräizer | Spill
+2665	Häerzer	Häerzer | Kaart | Spill
+2666	Rauten	Kaart | Rauten | Spill
+1F4B3	Kreditkaart	Bank | Geld | Kaart | Kredit | Kreditkaart | Suen
+1F4B4	Yen	Bank | Geld | Geldschäin | Rechnung | Schäin | Suen | Währung | Yen
+1F4B5	Dollar	Bank | Dollar | Geld | Geldschäin | Rechnung | Schäin | Suen | Währung
+1F4B6	Euro	Bank | Euro | Geld | Geldschäin | Rechnung | Schäin | Suen | Währung
+1F4B7	Pound	Bank | Geld | Geldschäin | Pound | Rechnung | Schäin | Suen | Währung
+1F4B9	steigende Coursdiagramm mat Yen	Bank | Cours | Diagramm | Geld | Maart | Marché | Steierung | steigen | steigend | steigende Coursdiagramm mat Yen | Suen | Tendenz | Währung | Yen
+1F4BB	Laptop	Computer | Laptop | PC | perséinlech
+1F4BC	Aktekoffer	Aktekoffer
+1F4BD	Minidisk	Computer | Disk | Minidisk | optesch
+1F4BE	Diskett	Computer | Disk | Diskett
+1F4BF	CD	CD | Computer | Disk | optesch
+1F4C0	DVD	Blu-ray | Computer | Disk | DVD | optesch
+1F4C1	Fichiersdossier	Dossier | Fichier | Fichiersdossier
+1F4C2	oppene Fichiersdossier	Dossier | Fichier | oppen | oppene Fichiersdossier
+1F4C3	opgerullte Säit	Dokument | Kréngel | opgerullt | opgerullte Säit | Säit
+1F4C4	bedréckt Säit	bedréckt Säit | Dokument | Säit
+1F4C5	Kalenner	Datum | Kalenner
+1F4C6	Ofräisskalenner	Kalenner | Ofräisskalenner
+1F4C7	Indexkaart	Index | Indexkaart | Kaart | Rolodex
+1F4C8	steigenden Diagramm	Diagramm | Grafik | steigend | steigenden Diagramm | Steigerung | Tendenz
+1F4C9	senkenden Diagramm	Diagramm | Grafik | senkend | senkenden Diagramm | Tendenz
+1F4CA	Balkendiagramm	Balken | Balkendiagramm | Diagramm | Grafik
+1F4CB	Notizbriet	Notizbriet
+1F4CC	Punaise	Punaise
+1F4CD	ronn Punaise	Punaise | ronn Punaise
+1F4CE	Bürosklamer	Bürosklamer
+1F4CF	Lineal	Lineal | riicht
+1F4D0	Zeechendräieck	Dräieck | Lineal | Zeechen | Zeechendräieck
+1F4D1	Lieszeechestickeren	Lieszeechen | Lieszeechestickeren | Markéierung | Stickeren | Zeechen
+1F4D2	Haaptbuch	Haaptbuch | Notizblock
+1F4D3	Notizblock	Notizblock
+1F4D4	dekoréierten Notizblock	Buch | Deckel | dekoréiert | dekoréierten Notizblock | Notizblock
+1F4D5	zouent Buch	Buch | zou | zouent Buch
+1F4D6	oppent Buch	Buch | oppen | oppent Buch
+1F4D7	gréngt Buch	Buch | gréng | gréngt Buch
+1F4D8	blot Buch	blo | blot Buch | Buch
+1F4D9	oranget Buch	Buch | orange | oranget Buch
+1F4DA	Bicher	Bicher | Buch
+1F4DB	Nummschëld	Numm | Nummschëld | Schëld
+1F4DC	Schrëftrullo	Pabeier | Schrëftrullo
+1F4DD	Memo	Bläistëft | Memo
+1F4DE	Telefonshörer	Hörer | Telefon | Telefonshörer
+1F4DF	Pager	Pager
+1F4E0	Fax	Fax
+1F4E1	Satellittenantenn	Antenn | Satellitt | Satellittenantenn | Teller
+1F4E2	Lautsprecher	ëffentlech Adress | haart | Lautsprecher
+1F4E3	Megafon	Megafon | ufeierend
+1F4E4	Fach fir erausgoend Post	Boîte | Bréif | erausgoend | Fach | Fach fir erausgoend Post | Post | schécken
+1F4E5	Fach fir erakommend Post	Boîte | Bréif | empfänken | Fach | Fach fir erakommend Post | Inbox | Post
+1F4E6	Pak	Këscht | Pak
+1F4E7	E-Mail	Bréif | E-Mail | Post
+1F4E8	antreffende Bréif	antreffend | antreffende Bréif | Bréif | E-Mail | emailen | empfänken | Enveloppe | Post
+1F4E9	Enveloppe mat Feil	Bréif | E-Mail | emailen | Enveloppe | Enveloppe mat Feil | erausgoend | Feil | no ënnen | Post | schécken
+1F4EA	zoue Bréifkëscht mat Fändel no ënnen	Bréifboîte | Bréifkëscht | no ënnen | Post | zou | zoue Bréifkëscht mat Fändel no ënnen
+1F4EB	zoue Bréifkëscht mat Fändel no uewen	Bréifboîte | Bréifkëscht | Post | zou | zoue Bréifkëscht mat Fändel no uewen
+1F4EC	oppe Bréifkëscht mat Fändel no uewen	Bréifboîte | Bréifkëscht | oppe Bréifkëscht mat Fändel no uewen | oppen | Post
+1F4ED	oppe Bréifkëscht mat Fändel no ënnen	Bréifboîte | Bréifkëscht | no ënnen | oppe Bréifkëscht mat Fändel no ënnen | oppen | Post
+1F4EE	Bréifboîte	Bréifboîte | Bréifkëscht | Post
+1F4EF	Posttroter	Post | Posttroter | Troter
+1F4F0	Zeitung	Neiegkeeten | Pabeier | Zeitung
+1F4F1	Handy	Funk | Handy | Mobil | Telefon
+1F4F2	Handy mat feil	empfänken | Feil | Funk | Handy | Handy mat feil | Mobil | Telefon | Uruff
+1F4F3	Vibratiounsmodus	Funk | Handy | Mobil | Modus | Telefon | Vibratioun | Vibratiounsmodus
+1F4F4	Handy aus	aus | Funk | Handy | Mobil | Telefon
+1F4F5	Handye verbueden	Funk | Handy | Handye verbueden | keen | Mobil | neen | net | Telefon | verbueden
+1F4F6	Empfangbalken	Balken | Empfang | Empfangbalken | Funk | Handy | Mobil | Signal | Telefon
+1F4F7	Fotoapparat	Fotoapparat | Video
+1F4F8	Fotoapparat mat Blëtz	Blëtz | Flash | Fotoapparat | Fotoapparat mat Blëtz | Kamera | Video
+1F4F9	Videokamera	Kamera | Video | Videokamera
+1F4FA	Fernseh	Fernseh | TV | Video
+1F4FB	Radio	Radio | Video
+1F4FC	Videokassett	Kassett | VHS | Video | Videokassett
+1F4FD	Filmprojekter	Film | Filmprojekter | Kino | Projekter | Video
+1F4FF	Rousekranz	Gebiet | Ketten | Kleedung | Kranz | Pärelen | Relioun | Rousekranz
+1F505	Dimmerknäppchen	dimmen | Dimmerknäppchen | Hellegkeet | niddereg
+1F506	Ophellknäppchen	hell | Hellegkeet | Ophellknäppchen
+1F507	Lautsprecher op lautlos	keen Toun | lautlos | Lautsprecher | Lautsprecher op lautlos | roueg
+1F508	Lautsprecher op lues agestallt	Lautsprecher op lues agestallt | lues
+1F509	Lautsprecher op mëttel agestallt	Lautsprecher op mëttel agestallt | mëttel
+1F50A	Lautsprecher op haart agestallt	haart | Lautsprecher op haart agestallt
+1F50B	Batterie	Batterie
+1F50C	Stecker	elektresch | Stecker | Stroum
+1F50D	no lénks geriicht Lupp	Glas | Lupp | no lénks geriicht Lupp | sichen | Utensil
+1F50E	no riets geriicht Lupp	Glas | Lupp | no riets geriicht Lupp | sichen | Utensil
+1F50F	zouent Schlass mat Bic	Bic | Fieder | privat | Schlass | Tënt | zou | zouent Schlass mat Bic
+1F510	zouent Schlass mat Schlëssel	Schlass | Schlëssel | sécher | zou | zouent Schlass mat Schlëssel
+1F511	Schlëssel	Passwuert | Schlass | Schlëssel
+1F512	zouent Schlass	zou | zouent Schlass
+1F513	oppent Schlass	entspären | oppen | oppent Schlass | Schlass | zou
+1F514	Klack	Klack | Schell
+1F515	duerchgestrache Klack	duerchgestrach | duerchgestrache Klack | keen Toun | Klack | lautlos | neen | net | roueg | verbueden
+1F516	Lieszeechen	Lieszeechen | Zeechen
+1F517	Glidd	Glidd
+1F518	Optiounsknäppchen	geometresch | Knäppchen | Optiounen | Optiounsknäppchen
+1F51E	ënner uechzéng Joer verbueden	18 | Altersbeschränkung | ënner | ënner uechzéng Joer verbueden | neen | net | uechzéng | verbueden
+1F526	Täscheluucht	Apparat | elektresch | Luucht | Täsch | Täscheluucht
+1F527	Schrauweschlëssel	Handwierksgeschir | Schrauwenzéier | Schrauweschlëssel
+1F528	Hummer	Handwierksgeschir | Hummer
+1F529	Mudder a Schrauf	Handwierksgeschir | Mudder | Mudder a Schrauf | Schrauf
+1F52A	Kichemesser	kachen | Kichemesser | Kichen | Messer | Utensil | Waff
+1F52B	Pistoul	Pistoul | Revolver | Utensil | Waff
+1F52C	Mikroskop	Apparat | Mikroskop | Wëssenschaft
+1F52D	Teleskop	Apparat | Teleskop | Wëssenschaft
+260E	Telefon	Telefon
+2620	Doudekapp a gekräizt Schanken	Doud | Doudekapp | Doudekapp a gekräizt Schanken | gekräizt Schanken | Gesiicht | Monster
+2622	radioaktiv	radioaktiv | Zeechen
+2623	Ëmweltgefor	Ëmweltgefor | Zeechen
+267F	Rollstullzeechen	Rollstullzeechen | Zougank
+2692	Hummer a Piosch	Handwierksgeschir | Hummer | Hummer a Piosch | Piosch
+2693	Anker	Anker | Handwierksgeschir | Schëff
+2694	gekräizt Schwäerter	gekräizt | Schwäerter | Waff
+2695	medezinescht Symbol	Asklepios | Medezin | medezinescht Symbol | Personal
+2696	Wo	Apparat | Gewiicht | Gläichgewiicht | Justiz | Riichter | Stärzeechen | Wo
+2697	Alembique	Alembique | Chimie | Handwierksgeschir
+2699	Zännrad	Handwierksgeschir | Zännrad
+269B	Atomzeechen	Atheist | Atom | Atomzeechen
+269C	Lilie	Lilie
+26A0	Warnung	Warnung
+26CF	Piosch	Grouf | Handwierksgeschir | Piosch
+26D1	Rettungsdéngscht	Gesiicht | Hëllef | Helm | Hutt | Kräiz | Rettungsdéngscht
+26D3	Ketten	Ketten
+26D4	keen Accès	Accès | keen | neen | net | verbueden | Verkéier
+2702	Schéier	Handwierksgeschir | Schéier | schneiden
+2709	Enveloppe	Bréif | E-Mail | Enveloppe
+270F	Bläistëft	Bläistëft
+2712	schwaarz Fieder	Bic | Fieder | schwaarz Fieder | Spëtz
+2714	fettgedréckte Kreepchen	fettgedréckte Kreepchen | Kreepchen | Krop
+2716	fettgedrécktent Multiplikatiounszeechen	fettgedrécktent Multiplikatiounszeechen | Multiplikatioun | multiplizéieren | ofbriechen | x
+2753	Fragezeechen	Fragezeechen | Fro | Interpunktioun | Zeechen
+2757	Ausruffzeechen	Ausruff | Ausruffzeechen | Interpunktioun | Zeechen
+27A1	Feil no riets	Feil | Feil no riets | Himmelsrichtung | Osten | Richtung
+1F500	Zoufallslecture-Knäppchen	Feil | gekräizt | Zoufallslecture-Knäppchen
+1F501	Widderhuelknäppchen	an Zärerichtung | Feil | widderhuelen | Widderhuelknäppchen
+1F502	Widderhuelknäppche fir ee Lidd	an Zärerichtung | eemol | Feil | Widderhuelknäppche fir ee Lidd
+1F503	vertikal Feiler an Zärerichtung	an Zärerichtung | Feil | opzéien | vertikal Feiler an Zärerichtung
+1F504	vertikal Feiler géint Zärerichtung	a géigegesat Richtung | counterclockwise | Feil | géint Zärerichtung | vertikal Feiler géint Zärerichtung
+1F519	ZERÉCK-Feil	Feil | zeréck | ZERÉCK-Feil
+1F51A	ENN-Feil	Enn | ENN-Feil | Feil
+1F51B	UN!-Feil	Feil | Markéierung | un | UN!-Feil
+1F51C	GESCHWËNN-Feil	Feil | geschwënn | GESCHWËNN-Feil
+1F51D	TOP-Feil	Feil | no uewen | Top | TOP-Feil
+1F520	Groussbuschtawen (Latäin)	ABCD | Buschtawen | Eingab | grouss | Groussbuschtawen (Latäin) | latäin
+1F521	Klengbuschtawen (Latäin)	abcd | Buschtawen | Eingab | kleng | Klengbuschtawen (Latäin) | latäin
+1F522	Zueleneingab	1234 | Eingab | Zuelen | Zueleneingab
+1F523	Symbolereingab	〒♪&% | Eingab | Symbolereingab
+1F524	Buschtaweneingab (Latäin)	abc | Alphabet | Buschtawen | Buschtaweneingab (Latäin) | Eingab | latäin
+2B05	Feil no lénks	Feil | Feil no lénks | Himmelsrichtung | Richtung | Westen
+2B06	Feil no uewen	Feil | Feil no uewen | Himmelsrichtung | Norden | Richtung
+2B07	Feil no ënnen	Feil | Feil no ënnen | Himmelsrichtung | no ënnen | Richtung | Süden

@@ -366,7 +366,18 @@ reading before you change either one.
     check, reads as missing, and the host flashes the shipped bundle in its place.
   - v26 and older firmware have a 256 KB icon slot and refuse a larger library at
     BEGIN, so the host sends a library over 256 KB only at v27.
-  **v28** adds cmd `44`, the **tap-hold terms** (`base/tap_terms.h`).
+  **v28** appends an **`A` block** to the GET_ID reply, after `G`: `['A'][u8]`, what
+  owns the keycaps. `0` no animation, `1` the one-shot Eden show (the boot intro or
+  `KC_EDEN`), `2` the Eden screensaver (`IDLE_STYLE_EDEN`). No command changes.
+  - Field 2026-11-09: after a firmware apply the host's connect-time font-pack flash
+    ran during the boot intro. The master drew its legends over Eden and the slave
+    stayed in Eden. The host now holds that flash until the block reads `0`.
+  - The intro starts at the end of `keyboard_post_init_user()`, before the host's
+    first GET_ID, so the first reply after a boot already reads `1`.
+  - It is the MASTER's state. The slave's show starts from the master's `anim_nonce`
+    a few housekeeping passes later and ends at about the same time.
+  - v27 and older firmware have no block. The host flashes at once, as before.
+  **v29** adds cmd `44`, the **tap-hold terms** (`base/tap_terms.h`).
   - Request: `data[2]` op (0 query, 1 set), `data[3..4]` tapping term ms,
     `data[5..6]` Flow Tap term ms, little-endian. `0xFFFF` leaves a term unchanged.
   - Reply, ACK and NACK alike: `data[3..4]` tapping term, `data[5..6]` Flow Tap
@@ -378,7 +389,7 @@ reading before you change either one.
     so an unwritten byte (0) means the default (200 / 150 ms), and "off" is not 0.
     Written at the next settings flush, like the idle timeout.
   - Only the master uses the values. Each half stores its own.
-  - v27 and older firmware NACK the command; their terms are the compile-time
+  - v28 and older firmware NACK the command; their terms are the compile-time
     200 / 150 ms.
 
 ## HID protocol (host → firmware)
@@ -408,7 +419,7 @@ reading before you change either one.
   | 16 | `39` | crash record read + clear |
   | 17 | `20` SET_UNICODE_MODE | VOLATILE flag in `data[3]` — apply in RAM, leave EEPROM alone |
   | 25 | `33` SEND_OVERLAY_MAPPING_W | a `to` of 600..1199 is slot `to - 600` drawn without the legend |
-  | 28 | `44` GET/SET_TAP_TERMS | tapping term and Flow Tap term; ranges CLOSED, unknown NACKs |
+  | 29 | `44` GET/SET_TAP_TERMS | tapping term and Flow Tap term; ranges CLOSED, unknown NACKs |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs

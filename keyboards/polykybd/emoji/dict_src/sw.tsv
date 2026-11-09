@@ -1,0 +1,1258 @@
+# emoji search keywords, sw, from Unicode CLDR release-48 (common/annotations, common/annotationsDerived). Unicode License v3, see LICENSE.
+# codepoint	name	keywords
+1F600	uso unaokenua	kenua | kukenua | uso | uso unaokenua
+1F601	uso uliokenua na macho yanayotabasamu	kenua | macho | tabasamu | uso | uso uliokenua na macho yanayotabasamu
+1F602	uso wenye machozi ya furaha	cheka | chekesha | chozi | furaha | uso | uso wenye machozi ya furaha
+1F603	uso unaotabasamu wenye macho makubwa	funguliwa | mdomo | tabasamu | uso | uso unaokenua wenye macho makubwa | uso unaotabasamu wenye macho makubwa
+1F604	uso unaotabasamu wenye macho ya tabasamu	funguliwa | jicho | mdomo | tabasamu | uso | uso unaokenua wenye macho ya tabasamu | uso unaotabasamu wenye macho ya tabasamu
+1F605	uso unaotabasamu wenye tone la jasho	aridi | funguliwa | jasho | kijasho | tabasamu | uso | uso unaotabasamu wenye tone la jasho | uso unaotabasamu wenye tone la jasho na mdomo uliofunguliwa
+1F606	uso unaotabasamu wenye mdomo wazi na macho yaliyofungwa	cheka | funguliwa | furaha | mdomo | ridhika | tabasamu | uso | uso unaotabasamu wenye mdomo wazi na macho yaliyofungwa
+1F607	uso unaotabasamu ulio na mduara wa mwangaza juu yake	asiye na hatia | duara ya mwangaza | kichimbakazi | malaika | njozi | tabasamu | uso unaotabasamu ulio na mduara wa mwangaza juu yake
+1F608	uso unaotabasamu wenye pembe	kichimbakazi | njozi | pembe | tabasamu | uso | uso unaotabasamu wenye pembe
+1F609	uso unaokonyeza	konyeza | kuvunjika moyo | telezesha | uso | uso unaokonyeza
+1F60A	uso unaotabasamu na macho yanayotabasamu	jicho | tabasamu | uso | uso unaotabasamu na macho yanayotabasamu | wekundu wa uso
+1F60B	uso unaofurahia chakula kitamu	kufurahia | tabasamu | tamu | uso | uso unaofurahia chakula kitamu | utamu
+1F60C	uso uliofarijika	farijika | kufarijika | uso | uso uliofarijika
+1F60D	uso unaotabasamu wenye macho ya umbo la moyo	jicho | moyo | tabasamu | tabasamu la upendo | upendo | uso | uso unaotabasamu wenye macho ya umbo la moyo
+1F60E	uso unaotabasamu uliovaa miwani	hali ya hewa | inayong’aa | jua | tabasamu | uso unaotabasamu uliovaa miwani | vali la macho | wimani ya jua
+1F60F	uso unaobeza	beza | dharau | kubeza | uso | uso unaobeza
+1F610	uso uliotulia	bila hisia | kutulia | sikufurahishwa | uso | uso uliotulia
+1F611	uso uliojikausha	usioeleza chochote | usioonyesha hisia | uso | uso uliojikausha | wenye kujikausha
+1F612	uso usio na furaha	kukosa furaha | kutofurahi | uso | uso usio na furaha
+1F613	uso wenye huzuni na jasho jembamba	jasho | jembamba | uso | uso wenye huzuni na jasho jembamba
+1F614	uso uliozama katika mawazo	huzunishwa | uso | uso uliozama katika mawazo | wenye mawazo
+1F615	uso uliochanganyikiwa	kuchanganyikiwa | uso | uso uliochanganyikiwa
+1F616	uso ulioshangazwa	kushangazwa | uso | uso ulioshangazwa
+1F617	uso unaobusu	busu | deti | nakupenda | uso | uso unaobusu
+1F618	uso unaotoa busu	busu | mahaba | moyo | sawa | uso | uso unaotoa busu
+1F619	uso unaobusu na macho yanayotabasamu	busu | jicho | tabasamu | uso | uso unaobusu na macho yanayotabasamu
+1F61A	uso unaobusu na macho yaliyofungwa	busu | deti | iliyofungwa | jicho | macho | uso | uso unaobusu na macho yaliyofungwa
+1F61B	uso wenye ulimi nje	ulimi | uso | uso wenye ulimi nje
+1F61C	uso unaotoa ulimi nje na kukonyeza jicho	jicho | konyeza | mtu atoaye ulimi nje na kukonyeza kwa jicho | ulimi | uso | uso unaotoa ulimi nje na kukonyeza jicho | utani
+1F61D	uso wenye makengeza na ulimi unaochomoza	jicho | ladha | mbaya | ulimi | uso | uso unaotoa ulimi nje na kufunga macho kabisa | uso wenye makengeza na ulimi unaochomoza
+1F61E	uso uliosikitika	asiye nafuraha | kukataliwa | kushindwa | sikitiko | uso | uso ulio kata tamaa | uso uliosikitika
+1F61F	uso ulio na wasiwasi	kosafuraha | uso | uso ulio na wasiwasi | wasiwasi
+1F620	uso uliojaa hasira	hasira | kasirika | kujaa hasira | uso | uso uliojaa hasira
+1F621	uso uliobibidua midomo	bibidua midomo | chukiza | ghadhabu | hasira | kasirika | nyekundu | uso | uso uliobibidua midomo
+1F622	uso unaolia	chozi | huzuni | lia | mtu anaye lia | uso | uso unaolia
+1F623	uso unaovumilia	kuvumilia | uso | uso unaovumilia | vumilia
+1F624	uso wenye mvuke unaotoka puani	hakuna furaha | hasira | hisia | kuzira | shinda | ushindi | uso | uso wenye mvuke unaotoka puani
+1F625	Uso wenye huzuni lakini unaoonyesha kufarijika	faraja | kufarijika | kusikitika | uso | uso uliosikitika lakini unaoonyesha kufarijika | Uso wenye huzuni lakini unaoonyesha kufarijika
+1F626	uso ulionuna wenye mdomo uliofunguliwa	alama ya kushangazwa | funguliwa | kukutwa bila kutegemea | kununa | mdomo | uso | uso ulionuna wenye mdomo uliofunguliwa
+1F627	uso unaoonyesha uchungu	uchungu | uso | uso unaoonyesha uchungu
+1F628	uso unaoogopa	kuhofu | kuogopa | uso | uso unaoogopa | woga
+1F629	uso unaoonyesha uchovu	kuchoka | uchovu | uso | uso unaoonyesha uchovu
+1F62A	uso unaosinzia	usingizi | uso | uso unaosinzia
+1F62B	uso uliochoka	kuchoka | kuhisi | uchovu | uso | uso uliochoka
+1F62C	uso uliokunjwa	kunja | meno | mganga wa meno | onyesha meno | uso | uso uliokunjwa
+1F62D	uso unaolia kwa sauti	chozi | huzuni | kulia | lia | machozi | uso | uso unaolia kwa sauti
+1F62E	uso wenye mdomo ulio wazi	funguliwa | huruma | mdomo | shangaa | uso | uso wenye mdomo ulio wazi
+1F62F	uso ulionyamaa	kunyamaa | kushangazwa | kustaajabu | uso | uso ulionyamaa
+1F630	uso wenye wasiwasi unaotokwa na jasho	funguliwa | jasho | jembamba | mdomo | samawati | sisimka | uso wenye midomo wazi | uso wenye wasiwasi unaotokwa na jasho | wasiwasi
+1F631	uso unaopiga mayowe ya hofu	kuhofu | kula | kuogopa | mayowe | uso | uso unaopiga mayowe ya hofu | woga
+1F632	uso uliostaajabu	kabisa | kushangaa | kushtuliwa | kustaajabishwa | uso | uso uliostaajabu
+1F633	uso uliojawa msisimko	inashangaza | kizunguzungu | kutoamini | shangaza | sisimka | uso | uso uliojawa msisimko
+1F634	uso unaoonyesha usingizi	kusinzia | lala | usiku | usingizi | uso | uso unaoonyesha usingizi
+1F635	uso unaoonyesha kuwa na kizunguzungu	kizunguzungu | kuchoka | uso | uso unaoonyesha kuwa na kizunguzungu
+1F636	uso bila mdomo	kimya | kunyamaza | mdomo | uso | uso bila mdomo
+1F637	uso uliovaa barakoa ya matibabu	barakoa | daktari | dawa | mafua | mgonjwa | uso | uso uliovaa barakoa ya matibabu
+1F638	uso wa paka mwenye tabasamu wenye macho ya tabasamu	jicho | kenua | paka | tabasamu | uso | uso wa paka mwenye tabasamu wenye macho ya tabasamu | uso wa paka unaokenua wenye macho yanayotabasamu
+1F639	paka mwenye machozi ya furaha	chozi | furaha | paka | paka mwenye machozi ya furaha | uso
+1F63A	uso wa paka mwenye tabasamu	funguliwa | kucheka | mdomo | onyesha taba samu | paka | tabasamu | uso | uso wa paka mwenye tabasamu
+1F63B	uso wa paka unaotabasamu wenye macho yenye umbo la moyo	jicho | moyo | paka | tabasamu | upendo | uso | uso wa paka unaotabasamu wenye macho yenye umbo la moyo
+1F63C	uso wa paka wenye tabasamu la kulazimisha	kejeli | kulazimisha | paka | tabasamu | uso | uso wa paka wenye tabasamu la kulazimisha
+1F63D	uso wa paka anayebusu	busu | jicho | paka | uso | uso wa paka anayebusu
+1F63E	uso wa paka uliobibidua midomo	kubibidua midomo | paka | uso | uso wa paka uliobibidua midomo
+1F63F	uso wa paka unaolia	chozi | huzuni | lia | mnyama | paka | uso | uso wa paka unaolia
+1F640	uso wa paka uliochoka	lo! | paka | shangazwa | uchovu | uso | uso wa paka uliochoka
+1F641	uso ulionuna kiasi	kununa | uso | uso ulionuna kiasi
+1F642	uso unaotabasamu kwa mbali	tabasamu | uso | uso unaotabasamu kwa mbali
+1F643	uso uliogeuzwa juu chini	kugeuzwa juu chini | uso | uso uliogeuzwa juu chini
+1F644	usio wenye macho yanayorembua	kubiringika | kurembua | macho | siamini | usio wenye macho yanayorembua | uso | uso wenye macho yanayorembua
+1F648	nyani aliyefumba macho kwa mikono	aibu | angalia | marufuku | mnyama | nyani | nyani aliyefumba macho kwa mikono | uovu | uso
+1F649	nyani aliyefunika masikio kwa mikono	kusikia | marufuku | nyani | nyani aliyefunika masikio kwa mikono | sikiliza | uovu | usisikie maovu | uso
+1F64A	nyani aliyefunika mdomo kwa mikono	kuzungumza | marufuku | nyani | nyani aliyefunika mdomo kwa mikono | uovu | uso
+1F910	uso uliofungwa mdomo kwa zipu	funga mdomo | kimya | mdomo | nyamaza | siri | uso | uso uliofungwa mdomo kwa zipu | zipu
+1F911	uso unaoonyesha pesa ya noti mdomoni	imelipwa | mdomo | noti mdomoni | pesa | uso | uso unaoonyesha pesa ya noti mdomoni
+1F912	uso wenye kipimajoto mdomoni	homa | mtu mwenye kipima joto mdomoni | ngonjwa | pima joto | ugonjwa | uso | uso wenye kipimajoto mdomoni
+1F913	uso wa mjuaji	mjuaji | Mjuaji | mjuzi wa teknolojia | mtaalamu wa mambo | uso | uso wa mjuaji | Uso wa mjuaji
+1F914	uso unaotafakari	kufikiri | kushangaa | uso | uso unaotafakari
+1F915	uso uliofungwa bandeji kichwani	bandeji | kuumia | maumivu | uso | uso uliofungwa bandeji | uso uliofungwa bandeji kichwani
+1F916	roboti	roboti | uso | zimwi
+1F917	uso unaokumbatia	kukumbatia | kumbatia | uso | uso unaokumbatia
+1F920	uso wenye kofia	kofia | uso | uso wenye kofia
+1F921	katuni	katuni | uso
+1F922	kichefuchefu	kichefuchefu | kizunguzungu | kutapika | mgonjwa | ugonjwa | uso
+1F923	angua kicheko	angua kicheko | cheka | chekesha | furaha | kugaragara | sakafu | uso
+1F924	kutema mate	kutema mate | uso
+1F925	uso unaodanganya	kudanganya | pinocchio | uso unaodanganya | uwongo
+1F926	ishara ya kutoamini	hali ya kushangaa | ishara ya kutoamini
+1F927	kupiga chafya	gesundheit | homa | kupiga chafya | mafua | ugonjwa | uso
+1F928	uso wenye nyusi zilizoinuka	kushuku | tuhumu | uso wenye nyusi zilizoinuka
+1F929	uso wenye macho ya nyota	kukenua | macho | nyota | uso | uso wenye macho ya nyota
+1F92A	uso wa kutania	jicho | kubwa | ndogo | uso wa kutania
+1F92B	uso unaonyamazisha	kimya | nyamaza | shh | uso unaonyamazisha
+1F92C	uso wenye ishara mdomoni	kuapa | kutukana | uso wenye ishara mdomoni
+1F92D	uso uliofunika mdomo kwa mkono	kugundua kwa ghafla | lo! | mshangao | mshtuko | siri | uso uliofunika mdomo kwa mkono
+1F92E	uso unaotapika	mgonjwa | tapika | uso unaotapika
+1F92F	kichwa kinacholipuka	haiwezekani | kichwa kinacholipuka | lipuka | mshtuko
+1F970	uso wenye tabasamu na maumbo ya moyo	huba | mahaba | mapenzi | moyo | Nakupenda | tabasamu | tamani | uso | uso wenye tabasamu na mahaba | uso wenye tabasamu na maumbo ya moyo
+1F971	uso unaopiga miayo	choka | kuchoka | piga miayo | sinzia | uchovu | uso unaopiga miayo
+1F972	uso unaotabasamu na wenye chozi	asante | chozi | faraja | furaha | kujivunia | kutabasamu | kutulia | uso unaotabasamu na wenye chozi
+1F973	uso wenye kofia ya karamu	filimbi | furaha | karamu | kofia | sherehe | siku ya kuzaliwa | uso | uso wenye kofia ya karamu
+1F974	uso uliolewa	kilevilevi | kizunguzungu | mlevi | mvinyo | ulevi | uso uliolewa
+1F975	uso wenye joto	homa | joto | joto jingi | kijasho | kufa | ulimi nje | uso mwekundu | uso wenye joto
+1F976	uso wenye baridi	barafu | baridi | buluu | kuganda | theluji | uso | uso wa samawati | uso wenye baridi
+1F978	uso uliogeuzwa ili kuficha	jasusi | kodoa macho | kujificha | kujifunika | masharubu | miwani | mtu | pua | uso | uso uliogeuzwa ili kuficha
+1F97A	uso unaosihi	hisi | kuhuzunika | kuomba | kwanini | macho makumbwa | macho yanayosihi | onea huruma | sihi | tafadhali | uso unaosihi
+1FAE0	uso unaoyeyuka	aibu | didimia | fifia | toweka | uso | uso unaoyeyuka | yeyuka
+1FAE1	uso unaopiga saluti	jeshi | kila la heri | ndiyo | safi | saluti | sawa | uchangamfu | uso unaopiga saluti
+1FAE2	uso wenye macho wazi na mkono kwenye mdomo	aibu | kushangaa | kustaajabu | kutoamini | mshangao | uso | uso wenye macho wazi na mkono kwenye mdomo | woga
+1FAE3	uso wenye macho yanayochungulia	aibu | chungulia | ficha | jicho | jifiche | kodolea | uso | uso wenye macho yanayochungulia | vutiwa
+1FAE4	uso wenye mdomo uliopinda	kuchanganyikiwa | kushuku | kusikitika | kutokuwa na uhakika | kutovutiwa | mdomo | sikitika | uso | uso wenye mdomo uliopinda
+1FAE5	uso uliochorwa kwa vitone	kujificha | kutoonekana | kutoweka | mfadhaiko | mndani | poa tu | uso uliochorwa kwa vitone
+1FAE7	viputo	chini ya maji | kibofu | sabuni | safi | teuka | viputo
+1FAE8	uso unaotikisika	ajabu | butwaa | hofu | jamani! | kutikisika | mshituko | mtetemeko | shangaza | shindo | Tabasamu na Hisia | tetema | tetemeka | tetemeko la ardhi | uso | uso unaotikisika | uuwii | wow
+1F381	zawadi iliyofungwa	chrismasi | iliyofungwa | kusherehekea | sanduku | zawadi
+1F389	mapambo ya sherehe	kusherehekea | mapambo ya sherehe | puto | sherehe | tada
+1F38A	mpira wa mapambo	kusherehekea | mapambo | mpira | mpira wa mapambo
+1F47B	pepo	kichimbakazi | kiumbe | njozi | pepo | uso | zimwi
+1F47C	mtoto malaika	kanisa | kichimbakazi | malaika | mtoto | njozi | uso
+1F47D	jitu geni	anga | hadithi | jitu geni | kitu kisichojulikana kinachopaa hewani | kiumbe | njozi | uso | zimwi
+1F47E	dubwana geni	anga | dubwana geni | geni | kitu kisichojulikana kinachopaa hewani | kiumbe | njozi | zimwi
+1F47F	kishetani	kichimbakazi | kishetani | njozi | pepo | shetani | uso
+1F480	fuvu	fuvu | kichimbakazi | kifo | uso | zimwi
+1F481	mhudumu anayetoa maelezo	anayejiamini | maelezo | mhudumu anayetoa maelezo | mkono | umbea | usaidizi
+1F482	mlinzi	askari mlinda gati | mlinzi
+1F489	bomba la sindano	bomba la sindano | daktari | dawa | kuchoma sindano | mgonjwa | sindano | sindano ya mafua | zana
+1F48A	kidonge	dakitari | daktari | dawa | kidonge | mgonjwa | punje | vitamini
+1F4A2	alama ya hasira	alama ya hasira | ghadhabu | hasira | kasirika | kibonzo
+1F4A4	usingizi	kibonzo | kulala | lala | sinzia | usingizi
+1F4A5	mgongano	bomu | kibonzo | lipua | mgongano | mlio
+1F4A6	matone ya jasho	jasho | kibonzo | kuchoka | maji | matone | matone ya jasho
+1F4A7	tone	hali ya hewa | jasho | jembamba | kibonzo | tone
+1F4A8	kuharakisha	dashi | kibonzo | kuharakisha | kukimbia
+1F4A9	kinyesi	kibonzo | kinyesi | mavi | uso | zimwi
+1F4AB	kizunguzungu	kibonzo | kizunguzungu | nyota
+1F4AC	kitufe cha usemi	ishara | kibonzo | kitufe cha usemi | mazungumzo | povu | puto | usemi
+1F4AD	kitufe cha mawazo	ishara | kibonzo | kitufe cha mawazo | puto | wazo
+1F4AE	ua jeupe	ua | ua jeupe
+1F4A0	almasi yenye kitone	almasi | almasi yenye kitone | jiometri | kibonzo | ndani
+1F4A1	taa	balbu | kibonzo | mwanga | taa | umeme | wazo
+1F4A3	bomu	bomu | kibonzo
+1F4AF	pointi mia moja	100 | alama | hakika | kamili | mia moja | pointi mia moja
+1F4B0	mfuko wa pesa	benki | dola | kulipa | mfuko | mfuko wa pesa | pesa
+1F4B1	sarafu mbalimbali	benki | pesa | sarafu | sarafu mbalimbali | ubadilishaji wa pesa
+1F4B2	alama ya dola	alama nzito ya dola | alama ya dola | dola | pesa | sarafu
+1F4B8	pesa za noti zenye mabawa	benki | dola | mabawa | noti | pepea | pesa | pesa za noti zenye mabawa
+1F525	moto	choma | moto | mwale | mwali | zana
+1F52E	tufe la kioo	bahati | kichimbakazi | kioo | mpira | njozi | tufe la kioo | zana
+1F440	macho	angalia | jicho | kuona | macho | mwili | ona | uso
+1F441	jicho	jicho | jicho moja | mwili
+1F442	sikio	mwili | sikio
+1F443	pua	harufu | mwili | pua
+1F444	mdomo	busu | mdomo | midomo | mwili
+1F445	ulimi	lamba | mwili | ulimi
+1F446	kidole cha kwanza kinachoelekeza juu kwa nyuma	cha shahada | elekeza | juu | kidole cha kwanza kinachoelekeza juu kwa nyuma | kidole cha shahada kinachoelekeza juu kwa nyuma | kidole chanda | mkono | nyuma ya mkono
+1F447	kidole cha kwanza kinachoelekeza chini kwa nyuma	cha shahada | elekeza | kidole | kidole cha kwanza kinachoelekeza chini kwa nyuma | kidole cha shahada kinachoelekeza chini kwa nyuma | mkono | nyuma ya mkono
+1F448	kidole cha shahada kinachoelekeza kushoto	cha shahada | elekeza | kidole | kidole cha shahada kinachoelekeza kushoto | mkono | nyuma ya mkono
+1F449	kidole cha shahada kinachoelekeza kulia	cha shahada | elekeza | kidole | kidole cha shahada kinachoelekeza kulia | mkono | nyuma ya mkono
+1F44A	ngumi uliyonyooshewa	konde | kunja ngumi | mkono | mwili | ngumi | ngumi iliyonyooshewa | ngumi uliyonyooshewa
+1F44B	mkono unaopunga	aga | kupunga | kwaheri | mkono | mkono unaopunga | mwili | punga | salamu | upo?
+1F44C	mkono wa kuonyesha mambo yako shwari	ishara ya kukubali | kiganja | mkono | mkono wa kuonyesha mambo yako shwari | mwili | poa | sawa | sawa kabisa | vizuri
+1F44D	dole gumba juu	1 | dole gumba juu | dole juu | gumba | juu | kubali | mkono | mwili | ndiyo | nzuri | Sawa | vizuri
+1F44E	dole gumba chini	-1 | alama ya kukataa | chini | dole gumba chini | gumba | hapana | kutoridhika | mkono | mwili | si nzuri | sitaki
+1F44F	mikono inayopiga makofi	hongera | kazi nzuri | makofi | mikono inayopiga makofi | mkono | mwili | piga makofi | vizuri
+1F450	mikono iliyowazi	mikono iliyowazi | mkono | mwili | wazi
+261D	kidole cha shahada kinachoelekeza juu	cha shahada | elekeza | juu | kidole | kidole cha shahada kinachoelekeza juu | mkono
+270A	ngumi iliyoinuliwa	konde | kunja ngumi | mkono | mwili | ngumi | ngumi iliyoinuliwa | pamoja | umoja
+270B	mkono ulioinuliwa	mkono | mkono ulioinuliwa
+270C	mkono wa ushindi	mkono | mkono wa ushindi | mwili | ushindi | v
+270D	mkono unaoandika	andika | mkono | mkono unaoandika | mwili
+1F4AA	misuli iliyotunishwa	kibonzo | misuli iliyotunishwa | misuli za mikono | musuli | mwili | tunisha
+1F590	mkono ulioinuliwa wenye vidole vilivyotanuliwa	kidole | mkono | mkono ulioinuliwa wenye vidole vilivyotanuliwa | mwili | tanuliwa
+1F64C	mikono iliyoinuliwa	inuliwa | ishara | kusherehekea | mikono iliyoinuliwa | mkono | mwili | shangwe
+1F64F	mikono iliyokunjwa	asante | inama | kunjwa | mikono iliyokunjwa | omba | shukrani | tafadhali | uliza
+1F90C	mkono wenye vidole vinavyobana	ishara ya mkono | kejeli | kidogo | kubanwa | kuuliza | mkono | mkono wenye vidole vinavyobana | subiri kidogo | vidole
+1F90F	vidole vinavyobana	kiasi fulani | kiasi kidogo | kidogo | kidunchu | vidole vinavyobana
+1F918	ishara ya pembe	cheza | ishara ya pembe | kidole | mkono | mwili | pembe
+1F919	ishara ya “nipigie simu”	ishara ya “nipigie simu” | mkono | nipigie simu
+1F91A	kuinua mkono	kiganja | kuinua mkono | mkono juu
+1F91B	ngumi ya kulia	ngumi ya kulia
+1F91C	ngumi ya kushoto	ngumi | ngumi ya kushoto
+1F91D	kusalimiana	kukutana | kusalimiana | maafikiano | makubaliano | salamu
+1F91E	ishara ya kubahatisha	bahati | ishara ya kubahatisha | kubahatisha | mkono
+1F91F	ishara ya "nakupenda"	ishara ya "nakupenda" | mkono | nakupenda
+1F932	viganja vilivyoshikana	maombi | viganja vilivyoshikana
+1F9B4	mfupa	gofu | mbwa | mfupa | mifupa
+1F9B5	mguu	goti | kiungo | mguu | mguu ulio jikunja | teke
+1F9B6	wayo	kanyaga | piga teke | unyayo | wayo
+1F9B7	jino	daktari wa meno | jino | jino jeupe | meno
+1F9E0	ubongo	akili | mwerevu | ubongo
+1F9BE	mkono bandia	mkono bandia | mkono wa roboti | ufikivu
+1FAC0	moyo	kadiolojia | katikati | mapigo | mapigo ya moyo | mdundo | moyo | pigo la moyo | roho | sehemu ya mwili
+1FAC1	mapafu	kupumua | kutoa pumzi | kuvuta pumzi | mapafu | pafu | pumzi | sehemu ya mwili
+1FAE6	kuuma mdomo	hofu | kuchezea | kufadhaika | kuogopa | kuuma mdomo | mdomo | wasi wasi | wasiwasi | woga
+1FAF0	vidole vya shahada na gumba vinavyopitana	ghali | hela | moyo | mshiko | mwaliko | pesa | upendo | vidole vya shahada na gumba vinavyopitana
+1FAF1	mkono unaoelekea kulia	kuelekea | kulia | mkono | mkono unaoelekea kulia
+1FAF2	mkono unaoelekea kushoto	kuelekea kushoto | kushoto | mkono | mkono unaoelekea kushoto
+1FAF3	mkono wenye kiganja kinachoelekea chini	angusha | dondosha | fukuza | mkono | mkono wenye kiganja kinachoelekea chini | puuza
+1FAF4	mkono wenye kiganja kinachoelekea juu	ita | mkono | mkono wenye kiganja kinachoelekea juu | nipe | njoo | patia | shika
+1FAF5	kidole cha shahada kinachomwelekea mtazamaji	kidole | kidole cha shahada kinachomwelekea mtazamaji | kuelekezea kidole | wewe
+1FAF6	mikono inayoonyesha ishara ya moyo	mapenzi | mikono | mikono inayoonyesha ishara ya moyo | moyo | penzi | upendo
+1FAF7	mkono unaosukuma kushoto	kataa | kushoto | mkono | mkono unaosukuma kushoto | ngoja kwanza | nipe tano | salamu | simama | simamisha | sitisha | subiri | sukuma | zuia
+1FAF8	mkono unaosukuma kulia	kataa | kulia | mkono | mkono unaosukuma kulia | ngoja kwanza | nipe tano | salamu | simama | simamisha | sitisha | subiri | sukuma
+2764	moyo mwekundu	hisia | moyo | moyo mwekundu | upendo
+1F380	utepe	kusherehekea | utepe
+1F382	keki ya kusherehekea siku ya kuzaliwa	keki | keki ya kusherehekea siku ya kuzaliwa | kitindamlo | kusherehekea | sherehe | siku ya kuzaliwa | tamu | vitobosha
+1F383	taa ya malenge yenye umbo la uso wa mtu	halloween | jack | kusherehekea | taa | taa ya malenge yenye umbo la uso wa mtu
+1F384	mti wa krismasi	krismasi | mti | mti wa krismasi | sherehe
+1F386	fataki	fataki | kufurahisha | sherehe
+1F387	kimetameta	fataki | kimetameta | kusherehekea | metameta
+1F388	puto	puto | sherehe | sherehe ya kuzaliwa | sherehekea
+1F9E7	bahasha nyekundu	bahasha nyekundu | hongbao | kila la heri | lai see | pesa | zawadi
+1F9E8	fataki ya kuchezea	baruti | fataki | fataki ya kuchezea | kilipuzi | moto | mwanga
+1F38B	mti wa tanabata	bango | kijapani | kusherehekea | mti | mti wa tanabata
+1F38C	bendera mbili zilizopishana	bendera mbili zilizopishana | iliyopishanishwa | kijapani | Kijapani | kusherehekea | pishana | pishanisha
+1F38D	mapambo ya msonobari	kijapani | kusherehekea | mapambo ya msonobari | mmea | msonobari | mwanzi
+1F38E	wanaserere wa kijapani	kijapani | kusherehekea | mwanaserere | mwanasesera | sherehe | wanaserere wa kijapani
+1F38F	bendera ya kambare mamba	bendera | bendera ya kambare mamba | kambare | kusherehekea
+1F390	kengele ya upepo	kengele | kengele ya upepo | kulia | kusherehekea | upepo
+1F391	sherehe ya mwezi	kusherehekea | mwezi | sherehe | sherehe ya mwezi
+1F393	kofia ya mahafali	hitimu | kofia | kofia inayovaliwa kwenye sherehe za kuhitimu masomo | kofia ya afali | kofia ya mahafali | kusherehekea | mavazi
+1F484	rangi ya midomo	rangi ya midomo | urembo | vipodozi
+1F485	rangi ya kupaka kwenye kucha	kucha | mwili | rangi | rangi ya kupaka | rangi ya kupaka kwenye kucha | tengeneza kucha | tunza | vipodozi
+1F48B	alama ya busu	alama | alama ya busu | busu | mapenzi | midomo | moyo
+1F48C	barua ya mapenzi	barua | barua ya mapenzi | mapenzi | moyo | upendo
+1F48D	pete	almasi | mapenzi | pete | pete ya almasi
+1F48E	kito	almasi | harusi | kito | mapenzi
+1F48F	busu	busu | mahaba | mapenzi | moyo | mume na mke
+1F490	shada la maua	mapenzi | mmea | shada la maua | ua
+1F491	mume na mke na ishara ya moyo	mapenzi | moyo | mume na mke | mume na mke na ishara ya moyo | upendo
+1F492	harusi	harusi | kanisa | mapenzi
+1F493	moyo unaodunda	kupiga | mapigo ya moyo | mbio | moyo | moyo unaodunda
+1F494	moyo uliovunjika	hisia | huzuni | kuvunjika moyo | moyo | moyo uliovunjika | upweke | vunja | vunjika
+1F495	mioyo miwili	mioyo miwili | moyo’ upendo
+1F496	moyo unaong’aa	furahia | metameta | moyo | moyo unaong’aa
+1F497	moyo uaokua	furahia | kukua | moyo | moyo uaokua | mpaigo ya moyo | wasiwasi
+1F498	moyo uliopenyezwa mshale	alama ya mapenzi | deti | mahaba | mapenzi | moyo | moyo uliopenyezwa mshale | mshale
+1F499	moyo ya samawati	moyo | moyo wa bluu | moyo ya samawati | samawati | upendo
+1F49A	moyo wa kijani	kijani | moyo | moyo wa kijani | upendo mbichi
+1F49B	moyo wa manjano	143 | hisia | manjano | moyo | moyo wa manjano | upendo
+1F49C	moyo wa zambarau	moyo | moyo wa zambarau | zambarau
+1F49D	moyo uliofungwa kwa utepe	143 | busu | moyo | moyo uliofungwa kwa utepe | utepe | valentine
+1F49E	mioyo inayozunguka	kuzunguka | mioyo inayozunguka | moyo
+1F49F	mapambo ya moyo	hisia | mapambo ya moyo | moyo | moyo wa zambarawe
+1F90D	moyo mweupe	moyo | moyo mweupe | moyo safi | nyeupe
+1F90E	moyo wa hudhurungi	hudhurungi | kahawia | moyo | moyo wa hudhurungi | moyo wa kahawia
+1F9E1	moyo wa rangi ya chungwa	chungwa | moyo | moyo wa rangi ya chungwa
+1FA75	moyo wa buluu hafifu	143 | bluu bahari | bluu kijani | buluu | hafifu | hisia | maalum | mawingu ya bluu | moyo | moyo wa buluu hafifu | nakupenda | penda | rembo | upendo
+1FA76	moyo wa kijivu	143 | fedha | hisia | kijivu | maalum | moyo | moyo wa kijivu | nakupenda | tabasamu na hisia | upendo
+1FA77	moyo wa waridi	143 | husudu | maalum | mlimbwende | moyo | moyo wa waridi | mzuri | nakupenda | penda | rembo | tabasamu na hisia | upendo | waridi
+2763	umbo la moyo lenye alama ya mshangao	alama | alama ya moyo mzito | moyo mzito | moyo wenye mshangao | mshangao | uakifishaji | umbo la moyo lenye alama ya mshangao
+2733	kinyota chenye ncha nane	* | kinyota | kinyota chenye ncha nane
+2734	nyota yenye ncha nane	* | nyota | nyota yenye ncha nane
+2747	metameta	* | metameta | ngara
+1F3E0	jengo la nyumba	jengo | jengo la nyumba | nyumba | nyumbani
+1F3E1	nyumba yenye ua	bustani | jengo | nyumba | nyumba yenye ua | nyumbani
+1F3E2	jengo la ofisi	jengo | jengo la ofisi
+1F3E3	posta ya japani	jengo | kijapani | posta | posta ya japani
+1F3E4	posta	jengo | posta | ulaya
+1F3E5	hospitali	daktari | dawa | hospitali | jengo
+1F3E6	benki	benki | jengo
+1F3E7	alama ya ATM	alama ya ATM | atm | benki | mwenye kuhesabu | otomatiki | pesa
+1F3E8	hoteli	hoteli | jengo
+1F3E9	hoteli ya mapenzi	hoteli | hoteli ya mapenzi | jengo | upendo
+1F3EA	duka la karibu	duka | duka la karibu | jengo
+1F3EB	shule	jengo | shule
+1F3EC	duka kuu	duka | duka kuu | jengo
+1F3ED	kiwanda	jengo | kiwanda
+1F3EE	taa nyekundu ya karatasi	baa | kijapani | mwanga | nyekundu | taa | taa nyekundu ya karatasi
+1F3EF	kasri la kijapani	jengo | kasri | kasri la kijapani | kijapani
+1F3F0	kasri	jengo | jengo la kifalme | kasri | ulaya
+1F463	nyayo	alama | mavazi | miguu tupu | mwili | nyayo | tembea
+1F464	kivuli cha kichwa na mabega ya mtu	kivuli | kivuli cha kichwa na mabega ya mtu | sanamu ya kichwa na mabega ya mtu
+1F465	vivuli vya vichwa na mabega ya watu	kivuli | marafiki | rafiki | sanamu ya kichwa na mabega ya mtu | sanamu za kichwa na mabega ya mtu katika kivuli | vivuli vya vichwa na mabega ya watu
+1F466	mvulana	kijana | mvulana
+1F467	msichana	bikira | kijana | mashuke | msichana | mwali | zodiaki
+1F468	mwanamume	mtu | mtu mzima | mvulana | mwanamume | rafiki
+1F469	mwanamke	msichana | mwanamke | ukataji nywele
+1F46A	familia	baba | familia | mama | mtoto
+1F46B	mwanamke na mwanamume walioshikana mikono	kushikana mikono | mkono | mume na mke | mwanamke | mwanamke na mwanamume walioshikana mikono | mwanamume | shikilia
+1F46C	wanaume walioshikana mikono	Gemini | kushikana mikono | mapacha | mashoga | mwanamume | wanaume | wanaume walioshikana mikono | wanaume wawili | zodiaki
+1F46D	wanawake walioshikana mikono	Dada | jinsia moja | kushikana mikono | marafiki wa kike | mashoga | mkono | wagaji | wanawake | wanawake walioshikana mikono | wanawake wawili
+1F46E	askari polisi	afisa | afisa wa polisi | askari polisi | askari polisi wa kiume | mtu mume | polisi
+1F46F	watu wanaosherehekea	mapacha | mcheza dansi | msichana | mwanamke | sikio | sungura | wacheza dansi | washereheshaji | wasichana washereheshaji | watu wanaosherehekea
+1F470	mtu aliyevaa shela	bi harusi | bi harusi aliyevaa shela | bibi harusi | harusi | mtu aliyevaa shela | shela
+1F471	mtu mwenye nywele za shaba	mtu mwenye nywele za shaba | mtu: nywele ya shaba | nywele | nywele za shaba | rangi ya shaba
+1F472	mwanamume aliyevaa kofia ya kichina	gua pi mao | kofia | mwanamume | mwanamume aliyevaa kofia ya kichina
+1F473	mwanaume aliyefunga kilemba	kilemba | mwanamume | mwanamume aliyefunga kkilemba | mwanaume aliyefunga kilemba
+1F474	babu	babu | mtu mzee | mwanamume | mzee
+1F475	bibi	bibi | busura | kunyolewa vibaya | mwanamke | mzee
+1F476	mtoto	kijana | mchanga | mimba | mtoto
+1F477	mfanyakazi wa ujenzi	kofia | kofia ngumu | mfanyakazi | mfanyakazi wa ujenzi | ujenzi
+1F478	binti mfalme	binti mfalme | kichimbakazi | malkia | njozi | taji
+1F479	zimwi	kichimbakazi | kijapani | kinyago | kiumbe | mila | njozi | uso | zimwi
+1F47A	afriti	afriti | kichimbakazi | kijapani | kiumbe | njozi | uso | zimwi
+1F483	mwanamke anayecheza	cheza | densi | furahia | mwanamke anayecheza | mwanamke anayecheza dansi | ngoma
+1F486	kukanda uso	kukanda | kukanda uso | kusinga | mahali panapotoa huduma zinazohusiana na mitindo | saluni ya kike
+1F487	kukata nywele	kinyozi | kukata nywele | ukumbi | urembo
+1F645	mtu anayeonyesha ishara ya kukataa	hapana | ishara | ishara ya kukataa | katazwa | marufuku | mkono | mtu anayeonyesha ishara ya kukataa | siyo
+1F646	mtu anayeonyesha ishara ya kukubali	ishara | ishara ya kukubali | mkono | mtu anayeonyesha ishara ya kukubali | sawa
+1F647	mtu aliyeinama	hali ya kujutia | inama | ishara | msamaha | mtu aliyeinama | samahani
+1F64B	mtu mwenye furaha aliyeinua mkono	furaha | inua mkono | inuliwa | ishara | mimi | mkono | mtu mwenye furaha aliyeinua mkono | naelewa | najua | swali
+1F64D	mtu anayekunja kipaji cha uso	chukizwa | ishara | kasirika | kukosa matumaini | mtu aliye chukizwa | mtu anayekunja kipaji cha uso
+1F64E	mtu aliyebibidua midomo	bibidua midomo | ishara | kukosa matumaini | kununa | mtu aliyebibidua midomo
+1F930	mwanamke mjamzito	mjamzito | mwanamke
+1F931	kunyonyesha mtoto	kunyonyesha | mtoto | titi
+1F933	selfi	kamera | selfi | selfie | simu
+1F934	mwana wa mfalme	mwana wa mfalme
+1F935	mtu aliyevaa tuxedo	bwana harusi | mtu aliyevaa tuxedo | Mtu wa kiume | mwanamume mwenye tuxedo | tuxedo
+1F936	mkongwe	bibi | Krismasi | mama | mkongwe | nyanya | sherehe
+1F937	ishara ya kutojali	ishara ya kutojali | sielewi | sijali
+1F385	baba krismasi	baba | kichimbakazi | krismasi | njozi | santa | sherehe
+1F9B8	shujaa	mshindi | mzuri | nguvu zisizo za kawaida | shujaa | shujaa wa kike
+1F9B9	jambazi sugu	jambazi | jambazi sugu | mhalifu | mtu mbaya | mwovu | nguvu zisizo za kawaida | uovu
+1F9BF	mguu bandia	mguu bandia | mguu wa roboti | ufikivu
+1F9D0	uso wenye miwani kwenye jicho moja	iliyorembwa | uso wenye miwani kwenye jicho moja | yakupendeza
+1F9D1	mtu mzima	asiyejitambulisha na jinsia yoyote | jinsia | mtu mzima
+1F9D2	kijana	asiyejitambulisha na jinsia yoyote | jinsia | kijana
+1F9D3	mzee	asiyejitambulisha na jinsia yoyote | mtu mzee | mzee
+1F9D4	mtu mwenye ndevu	mtu | mtu mwenye ndevu | mtu: ndevu | mwanamume mwenye ndevu | ndevu | ndevu za mwanamumu
+1F9D5	mwanamke aliyejifunga kitambaa kichwani	hijab | kitambaa | kitambaa cha kichwani | mwanamke aliyejifunga kitambaa kichwani | neti ya kichwani
+1F9D6	mtu katika bafu la mvuke	chumba cha mvuke | kujifukiza | mtu katika bafu la mvuke | sauna
+1F9D7	mtu anayekwea	mkwezi | mtu anayekwea
+1F9D8	mtu anayetaamali	mtu anayetaamali | mwanamke anayefanya yoga | tafakuri | yoga
+1F9D9	mlozi	mchawi | mchawi wa kike | mlozi | mlozi mwanamke | mwanga
+1F9DA	kichimbakazi	jini | kichimbakazi | kichimbakazi malkia | kichimbakazi mfalme
+1F9DB	mnyonya damu	Dracula | mnyonya damu | zimwi
+1F9DC	nguva mtu	nguva | nguva dume | nguva jike | nguva kike | nguva mtu
+1F9DD	kibwengo	kibwengo | mazingaombwe
+1F9DE	jini	jini | pepo jini
+1F9DF	dubwana	dubwana | mazimwi | zimwi
+1FAC2	watu wanaokumbatiana	asante | hujambo | kumbatia | kwaheri | mapenzi | pambaja | urafiki | watu wanaokumbatiana
+1FAC3	mwanamume mwenye kitambi	kitambi | kuvimba | mimba | mtu | mwanamume mwenye kitambi | tumbo lililojaa | utambi
+1FAC4	mtu mwenye mimba	kitambi | kuvimba | kuvimbiwa | mimba | mjamzito | mtu mwenye mimba | tumbo lililojaa
+B9	weka moja juu	herufijuu | moja | weka moja juu
+B2	weka mbili juu	herufijuu | mbili | mraba | weka mbili juu
+B3	weka tatu juu	herufijuu | mchemraba | tatu | weka tatu juu
+207B	alama ya kutoa ya juu	alama ya kutoa | alama ya kutoa ya juu | juu
+B0	digrii	digrii | saa | thibitisho
+B1	jumlisha-toa	jumlisha-toa
+D7	alama ya kuzidisha	alama ya kuzidisha | kuzidisha | mara nyingi | zidisha
+F7	alama ya kugawanya	alama iliyoashiria maandishi ya kutiliwa shaka | alama ya kugawanya | gawanya | kugawanya
+B5	alama ya mikro	alama ya mikro | kipimo
+A9	hakimiliki	c | hakimiliki | hatimiliki
+AE	iliyosajiliwa	iliyosajiliwa | imesajiliwa | r | sajili
+2122	chapa ya biashara	alama | alama ya biashara | chapa ya biashara
+A7	kifungu	alama ya kifungu | aya | kifungu | sehemu
+B6	alama ya aya	alama ya aya | alinea | aya
+B7	kitone cha kati	alama ya kitone | kati | kitone | kitone cha kati
+2022	tobo	kitone | tobo
+2013	kistari kirefu	kirefu | kistari
+2026	alama ya dukuduku	alama ya dukuduku | nukta | nukta ya dukuduku | ruko
+AB	vishale viwili vinavyoelekea kushoto	dondoa | kareti | kushoto | mwango | pembe | tepe | vishale viwili vinavyoelekea kushoto
+BB	vishale viwili vinavyoelekea kulia	dondoa | kareti | kulia | mwango | pembe | tepe | vishale viwili vinavyoelekea kulia
+2030	kwa elfu	kwa elfu
+20AC	yuro	EUR | sarafu | yuro
+A3	pauni	EGP | GBP | pauni | sarafu
+A5	yeni	CNY | JPY | sarafu | yeni | yuani
+A2	senti	senti
+20B9	rupia ya india	rupia | rupia ya india | sarafu
+20BD	rubo	rubo | sarafu
+20A9	won	KPW | KRW | won
+20BA	Lira ya Uturuki	
+20BF	bitcoin	bitcoin | BTC
+20AA	Shekeli Mpya ya Israel	
+20AB	Dong ya Vietnam	
+20B1	peso	peso
+20BC	Manat ya Azerbaijan	
+20B4	Hryvnia ya Ukraine	
+20A6	Naira ya Nigeria	
+20A1	Colon ya Kostarika	
+20B2	Guarani ya Paragwai	
+20B5	Cedi ya Ghana	
+20B8	Tenge ya Kazakhstan	
+20BE	Lari ya Jojia	
+20AE	Tugrik ya Mongolia	
+20AD	Kip ya Laosi	
+20A8	rupii	rupii | sarafu
+24	dola	dola | pesa | peso | USD
+58F	Dram ya Armenia	
+9F3	Taka ya Bangladesh	
+E3F	Baht ya Tailandi	
+20A3	faranga ya ufaransa	faranga | faranga ya ufaransa | sarafu
+20A4	lira	lira | sarafu
+20B0	peni ya ujerumani	peni ya ujarumani | peni ya ujerumani | pfennig | sarafu
+20B3	austral	ARA | austral | sarafu
+20A2	kruzeiro	BRB | kruzeiro | sarafu
+20A5	mill	mil | mill
+20B6	livre tournois	livre tournois | sarafu
+20B7	spesmilo	sarafu | spesmilo
+A4	Sarafu isiyojulikana	
+201E	alama ya kunukuu ya chini kushoto	alama ya kunukuu | alama ya kunukuu ya chini | alama ya kunukuu ya chini kushoto | manukuu | nukuu | nukuu mbili
+201C	alama ya kunukuu ya kushoto	alama ya kunukuu | alama ya kunukuu ya kushoto | manukuu | nukuu | nukuu mbili
+201D	alama ya kunukuu ya kulia	alama ya kunukuu | alama ya kunukuu ya kulia | manukuu | nukuu | nukuu mbili
+2018	apostrofi ya kushoto	alama ya nukuu | apostrofi | apostrofi ya kushoto | nukuu | nukuu moja
+2019	apostrofi ya kulia	alama ya nukuu | apostrofi | apostrofi ya kulia | nukuu | nukuu moja
+A1	alama ya mshangao iliyopinduliwa	alama ya mshangao | alama ya mshangao iliyopinduliwa | iliyopinduliwa | mshangao | mshindo | shangaa
+BF	alama ya kuuliza iliyopinduliwa	alama ya kuuliza | alama ya kuuliza iliyopinduliwa | iliyopinduliwa | swali
+2020	alama ya kurejea	alama iliyotumika zamani katika maandishi | alama ya kurejea
+2021	alama mbili za kurejea	alama iliyotumika zamani katika maandishi | alama mbili za kurejea | alama ya kurejea | mara mbili
+2044	mkato wa sehemu	mkato wa sehemu | mkwaju
+2032	tasa	tasa
+2033	tasa mbili	tasa | tasa mbili
+201A	apostrofi ya chini kulia	apostrofi | apostrofi ya chini kulia | nukuu | nukuu ya chini
+AC	uhasi	sio | uhasi
+2117	hakimiliki ya rekodi ya sauti	hakimiliki | hakimiliki ya rekodi ya sauti | rekodi | sauti
+2212	alama ya kutoa	alama ya kutoa | ondoa | toa
+2213	jumlisha au toa	jumlisha au toa | jumlisha toa
+2248	karibu inalingana	kadirio | karibia | karibu inalingana
+2260	hailingani	hailingani | isiyolingana | kutokuwa sawa
+2261	inafanana na	hasa | inafanana | inafanana na | mara tatu
+2264	chini ya au lingana	chini ya | chini ya au lingana | inalingana | kutokuwa sawa | lingana
+2265	zaidi ya au lingana	inalingana | kutokuwa sawa | lingana | zaidi ya | zaidi ya au lingana
+226A	chache zaidi ya	chache zaidi ya | hesabu | ukosefu wa usawa
+226B	kubwa zaidi ya	hesabu | kubwa zaidi ya | ukosefu wa usawa
+221E	alama ya isiyokoma	alama ya isiyokoma | isiyokoma
+221A	kipeo cha pili	isiyoeleweka | kipeo | kipeo cha pili | mraba | mzizi
+221D	kadiri	kadiri | ulinganifu
+2211	jumla ya mpango wa n	hisabati | jumla ya mpango wa n | ujumlishaji
+220F	zao la mpango wa n	mantiki | zao | zao la mpango wa n
+222B	rejeo	kalkulasi | rejeo
+2202	mgawango tenguo	mgawango tenguo | tenguo
+2206	nyongeza	nyongeza | pembetatu
+2207	nabla	nabla | pembetatu
+2200	kwa yote	ikiwa | jumla | kwa yote | yote | yoyote
+2203	kuna	kuna
+2205	seti kapa	hesabu | seti kapa | ukokotoaji
+2208	memba ya	inajumuisha | memba | memba ya | seti | umemba
+2209	si memba	memba | si memba
+2229	ungano	seti | ungano
+222A	muungano	mkusanyiko | muungano | seti
+2282	seti ndogo ya	seti | seti ndogo | seti ndogo ya
+2283	seti kuu	hisabati | kigawanyaji cha seti | seti kuu
+2286	sawa na seti ndogo	sawa na seti ndogo
+2287	sawa na seti kuu	hisabati | sawa na seti kuu | usawa
+2227	mantiki na	kabari | mantiki | mantiki na
+2295	jumlisha kwenye duara	jumlisha | jumlisha kwenye duara
+2297	zidisha kwenye duara	tokeo | uzidishaji | zidisha kwenye duara
+22A5	taki wima	taki | taki wima
+2220	pembe	kali | pembe
+2234	hivyo basi	hivyo basi | mantiki
+2235	kwa sababu	kwa sababu | mantiki
+2218	kiduara cha kukokotoa	kiduara cha kukokotoa | kikokotoo | kivungo
+2219	nukta ya kukokotoa	kikokotoo | nukta ya kukokotoa
+22C5	nukta ya kigawanyaji	kigawanyaji | nukta ya kigawanyaji
+2215	deshi ya gawanya	deshi ya gawanya | mkato | sleshi
+2190	mshale unaoelekea kushoto	kushoto | mshale | mshale unaoelekea kushoto
+2191	mshale unaoelekea juu	juu | mshale | mshale unaoelekea juu
+2192	mshale unaoelekea kulia	kulia | mshale | mshale unaoelekea kulia
+2193	mshale unaoelekea chini	chini | mshale | mshale unaoelekea chini
+2196	mshale unaoelekeza juu kushoto	kaskazini magharibi | kati ya sehemu kuu ya dira | mshale | mshale unaoelekeza juu kushoto | mshale unaoelekeza kaskazini magharibi | uelekeo
+2197	mshale unaoelekeza juu kulia	kaskazini mashariki | kati ya sehemu kuu ya dira | mshale | mshale unaoelekeza juu kulia | uelekeo
+2198	mshale unaoelekeza chini kulia	kaskazini kusini mashariki | kati ya sehemu kuu ya dira | kusini mashariki | mshale | mshale unaoelekeza chini kulia | mwelekeo | uelekeo
+2199	mshale unaoelekeza chini kushoto	kati ya sehemu kuu ya dira | kusini magharibi | mshale | mshale unaoelekeza chini kushoto | uelekeo
+2194	mshale unaoeleza kushoto na kulia	mshale | mshale unaoeleza kushoto na kulia | pande zote
+2195	mshale unaoelekeza chini na juu	mshale | mshale unaoelekeza chini na juu
+21D0	vishale pacha vyenye ncha moja kushoto	vishale pacha vyenye ncha moja kushoto
+21D1	vishale pacha vyenye ncha moja kuelekea juu	vishale pacha vyenye ncha moja kuelekea juu
+21D2	vishale pacha vyenye ncha moja kulia	vishale pacha vyenye ncha moja kulia
+21D3	vishale pacha vyenye ncha moja kuelekea chini	vishale pacha vyenye ncha moja kuelekea chini
+21D6	vishale pacha vyenye ncha kaskazini magharibi	vishale pacha vyenye ncha kaskazini magharibi
+21D7	vishale pacha vyenye ncha kaskazini mashariki	vishale pacha vyenye ncha kaskazini mashariki
+21D8	vishale pacha vyenye ncha kusini mashariki	vishale pacha vyenye ncha kusini mashariki
+21D9	vishale pacha vyenye ncha kusini magharibi	vishale pacha vyenye ncha kusini magharibi
+21D4	vishale pacha vyenye ncha pande zote	vishale pacha vyenye ncha pande zote
+21A4	kishale kinachoelekea kushoto kutoka kwenye upao	kishale kinachoelekea kushoto kutoka kwenye upao
+21A6	kishale kinachoelekea kulia kutoka kwenye upao	kishale kinachoelekea kulia kutoka kwenye upao
+21A5	kishale kinachoelekea juu kutoka kwenye upao	kishale kinachoelekea juu kutoka kwenye upao
+21A7	kishale kinachoelekea chini kutoka kwenye upao	kishale kinachoelekea chini kutoka kwenye upao
+21A9	mshale wa kulia unaopinda kushoto	mshale | mshale wa kulia unaoelekeza kushoto | mshale wa kulia unaopinda kushoto
+21AA	mshale wa kushoto unaopinda kulia	elekea kulia | geukia kulia | mshale | mshale wa kushoto unaopinda kulia
+219E	kishale chenye vichwa viwili vinavyoelekea kushoto	kishale chenye vichwa viwili vinavyoelekea kushoto
+21A0	kishale chenye vichwa viwili vinavyoelekea kulia	kishale chenye vichwa viwili vinavyoelekea kulia
+219F	kishale chenye vichwa viwili vinavyoelekea juu	kishale chenye vichwa viwili vinavyoelekea juu
+21A1	kishale chenye vichwa viwili vinavyoelekea chini	kishale chenye vichwa viwili vinavyoelekea chini
+21A2	kishale chenye mkia unaoelekea kushoto	kishale chenye mkia unaoelekea kushoto
+21A3	kishale chenye mkia unaoelekea kulia	kishale chenye mkia unaoelekea kulia
+219A	mkwaju na kishale kinachoelekea kushoto	mkwaju na kishale kinachoelekea kushoto
+219B	mkwaju na kishale kinachoelekea kulia	mkwaju na kishale kinachoelekea kulia
+21AE	kishale kinachoashiria kulia na kushoto	kishale kinachoashiria kulia na kushoto
+21CD	vishale pacha vyenye ncha moja kushoto vina mkato	vishale pacha vyenye ncha moja kushoto vina mkato
+21CF	vishale pacha vyenye ncha moja kulia vina mkato	vishale pacha vyenye ncha moja kulia vina mkato
+21CE	vishale pacha vyenye ncha pande zote vina mkato	vishale pacha vyenye ncha pande zote vina mkato
+21C4	kishale cha kulia juu ya kishale cha kushoto	kishale cha kulia juu ya kishale cha kushoto
+21C6	mshale unaoelekea kushoto juu ya mshale unaoelekea kulia	kulia | kushoto | mshale | mshale unaoelekea kushoto juu ya mshale unaoelekea kulia
+21CB	chusa kinachoelekea kushoto juu ya chusa kinachoelekea kulia	chusa kinachoelekea kushoto juu ya chusa kinachoelekea kulia
+21CC	chusa kinachoelekea kulia juu ya chusa kinachoelekea kushoto	chusa kinachoelekea kulia juu ya chusa kinachoelekea kushoto
+21BC	chusa chenye chembe inayoelekea juu kushoto	chembe | chusa chenye chembe inayoelekea juu kushoto
+21BD	chusa chenye chembe inayoelekea chini kushoto	chembe | chusa chenye chembe inayoelekea chini kushoto
+21C0	chusa chenye chembe inayoelekea juu kulia	chembe | chusa chenye chembe inayoelekea juu kulia
+21C1	chusa chenye chembe inayoelekea chini kulia	chembe | chusa chenye chembe inayoelekea chini kulia
+21BE	chusa kinachoelekea juu chenye chembe cha kulia	chembe | chusa kinachoelekea juu chenye chembe cha kulia
+21BF	chusa kinachoelekea juu chenye chembe cha kushoto	chembe | chembe cha chusa kinachoelekea juu | chusa kinachoelekea juu chenye chembe cha kushoto
+21C2	chusa kinachoelekea chini chenye chembe cha kulia	chusa | chusa kinachoelekea chini chenye chembe cha kulia
+21C3	chusa kinachoelekea chini chenye chembe cha kushoto	chembe | chusa kinachoelekea chini chenye chembe cha kushoto
+21C7	vishale pacha vinavyoelekea kushoto	vishale pacha vinavyoelekea kushoto
+21C9	vishale pacha vinavyoelekea kulia	vishale pacha vinavyoelekea kulia
+21C8	vishale pacha vinavyoelekea juu	vishale pacha vinavyoelekea juu
+21CA	vishale pacha vinavyoelekea chini	vishale pacha vinavyoelekea chini
+21DA	vishale vitatu vyenye ncha moja kushoto	vishale vitatu vyenye ncha moja kushoto
+21DB	vishale vitatu vyenye ncha moja kulia	vishale vitatu vyenye ncha moja kulia
+219C	kishale cha kiwimbi kinachoelekea kushoto	kishale cha kiwimbi kinachoelekea kushoto
+219D	kishale cha kiwimbi kinachoelekea kulia	kishale cha kiwimbi kinachoelekea kulia
+21DC	mcharazo wenye kishale cha kushoto	mcharazo wenye kishale cha kushoto
+21DD	mcharazo wenye kishale cha kulia	mcharazo wenye kishale cha kulia
+21AD	kishale cha kiwimbi chenye ncha pande mbili	kishale cha kiwimbi chenye ncha pande mbili
+21AF	zigizagi yenye kishale kinachoelekea chini	zigizagi | zigizagi yenye kishale kinachoelekea chini
+21BA	kishale cha mviringo wazi kinachoelekea kinyume cha saa	kishale cha mviringo wazi kinachoelekea kinyume cha saa
+21BB	kishale cha mviringo wazi kinachoelekea kisaa	kishale cha mviringo wazi kinachoelekea kisaa
+1F400	panya	mnyama | panya
+1F401	kipanya	kipanya | mnyama | panya
+1F402	maksai	fahali | maksai | mnyama | ng’ombe | zodiaki
+1F403	nyati	maji | mnyama | nyati
+1F404	ng’ombe	maziwa | mnyama | moo | ng’ombe | shamba la ng’ombe
+1F405	chui mkubwa mwenye milia	chui mkubwa mwenye milia | chui mwenye milia | mnyama | taiga
+1F406	chui	chui | mnyama
+1F407	sungura	mnayama kipenzi | sungura | sungura wa kufugwa
+1F408	paka	mnyama kipenzi | paka
+1F409	dragoni	dragoni | kichimbakazi
+1F40A	mamba	mamba | mnyama
+1F40B	nyangumi	bahari | nyangumi
+1F40C	konokono	asilia | konokono | shamba
+1F40D	nyoka	dubu | joka | nyoka | opichasi | zodiaki
+1F40E	farasi	farasi | kuendesha farasi | mashindano
+1F40F	kondoo dume	kondoo | kondoo dume | mnyama | zodiaki
+1F410	mbuzi	mbuzi | zodiaki
+1F411	kondoo	kike | kondoo | kondoo wa kike
+1F412	tumbili	mnyama | ndizi | tumbili
+1F413	jogoo	jimbi | jogoo
+1F414	kuku	kuku | ndege
+1F415	mbwa	mbwa | mnyama kipenzi
+1F416	nguruwe	mnyama | nene | nguruwe | nguruwe jike
+1F417	uso wa nguruwe dume	nguruwe | uso wa nguruwe dume
+1F418	ndovu	ndovu | tembo
+1F419	pweza	bahari | pweza
+1F41A	kombe la mzunguko	ganda la baharini | ganda la ufukoni | kombe | kombe la mzunguko | mzunguko | ufuko
+1F41B	mdudu	duduwasha | mdudu
+1F41C	siafu	chunguchungu | mdudu | siafu
+1F41D	nyuki	asali | mandhari | mdudu | nyuki
+1F41E	kombamwiko mwenye madoa	bimbirisa kimba | kombamwiko | kombamwiko mwenye madoa | mdudu | mende
+1F41F	samaki	chakula | samaki | zodiaki
+1F420	samaki wa tropiki	samaki | samaki wa tropiki | tropikali
+1F421	aina ya samaki	aina ya samaki | pweza | samaki
+1F422	mzee kobe	kobe | mzee kobe
+1F423	kifaranga kinachoanguliwa	kifaranga | kifaranga kinachoanguliwa | kuanguliwa | mtoto | ndege | yai
+1F424	kifaranga	kifaranga | mtoto | ndege
+1F425	kifaranga kinachotazama mbele	kifaranga | kifaranga kinachotazama mbele | mtoto
+1F426	ndege	ndege
+1F427	pengwini	ngwini | pengwini
+1F428	koala	dubu | koala
+1F429	kijibwa	kijibwa | mbwa
+1F42A	ngamia	ngamia | ngamia mwenye nundu moja | nundu
+1F42B	ngamia mwenye nundu mbili	ngamia | ngamia mwenye nundu mbili | nundu
+1F42C	pomboo	kikono | papa | pomboo | samaki
+1F42D	uso wa panya	panya | uso | uso wa panya
+1F42E	uso wa ng’ombe	maziwa | mnyama | ng’ombe | shamba la ng’ombe | uso | uso wa ng’ombe
+1F42F	uso wa chui milia	chui | chui milia | uso | uso wa chui milia
+1F430	uso wa sungura	mnayama kipenzi | sungura | uso | uso wa sungura
+1F431	uso wa paka	mnyama kipenzi | paka | uso | uso wa paka
+1F432	uso wa dragoni	dragoni | kichimbakazi | uso | uso wa dragoni
+1F433	nyangumi anayerusha maji	kurusha | nyangumi | nyangumi anayerusha maji | uso
+1F434	uso wa farasi	farasi | myama | uso | uso wa farasi
+1F435	uso wa tumbili	tumbili | uso | uso wa tumbili
+1F436	uso wa mbwa	mbwa | mnyama | mnyama kipenzi | uso | uso wa mbwa
+1F437	uso wa nguruwe	mnyama | nguruwe | nyama ya nguruwe | uso | uso wa nguruwe
+1F438	uso wa chura	chura | uso | uso wa chura
+1F439	uso wa buku	mnyama kipenzi | panya buku | uso | uso wa buku
+1F43A	mbwa mwitu	mbwa mwitu | mnyama | uso
+1F43B	dubu	dubu | uso
+1F43C	panda	panda | uso
+1F43D	pua la nguruwe	nguruwe | pua | pua la nguruwe | uso
+1F43E	nyayo za mnyama	alama | nyayo | nyayo za mnyama | nyayo zenye makucha
+1F43F	kindimilia	kindi milia | kindimilia | squiro
+1F981	simba	Leo | simba | uso | zodiaki
+1F982	ng’e	ng’e | zodiaki
+1F983	bata mzinga	bata mzinga | ndege
+1F984	uso wa farasi mwenye pembe moja	farasi | uso | uso wa farasi mwenye pembe moja
+1F985	tai (ndege)	ndege | tai | tai (ndege)
+1F986	bata	bata | ndege
+1F987	popo	mnyama | ndege | popo
+1F988	papa	papa | pweza | samaki
+1F989	bundi	bundi | busara | mnyama | ndege
+1F98A	mbweha	mbweha | uso
+1F98B	kipepeo	kipepeo | maridadi | mdudu
+1F98C	kulungu	kulungu | mnyama
+1F98D	sokwe	mnyama | sokwe
+1F98E	mjusi	kenge | mjusi | mnyama | mnyama anayetamba
+1F98F	kifaru	kifaru | mnyama
+1F990	uduvi	chakula | kamba | shrimpu | uduvi
+1F991	ngisi	chakula | ngisi | samaki
+1F992	twiga	madoa | twiga
+1F993	punda milia	milia | punda milia
+1F994	nungunungu	nungunungu | yenye miiba
+1F995	sauropodi	brachiosaurusi | brontosaurusi | diplodocusi | sauropodi
+1F996	T-Rex	dinosaura | T-Rex | Tyrannosaria Rex
+1F997	nyenje	kriketi | mdudu | nyenje | panzi
+1F998	kangaruu	Australia | kangaruu | mnyama | mtoto wa kangaruu | ruka
+1F999	ilama	alpaca | guanaco | ilama | mnyama | sufi | sufu | vicuna
+1F99A	tausi	kiburi | majivuno | ndege | tausi
+1F99B	kiboko	kiboko | mnyama
+1F99C	kasuku	kasuku | kuzungumza | maharamia | ndege | ongea
+1F99D	rakuni	mdadisi | mjanja | myama | rakuni
+1F99E	kambamti	gando | kambamti | supu | vyakula vya baharini
+1F99F	mbu	homa | malaria | mbu | mdudu | ugojwa | ugonjwa | uma | virusi
+1F9A0	bakteria	amoeba | bakteria | sayansi | virusi
+1F9A1	melesi	melesi | melesi mla asali | mnyama | sumbua
+1F9A2	bata maji	bata | bata maji | mtoto wa bata | ndege
+1F9A3	tembo wa kale	kubwa | kutoweka | manyoya | mnyama | ndovu | pembe | tembo wa kale
+1F9A4	dodo	dodo | kubwa | kutoweka | mnyama | Morisi | ndege
+1F9A5	slothi	mvivu | mzembe | polepole | slothi | taratibu
+1F9A6	fisi-maji	cheshi | fisi-maji | kuvua samaki
+1F9A7	orangutanu (sokwe)	myama | nyani | nyani dume | orangutanu (sokwe) | sokwe
+1F9A8	kicheche	kicheche | kunuka
+1F9A9	Flamingo	flamingo | Flamingo | kwenye joto | madaha | tropiki
+1F9AA	chaza	chaza | kupiga mbizi | lulu
+1F9AB	buku	buku | bwawa | meno | mnyama | Wanyama na Asili
+1F9AC	baisani	baisani | kundi | mnyama | nyati
+1F9AD	sili	bahari | mnyama | sili | sili mkubwa
+1F9AE	mbwa wa kuongoza	kiongozi | kipofu | mbwa kiongozi | mbwa wa kuongoza | sehemu ya wasio ona | ufikivu
+1FABC	kiwavi wa baharini	bahari | baharini | bila uti wa mgongo | choma | jeli | kiwavi wa baharini | kuuma | maisha ya baharini | mnyama | samaki wa kufugwa | uchungu | umiza
+1F330	aina ya njugu	aina ya njugu | mbegu ya mlozi | mmea
+1F331	mche	mche | mmea | mmea mchanga
+1F332	mmea wenye majani mwaka mzima	mmea | mmea wenye majani mwaka mzima | mti | mti wa krismasi
+1F333	mti unaopukutika majani yake	kupuputika | mmea | mti | mti unaopukutika majani yake | puputika majani
+1F334	mnazi	mmea | mnazi | mti
+1F335	dungusi kakati	dungusi kakati | mmea
+1F337	tulipu	mmea | tulipu | ua
+1F338	ua la mcheri	chanua | cheri | mmea | ua | ua la mcheri | uzuri
+1F339	ua la waridi	mmea | nyekundu | ua | ua la waridi
+1F33A	haibiskasi	haibiskasi | mmea | ua
+1F33B	alizeti	alizeti | jua | mmea | ua
+1F33C	maua mengi	maua mengi | mmea | ua
+1F33D	mahindi	mahindi | mmea | nafaka | sikio | tazaa
+1F33E	shada la mchele	mchele | mmea | punje | shada la mchele | shada la mpunga | sikio
+1F33F	mimea ya msimu	jani | mimea ya msimu | mmea | tawi
+1F340	klova yenye majani manne	4 | jani | klova | klova yenye majani manne | mmea | nne | tawi
+1F341	jani la mshira	jani | jani la mshira | kuanguka | mmea | mshira | msimu wa kipupwe
+1F342	jani lililoanguka	jani lililoanguka | kipupwe | kuanguka | majani | mmea
+1F343	jani linalopepea kwenye upepo	jani linalopepea kwenye upepo | mmea | pepea | puliza | tawi | upepo
+1F344	uyoga	mmea | uyoga
+1FAB0	nzi	dudu | funza | kiumbe | kuoza | mdudu | nzi | ugonjwa
+1FAB1	mnyoo	anelidi | jongoo | mdudu | mnyama | mnyoo | nyungunyungu
+1FAB2	mende	dudu | kijidudu | kiumbe | mdudu | mende
+1FAB3	kombamwiko	dudu | kijidudu | kiumbe | kombamwiko | mdudu | mende
+1FAB4	mmea ndani ya mkebe	bila faida | chungu | kutunza | mea | mmea | mmea ndani ya mkebe | mtungi | nyumba | pambo | uchoshi
+1FAB5	kuni	gogo | kisiki | kuni | makorokoro | mbao
+1FAB6	unyoya	kuruka | manyoya | ndege | nyepesi | unyoya
+1FAB7	yungiyungi	India | Kihindu | ua | Ubudha | usafi | Vietinamu | yungi | yungiyungi
+1FAB8	matumbawe	bahari | mabadiliko ya tabianchi | matumbawe | tabianchi
+1FAB9	kiota tupu	kiota | kiota tupu | nyumba | tawi
+1FABA	kiota chenye mayai	kiota | kiota chenye mayai | kiota kilicho na mayai | mayai | ndege | yai
+1FABB	hyacinthi	chanua | chipuka | hyacinthi | kichaka | maua | maua ya samawati | maua ya zambarau | mmea | mrujuani | rangi maridadi | ua | zambarau
+2618	shamroki	mmea | shamroki
+1F347	zabibu	mmea | tunda | zabibu
+1F348	tikiti	mmea | tikiti | tikiti maji | tunda
+1F349	tikitimaji	mmea | tikitimaji | tunda
+1F34A	chenza	chenza | chungwa | mmea | tunda | vitamini c
+1F34B	limau	limau | mmea | tunda
+1F34C	ndizi	mmea | ndizi | potassium | tunda
+1F34D	nanasi	mmea | nanasi | tunda
+1F34E	tufaha jekundu	chakula | jekundu | mmea | tufaha | tunda
+1F34F	tufaha la kijani	apo la kijani | kijani | mmea | tufaha | tufaha la kijani | tunda
+1F350	pea	mmea | pea | tunda
+1F351	pichi	fyulisi | mmea | pichi | tunda
+1F352	cheri	cheri | mmea | moheri | tunda
+1F353	stroberi	beri | mmea | stroberi | tunda
+1F336	pilipili kali	mmea | moto | pilipili | pilipili kali
+1F354	hambaga	baga | hambaga
+1F355	piza	jibini | kipande | piza
+1F356	nyama kwenye mfupa	mfupa | nyama | nyama kwenye mfupa
+1F357	paja la kuku	kuku | mfupa | mguu | ndege wanaofugwa | paja la kuku
+1F358	biskuti za mchele	biskuti za mchele | chakula kilichotengenezwa kutoka kwa mchele | mchele
+1F359	mchele uliotengenezwa kwa mtindo wa tufe	kijapani | mchele | mchele uliotengenezwa kwa mtindo wa tufe | mpira
+1F35A	wali	chakula | mchele | uliopikwa | wali
+1F35B	wali ulio na mchuzi wa viungo	mchele | mchele ulio pokwa | mchuzi wa viungo | wali | wali ulio na mchuzi wa viungo
+1F35C	bakuli yenye tambi	bakuli | bakuli lenye tambi | bakuli yenye tambi | kupika kwa mvuke | tambi | tambi za kijapani
+1F35D	tambi	chakula | supaget | tambi
+1F35E	mkate	mkate | resteuranti
+1F35F	chipsi	chakula | chipsi | viazi | vibanzi
+1F360	kiazi kitamu kilichochomwa	kiazi | kiazi kitamu kilichochomwa | kuchoma | tamu
+1F361	dango	dango | ijiti | kibaniko | kijapani | kitafunio | kitindamlo | tamu
+1F362	odeni	chakula cha majini | kebabu | kibaniko | kijiti | odeni
+1F363	sushi	chakula | sushi
+1F364	uduvi iliyokaangwa	ilikaangwa | karangwa | kukaanga | tempura | uduvi | uduvi iliyokaangwa | ushimba
+1F365	keki ya samaki iliyozingwa	keki | keki ya samaki iliyozingwa | samaki | vitobosha | zinga
+1F366	aisikrimu laini	aisikrimu | barafu | kitandamlo | krimu | laini | tamu
+1F367	barafu iliyochongwa	aisikrimu | barafu | barafu iliyochongwa | kitindamlo | tamu
+1F368	aisikrimu	aisikrimu | barafu | kitindamlo | krimu | tamu
+1F369	kitumbua	disati | donati | kitindamlo | kitumbua | tamu
+1F36A	biskuti	biskuti | kitindamlo | peremende
+1F36B	chokoleti	chokoleti | diseti | kitindamlo | mche | tamu
+1F36C	peremende	dizati | kitindamlo | peremende | pipi
+1F36D	pipi	dizeti | kitindamlo | pipi | tamu
+1F36E	faluda	disati | faluda | kitindamlo | pudini | tamu
+1F36F	chungu cha asali	asali | chakula | chungu cha asali | jungu | tamu
+1F370	keki	keki | kipande | kitindamlo | tamu | vitobosha
+1F371	boksi ya kuweka chakula	bento | boksi | boksi ya kuweka chakula
+1F372	chungu cha chakula	chungu | chungu cha chakula | mchuzi
+1F373	kupika	kaanga yai | kukaang’a | kupika | sufuria | yai | yai jicho ngombe
+1F374	uma na kisu	chakula | kifungua kinywa | kisu | kupika | uma | uma na kisu | vyombo
+1F375	kikombe kisicho na kishikio	chai | kikombe | kikombe cha chai | kikombe kisicho na kishikio | kinywaji
+1F376	mvinyo wa kijapani unaotokana na mchele	baa | chupa | kikombe | kinywaji | mvinyo wa kijapani unaotokana na mchele | sake
+1F377	glasi ya divai	baa | divai | glasi | glasi ya divai | kinywaji | mvinyo
+1F378	glasi ya kokteli	baa | glasi | glasi ya kokteli | kinywaji | kokteli | pombe
+1F379	kinywaji cha tropiki	baa | juisi mchanganyiko | kinywaji | kinywaji cha tropiki | tropikali
+1F37A	kikombe cha bia	baa | bia | kikombe | kikombe cha bia | kinywaji | kukombe
+1F37B	vikombe vya bia vilivyogonganishwa	baa | bia | gonganisha | kikombe | kinywaji | pombe | vikombe vya bia vilivyogonganishwa | vikombe vya bia vinavyogonganishwa
+1F37C	chupa ya maziwa ya mtoto	chupa | chupa ya maziwa ya mtoto | kinywaji | maziwa | mtoto
+1F37D	uma na kisu na sahani	kisu | kupika | sahani | uma | uma na kisu na sahani
+1F37E	chupa yenye kifuniko kilichofunguliwa	baa | chupa | chupa yenye kifuniko kilichofunguliwa | kifuniko | kinywaji | kufungua
+1F37F	bisi	bisi | popkoni
+1F950	mahamri	chakula | maandazi | mahamri | mkate | vitumbua
+1F951	parachichi	chakula | matunda | parachichi | tunda
+1F952	tango	chakula | mboga | tango | tango pepeta
+1F953	nyama	chakula | nyama | nyama ya nguruwe
+1F954	viazi	chakula | kiazi | mboga | viazi
+1F955	karoti	chakula | karoti | mboga
+1F956	mkate wa kifaransa	chakula | mkate | mkate wa kifaransa
+1F957	kachumbari	chakula | kachumbari | kijani | saladi
+1F958	kikaango	chakula | chapati | karai | kikaangio | kikaango | paella | sufuria
+1F959	shawarma	chakula | kababu | shawarma
+1F95A	yai	chakula | yai
+1F95B	glasi yenye maziwa	glasi | glasi yenye maziwa | kinywaji | maziwa
+1F95C	njugu	chakula | karanga | njugu
+1F95D	tunda la kiwi	chakula | matunda | tunda la kiwi
+1F95E	chapati	chakula | chapati
+1F95F	pudini ya kinyunya	empanada | gyoza | jiaozi | pierogi | potsticker | pudini | pudini ya kinyunya
+1F960	biskuti ya bahati	biskuti ya bahati | ubashiri
+1F961	kisanduku cha chakula	katoni ya chakula | kisanduku cha chakula | wakilisha chakula
+1F962	vijiti vya kutumia kula	hashi | vijiti vya kulia | vijiti vya kutumia kula
+1F963	bakuli lenye kijiko	bakuli lenye kijiko | kiamsha kinywa | nafaka | uji
+1F964	kikombe chenye mrija	juisi | kijwaji | kikombe chenye mrija | maji | maji ya machungwa | soda
+1F965	nazi	mnazi | nazi | pina kolada | tui
+1F966	brokoli	brokoli | kabichi ya msitu
+1F967	pai	pai | vijazo | vitobosho
+1F968	pretzel	iliyosokotwa | pretzel
+1F969	kipande cha nyama	kipande cha nyama | kipande cha nyama ya kondoo | kipande cha nyama ya nguruwe | nyama
+1F96A	sandwichi	mkate | sandwichi
+1F96B	chakula kilicho koponi	chakula cha kopo | chakula kilicho koponi | kopo
+1F96C	sukumawiki	bok choy | jani la kijani | kabichi | mchicha | saladi | sukumawiki
+1F96D	embe	chakula | embe | embe dodo | tropiki | tunda
+1F96E	mkate wa sinia	keki | mapukutiko | mkate wa sinia | sherehe | yuebing
+1F96F	mkate wa kuoka	kifungua kinywa | kuoka | mkate | mkate wa kuoka | siagi
+1F9C0	kipande cha jibini	jibini | kipande cha jibini
+1F9C1	keki ndogo	keki ndogo | keki ya kikapu | kuoka | sukari | tamu
+1F9C2	chumvi	chukiza | chumvi | kidau | kiungo | pilipili
+1F9C3	chupa ya kinywaji	chupa ya kinywaji | juisi | katoni ya juisi | katoni ya kinywaji | kinywaji | sanduku | sanduku la juisi | tamu
+1F9C4	kitunguu saumu	kitunguu saumu | ladha
+1F9C5	kitunguu	kitunguu | kiungo | ladha
+1F9C6	felafeli	felafeli | kababu | njegere kubwa | nyama kababu | nyama ya mviringo
+1F9C7	mkate wa sega la nyuki	chakula cha asubuhi | chuma | kutoweza kufanya uamuzi | mkate wa sega la nyuki
+1F9C8	siagi	bidhaa ya maziwa | siagi
+1F9C9	kinywaji cha mate	kinywaji | kinywaji cha mate | pombe | pombe ya kienyeji
+1F9CA	kidonge cha barafu	barafu | baridi | kidonge cha barafu | siwa barafu
+1F9CB	chai ya maziwa ya boba	chai | chai ya maziwa ya boba | chakula | lulu | maziwa | taiwan | viputo
+1FAD0	forosadi	beri | buluu | chakula | forosadi | tunda | tunda dogo
+1FAD1	pilipili boga	boga | chakula | pilipili | pilipili hoho
+1FAD2	zeituni	chakula | zeituni
+1FAD3	chapati ya maji	arepa | chakula | chapati | chapati ya maji | mkate | naan | pita
+1FAD4	tamale	chakula | meksiko | mkate uliofungwa wa kimeksiko | tamale
+1FAD5	jibini iliyoyeyushwa	chakula | chokoleti | jibini | jibini iliyoyeyushwa | kuyeyushwa | sufuria | uswisi
+1FAD6	birika la chai	birika | birika la chai | buli | chai | chakula | kinywaji
+1FAD7	kinywaji kinachomiminika	bilauri | glasi | kinywaji | kinywaji kinachomiminika | kumwagika | maji | tupu
+1FAD8	maharagwe	chakula | kunde | maharage | maharagwe | ndogo
+1FAD9	chupa kubwa	chombo | chupa | chupa kubwa | kiungo | kuhifadhi | rojo | tupu
+1FADA	tangawizi	afya | asili | bia | kiungo | miti shamba | mzizi | pombe | tangawizi | tiba asili
+1FADB	ganda la njegere	ganda | ganda la njegere | kunde | maharage | mboga | njegere
+2615	kinywaji moto	chai | kahawa | kinywaji | moto
+2600	jua	anga | hali ya hewa | jua | kung’aa | miali
+2601	wingu	hali ya hewa | wingu
+2602	mwavuli	hali ya hewa | mavazi | mvua | mwavuli
+2603	sanamu ya mtu ya theluji	baridi | hali ya hewa | mtu wa theluji | sanamu ya mtu ya theluji | theluji
+2614	mwavuli na matone ya mvua	hali ya hewa | mavazi | mvua | mwavuli | mwavuli na matone ya mvua | tone
+26A1	volteji ya juu	hatari | kuungua kwa umeme | radi | umeme | volteji | volteji ya juu
+26C4	sanamu ya mtu ya theluji bila theluji	baridi | hali ya hewa | sanamu ya mtu ya theluji bila theluji | theluji
+26C5	jua nyuma ya wingu	hali ya hewa | jua | jua nyuma ya wingu | wingu
+26C8	wingu pamoja na radi na mvua	hali ya hewa | mvua | ngurumo | wingu | wingu mvua na radi | wingu pamoja na radi na mvua
+2744	chembe ya theluji	baridi | chembe chembe za theluji | chembe ya theluji | hali ya hewa | theluji
+1F300	tufani	hali ya hewa | kimbunga | kizunguzungu | tufani
+1F301	mandhari yenye ukungu	hali ya hewa | mandhari yenye ukungu
+1F302	mwavuli uliokunjwa	hali ya hewa | mavazi | mvua | mwavuli | mwavuli uliokunjwa
+1F303	usiku wenye nyota	hali ya hewa | nyota | usiku | usiku wenye nyota
+1F304	macheo kwenye milima	asubuhi | hali yahewa | jua | macheo | macheo kwenye milima | mlima
+1F305	macheo	asubuhi | hali ya hewa | jua | macheo | machweo
+1F306	mwonekano wa jiji usiku	jiji | jioni | machweo | mandhari | mwonekano wa jiji usiku | usiku
+1F307	machweo	giza | hali ya hewa | jengo | jua | machweo
+1F308	upinde wa mvua	hali ya hewa | jinsiambili | mvua | shoga | upinde wa mvua
+1F309	daraja usiku	daraja | hali ya hewa | usiku
+1F30A	wimbi la maji	bahari | maji | wimbi la maji | wimbi’ hali ya hewa
+1F30B	volkano	hali ya hewa | kulipuka | mlima | volkano
+1F30C	kilimia	anga | hali ya jewa | hali ya jwa | kilimia
+1F30D	tufe linaloonyesha ulaya-afrika	afrika | dunia | tufe | tufe linaloonyesha ulaya na afrika | tufe linaloonyesha ulaya-afrika | ulaya | ulimwengu
+1F30E	tufe linaloonyesha amerika	dunia | marekani | tufe | tufe linaloonyesha amerika | ulimwengu
+1F30F	tufe linaloonyesha asia-australia	asia | Asia | australia | dunia | tufe | tufe linaloonyesha asia-australia | ulimwengu
+1F310	tufe lenye meridiani	dunia | meridiani | tufe | tufe lenye meridiani | ulimwengu
+1F311	mwezi mpya	anga | hali ya hewa | mwezi | mwezi mpya | nyeusi
+1F312	mwezi mwandamo	anga | hali ya hewa | hali yahewa | kuanza | mwezi | mwezi mwandamo
+1F313	mwezi wa robo ya kwanza	anga | hali ya hewa | kushikwa kwa mwezi | mwezi | mwezi wa robo ya kwanza | robo
+1F314	mwezi ulioangazwa zaidi ya nusu unaopevuka	anga | hali ya hewa | kuanza | mwezi | mwezi ulioangazwa zaidi ya nusu | mwezi ulioangazwa zaidi ya nusu unaopevuka | mwezi ulioangazwa zaidi ya nusu unaotanda
+1F315	mwezi kamili	anga | hali ya hewa | kamili | mwezi
+1F316	mwezi ulioangazwa zaidi ya nusu unaofifia	anga | hali ya hewa | kuisha | kupatwa kwa mwezi | mwezi | mwezi ulioangazwa zaidi ya nusu | mwezi ulioangazwa zaidi ya nusu unaofifia
+1F317	mwezi wa robo ya mwisho	anga | hali ya hewa | kupatwa kwa mwezi | mwezi | mwezi wa robo ya mwisho | robo
+1F318	mwezi kongo	anga | hali ya hewa | hali yahewa | kuisha | mwezi | mwezi kongo | mwezi mwandamo
+1F319	mwezi unaoandama mwezi mpya	anga | hali ya hewa | mwandamo wa mwezi | mwezi | mwezi mwandamo | mwezi unaoandama mwezi mpya
+1F31A	uso wa mwezi mpya	anga | hali ya hewa | mwezi | uso | uso wa mwezi mpya
+1F31B	mwezi wa robo ya kwanza wenye uso	anga | hali ya hewa | mwezi | mwezi wa robo ya kwanza wenye uso | robo | uso
+1F31C	mwezi wa robo ya mwisho wenye uso	anga | hali ya hewa | mwezi | mwezi wa robo ya mwisho wenye uso | robo | uso
+1F31D	uso unaokaa mwezi	anga | hali ya hewa | kamili | kung’aa | uso | uso unaokaa mwezi
+1F31E	uso unaokaa jua	anga | hali ya hewa | jua | kua lenye uso | kung’aa | usi | uso unaokaa jua
+1F31F	nyota inayong’aa	kumetameta | kung’ara | metameta | ng’aa | nyota | nyota inayong’aa
+1F320	kimwondo	anga | kaunguka | kimondo | kimwondo | nyota | nyota iangukayo
+1F321	pima joto	hali ya hewa | pima joto
+1F324	jua nyuma ya wingu dogo	hali ya hewa | jua | jua nyuma ya wingu dogo | wingu
+1F325	jua nyuma ya wingu kubwa	hali ya hewa | jua | jua nyuma ya wingu kubwa | wingu
+1F326	jua nyuma ya wingu lenye mvua	hali ya jewa | jua | jua nyuma ya wingu lenye mvua | mvua | wingu
+1F327	wingu lenye mvua	hali ya hewa | mvua | wingu | wingu lenye mvua
+1F328	wingu lenye theluji	baridi | baridi na theluji | hali ya hewa | theluji | wingu | wingu lenye theluji
+1F329	wingu lenye radi	hali ya hewa | radi | wingu | wingu lenye radi
+1F32A	kimbunga	hali ya hewa | kimbunga | wingu
+1F32B	ukungu	hali ya hewa | ukungu | wingu
+1F32C	uso unaopuliza upepo	hali ya hewa | puliza | upepo | uso | uso unaopuliza upepo | wingu
+2648	nyota ya kondoo	nyota ya kondoo | zodiaki
+2649	fahali	dume | fahali | zodiaki
+264A	mapacha	mapacha | zodiaki
+264B	nyota ya kaa	nyota ya kaa | zodiaki
+264C	nyota ya simba	nyota ya simba | simba | zodiaki
+264D	mashuke	bikira | mashuke | mwali | zodiaki
+264E	mizani	haki | mizani | pima | zodiaki
+264F	nyota ya ng’e	nge | nyota ya ng’e | zodiaki
+2650	mshale	mpiga mishale | mshale | zodiaki
+2651	nyota ya mbuzi	mbuzi | nyota ya mbuzi | zodiaki
+2652	nyota ya ndoo	hamali | maji | ndoo | nyota ya ndoo | zodiaki
+2653	nyota ya samaki	nyota ya samaki | zodiaki
+1F550	saa saba	00 | 1 | 1:00 | saa | saba
+1F551	saa nane	00 | 2 | 2:00 | nane | saa
+1F552	saa tisa	00 | 3 | 3:00 | saa | tisa
+1F553	saa kumi	00 | 4 | 4:00 | kumi | saa
+1F554	saa kumi na moja	00 | 5 | 5:00 | kumi na moja | saa | saa kumi na moja
+1F555	saa kumi na mbili	00 | 6 | 6:00 | kumi na mbili | saa | saa kumi na mbili
+1F556	saa moja	00 | 7 | 7:00 | moja | saa
+1F557	saa mbili	00 | 8 | 8:00 | mbili | saa
+1F558	saa tatu	00 | 9 | 9:00 | muda | saa | saa tisa | tatu
+1F559	saa nne	00 | 10 | 10:00 | nne | saa
+1F55A	saa tano	00 | 11 | 11:00 | saa | tano
+1F55B	saa sita	00 | 12 | 12:00 | saa | sita
+1F55C	saa saba na nusu	1 | 1:30 | 30 | moja | muda | nusu | saa | saa saba na nusu | saba
+1F55D	saa nane na nusu	2 | 2:30 | 30 | mbili | nane | nusu | saa | saa nane na nusu
+1F55E	saa tisa na nusu	3 | 3:30 | 30 | nusu | saa | saa tisa na nusu | tisa
+1F55F	saa kumi na nusu	30 | 4 | 4:30 | kumi | nusu | saa | saa kumi na nusu
+1F560	saa kumi na moja na nusu	30 | 5 | 5:30 | kumi na moja | nusu | saa | saa kumi na moja na nusu
+1F561	sa kumi na mbili na nusu	30 | 6 | 6:30 | kumi na mbili | nusu | sa kumi na mbili na nusu | saa | saa kumi na mbili na nusu
+1F562	saa moja na nusu	30 | 7 | 7:30 | moja | nusu | saa | saa moja na nusu
+1F563	saa mbili na nusu	30 | 8 | 8:30 | mbili | nusu | saa | saa mbili na nusu
+1F564	saa tatu na nusu	30 | 9 | 9:30 | nusu | saa | saa tatu na nusu | tatu
+1F565	saa nne na nusu	10 | 10:30 | 30 | nne | nusu | saa | saa nne na nusu
+1F566	saa tano na nusu	11 | 11:30 | 30 | nusu | saa | saa tano na nusu | tano
+1F567	saa sita na nusu	12 | 12:30 | 30 | nusu | saa | saa sita na nusu | sita
+1FA90	sayari yenye duara	baridi | Dunia | sayari | sayari yenye duara | zohali
+2604	kimondo	anga | kimondo
+26F0	mlima	mlima
+26F1	mwavuli ulio kwenye ardhi	hali ya hewa | jua | mvua | mwavuli | mwavuli ulio kwenye ardhi
+26F2	mlizamu	mahali pa kunjwa maji | mlizamu
+26F4	kivuko	boti | feri | kivuko
+26F5	mashua	bahari | boti | gari | mahali pa kutembelea watalii | mashua | mashura
+2708	eropleni	eropleni | gari | ndege | ruka
+1F488	nguzo ya kinyozi	kinyozi | kunyolewa | nguzo | nguzo ya kinyozi
+1F4BA	kikalio	kikalio | kiti
+1F680	roketi	anga | gari | roketi | roketi ya angani
+1F681	helikopta	gari | helikopta
+1F682	garimoshi	gari | garimoshi | ingini ya garimoshi | injini | mvuke | reli | treni
+1F683	gari la moshi	basi la tramu | gari | gari la moshi | reli | tramu | treni | umeme
+1F684	treni yenye kasi	gari | kasi | reli | shinkansen | trani ya mwendo kasi | treni | treni yenye kasi
+1F685	treni yenye kasi yenye umbo la risasi	gari | kasi | reli | risasi | shinkansen | treni | treni ya mwendo kasi | treni yenye kasi yenye umbo la risasi
+1F686	treni	gari | reli | treni
+1F687	metro	gari | metro | reli ya chini ya ardhi | safari | treni ya mjini
+1F688	reli nyepesi	gari | reli | reli nyepesi
+1F689	kituo	gari | kituo | kituo cha treni | reli | teni | treni
+1F68A	tramu	basi la tramu | mwendokasi | tramu
+1F68B	gari la tramu	basi la tramu | gari | gari la tramu | tramu
+1F68C	basi	basi | basi la shule | gari
+1F68D	basi linalokuja	basi | gari | linalokuja
+1F68E	kiberenge	basi | gari | kiberenge | toroli | tramu
+1F68F	kituo cha basi	gari | kituo | kituo cha basi
+1F690	basi dogo	basi | basi dogo | gari
+1F691	ambulansi	ambulansi | gari | gari la wagojwa
+1F692	gari la zimamoto	gari | gari la zimamoto | injini | lori | moto
+1F693	gari la polisi	gari | gari la polisi | polisi | ziara
+1F694	gari la polisi linalokuja	gari | gari la polisi linalokuja | linalokuja | polisi
+1F695	teksi	gari | teksi
+1F696	teksi inayokuja	gari | linalokuja | teksi | teksi inayokuja
+1F697	gari	gari | kuendesha | motokaa
+1F698	gari linalokuja	gari | linalokuja | motokaa
+1F699	gari la burudani	gari | gari la burudani | gari la huduma | la burudani | rv
+1F69A	gari la kusafirisha mizigo	gari | gari la kusafirisha mizigo | gari la kusambazia mizigo | kusafirisha | lori
+1F69B	lori linalobeba mizigo	gari | lori | lori dogo | lori la mizigo | lori linalobeba mizigo
+1F69C	trekta	gari | trekta
+1F69D	reli moja	gari | reli moja
+1F69E	reli ya milimani	gari | mlima | reli | reli ya milimani | safari
+1F69F	reli inayoelea angani	elea | gari | reli | reli inayoelea angani
+1F6A0	gari linalosafiri milimani kwa kamba	gari | gari linalosafiri kwenye kamba zilizoning’ing’izwa | gari linalosafiri kwenye kamba zilizoning’ing’izwa hewani | gari linalosafiri milimani kwa kamba | kebo
+1F6A1	tramu inayosafiri angani kwa kamba	gari | gari linalosafiri kwenye kamba zilizoning’ing’izwa hewani | gari linalosafiri kwenye kamba zilizoning’inizwa hewani | hewani | kebo | njia ya kamba | njia ya tramu | tramu inayosafiri angani kwa kamba
+1F6A2	meli	abiria | mashua | meli | titanic
+1F6A3	ngalawa	boti | gari | kupiga makasia | mashua | mpiga kasia | ngalawa | ziwa
+1F6A4	mashua ya kasi	boti | gari | mashua ya kasi
+1F6A5	taa mlalo ya trafiki	ishara | taa | taa mlalo ya trafiki | trafiki
+1F6A6	taa wima ya trafiki	ishara | taa | taa wima ya trafiki | taa ya trafiki | trafiki
+1F6A7	ujenzi	kizuizi | ujenzi
+1F6A8	taa ya gari la polisi	gari | kuzunguka | mwanga | polisi | taa | taa ya gari la polisi
+1F6A9	bendera yenye pembe	bendera yenye pembe | mlingoti
+1F6AA	mlango	mlango
+1F6B0	maji safi ya kunywa	kunywa | maji | maji safi ya kunywa | safi kwa kunywa
+1F6B1	maji hayafai kwa matumizi ya kunywa	isiyo bebeka | kavu | maji | maji hayafai kwa matumizi ya kunywa | si ya kunywa | yamezuiwa
+1F6B3	baisikeli haziruhusiwi	baisikeli | baisikeli haziruhusiwi | gari | hapana | katazwa | marufuku | siyo
+1F6B7	watembea kwa miguu hawaruhusiwi	hapana | katazwa | marufuku | mtembea kwa miguu | siyo | watembea kwa miguu hawaruhusiwi
+1F6B8	watoto wanavuka barabara	kuvuka | mtembea kwa miguu | mtoto | trafiki | watoto wanavuka barabara
+1F6B9	maliwato ya wanaume	choo | maliwato | maliwato ya wanaume | mwanamume
+1F6BA	maliwato ya wanawake	maliwato | maliwato ya wanawake | mwanamke
+1F6BB	maliwato	choo | maliwato
+1F6BC	alama ya mtoto	alama ya mtoto | kubadilisha nguo | mtoto
+1F6BD	choo	choo | maliwato
+1F6BE	msala	choo | maji | maliwato | msala
+1F6BF	bafu ya manyunyu	bafu ya manyunyu | maji
+1F6C0	mtu anayeoga	bafu | hodhi | mtu anayeoga
+1F6C1	bafu	bafu | hamamu
+1F6C2	udhibiti wa pasipoti	pasipoti | udhibiti | udhibiti wa pasipoti
+1F6C3	forodha	eneo la kuegesha | eneo la kuingia | forodha
+1F6C4	madai ya mzigo	dai | madai ya mzigo | mzigo | safari | sanduku | sehemu ya mizigo | tayari
+1F6C5	mahali pa kuhifadhi mizigo	hifadhi | mahali pa kuhifadhi mizigo | mzigo
+1F6D0	mahali pa kuabudu	abudu | dini | mahali pa kuabudu
+1F6D1	taa ya kusimama	alama ya kusimama | alama ya kusimama ya pembe nane | somama | taa ya kusimama | trafiki
+1F6D2	mkokoteni	kigari cha kununulia bidhaa | mkokoteni | toroli | ununuzi
+2668	chemichemi za maji ya moto	cheche | cheche za maji ya moto | chemchemi | chemcheni za maji moto | chemichemi za maji ya moto | moto | mvuke
+26BD	mpira wa miguu	mchezo | mpira | mpira wa miguu | soka
+26BE	mpira wa besibali	mpira | mpira wa besibali
+26F3	bendera katika shimo	bendera katika shimo | gofu | shimo
+1F392	mfuko wa shuleni	begi | mfuko wa shuleni | mkoba | shule
+1F3A0	farasi inayozunguka	farasi | farasi inayozunguka | kuzunguka
+1F3A1	gurudumu linalozunguka	ferris | gurudumu | gurudumu linalozunguka | sehemu za burudani
+1F3A2	rola kosta	gurudumu | rola kosta | sehemu za burudani | viti vinavyozunguka
+1F3A3	ndoano ya uvuvi	mchezo wa kuvua | ndoana | ndoano | ndoano ya uvuvi | samaki
+1F3A4	maikrofoni	imba | karaoke | kinasa sauti | maikrofoni | muziki | sauti
+1F3A5	kamera ya kurekodi filamu	filamu | kamera | kamera ya kurekodi filamu | sinema
+1F3A6	filamu	filamu | flamu | kamera | mshine ya filamu | sinema
+1F3A7	spika za masikioni	kifaa cha sauti cha masikioni | sauti | spika za masikioni
+1F3A8	paleti ya msanii	kuchora | makumbusho | mchoraji | msanii | paleti | paleti ya msanii | sanaa
+1F3A9	kofia ya mwanamume	juu | kofia | kofia ya mwanamume | mavazi
+1F3AA	hema ya sarakasi	hema | hema ya sarakasi | sarakasi
+1F3AB	tiketi	kuingia | tiketi
+1F3AC	ubao wa kuanzisha matukio wakati wa kutengeneza filamu	filamu | ubao wa kuanzisha matukio wakati wa kutengeneza filamu
+1F3AD	sanaa	barakoa | kuigiza | kusherehesha | sanaa | ukumbi wa maigizo
+1F3AE	mchezo wa video	kidhibiti | mchezo | mchezo wa video
+1F3AF	kulenga shabaha	gonga | jicho la dume | kigumba | kulenga shabaha | lengo | lengo kuu | mchezo
+1F3B0	mashine ya kamari	mashine ya kamari | mchezo
+1F3B1	biliadi	8 | biliadi | mchezo | mpira | nane
+1F3B2	dadu	burudani | dadu | mchezo
+1F3B3	mchezo wa kuvingirisha matufe chini	mchezo | mchezo wa kuvingirisha matufe chini | mpira
+1F3B4	kadi za karata za maua	kadi | kadi za karata za maua | kijapani | kucheza | maua | mchezo | ua
+1F3B5	noti ya muziki	muziki | noti | noti ya muziki
+1F3B6	manoti ya muziki	manoti | manoti ya muziki | muziki | mziki | noti | noti za muziki | notoni
+1F3B7	saksafoni	ala | muziki | saksafoni | zeze
+1F3B8	gita	ala | gita | muziki
+1F3B9	kinanda	ala | kinanda | muziki | piano
+1F3BA	tarumbeta	ala | muziki | tarumbeta
+1F3BB	fidla	ala | fidla | muziki
+1F3BC	karatasi ya muziki	karatasi ya muziki | muziki | mziki
+1F3BD	shati la kukimbia	kukimbia | mshipi | shati | shati la kukimbia | shati ya kukimbia
+1F3BE	mpira wa tenisi	mpira | mpira wa tenisi | raketi
+1F3BF	skii	relitheluji | ski | skii | theluji
+1F3C0	mpira wa kikapu	kikapu | mchezo | mpira | mpira wa kikapu
+1F3C1	bendera yenye mirabaraba	bendera ya kuonyesha michezo | bendera yenye mirabaraba | maliza | mashindano ya mbio | michezo | mirabamiraba
+1F3C2	mtu anayeteleza kwenye theluji	mchezo | mtu anayeteleza kwenye theluji | ski | theluji | ubao wa kuteleza kwenye theluji
+1F3C3	mkimbiaji	kukimbia | marathoni | mbio za masafa marefu | mkimbiaji
+1F3C4	mtu anayeteleza kwenye mawimbi	bahari | kuteleza kwenye mawimbi | mchezo | mtu anayeteleza kwenye mawimbi | ufukweni
+1F3C5	medali ya michezo	medali | medali ya michezo
+1F3C6	kikombe	kikombe | michezo | ushindi | zawadi
+1F3C7	mbio za farasi	farasi | farasi ya mashindano | mashindano | mbio za farasi | mwendesha farasi
+1F3C8	mpira wa marekani	marekani | mchezo wa mpira wa kimarekani | mpira | mpira wa marekani | mpira wa miguu
+1F3C9	mpira wa raga	mpira | mpira wa miguu | mpira wa raga | raga
+1F3CA	mwogeleaji	kuogelea | mchezo | mtu akiogelea | mwogeleaji
+1F3CB	mbeba vyuma vizito	mazoezi ya mwili | mbeba vyuma | mbeba vyuma vizito | uzito
+1F3CC	mcheza gofu	gofu | mcheza gofu | mpira | mwanamume anayecheza gofu
+1F3CD	pikipiki	mashindano | pikipiki
+1F3CE	gari la mashindano	gari | gari la mashindano | mashindano
+1F451	taji	malkia | mavazi | mfalme | taji
+1F452	kofia ya mwanamke	kofia | kofia ya mwanamke | mavazi | mwanamke
+1F453	miwani	jicho | maiwani | mavazi | miwani | miwani ya macho
+1F454	tai	mavazi | shati | tai
+1F455	fulana	fulana | mavazi | shati
+1F456	suruali ya jinzi	mavazi | suruali | suruali ya jinzi
+1F457	nguo	mavazi | nguo | vazi la kike
+1F458	kimono	kimono | mavazi | vazi
+1F459	bikini	bikini | chupi na brazia | kuogelea | mavazi
+1F45A	nguo za wanawake	mavazi | mwanamke | nguo za wanawake | shati
+1F45B	kibeti	kibeti | mavazi | sarafu
+1F45C	mfuko	begi la mkononi | kununua | mavazi | mfuko | nguo | pochi | pochi ya mwanamke
+1F45D	kipochi	begi | kipochi | mavazi | mkoba | nguo
+1F45E	kiatu cha wanaume	kiatu | kiatu cha wanaume | mavazi | mwanamume
+1F45F	kiatu cha kukimbia	kiatu | kiatu cha kukimbia | kiatu cha kukimbilia | mavazi | mbio | michezo | raba ya kukimbia
+1F460	kiatu chenye kisigino kirefu	kiatu | kiatu chenye kisigino kirefu | kisigino | mavazi | mwanamke
+1F461	ndara ya mwanamke	kiatu | kiatu cha mwanamke | mavazi | mwanamke | ndara | ndara ya mwanamke
+1F462	buti la mwanamke	buti | buti la mwanamke | buti ya mwanamke | kiatu | mavazi | mwanamke
+1F6B2	baisikeli	baisikeli | gari
+1F6B4	mwendesha baisikeli	baisikeli | mwendesha baisikeli | mwendesha baiskeli
+1F6B5	mtu anayeendesha baisikeli mlimani	baisikeli | kuendesha baiskeli | mlima | mtu anayeendesha baisikeli mlimani | mwendesha baisikeli
+1F6B6	mtu anayetembea	kutembea | kutembea umbali mrefu | matembezi | mtu anayetembea | natoka | tembea
+1F938	sarakasi	mchezaji | mwanasarakasi | sarakasi | shauku
+1F939	shughuli nyingi	kurusha mipira mingi kwa mikono | shughuli nyingi
+1F93A	mtu aliyeshika upanga	mtu aliyeshika upanga | spoti | upanga
+1F93C	wanandondi	bondia | miereka | ndondi | spoti | wanamiereka | wanandondi
+1F93D	michezo kwenye bwawa la kuogelea	bwawa la kuogelea | maji | michezo kwenye bwawa la kuogelea | spoti
+1F93E	mpira wa mikono	mchezaji wa mpira wa mikono | mpira | mpira wa mikono | spoti
+1F93F	barakoa ya kupiga mbizi	barakoa la kupiga mbizi | barakoa ya kupiga mbizi | kupiga mbizi | kuzamia majini | skuba | vifaa vya kupiga mbizi
+1F9E2	chepeo	chepeo | kibandiko cha baba | kofia | kofia iliyochorwa emoji | kofia ya besiboli
+1F9E3	shali	shali | shingo
+1F9E4	glavu	glavu | mkono
+1F9E5	koti	baridi | jaketi | koti
+1F9E6	soksi	soksi | soksi ndefu
+1FA70	viatu vya bale	bale | dansi | dansi ya maigizo | densi | viatu vya bale | viatu vya dansi
+1FA71	nguo ya kuogelea	nguo ya kuogelea | suti ya kuogelea | vazi la kuogelea
+1FA72	chupi	chupi | nguo | nguo ya kuogelea | suti ya kuogelea | vazi la kuogelea
+1FA73	kaptura	chupi | kaptura | nguo | suruali | vazi la kuogea | vazi la kuogelea
+1FA74	ndara	kandambili | malapa | ndara | sapatu | zori
+1FA80	kigurudumu cha uzi	badilika badilika | kidude cha kuchezea | kigurudumu cha uzi | kupanda na kushuka
+1FA81	kishada	kishada | paa | ruka | tiara
+1FA82	parachuti	mrukaji kwa mwavuli | mwavuli wa kurukia | parachuti | ruka kutoka angani | ruka kwa nyiririko | ruka kwa parachuti
+1FA83	bumerangi	australia | bumarengi | bumerangi | kurudi | matokeo | silaha | wananchi wa asili
+1FA84	kifimbo cha mazingaombwe	kifimbo cha mazingaombwe | kiini macho | mazingaombwe | mganga | mlozi wa kike | mlozi wa kiume | muujiza
+1FA85	pinata	dhifa | karamu | pinata | sherehe | tamu
+1FA86	mwanaserere wa kirusi	babushka | doli za uzazi | kutunza | mwanaserere | mwanaserere wa kirusi | urusi
+1FA95	gambusi	gambusi | muziki | nyuzi | zeze
+1FA97	kodiani	ala | harimuni | kodiani | konsertina | muziki
+1FA98	ngoma refu	ala | mapigo | mdundo | ngoma | ngoma refu
+265F	kipande cha saratanji	danganya | kipande cha saratanji | saratanji | toa mhanga
+2660	shupaza	jembe | kadi | karata | karata ya jembe | mchezo | shupaza
+2663	maua	kadi | kadi ua la karanga | karata | maua | mchezo | ua
+2665	kopa	kadi | karata | karata ya moyo | kopa | mchezo
+2666	kisu	almasi | kadi | karata | kisu | mchezo | visu
+1F4B3	kadi ya mkopo	benki | kadi | kadi ya mkopo | mkopo | pesa
+1F4B4	noti ya yeni	benki | noti | noti ya yeni | pesa | sarafu | yeni
+1F4B5	noti ya dola	benki | dola | noti | noti ya dola | pesa | sarafu
+1F4B6	noti ya yuro	benki | noti | noti ya yuro | pesa | sarafu | yuro
+1F4B7	noti ya pauni	benki | noti | noti ya paundi | noti ya pauni | paundi | pauni | pesa | sarafu
+1F4B9	chati inayopanda yenye yeni	benki | chati | chati inayopanda yenye yeni | chayi inayopanda yenye yeni | grafu | kupanda | ongezeka | pesa | sarafu | soko | yeni
+1F4BB	kompyuta ndogo	binafsi | kompyuta | kompyuta ndogo | pc
+1F4BC	mkoba	mkoba | mkoba wa ofisini
+1F4BD	diski ndogo	diski | diski ndogo | kompyuta | ya macho
+1F4BE	diski laini	diski | diski laini | kompyuta
+1F4BF	diski	blu-ray | cd | diski | dvd | kompyuta | mwangaza | ya macho
+1F4C0	diski dijitali	blu-ray | cd | diski | diski dijitali | kompyuta | mwangaza | ya macho
+1F4C1	folda ya faili	faili | folda | folda ya faili
+1F4C2	folda ya faili iliyofunguliwa	faili | folda | folda ya faili iliyofunguliwa | funguliwa
+1F4C3	ukurasa uliokunjwa	hati | kukunja | ukurasa | ukurasa uliokunjwa
+1F4C4	ukurasa unaotazama juu	hati | ukurasa | ukurasa unaotazama juu
+1F4C5	kalenda	kalenda | tarehe
+1F4C6	kalenda unayoweza kuchana kurasa	kalenda | kalenda unayoweza kuchana kurasa
+1F4C7	kadi	farahasa | kadi | mwongozo
+1F4C8	chati inayopanda	chati | chati inayopanda | grafu | juu | kukua | uelekeo
+1F4C9	chati inayoshuka	chati | chati inayoshuka | chini | grafu | uelekeo
+1F4CA	chati ya miraba	chati | chati ya miraba | grafu | mraba
+1F4CB	ubao wa kunakili	ubao wa kunakili
+1F4CC	pini	bandika | kibandiko | pini | unga
+1F4CD	pini yenye kichwa cha mduara	bandika | kibandiko | pini | pini yenye kichwa cha mduara
+1F4CE	kishikizo	kishikizo | kishikizo cha karatasi
+1F4CF	rula	rula | ukingo ulionyooka
+1F4D0	rula ya pembe	pembe | rula | rula ya pembe | seti
+1F4D1	vichupo vya alamisho	alama | alamisho | vichupo | vichupo vya alamisho | weka alama
+1F4D2	leja	daftari | leja
+1F4D3	daftari	daftari
+1F4D4	daftari lenye jalada lililopambwa	daftari | daftari lenye jalada lililopambwa | elimu | jalada | kitabu | kuandika | lililopambwa | shule
+1F4D5	kitabu kilichofungwa	kitabu | kitabu kilichofungwa | kufungwa
+1F4D6	kitabu kilichofunguliwa	kitabu | kitabu kilichofunguliwa | kufunguliwa
+1F4D7	kitabu cha kijani	elimu | kijani | kitabu | kitabu cha kijani | maktaba
+1F4D8	kitabu cha samawati	kitabu | kitabu cha samawati | maktaba | samawati
+1F4D9	kitabu cha njano	kitabu | kitabu cha njano | maktaba | manjano
+1F4DA	vitabu	elimu | kitabu | kusoma | librari | shule | soma | vitabu
+1F4DB	beji ya jina	beji | beji ya jina | jina
+1F4DC	hati ya kukunja kwa kuviringisha	hati ya kukunja kwa kuviringisha | karatasi
+1F4DD	hati	hati | mawasiliano | media | muhtasari | mwandiko | penseli | ujumbe
+1F4DE	mkono wa simu	mawasiliano | mkono wa simu | simu
+1F4DF	peja	mawasiliano | peja
+1F4E0	mashine ya faksi	faksi | mashine ya faksi
+1F4E1	antena ya setilaiti	antena | antena ya setilaiti | dishi | setilaiti | ungo
+1F4E2	kipaza sauti	kipaza sauti | sauti
+1F4E3	megafoni	kushangilia | megafoni
+1F4E4	trei ya majalada ya kutoka	barua | imetumwa | sanduku | sanduku la kutuma | trei | trei ya kutoa | trei ya majalada ya kutoka
+1F4E5	trei ya majalada ya kuingia	barua | pokea | sanduku | sanduku la kupokea | trei | trei ya kupokea | trei ya majalada ya kuingia
+1F4E6	kifurushi	kifurushi | mawasiliano | sanduku
+1F4E7	barua pepe	barua | barua pepe
+1F4E8	bahasha inayoingia	bahasha | barua | barua pepe | inayoingia | pokea
+1F4E9	bahasha na kishale	bahasha | bahasha na kishale | barua | barua pepe | inayotoka | mshale
+1F4EA	sanduku la barua lililofungwa lenye bendera iliyoshushwa	fungwa | kushushwa | sanduku | sanduku la barua | sanduku la barua lililofungwa lenye bendera iliyoshushwa | sanduku la barua lisilo na barua ya kuchukuliwa | sanduku la posta
+1F4EB	sanduku la barua lililofungwa lenye bendera iliyoinuliwa	barua | fungwa | sanduku la barua | sanduku la barua lililofungwa lenye bendera iliyoinuliwa | sanduku la posta | sanduku la posta lenye barua ndani
+1F4EC	sanduku la barua lililofunguliwa lenye bendera iliyoinuliwa	barua | funguliwa | sanduku la barua | sanduku la barua lililofunguliwa lenye bendera iliyoinuliwa | sanduku la posta
+1F4ED	sanduku la barua lililofunguliwa lenye bendera iliyoshushwa	barua | funguliwa | kushushwa | sanduku la barua | sanduku la barua lililofunguliwa lenye bendera iliyoshushwa | sanduku la posta
+1F4EE	sanduku la barua	barua | sanduku la barua
+1F4EF	honi ya posta	honi | honi ya posta | posta
+1F4F0	gazeti	gazeti | habari | karatasi
+1F4F1	simu ya mkononi	mawasiliano | simu | simu ya mkononi | ya mkononi
+1F4F2	simu ya mkononi yenye kishale	mshale | piga simu | pokea | simu | simu ya mkononi | simu ya mkononi yenye kishale | ya mkononi
+1F4F3	hali ya mtetemo	hali | hali ya mtetemo | mtetemo | simu | simu ina tetemeka | simu ya mkononi | ya mkononi
+1F4F4	zima simu za mkononi	imezimwa | simu | simu ya mkononi | ya mkononi | zima simu ya mkononi | zima simu za mkononi
+1F4F5	simu za mkononi haziruhusiwi	hapana | katazwa | marufuku | simu | simu ya mkononi | simu za mkononi haziruhusiwi | siyo | somu ya mkononi | ya mkononi
+1F4F6	pau za antena	antena | ishara | mawasiliano | pau | pau za antena | simu | simu ya mkononi | ya mkononi
+1F4F7	kamera	instagram | kamera | video
+1F4F8	kamera yenye mmweko	kamera | kamera yenye mmweko | mmweko | video
+1F4F9	kamera ya kurekodi video	kamera | kamera ya kurekodi video | video
+1F4FA	runinga	runinga | tv | video
+1F4FB	redio	redio | video
+1F4FC	kaseti ya video	kanda | kaseti ya video | kaseti ya zamani | vhs | video
+1F4FD	projekta ya filamu	filamu | projekta | projekta ya filamu | sinema | video
+1F4FF	shanga za maombi	dini | maombi | mavazi | mkufu | ombi | shanga | shanga za maombi
+1F505	kitufe cha kufifiza mwanga	chini | fifia | kitufe cha kufifiza mwanga | kung’aa | mwanga mdogo
+1F506	kitufe cha kuongeza mwanga	kitufe cha kuongeza mwanga | kung’aa | mng’ao | mwanga
+1F507	spika imezimwa	kimya | sauti | spika | spika imezimwa | zima
+1F508	spika	sauti | sauti ya chini ya spika | spika
+1F509	spika imewashwa	chini | sauti | spika | spika imewashwa | spika imewashwa sauti ya kati | wingu
+1F50A	spika yenye sauti ya juu	juu | sauti | spika | spika yenye sauti ya juu
+1F50B	betri	betri
+1F50C	plagi ya umeme	nguvu za umeme | plagi | plagi ya umeme | umeme
+1F50D	kioo cha ukuzaji kinachoelekeza kushoto	glasi | kikuzi | kioo cha ukuzaji kinachoelekeza kushoto | kukuza | tafuta | zana
+1F50E	kioo cha ukuzaji kinachoelekeza kulia	glasi | kioo cha ukuzaji kinachoelekeza kulia | kukuza | tafuta | zana
+1F50F	kufuli na kalamu	faragha | kalamu | kufuli | kufuli na kalamu | nibu | wino
+1F510	kufuli iliyofungwa na ufunguo	fungwa | kufuli | kufuli iliyofungwa na ufunguo | salama | ufunguo
+1F511	ufunguo	fungua | kufuli | nenosiri | ufunguo
+1F512	kufuli	binafsi | fungwa | kufuli
+1F513	kufuli iliyofunguliwa	funga | fungua | funguliwa | kufuli iliyofunguliwa
+1F514	kengele	kanisa | kengele | sauti
+1F515	kengele yenye alama ya mkato	hapana | katazwa | kengele | kengele yenye alama ya mkato | kimya | marufuku | zima
+1F516	alamisho	alamisho | weka alama
+1F517	pete ya mnyororo	pete | pete ya mnyororo
+1F518	kitufe	jiometri | kitufe
+1F51E	walio chini ya miaka kumi na nane hawaruhusiwi	18 | chini ya miaka inayoruhusiwa | kikwazo cha umri | kufika na nane marufuku | kumi na nane | marufuku | walio chini ya miaka kumi na nane hawaruhusiwi
+1F51F	kitufe: 10	kitufe
+1F526	kurunzi	kurunzi | mwanga | tochi | umeme | zana
+1F527	spana malaya	spana | spana malaya | zana | zana za nyumbani
+1F528	nyundo	nyundo | zana
+1F529	nati na bolti	bolti | nati | nati na bolti | zana
+1F52A	kisu kinachotumika jikoni	hocho | kisu | kisu kinachotumika jikoni | kupika | silaha | zana
+1F52B	bastola ya maji	bastola | bastola ya maji | bunduki | maji | silaha | zana
+1F52C	hadubini	hadubini | zana
+1F52D	darubini	darubini | zana
+1F9BA	jaketi la usalama	dharura | jaketi | jaketi la usalama | usalama
+1F9BB	sikio lenye kifaa cha kusikia	sikio lenye kifaa cha kusikia | tatizo la kutosikia vizuri | ufikivu
+1F9BC	kiti cha magurudumu chenye mota	kiti cha magurudumu chenye mota | mapito ya walemavu | ufikivu
+1F9BD	kiti cha magurudumu kisicho na mota	kiti cha magurudumu kisicho na mota | sehemu ya walemavu | ufikivu
+1F9E9	mchezofumbo	dokezo | fumbo | fungamana | kipande | kipande cha mchezo wa mafumbo | mchezofumbo
+1F9EA	neli ya majaribio	kemia | maabara | majaribio | mwanakemia | neli ya majaribio | sayansi
+1F9EB	chombo cha kupondea	bakteria | biolojia | chombo cha kupondea | maabara | mwanabiolojia
+1F9EC	dna	biologist | dna | jenetiki | jeni | mageuko | mageuzi | maisha | mwanabiolojia
+1F9ED	dira	dira | kuelekeza | maelekezo | smaku | usafiri
+1F9EE	abaki	abaki | kokotoa
+1F9EF	kizima moto	kizima moto | moto | zima
+1F9F0	kisanduku cha vifaa	kisanduku | kisanduku cha vifaa | kisanduku cha zana | kisanduku chekundu | makanika | zana
+1F9F1	tofali	matofali | tofali | udongo | ukuta | zege
+1F9F2	sumaku	kiatu cha farasi | mvuto | sumaku
+1F9F3	mzigo	funganya virago | mzigo | safiri | sanduku
+1F9F4	chupa ya losheni	chupa ya losheni | kisitiri jua | losheni | mafuta | shampuu
+1F9F5	uzi	kigurudumu cha uzi | kushona | sindano | uzi
+1F9F6	uzi uliosokotwa	kroshia | shona | uzi | uzi uliosokotwa
+1F9F7	kikwasi	kikwasi | nepi | pini ya usalama
+1F9F8	mwanaserere wa dubu	dubu | kidude cha kuchezea | kikorokoro | mwanaserere | mwanaserere wa dubu
+1F9F9	ufagio	kufagia | kusafisha | mchawi | mfyagio | ufagio
+1F9FA	kikapu	kikapu | kufua nguo | kulima | mandari
+1F9FB	karatasi	karatasi | karatasi ya kuchambia | taulo ya mikono
+1F9FC	sabuni	kipande | kisahani cha sabuni | kuoga | kupaka | kusafisha | sabuni | safisha
+1F9FD	sifongo	fyonza | kufyonza | kunyonya | kusafisha | sifongo
+1F9FE	risiti	rekodi | risiti | thibitisho | uhasibu | ushahidi
+1F9FF	hirizi	hirizi | jicho baya | kago | pepo | shanga | talasimu
+1FA78	tone la damu	changia damu | dawa | hedhi | jeraha | kuchangia damu | kuumia | tokwa na damu | tone la damu | vuja damu
+1FA79	bendeji inayonata	bandeji | bandeji inatayo | bendeji | bendeji inayonata
+1FA7A	stetoskopu	daktari | dawa | moyo | stetoskopu
+1FA91	kiti	kaa | keti | kiti
+1FA92	wembe	kali | kunyoa | nyoa | wembe
+1FA93	shoka	kishoka | kukata | kukatika | kuni | pasua | shoka
+1FA94	taa ya diya	diya | mafuta | taa | taa ya diya
+1FA96	kofia ya wanajeshi	askari | askari wa vita | jeshi | kofia | kofia ya wanajeshi | mwanajeshi | vita | wanajeshi
+1FA99	sarafu	chuma | dhahabu | hazina | hela | pesa | sarafu | shaba | shilingi
+1FA9A	msumeno	kata | mbao | msumeno | seremala | zana
+1FA9B	bisibisi	bisbisi | bisibisi | parafujo | zana
+1FA9C	ngazi	daraja | kidato | ngazi | panda
+1FA9D	ndoano	bakora | kishawishi cha mauzo | ndoana | ndoano | pinda | shika | tega
+1FA9E	kioo	kiakisi | kioo | kuakisi | vipodozi
+1FA9F	dirisha	angavu | dirisha | fremu | hewa safi | kuona | mwanya
+260E	simu	simu | simu ya mezani
+2620	fuvu na mifupa	fuvu | fuvu na mifupa | kifo | mifupa | uso | zimwi
+2622	mnururisho	alama ya mnururisho | ishara | miyonzo mibaya | mnururisho
+2623	tahadhari ya kibayalojia	alam ya tahadhari | tahadhari ya kibayalojia | tahadhari ya kibayolojia | tahadhari ya kibiolojia
+267F	kiti cha magurudumu	alama ya kiti cha magurudumu | kiti cha magurudumu | ufikiaji
+2692	nyundo na sululu	nyundo | nyundo na sululu | sululu | zana
+2693	nanga	kifaa | meli | nanga | zana
+2694	panga zilizopishanishwa	kupishanishwa | panga zilizopishanishwa | silaha | sime
+2695	ishara ya taaluma ya matibabu	dawa | ishara | ishara ya taaluma ya matibabu | tiba
+2696	mzani	haki | mizani | mzani | pima | uzito | zana | zodiaki
+2697	alembiki	alembiki | kemia | zana
+2699	gia	gia | zana
+269B	alama ya atomu	alama ya atomu | asiyemwamini Mungu | atomu
+269C	ua la yungi	ua la yungi | yungiyungi
+26A0	onyo	onyo | uwe makini
+26CF	sululu	kuchimba mgodi | nyundo | sululu | zana
+26D1	helmeti iliyo na msalaba mweupe	helmeti | helmeti iliyo na msalaba mweupe | kofia | msaada | msalaba | uso
+26D3	minyororo	minyororo | mnyororo
+26D4	hakuna kuingia	hakuna kuingia | hapana | katazwa | kuingia | marufuku | siyo | trafiki | usipite
+2702	makasi	makasi | zana
+2709	bahasha	bahasha | barua pepe
+270F	penseli	penseli
+2712	nibu nyeusi	kalamu | nibu | nibu nyeusi
+2714	alama ya tiki	✓ | alama ya tiki | tia tiki | tiki nyeusi | tiki ya kijani
+2716	zidisha	× | alama | alama ya kuzidisha | ghairi | zidisha
+2753	alama nyekundu ya kuuliza	? | alama | alama nyekundu ya kuuliza | alama ya kuuliza | swali | uakifishaji
+2757	alama nyekundu ya mshangao	! | alama | alama nyekundu ya mshangao | alama ya mshangao | mshangao | uakifishaji
+27A1	mshale unaoelekeza kulia	mashariki | mshale | mshale unaoelekeza kulia | muelekeo | sehemu kuu ya dira | uelekeo
+1F500	kitufe cha kuchanganya	kitufe cha kuchanganya | kupishana | kupishanishwa | mshale
+1F501	kitufe cha kurudia	kitufe cha kurudia | mshale | mzunguko wa akrabu | rudia
+1F502	kitufe cha kurudia wimbo mmoja	kitufe cha kurudia wimbo mmoja | mara moja | mshale | mzunguko wa akrabu
+1F503	mishale wima inayoelekeza kwa mzunguko wa akrabu	mishale wima inayoelekeza kwa mzunguko wa akrabu | mshale | mzunguko wa akrabu | pakia upya | pakua upya
+1F504	kitufe cha mishale ya kinyume saa	anzisha upya | chakaa | kinyume saa | kitufe cha mishale ya kinyume saa | mshale
+1F519	mshale wa nyuma	mshale | mshale wa nyuma | nyuma
+1F51A	mshale wa mwisho	mshale | mshale kuelekeza mwisho | mshale wa mwisho | mwisho
+1F51B	mshale wa hewani!	alama | hewani | mshale | mshale wa hewani! | WASHA
+1F51C	mshale unaoashiria hivi karibuni	hivi karibuni | mshale | mshale unaoashiria hivi karibuni
+1F51D	mshale unaoangalia juu	juu | mshale | mshale unaoangalia juu | mshale unaoelekea juu
+1F520	weka herufi kubwa za kilatini	ABCD | herufi | herufi kubwa | latini | weka | weka herufi kubwa za kilatini
+1F521	weka hefuri ndogo za kilatini	abcd | herufi | herufi ndogo | latini | weka | weka hefuri ndogo za kilatini
+1F522	weka nambari	1234 | namba | nambari | weka
+1F523	weka alama	weka | weka alama
+1F524	weka herufi za kilatini	abc | alfabeti | herufi | latini | weka | weka herufi za kilatini
+21B5	kishale cha chini chenye kona inayopinda kushoto	kishale cha chini chenye kona inayopinda kushoto
+21B0	kishale kinachoelekea juu chenye ncha iliyopinda kushoto	kishale kinachoelekea juu chenye ncha iliyopinda kushoto
+21B1	kishale kinachoelekea juu chenye ncha iliyopinda kulia	kishale kinachoelekea juu chenye ncha iliyopinda kulia
+21B2	kishale kinachoelekea chini ncha ikipinda kushoto	kishale kinachoelekea chini ncha ikipinda kushoto
+21B3	kishale kinachoelekea chini ncha ikipinda kulia	kishale kinachoelekea chini ncha ikipinda kulia
+21B4	kishale cha chini chenye kona inayopinda kulia	kishale cha chini chenye kona inayopinda kulia
+21E4	upao wa kishale cha kushoto	upao wa kishale cha kushoto
+21E5	upao wa kishale cha kulia	upao wa kishale cha kulia
+21B9	kishale kinachoelekea kushoto juu ya kishale kinachoelekea kulia	kishale | kishale kinachoelekea kushoto juu ya kishale kinachoelekea kulia | kushoto | upao | vishale vya upau wa kushoto juu ya kulia
+21E7	kishale wazi kinachoelekea juu	kishale wazi kinachoelekea juu
+21EA	kishale wazi chenye mkato kinachoelekea juu	kishale wazi chenye mkato kinachoelekea juu
+21E6	kishale wazi kinachoelekea kushoto	kishale wazi kinachoelekea kushoto
+21E8	kishale wazi kinachoelekea kulia	kishale wazi kinachoelekea kulia
+21E9	kishale wazi kinachoelekea chini	kishale wazi kinachoelekea chini
+21DE	kishale kinachoelekea juu chenye mikato miwili	kishale kinachoelekea juu chenye mikato miwili
+21DF	kishale kinachoelekea chini chenye mikato miwili	kishale kinachoelekea chini chenye mikato miwili
+21B8	kishale cha upau wa kasakazini magharibi	kishale cha kaskazini magharibi kinachoegemea upao | kishale cha upau wa kasakazini magharibi
+21B6	kishale nusu mviringo kinachoelekea kinyume saa	kishale nusu mviringo kinachoelekea kinyume saa
+21B7	kishale nusu mviringo kinachoelekea kisaa	kishale nusu mviringo kinachoelekea kisaa
+21C5	mshale unaoelekea juu na mwingine chini	chini | juu | mshale | mshale unaoelekea juu na mwingine chini
+21F5	kishale cha kushoto chini cha kulia juu	kishale cha kushoto chini cha kulia juu
+21A8	kishale cha juu chini chenye upao	kishale cha juu chini chenye upao
+21E0	kishale cha deshi cha kushoto	kishale cha deshi cha kushoto
+21E1	kishale cha deshi kinachoelekea juu	kishale cha deshi kinachoelekea juu
+21E2	kishale cha deshi cha kulia	kishale cha deshi cha kulia
+21E3	kishale cha deshi kinachoelekea chini	kishale cha deshi kinachoelekea chini
+21AB	kishale kilichosokota kinachoelekea kushoto	kishale kilichosokota kinachoelekea kushoto
+21AC	kishale kilichosokota kinachoelekea kulia	kishale kilichosokota kinachoelekea kulia
+2B05	mshale unaoelekeza kushoto	magharibi | mshale | mshale unaoelekeza kushoto | sehemu kuu ya dira | uelekeo
+2B06	mshale unaoelekeza juu	endelea | kaskazini | mshale | mshale unaoelekeza juu | sehemu kuu ya dira | uelekeo
+2B07	mshale unaoangalia chini	chini | kusini | mshale | mshale unaoangalia chini | mwelekeo wa chini | sehemu kuu ya dira | uelekeo

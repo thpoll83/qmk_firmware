@@ -188,6 +188,13 @@ typedef struct _poly_sync_t {
     // fail in. Master-authoritative, RAM-only, never persisted: a reboot is a
     // fresh decision.
     uint32_t doom_pack_auth_crc;
+    // Emoji search mode (emoji_layer.h): the typed query as BMP codepoints, and
+    // {flags (bit 0 search mode), result page, query length, reserved}. Synced so
+    // the slave shows its half of the same search; it runs the search itself on
+    // its own dictionary copy. 2-byte members right after the 4-byte ones and a
+    // 4-byte group after them, so the struct stays padding-free.
+    uint16_t emj_query[16];
+    uint8_t  emj_search[4];
     uint8_t  lang;
     uint8_t  contrast;
     uint8_t  flags;
@@ -565,7 +572,7 @@ typedef struct _poly_eeconf_t {
     // an EEPROM written before this field reads 0 here (wear levelling returns cleared
     // bytes as zero), and 0 is GLYPH_PLACE_CENTRE, the placement those boards had.
     uint8_t  glyph_place;
-    // Persisted tapping term and Flow Tap term (HID cmd 44, protocol v28), each
+    // Persisted tapping term and Flow Tap term (HID cmd 44, protocol v29), each
     // ms / 10 BIASED BY ONE so that zero means "never chosen": tap_term_pack() /
     // tapping_term_unpack() / flow_tap_term_unpack() in base/tap_terms.h. The bias
     // is needed because a Flow Tap term of 0 (off) is a real choice.

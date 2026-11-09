@@ -1,7 +1,7 @@
 // Copyright 2026 Thomas Pollak
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// The tap-hold timing settings (HID cmd 44, protocol v28): the tapping term and
+// The tap-hold timing settings (HID cmd 44, protocol v29): the tapping term and
 // the Flow Tap term, their allowed ranges, and their EEPROM encoding.
 //
 // Header-only and pure (no config.h, no quantum.h), so the ranges and the encoding

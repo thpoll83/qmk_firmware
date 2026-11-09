@@ -308,7 +308,10 @@ Twelve custom transaction IDs send state to the slave with CRC32 and up to 10 re
   QMK defaults it to `EECONFIG_USER_DATA_SIZE`, so every appended `poly_eeconf_t` byte
   up to 1.11.0 zeroed all settings on upgrade, and the zeroed `keymap_layers_fmt` then
   discarded the stored keymap and macros. Now a tail byte appends without a reset, and
-  its default must be 0.
+  its default must be 0. ⚠️ On a board older than 2026-08-13, offsets 159 and up can
+  hold old keymap bytes (the keymap began at offset 128). A field there needs the
+  `tail_fmt` marker's reset (`stamp_tail_fmt()`, state.h); extend that reset when you
+  add one.
 - **`g_user_brightness` changes only at deliberate set-points**, never from idle or
   suspend transients.
 - **Idle tracking is a `bool` plus a `uint32_t` timestamp**, never a signed sentinel.

@@ -97,6 +97,14 @@ void stamp_keymap_layers_fmt(void) {
                                    sizeof(marker));
 }
 
+// Written straight through at boot, like stamp_keymap_layers_fmt(): the bytes it
+// zeroes may hold leftover keymap data (state.h, tail_fmt), so the marker and the
+// zeros go in one write.
+void stamp_tail_fmt(void) {
+    const uint8_t tail[4] = {0, 0, 0, TAIL_FMT_OK};
+    eeconfig_update_user_datablock(tail, offsetof(poly_eeconf_t, tapping_term), sizeof(tail));
+}
+
 // Saves both settings and latin table. Use save_user_settings() or save_user_latin() when only one part changed.
 void save_user_eeconf(void) {
     save_user_settings();

@@ -169,7 +169,11 @@ key sits on a standard keyboard (`[` one key right of P, `.` two right of M), on
 the same half as its own key. When that neighbour is on the other half, the
 distance is measured from the key itself; a letter never changes sides. Only a letter no other key can type moves: Russian х
 and ю on Qwerty do, French é does not (e finds the same words, see `fold()`).
-`build_slot_letters()` does this in two passes. With Russian, all 33 letters can
+`build_slot_letters()` does this in two passes. `render_search_keys.py` draws the result for Qwerty and
+Qwerty Stag! on one HTML page (the docs site's picture) and prints the letters it
+moved. It has its own copy of these rules in `roles()`: a change to
+`build_slot_letters()` needs the same change there, and the picture shows only
+what that copy computes. With Russian, all 33 letters can
 be typed on all five base layouts.
 
 The letters are read from the base layout when search mode starts, from the

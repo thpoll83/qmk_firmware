@@ -19,6 +19,9 @@ import re
 import sys
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")   # Cyrillic output on a non-UTF-8 console
+
 QMK = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(QMK / "emoji"))
 import emoji_dict  # noqa: E402
@@ -26,7 +29,7 @@ import emoji_dict  # noqa: E402
 QUERY = sys.argv[1] if len(sys.argv) > 1 else "smil"
 OUT = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("preview.html")
 
-src = re.sub(r"/\*.*?\*/", "", (QMK / "split72/keymaps/default/keymap.c").read_text(), flags=re.S)
+src = re.sub(r"/\*.*?\*/", "", (QMK / "split72/keymaps/default/keymap.c").read_text(encoding="utf-8"), flags=re.S)
 
 
 def layer(name):
@@ -49,7 +52,7 @@ ROWS = [7, 7, 8, 8, 7]
 LEFT_COLS = [range(0, 7), range(0, 7), range(0, 8), range(0, 8), [0, 1, 2, 3, 5, 6, 7]]
 RIGHT_COLS = [range(1, 8), range(1, 8), range(0, 8), range(0, 8), [0, 1, 2, 4, 5, 6, 7]]
 
-_cfg = (QMK / "split72/keymaps/default/config.h").read_text()
+_cfg = (QMK / "split72/keymaps/default/config.h").read_text(encoding="utf-8")
 RESULT_OF_CAT = [int(x) for x in re.search(r"EMJ_SEARCH_RESULT_OF_CAT \{([^}]*)\}", _cfg).group(1).split(",")]
 SPACE_MRU = {5, 6}
 import os
@@ -88,6 +91,7 @@ def letter_of(k):
 
 def roles(base):
     base = [tap(k) for k in base]
+    assert len(emj) == len(base) == len(MATRIX), (len(emj), len(base), len(MATRIX))
     pairs = list(zip(emj, base))
     # the firmware's two passes, in matrix scan order
     order = sorted(range(len(pairs)), key=lambda i: tuple(MATRIX[i]))

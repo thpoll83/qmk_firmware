@@ -36,6 +36,9 @@ uint16_t emjdict_cp_count(void);
 // The dictionary has a letter for this typed codepoint (its fold table lists it),
 // so a key with this legend can type into the query.
 bool emjdict_maps_letter(uint32_t cp);
+// The dictionary's byte code for a typed letter (its base letter), or
+// EMJDICT_CODE_UNKNOWN. Two letters with one code find the same words.
+uint8_t emjdict_letter_code(uint32_t cp);
 
 // Search for `query` (n typed codepoints; U+0020 separates words). Writes up to
 // out_max codepoints of the results, starting at result number `skip`, to out[],

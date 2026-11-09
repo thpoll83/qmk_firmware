@@ -297,6 +297,26 @@ static void search_changed(void) {
     request_disp_refresh();
 }
 
+// Role of an emoji slot in search mode, from the fixed slot config and the
+// base layout's Backspace (s_bksp_below, set before this is used).
+static uint8_t slot_role(uint8_t slot) {
+    if (slot == EMJ_SEARCH_SPACE2_SLOT) return ROLE_SPACE;
+    if (slot == EMJ_SEARCH_BKSP_SLOT) return s_bksp_below ? ROLE_SPACE : ROLE_BKSP;
+    if (slot == EMJ_SEARCH_SPACE_SLOT) return s_bksp_below ? ROLE_NONE : ROLE_SPACE;
+    return ROLE_NONE;
+}
+
+// The letter the base layout's key at `pos` types in the active language, or 0.
+static uint32_t base_letter(uint8_t base, uint8_t lang, keypos_t pos) {
+    uint16_t        bkc = poly_mt_tap(keymap_key_to_keycode(base, pos));
+    const uint32_t *t   = translate_keycode(lang, bkc, false, false);
+    if (!t) return 0;
+    while (*t && *t < 0x20u) ++t;   // skip the legend's position nudges
+    return (*t && *t <= 0xFFFFu && emjdict_maps_letter(*t)) ? *t : 0;
+}
+
+#define EMJ_LOST_MAX 16  // letters one layout can lose to search keys and still get back
+
 static void build_slot_letters(void) {
     if (!s_letters_dirty) return;
     s_letters_dirty = false;
@@ -304,21 +324,74 @@ static void build_slot_letters(void) {
     s_bksp_below = false;
     const uint8_t base = (uint8_t)get_local_layer()->def_layer;
     const uint8_t lang = get_local_state()->lang;
+
+    // Pass 1: where the base layout has Backspace decides the slot roles.
+    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            keypos_t pos = {.row = r, .col = c};
+            if (keymap_key_to_keycode(_EMJ, pos) == KC_EMJ_PAGE_NEXT &&
+                poly_mt_tap(keymap_key_to_keycode(base, pos)) == KC_BACKSPACE) {
+                s_bksp_below = true;
+            }
+        }
+    }
+
+    // Pass 2: letters on their own key. A letter whose key has a search function
+    // (Space, Backspace, a result, a recent) is collected as lost.
+    uint8_t  reach[32] = {0};                 // byte codes some key already types
+    uint8_t  slot_r[EMJ_SLOTS_PER_PAGE] = {0}, slot_c[EMJ_SLOTS_PER_PAGE] = {0};
+    bool     slot_free[EMJ_SLOTS_PER_PAGE] = {false};
+    uint32_t lost_cp[EMJ_LOST_MAX];
+    uint8_t  lost_r[EMJ_LOST_MAX], lost_c[EMJ_LOST_MAX], nlost = 0;
     for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             keypos_t pos = {.row = r, .col = c};
             uint16_t kc  = keymap_key_to_keycode(_EMJ, pos);
-            if (kc == KC_EMJ_PAGE_NEXT) {
-                if (poly_mt_tap(keymap_key_to_keycode(base, pos)) == KC_BACKSPACE) s_bksp_below = true;
-                continue;
+            uint32_t cp  = base_letter(base, lang, pos);
+            bool     own = kc >= KC_EMJ_SLOT_BASE && kc < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE &&
+                       slot_role((uint8_t)(kc - KC_EMJ_SLOT_BASE)) == ROLE_NONE;
+            if (own) {
+                uint8_t slot = (uint8_t)(kc - KC_EMJ_SLOT_BASE);
+                slot_r[slot] = r;
+                slot_c[slot] = c;
+                if (cp) {
+                    s_slot_letter[slot] = cp;
+                    uint8_t code        = emjdict_letter_code(cp);
+                    reach[code >> 3] |= (uint8_t)(1u << (code & 7u));
+                } else {
+                    slot_free[slot] = true;
+                }
+            } else if (cp && nlost < EMJ_LOST_MAX) {
+                lost_cp[nlost] = cp;
+                lost_r[nlost]  = r;
+                lost_c[nlost]  = c;
+                ++nlost;
             }
-            if (kc < KC_EMJ_SLOT_BASE || kc >= KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) continue;
-            uint16_t        bkc = poly_mt_tap(keymap_key_to_keycode(base, pos));
-            const uint32_t *t   = translate_keycode(lang, bkc, false, false);
-            if (!t) continue;
-            while (*t && *t < 0x20u) ++t;   // skip the legend's position nudges
-            if (*t && *t <= 0xFFFFu && emjdict_maps_letter(*t)) s_slot_letter[kc - KC_EMJ_SLOT_BASE] = *t;
         }
+    }
+
+    // Pass 3: a lost letter that no other key can type (Russian х on Qwerty's
+    // Backspace key; not French é, since e finds the same words) moves to the
+    // nearest free emoji slot on the same half (rows 0..half-1 are the left half).
+    const uint8_t half_rows = MATRIX_ROWS / 2;
+    for (uint8_t i = 0; i < nlost; ++i) {
+        uint8_t code = emjdict_letter_code(lost_cp[i]);
+        if (reach[code >> 3] & (1u << (code & 7u))) continue;
+        uint8_t best = 0xFF, best_d = 0xFF;
+        for (uint8_t slot = 0; slot < EMJ_SLOTS_PER_PAGE; ++slot) {
+            if (!slot_free[slot] || (slot_r[slot] < half_rows) != (lost_r[i] < half_rows)) continue;
+            uint8_t dr = (uint8_t)(slot_r[slot] > lost_r[i] ? slot_r[slot] - lost_r[i] : lost_r[i] - slot_r[slot]);
+            uint8_t dc = (uint8_t)(slot_c[slot] > lost_c[i] ? slot_c[slot] - lost_c[i] : lost_c[i] - slot_c[slot]);
+            uint8_t d  = (uint8_t)(dr + dc);
+            if (d < best_d) {
+                best_d = d;
+                best   = slot;
+            }
+        }
+        if (best == 0xFF) continue;   // no free key on that half: the letter stays lost
+        s_slot_letter[best] = lost_cp[i];
+        slot_free[best]     = false;
+        reach[code >> 3] |= (uint8_t)(1u << (code & 7u));
     }
 }
 
@@ -329,9 +402,7 @@ static uint8_t search_role(uint16_t kc) {
     if (kc == KC_EMJ_PAGE_NEXT) return ROLE_NEXT;
     build_slot_letters();
     if (kc == KC_EMJ_S_BKSP) return s_bksp_below ? ROLE_BKSP : ROLE_NONE;
-    if (kc == KC_EMJ_SLOT_BASE + EMJ_SEARCH_SPACE2_SLOT) return ROLE_SPACE;
-    if (kc == KC_EMJ_SLOT_BASE + EMJ_SEARCH_BKSP_SLOT) return s_bksp_below ? ROLE_SPACE : ROLE_BKSP;
-    if (kc == KC_EMJ_SLOT_BASE + EMJ_SEARCH_SPACE_SLOT) return s_bksp_below ? ROLE_NONE : ROLE_SPACE;
+    if (kc >= KC_EMJ_SLOT_BASE && kc < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) return slot_role((uint8_t)(kc - KC_EMJ_SLOT_BASE));
     return ROLE_NONE;
 }
 

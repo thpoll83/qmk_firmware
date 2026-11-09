@@ -261,6 +261,10 @@ static uint8_t fold_code(uint32_t cp) {
     return EMJDICT_CODE_UNKNOWN;
 }
 
+uint8_t emjdict_letter_code(uint32_t cp) {
+    return (s_present && cp != U' ') ? fold_code(cp) : EMJDICT_CODE_UNKNOWN;
+}
+
 bool emjdict_maps_letter(uint32_t cp) {
     return s_present && cp != U' ' && fold_code(cp) != EMJDICT_CODE_UNKNOWN;
 }

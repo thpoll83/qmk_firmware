@@ -270,12 +270,17 @@ static const uint8_t s_result_of_cat[] = EMJ_SEARCH_RESULT_OF_CAT;
 // Search-mode roles. The page keys (top left, top right) page the results.
 // Backspace and Space are two emoji slots with no letter on any base layout
 // (EMJ_SEARCH_BKSP_SLOT, EMJ_SEARCH_SPACE_SLOT): on split72 the key above the
-// right innermost thumb and the one beside it. The recents keep all 12 keys.
+// right innermost thumb and the one beside it. When the base layout has
+// Backspace on the top-right key (Qwerty), Backspace moves one row down to
+// KC_EMJ_S_BKSP instead, and Space takes the Backspace slot. The recents keep
+// all 12 keys.
 enum { ROLE_NONE = 0, ROLE_SPACE, ROLE_BKSP, ROLE_PREV, ROLE_NEXT };
 
 // The letter each emoji slot types in search mode: the base layer's key at the
 // slot's matrix position, in the active language. 0 = no letter (blank, inert).
 static uint32_t s_slot_letter[EMJ_SLOTS_PER_PAGE];
+// The base layout has Backspace on the top-right key: KC_EMJ_S_BKSP is Backspace.
+static bool     s_bksp_below;
 // Rebuilt lazily from the main loop: the slave's sync handler runs on the split
 // protocol thread and only marks it stale.
 static bool     s_letters_dirty = true;
@@ -294,12 +299,17 @@ static void build_slot_letters(void) {
     if (!s_letters_dirty) return;
     s_letters_dirty = false;
     memset(s_slot_letter, 0, sizeof(s_slot_letter));
+    s_bksp_below = false;
     const uint8_t base = (uint8_t)get_local_layer()->def_layer;
     const uint8_t lang = get_local_state()->lang;
     for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             keypos_t pos = {.row = r, .col = c};
             uint16_t kc  = keymap_key_to_keycode(_EMJ, pos);
+            if (kc == KC_EMJ_PAGE_NEXT) {
+                if (poly_mt_tap(keymap_key_to_keycode(base, pos)) == KC_BACKSPACE) s_bksp_below = true;
+                continue;
+            }
             if (kc < KC_EMJ_SLOT_BASE || kc >= KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE) continue;
             uint16_t        bkc = poly_mt_tap(keymap_key_to_keycode(base, pos));
             const uint32_t *t   = translate_keycode(lang, bkc, false, false);
@@ -315,8 +325,10 @@ static void build_slot_letters(void) {
 static uint8_t search_role(uint16_t kc) {
     if (kc == KC_EMJ_PAGE_PREV) return ROLE_PREV;
     if (kc == KC_EMJ_PAGE_NEXT) return ROLE_NEXT;
-    if (kc == KC_EMJ_SLOT_BASE + EMJ_SEARCH_BKSP_SLOT) return ROLE_BKSP;
-    if (kc == KC_EMJ_SLOT_BASE + EMJ_SEARCH_SPACE_SLOT) return ROLE_SPACE;
+    build_slot_letters();
+    if (kc == KC_EMJ_S_BKSP) return s_bksp_below ? ROLE_BKSP : ROLE_NONE;
+    if (kc == KC_EMJ_SLOT_BASE + EMJ_SEARCH_BKSP_SLOT) return s_bksp_below ? ROLE_SPACE : ROLE_BKSP;
+    if (kc == KC_EMJ_SLOT_BASE + EMJ_SEARCH_SPACE_SLOT) return s_bksp_below ? ROLE_NONE : ROLE_SPACE;
     return ROLE_NONE;
 }
 
@@ -401,6 +413,7 @@ static const uint32_t *search_display_text(uint16_t keycode) {
         uint32_t cp = result_for_cat((uint8_t)(keycode - KC_EMJ_CAT_BASE));
         return cp ? make_slot_str(cp) : (const uint32_t *)U"";
     }
+    if (keycode == KC_EMJ_S_BKSP) return (const uint32_t *)U"";   // Backspace is elsewhere on this layout
     if (is_mru_key(keycode)) {
         uint32_t cp = emj_decode(mru_emoji_get((uint8_t)(keycode - KC_EMJ_MRU_BASE)));
         return cp ? make_slot_str(cp) : (const uint32_t *)U"";
@@ -469,6 +482,7 @@ static bool search_process(uint16_t keycode) {
         if (cp != 0) query_append(cp);
         return true;
     }
+    if (keycode == KC_EMJ_S_BKSP) return true;   // blank and inert on this layout
     return false;
 }
 
@@ -520,8 +534,8 @@ const uint32_t *emj_display_text(uint16_t keycode) {
     if (emj_search_active()) {
         const uint32_t *t = search_display_text(keycode);
         if (t) return t;
-    } else if (keycode == KC_EMJ_S_CLEAR) {
-        return (const uint32_t *)U"";   // search-only key: blank in tab mode
+    } else if (keycode == KC_EMJ_S_CLEAR || keycode == KC_EMJ_S_BKSP) {
+        return (const uint32_t *)U"";   // search-only keys: blank in tab mode
     }
     // ── Page arrows with "page/pages" — always live because paging wraps ──
     if (keycode == KC_EMJ_PAGE_PREV) {
@@ -558,7 +572,7 @@ const uint32_t *emj_display_text(uint16_t keycode) {
 }
 
 bool emj_process_keycode(uint16_t keycode, bool pressed) {
-    if (keycode == KC_EMJ_MODE || keycode == KC_EMJ_S_CLEAR) {
+    if (keycode == KC_EMJ_MODE || keycode == KC_EMJ_S_CLEAR || keycode == KC_EMJ_S_BKSP) {
         if (!pressed) return true;
         update_performed();
         if (keycode == KC_EMJ_MODE) {

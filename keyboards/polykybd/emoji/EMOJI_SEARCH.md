@@ -109,12 +109,14 @@ split72, search mode:
 | top row, 12 number keys | category tabs | results 1–12, best match first |
 | Esc (top left) | previous page | previous result page |
 | top right | next page | next result page |
-| right half, row 3, column 0 (slot 31) | emoji slot | Backspace |
-| right half, row 3, column 1 (slot 32) | emoji slot | Space |
+| right half, row 3, column 0 (slot 31) | emoji slot | Backspace (Space on Qwerty) |
+| right half, row 3, column 1 (slot 32) | emoji slot | Space (blank on Qwerty) |
+| `\`, below the top-right key (`KC_NO` before) | blank, inert | Backspace on Qwerty, blank otherwise |
 | bottom row | recents | recents, all 12 |
 
 Backspace sits above the right innermost thumb key (Enter on Stag!), Space beside
-it. Neither key is a letter on any of the five base layouts: `[` `]` on Qwerty,
+it. When the base layout has Backspace on the top-right key (Qwerty), Backspace
+moves one row down to the `\` position and Space takes the key above the thumb. Neither key is a letter on any of the five base layouts: `[` `]` on Qwerty,
 Lang and App / Hyper / `+` / IME on Stag!, Colemak DH, Neo and Workman. On Qwerty
 with a language that puts a letter on `[` (de: ü), that letter cannot be typed;
 the fold to the base letter makes `u` find the same words.

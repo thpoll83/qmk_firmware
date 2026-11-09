@@ -72,7 +72,8 @@ void emj_draw_tab_bottom(uint16_t keycode);
 // slots type the letters of the base layer in the active language, the category
 // tabs show the results, and the page keys (top left, top right) page them.
 // Backspace and Space are two fixed emoji slots (EMJ_SEARCH_BKSP_SLOT,
-// EMJ_SEARCH_SPACE_SLOT). KC_EMJ_S_CLEAR clears the query, and leaving the layer
+// EMJ_SEARCH_SPACE_SLOT); when the base layout has Backspace on the top-right
+// key, Backspace moves one row down to KC_EMJ_S_BKSP and Space takes its slot. KC_EMJ_S_CLEAR clears the query, and leaving the layer
 // clears it too. The mode key shows an on/off switch, and is blank and inert
 // while no dictionary is loaded.
 

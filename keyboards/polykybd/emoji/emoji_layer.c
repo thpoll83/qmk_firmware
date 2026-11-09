@@ -317,6 +317,23 @@ static uint32_t base_letter(uint8_t base, uint8_t lang, keypos_t pos) {
 
 #define EMJ_LOST_MAX 16  // letters one layout can lose to search keys and still get back
 
+// Where a punctuation key sits on a standard keyboard, relative to a letter or
+// digit key: `[` is one key right of P, `.` two right of M. A lost letter is
+// placed near that spot (next to its neighbour on a standard keyboard, where a
+// user of that language looks for it), not near where this layout put the key.
+typedef struct {
+    uint16_t kc, neighbour;
+    int8_t   dcol;
+} emj_anchor_t;
+static const emj_anchor_t s_anchor[] = {
+    {KC_LEFT_BRACKET, KC_P, 1}, {KC_RIGHT_BRACKET, KC_P, 2}, {KC_BACKSLASH, KC_P, 3},
+    {KC_SEMICOLON, KC_L, 1},    {KC_QUOTE, KC_L, 2},         {KC_NONUS_HASH, KC_L, 3},
+    {KC_COMMA, KC_M, 1},        {KC_DOT, KC_M, 2},           {KC_SLASH, KC_M, 3},
+    {KC_GRAVE, KC_1, -1},       {KC_MINUS, KC_0, 1},         {KC_EQUAL, KC_0, 2},
+    {KC_NONUS_BACKSLASH, KC_Z, -1},
+};
+#define EMJ_ANCHOR_N (sizeof(s_anchor) / sizeof(s_anchor[0]))
+
 static void build_slot_letters(void) {
     if (!s_letters_dirty) return;
     s_letters_dirty = false;
@@ -342,12 +359,23 @@ static void build_slot_letters(void) {
     uint8_t  slot_r[EMJ_SLOTS_PER_PAGE] = {0}, slot_c[EMJ_SLOTS_PER_PAGE] = {0};
     bool     slot_free[EMJ_SLOTS_PER_PAGE] = {false};
     uint32_t lost_cp[EMJ_LOST_MAX];
+    uint16_t lost_kc[EMJ_LOST_MAX];
     uint8_t  lost_r[EMJ_LOST_MAX], lost_c[EMJ_LOST_MAX], nlost = 0;
+    uint8_t  nb_r[EMJ_ANCHOR_N], nb_c[EMJ_ANCHOR_N];   // base-layout position of each anchor's neighbour
+    memset(nb_r, 0xFF, sizeof(nb_r));
+    memset(nb_c, 0xFF, sizeof(nb_c));
     for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             keypos_t pos = {.row = r, .col = c};
             uint16_t kc  = keymap_key_to_keycode(_EMJ, pos);
             uint32_t cp  = base_letter(base, lang, pos);
+            uint16_t bkc = poly_mt_tap(keymap_key_to_keycode(base, pos));
+            for (uint8_t a = 0; a < EMJ_ANCHOR_N; ++a) {
+                if (bkc == s_anchor[a].neighbour) {
+                    nb_r[a] = r;
+                    nb_c[a] = c;
+                }
+            }
             bool     own = kc >= KC_EMJ_SLOT_BASE && kc < KC_EMJ_SLOT_BASE + EMJ_SLOTS_PER_PAGE &&
                        slot_role((uint8_t)(kc - KC_EMJ_SLOT_BASE)) == ROLE_NONE;
             if (own) {
@@ -363,6 +391,7 @@ static void build_slot_letters(void) {
                 }
             } else if (cp && nlost < EMJ_LOST_MAX) {
                 lost_cp[nlost] = cp;
+                lost_kc[nlost] = bkc;
                 lost_r[nlost]  = r;
                 lost_c[nlost]  = c;
                 ++nlost;
@@ -372,16 +401,27 @@ static void build_slot_letters(void) {
 
     // Pass 3: a lost letter that no other key can type (Russian х on Qwerty's
     // Backspace key; not French é, since e finds the same words) moves to the
-    // nearest free emoji slot on the same half (rows 0..half-1 are the left half).
+    // free emoji slot nearest its standard-keyboard spot (s_anchor), on the same
+    // half as its own key (rows 0..half-1 are the left half).
     const uint8_t half_rows = MATRIX_ROWS / 2;
     for (uint8_t i = 0; i < nlost; ++i) {
         uint8_t code = emjdict_letter_code(lost_cp[i]);
         if (reach[code >> 3] & (1u << (code & 7u))) continue;
+        // Measure from the standard-keyboard spot when its neighbour is on the same
+        // half as the key; a letter never moves to the other half.
+        int16_t ar = lost_r[i], ac = lost_c[i];
+        for (uint8_t a = 0; a < EMJ_ANCHOR_N; ++a) {
+            if (s_anchor[a].kc != lost_kc[i] || nb_r[a] == 0xFF) continue;
+            if ((nb_r[a] < half_rows) != (lost_r[i] < half_rows)) break;
+            ar = nb_r[a];
+            ac = (int16_t)(nb_c[a] + s_anchor[a].dcol);
+            break;
+        }
         uint8_t best = 0xFF, best_d = 0xFF;
         for (uint8_t slot = 0; slot < EMJ_SLOTS_PER_PAGE; ++slot) {
             if (!slot_free[slot] || (slot_r[slot] < half_rows) != (lost_r[i] < half_rows)) continue;
-            uint8_t dr = (uint8_t)(slot_r[slot] > lost_r[i] ? slot_r[slot] - lost_r[i] : lost_r[i] - slot_r[slot]);
-            uint8_t dc = (uint8_t)(slot_c[slot] > lost_c[i] ? slot_c[slot] - lost_c[i] : lost_c[i] - slot_c[slot]);
+            uint8_t dr = (uint8_t)(slot_r[slot] > ar ? slot_r[slot] - ar : ar - slot_r[slot]);
+            uint8_t dc = (uint8_t)(slot_c[slot] > ac ? slot_c[slot] - ac : ac - slot_c[slot]);
             uint8_t d  = (uint8_t)(dr + dc);
             if (d < best_d) {
                 best_d = d;

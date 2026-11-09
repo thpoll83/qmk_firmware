@@ -121,11 +121,14 @@ moves one row down to the `\` position and Space takes the key above the thumb. 
 English.
 
 A letter of the active language whose key has a search function (Space,
-Backspace, a result, a recent) moves to the nearest free emoji slot on the same
-half, by matrix distance. Only a letter no other key can type moves: Russian х
+Backspace, a result, a recent) moves to the free emoji slot nearest to where its
+key sits on a standard keyboard (`[` one key right of P, `.` two right of M), on
+the same half as its own key. When that neighbour is on the other half, the
+distance is measured from the key itself; a letter never changes sides. Only a letter no other key can type moves: Russian х
 and ю on Qwerty do, French é does not (e finds the same words, see `fold()`).
 `build_slot_letters()` does this in three passes. With Russian, Qwerty moves х
-and ю, Neo ъ, Workman ъ and ё, and all 33 letters can be typed.
+under з and ю to the end of row 3, Neo moves ъ, Workman ъ and ё, and all 33
+letters can be typed.
 
 The letters are read from the base layout when search mode starts, from the
 stored keymap, so a remapped layout is followed too. There is no Enter or Delete

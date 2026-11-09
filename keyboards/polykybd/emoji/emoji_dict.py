@@ -22,16 +22,16 @@ Bundle layout (little-endian, every block 4-byte aligned)::
     PlyF header, 32 B   magic "PlyF", abi 2, flags FLAG_DATA, content_version =
                         dictionary revision, font_count 0, font_table_off 32,
                         total_size, crc32 over everything after the header
-    dict header, 32 B   "EmjD", format u16, lang u16 (LANG_CODES index),
+    dict header, 44 B   "EmjD", format u16, lang u16 (LANG_CODES index),
                         cp_count u16, word_count u16, cps_off u32,
                         words_off u32, strings_off u32, alpha_count u16,
                         fold_count u16, alpha_off u32, fold_off u32,
                         stop_count u16, variant u16 (see variant_code()), stop_off u32
                         (offsets from bundle start)
-    alphabet            u32[alpha_count]: the letter for byte code 1, 2, ...
+    alphabet            u32[alpha_count]: the letter for code 1, 2, ...
     fold table          u32[fold_count]: (code << 24) | codepoint, sorted by
                         codepoint: every letter a user can type, upper and lower
-                        case, and the byte code of its base letter
+                        case, and the code of its base letter
     stop words          stop_count coded words, each NUL-terminated: the query
                         drops these, as the index never contains them
     cps                 u32[cp_count]: the codepoints, in picker order
@@ -40,13 +40,13 @@ Bundle layout (little-endian, every block 4-byte aligned)::
     strings             the words, folded (see fold()), 6 bits per letter
                         (pack_word()), each ended by code 0 and padded to a byte
 
-Words are stored one byte per letter in every script. The alphabet lists the
-letters the dictionary uses, in codepoint order; letter k is stored as byte k+1,
-and 0 ends a word. Russian needs 32 codes plus the Latin letters of the English
+Words are stored as one 6-bit code per letter in every script (pack_word()).
+The alphabet lists the letters the dictionary uses, in codepoint order; letter k
+is stored as code k+1, and code 0 ends a word. Russian needs 32 codes plus the Latin letters of the English
 fallback text. The firmware maps each typed letter through the fold table with a
-binary search, so Ä, ä and a give the same byte and the keyboard needs no Unicode
+binary search, so Ä, ä and a give the same code and the keyboard needs no Unicode
 data of its own. A letter the table does not list becomes 0xFF, which no word
-contains, so it matches only through the typo pass. Byte order equals codepoint order, so the
+contains, so it matches only through the typo pass. Code order equals codepoint order, so the
 word table stays sorted for the binary search.
 
 A word record is two u16: the string offset (from strings_off) and the index of
@@ -87,6 +87,9 @@ DICT_MAGIC = b"EmjD"
 DICT_FORMAT = 2                # 2: 6-bit letter codes, typeable words only
 DICT_HEADER_FMT = "<4sHHHHIIIHHIIHHI"
 DICT_HEADER_SIZE = 44
+# EMJDICT_MAX_CPS (base/emoji_dict.h): the firmware refuses a bundle with more.
+# Below the 12-bit posting index (4096), so that bound is covered too.
+MAX_CPS = 2304
 ALPHA_MAX = 63                # 6-bit codes 1..63; 0 ends a word; 0xFF = typed letter not in the alphabet
 LETTER_BITS = 6
 WORD_MAX = 64                 # letters in one word (EMJDICT_WORD_MAX); longer words are dropped
@@ -177,7 +180,7 @@ def fold(text: str) -> str:
 
 
 def fold_table(code: dict[str, int]) -> list[tuple[int, int]]:
-    """(codepoint, byte code) for every letter that folds into the alphabet: the
+    """(codepoint, code) for every letter that folds into the alphabet: the
     alphabet itself, its upper case, and every Latin, Greek or Cyrillic letter
     whose base letter is in it. Sorted by codepoint."""
     cands = {ord(ch) for ch in code} | {ord(ch.upper()) for ch in code if len(ch.upper()) == 1}
@@ -483,8 +486,9 @@ def build(did: str, revision: int | None = None) -> bytes:
     entries = sorted(((cp, name, kws) for cp, (name, kws) in rows.items() if cp in order),
                      key=lambda e: order[e[0]])
     cps = [e[0] for e in entries]
-    if len(cps) > POST_INDEX_MASK + 1:
-        raise SystemExit(f"{len(cps)} codepoints do not fit the 12-bit posting index")
+    if len(cps) > MAX_CPS:
+        raise SystemExit(f"{len(cps)} codepoints exceed the firmware limit "
+                         f"(EMJDICT_MAX_CPS {MAX_CPS})")
 
     posts: dict[str, dict[int, int]] = {}
 

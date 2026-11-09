@@ -476,11 +476,15 @@ void oled_update_buffer(void) {
         uint8_t  n = emj_search_query(q, 22);
         q[n++]     = U'_';
         q[n]       = 0;
-        uint8_t first = 0;
-        for (; first + 1u < n; ++first) {
+        // Grow the shown tail one letter at a time from the cursor. The bbox
+        // narrows its extent to int8_t, so a tail wider than 127 px wraps below
+        // xmin; one letter adds far less than 128 px, so that wrap is caught.
+        uint8_t first = n - 1u;
+        while (first > 0) {
             int8_t xmin, xmax, ymin, ymax;
-            kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, q + first, &xmin, &xmax, &ymin, &ymax);
-            if (xmax < 126) break;
+            kdisp_gfx_text_bbox(g_all_fonts, g_all_font_count, q + first - 1, &xmin, &xmax, &ymin, &ymax);
+            if (xmax < xmin || xmax >= 126) break;
+            --first;
         }
         kdisp_write_gfx_text(g_all_fonts, g_all_font_count, 0, 44, q + first);
         if (n > 1) {

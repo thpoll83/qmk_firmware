@@ -17,6 +17,17 @@ sys.path.insert(0, os.path.join(HERE, "..", "..", "emoji"))
 import emoji_dict as ed  # noqa: E402
 
 
+class FirmwareLimitTest(unittest.TestCase):
+    def test_max_cps_matches_the_firmware(self):
+        """build() refuses what emjdict_load_at() would refuse."""
+        import re
+        with open(os.path.join(HERE, "..", "..", "base", "emoji_dict.h"), encoding="utf-8") as f:
+            m = re.search(r"#define\s+EMJDICT_MAX_CPS\s+(\d+)u?", f.read())
+        self.assertIsNotNone(m)
+        self.assertEqual(ed.MAX_CPS, int(m.group(1)))
+        self.assertLessEqual(ed.MAX_CPS, ed.POST_INDEX_MASK + 1)
+
+
 class FoldTest(unittest.TestCase):
     def test_latin_greek_cyrillic_lose_diacritics(self):
         self.assertEqual(ed.fold("Lächeln"), "lacheln")

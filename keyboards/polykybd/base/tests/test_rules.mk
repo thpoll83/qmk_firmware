@@ -129,6 +129,15 @@ polykybd_idle_timeout_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# tap_terms.h is header-only and pure, like idle_timeout.h: the cmd 44 ranges and
+# the biased EEPROM encoding are tested without a device.
+polykybd_tap_terms_SRC := \
+	$(POLY_BASE_PATH)/tests/tap_terms_tests.cpp
+
+polykybd_tap_terms_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
 # doom_pack_gate.h is header-only and pure — no flash reads, no monocypher, no
 # keyboard config — so the FW-9 policy (unsigned vs invalid, interactive vs idle,
 # and what an accepted pack authorises) is testable without a device. The crypto

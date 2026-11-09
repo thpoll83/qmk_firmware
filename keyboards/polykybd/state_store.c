@@ -36,6 +36,14 @@ void save_user_settings(void) {
     const uint8_t idle_timeout_stored = idle_timeout_pack(get_idle_timeout());
     eeconfig_update_user_datablock(&idle_timeout_stored, offsetof(poly_eeconf_t, idle_timeout),
                                    sizeof(idle_timeout_stored));
+    // The tap-hold terms (cmd 44) are adjacent tail bytes, biased like the idle
+    // timeout (base/tap_terms.h). eeconfig_update_* skips bytes that did not change.
+    const uint8_t tap_terms_stored[2] = { tap_term_pack(get_poly_tapping_term()),
+                                          tap_term_pack(get_poly_flow_tap_term()) };
+    _Static_assert(offsetof(poly_eeconf_t, flow_tap_term) == offsetof(poly_eeconf_t, tapping_term) + 1,
+                   "tapping_term and flow_tap_term must be adjacent");
+    eeconfig_update_user_datablock(tap_terms_stored, offsetof(poly_eeconf_t, tapping_term),
+                                   sizeof(tap_terms_stored));
 }
 
 // Writes only the packed latin variation picks to EEPROM.

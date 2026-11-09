@@ -295,10 +295,19 @@
 //      one-shot Eden show (boot intro or KC_EDEN), 2 the Eden screensaver. The host
 //      holds its connect-time font-pack flash while it is not 0. Older firmware has
 //      no block and the host flashes at once, as before.
-#define PROTOCOL_VERSION 28
+//  v29 cmd 44 (tap-hold timing) reads and sets the tapping term (100..500 ms) and the
+//      Flow Tap term (0..300 ms, 0 = off), both in 10 ms steps, persisted at the next
+//      settings flush. Closed ranges: a value outside them NACKs. Older firmware
+//      NACKs the command, and its terms are the compile-time 200 / 150 ms.
+#define PROTOCOL_VERSION 29
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2
+
+// The tap-hold terms are runtime settings (cmd 44): QMK asks the get_*_term()
+// hooks in poly_keymap.c for every tap-hold decision.
+#define TAPPING_TERM_PER_KEY
+#define QUICK_TAP_TERM_PER_KEY
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

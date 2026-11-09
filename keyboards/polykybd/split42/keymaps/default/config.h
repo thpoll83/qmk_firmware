@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #define ENABLE_COMPILE_KEYCODE
 
-#define EECONFIG_USER_DATA_SIZE 159  // +39 latin_ex_wide +1 fmt +20 latin_assign, then +18/+9/+1 for the punctuation targets, +1 glyph_size +1 keymap_layers_fmt +1 idle_style_fmt +1 idle_timeout +1 glyph_place
+#define EECONFIG_USER_DATA_SIZE 161  // +39 latin_ex_wide +1 fmt +20 latin_assign, then +18/+9/+1 for the punctuation targets, +1 glyph_size +1 keymap_layers_fmt +1 idle_style_fmt +1 idle_timeout +1 glyph_place +2 tapping_term/flow_tap_term
                                      // +20 latin_assign (6-bit base-letter per key).
                                      // POLY_EECONFIG_USER_RESERVED was raised 128->256 for
                                      // this: 126 still fits 128, but with 2 bytes left the

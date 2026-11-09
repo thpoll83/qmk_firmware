@@ -32,11 +32,14 @@ class FoldTest(unittest.TestCase):
                 self.assertEqual(len(ed.fold_letter(chr(c))), 1, hex(c))
 
     def test_hangul_is_stored_as_its_keys(self):
-        self.assertEqual(ed.hangul_keys("한국"), "ㅎㅏㄴㄱㅜㄱ")
-        self.assertEqual(ed.hangul_keys("왜 닭"), "ㅇㅗㅐ ㄷㅏㄹㄱ")   # compound vowel and final: two keys
+        # Stored in the conjoining jamo the ko-KR keys show (HANGEUL_* in lang_lut.c).
+        J = lambda compat: "".join(ed._TO_CONJOINING.get(c, c) for c in compat)
+        self.assertEqual(ed.hangul_keys("한국"), J("ㅎㅏㄴㄱㅜㄱ"))
+        self.assertEqual(ed.hangul_keys("왜 닭"), J("ㅇㅗㅐ ㄷㅏㄹㄱ"))   # compound vowel and final: two keys
+        self.assertEqual(ed.hangul_keys("한")[0], "\u1112")                # ᄒ, the key's legend
         # Shift doubles fold to their base key, like other letters to their base letter.
-        self.assertEqual(ed.fold("까치"), "ㄱㅏㅊㅣ")
-        self.assertEqual(ed.fold_letter("ㅖ"), "ㅔ")
+        self.assertEqual(ed.fold("까치"), J("ㄱㅏㅊㅣ"))
+        self.assertEqual(ed.fold_letter("\u1168"), "\u1166")             # ᅨ -> ᅦ
 
     def test_indic_vowel_signs_stay(self):
         self.assertEqual(ed.fold("புன்னகை"), "புன்னகை")
@@ -166,6 +169,24 @@ class BundleTest(unittest.TestCase):
         cps, typo = d.search("rαcket")
         self.assertTrue(typo)
         self.assertIn(ord("🚀"), cps)
+
+    def test_words_are_six_bit(self):
+        self.assertEqual(ed.unpack_word(ed.pack_word([1, 63, 5]), 0, 99), bytes([1, 63, 5]))
+        self.assertEqual(len(ed.pack_word([1] * 4)), 4)       # 5 codes x 6 bits = 30 bits -> 4 bytes
+        for d in self.dicts.values():
+            self.assertLessEqual(len(d.alphabet), 63)
+
+    def test_only_typeable_words(self):
+        # en and de keyboards type Latin letters only, and German folds ä ö ü ß.
+        for d in self.dicts.values():
+            self.assertTrue(set(d.alphabet) <= set("abcdefghijklmnopqrstuvwxyz"), d.alphabet)
+        ru = ed.typeable_letters("ru", "")
+        self.assertIn("ж", ru)
+        self.assertNotIn("a", ru)                            # no Latin on a Russian layout
+        self.assertIn("\u2F47", ed.typeable_letters("zh", "HK"))   # ⽇, the Cangjie key A
+        self.assertIn("ㄅ", ed.typeable_letters("zh", "TW"))   # on the number row, moved in search mode
+        self.assertEqual(ed.key_remap("zh", "HK")["a"], "\u2F47")
+        self.assertEqual(ed.key_remap("zh", "CN"), {})
 
     def test_corrupt_bundle_is_refused(self):
         blob = bytearray(self.blobs["en"])

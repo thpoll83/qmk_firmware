@@ -52,10 +52,9 @@ Every letter folds to exactly one base letter (`fold_letter()`): ä, á, â → 
 nothing, because the user picks the emoji from the results. Letters of other
 scripts are only lowercased, since the Indic vowel signs are separate letters.
 
-Words are stored as the keys that type them. Korean is split into jamo keys of the
-2-set layout that ko-KR's letter keys show: 한 → ㅎ ㅏ ㄴ, a compound vowel or final
-as two keys, and a Shift double (ㄲ ㅃ ㅒ ㅖ) folded to its base key. That leaves
-26 jamo codes; the ko dictionary is 110 KB (83% of the slot) with 62 letters.
+Words are stored as the keys that type them. Korean is split into the conjoining
+jamo the ko-KR keys show (2-set layout): 한 → ᄒ ᅡ ᄂ, a compound vowel or final
+as two keys, and a Shift double (ᄁ ᄈ ᅤ ᅨ) folded to its base key: 26 codes.
 
 Japanese and Chinese words are written as the Latin or Zhuyin keys that type them
 (`emoji_romanize.py`, `extract --input` through the dictionary id): ja-JP's letter
@@ -65,13 +64,13 @@ one kana keyword). Chinese uses Unihan's kMandarin and kCangjie, first reading,
 tones dropped. One language can have several dictionaries, told apart by country
 and input method in the header's variant field: the id is `lang[-CC][@method]`.
 
-| dictionary | letter keys | example | size |
-|---|---|---|---|
-| ja@romaji | Latin | スマイル → sumairu | 71 KB (53%) |
-| zh-CN@pinyin | Latin | 笑脸 → xiaolian | 116 KB (88%) |
-| zh-TW@zhuyin | Zhuyin | 笑脸 → ㄒㄧㄠㄌㄧㄢ | 91 KB (69%) |
-| zh-HK@pinyin | Latin | 火 → huo | 121 KB (92%) |
-| zh-HK@cangjie | Latin | 笑 → hhk | 128 KB (97%) |
+| dictionary | letter keys | example |
+|---|---|---|
+| ja@romaji | Latin | スマイル → sumairu |
+| zh-CN@pinyin | Latin | 笑脸 → xiaolian |
+| zh-TW@zhuyin | Zhuyin | 笑脸 → ㄒㄧㄠㄌㄧㄢ |
+| zh-HK@pinyin | Cangjie radicals, by key | 火 → huo |
+| zh-HK@cangjie | Cangjie radicals | 笑 → ⽵⽵⼤ (hhk) |
 
 ```bash
 python3 emoji_dict.py extract zh-HK@cangjie --unihan <Unihan dir> \
@@ -80,25 +79,32 @@ python3 emoji_dict.py extract zh-HK@cangjie --unihan <Unihan dir> \
 python3 emoji_dict.py build zh-HK@cangjie -o zh-HK@cangjie.plyd
 ```
 
-Words are stored one byte per letter in every script. The alphabet table lists the
-letters of the dictionary in codepoint order, and letter k is stored as byte k+1.
-The fold table maps every letter a user can type, upper and lower case, to the
-byte of its base letter: 352 entries (1.4 KB) for German. The firmware maps each
-typed letter through it with a binary search and needs no Unicode data of its own.
-A letter outside the table becomes 0xFF and matches only through the typo pass.
-Russian uses 57 codes: 32 Cyrillic letters after folding plus the Latin letters
-of the English fallback text. `build` refuses a dictionary with more than 254
-letters, which rules out CJK.
+Words are stored as 6-bit letter codes (format 2), the same for every
+dictionary: code k+1 is alphabet letter k, code 0 ends a word, and each word starts
+on a byte (`pack_word()`), so the 16-bit word records and the binary search are
+unchanged. A dictionary holds only words its language's keyboard can type in
+search mode: `typeable_letters()` reads the unshifted legend of every key from
+`lang/lang_lut.c` (the number row counts, since a letter there is moved to a free
+key; Esc, Tab, Backspace, Enter and Space do not). So a Russian dictionary drops
+the English words its layout cannot type, and a German one keeps them. The most
+letters any layout types is 41 (zh-TW), inside the 63 codes. A converted
+dictionary maps each Latin letter to the legend on the key that types it
+(`key_remap()`): zh-HK's keys show the Cangjie radicals, so Cangjie `a` is ⽇.
 
-Measured sizes (128 KB slot):
+Measured sizes (format 2, 128 KB slot): all 79 dictionaries CLDR has data for
+fit, median 56%.
 
-| lang | bytes | slot |
+| dictionary | size | slot |
 |---|---|---|
-| en | 67 KB | 52% |
-| de | 104 KB | 81% |
-| pl | 105 KB | 82% |
-| el | 106 KB | 82% |
-| ru | 109 KB | 85% |
+| en | 62 KB | 48% |
+| de | 95 KB | 74% |
+| ru | 65 KB | 50% |
+| ko | 63 KB | 48% |
+| cs (largest) | 122 KB | 95% |
+| ja@romaji | 64 KB | 50% |
+| zh-CN@pinyin | 103 KB | 80% |
+| zh-TW@zhuyin | 47 KB | 36% |
+| zh-HK@cangjie | 77 KB | 60% |
 
 `build` refuses a bundle larger than the slot, and a word table or posting list
 past the 16-bit record fields.

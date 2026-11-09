@@ -21,6 +21,9 @@
 #define EMJDICT_MAX_CPS      2304u    // picker codepoints a dictionary may index (2122 today)
 #define EMJDICT_QUERY_MAX    16u      // typed characters, spaces included
 #define EMJDICT_MAX_WORDS    4u       // query words searched; later ones are ignored
+#define EMJDICT_FORMAT       2u       // 2: 6-bit letter codes (emoji_dict.py DICT_FORMAT)
+#define EMJDICT_LETTER_BITS  6u
+#define EMJDICT_WORD_MAX     64u      // letters in one dictionary word (emoji_dict.py WORD_MAX)
 
 // Validate the bundle at `base` (bounded by `cap`, the slot size). True for a
 // valid dictionary and for the header-only wipe sentinel; *out_ver gets the

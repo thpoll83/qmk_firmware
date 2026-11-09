@@ -37,8 +37,8 @@ Bundle layout (little-endian, every block 4-byte aligned)::
     cps                 u32[cp_count]: the codepoints, in picker order
     words               u16[2 * (word_count + 1)]: per word {str_off, first posting}
     postings            u16[]: per word, the cps[] indices it names
-    strings             the words, folded (see fold()), one byte per letter,
-                        NUL-terminated, sorted
+    strings             the words, folded (see fold()), 6 bits per letter
+                        (pack_word()), each ended by code 0 and padded to a byte
 
 Words are stored one byte per letter in every script. The alphabet lists the
 letters the dictionary uses, in codepoint order; letter k is stored as byte k+1,
@@ -82,10 +82,12 @@ PLYF_HEADER_SIZE = 32
 FLAG_DATA = 0x0001            # data-only bundle: no fonts, payload after the header
 
 DICT_MAGIC = b"EmjD"
-DICT_FORMAT = 1
+DICT_FORMAT = 2                # 2: 6-bit letter codes, typeable words only
 DICT_HEADER_FMT = "<4sHHHHIIIHHIIHHI"
 DICT_HEADER_SIZE = 44
-ALPHA_MAX = 254               # byte codes 1..254; 0 ends a word, 0xFF = not in the alphabet
+ALPHA_MAX = 63                # 6-bit codes 1..63; 0 ends a word; 0xFF = typed letter not in the alphabet
+LETTER_BITS = 6
+WORD_MAX = 64                 # letters in one word (EMJDICT_WORD_MAX); longer words are dropped
 CODE_UNKNOWN = 0xFF
 
 POST_NAME_BIT = 0x8000
@@ -114,15 +116,22 @@ _HANGUL_V = ["ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅗ
              "ㅜㅓ", "ㅜㅔ", "ㅜㅣ", "ㅠ", "ㅡ", "ㅡㅣ", "ㅣ"]
 _HANGUL_T = ["", "ㄱ", "ㄲ", "ㄱㅅ", "ㄴ", "ㄴㅈ", "ㄴㅎ", "ㄷ", "ㄹ", "ㄹㄱ", "ㄹㅁ", "ㄹㅂ", "ㄹㅅ", "ㄹㅌ",
              "ㄹㅍ", "ㄹㅎ", "ㅁ", "ㅂ", "ㅂㅅ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"]
+# The ko-KR keys show CONJOINING jamo (lang_lut.c: HANGEUL_MIEUM is U+1106): the
+# initial form for every consonant, the medial form for every vowel. A word is
+# stored in those, so a typed key matches it.
+_TO_CONJOINING = dict(zip(_HANGUL_L, (chr(0x1100 + i) for i in range(19))))
+_TO_CONJOINING.update(zip("ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ", (chr(0x1161 + i) for i in range(21))))
 
 
 def hangul_keys(text: str) -> str:
-    """Hangul syllables as the jamo keys that type them: 한 -> ㅎㅏㄴ."""
+    """Hangul syllables as the jamo keys that type them, in the conjoining forms
+    the ko-KR keys show: 한 -> 하ᄂ (ㅎ ㅏ ㄴ)."""
     out = []
     for ch in text:
         o = ord(ch) - 0xAC00
         if 0 <= o < 11172:
-            out.append(_HANGUL_L[o // 588] + _HANGUL_V[(o % 588) // 28] + _HANGUL_T[o % 28])
+            jamo = _HANGUL_L[o // 588] + _HANGUL_V[(o % 588) // 28] + _HANGUL_T[o % 28]
+            out.append("".join(_TO_CONJOINING[j] for j in jamo))
         else:
             out.append(ch)
     return "".join(out)
@@ -131,7 +140,9 @@ def hangul_keys(text: str) -> str:
 _FOLD_BASE = {"ß": "s", "æ": "a", "œ": "o", "ø": "o", "ł": "l", "đ": "d", "ð": "d",
               "þ": "t", "ı": "i", "ħ": "h", "ŧ": "t", "ŋ": "n", "ĸ": "k", "ſ": "s",
               "ς": "σ",
-              "ㄲ": "ㄱ", "ㄸ": "ㄷ", "ㅃ": "ㅂ", "ㅆ": "ㅅ", "ㅉ": "ㅈ", "ㅒ": "ㅐ", "ㅖ": "ㅔ"}
+              "ㄲ": "ㄱ", "ㄸ": "ㄷ", "ㅃ": "ㅂ", "ㅆ": "ㅅ", "ㅉ": "ㅈ", "ㅒ": "ㅐ", "ㅖ": "ㅔ",
+              "\u1101": "\u1100", "\u1104": "\u1103", "\u1108": "\u1107", "\u110A": "\u1109",
+              "\u110D": "\u110C", "\u1164": "\u1162", "\u1168": "\u1166"}
 
 FOLD_SCRIPT_END = 0x0530      # Latin, Greek, Cyrillic: the scripts whose letters fold
 
@@ -291,6 +302,137 @@ def _read_tsv(path: Path) -> dict[int, tuple[str, list[str]]]:
     return rows
 
 
+_LAYOUTS: dict = {}
+
+
+def _is_typeable(ch: str) -> bool:
+    """A legend a search query can contain: a letter, or a symbol used as a key
+    name (zh-HK's Kangxi radicals); not a digit, punctuation or a space."""
+    return unicodedata.category(ch)[0] == "L" or unicodedata.category(ch) == "So"
+
+
+def _layouts() -> dict[str, dict[str, str]]:
+    """Per keyboard layout (xx-YY): the folded first character of the unshifted
+    legend of every key in lang/lang_lut.c (en-US where a layout inherits), by
+    keycode name. Read from the firmware's own table, so a dictionary holds only
+    words that layout can type."""
+    if _LAYOUTS:
+        return _LAYOUTS
+    macros: dict[str, str] = {}
+    for h in (POLY / "lang").glob("*.h"):
+        for m in re.finditer(r"#define\s+(\w+)\s+([^\n]*)", h.read_text(encoding="utf-8")):
+            macros.setdefault(m.group(1), m.group(2))
+
+    def unescape(q: str) -> str:
+        q = re.sub(r"\\U([0-9A-Fa-f]{8})", lambda m: chr(int(m.group(1), 16)), q)
+        q = re.sub(r"\\u([0-9A-Fa-f]{4})", lambda m: chr(int(m.group(1), 16)), q)
+        q = re.sub(r"\\x([0-9A-Fa-f]+)", lambda m: chr(int(m.group(1), 16)), q)
+        simple = {"f": "\f", "v": "\v", "r": "\r", "n": "\n", "t": "\t", "a": "\a", "b": "\b",
+                  "\\": "\\", '"': '"', "'": "'"}
+        return re.sub(r"\\([fvrntab\\\"'])", lambda m: simple[m.group(1)], q)
+
+    def resolve(text: str, depth: int = 0) -> str:
+        out = ""
+        for lit_, name in re.findall(r'U"((?:[^"\\]|\\.)*)"|([A-Za-z_]\w*)', text):
+            if lit_ or not name:
+                out += unescape(lit_)
+            elif name in macros and depth < 8:
+                out += resolve(macros[name], depth + 1)
+        return out
+
+    src = (POLY / "lang" / "lang_lut.c").read_text(encoding="utf-8")
+    start = src.index("]]]*/", src.index("lang_plane [ALPHA")) + 5
+    body = src[start:src.index("//[[[end]]]", start)]
+    blocks = re.split(r"\{/\*\s*(KC_\w+):\s*\*/", body)
+    raw: dict[str, dict[str, str | None]] = {}
+    for i in range(1, len(blocks), 2):
+        for m in re.finditer(r"/\*\s*([a-z]{2}-[A-Z]{2})\s*\*/\s*(.*)", blocks[i + 1]):
+            cell = re.split(r",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", m.group(2))[0].strip()
+            raw.setdefault(m.group(1), {})[blocks[i]] = None if cell == "NULL" else resolve(cell)
+    if "en-US" not in raw:
+        raise SystemExit("could not read the layouts from lang/lang_lut.c")
+    for layout, keys in raw.items():
+        legends = {}
+        for kc, txt in keys.items():
+            if kc in _NOT_TYPED:
+                continue
+            txt = txt if txt is not None else raw["en-US"].get(kc)
+            ch = next((c for c in (txt or "") if ord(c) >= 0x20), None)
+            if ch and _is_typeable(ch):
+                legends[kc] = fold_letter(ch)
+        _LAYOUTS[layout] = legends
+    return _LAYOUTS
+
+
+# Control keys, whose legends ("Esc", the Tab arrow) are not letters. The number
+# row counts: its digits are not letters, and a letter on it (zh-TW's ㄅ ㄉ ㄓ) is
+# moved to a free key in search mode (emoji_layer.c build_slot_letters()).
+_NOT_TYPED = {"KC_ENTER", "KC_ESCAPE", "KC_BACKSPACE", "KC_TAB", "KC_SPACE"}
+
+
+def _matching_layouts(lang: str, country: str) -> list[str]:
+    out = [l for l in _layouts() if l.split("-")[0] == lang and (not country or l.split("-")[1] == country)]
+    if not out:
+        raise SystemExit(f"no keyboard layout for {lang}{'-' + country if country else ''}")
+    return out
+
+
+def key_remap(lang: str, country: str) -> dict[str, str]:
+    """For a converted dictionary (romaji, pinyin, Cangjie), each Latin letter as
+    the legend on the key that types it on the target layout: zh-HK's keys show
+    Cangjie radicals, so a Cangjie or pinyin `a` is stored as ⽇. Empty where the
+    layout shows the Latin letters itself."""
+    lay = _layouts()[_matching_layouts(lang, country)[0]]
+    remap = {}
+    for c in "abcdefghijklmnopqrstuvwxyz":
+        got = lay.get(f"KC_{c.upper()}")
+        if got and got != c:
+            remap[c] = got
+    return remap
+
+
+def typeable_letters(lang: str, country: str) -> set[str]:
+    """Letters the layouts of this language (and country, when given) can type."""
+    out: set[str] = set()
+    for layout in _matching_layouts(lang, country):
+        out |= set(_layouts()[layout].values())
+    return out
+
+
+def pack_word(codes: list[int]) -> bytes:
+    """6-bit codes, least significant bits first, then the end code 0, padded to a
+    whole byte."""
+    acc = nbits = 0
+    out = bytearray()
+    for c in codes + [0]:
+        acc |= c << nbits
+        nbits += LETTER_BITS
+        while nbits >= 8:
+            out.append(acc & 0xFF)
+            acc >>= 8
+            nbits -= 8
+    if nbits:
+        out.append(acc & 0xFF)
+    return bytes(out)
+
+
+def unpack_word(data: bytes, start: int, end: int) -> bytes:
+    """The codes of one packed word, up to its end code."""
+    out = bytearray()
+    acc = nbits = 0
+    for b in data[start:end]:
+        acc |= b << nbits
+        nbits += 8
+        while nbits >= LETTER_BITS:
+            c = acc & ((1 << LETTER_BITS) - 1)
+            acc >>= LETTER_BITS
+            nbits -= LETTER_BITS
+            if c == 0:
+                return bytes(out)
+            out.append(c)
+    return bytes(out)
+
+
 def build(did: str, revision: int) -> bytes:
     lang, country, method = parse_id(did)
     src = SRC_DIR / f"{did}.tsv"
@@ -311,10 +453,17 @@ def build(did: str, revision: int) -> bytes:
     def add(tok: str, idx: int, flag: int) -> None:
         posts.setdefault(tok, {})[idx] = posts.get(tok, {}).get(idx, 0) | flag
 
-    for idx, (_cp, name, kws) in enumerate(entries):
-        name_toks = set(tokens(name, lang))
-        for tok in name_toks | {t for k in kws for t in tokens(k, lang)}:
-            add(tok, idx, POST_NAME_BIT if tok in name_toks else 0)
+    remap = key_remap(lang, country) if method else {}
+    own = {cp for cp in _read_tsv(src)}
+
+    def own_tokens(text: str) -> list[str]:
+        return ["".join(remap.get(ch, ch) for ch in t) for t in tokens(text, lang)]
+
+    for idx, (cp, name, kws) in enumerate(entries):
+        tok = own_tokens if cp in own else (lambda text: tokens(text, lang))
+        name_toks = set(tok(name))
+        for t in name_toks | {t for k in kws for t in tok(k)}:
+            add(t, idx, POST_NAME_BIT if t in name_toks else 0)
     if lang != "en":
         # The English words too, as keywords: a German speaker may type "smile".
         # Without the name bit, so the language's own name words rank above them.
@@ -330,16 +479,20 @@ def build(did: str, revision: int) -> bytes:
             for tok in set(tokens(en_name, "en")) | common:
                 add(tok, idx, 0)
 
+    # Only words this language's keyboard can type in search mode: a Russian layout
+    # types no Latin letters, so the English words go; a German one keeps them.
+    typeable = typeable_letters(lang, country)
+    posts = {w: p for w, p in posts.items() if len(w) <= WORD_MAX and all(ch in typeable for ch in w)}
     alphabet = sorted({ch for w in posts for ch in w})
     if len(alphabet) > ALPHA_MAX:
-        raise SystemExit(f"{lang}: {len(alphabet)} letters do not fit one byte per letter")
+        raise SystemExit(f"{did}: {len(alphabet)} letters do not fit {LETTER_BITS}-bit codes")
     code = {ch: i + 1 for i, ch in enumerate(alphabet)}
-    words = sorted(posts)                  # codepoint order == byte-code order
+    words = sorted(posts)                  # codepoint order == code order
     strings = bytearray()
     str_offs = []
     for w in words:
         str_offs.append(len(strings))
-        strings += bytes(code[ch] for ch in w) + b"\0"
+        strings += pack_word([code[ch] for ch in w])
     postings: list[int] = []
     post_starts = []
     for w in words:
@@ -438,8 +591,7 @@ class Dict:
         self.words, self.posts = [], []
         for i in range(nword):
             so, ps = recs[2 * i], recs[2 * i + 1]
-            end = blob.index(b"\0", strings_off + so)
-            self.words.append(blob[strings_off + so:end])
+            self.words.append(unpack_word(blob, strings_off + so, strings_off + recs[2 * i + 2]))
             self.posts.append(struct.unpack_from(f"<{recs[2 * i + 3] - ps}H", blob, post_off + 2 * ps))
 
     def encode(self, word: str) -> bytes:

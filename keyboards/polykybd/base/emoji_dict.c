@@ -84,7 +84,7 @@ bool emjdict_load_at(const uint8_t *base, uint32_t cap, uint16_t *out_ver) {
     s_d.base  = base;
     s_d.total = h.total_size;
     const uint32_t d = sizeof(fontpack_header_t);
-    if (memcmp(base + d, "EmjD", 4) != 0 || rd16(d + 4) != 1u) return emjdict_unload(), false;
+    if (memcmp(base + d, "EmjD", 4) != 0 || rd16(d + 4) != EMJDICT_FORMAT) return emjdict_unload(), false;
     s_d.lang        = rd16(d + 6);
     s_d.ncp         = rd16(d + 8);
     s_d.nword       = rd16(d + 10);
@@ -143,12 +143,32 @@ typedef struct {
     uint16_t lo, hi;  // prefix: matching word range; typo: 0..nword, filtered
 } qword_t;
 
+// Word i's letter codes, unpacked into s_word: 6 bits per letter, least
+// significant bits first, ended by code 0 or by the next word's first byte
+// (format 2, emoji_dict.py pack_word()). The pointer is valid until the next call.
+static uint8_t s_word[EMJDICT_WORD_MAX];
+
 static const uint8_t *word_ptr(uint16_t i, uint8_t *len) {
-    uint16_t a = rd16(s_d.words_off + 4u * i);
-    uint16_t b = rd16(s_d.words_off + 4u * (i + 1u));
-    uint16_t l = (uint16_t)(b - a - 1u);
-    *len       = l > 255u ? 255u : (uint8_t)l;
-    return s_d.base + s_d.strings_off + a;
+    uint16_t a   = rd16(s_d.words_off + 4u * i);
+    uint16_t b   = rd16(s_d.words_off + 4u * (i + 1u));
+    uint32_t acc = 0;
+    uint8_t  nbits = 0, n = 0;
+    for (uint16_t o = a; o < b && n < EMJDICT_WORD_MAX; ++o) {
+        acc |= (uint32_t)s_d.base[s_d.strings_off + o] << nbits;
+        nbits += 8;
+        while (nbits >= EMJDICT_LETTER_BITS) {
+            uint8_t c = (uint8_t)(acc & ((1u << EMJDICT_LETTER_BITS) - 1u));
+            acc >>= EMJDICT_LETTER_BITS;
+            nbits -= EMJDICT_LETTER_BITS;
+            if (c == 0 || n >= EMJDICT_WORD_MAX) {
+                *len = n;
+                return s_word;
+            }
+            s_word[n++] = c;
+        }
+    }
+    *len = n;
+    return s_word;
 }
 
 // <0, 0, >0 like memcmp on the byte strings, a shorter prefix sorting first.

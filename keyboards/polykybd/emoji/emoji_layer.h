@@ -92,6 +92,11 @@ void emj_draw_tab_bottom(uint16_t keycode);
 #  define EMJ_SEARCH_SPACE_SLOT 0xFF
 #endif
 
+// Recents key that is a second Space in search mode (0xFF = none).
+#ifndef EMJ_SEARCH_SPACE_MRU
+#  define EMJ_SEARCH_SPACE_MRU 0xFF
+#endif
+
 #define EMJ_SEARCH_PAGE 12  // results per page: the category tab keys
 
 // Search mode is on and a dictionary is loaded.

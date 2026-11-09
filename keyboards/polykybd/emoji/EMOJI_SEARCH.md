@@ -103,7 +103,7 @@ split72, search mode:
 
 | position | tab mode | search mode |
 |---|---|---|
-| Tab (`KC_NO` before) | mode key, switch off | mode key, switch on ("Find" over the on/off switch icon) |
+| Tab (`KC_NO` before) | mode key: "Find" over the switch icon, off | the same, switch on |
 | Fn, below Tab (`KC_NO` before) | blank, inert | Clear: empty the query |
 | letter keys | emoji slots | letters of the active language layout; other keys there blank and inert |
 | top row, 12 number keys | category tabs | results 1–12, best match first |
@@ -112,7 +112,8 @@ split72, search mode:
 | right half, row 3, column 0 (slot 31) | emoji slot | Backspace (Space on Qwerty) |
 | right half, row 3, column 1 (slot 32) | emoji slot | Space (blank on Qwerty) |
 | `\`, below the top-right key (`KC_NO` before) | blank, inert | Backspace on Qwerty, blank otherwise |
-| bottom row | recents | recents, all 12 |
+| left innermost thumb (recents 5) | recent | Space |
+| rest of the bottom row | recents | the 11 latest recents, without a gap |
 
 Backspace sits above the right innermost thumb key (Enter on Stag!), Space beside
 it. When the base layout has Backspace on the top-right key (Qwerty), Backspace

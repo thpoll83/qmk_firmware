@@ -106,6 +106,7 @@
 #include "split_sync.h"
 
 #include "lang/lang_lut.h"
+#include "base/caps_word_letter.h"
 #include "lang/lang_lut_ext.h"
 
 #include "layers.h"
@@ -4049,45 +4050,30 @@ _Static_assert(TAPPING_TERM == POLY_DEFAULT_TAPPING_TERM_MS,
                "TAPPING_TERM and POLY_DEFAULT_TAPPING_TERM_MS have drifted");
 
 #ifdef CAPS_WORD_ENABLE
-// Compares two legends by their printed codepoints. Codepoints below 0x20 are
-// layout controls (\f, \v, nudges), not text: de-DE's Minus key is "\f\fß" plain
-// and "ß" under Caps Lock, which is the same character.
-static bool legend_text_equal(const uint32_t* a, const uint32_t* b) {
-    if (a == b) return true;
-    if (a == NULL || b == NULL) return false;
-    for (;;) {
-        while (*a != 0 && *a < 0x20u) a++;
-        while (*b != 0 && *b < 0x20u) b++;
-        if (*a != *b) return false;
-        if (*a == 0) return true;
-        a++;
-        b++;
-    }
-}
-
 // Caps Word's key test, with the letters of the active language instead of QMK's
-// fixed KC_A..KC_Z. A key is a letter when the language table gives it a different
-// legend under Caps Lock: on de-DE that adds ö, ä, ü (KC_SCLN, KC_QUOT, KC_LBRC),
-// on fr-FR it makes KC_SCLN (m) a letter and KC_M (,) not. The digit row is never a
-// letter: some tables leave its Caps Lock entry empty, which reads as "like Shift".
-// Minus becomes underscore only where Shift+Minus types "_". Digits, Backspace,
-// Delete and underscore continue the word without Shift, as in QMK's default; any
-// other key ends it.
+// fixed KC_A..KC_Z: a key is a letter when its plain and shifted legends are the two
+// cases of one letter (base/caps_word_letter.h). On de-DE that adds ö, ä, ü and
+// leaves comma and period out; on fr-FR it makes KC_SCLN (m) a letter and KC_M (,)
+// not. A KC_A..KC_Z key of a script without case (Hebrew, Arabic, ...) continues
+// the word without Shift. Minus becomes underscore only where Shift+Minus types
+// "_". Digits, Backspace, Delete and underscore continue the word without Shift, as
+// in QMK's default; any other key ends it.
 bool caps_word_press_user(uint16_t keycode) {
     const uint8_t lang = get_local_state()->lang;
-    const bool digit = keycode >= KC_1 && keycode <= KC_0;
-    if (!digit && ((keycode >= KC_A && keycode <= KC_SLASH) || keycode == KC_NONUS_BACKSLASH)) {
-        const uint32_t* plain = translate_keycode(lang, keycode, false, false);
-        if (!legend_text_equal(plain, translate_keycode(lang, keycode, false, true))) {
+    if ((keycode >= KC_A && keycode <= KC_SLASH) || keycode == KC_NONUS_BACKSLASH) {
+        const uint32_t* plain   = translate_keycode(lang, keycode, false, false);
+        const uint32_t* shifted = translate_keycode(lang, keycode, true, false);
+        if (caps_word_is_letter(plain, shifted)) {
             add_weak_mods(MOD_BIT(KC_LSFT));
             return true;
         }
-        if (keycode == KC_MINUS && legend_text_equal(translate_keycode(lang, keycode, true, false), U"_")) {
+        if (keycode == KC_MINUS && legend_first_char(shifted) == '_') {
             add_weak_mods(MOD_BIT(KC_LSFT));
             return true;
         }
     }
     switch (keycode) {
+        case KC_A ... KC_Z:
         case KC_1 ... KC_0:
         case KC_BSPC:
         case KC_DEL:

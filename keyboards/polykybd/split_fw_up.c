@@ -565,8 +565,11 @@ void fw_up_slave_versions_invalidate(uint8_t bundle) {
         s_slave_ver_uncertain[bundle] = true;
         poly_state_touch();   // the V block for this bundle just went below both
     }
+    // Not at once: the slave reloads a committed bundle later, in its
+    // housekeeping, so an immediate read could return the old version and clear
+    // the flag. Same delay as the read that confirms a successful COMMIT.
     s_slave_ver_stale = true;
-    s_slave_ver_next  = timer_read32();
+    s_slave_ver_next  = timer_read32() + 3u * SLAVE_VERSIONS_RETRY_MS;
 }
 
 uint16_t fw_up_reported_bundle_version(uint8_t bundle) {

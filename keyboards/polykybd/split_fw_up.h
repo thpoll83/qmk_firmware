@@ -137,7 +137,8 @@ static_assert(sizeof(fw_up_versions_reply_t) <= RPC_S2M_BUFFER_SIZE,
 void     fw_up_slave_versions_tick(void);
 void     fw_up_note_slave_bundle(uint8_t bundle, uint16_t version);
 // After a COMMIT of `bundle` whose effect on the slave is unknown: read the
-// slave's versions again on the next tick. Until a read lands, GET_ID reports
+// slave's versions again once its deferred reload has run (the same delay as
+// the read that confirms a successful COMMIT). Until a read lands, GET_ID reports
 // that bundle below both halves and the cmd 42 guard treats the slave as unknown.
 void     fw_up_slave_versions_invalidate(uint8_t bundle);
 uint16_t fw_up_reported_bundle_version(uint8_t bundle);

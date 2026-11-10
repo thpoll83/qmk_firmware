@@ -541,7 +541,10 @@ void fw_up_note_slave_bundle(uint8_t bundle, uint16_t version) {
 }
 
 bool fw_up_slave_bundle_version(uint8_t bundle, uint16_t *ver) {
-    const bool known = s_slave_ver_known && bundle < FONTPACK_BUNDLE_COUNT;
+    // Not while a confirming read is pending: after a COMMIT,
+    // fw_up_note_slave_bundle() stores the committed version before the slave
+    // has reloaded that bundle in its housekeeping.
+    const bool known = s_slave_ver_known && !s_slave_ver_stale && bundle < FONTPACK_BUNDLE_COUNT;
     if (ver) *ver = known ? s_slave_ver[bundle] : 0u;
     return known;
 }

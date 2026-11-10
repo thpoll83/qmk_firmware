@@ -341,7 +341,9 @@ Firmware `base/icon_lib.{c,h}` + cmd 42 in `hid_com.c`; host
   (`iconlib_fill_allowed()`). Each half draws a fill from its own flash, and an id
   names a glyph only within one library build. The `V` block is the master's alone
   until the master has read the slave's versions (one transaction after link-up,
-  §2.7), so the host's version check cannot cover that window. Until the read lands,
+  §2.7), so the host's version check cannot cover that window. Until the read lands
+(also the read that confirms a COMMIT, about 3 s after it, since the slave reloads
+the bundle in its housekeeping),
   and whenever the slave's icon `content_version` differs from the master's, cmd 42
   answers `!` at pair 0 and the host uploads bitmaps. Without this, a slave that
   missed a library flash would draw the wrong icon for every id a rebuild renumbered

@@ -59,6 +59,10 @@ bool     iconlib_blit(uint16_t id, uint8_t *frame);
 // Returns ICONLIB_FILL_OK when every pair applied, otherwise the index of the
 // first pair that did not (slot out of range, unknown id, bad glyph); pairs
 // before it were applied, it and everything after were not.
+#define ICONLIB_FILL_OK 0xFFu
+uint8_t  iconlib_fill_pairs(const uint8_t *buf, uint8_t bytes, uint8_t width,
+                            uint16_t n_slots, uint8_t *(*slot_ptr)(uint16_t slot));
+
 // Whether the master may fill from its library while the slave also draws the
 // report (cmd 42). Only when the master has read the slave's versions since the
 // split link came up, and the slave's icon library has the master's
@@ -67,7 +71,3 @@ bool     iconlib_blit(uint16_t id, uint8_t *frame);
 // pair 0 and the host uploads bitmaps, which reach both halves. A master with no
 // library (version 0) refuses too, as the fill itself would.
 bool iconlib_fill_allowed(uint16_t master_ver, bool slave_ver_known, uint16_t slave_ver);
-
-#define ICONLIB_FILL_OK 0xFFu
-uint8_t  iconlib_fill_pairs(const uint8_t *buf, uint8_t bytes, uint8_t width,
-                            uint16_t n_slots, uint8_t *(*slot_ptr)(uint16_t slot));

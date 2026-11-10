@@ -135,8 +135,10 @@ static_assert(sizeof(fw_up_versions_reply_t) <= RPC_S2M_BUFFER_SIZE,
 void     fw_up_slave_versions_tick(void);
 void     fw_up_note_slave_bundle(uint8_t bundle, uint16_t version);
 uint16_t fw_up_reported_bundle_version(uint8_t bundle);
-// The slave's content_version of `bundle` and whether the master has read it
-// since the split link came up (false until then; *ver is then 0).
+// The slave's content_version of `bundle`, and whether the master has READ it
+// from the slave since the split link came up and since the last COMMIT (false
+// until then, and *ver is 0). Unlike fw_up_reported_bundle_version(), it never
+// returns the version a COMMIT recorded before the confirming read.
 bool     fw_up_slave_bundle_version(uint8_t bundle, uint16_t *ver);
 
 // Reset/apply coordination (master → slave).  ONE transaction (USER_SYNC_RESET)

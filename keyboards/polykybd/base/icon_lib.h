@@ -62,3 +62,12 @@ bool     iconlib_blit(uint16_t id, uint8_t *frame);
 #define ICONLIB_FILL_OK 0xFFu
 uint8_t  iconlib_fill_pairs(const uint8_t *buf, uint8_t bytes, uint8_t width,
                             uint16_t n_slots, uint8_t *(*slot_ptr)(uint16_t slot));
+
+// Whether the master may fill from its library while the slave also draws the
+// report (cmd 42). Only when the master has read the slave's versions since the
+// split link came up, and the slave's icon library has the master's
+// content_version: each half draws a fill from its OWN library, and an id names a
+// glyph only within one library build. Otherwise the master refuses the report at
+// pair 0 and the host uploads bitmaps, which reach both halves. A master with no
+// library (version 0) refuses too, as the fill itself would.
+bool iconlib_fill_allowed(uint16_t master_ver, bool slave_ver_known, uint16_t slave_ver);

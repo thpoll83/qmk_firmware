@@ -149,3 +149,7 @@ uint8_t iconlib_fill_pairs(const uint8_t *buf, uint8_t bytes, uint8_t width,
     }
     return ICONLIB_FILL_OK;
 }
+
+bool iconlib_fill_allowed(uint16_t master_ver, bool slave_ver_known, uint16_t slave_ver) {
+    return master_ver != 0u && slave_ver_known && slave_ver == master_ver;
+}

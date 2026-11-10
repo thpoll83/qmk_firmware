@@ -540,6 +540,15 @@ void fw_up_note_slave_bundle(uint8_t bundle, uint16_t version) {
     s_slave_ver_next  = timer_read32() + 3u * SLAVE_VERSIONS_RETRY_MS;
 }
 
+bool fw_up_slave_bundle_version(uint8_t bundle, uint16_t *ver) {
+    // Not while a confirming read is pending: after a COMMIT,
+    // fw_up_note_slave_bundle() stores the committed version before the slave
+    // has reloaded that bundle in its housekeeping.
+    const bool known = s_slave_ver_known && !s_slave_ver_stale && bundle < FONTPACK_BUNDLE_COUNT;
+    if (ver) *ver = known ? s_slave_ver[bundle] : 0u;
+    return known;
+}
+
 uint16_t fw_up_reported_bundle_version(uint8_t bundle) {
     uint16_t v = fontpack_bundle_version(bundle);
     if (s_slave_ver_known && bundle < FONTPACK_BUNDLE_COUNT && s_slave_ver[bundle] < v) {

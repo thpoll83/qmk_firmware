@@ -839,7 +839,14 @@ static void hid_cmd_42(uint8_t *data, uint8_t length, const poly_layer_t *local_
         fill.bytes = OVERLAY_MAP_W_BYTES;
         memcpy(fill.mapping, &data[OVERLAY_MAP_W_HDR], OVERLAY_MAP_W_BYTES);
         uint8_t bad = ICONLIB_FILL_OK;
+        uint16_t slave_ver = 0;
+        const bool slave_known = fw_up_slave_bundle_version(FONTPACK_ICONS_BUNDLE_ID, &slave_ver);
         if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
+            bad = 0;
+        } else if (!iconlib_fill_allowed(fontpack_bundle_version(FONTPACK_ICONS_BUNDLE_ID),
+                                         slave_known, slave_ver)) {
+            // The slave would draw these ids from its own library, which may be
+            // another build (or unknown, in the first second after link-up).
             bad = 0;
         } else {
             bad = iconlib_fill_pairs(fill.mapping, OVERLAY_MAP_W_BYTES, width,

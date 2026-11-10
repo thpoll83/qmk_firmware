@@ -217,7 +217,7 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
             // so the cached slave versions must be read again rather than combined
             // with the master's as if nothing happened.
             if (!is_doom && !(master_ok && slave_ok)) {
-                fw_up_slave_versions_invalidate();
+                fw_up_slave_versions_invalidate(s_fontpack_bundle);
             }
             const char *outcome = ok ? (is_doom ? "installed" : "live")
                                      : !master_ok    ? "REJECTED (master finalize)"

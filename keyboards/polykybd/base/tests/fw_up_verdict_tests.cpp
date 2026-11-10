@@ -334,19 +334,27 @@ TEST(FontpackCommitStatusTest, StatusBytesAreSafeInAStringLiteral) {
 }
 
 TEST(FwUpCombinedBundleVersion, MastersOwnUntilTheSlaveIsRead) {
-    EXPECT_EQ(fw_up_combined_bundle_version(8, false, 0), 8);
-    EXPECT_EQ(fw_up_combined_bundle_version(8, false, 3), 8);
+    EXPECT_EQ(fw_up_combined_bundle_version(8, false, 0, false), 8);
+    EXPECT_EQ(fw_up_combined_bundle_version(8, false, 3, false), 8);
 }
 
 TEST(FwUpCombinedBundleVersion, AgreeingHalvesReportTheirVersion) {
-    EXPECT_EQ(fw_up_combined_bundle_version(8, true, 8), 8);
-    EXPECT_EQ(fw_up_combined_bundle_version(0, true, 0), 0);
+    EXPECT_EQ(fw_up_combined_bundle_version(8, true, 8, false), 8);
+    EXPECT_EQ(fw_up_combined_bundle_version(0, true, 0, false), 0);
 }
 
 TEST(FwUpCombinedBundleVersion, DifferingHalvesReportBelowBoth) {
-    EXPECT_EQ(fw_up_combined_bundle_version(8, true, 9), 7) << "slave newer than master";
-    EXPECT_EQ(fw_up_combined_bundle_version(9, true, 8), 7) << "master newer than slave";
-    EXPECT_EQ(fw_up_combined_bundle_version(8, true, 0), 0) << "slave has no bundle";
-    EXPECT_EQ(fw_up_combined_bundle_version(0, true, 5), 0) << "master has no bundle";
-    EXPECT_EQ(fw_up_combined_bundle_version(1, true, 2), 0);
+    EXPECT_EQ(fw_up_combined_bundle_version(8, true, 9, false), 7) << "slave newer than master";
+    EXPECT_EQ(fw_up_combined_bundle_version(9, true, 8, false), 7) << "master newer than slave";
+    EXPECT_EQ(fw_up_combined_bundle_version(8, true, 0, false), 0) << "slave has no bundle";
+    EXPECT_EQ(fw_up_combined_bundle_version(0, true, 5, false), 0) << "master has no bundle";
+    EXPECT_EQ(fw_up_combined_bundle_version(1, true, 2, false), 0);
+}
+
+TEST(FwUpCombinedBundleVersion, AnUncertainSlaveReportsBelowBoth) {
+    EXPECT_EQ(fw_up_combined_bundle_version(8, true, 8, true), 7)
+        << "a cached slave version equal to the master's must not hide the COMMIT";
+    EXPECT_EQ(fw_up_combined_bundle_version(9, true, 8, true), 7);
+    EXPECT_EQ(fw_up_combined_bundle_version(8, false, 0, true), 7) << "slave not known";
+    EXPECT_EQ(fw_up_combined_bundle_version(0, true, 0, true), 0);
 }

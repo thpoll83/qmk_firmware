@@ -69,5 +69,11 @@ bool fw_up_status_crc_ok(const fw_staging_status_t *status, uint32_t claimed_crc
 // halves, which makes them agree again. Plain min() missed a slave that is newer
 // than the master, and a master that is newer than the slave when the slave holds
 // the host's version: the host saw "current" and the halves stayed apart.
+//
+// `slave_uncertain`: a COMMIT of this bundle did not succeed on both halves, so
+// the slave's copy may have changed and no read has confirmed it since. Then the
+// result is below both halves (below the master's alone when the slave is not
+// known), as for differing halves: a cached slave version equal to the master's
+// must not hide a slave the COMMIT changed.
 uint16_t fw_up_combined_bundle_version(uint16_t master_ver, bool slave_ver_known,
-                                       uint16_t slave_ver);
+                                       uint16_t slave_ver, bool slave_uncertain);

@@ -288,8 +288,8 @@ Firmware behaviour:
 
 ### 2.7 Bundle versions from both halves
 
-The `V` block reports **`min(master, slave)`** per bundle, for all nine bundles.
-Halves that DIFFER report the lower version minus one
+The `V` block combines both halves per bundle, for all nine bundles: the shared
+version when they agree. Halves that DIFFER report the lower version minus one
 (`fw_up_combined_bundle_version()`): plain `min()` read as current when the slave was
 the newer half, or when the slave held the host's version and the master a newer one,
 so the host never repaired the mismatch.

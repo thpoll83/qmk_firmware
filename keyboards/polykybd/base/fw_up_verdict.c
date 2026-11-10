@@ -40,8 +40,9 @@ bool fw_up_status_crc_ok(const fw_staging_status_t *status, uint32_t claimed_crc
 }
 
 uint16_t fw_up_combined_bundle_version(uint16_t master_ver, bool slave_ver_known,
-                                       uint16_t slave_ver) {
-    if (!slave_ver_known || slave_ver == master_ver) return master_ver;
-    const uint16_t lower = (slave_ver < master_ver) ? slave_ver : master_ver;
+                                       uint16_t slave_ver, bool slave_uncertain) {
+    if (!slave_uncertain && (!slave_ver_known || slave_ver == master_ver)) return master_ver;
+    uint16_t lower = master_ver;
+    if (slave_ver_known && slave_ver < lower) lower = slave_ver;
     return lower ? (uint16_t)(lower - 1u) : 0u;
 }

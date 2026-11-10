@@ -412,11 +412,11 @@ reading before you change either one.
   **v31** adds cmd `45` AI and cmd `46` AI_CARD for **AI mode** (`ai_mode.h`,
   `base/ai_events.h`; design: PolyKybdHost `docs/agent-registry-plan.md`). The
   `KC_AI` key (0x7E2A, bound in no keymap) turns the number row `1`..`0` and ESC into
-  agent cards. The keys are found by their keycode on layer 0. All of it is RAM only
+  agent cards. The keys are found by their keycode on the active default layer (`def_layer`). All of it is RAM only
   and synced to the slave in `poly_sync_t` (100 -> 132 bytes).
   - Cmd `45`, op in `data[2]`, closed: any other op NACKs.
     - `0` QUERY. Reply `data[3]` AI mode (0/1), `data[4]` newest event seq (0 = none),
-      `data[5]` number keys found on layer 0 (0..10), `data[6]` 1 if ESC was found.
+      `data[5]` number keys found on the default layer (0..10), `data[6]` 1 if ESC was found.
     - `1` SET_KEYS. `data[3..12]` state of keys 0..9 (0 empty, 1 working, 2 waiting,
       3 done, 4 idle, 5 stale), `data[13]` ESC attention (0/1), `data[14..33]` the
       card's pool slot per key, u16 little-endian, `0xFFFF` = no card. A state past 5,

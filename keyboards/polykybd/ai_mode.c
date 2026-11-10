@@ -74,16 +74,20 @@ bool ai_mode_active(void) {
 }
 
 // The AI key index (0..9 number keys, AI_KEY_ESC) of the key at (row, col), from its
-// keycode on layer 0: the same lookup the renderer and the key events use
-// (poly_keycode_at() behind keymap_key_to_keycode()), so a remap moves the key.
+// keycode on the ACTIVE DEFAULT layer (def_layer, a layer index): the same lookup the
+// renderer and the key events use (poly_keycode_at() behind keymap_key_to_keycode()),
+// so a remap or another base layout moves the key. Layer 0 is not enough: the shipped
+// layer 1 has 6 on the left half, so its number keys are not where layer 0's are.
+// The synced snapshot is read on both halves; it lags a default-layer change by one
+// housekeeping pass, which only delays where the cards appear.
 static uint8_t ai_key_at(uint8_t row, uint8_t col) {
     if (row >= MATRIX_ROWS || col >= MATRIX_COLS) return AI_KEY_NONE;
     const keypos_t pos = {.col = col, .row = row};
-    return ai_key_index(keymap_key_to_keycode(0, pos));
+    return ai_key_index(keymap_key_to_keycode((uint8_t)get_local_layer()->def_layer, pos));
 }
 
 // The position of every AI key, (row << 4) | col, NO_KEY if absent. The first match
-// wins when a keycode is on layer 0 twice.
+// wins when a keycode is on the default layer twice.
 static void ai_find_keys(uint8_t *rc) {
     memset(rc, NO_KEY, AI_NUM_KEYS + 1u);
     for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {

@@ -12,7 +12,7 @@
 //   mode; ESC is the pager (key 10) and does not. Every press and release is swallowed,
 //   except the release of a key that was already down when the mode started, and the
 //   release of a modifier or a layer key.
-// - The keys are found by their keycode on layer 0 (KC_1..KC_0, KC_ESC), so a remap
+// - The keys are found by their keycode on the active default layer (KC_1..KC_0, KC_ESC), so a remap
 //   moves them. split42 has no number row: there only ESC is found.
 // - The host sets, per number key, a state (the LED) and the pool slot of a card (the
 //   keycap image in AI mode) with cmd 45 op 1, uploads the cards with cmd 46, and reads

@@ -92,12 +92,24 @@ TEST(AiKeys, NumberRowAndEsc) {
     EXPECT_EQ(ai_key_index(0x1D), AI_KEY_NONE);   // KC_Z
     EXPECT_EQ(ai_key_index(0x28), AI_KEY_NONE);   // KC_ENTER, between 0 and ESC
     EXPECT_EQ(ai_key_index(0x591E), AI_KEY_NONE); // a keycode whose low byte is KC_1
+    EXPECT_EQ(ai_key_index(0x2D), AI_KEY_MINUS);  // KC_MINUS: dictation
+    EXPECT_EQ(ai_key_index(0x2E), AI_KEY_PLUS);   // KC_EQUAL: next waiting agent
+    EXPECT_EQ(ai_key_index(0x2F), AI_KEY_NONE);   // KC_LBRC, after KC_EQUAL
+}
+
+TEST(AiKeys, CardOfKey) {
+    EXPECT_EQ(ai_card_of_key(0), 0);
+    EXPECT_EQ(ai_card_of_key(9), 9);
+    EXPECT_EQ(ai_card_of_key(AI_KEY_ESC), AI_KEY_NONE);   // ESC draws its own text
+    EXPECT_EQ(ai_card_of_key(AI_KEY_MINUS), AI_CARD_MINUS);
+    EXPECT_EQ(ai_card_of_key(AI_KEY_PLUS), AI_CARD_PLUS);
+    EXPECT_EQ(ai_card_of_key(AI_KEY_NONE), AI_KEY_NONE);
 }
 
 static void make_payload(uint8_t *p, uint8_t state, uint8_t esc, uint16_t slot) {
     for (unsigned i = 0; i < AI_NUM_KEYS; ++i) p[i] = state;
     p[AI_NUM_KEYS] = esc;
-    for (unsigned i = 0; i < AI_NUM_KEYS; ++i) {
+    for (unsigned i = 0; i < AI_NUM_CARDS; ++i) {
         p[AI_NUM_KEYS + 1 + 2 * i]     = (uint8_t)(slot & 0xFF);
         p[AI_NUM_KEYS + 1 + 2 * i + 1] = (uint8_t)(slot >> 8);
     }
@@ -105,7 +117,7 @@ static void make_payload(uint8_t *p, uint8_t state, uint8_t esc, uint16_t slot) 
 
 TEST(AiSetKeys, AcceptsTheFullRange) {
     uint8_t p[AI_SET_KEYS_LEN];
-    make_payload(p, AI_STATE_STALE, 1, 599);
+    make_payload(p, AI_STATE_STALE, AI_FLAGS_VALID, 599);
     EXPECT_TRUE(ai_set_keys_valid(p, 600));
     make_payload(p, AI_STATE_EMPTY, 0, AI_SLOT_NONE);
     EXPECT_TRUE(ai_set_keys_valid(p, 600));
@@ -117,7 +129,12 @@ TEST(AiSetKeys, RejectsEachBadField) {
     p[9] = AI_STATE_COUNT;
     EXPECT_FALSE(ai_set_keys_valid(p, 600));
 
-    make_payload(p, 0, 2, AI_SLOT_NONE);
+    make_payload(p, 0, 0x10, AI_SLOT_NONE);   // a flag outside AI_FLAGS_VALID
+    EXPECT_FALSE(ai_set_keys_valid(p, 600));
+
+    make_payload(p, 0, 0, AI_SLOT_NONE);
+    p[AI_NUM_KEYS + 1 + 2 * AI_CARD_PLUS]     = 0x58;   // the '+' card at 600
+    p[AI_NUM_KEYS + 1 + 2 * AI_CARD_PLUS + 1] = 0x02;
     EXPECT_FALSE(ai_set_keys_valid(p, 600));
 
     make_payload(p, 0, 0, AI_SLOT_NONE);
@@ -131,19 +148,23 @@ TEST(AiSetKeys, RejectsEachBadField) {
 
 TEST(AiSetKeys, DecodeIsLittleEndianPerKey) {
     uint8_t p[AI_SET_KEYS_LEN];
-    make_payload(p, 0, 1, AI_SLOT_NONE);
+    make_payload(p, 0, AI_FLAG_MORE_PAGES, AI_SLOT_NONE);
     p[0]                  = AI_STATE_WAITING;
     p[AI_NUM_KEYS + 1]     = 0x34;
     p[AI_NUM_KEYS + 1 + 1] = 0x01;   // key 0 -> slot 0x134
+    p[AI_NUM_KEYS + 1 + 2 * AI_CARD_MINUS]     = 0x56;
+    p[AI_NUM_KEYS + 1 + 2 * AI_CARD_MINUS + 1] = 0x02;   // '-' -> slot 598
     uint8_t  state[AI_NUM_KEYS];
-    uint8_t  esc = 0;
-    uint16_t slot[AI_NUM_KEYS];
-    ai_set_keys_decode(p, state, &esc, slot);
+    uint8_t  flags = 0;
+    uint16_t slot[AI_NUM_CARDS];
+    ai_set_keys_decode(p, state, &flags, slot);
     EXPECT_EQ(state[0], AI_STATE_WAITING);
     EXPECT_EQ(state[1], AI_STATE_EMPTY);
-    EXPECT_EQ(esc, 1);
+    EXPECT_EQ(flags, AI_FLAG_MORE_PAGES);
     EXPECT_EQ(slot[0], 0x134);
     EXPECT_EQ(slot[9], AI_SLOT_NONE);
+    EXPECT_EQ(slot[AI_CARD_MINUS], 598);
+    EXPECT_EQ(slot[AI_CARD_PLUS], AI_SLOT_NONE);
 }
 
 TEST(AiCard, HeaderFields) {

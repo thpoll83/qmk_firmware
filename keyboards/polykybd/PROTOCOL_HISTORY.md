@@ -411,17 +411,23 @@ reading before you change either one.
   - A v29 firmware ignores the new bytes and ACKs, so the host gates them on v30.
   **v31** adds cmd `45` AI and cmd `46` AI_CARD for **AI mode** (`ai_mode.h`,
   `base/ai_events.h`; design: PolyKybdHost `docs/agent-registry-plan.md`). The
-  `KC_AI` key (0x7E2A, bound in no keymap) turns the number row `1`..`0` and ESC into
-  agent cards. The keys are found by their keycode on the active default layer (`def_layer`). All of it is RAM only
-  and synced to the slave in `poly_sync_t` (100 -> 132 bytes).
+  `KC_AI` key (0x7E2A, bound in no keymap) turns the number row `1`..`0` into agent
+  cards, ESC into the pager, `-` into dictation and `=` (`+`) into "next waiting
+  agent". The keys are found by their keycode on the active default layer
+  (`def_layer`). All of it is RAM only and synced to the slave in `poly_sync_t`
+  (100 -> 136 bytes).
   - Cmd `45`, op in `data[2]`, closed: any other op NACKs.
     - `0` QUERY. Reply `data[3]` AI mode (0/1), `data[4]` newest event seq (0 = none),
       `data[5]` number keys found on the default layer (0..10), `data[6]` 1 if ESC was found.
     - `1` SET_KEYS. `data[3..12]` state of keys 0..9 (0 empty, 1 working, 2 waiting,
-      3 done, 4 idle, 5 stale), `data[13]` ESC attention (0/1), `data[14..33]` the
-      card's pool slot per key, u16 little-endian, `0xFFFF` = no card. A state past 5,
-      an attention byte past 1 or a slot of 600 or more (other than `0xFFFF`) NACKs and
-      changes nothing. ACK has no data.
+      3 done, 4 idle, 5 stale), `data[13]` flags (bit 0 ESC attention, bit 1 more
+      than one page: ESC shows "Next" and pages, bit 2 an agent waits: `+` blinks red
+      in AI mode, bit 3 the `-`/`+` cards are there), `data[14..37]` 12 card pool
+      slots, u16 little-endian, keys 1..9,0 then `-` then `+`, `0xFFFF` = no card. A
+      state past 5, any other flag bit, or a slot of 600 or more (other than `0xFFFF`)
+      NACKs and changes nothing. ACK has no data. A number key draws its card only
+      when its state is not empty, and `-`/`+` only with flag bit 3, because the
+      zeroed slots read as the valid pool slot 0 until the host has sent op 1.
     - `2` READ_EVENTS. `data[3]` the last seq the host has seen (0 = none). Reply
       `data[3]` newest seq, `data[4]` count n (0..8), then n pairs `data[5+2i]` seq,
       `data[6+2i]` key, oldest first, only the events after the host's seq in ring
@@ -433,7 +439,8 @@ reading before you change either one.
     `USER_SYNC_OVERLAY_DATA` with `OVERLAY_SEG_RAW_SLOT` (segment bit 7), so the slave
     marks no display position for it. A slot of 600 or more or a segment past 5 NACKs.
     Dropped without a reply while DOOM borrows the pool, like cmd 42.
-  - A key event (a number key 0..9 in AI mode, or ESC = 10, the pager) goes into a ring
+  - A key event in AI mode (a number key 0..9, ESC = 10 the pager, only with flag
+    bit 1; `-` = 11 dictation; `+` = 12 next waiting agent) goes into a ring
     of 8 `{seq, key}` entries. seq starts at 1 and wraps from 255 to 1. Each event
     increments the GET_ID `G` counter and prints `ai ev <seq> <key>` on the console.
     Host writes (op 1, cmd 46) do not move `G`.

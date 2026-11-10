@@ -304,16 +304,17 @@ typedef struct _poly_sync_t {
     mines_board_t mines;
     // AI mode (ai_mode.h, cmd 45 / 46): ai_mode is the master's (the AI key); the rest
     // is what the host set with cmd 45 op 1 -- per number key 1..9,0 its state (enum
-    // ai_state, the LED) and the pool slot of its card (AI_SLOT_NONE = no card), and
-    // whether ESC blinks. Synced because the slave draws the cards and paints the LEDs
+    // ai_state, the LED), the pool slot of each card (1..9,0 then '-' and '+';
+    // AI_SLOT_NONE = no card), and the op 1 flags (AI_FLAG_*: ESC blinks, more pages,
+    // some agent waits, the '-'/'+' cards are there). Synced because the slave draws the cards and paints the LEDs
     // of its own half. RAM only, never persisted: a light that survived a reboot would
     // describe an agent that may be gone, and the host re-sends it all on connect.
     // ai_mode sits on the odd offset after mines so ai_slot[] starts on an even one,
     // and ai_reserved fills the tail: the struct stays padding-free (asserted below).
     uint8_t  ai_mode;
-    uint16_t ai_slot[10];
+    uint16_t ai_slot[12];
     uint8_t  ai_state[10];
-    uint8_t  ai_esc_attention;
+    uint8_t  ai_flags;
     uint8_t  ai_reserved;
 } poly_sync_t;
 

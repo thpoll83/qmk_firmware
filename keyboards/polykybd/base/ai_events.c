@@ -41,6 +41,15 @@ uint8_t ai_ring_read(const ai_ring_t *r, uint8_t since, ai_event_t *out) {
 uint8_t ai_key_index(uint16_t keycode) {
     if (keycode >= AI_HID_KC_1 && keycode <= AI_HID_KC_0) return (uint8_t)(keycode - AI_HID_KC_1);
     if (keycode == AI_HID_KC_ESC) return AI_KEY_ESC;
+    if (keycode == AI_HID_KC_MINUS) return AI_KEY_MINUS;
+    if (keycode == AI_HID_KC_EQUAL) return AI_KEY_PLUS;
+    return AI_KEY_NONE;
+}
+
+uint8_t ai_card_of_key(uint8_t key) {
+    if (key < AI_NUM_KEYS) return key;
+    if (key == AI_KEY_MINUS) return AI_CARD_MINUS;
+    if (key == AI_KEY_PLUS) return AI_CARD_PLUS;
     return AI_KEY_NONE;
 }
 
@@ -53,18 +62,18 @@ bool ai_set_keys_valid(const uint8_t *payload, uint16_t num_slots) {
     for (uint8_t i = 0; i < AI_NUM_KEYS; ++i) {
         if (payload[i] >= AI_STATE_COUNT) return false;
     }
-    if (payload[AI_NUM_KEYS] > 1u) return false;
-    for (uint8_t i = 0; i < AI_NUM_KEYS; ++i) {
+    if (payload[AI_NUM_KEYS] & (uint8_t)~AI_FLAGS_VALID) return false;
+    for (uint8_t i = 0; i < AI_NUM_CARDS; ++i) {
         const uint16_t s = slot_at(payload, i);
         if (s != AI_SLOT_NONE && s >= num_slots) return false;
     }
     return true;
 }
 
-void ai_set_keys_decode(const uint8_t *payload, uint8_t *state, uint8_t *esc, uint16_t *slot) {
+void ai_set_keys_decode(const uint8_t *payload, uint8_t *state, uint8_t *flags, uint16_t *slot) {
     memcpy(state, payload, AI_NUM_KEYS);
-    *esc = payload[AI_NUM_KEYS];
-    for (uint8_t i = 0; i < AI_NUM_KEYS; ++i) slot[i] = slot_at(payload, i);
+    *flags = payload[AI_NUM_KEYS];
+    for (uint8_t i = 0; i < AI_NUM_CARDS; ++i) slot[i] = slot_at(payload, i);
 }
 
 bool ai_card_header(uint16_t header, uint16_t num_slots, uint16_t *slot, uint8_t *segment) {

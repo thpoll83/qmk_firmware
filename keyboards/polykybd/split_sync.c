@@ -132,11 +132,14 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
                               incoming->glyph_place != current->glyph_place;
     // A move in the idle-screen mine sweeper -> redraw this half's cells.
     bool mines_changed = memcmp(&incoming->mines, &current->mines, sizeof(incoming->mines)) != 0;
-    // AI mode turned on or off, or the cards changed while it is on -> redraw the
-    // number row and ESC (ai_mode.h). A state change alone moves only the LEDs.
+    // AI mode turned on or off, or the cards, states or flags changed while it is on
+    // -> redraw the number row, ESC, '-' and '+' (ai_mode.h). An empty key draws no
+    // card and ESC shows "Next" only with more pages, so states and flags count too.
     bool ai_changed = incoming->ai_mode != current->ai_mode ||
                       (incoming->ai_mode &&
-                       memcmp(incoming->ai_slot, current->ai_slot, sizeof(incoming->ai_slot)) != 0);
+                       (incoming->ai_flags != current->ai_flags ||
+                        memcmp(incoming->ai_state, current->ai_state, sizeof(incoming->ai_state)) != 0 ||
+                        memcmp(incoming->ai_slot, current->ai_slot, sizeof(incoming->ai_slot)) != 0));
     copy_local_state(incoming);
     if (doom_ctl_changed || fw_confirm_changed || glyph_size_changed || mines_changed || ai_changed) {
         request_disp_refresh();

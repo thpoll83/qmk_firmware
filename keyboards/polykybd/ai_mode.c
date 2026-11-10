@@ -32,13 +32,14 @@ extern const GFXfont NotoSans_Regular_Mid_19px7b;
 
 bool display_wakeup(keyrecord_t *record);   // poly_keymap.c
 
-_Static_assert(KC_1 == AI_HID_KC_1 && KC_0 == AI_HID_KC_0 && KC_ESC == AI_HID_KC_ESC,
+_Static_assert(KC_1 == AI_HID_KC_1 && KC_0 == AI_HID_KC_0 && KC_ESC == AI_HID_KC_ESC &&
+                   KC_MINUS == AI_HID_KC_MINUS && KC_EQUAL == AI_HID_KC_EQUAL,
                "base/ai_events.h key codes differ from QMK's");
 // Op 2's reply: data[5 + 2i], data[6 + 2i] for i < AI_RING_SIZE must fit the report.
 _Static_assert(6 + 2 * (AI_RING_SIZE - 1) < 64, "op 2 reply does not fit a report");
 _Static_assert(3 + AI_SET_KEYS_LEN <= 64, "op 1 request does not fit a report");
 _Static_assert(sizeof(((poly_sync_t *)0)->ai_state) == AI_NUM_KEYS, "poly_sync_t.ai_state size");
-_Static_assert(sizeof(((poly_sync_t *)0)->ai_slot) == AI_NUM_KEYS * sizeof(uint16_t), "poly_sync_t.ai_slot size");
+_Static_assert(sizeof(((poly_sync_t *)0)->ai_slot) == AI_NUM_CARDS * sizeof(uint16_t), "poly_sync_t.ai_slot size");
 _Static_assert(NUM_OVERLAY_SLOTS <= 0x400, "cmd 46 carries the slot in 10 bits");
 
 #define AI_CMD      0x2Du   // 45
@@ -89,7 +90,7 @@ static uint8_t ai_key_at(uint8_t row, uint8_t col) {
 // The position of every AI key, (row << 4) | col, NO_KEY if absent. The first match
 // wins when a keycode is on the default layer twice.
 static void ai_find_keys(uint8_t *rc) {
-    memset(rc, NO_KEY, AI_NUM_KEYS + 1u);
+    memset(rc, NO_KEY, AI_KEY_COUNT);
     for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
         for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
             const uint8_t k = ai_key_at(r, c);
@@ -209,7 +210,16 @@ bool ai_process_record(uint16_t keycode, keyrecord_t *record) {
         return true;
     }
     if (key == AI_KEY_ESC) {
-        ai_record(AI_KEY_ESC);   // the pager: the mode stays on
+        // The pager: the mode stays on. With one page there is nothing to page to, so
+        // the press is swallowed and nothing is reported (the key is blank then).
+        if (get_local_state()->ai_flags & AI_FLAG_MORE_PAGES) ai_record(AI_KEY_ESC);
+        return true;
+    }
+    if (key == AI_KEY_MINUS || key == AI_KEY_PLUS) {
+        // '-' dictation, '+' the next waiting agent: the host acts, the mode ends so
+        // the keyboard types again (into the dictation field or the raised agent).
+        ai_record(key);
+        ai_leave(key == AI_KEY_MINUS ? "minus" : "plus");
         return true;
     }
     // Any other key: swallowed. Latched, it also ends the mode; while the AI key is
@@ -239,8 +249,19 @@ bool ai_render_key(uint8_t row, uint8_t col) {
     const uint8_t key = ai_key_at(row, col);
     if (key == AI_KEY_NONE) return false;
     kdisp_set_buffer(0x00);
+    const poly_sync_t *s = get_local_state();
     if (key == AI_KEY_ESC) {
-        draw_text_centred(U"Next");   // the pager
+        // The pager, only when there is a page to go to; otherwise blank.
+        if (s->ai_flags & AI_FLAG_MORE_PAGES) draw_text_centred(U"Next");
+        return true;
+    }
+    if (key == AI_KEY_MINUS || key == AI_KEY_PLUS) {
+        // The host's cards for dictation and "next waiting". Gated on the flag, not the
+        // slot: a zeroed slot is the valid pool slot 0 (see below).
+        const uint16_t slot = s->ai_slot[ai_card_of_key(key)];
+        if ((s->ai_flags & AI_FLAG_EXTRA_CARDS) && slot < NUM_OVERLAY_SLOTS) {
+            kdisp_draw_bitmap(BUFFER_X, 0, get_overlay(slot), SCREEN_WIDTH, SCREEN_HEIGHT);
+        }
         return true;
     }
     // A card replaces the whole keycap, as a v25 no-legend overlay does. A key without
@@ -249,8 +270,7 @@ bool ai_render_key(uint8_t row, uint8_t col) {
     // host has sent op 1 (a host older than v30, or the feature off) every ai_slot[]
     // reads 0, a valid pool slot, and all ten keys showed pool slot 0, the ESC mark of
     // whatever application was in front (field, 2026-11-10: the VS Code logo).
-    const poly_sync_t *s    = get_local_state();
-    const uint16_t     slot = s->ai_slot[key];
+    const uint16_t slot = s->ai_slot[key];
     if (s->ai_state[key] != AI_STATE_EMPTY && slot < NUM_OVERLAY_SLOTS) {
         kdisp_draw_bitmap(BUFFER_X, 0, get_overlay(slot), SCREEN_WIDTH, SCREEN_HEIGHT);
     }
@@ -267,7 +287,7 @@ bool ai_render_key(uint8_t row, uint8_t col) {
 #    define AI_BLINK_HALF_MS  250u    // waiting: red blinking at 2 Hz
 #    define AI_KEYS_RESCAN_MS 1000u   // the key positions follow a remap within this
 
-static uint8_t  s_led_rc[AI_NUM_KEYS + 1u];
+static uint8_t  s_led_rc[AI_KEY_COUNT];
 static uint32_t s_led_rc_t;
 static bool     s_led_rc_valid;
 
@@ -282,7 +302,7 @@ static void paint_rc(uint8_t rc, uint8_t r, uint8_t g, uint8_t b) {
 // (no borrow in this prototype; the plan's open question).
 void ai_rgb_paint(void) {
     const poly_sync_t *s   = get_local_state();
-    bool               any = s->ai_mode && s->ai_esc_attention;
+    bool any = s->ai_mode && (s->ai_flags & (AI_FLAG_ESC_ATTENTION | AI_FLAG_ANY_WAITING));
     for (uint8_t i = 0; i < AI_NUM_KEYS && !any; ++i) any = s->ai_state[i] != AI_STATE_EMPTY;
     if (!any) return;
 
@@ -318,8 +338,11 @@ void ai_rgb_paint(void) {
                 break;   // empty: the running effect stays
         }
     }
-    if (s->ai_mode && s->ai_esc_attention) {
+    if (s->ai_mode && (s->ai_flags & AI_FLAG_ESC_ATTENTION)) {
         paint_rc(s_led_rc[AI_KEY_ESC], on ? AI_LED_FULL : 0u, 0, 0);
+    }
+    if (s->ai_mode && (s->ai_flags & AI_FLAG_ANY_WAITING)) {
+        paint_rc(s_led_rc[AI_KEY_PLUS], on ? AI_LED_FULL : 0u, 0, 0);   // '+' goes there
     }
 }
 #endif
@@ -331,7 +354,7 @@ void ai_hid_cmd(uint8_t *data, uint8_t length) {
     const uint8_t op = length > 2 ? data[2] : 0xFFu;
     poly_sync_t  *ls = access_local_state();
     if (op == 0) {
-        uint8_t rc[AI_NUM_KEYS + 1u];
+        uint8_t rc[AI_KEY_COUNT];
         ai_find_keys(rc);
         uint8_t found = 0;
         for (uint8_t i = 0; i < AI_NUM_KEYS; ++i) found += rc[i] != NO_KEY;
@@ -345,12 +368,12 @@ void ai_hid_cmd(uint8_t *data, uint8_t length) {
         data[6] = rc[AI_KEY_ESC] != NO_KEY ? 1u : 0u;
     } else if (op == 1 && length >= 3u + AI_SET_KEYS_LEN && ai_set_keys_valid(&data[3], NUM_OVERLAY_SLOTS)) {
         uint8_t  state[AI_NUM_KEYS];
-        uint8_t  esc;
-        uint16_t slot[AI_NUM_KEYS];
-        ai_set_keys_decode(&data[3], state, &esc, slot);
+        uint8_t  flags;
+        uint16_t slot[AI_NUM_CARDS];
+        ai_set_keys_decode(&data[3], state, &flags, slot);
         memcpy(ls->ai_state, state, sizeof(state));
         memcpy(ls->ai_slot, slot, sizeof(slot));
-        ls->ai_esc_attention = esc;
+        ls->ai_flags = flags;
         // The housekeeping state diff sends it to the slave; that also redraws the
         // slave's keys (user_sync_poly_data_handler).
         if (ls->ai_mode) request_disp_refresh();

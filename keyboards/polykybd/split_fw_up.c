@@ -502,7 +502,16 @@ void fw_up_slave_versions_tick(void) {
     if (up != s_link_up) {
         s_link_up = up;
         s_slave_ver_stale = true;
-        s_slave_ver_next  = timer_read32();
+        // Read again soon, but never before a deadline a COMMIT set: the slave
+        // reloads a committed bundle in its housekeeping, and an early read
+        // could return the old version (fw_up_note_slave_bundle and
+        // fw_up_slave_versions_invalidate both wait for it).
+        // "Pending" means at most 3 s ahead: a deadline from long ago would
+        // otherwise look like a future one once the 32-bit timer wraps.
+        const uint32_t now = timer_read32();
+        if ((uint32_t)(s_slave_ver_next - now) > 3u * SLAVE_VERSIONS_RETRY_MS) {
+            s_slave_ver_next = now;
+        }
         if (s_slave_ver_known) {
             s_slave_ver_known = false;
             poly_state_touch();   // the V block just changed back to the master's

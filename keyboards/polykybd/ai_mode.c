@@ -245,8 +245,13 @@ bool ai_render_key(uint8_t row, uint8_t col) {
     }
     // A card replaces the whole keycap, as a v25 no-legend overlay does. A key without
     // one stays blank.
-    const uint16_t slot = get_local_state()->ai_slot[key];
-    if (slot < NUM_OVERLAY_SLOTS) {
+    // ⚠️ The STATE decides, not the slot alone: poly_sync_t starts zeroed, so before a
+    // host has sent op 1 (a host older than v30, or the feature off) every ai_slot[]
+    // reads 0, a valid pool slot, and all ten keys showed pool slot 0, the ESC mark of
+    // whatever application was in front (field, 2026-11-10: the VS Code logo).
+    const poly_sync_t *s    = get_local_state();
+    const uint16_t     slot = s->ai_slot[key];
+    if (s->ai_state[key] != AI_STATE_EMPTY && slot < NUM_OVERLAY_SLOTS) {
         kdisp_draw_bitmap(BUFFER_X, 0, get_overlay(slot), SCREEN_WIDTH, SCREEN_HEIGHT);
     }
     return true;

@@ -308,7 +308,7 @@
 //  v31 cmd 45 (AI: query, set the number-row states / cards, read key events) and
 //      cmd 46 (AI_CARD: one 60-byte segment straight into a pool slot) for AI mode
 //      (ai_mode.h, KC_AI). Older firmware NACKs both, which is the host's signal.
-#define PROTOCOL_VERSION 30
+#define PROTOCOL_VERSION 31
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2

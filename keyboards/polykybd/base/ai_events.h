@@ -1,7 +1,7 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// The pure part of AI mode (ai_mode.h, HID cmd 45 / 46, protocol v30): the event ring
+// The pure part of AI mode (ai_mode.h, HID cmd 45 / 46, protocol v31): the event ring
 // that reports key presses to the host, the key-index mapping, and the checks on what
 // the host sends. No quantum.h, no config.h, so it is unit-tested on the host
 // (make test:polykybd_ai_events). The firmware binding is ai_mode.c.

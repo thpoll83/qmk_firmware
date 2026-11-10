@@ -47,6 +47,6 @@ bool ai_render_key(uint8_t row, uint8_t col);
 void ai_rgb_paint(void);
 #endif
 
-// HID cmd 45 (AI) and cmd 46 (AI_CARD), protocol v30. Both reply into `data`.
+// HID cmd 45 (AI) and cmd 46 (AI_CARD), protocol v31. Both reply into `data`.
 void ai_hid_cmd(uint8_t *data, uint8_t length);
 void ai_hid_card(uint8_t *data, uint8_t length);

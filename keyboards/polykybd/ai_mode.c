@@ -267,7 +267,7 @@ bool ai_render_key(uint8_t row, uint8_t col) {
     // A card replaces the whole keycap, as a v25 no-legend overlay does. A key without
     // one stays blank.
     // ⚠️ The STATE decides, not the slot alone: poly_sync_t starts zeroed, so before a
-    // host has sent op 1 (a host older than v30, or the feature off) every ai_slot[]
+    // host has sent op 1 (a host older than v31, or the feature off) every ai_slot[]
     // reads 0, a valid pool slot, and all ten keys showed pool slot 0, the ESC mark of
     // whatever application was in front (field, 2026-11-10: the VS Code logo).
     const uint16_t slot = s->ai_slot[key];
@@ -354,7 +354,7 @@ void ai_rgb_paint(void) {
 // ---- HID --------------------------------------------------------------------------
 
 void ai_hid_cmd(uint8_t *data, uint8_t length) {
-    // data[2] op: 0 QUERY, 1 SET_KEYS, 2 READ_EVENTS. PROTOCOL_HISTORY.md, v30.
+    // data[2] op: 0 QUERY, 1 SET_KEYS, 2 READ_EVENTS. PROTOCOL_HISTORY.md, v31.
     const uint8_t op = length > 2 ? data[2] : 0xFFu;
     poly_sync_t  *ls = access_local_state();
     if (op == 0) {

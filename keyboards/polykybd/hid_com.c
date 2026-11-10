@@ -51,7 +51,7 @@
 #include "multicore_exec.h"   // core1_stall_report
 #include "boot_diag.h"        // boot_banner_on_host_probe
 #include "ltr559_policy.h"    // poly_ltr559_drives_brightness
-#include "ai_mode.h"          // cmd 45 / 46 (protocol v30)
+#include "ai_mode.h"          // cmd 45 / 46 (protocol v31)
 
 
 /*[[[cog
@@ -1706,11 +1706,11 @@ static void hid_cmd_44(uint8_t *data, uint8_t length, const poly_layer_t *local_
     return;
 }
 
-static void hid_cmd_45(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //AI mode: query / set keys / read events (protocol v30+)
+static void hid_cmd_45(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //AI mode: query / set keys / read events (protocol v31+)
     ai_hid_cmd(data, length);
 }
 
-static void hid_cmd_46(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //AI card segment into a pool slot (protocol v30+)
+static void hid_cmd_46(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //AI card segment into a pool slot (protocol v31+)
     ai_hid_card(data, length);
 }
 

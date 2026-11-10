@@ -114,9 +114,10 @@ static_assert(sizeof(fw_up_status_reply_t) <= RPC_S2M_BUFFER_SIZE,
               "fw_up_status_reply_t exceeds RPC_S2M_BUFFER_SIZE — the STATUS probe would silently stop answering");
 
 // The slave's font-pack bundle versions (protocol v20). The GET_ID 'V' block
-// reports min(master, slave) per bundle, so a half that missed a flash reads as
-// behind and the host's normal autocheck flashes that bundle again (the transport
-// writes both halves). Same request shape as STATUS; the reply is CRC'd over
+// combines both halves per bundle (fw_up_combined_bundle_version: the shared
+// version, or below both when they differ), so a half that missed a flash reads
+// as behind and the host's normal autocheck flashes that bundle again (the
+// transport writes both halves). Same request shape as STATUS; the reply is CRC'd over
 // everything after crc32 and carries the count, so an older slave -- which leaves
 // the reply zeroed for an op it does not know -- can never pass for "all zero".
 typedef struct _fw_up_versions_reply_t {
@@ -131,9 +132,15 @@ static_assert(sizeof(fw_up_versions_reply_t) <= RPC_S2M_BUFFER_SIZE,
 // Master side. The tick runs in housekeeping and re-reads the slave until it
 // answers (boot, and again after each font-pack COMMIT); a change calls
 // poly_state_touch() so the host re-reads GET_ID. Until the slave has answered,
-// the master reports its own versions.
+// the master reports its own versions; after that, fw_up_combined_bundle_version()
+// (the shared version, or below both halves when they differ).
 void     fw_up_slave_versions_tick(void);
 void     fw_up_note_slave_bundle(uint8_t bundle, uint16_t version);
+// After a COMMIT of `bundle` whose effect on the slave is unknown: read the
+// slave's versions again once its deferred reload has run (the same delay as
+// the read that confirms a successful COMMIT). Until a read lands, GET_ID reports
+// that bundle below both halves and the cmd 42 guard treats the slave as unknown.
+void     fw_up_slave_versions_invalidate(uint8_t bundle);
 uint16_t fw_up_reported_bundle_version(uint8_t bundle);
 // The slave's content_version of `bundle`, and whether the master has READ it
 // from the slave since the split link came up and since the last COMMIT (false

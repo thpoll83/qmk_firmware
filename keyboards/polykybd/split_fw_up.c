@@ -478,6 +478,9 @@ void user_sync_reset_handler(uint8_t in_len, const void* in_data, uint8_t out_le
 static uint16_t s_slave_ver[FONTPACK_BUNDLE_COUNT];
 static bool     s_slave_ver_known = false;
 static bool     s_slave_ver_stale = true;     // read at boot
+// Per bundle: a COMMIT that did not succeed on both halves, not yet confirmed by
+// a read. GET_ID then reports below both halves (fw_up_combined_bundle_version).
+static bool     s_slave_ver_uncertain[FONTPACK_BUNDLE_COUNT];
 static uint32_t s_slave_ver_next  = 0;
 
 static bool query_slave_versions(fw_up_versions_reply_t *reply) {
@@ -499,7 +502,16 @@ void fw_up_slave_versions_tick(void) {
     if (up != s_link_up) {
         s_link_up = up;
         s_slave_ver_stale = true;
-        s_slave_ver_next  = timer_read32();
+        // Read again soon, but never before a deadline a COMMIT set: the slave
+        // reloads a committed bundle in its housekeeping, and an early read
+        // could return the old version (fw_up_note_slave_bundle and
+        // fw_up_slave_versions_invalidate both wait for it).
+        // "Pending" means at most 3 s ahead: a deadline from long ago would
+        // otherwise look like a future one once the 32-bit timer wraps.
+        const uint32_t now = timer_read32();
+        if ((uint32_t)(s_slave_ver_next - now) > 3u * SLAVE_VERSIONS_RETRY_MS) {
+            s_slave_ver_next = now;
+        }
         if (s_slave_ver_known) {
             s_slave_ver_known = false;
             poly_state_touch();   // the V block just changed back to the master's
@@ -517,9 +529,17 @@ void fw_up_slave_versions_tick(void) {
         return;   // an older slave never answers this op: the master's versions stand
     }
     bool changed = !s_slave_ver_known || memcmp(s_slave_ver, reply.ver, sizeof(s_slave_ver)) != 0;
+    bool was_uncertain = false;
+    for (uint8_t b = 0; b < FONTPACK_BUNDLE_COUNT; ++b) {
+        was_uncertain = was_uncertain || s_slave_ver_uncertain[b];
+        s_slave_ver_uncertain[b] = false;
+    }
     memcpy(s_slave_ver, reply.ver, sizeof(s_slave_ver));
     s_slave_ver_known = true;
     s_slave_ver_stale = false;
+    if (was_uncertain && !changed) {
+        poly_state_touch();   // the V block leaves its conservative value
+    }
     if (changed) {
         uprint("Slave bundle versions:");
         for (uint8_t b = 0; b < FONTPACK_BUNDLE_COUNT; ++b) uprintf(" %u", (unsigned)s_slave_ver[b]);
@@ -549,12 +569,23 @@ bool fw_up_slave_bundle_version(uint8_t bundle, uint16_t *ver) {
     return known;
 }
 
-uint16_t fw_up_reported_bundle_version(uint8_t bundle) {
-    uint16_t v = fontpack_bundle_version(bundle);
-    if (s_slave_ver_known && bundle < FONTPACK_BUNDLE_COUNT && s_slave_ver[bundle] < v) {
-        v = s_slave_ver[bundle];
+void fw_up_slave_versions_invalidate(uint8_t bundle) {
+    if (bundle < FONTPACK_BUNDLE_COUNT && !s_slave_ver_uncertain[bundle]) {
+        s_slave_ver_uncertain[bundle] = true;
+        poly_state_touch();   // the V block for this bundle just went below both
     }
-    return v;
+    // Not at once: the slave reloads a committed bundle later, in its
+    // housekeeping, so an immediate read could return the old version and clear
+    // the flag. Same delay as the read that confirms a successful COMMIT.
+    s_slave_ver_stale = true;
+    s_slave_ver_next  = timer_read32() + 3u * SLAVE_VERSIONS_RETRY_MS;
+}
+
+uint16_t fw_up_reported_bundle_version(uint8_t bundle) {
+    const uint16_t own = fontpack_bundle_version(bundle);
+    if (bundle >= FONTPACK_BUNDLE_COUNT) return own;
+    return fw_up_combined_bundle_version(own, s_slave_ver_known, s_slave_ver[bundle],
+                                         s_slave_ver_uncertain[bundle]);
 }
 
 uint8_t fw_up_send_slave_reset(poly_reset_sync_t *msg) {

@@ -208,6 +208,9 @@ reading before you change either one.
     `FLASH_STAGE_VERSIONS` op, read from housekeeping at boot and after each COMMIT).
     A half that missed a flash reads as behind and the host's autocheck re-flashes it.
     An older slave never answers the op, so the master's versions stand.
+    Later firmware (same protocol): halves that differ report the lower
+    version minus one, so the host also re-flashes a slave that is NEWER than the
+    master (`fw_up_combined_bundle_version()`).
   **v21** lets cmd `33` carry the **prepare and enable steps** of an app switch as
   flags in its width byte: `OVERLAY_MAP_W_RESET` (0x40) runs cmd `11`'s prepare
   (`MIRROR_OVERLAYS | MAPPING_RESET | USAGE_RESET`) before the pairs are applied, and

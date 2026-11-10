@@ -314,8 +314,8 @@ static void hid_cmd_6(uint8_t *data, uint8_t length, const poly_layer_t *local_l
         data[off++] = 'V';
         data[off++] = bcount;
         for (uint8_t b = 0; b < bcount; ++b) {
-            // min(master, slave) since v20: a half that missed a
-            // flash reads as behind, so the host flashes it again.
+            // Both halves since v20 (fw_up_combined_bundle_version): a half
+            // that missed a flash reads as behind, so the host flashes it again.
             uint16_t v = fw_up_reported_bundle_version(b);
             data[off++] = (uint8_t)(v & 0xFF);
             data[off++] = (uint8_t)(v >> 8);

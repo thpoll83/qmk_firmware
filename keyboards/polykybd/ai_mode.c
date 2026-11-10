@@ -282,7 +282,11 @@ bool ai_render_key(uint8_t row, uint8_t col) {
 #ifdef RGB_MATRIX_ENABLE
 // Raw LED values, like the flash cue (5..36): not scaled by the RGB matrix brightness.
 #    define AI_LED_FULL       40u
-#    define AI_LED_DIM        8u
+// ⚠️ Not lower. At 8 the LEDs differ visibly from one another (first hardware
+// test: idle keys side by side were not the same green), so "dim" is half of
+// FULL, the lowest level at which they match. Idle and done stay apart by
+// brightness (20 vs 40); stale is white at the same level.
+#    define AI_LED_DIM        20u
 #    define AI_BREATH_MS      1500u   // working: amber breathing
 #    define AI_BLINK_HALF_MS  250u    // waiting: red blinking at 2 Hz
 #    define AI_KEYS_RESCAN_MS 1000u   // the key positions follow a remap within this

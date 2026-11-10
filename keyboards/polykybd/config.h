@@ -299,7 +299,13 @@
 //      Flow Tap term (0..300 ms, 0 = off), both in 10 ms steps, persisted at the next
 //      settings flush. Closed ranges: a value outside them NACKs. Older firmware
 //      NACKs the command, and its terms are the compile-time 200 / 150 ms.
-#define PROTOCOL_VERSION 29
+//  v30 cmd 44 also reads and sets Auto Shift. Request data[7] = Auto Shift op
+//      (0 keep, 1 off, 2 on), data[8..9] = Auto Shift timeout ms LE (0 or 0xFFFF
+//      keeps it; 100..500 in 10 ms steps). A v29 host zero-pads the report, so its
+//      sets leave Auto Shift alone. Reply data[7] gains bit 1 (Auto Shift compiled
+//      in) and bit 2 (Auto Shift on), data[8..9] = the timeout. A v29 firmware
+//      ignores the new request bytes, so the host gates them on v30.
+#define PROTOCOL_VERSION 30
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2
@@ -308,6 +314,12 @@
 // hooks in poly_keymap.c for every tap-hold decision.
 #define TAPPING_TERM_PER_KEY
 #define QUICK_TAP_TERM_PER_KEY
+
+// Auto Shift (cmd 44 v30) is a runtime setting, off by default: QMK starts with it
+// off and the EEPROM load turns it on (note_poly_auto_shift(), state.c).
+#define AUTO_SHIFT_DISABLED_AT_STARTUP
+// Caps Word: CW_TOGG, or both Shift keys pressed together.
+#define BOTH_SHIFTS_TURNS_ON_CAPS_WORD
 
 #define FULL_BRIGHT 50
 #define MIN_BRIGHT 1

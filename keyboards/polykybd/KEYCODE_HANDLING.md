@@ -78,3 +78,22 @@ keycode; `process_record_user()` calls it last, before `display_wakeup()`.
   **replaced** — it worked, but it is a bespoke guard for something the framework
   already answers.
 
+
+## Caps Word and Auto Shift
+
+Both are QMK features, enabled in each variant's `keyboard.json`.
+
+- **Caps Word** turns on with `CW_TOGG` or both Shift keys (`BOTH_SHIFTS_TURNS_ON_CAPS_WORD`).
+  `caps_word_press_user()` in `poly_keymap.c` decides which keys are letters from the
+  active language's table: a key is a letter when its legend changes under Caps Lock.
+  On de-DE that makes ö, ä and ü letters; QMK's default knows only KC_A..KC_Z. The digit
+  row is excluded, because some tables leave its Caps Lock entry empty, which
+  `translate_keycode()` reads as "like Shift". While Caps Word is on, the housekeeping
+  pass sets the synced `led_state.caps_lock`, so both halves draw capitals. The host's
+  Caps Lock is not touched.
+- ⚠️ **Keys that `process_record_user()` swallows never reach Caps Word or Auto Shift**,
+  which run after it in `process_record_quantum()`. A custom keycode that types a letter
+  is not shifted by either.
+- **Auto Shift** is off by default and set over cmd 44 (protocol v30). The `AS_*`
+  keycodes are intercepted in `process_record_user()` so they change the persisted
+  setting (`set_poly_auto_shift*()`), not only QMK's live state.

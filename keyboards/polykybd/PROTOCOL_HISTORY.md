@@ -391,6 +391,21 @@ reading before you change either one.
   - Only the master uses the values. Each half stores its own.
   - v28 and older firmware NACK the command; their terms are the compile-time
     200 / 150 ms.
+  **v30** extends cmd `44` with **Auto Shift** (QMK `AUTO_SHIFT_ENABLE`).
+  - Request: `data[7]` Auto Shift op (0 keep, 1 off, 2 on), `data[8..9]` timeout
+    ms, little-endian (0 or `0xFFFF` keeps it). 0 means "keep" because a v29 host
+    zero-pads the report: its sets must leave Auto Shift as it is.
+  - Reply: `data[7]` gains bit 1 (Auto Shift is compiled in) and bit 2 (Auto Shift
+    is on); `data[8..9]` is the timeout.
+  - Timeout range 100..500 ms, 10 ms steps, CLOSED like the terms. The default is
+    180 ms, because QMK's 175 ms is off the grid. Off by default
+    (`AUTO_SHIFT_DISABLED_AT_STARTUP`). A report with any bad field changes nothing.
+  - Stored in `poly_eeconf_t.auto_shift` (bit 7 on, bits 0..6 ms / 10), so 0 means
+    off at the default. It is after `tail_fmt`, so it has its own marker,
+    `tail2_fmt` (0xB6 at offset 164, a high byte of the old keymap).
+  - The `AS_TOGG`, `AS_ON`, `AS_OFF`, `AS_UP`, `AS_DOWN` keycodes change the same
+    persisted setting (`process_record_user()`); `AS_UP`/`AS_DOWN` step 10 ms.
+  - A v29 firmware ignores the new bytes and ACKs, so the host gates them on v30.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload

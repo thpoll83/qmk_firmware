@@ -20,7 +20,9 @@
         "polykybd/polymod_rle"
     ],
     "features": {
+        "auto_shift": true,
         "bootmagic": false,
+        "caps_word": true,
         "console": true,
         "encoder": true,
         "extrakey": true,

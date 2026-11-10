@@ -1619,32 +1619,44 @@ static void hid_cmd_40(uint8_t *data, uint8_t length, const poly_layer_t *local_
 // Cmd 44 reply flag: this build has Flow Tap compiled in (FLOW_TAP_TERM defined).
 // Without it the Flow Tap term is stored but used by nothing, and the host shows
 // the control disabled.
-#define TAP_TERMS_FLAG_FLOW_TAP 0x01u
+#define TAP_TERMS_FLAG_FLOW_TAP     0x01u   // Flow Tap is compiled in
+#define TAP_TERMS_FLAG_AUTO_SHIFT   0x02u   // Auto Shift is compiled in (v30)
+#define TAP_TERMS_FLAG_AUTO_SHIFT_ON 0x04u  // Auto Shift is on (v30)
 
-static void hid_cmd_44(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //get/set the tap-hold terms (protocol v29+)
+static void hid_cmd_44(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //get/set the tap-hold terms (protocol v29+) and Auto Shift (v30+)
     {
         // Request: data[2] = op (0 query, 1 set), data[3..4] = tapping term ms,
         // data[5..6] = Flow Tap term ms, both little-endian; TAP_TERM_KEEP (0xFFFF)
-        // leaves that term unchanged. Ranges: base/tap_terms.h. Both are CLOSED,
-        // like the idle timeout (cmd 40): a value outside them is NACKed, because an
-        // accepted one is persisted and used for every tap-hold key.
+        // leaves that term unchanged. v30: data[7] = Auto Shift op (0 keep, 1 off,
+        // 2 on), data[8..9] = Auto Shift timeout ms (0 or 0xFFFF keep). A v29 host
+        // zero-pads the report, so its sets keep Auto Shift as it is.
+        // Ranges: base/tap_terms.h. All are CLOSED, like the idle timeout (cmd 40):
+        // a value outside them is NACKed, because an accepted one is persisted and
+        // used for every key.
         //
-        // Both fields are validated before either is applied, so a report with one
-        // bad value changes nothing.
+        // Every field is validated before any is applied, so a report with one bad
+        // value changes nothing.
         //
         // Reply (ACK and NACK alike): data[3..4] = tapping term, data[5..6] = Flow
-        // Tap term, data[7] = flags (TAP_TERMS_FLAG_FLOW_TAP). Persisted at the next
-        // settings flush (suspend / store key).
+        // Tap term, data[7] = flags (TAP_TERMS_FLAG_*), data[8..9] = Auto Shift
+        // timeout. Persisted at the next settings flush (suspend / store key).
         const uint8_t  op       = hid_payload_avail(length, 2) > 0 ? data[2] : 0xFFu;
         const uint16_t tap_ms   = hid_payload_avail(length, 4) > 0 ? (uint16_t)(data[3] | (data[4] << 8)) : TAP_TERM_KEEP;
         const uint16_t flow_ms  = hid_payload_avail(length, 6) > 0 ? (uint16_t)(data[5] | (data[6] << 8)) : TAP_TERM_KEEP;
+        const uint8_t  as_op    = hid_payload_avail(length, 7) > 0 ? data[7] : AUTO_SHIFT_OP_KEEP;
+        uint16_t       as_ms    = hid_payload_avail(length, 9) > 0 ? (uint16_t)(data[8] | (data[9] << 8)) : AUTO_SHIFT_MS_KEEP;
+        if (as_ms == TAP_TERM_KEEP) {
+            as_ms = AUTO_SHIFT_MS_KEEP;
+        }
         bool ok = false;
         if (op == 0) {
             ok = true;
         } else if (op == 1) {
             const bool tap_ok  = tap_ms == TAP_TERM_KEEP || tapping_term_valid(tap_ms);
             const bool flow_ok = flow_ms == TAP_TERM_KEEP || flow_tap_term_valid(flow_ms);
-            ok = tap_ok && flow_ok;
+            const bool as_ok   = as_op <= AUTO_SHIFT_OP_ON
+                                 && (as_ms == AUTO_SHIFT_MS_KEEP || auto_shift_ms_valid(as_ms));
+            ok = tap_ok && flow_ok && as_ok;
             if (ok) {
                 if (tap_ms != TAP_TERM_KEEP) {
                     set_poly_tapping_term(tap_ms);
@@ -1652,25 +1664,42 @@ static void hid_cmd_44(uint8_t *data, uint8_t length, const poly_layer_t *local_
                 if (flow_ms != TAP_TERM_KEEP) {
                     set_poly_flow_tap_term(flow_ms);
                 }
-                uprintf("Set tapping term %ums, flow tap term %ums.\n",
-                        (unsigned int)get_poly_tapping_term(), (unsigned int)get_poly_flow_tap_term());
+                if (as_ms != AUTO_SHIFT_MS_KEEP) {
+                    set_poly_auto_shift_ms(as_ms);
+                }
+                if (as_op != AUTO_SHIFT_OP_KEEP) {
+                    set_poly_auto_shift(as_op == AUTO_SHIFT_OP_ON);
+                }
+                uprintf("Set tapping term %ums, flow tap term %ums, auto shift %s %ums.\n",
+                        (unsigned int)get_poly_tapping_term(), (unsigned int)get_poly_flow_tap_term(),
+                        get_poly_auto_shift() ? "on" : "off", (unsigned int)get_poly_auto_shift_ms());
             } else {
-                uprintf("Refused tap terms %u / %u.\n", (unsigned int)tap_ms, (unsigned int)flow_ms);
+                uprintf("Refused tap terms %u / %u, auto shift %u / %u.\n", (unsigned int)tap_ms,
+                        (unsigned int)flow_ms, (unsigned int)as_op, (unsigned int)as_ms);
             }
         }
         memset(data, 0, length);
         hid_reply(data, 0x2C, ok);
         const uint16_t cur_tap  = get_poly_tapping_term();
         const uint16_t cur_flow = get_poly_flow_tap_term();
+        const uint16_t cur_as   = get_poly_auto_shift_ms();
         data[3] = (uint8_t)(cur_tap & 0xFFu);
         data[4] = (uint8_t)(cur_tap >> 8);
         data[5] = (uint8_t)(cur_flow & 0xFFu);
         data[6] = (uint8_t)(cur_flow >> 8);
+        uint8_t flags = 0;
 #ifdef FLOW_TAP_TERM
-        data[7] = TAP_TERMS_FLAG_FLOW_TAP;
-#else
-        data[7] = 0;
+        flags |= TAP_TERMS_FLAG_FLOW_TAP;
 #endif
+#ifdef AUTO_SHIFT_ENABLE
+        flags |= TAP_TERMS_FLAG_AUTO_SHIFT;
+        if (get_poly_auto_shift()) {
+            flags |= TAP_TERMS_FLAG_AUTO_SHIFT_ON;
+        }
+#endif
+        data[7] = flags;
+        data[8] = (uint8_t)(cur_as & 0xFFu);
+        data[9] = (uint8_t)(cur_as >> 8);
         raw_hid_send(data, length);
     }
     return;

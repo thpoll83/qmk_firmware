@@ -44,6 +44,10 @@ void save_user_settings(void) {
                    "tapping_term and flow_tap_term must be adjacent");
     eeconfig_update_user_datablock(tap_terms_stored, offsetof(poly_eeconf_t, tapping_term),
                                    sizeof(tap_terms_stored));
+    // Auto Shift (cmd 44 v30) is one tail byte; tail2_fmt was stamped at load.
+    const uint8_t auto_shift_stored = auto_shift_pack(get_poly_auto_shift(), get_poly_auto_shift_ms());
+    eeconfig_update_user_datablock(&auto_shift_stored, offsetof(poly_eeconf_t, auto_shift),
+                                   sizeof(auto_shift_stored));
 }
 
 // Writes only the packed latin variation picks to EEPROM.
@@ -103,6 +107,12 @@ void stamp_keymap_layers_fmt(void) {
 void stamp_tail_fmt(void) {
     const uint8_t tail[4] = {0, 0, 0, TAIL_FMT_OK};
     eeconfig_update_user_datablock(tail, offsetof(poly_eeconf_t, tapping_term), sizeof(tail));
+}
+
+// Same as stamp_tail_fmt(), for the bytes after it (state.h, tail2_fmt).
+void stamp_tail2_fmt(void) {
+    const uint8_t tail[2] = {0, TAIL2_FMT_OK};
+    eeconfig_update_user_datablock(tail, offsetof(poly_eeconf_t, auto_shift), sizeof(tail));
 }
 
 // Saves both settings and latin table. Use save_user_settings() or save_user_latin() when only one part changed.

@@ -487,6 +487,57 @@ void note_poly_tap_terms(uint16_t tapping_ms, uint16_t flow_tap_ms) {
     g_flow_tap_term_ms = flow_tap_term_valid(flow_tap_ms) ? flow_tap_ms : POLY_DEFAULT_FLOW_TAP_TERM_MS;
 }
 
+// ---- Auto Shift (HID cmd 44, protocol v30) -----------------------------------
+//
+// The settings block holds the choice; QMK's Auto Shift holds the live state and
+// is kept equal to it. AUTO_SHIFT_DISABLED_AT_STARTUP (config.h) makes QMK start
+// off, and the EEPROM load turns it on when the board stored "on".
+static bool     g_auto_shift_on = false;
+static uint16_t g_auto_shift_ms = POLY_DEFAULT_AUTO_SHIFT_MS;
+
+static void apply_poly_auto_shift(void) {
+#ifdef AUTO_SHIFT_ENABLE
+    set_autoshift_timeout(g_auto_shift_ms);
+    if (g_auto_shift_on) {
+        autoshift_enable();
+    } else {
+        autoshift_disable();
+    }
+#endif
+}
+
+bool get_poly_auto_shift(void) {
+    return g_auto_shift_on;
+}
+
+uint16_t get_poly_auto_shift_ms(void) {
+    return g_auto_shift_ms;
+}
+
+void set_poly_auto_shift(bool on) {
+    if (on == g_auto_shift_on) {
+        return;
+    }
+    g_auto_shift_on    = on;
+    g_brightness_dirty = true;   // flushed with the settings block at suspend/store
+    apply_poly_auto_shift();
+}
+
+void set_poly_auto_shift_ms(uint16_t ms) {
+    if (!auto_shift_ms_valid(ms) || ms == g_auto_shift_ms) {
+        return;
+    }
+    g_auto_shift_ms    = ms;
+    g_brightness_dirty = true;
+    apply_poly_auto_shift();
+}
+
+void note_poly_auto_shift(bool on, uint16_t ms) {
+    g_auto_shift_ms = auto_shift_ms_valid(ms) ? ms : POLY_DEFAULT_AUTO_SHIFT_MS;
+    g_auto_shift_on = on;
+    apply_poly_auto_shift();
+}
+
 // Console-log name for an idle style, from the style table (base/idle_style.c).
 const char* idle_style_name(uint8_t style) {
     return style < IDLE_STYLE_COUNT ? idle_style_desc(style)->name : "?";

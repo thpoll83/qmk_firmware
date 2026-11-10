@@ -592,10 +592,24 @@ typedef struct _poly_eeconf_t {
     // marker once, via stamp_tail_fmt(). Offset 162 was the HIGH byte of a keycode
     // (big-endian, at most 0x7F), so it can never read as 0xA5 by accident.
     uint8_t  tail_fmt;
+    // Auto Shift (HID cmd 44, protocol v30): bit 7 on/off, bits 0..6 the timeout / 10,
+    // so 0 means "never chosen" (off at the default timeout). auto_shift_pack() /
+    // auto_shift_unpack_*() in base/tap_terms.h.
+    uint8_t  auto_shift;
+    // ⚠️ TAIL2_FMT_OK when auto_shift was written by a build that knows it. tail_fmt
+    // above does not cover these bytes: a board stamped by a build before this field
+    // kept whatever offset 163 held, which on a board older than 2026-08-13 is old
+    // keymap data. Offset 164 was the HIGH byte of a keycode (at most 0x7F), so the
+    // marker cannot read as 0xB6 by accident. stamp_tail2_fmt() writes both bytes.
+    uint8_t  tail2_fmt;
 } poly_eeconf_t;
 
 #define EMJ_SEARCH_MODE_ON  0x01   // poly_eeconf_t.emj_search_mode: search mode chosen
 #define TAIL_FMT_OK         0xA5   // poly_eeconf_t.tail_fmt: the tail bytes are real
+#define TAIL2_FMT_OK        0xB6   // poly_eeconf_t.tail2_fmt: auto_shift is real
+_Static_assert(offsetof(poly_eeconf_t, tail2_fmt) == 164, "tail2_fmt must stay at user offset 164 (an even, high-byte offset of the old keymap)");
+_Static_assert(offsetof(poly_eeconf_t, tail2_fmt) == offsetof(poly_eeconf_t, auto_shift) + 1,
+               "stamp_tail2_fmt() writes auto_shift..tail2_fmt as one 2-byte block");
 _Static_assert(offsetof(poly_eeconf_t, tail_fmt) == 162, "tail_fmt must stay at user offset 162 (an even, high-byte offset of the old keymap)");
 _Static_assert(offsetof(poly_eeconf_t, tail_fmt) == offsetof(poly_eeconf_t, tapping_term) + 3,
                "stamp_tail_fmt() writes tapping_term..tail_fmt as one 4-byte block");
@@ -700,6 +714,8 @@ void load_user_mru(void);
 void stamp_keymap_layers_fmt(void);
 // Zeroes tapping_term, flow_tap_term and emj_search_mode and writes TAIL_FMT_OK.
 void stamp_tail_fmt(void);
+// Zeroes auto_shift and writes TAIL2_FMT_OK.
+void stamp_tail2_fmt(void);
 void save_user_eeconf(void);
 
 // Loads user keyboard configuration from EEPROM with brightness validation against maximum.
@@ -828,6 +844,15 @@ uint16_t get_poly_flow_tap_term(void);
 // range (tapping_term_valid() / flow_tap_term_valid()) is ignored.
 void set_poly_tapping_term(uint16_t ms);
 void set_poly_flow_tap_term(uint16_t ms);
+
+// Auto Shift (cmd 44, protocol v30). The setters push the value into QMK's Auto
+// Shift and mark the settings block dirty; a timeout outside the range is ignored.
+// note_poly_auto_shift() is the EEPROM-load path and marks nothing dirty.
+bool     get_poly_auto_shift(void);
+uint16_t get_poly_auto_shift_ms(void);
+void     set_poly_auto_shift(bool on);
+void     set_poly_auto_shift_ms(uint16_t ms);
+void     note_poly_auto_shift(bool on, uint16_t ms);
 
 // Record the terms without marking settings dirty (boot-time EEPROM load).
 void note_poly_tap_terms(uint16_t tapping_ms, uint16_t flow_tap_ms);

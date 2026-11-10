@@ -960,6 +960,12 @@ void sync_and_refresh_displays(void) {
         // The host's real caps lock is untouched; only the LOCAL snapshot the renderer
         // reads is forced, and only while chapter 1 is up.
         if (tutorial_caps_hold()) access_local_layer()->led_state.caps_lock = true;
+#ifdef CAPS_WORD_ENABLE
+        // Caps Word shifts the letters, as Caps Lock does, so the legends show capitals
+        // while it is on. Display only: the host's Caps Lock is untouched. The slave
+        // gets it through the same synced led_state.
+        if (is_caps_word_on()) access_local_layer()->led_state.caps_lock = true;
+#endif
         // The same for Num Lock on the Num layer: with the host's Num Lock off the keypad
         // keys draw their navigation legends (arrows, Ins, Del), so "hold Num" showed a
         // layer without a single number on it (hardware). Display only, lesson only; the
@@ -4042,6 +4048,57 @@ void poly_fl_row_cache_invalidate(void) {
 _Static_assert(TAPPING_TERM == POLY_DEFAULT_TAPPING_TERM_MS,
                "TAPPING_TERM and POLY_DEFAULT_TAPPING_TERM_MS have drifted");
 
+#ifdef CAPS_WORD_ENABLE
+// Compares two legends by their printed codepoints. Codepoints below 0x20 are
+// layout controls (\f, \v, nudges), not text: de-DE's Minus key is "\f\fß" plain
+// and "ß" under Caps Lock, which is the same character.
+static bool legend_text_equal(const uint32_t* a, const uint32_t* b) {
+    if (a == b) return true;
+    if (a == NULL || b == NULL) return false;
+    for (;;) {
+        while (*a != 0 && *a < 0x20u) a++;
+        while (*b != 0 && *b < 0x20u) b++;
+        if (*a != *b) return false;
+        if (*a == 0) return true;
+        a++;
+        b++;
+    }
+}
+
+// Caps Word's key test, with the letters of the active language instead of QMK's
+// fixed KC_A..KC_Z. A key is a letter when the language table gives it a different
+// legend under Caps Lock: on de-DE that adds ö, ä, ü (KC_SCLN, KC_QUOT, KC_LBRC),
+// on fr-FR it makes KC_SCLN (m) a letter and KC_M (,) not. The digit row is never a
+// letter: some tables leave its Caps Lock entry empty, which reads as "like Shift".
+// Minus becomes underscore only where Shift+Minus types "_". Digits, Backspace,
+// Delete and underscore continue the word without Shift, as in QMK's default; any
+// other key ends it.
+bool caps_word_press_user(uint16_t keycode) {
+    const uint8_t lang = get_local_state()->lang;
+    const bool digit = keycode >= KC_1 && keycode <= KC_0;
+    if (!digit && ((keycode >= KC_A && keycode <= KC_SLASH) || keycode == KC_NONUS_BACKSLASH)) {
+        const uint32_t* plain = translate_keycode(lang, keycode, false, false);
+        if (!legend_text_equal(plain, translate_keycode(lang, keycode, false, true))) {
+            add_weak_mods(MOD_BIT(KC_LSFT));
+            return true;
+        }
+        if (keycode == KC_MINUS && legend_text_equal(translate_keycode(lang, keycode, true, false), U"_")) {
+            add_weak_mods(MOD_BIT(KC_LSFT));
+            return true;
+        }
+    }
+    switch (keycode) {
+        case KC_1 ... KC_0:
+        case KC_BSPC:
+        case KC_DEL:
+        case KC_UNDS:
+            return true;
+        default:
+            return false;
+    }
+}
+#endif
+
 uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
     return get_poly_tapping_term();
 }
@@ -7016,6 +7073,32 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
         return false;
     }
 
+#ifdef AUTO_SHIFT_ENABLE
+    // The Auto Shift keycodes change the persisted setting (cmd 44), not only QMK's
+    // live state, so the host and the next boot see the same value. Swallowed on
+    // both edges, acted on at the press, before process_auto_shift() sees them.
+    // AS_UP/AS_DOWN step 10 ms, not QMK's 5, to stay on the setting's grid.
+    // AS_RPT (types the timeout) is left to QMK.
+    switch (keycode) {
+        case AS_TOGG:
+        case AS_ON:
+        case AS_OFF:
+        case AS_UP:
+        case AS_DOWN:
+            if (record->event.pressed) {
+                if (keycode == AS_UP || keycode == AS_DOWN) {
+                    set_poly_auto_shift_ms(auto_shift_ms_step(get_poly_auto_shift_ms(), keycode == AS_UP));
+                } else {
+                    set_poly_auto_shift(keycode == AS_ON || (keycode == AS_TOGG && !get_poly_auto_shift()));
+                }
+                request_disp_refresh();
+            }
+            return false;
+        default:
+            break;
+    }
+#endif
+
     if (record->event.pressed) {
         switch (keycode) {
             case QK_BOOTLOADER: {
@@ -7571,6 +7654,12 @@ void keyboard_post_init_user(void) {
         stamp_tail_fmt();
     }
     note_poly_tap_terms(tapping_term_unpack(ee.tapping_term), flow_tap_term_unpack(ee.flow_tap_term));
+    // auto_shift is after tail_fmt, so it has its own marker (state.h, tail2_fmt).
+    if (ee.tail2_fmt != TAIL2_FMT_OK) {
+        ee.auto_shift = 0;
+        stamp_tail2_fmt();
+    }
+    note_poly_auto_shift(auto_shift_unpack_on(ee.auto_shift), auto_shift_unpack_ms(ee.auto_shift));
     emit_idle_config();   // the style is only known here — the banner tick re-emits it
     note_glyph_script(ee.glyph_script);
     note_glyph_size(ee.glyph_size);
@@ -7939,6 +8028,8 @@ void eeconfig_init_user(void) {
     ee.tapping_term   = tap_term_pack(POLY_DEFAULT_TAPPING_TERM_MS);
     ee.flow_tap_term  = tap_term_pack(POLY_DEFAULT_FLOW_TAP_TERM_MS);
     ee.tail_fmt       = TAIL_FMT_OK;
+    ee.auto_shift     = auto_shift_pack(false, POLY_DEFAULT_AUTO_SHIFT_MS);
+    ee.tail2_fmt      = TAIL2_FMT_OK;
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.

@@ -138,6 +138,14 @@ polykybd_tap_terms_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# caps_word_letter.h is header-only and pure: Caps Word's letter test.
+polykybd_caps_word_letter_SRC := \
+	$(POLY_BASE_PATH)/tests/caps_word_letter_tests.cpp
+
+polykybd_caps_word_letter_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
 # doom_pack_gate.h is header-only and pure — no flash reads, no monocypher, no
 # keyboard config — so the FW-9 policy (unsigned vs invalid, interactive vs idle,
 # and what an accepted pack authorises) is testable without a device. The crypto

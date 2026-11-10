@@ -1,8 +1,9 @@
 // Copyright 2026 Thomas Pollak
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// The tap-hold timing settings (HID cmd 44, protocol v29): the tapping term and
-// the Flow Tap term, their allowed ranges, and their EEPROM encoding.
+// The tap-hold timing settings (HID cmd 44): the tapping term and the Flow Tap
+// term (protocol v29), Auto Shift (protocol v30), their allowed ranges, and their
+// EEPROM encoding.
 //
 // Header-only and pure (no config.h, no quantum.h), so the ranges and the encoding
 // are unit-tested on the host (make test:polykybd_tap_terms). The live values and
@@ -12,6 +13,7 @@
 // accepted value is persisted and then used for every tap-hold key.
 //   tapping term   100..500 ms, in 10 ms steps
 //   Flow Tap term    0..300 ms, in 10 ms steps (0 turns Flow Tap off)
+//   Auto Shift      100..500 ms, in 10 ms steps, plus an on/off switch (off by default)
 // QMK clamps a Flow Tap term to 500 ms itself, so 300 is well inside it.
 
 #pragma once
@@ -33,6 +35,20 @@
 // Cmd 44 field value meaning "leave this term unchanged".
 #define TAP_TERM_KEEP 0xFFFFu
 
+// Auto Shift (protocol v30). QMK's own default timeout is 175 ms, which is off the
+// 10 ms grid, so the default here is 180 ms.
+#define AUTO_SHIFT_MIN_MS          100u
+#define AUTO_SHIFT_MAX_MS          500u
+#define POLY_DEFAULT_AUTO_SHIFT_MS 180u
+
+// Cmd 44 v30 request fields. Both use 0 for "keep" (the timeout also takes
+// TAP_TERM_KEEP), because a v29 host zero-pads the report: a set from such a host
+// must leave Auto Shift as it is.
+#define AUTO_SHIFT_OP_KEEP 0u
+#define AUTO_SHIFT_OP_OFF  1u
+#define AUTO_SHIFT_OP_ON   2u
+#define AUTO_SHIFT_MS_KEEP 0u
+
 static inline bool tap_term_in_range(uint16_t ms, uint16_t min_ms, uint16_t max_ms) {
     return ms >= min_ms && ms <= max_ms && (ms % TAP_TERM_STEP_MS) == 0u;
 }
@@ -43,6 +59,18 @@ static inline bool tapping_term_valid(uint16_t ms) {
 
 static inline bool flow_tap_term_valid(uint16_t ms) {
     return tap_term_in_range(ms, FLOW_TAP_TERM_MIN_MS, FLOW_TAP_TERM_MAX_MS);
+}
+
+static inline bool auto_shift_ms_valid(uint16_t ms) {
+    return tap_term_in_range(ms, AUTO_SHIFT_MIN_MS, AUTO_SHIFT_MAX_MS);
+}
+
+// One step of the AS_UP / AS_DOWN keycodes, kept inside the range.
+static inline uint16_t auto_shift_ms_step(uint16_t ms, bool up) {
+    if (up) {
+        return ms + TAP_TERM_STEP_MS <= AUTO_SHIFT_MAX_MS ? (uint16_t)(ms + TAP_TERM_STEP_MS) : ms;
+    }
+    return ms >= AUTO_SHIFT_MIN_MS + TAP_TERM_STEP_MS ? (uint16_t)(ms - TAP_TERM_STEP_MS) : ms;
 }
 
 // ---- The EEPROM encoding ---------------------------------------------------
@@ -76,6 +104,28 @@ static inline uint16_t tapping_term_unpack(uint8_t stored) {
 static inline uint16_t flow_tap_term_unpack(uint8_t stored) {
     return tap_term_unpack(stored, FLOW_TAP_TERM_MIN_MS, FLOW_TAP_TERM_MAX_MS,
                            POLY_DEFAULT_FLOW_TAP_TERM_MS);
+}
+
+// Auto Shift is one byte: bit 7 is the switch, bits 0..6 are the timeout / 10
+// (10..50). The timeout part is never 0 once written, so 0 means "never chosen"
+// and decodes to off at the default timeout.
+#define AUTO_SHIFT_STORED_ON   0x80u
+#define AUTO_SHIFT_STORED_MASK 0x7Fu
+
+static inline uint8_t auto_shift_pack(bool on, uint16_t ms) {
+    return (uint8_t)((on ? AUTO_SHIFT_STORED_ON : 0u) | (uint8_t)(ms / TAP_TERM_STEP_MS));
+}
+
+// A byte whose timeout part is outside the range (0 included) gives off at the
+// default timeout, whatever its switch bit says.
+static inline bool auto_shift_unpack_on(uint8_t stored) {
+    const uint16_t ms = (uint16_t)((stored & AUTO_SHIFT_STORED_MASK) * TAP_TERM_STEP_MS);
+    return auto_shift_ms_valid(ms) && (stored & AUTO_SHIFT_STORED_ON) != 0u;
+}
+
+static inline uint16_t auto_shift_unpack_ms(uint8_t stored) {
+    const uint16_t ms = (uint16_t)((stored & AUTO_SHIFT_STORED_MASK) * TAP_TERM_STEP_MS);
+    return auto_shift_ms_valid(ms) ? ms : POLY_DEFAULT_AUTO_SHIFT_MS;
 }
 
 // QMK requires QUICK_TAP_TERM <= TAPPING_TERM. The quick-tap term stays the

@@ -228,6 +228,15 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         // this set and stay full size — a 15px switch and a 16px layer icon both clear
         // the 15px advance (measured: 2-3px gaps, nothing clipped).
         case KC_STORE_EE:                   return HINT_SMALL U"    Store\r\v      EE";
+        // Caps Word and Auto Shift (cmd 44 v30). Static legends, without an on/off
+        // mark: the state is the master's alone and the slave draws half the keys.
+        case CW_TOGG:                       return HINT_SMALL U"    Caps\r\v     Word";
+        case AS_TOGG:                       return U"Auto\r\v " ICON_SHIFT;
+        case AS_ON:                         return U"Auto\r\v" ICON_SHIFT ICON_SWITCH_ON;
+        case AS_OFF:                        return U"Auto\r\v" ICON_SHIFT ICON_SWITCH_OFF;
+        case AS_UP:                         return U"Auto\r\v" ICON_SHIFT HINT_SMALL U" +10";
+        case AS_DOWN:                       return U"Auto\r\v" ICON_SHIFT HINT_SMALL U" -10";
+        case AS_RPT:                        return U"Auto\r\v" ICON_SHIFT HINT_SMALL U" ms";
         // The two host-only settings that now have a key each. Both show the
         // ACTIVE value, so the keycap answers "what is it set to" without a press.
         case KC_IDLE_STYLE:                 return idle_style_legend();

@@ -341,4 +341,12 @@ TEST_F(IconLibTest, FillRefusesAWidthOutsideTheCodec) {
     EXPECT_EQ(iconlib_fill_pairs(buf.data(), 61, 17, 4, pool_slot), 0);
 }
 
+TEST(IconLibFillAllowed, OnlyWhenTheSlaveHasTheMastersLibrary) {
+    EXPECT_TRUE(iconlib_fill_allowed(8, true, 8));
+    EXPECT_FALSE(iconlib_fill_allowed(8, false, 8)) << "slave versions not read since link-up";
+    EXPECT_FALSE(iconlib_fill_allowed(9, true, 8)) << "slave holds an older library";
+    EXPECT_FALSE(iconlib_fill_allowed(8, true, 9)) << "slave holds a newer library";
+    EXPECT_FALSE(iconlib_fill_allowed(0, true, 0)) << "no library on either half";
+}
+
 }  // namespace

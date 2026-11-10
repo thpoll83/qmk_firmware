@@ -38,3 +38,10 @@ bool fw_up_status_crc_ok(const fw_staging_status_t *status, uint32_t claimed_crc
     if (!status) return false;
     return crc32_1byte((const uint8_t *)status, sizeof(*status), 0) == claimed_crc;
 }
+
+uint16_t fw_up_combined_bundle_version(uint16_t master_ver, bool slave_ver_known,
+                                       uint16_t slave_ver) {
+    if (!slave_ver_known || slave_ver == master_ver) return master_ver;
+    const uint16_t lower = (slave_ver < master_ver) ? slave_ver : master_ver;
+    return lower ? (uint16_t)(lower - 1u) : 0u;
+}

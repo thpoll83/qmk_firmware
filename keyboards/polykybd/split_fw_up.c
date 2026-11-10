@@ -550,11 +550,9 @@ bool fw_up_slave_bundle_version(uint8_t bundle, uint16_t *ver) {
 }
 
 uint16_t fw_up_reported_bundle_version(uint8_t bundle) {
-    uint16_t v = fontpack_bundle_version(bundle);
-    if (s_slave_ver_known && bundle < FONTPACK_BUNDLE_COUNT && s_slave_ver[bundle] < v) {
-        v = s_slave_ver[bundle];
-    }
-    return v;
+    const uint16_t own = fontpack_bundle_version(bundle);
+    if (bundle >= FONTPACK_BUNDLE_COUNT) return own;
+    return fw_up_combined_bundle_version(own, s_slave_ver_known, s_slave_ver[bundle]);
 }
 
 uint8_t fw_up_send_slave_reset(poly_reset_sync_t *msg) {

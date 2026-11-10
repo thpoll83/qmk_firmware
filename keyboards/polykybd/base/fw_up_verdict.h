@@ -60,3 +60,14 @@ enum fw_up_commit_verdict fw_up_classify_commit_failure(uint8_t slave_ack, bool 
 // landed, so a corrupt one must be refused rather than believed — the reply rides
 // the same un-CRC'd link as everything else.
 bool fw_up_status_crc_ok(const fw_staging_status_t *status, uint32_t claimed_crc);
+
+// The per-bundle version GET_ID's V block reports for both halves together.
+// Until the master has read the slave's versions it is the master's own. When
+// the halves agree it is that version. When they DIFFER it is the lower one minus
+// one (0 at the floor): strictly below both, so a host shipping either half's
+// version or a newer one sees the bundle as out of date and flashes it to both
+// halves, which makes them agree again. Plain min() missed a slave that is newer
+// than the master, and a master that is newer than the slave when the slave holds
+// the host's version: the host saw "current" and the halves stayed apart.
+uint16_t fw_up_combined_bundle_version(uint16_t master_ver, bool slave_ver_known,
+                                       uint16_t slave_ver);

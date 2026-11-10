@@ -332,3 +332,21 @@ TEST(FontpackCommitStatusTest, StatusBytesAreSafeInAStringLiteral) {
                                 << " would merge into a preceding \\xNN escape";
     }
 }
+
+TEST(FwUpCombinedBundleVersion, MastersOwnUntilTheSlaveIsRead) {
+    EXPECT_EQ(fw_up_combined_bundle_version(8, false, 0), 8);
+    EXPECT_EQ(fw_up_combined_bundle_version(8, false, 3), 8);
+}
+
+TEST(FwUpCombinedBundleVersion, AgreeingHalvesReportTheirVersion) {
+    EXPECT_EQ(fw_up_combined_bundle_version(8, true, 8), 8);
+    EXPECT_EQ(fw_up_combined_bundle_version(0, true, 0), 0);
+}
+
+TEST(FwUpCombinedBundleVersion, DifferingHalvesReportBelowBoth) {
+    EXPECT_EQ(fw_up_combined_bundle_version(8, true, 9), 7) << "slave newer than master";
+    EXPECT_EQ(fw_up_combined_bundle_version(9, true, 8), 7) << "master newer than slave";
+    EXPECT_EQ(fw_up_combined_bundle_version(8, true, 0), 0) << "slave has no bundle";
+    EXPECT_EQ(fw_up_combined_bundle_version(0, true, 5), 0) << "master has no bundle";
+    EXPECT_EQ(fw_up_combined_bundle_version(1, true, 2), 0);
+}

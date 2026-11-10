@@ -131,7 +131,8 @@ static_assert(sizeof(fw_up_versions_reply_t) <= RPC_S2M_BUFFER_SIZE,
 // Master side. The tick runs in housekeeping and re-reads the slave until it
 // answers (boot, and again after each font-pack COMMIT); a change calls
 // poly_state_touch() so the host re-reads GET_ID. Until the slave has answered,
-// the master reports its own versions.
+// the master reports its own versions; after that, fw_up_combined_bundle_version()
+// (the shared version, or below both halves when they differ).
 void     fw_up_slave_versions_tick(void);
 void     fw_up_note_slave_bundle(uint8_t bundle, uint16_t version);
 uint16_t fw_up_reported_bundle_version(uint8_t bundle);

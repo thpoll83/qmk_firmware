@@ -289,6 +289,10 @@ Firmware behaviour:
 ### 2.7 Bundle versions from both halves
 
 The `V` block reports **`min(master, slave)`** per bundle, for all nine bundles.
+Halves that DIFFER report the lower version minus one
+(`fw_up_combined_bundle_version()`): plain `min()` read as current when the slave was
+the newer half, or when the slave held the host's version and the master a newer one,
+so the host never repaired the mismatch.
 
 - The master reads the slave's per-bundle `content_version` at boot and after
   each COMMIT (in the `FLASH_STAGE_STATUS` reply or a sibling transaction;

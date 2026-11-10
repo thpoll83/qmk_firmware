@@ -135,6 +135,9 @@ static_assert(sizeof(fw_up_versions_reply_t) <= RPC_S2M_BUFFER_SIZE,
 // (the shared version, or below both halves when they differ).
 void     fw_up_slave_versions_tick(void);
 void     fw_up_note_slave_bundle(uint8_t bundle, uint16_t version);
+// After a COMMIT whose effect on the slave is unknown: read the slave's versions
+// again on the next tick, and until then treat them as not confirmed.
+void     fw_up_slave_versions_invalidate(void);
 uint16_t fw_up_reported_bundle_version(uint8_t bundle);
 // The slave's content_version of `bundle`, and whether the master has READ it
 // from the slave since the split link came up and since the last COMMIT (false

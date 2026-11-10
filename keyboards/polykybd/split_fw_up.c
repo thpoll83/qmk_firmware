@@ -549,6 +549,11 @@ bool fw_up_slave_bundle_version(uint8_t bundle, uint16_t *ver) {
     return known;
 }
 
+void fw_up_slave_versions_invalidate(void) {
+    s_slave_ver_stale = true;
+    s_slave_ver_next  = timer_read32();
+}
+
 uint16_t fw_up_reported_bundle_version(uint8_t bundle) {
     const uint16_t own = fontpack_bundle_version(bundle);
     if (bundle >= FONTPACK_BUNDLE_COUNT) return own;

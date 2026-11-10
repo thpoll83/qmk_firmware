@@ -74,6 +74,7 @@
 #include "anim/tutorial.h"
 #include "anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
 #include "mines_mode.h"                   // the idle-screen mine sweeper (hold Hyper while idle)
+#include "ai_mode.h"                      // AI mode: agent cards on the number row (KC_AI)
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
@@ -371,6 +372,7 @@ bool rgb_matrix_indicators_kb(void) {
         }
     }
     if (tutorial_rgb_paint()) return false;   // the first-run show and the lesson
+    ai_rgb_paint();   // agent states on the number row; other LEDs keep the effect
     return rgb_matrix_indicators_user();
 }
 
@@ -1724,6 +1726,8 @@ void housekeeping_task_user(void) {
         // hands the board back to the idle animation on hide or after 2 min untouched.
         // Before the idle block for the same reason as the demo.
         if (is_keyboard_master()) mines_tick();
+        // AI mode's latch timeout (ai_mode.h).
+        if (is_keyboard_master()) ai_mode_tick();
         // The segment just entered may preview another language or script: write it
         // BEFORE the render below, or each board is first drawn in the previous
         // segment's language and repainted a pass later (the tutorial's lesson, see
@@ -5725,6 +5729,12 @@ void update_displays(enum refresh_mode mode) {
                         mines_render_key((uint8_t)(r + offset), c);
                         kdisp_send_window();
                         doom_handled = true;
+                    } else if (ai_render_key((uint8_t)(r + offset), c)) {
+                        // AI mode: the number row shows the host's agent cards and
+                        // ESC the pager. Every other key renders normally below.
+                        // From the SYNCED state, so the slave draws its half too.
+                        kdisp_send_window();
+                        doom_handled = true;
                     } else if (tutorial_intro_mode() &&
                                tutorial_is_chrome_key((uint8_t)(r + offset), c)) {
                         // The tutorial's chrome: "Hold to / skip..." on Esc, the chapter
@@ -6684,6 +6694,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // (mines_mode.h); a shorter tap only wakes the board.
     if (mines_active()) {
         return !mines_process_record(keycode, record);
+    }
+    // AI mode (ai_mode.h): KC_AI turns the number row and ESC into the host's agent
+    // cards. While it is on every key event is swallowed and answered there, except
+    // the releases a held key or a modifier / layer key needs.
+    if (ai_process_record(keycode, record)) {
+        return false;
     }
     if (mines_try_start(keycode, record)) {
         return false;

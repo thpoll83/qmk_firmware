@@ -1,0 +1,404 @@
+// Copyright 2026 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
+//
+// Firmware binding for AI mode (ai_mode.h): the AI key, the key swallowing, the event
+// ring, cmd 45 / 46, the keycap drawing and the LEDs. The pure part (the ring, the
+// key index, the checks on what the host sends) is base/ai_events.c. PROTOTYPE.
+#include "ai_mode.h"
+
+#include "quantum.h"
+#include QMK_KEYBOARD_H
+#include "print.h"
+#include "raw_hid.h"
+#include <transactions.h>   // USER_SYNC_OVERLAY_DATA
+#include <string.h>
+
+#include "base/ai_events.h"
+#include "base/update.h"        // request_disp_refresh / update_performed
+#include "base/overlay.h"       // get_overlay
+#include "base/disp_array.h"
+#include "base/font_lookup.h"   // kdisp_gfx_text_bbox
+#include "state.h"
+#include "keycode_helper.h"     // KC_AI
+#include "bridge_helper.h"      // send_to_bridge
+#include "split_sync.h"         // overlay_sync_t, OVERLAY_SEG_RAW_SLOT
+#ifdef RGB_MATRIX_ENABLE
+#    include <lib/lib8tion/lib8tion.h>   // sin8
+#endif
+
+// Defined in base/fonts/util_font.h, which carries the data and is included once
+// (poly_keymap.c). ASCII, resident.
+extern const GFXfont NotoSans_Regular_Mid_19px7b;
+
+bool display_wakeup(keyrecord_t *record);   // poly_keymap.c
+
+_Static_assert(KC_1 == AI_HID_KC_1 && KC_0 == AI_HID_KC_0 && KC_ESC == AI_HID_KC_ESC,
+               "base/ai_events.h key codes differ from QMK's");
+// Op 2's reply: data[5 + 2i], data[6 + 2i] for i < AI_RING_SIZE must fit the report.
+_Static_assert(6 + 2 * (AI_RING_SIZE - 1) < 64, "op 2 reply does not fit a report");
+_Static_assert(3 + AI_SET_KEYS_LEN <= 64, "op 1 request does not fit a report");
+_Static_assert(sizeof(((poly_sync_t *)0)->ai_state) == AI_NUM_KEYS, "poly_sync_t.ai_state size");
+_Static_assert(sizeof(((poly_sync_t *)0)->ai_slot) == AI_NUM_KEYS * sizeof(uint16_t), "poly_sync_t.ai_slot size");
+_Static_assert(NUM_OVERLAY_SLOTS <= 0x400, "cmd 46 carries the slot in 10 bits");
+
+#define AI_CMD      0x2Du   // 45
+#define AI_CARD_CMD 0x2Eu   // 46
+#define NO_KEY      0xFFu
+
+static ai_ring_t s_ring;
+// The AI key press being tracked (its release decides hold or tap).
+static bool     s_ai_down;
+static uint8_t  s_ai_row;
+static uint8_t  s_ai_col;
+static uint16_t s_ai_t;
+static bool     s_ai_entered;   // this press turned the mode on (a toggle-off press did not)
+static uint32_t s_last_input;   // for AI_MODE_LATCH_TIMEOUT_MS
+// Keys already down when the mode started: their releases are not ours.
+static matrix_row_t s_held_at_start[MATRIX_ROWS];
+// Presses the mode swallowed: their releases are swallowed too, also after the mode
+// ended (a number key ends it on the press).
+static matrix_row_t s_swallowed[MATRIX_ROWS];
+
+static bool rc_test(const matrix_row_t *m, uint8_t row, uint8_t col) {
+    return (m[row] & ((matrix_row_t)1 << col)) != 0;
+}
+static void rc_set(matrix_row_t *m, uint8_t row, uint8_t col) {
+    m[row] |= (matrix_row_t)1 << col;
+}
+static void rc_clear(matrix_row_t *m, uint8_t row, uint8_t col) {
+    m[row] &= (matrix_row_t)~((matrix_row_t)1 << col);
+}
+
+bool ai_mode_active(void) {
+    return get_local_state()->ai_mode != 0;
+}
+
+// The AI key index (0..9 number keys, AI_KEY_ESC) of the key at (row, col), from its
+// keycode on layer 0: the same lookup the renderer and the key events use
+// (poly_keycode_at() behind keymap_key_to_keycode()), so a remap moves the key.
+static uint8_t ai_key_at(uint8_t row, uint8_t col) {
+    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) return AI_KEY_NONE;
+    const keypos_t pos = {.col = col, .row = row};
+    return ai_key_index(keymap_key_to_keycode(0, pos));
+}
+
+// The position of every AI key, (row << 4) | col, NO_KEY if absent. The first match
+// wins when a keycode is on layer 0 twice.
+static void ai_find_keys(uint8_t *rc) {
+    memset(rc, NO_KEY, AI_NUM_KEYS + 1u);
+    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            const uint8_t k = ai_key_at(r, c);
+            if (k != AI_KEY_NONE && rc[k] == NO_KEY) rc[k] = (uint8_t)((r << 4) | c);
+        }
+    }
+}
+
+// ---- the mode ---------------------------------------------------------------------
+
+static void ai_enter(void) {
+    // Release anything held before swallowing begins.
+    clear_keyboard();
+    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
+        s_held_at_start[r] = matrix_get_row(r);
+        s_swallowed[r]     = 0;
+    }
+    access_local_state()->ai_mode = 1;   // reaches the slave with the next state sync
+    s_last_input = timer_read32();
+    update_performed();
+    request_disp_refresh();
+    uprint("ai: on\n");
+}
+
+static void ai_leave(const char *why) {
+    access_local_state()->ai_mode = 0;
+    request_disp_refresh();
+    uprintf("ai: off (%s)\n", why);
+}
+
+static void ai_record(uint8_t key) {
+    const uint8_t seq = ai_ring_push(&s_ring, key);
+    poly_state_touch();   // the GET_ID 'G' counter: the host reads op 2 when it moves
+    uprintf("ai ev %u %u\n", (unsigned)seq, (unsigned)key);
+}
+
+static bool is_layer_key(uint16_t kc) {
+    return IS_QK_MOMENTARY(kc) || IS_QK_LAYER_TAP(kc) || IS_QK_LAYER_MOD(kc) || IS_QK_ONE_SHOT_LAYER(kc) ||
+           IS_QK_LAYER_TAP_TOGGLE(kc) || IS_QK_TO(kc) || IS_QK_TOGGLE_LAYER(kc);
+}
+
+bool ai_process_record(uint16_t keycode, keyrecord_t *record) {
+    const uint8_t row     = record->event.key.row;
+    const uint8_t col     = record->event.key.col;
+    const bool    pressed = record->event.pressed;
+    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) {
+        // Not a matrix key (an encoder step): swallowed while the mode is on.
+        return ai_mode_active();
+    }
+
+    // The AI key's own release: the end of a hold, or the start of the latch.
+    if (!pressed && s_ai_down && row == s_ai_row && col == s_ai_col) {
+        s_ai_down = false;
+        rc_clear(s_swallowed, row, col);
+        if (ai_mode_active() && s_ai_entered) {
+            if (timer_elapsed(s_ai_t) > get_poly_tapping_term()) {
+                ai_leave("hold");
+            } else {
+                s_last_input = timer_read32();   // latched: the timeout starts now
+            }
+        }
+        return true;
+    }
+    // A release whose press the mode swallowed.
+    if (!pressed && rc_test(s_swallowed, row, col)) {
+        rc_clear(s_swallowed, row, col);
+        return true;
+    }
+
+    if (!ai_mode_active()) {
+        if (pressed && keycode == KC_AI) {
+            // Wake the board as any key does. A dead wake press (displays off,
+            // DEAD_KEY_ON_WAKEUP) is only a wake.
+            if (!display_wakeup(record)) return true;
+            s_ai_down    = true;
+            s_ai_row     = row;
+            s_ai_col     = col;
+            s_ai_t       = timer_read();
+            s_ai_entered = true;
+            ai_enter();
+            return true;
+        }
+        return false;
+    }
+
+    s_last_input = timer_read32();
+    update_performed();   // the swallowed events skip the normal wake / idle path
+    if (!pressed) {
+        // A key that was down when the mode started keeps its normal release, so a
+        // layer key does not stay on (clear_keyboard() does not release layers).
+        if (rc_test(s_held_at_start, row, col)) {
+            rc_clear(s_held_at_start, row, col);
+            return false;
+        }
+        // Modifier and layer releases fall through (the Intl-layer rule): a release
+        // with no press behind it does nothing on the host.
+        if (IS_MODIFIER_KEYCODE(keycode) || is_layer_key(keycode)) return false;
+        return true;
+    }
+
+    rc_clear(s_held_at_start, row, col);   // a press means its release was missed
+    if (keycode == KC_AI) {
+        // A second AI press turns the mode off; its release is then swallowed.
+        ai_leave("ai key");
+        s_ai_down    = true;
+        s_ai_row     = row;
+        s_ai_col     = col;
+        s_ai_t       = timer_read();
+        s_ai_entered = false;
+        return true;
+    }
+    rc_set(s_swallowed, row, col);
+    const uint8_t key = ai_key_at(row, col);
+    if (key < AI_NUM_KEYS) {
+        ai_record(key);
+        ai_leave("number");
+        return true;
+    }
+    if (key == AI_KEY_ESC) {
+        ai_record(AI_KEY_ESC);   // the pager: the mode stays on
+        return true;
+    }
+    // Any other key: swallowed. Latched, it also ends the mode; while the AI key is
+    // still held, the hold decides.
+    if (!s_ai_down) ai_leave("other key");
+    return true;
+}
+
+void ai_mode_tick(void) {
+    if (!ai_mode_active() || s_ai_down) return;
+    if (timer_elapsed32(s_last_input) > AI_MODE_LATCH_TIMEOUT_MS) ai_leave("timeout");
+}
+
+// ---- drawing ----------------------------------------------------------------------
+
+static const GFXfont *const s_fonts[] = {&NotoSans_Regular_Mid_19px7b};
+
+static void draw_text_centred(const uint32_t *text) {
+    int8_t xmin, xmax, ymin, ymax;
+    kdisp_gfx_text_bbox(s_fonts, 1, text, &xmin, &xmax, &ymin, &ymax);
+    kdisp_write_gfx_text(s_fonts, 1, (int8_t)(BUFFER_X + SCREEN_WIDTH / 2 - (xmax - xmin + 1) / 2 - xmin),
+                         (int8_t)((SCREEN_HEIGHT - (ymax - ymin + 1)) / 2 - ymin), text);
+}
+
+bool ai_render_key(uint8_t row, uint8_t col) {
+    if (!ai_mode_active()) return false;
+    const uint8_t key = ai_key_at(row, col);
+    if (key == AI_KEY_NONE) return false;
+    kdisp_set_buffer(0x00);
+    if (key == AI_KEY_ESC) {
+        draw_text_centred(U"Next");   // the pager
+        return true;
+    }
+    // A card replaces the whole keycap, as a v25 no-legend overlay does. A key without
+    // one stays blank.
+    const uint16_t slot = get_local_state()->ai_slot[key];
+    if (slot < NUM_OVERLAY_SLOTS) {
+        kdisp_draw_bitmap(BUFFER_X, 0, get_overlay(slot), SCREEN_WIDTH, SCREEN_HEIGHT);
+    }
+    return true;
+}
+
+// ---- LEDs -------------------------------------------------------------------------
+
+#ifdef RGB_MATRIX_ENABLE
+// Raw LED values, like the flash cue (5..36): not scaled by the RGB matrix brightness.
+#    define AI_LED_FULL       40u
+#    define AI_LED_DIM        8u
+#    define AI_BREATH_MS      1500u   // working: amber breathing
+#    define AI_BLINK_HALF_MS  250u    // waiting: red blinking at 2 Hz
+#    define AI_KEYS_RESCAN_MS 1000u   // the key positions follow a remap within this
+
+static uint8_t  s_led_rc[AI_NUM_KEYS + 1u];
+static uint32_t s_led_rc_t;
+static bool     s_led_rc_valid;
+
+static void paint_rc(uint8_t rc, uint8_t r, uint8_t g, uint8_t b) {
+    if (rc == NO_KEY) return;
+    const uint8_t led = g_led_config.matrix_co[rc >> 4][rc & 0x0F];
+    if (led == NO_LED) return;
+    rgb_matrix_set_color(led, r, g, b);
+}
+
+// Called only while the RGB matrix runs. With the matrix off the lights do not show
+// (no borrow in this prototype; the plan's open question).
+void ai_rgb_paint(void) {
+    const poly_sync_t *s   = get_local_state();
+    bool               any = s->ai_mode && s->ai_esc_attention;
+    for (uint8_t i = 0; i < AI_NUM_KEYS && !any; ++i) any = s->ai_state[i] != AI_STATE_EMPTY;
+    if (!any) return;
+
+    const uint32_t now = timer_read32();
+    if (!s_led_rc_valid || (uint32_t)(now - s_led_rc_t) >= AI_KEYS_RESCAN_MS) {
+        ai_find_keys(s_led_rc);
+        s_led_rc_t     = now;
+        s_led_rc_valid = true;
+    }
+    const uint8_t phase  = (uint8_t)(((now % AI_BREATH_MS) * 256u) / AI_BREATH_MS);
+    const uint8_t breath = (uint8_t)(4u + scale8(sin8(phase), AI_LED_FULL - 4u));
+    const bool    on     = ((now / AI_BLINK_HALF_MS) & 1u) == 0u;
+
+    for (uint8_t i = 0; i < AI_NUM_KEYS; ++i) {
+        const uint8_t rc = s_led_rc[i];
+        switch (s->ai_state[i]) {
+            case AI_STATE_WORKING:
+                paint_rc(rc, breath, (uint8_t)(breath / 3u), 0);
+                break;
+            case AI_STATE_WAITING:
+                paint_rc(rc, on ? AI_LED_FULL : 0u, 0, 0);
+                break;
+            case AI_STATE_DONE:
+                paint_rc(rc, 0, AI_LED_FULL, 0);
+                break;
+            case AI_STATE_IDLE:
+                paint_rc(rc, 0, AI_LED_DIM, 0);
+                break;
+            case AI_STATE_STALE:
+                paint_rc(rc, AI_LED_DIM, AI_LED_DIM, AI_LED_DIM);
+                break;
+            default:
+                break;   // empty: the running effect stays
+        }
+    }
+    if (s->ai_mode && s->ai_esc_attention) {
+        paint_rc(s_led_rc[AI_KEY_ESC], on ? AI_LED_FULL : 0u, 0, 0);
+    }
+}
+#endif
+
+// ---- HID --------------------------------------------------------------------------
+
+void ai_hid_cmd(uint8_t *data, uint8_t length) {
+    // data[2] op: 0 QUERY, 1 SET_KEYS, 2 READ_EVENTS. PROTOCOL_HISTORY.md, v30.
+    const uint8_t op = length > 2 ? data[2] : 0xFFu;
+    poly_sync_t  *ls = access_local_state();
+    if (op == 0) {
+        uint8_t rc[AI_NUM_KEYS + 1u];
+        ai_find_keys(rc);
+        uint8_t found = 0;
+        for (uint8_t i = 0; i < AI_NUM_KEYS; ++i) found += rc[i] != NO_KEY;
+        memset(data, 0, length);
+        data[0] = 'P';
+        data[1] = AI_CMD;
+        data[2] = '.';
+        data[3] = ls->ai_mode ? 1u : 0u;
+        data[4] = s_ring.seq;
+        data[5] = found;
+        data[6] = rc[AI_KEY_ESC] != NO_KEY ? 1u : 0u;
+    } else if (op == 1 && length >= 3u + AI_SET_KEYS_LEN && ai_set_keys_valid(&data[3], NUM_OVERLAY_SLOTS)) {
+        uint8_t  state[AI_NUM_KEYS];
+        uint8_t  esc;
+        uint16_t slot[AI_NUM_KEYS];
+        ai_set_keys_decode(&data[3], state, &esc, slot);
+        memcpy(ls->ai_state, state, sizeof(state));
+        memcpy(ls->ai_slot, slot, sizeof(slot));
+        ls->ai_esc_attention = esc;
+        // The housekeeping state diff sends it to the slave; that also redraws the
+        // slave's keys (user_sync_poly_data_handler).
+        if (ls->ai_mode) request_disp_refresh();
+        memset(data, 0, length);
+        data[0] = 'P';
+        data[1] = AI_CMD;
+        data[2] = '.';
+    } else if (op == 2 && length > 3) {
+        ai_event_t ev[AI_RING_SIZE];
+        const uint8_t n = ai_ring_read(&s_ring, data[3], ev);
+        memset(data, 0, length);
+        data[0] = 'P';
+        data[1] = AI_CMD;
+        data[2] = '.';
+        data[3] = s_ring.seq;
+        data[4] = n;
+        for (uint8_t i = 0; i < n; ++i) {
+            data[5 + 2 * i] = ev[i].seq;
+            data[6 + 2 * i] = ev[i].key;
+        }
+    } else {
+        uprintf("ai: refused op %u\n", (unsigned)op);
+        memset(data, 0, length);
+        data[0] = 'P';
+        data[1] = AI_CMD;
+        data[2] = '!';
+    }
+    raw_hid_send(data, length);
+}
+
+void ai_hid_card(uint8_t *data, uint8_t length) {
+    // data[2..3] header (bits 0..9 pool slot, 12..14 segment), data[4..63] 60 bytes.
+    uint16_t slot = 0;
+    uint8_t  seg  = 0;
+    bool     ok   = length >= 4u + BYTES_PER_SEGMENT &&
+              ai_card_header((uint16_t)(data[2] | (data[3] << 8)), NUM_OVERLAY_SLOTS, &slot, &seg);
+    if (ok) {
+        // Straight into the pool slot, NOT through display_to_pool: the cards are
+        // written while an app's mapping is live, and the host reserves their slots.
+        memcpy(get_overlay(slot) + seg * BYTES_PER_SEGMENT, &data[4], BYTES_PER_SEGMENT);
+        overlay_sync_t transfer;
+        transfer.adj_idx = slot;   // the slave's handler uses it as a pool slot, unmapped
+        // OVERLAY_SEG_RAW_SLOT: the slave must not mark a display position for it
+        // (mark_display_has_overlay_post_upload), which would show the card on the
+        // key whose flat index equals the slot number.
+        transfer.segment = (uint8_t)(seg | OVERLAY_SEG_RAW_SLOT);
+        memcpy(transfer.overlay, &data[4], BYTES_PER_SEGMENT);
+        if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_DATA, (void *)&transfer, sizeof(transfer), 10))) {
+            uprintf("ai: card slot %u segment %u did not reach the slave\n", (unsigned)slot, (unsigned)seg);
+        }
+        if (seg == NUM_SEGMENTS_PER_OVERLAY - 1 && ai_mode_active()) request_disp_refresh();
+    } else {
+        uprint("ai: refused card segment\n");
+    }
+    memset(data, 0, length);
+    data[0] = 'P';
+    data[1] = AI_CARD_CMD;
+    data[2] = ok ? '.' : '!';
+    raw_hid_send(data, length);
+}

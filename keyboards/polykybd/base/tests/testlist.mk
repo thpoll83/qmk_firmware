@@ -31,5 +31,6 @@ TEST_LIST += polykybd_core1_owner
 TEST_LIST += polykybd_core1_suspend
 TEST_LIST += polykybd_fw_stage
 TEST_LIST += polykybd_mines_plan
+TEST_LIST += polykybd_ai_events
 TEST_LIST += polykybd_idle_style
 TEST_LIST += polykybd_emoji_dict

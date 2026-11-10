@@ -305,6 +305,9 @@
 //      sets leave Auto Shift alone. Reply data[7] gains bit 1 (Auto Shift compiled
 //      in) and bit 2 (Auto Shift on), data[8..9] = the timeout. A v29 firmware
 //      ignores the new request bytes, so the host gates them on v30.
+//  v31 cmd 45 (AI: query, set the number-row states / cards, read key events) and
+//      cmd 46 (AI_CARD: one 60-byte segment straight into a pool slot) for AI mode
+//      (ai_mode.h, KC_AI). Older firmware NACKs both, which is the host's signal.
 #define PROTOCOL_VERSION 30
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1

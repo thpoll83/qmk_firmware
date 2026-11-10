@@ -302,6 +302,19 @@ typedef struct _poly_sync_t {
     // well inside RPC_M2S_BUFFER_SIZE. A multiple of 4 bytes, so the struct stays
     // padding-free. Master-authoritative and never persisted: a reboot ends the game.
     mines_board_t mines;
+    // AI mode (ai_mode.h, cmd 45 / 46): ai_mode is the master's (the AI key); the rest
+    // is what the host set with cmd 45 op 1 -- per number key 1..9,0 its state (enum
+    // ai_state, the LED) and the pool slot of its card (AI_SLOT_NONE = no card), and
+    // whether ESC blinks. Synced because the slave draws the cards and paints the LEDs
+    // of its own half. RAM only, never persisted: a light that survived a reboot would
+    // describe an agent that may be gone, and the host re-sends it all on connect.
+    // ai_mode sits on the odd offset after mines so ai_slot[] starts on an even one,
+    // and ai_reserved fills the tail: the struct stays padding-free (asserted below).
+    uint8_t  ai_mode;
+    uint16_t ai_slot[10];
+    uint8_t  ai_state[10];
+    uint8_t  ai_esc_attention;
+    uint8_t  ai_reserved;
 } poly_sync_t;
 
 // Same reasoning as latin_sync_t's guard: transaction_rpc_exec() refuses a payload
@@ -310,6 +323,10 @@ typedef struct _poly_sync_t {
 // and a slave that never hears it, with nothing in the log.
 static_assert(sizeof(poly_sync_t) <= RPC_M2S_BUFFER_SIZE,
               "poly_sync_t exceeds RPC_M2S_BUFFER_SIZE — the split sync would be silently rejected");
+// No padding: the split CRC covers every byte from offset 4, and the AI fields are
+// placed so the struct needs none. A member added in the wrong place fails here.
+static_assert(sizeof(poly_sync_t) == offsetof(poly_sync_t, ai_reserved) + 1,
+              "poly_sync_t has padding -- reorder the AI fields");
 // The tutorial's sync payload and the field it rides in must stay the same size — a
 // mismatch would silently truncate the ripple origin rather than fail to build.
 static_assert(sizeof(((poly_sync_t *)0)->tut) == TUTORIAL_SYNC_BYTES,

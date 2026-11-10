@@ -251,6 +251,10 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_EDEN:                       return MID_TWO_LINE("RESET", "Eden");
         case KC_DEMO:                       return MID_TWO_LINE("Demo", "Mode");
         case KC_DEMO_KEYS:                  return MID_TWO_LINE("Key", "Demo");
+        // The AI key (ai_mode.h). A plain word in the default legend face, like
+        // "More": render_key() is reached only when this returns NULL, so this one
+        // string is the whole legend on both halves.
+        case KC_AI:                         return U"AI";
         // ⚠️ KC_GLYPH_SIZE_UP is handled in to_static_text() (poly_keymap.c), NOT here.
         // Its legend depends on the current tier AND on whether Shift is held, and the
         // SYNCED mods live in poly_layer_t — this function only receives led_t, so the

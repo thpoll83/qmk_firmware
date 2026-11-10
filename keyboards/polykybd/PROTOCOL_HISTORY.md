@@ -409,6 +409,35 @@ reading before you change either one.
   - The `AS_TOGG`, `AS_ON`, `AS_OFF`, `AS_UP`, `AS_DOWN` keycodes change the same
     persisted setting (`process_record_user()`); `AS_UP`/`AS_DOWN` step 10 ms.
   - A v29 firmware ignores the new bytes and ACKs, so the host gates them on v30.
+  **v31** adds cmd `45` AI and cmd `46` AI_CARD for **AI mode** (`ai_mode.h`,
+  `base/ai_events.h`; design: PolyKybdHost `docs/agent-registry-plan.md`). The
+  `KC_AI` key (0x7E2A, bound in no keymap) turns the number row `1`..`0` and ESC into
+  agent cards. The keys are found by their keycode on layer 0. All of it is RAM only
+  and synced to the slave in `poly_sync_t` (100 -> 132 bytes).
+  - Cmd `45`, op in `data[2]`, closed: any other op NACKs.
+    - `0` QUERY. Reply `data[3]` AI mode (0/1), `data[4]` newest event seq (0 = none),
+      `data[5]` number keys found on layer 0 (0..10), `data[6]` 1 if ESC was found.
+    - `1` SET_KEYS. `data[3..12]` state of keys 0..9 (0 empty, 1 working, 2 waiting,
+      3 done, 4 idle, 5 stale), `data[13]` ESC attention (0/1), `data[14..33]` the
+      card's pool slot per key, u16 little-endian, `0xFFFF` = no card. A state past 5,
+      an attention byte past 1 or a slot of 600 or more (other than `0xFFFF`) NACKs and
+      changes nothing. ACK has no data.
+    - `2` READ_EVENTS. `data[3]` the last seq the host has seen (0 = none). Reply
+      `data[3]` newest seq, `data[4]` count n (0..8), then n pairs `data[5+2i]` seq,
+      `data[6+2i]` key, oldest first, only the events after the host's seq in ring
+      order; a seq not in the ring returns every event held. Nothing is cleared.
+  - Cmd `46`: `data[2..3]` u16 little-endian, bits 0..9 pool slot, bits 12..14
+    segment 0..5; `data[4..63]` that 60-byte segment of the 360-byte image. Written
+    straight into the pool slot, NOT through `display_to_pool`, because the cards are
+    written while an app's mapping is live. Relayed to the slave on
+    `USER_SYNC_OVERLAY_DATA` with `OVERLAY_SEG_RAW_SLOT` (segment bit 7), so the slave
+    marks no display position for it. A slot of 600 or more or a segment past 5 NACKs.
+    Dropped without a reply while DOOM borrows the pool, like cmd 42.
+  - A key event (a number key 0..9 in AI mode, or ESC = 10, the pager) goes into a ring
+    of 8 `{seq, key}` entries. seq starts at 1 and wraps from 255 to 1. Each event
+    increments the GET_ID `G` counter and prints `ai ev <seq> <key>` on the console.
+    Host writes (op 1, cmd 46) do not move `G`.
+  - Older firmware NACKs both commands.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
@@ -438,6 +467,7 @@ reading before you change either one.
   | 17 | `20` SET_UNICODE_MODE | VOLATILE flag in `data[3]` — apply in RAM, leave EEPROM alone |
   | 25 | `33` SEND_OVERLAY_MAPPING_W | a `to` of 600..1199 is slot `to - 600` drawn without the legend |
   | 29 | `44` GET/SET_TAP_TERMS | tapping term and Flow Tap term; ranges CLOSED, unknown NACKs |
+  | 30 | `45` AI, `46` AI_CARD | AI mode: number-row states and cards, key events; op and states CLOSED |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs

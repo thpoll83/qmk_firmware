@@ -267,7 +267,8 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
         ),
     // MIDI layer (USB MIDI, send-only; reached with TO(_ML) on _UL, left with KC_BASE on
-    // Esc or on the lower-left corner key, where Ctrl sits on the base layers).
+    // the lower-left corner key, where Ctrl sits on the base layers). Esc is All Notes Off,
+    // the panic key; the number row's inner key returns to the home octave (OCT 4).
     // The piano follows the computer-keyboard mode of Ableton Live and Logic Pro: white
     // keys C4..F5 on the home row, black keys above them, and blank keys where a piano
     // has no black key (B-C, E-F). Z/X octave and C/V velocity are the same in both
@@ -278,11 +279,11 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // The arguments follow the LAYOUT macro's order, not the visual rows: the two
     // encoder positions (3,7) and (8,0) are transparent.
     [_ML] = LAYOUT_left_right_stacked(
-        KC_BASE, MI_BNDD, MI_BNDU, MI_MOD, MI_CHND, MI_CHNU, MI_AOFF,
+        MI_AOFF, MI_BNDD, MI_BNDU, MI_MOD, MI_CHND, MI_CHNU, MI_OC3,
         MI_SUST, KC_NO, MI_Cs, MI_Ds, KC_NO, MI_Fs, MI_TR0,
         MI_LEG, MI_C, MI_D, MI_E, MI_F, MI_G, MI_PORT,
         _______, MI_CH1, MI_OCTD, MI_OCTU, MI_VELD, MI_VELU, MI_TRSD, MI_TRSU,
-        KC_NO, KC_BASE, MI_MODD, MI_MODU, MI_OC2, MI_SOST, MI_SOFT, MI_OC3,
+        KC_NO, KC_BASE, MI_MODD, MI_MODU, MI_OC2, MI_SOST, MI_SOFT, MI_VL6,
 
         MI_VL2, MI_VL3, MI_VL5, MI_VL6, MI_VL8, MI_VL10, MI_AOFF,
         MI_MOD, MI_Gs, MI_As, KC_NO, MI_Cs1, MI_Ds1, KC_NO,

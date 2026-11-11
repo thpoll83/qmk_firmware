@@ -199,7 +199,9 @@ bool ai_process_record(uint16_t keycode, keyrecord_t *record) {
         rc_clear(s_swallowed, row, col);
         if (s_ai_pending) {
             s_ai_pending = false;
-            const uint8_t hyper = MOD_BIT(KC_LCTL) | MOD_BIT(KC_LSFT) | MOD_BIT(KC_LALT) | MOD_BIT(KC_LGUI);
+            // Only the Hyper bits not already held: releasing a held Ctrl would end it.
+            const uint8_t hyper = (uint8_t)((MOD_BIT(KC_LCTL) | MOD_BIT(KC_LSFT) | MOD_BIT(KC_LALT) |
+                                             MOD_BIT(KC_LGUI)) & (uint8_t)~get_mods());
             register_mods(hyper);      // sends the report: the PC sees Hyper down
             wait_ms(TAP_CODE_DELAY);
             unregister_mods(hyper);    // and up, with no key between
@@ -533,8 +535,11 @@ void ai_hid_card(uint8_t *data, uint8_t length) {
         memcpy(transfer.overlay, &data[4], BYTES_PER_SEGMENT);
         if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_DATA, (void *)&transfer, sizeof(transfer), 10))) {
             uprintf("ai: card slot %u segment %u did not reach the slave\n", (unsigned)slot, (unsigned)seg);
+            // NACK, so the host sends the card again (controller._card drops its record
+            // of a refused upload); an ACK here left the slave with half a card.
+            ok = false;
         }
-        if (seg == NUM_SEGMENTS_PER_OVERLAY - 1 && ai_mode_active()) request_disp_refresh();
+        if (ok && seg == NUM_SEGMENTS_PER_OVERLAY - 1 && ai_mode_active()) request_disp_refresh();
     } else {
         uprint("ai: refused card segment\n");
     }

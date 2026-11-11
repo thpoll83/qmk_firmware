@@ -442,7 +442,9 @@ reading before you change either one.
     straight into the pool slot, NOT through `display_to_pool`, because the cards are
     written while an app's mapping is live. Relayed to the slave on
     `USER_SYNC_OVERLAY_DATA` with `OVERLAY_SEG_RAW_SLOT` (segment bit 7), so the slave
-    marks no display position for it. A slot of 600 or more or a segment past 5 NACKs.
+    marks no display position for it. A slot of 600 or more or a segment past 5 NACKs,
+    and so does a segment the slave did not confirm: the master's copy is written, and
+    the host sends the whole card again on its next pass.
     Dropped without a reply while DOOM borrows the pool, like cmd 42.
   - A key event in AI mode (a number key 0..9, ESC = 10 the pager, only with flag
     bit 1; `-` = 11 dictation; `+` = 12 next waiting agent) goes into a ring
@@ -497,7 +499,8 @@ reading before you change either one.
   | 17 | `20` SET_UNICODE_MODE | VOLATILE flag in `data[3]` — apply in RAM, leave EEPROM alone |
   | 25 | `33` SEND_OVERLAY_MAPPING_W | a `to` of 600..1199 is slot `to - 600` drawn without the legend |
   | 29 | `44` GET/SET_TAP_TERMS | tapping term and Flow Tap term; ranges CLOSED, unknown NACKs |
-  | 30 | `45` AI, `46` AI_CARD | AI mode: number-row states and cards, key events; op and states CLOSED |
+  | 31 | `45` AI, `46` AI_CARD | AI mode: number-row states and cards, key events; op and states CLOSED |
+  | 32 | `47` KEY_ATTENTION | the focus ripple on one key; op and period CLOSED |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs

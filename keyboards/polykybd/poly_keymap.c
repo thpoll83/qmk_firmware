@@ -4451,6 +4451,8 @@ bool poly_slot_visible(uint8_t slot) {
 bool poly_focus_draw_legend(uint8_t slot) {
     uint8_t r, c;
     if (!tutorial_matrix_of(slot, &r, &c)) return false;
+    // An agent card (AI mode) under the ripple, not the key's ordinary legend.
+    if (ai_render_key(r, c)) return true;
     if (!tutorial_key_visible(r, c)) return false;
     if (menu_cascade_hidden(r, c)) return false;   // not its turn in the cascade yet
     // The chrome keys show the lesson's labels, here as in update_displays(), or a ring
@@ -5742,6 +5744,11 @@ void update_displays(enum refresh_mode mode) {
                         // AI mode: the number row shows the host's agent cards and
                         // ESC the pager. Every other key renders normally below.
                         // From the SYNCED state, so the slave draws its half too.
+                        // The focus ripple composites on top, as on any other key.
+                        if (poly_focus_active()) {
+                            const sa_geom_t fg = startup_anim_key_geom(!is_left_side(), disp_idx);
+                            poly_focus_overlay(disp_idx, &fg);
+                        }
                         kdisp_send_window();
                         doom_handled = true;
                     } else if (tutorial_intro_mode() &&

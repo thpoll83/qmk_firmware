@@ -82,7 +82,10 @@ def _lean_ai(spec=None):
     ink = set()
     for y in range(h):
         for x in range(w):
-            if sum(im.crop((x * ss, y * ss, x * ss + ss, y * ss + ss)).get_flattened_data()) >= 255 * ss * ss * 0.4:
+            cell = im.crop((x * ss, y * ss, x * ss + ss, y * ss + ss))
+            # get_flattened_data() is Pillow 12.1+; getdata() is the older name.
+            pixels = cell.get_flattened_data() if hasattr(cell, 'get_flattened_data') else cell.getdata()
+            if sum(pixels) >= 255 * ss * ss * 0.4:
                 ink.add((x, y))
     return ink
 

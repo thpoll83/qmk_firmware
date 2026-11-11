@@ -59,6 +59,7 @@ static bool     s_endless;
 static uint32_t s_next;       // when the next ripple is due
 static uint8_t  s_slot = TUT_SLOT_NONE;
 static uint16_t s_period_ms;
+static bool     s_restart;    // a new START: replace a ripple already running
 
 bool key_attention_pending(void) { return s_endless || s_left > 0u; }
 
@@ -74,12 +75,17 @@ void key_attention_tick(void) {
         s_left      = s_slot != TUT_SLOT_NONE ? s->attn_count : 0u;
         s_period_ms = (uint16_t)(s->attn_period * 100u);
         s_next      = timer_read32();
+        s_restart   = s_slot != TUT_SLOT_NONE;
     }
     if (!key_attention_pending()) return;
-    if (tutorial_active() || !poly_render_live() || poly_focus_active()) return;
+    if (tutorial_active() || !poly_render_live()) return;
+    // A START replaces whatever ripple runs now (poly_focus_start keeps the panels the
+    // old one still owes a restore); otherwise wait for the running one to finish.
+    if (poly_focus_active() && !s_restart) return;
     const uint32_t now = timer_read32();
     if ((int32_t)(now - s_next) < 0) return;
     poly_focus_start(s_slot);
+    s_restart = false;
     s_next = now + s_period_ms;
     if (!s_endless) --s_left;
 }

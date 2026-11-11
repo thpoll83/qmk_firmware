@@ -61,6 +61,7 @@ static uint32_t s_next;       // when the next ripple is due
 static uint8_t  s_slot = TUT_SLOT_NONE;
 static uint16_t s_period_ms;
 static bool     s_restart;    // a new START: replace a ripple already running
+static bool     s_ours;       // the running ripple is one this file started
 
 bool key_attention_pending(void) { return s_endless || s_left > 0u; }
 
@@ -80,7 +81,12 @@ void key_attention_tick(void) {
     }
     // The firmware prompt owns every panel: stop any ripple still crossing it (this
     // half's own, from cmd 47, an agent or the tutorial) and redraw the prompt whole.
+    if (!poly_focus_active()) s_ours = false;
     if (s->fw_confirm && poly_focus_active()) {
+        // Our own ripple, cut short: run it again once the prompt closes (an endless
+        // request repeats anyway; a CANCEL or a new START already reset the schedule).
+        if (s_ours && !s_endless && s_slot != TUT_SLOT_NONE && s_left < UINT8_MAX) ++s_left;
+        s_ours = false;
         poly_focus_cancel();
         request_disp_refresh();
     }
@@ -93,6 +99,7 @@ void key_attention_tick(void) {
     const uint32_t now = timer_read32();
     if ((int32_t)(now - s_next) < 0) return;
     poly_focus_start(s_slot);
+    s_ours    = true;
     s_restart = false;
     s_next = now + s_period_ms;
     if (!s_endless) --s_left;

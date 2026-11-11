@@ -4454,8 +4454,13 @@ bool poly_focus_draw_legend(uint8_t slot) {
     // The firmware prompt owns every panel: a ripple still running when it opened
     // repaints the prompt's state (one key or dark), as update_displays() does.
     if (get_local_state()->fw_confirm) {
-        if (r == FW_CONFIRM_ROW && c == FW_CONFIRM_COL) render_fw_confirm_key(is_left_side());
-        else kdisp_set_buffer(0x00);
+        // r is the board row (the right half starts at MATRIX_ROWS_PER_SIDE);
+        // update_displays() compares the half-local one.
+        if (r % MATRIX_ROWS_PER_SIDE == FW_CONFIRM_ROW && c == FW_CONFIRM_COL) {
+            render_fw_confirm_key(is_left_side());
+        } else {
+            kdisp_set_buffer(0x00);
+        }
         return true;
     }
     // An agent card (AI mode) under the ripple, not the key's ordinary legend.

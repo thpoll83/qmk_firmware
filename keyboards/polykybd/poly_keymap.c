@@ -1858,6 +1858,8 @@ void housekeeping_task_user(void) {
             menu_cascade_tick();
             lang_sparkle_tick();   // the language preview's twinkles; self-gating
         }
+        // An agent that waits gets the focus ripple on its number key (ai_mode.h).
+        ai_attention_tick();
         // Advance the focus ripple, if one is live. Self-gating and bounded to
         // POLY_FOCUS_SLICE_MS, so an idle keyboard pays a single boolean test.
         poly_focus_tick();
@@ -4326,6 +4328,10 @@ static uint8_t tutorial_slot_of(uint8_t row, uint8_t col) {
     if (idx == 255) return TUT_SLOT_NONE;
     return TUT_SLOT(row >= MATRIX_ROWS_PER_SIDE ? 1 : 0, idx);
 }
+
+// The display slot (TUT_SLOT packing) of the key at (row, col), TUT_SLOT_NONE for a
+// key without a panel. For poly_focus_start() outside the tutorial (ai_mode.c).
+uint8_t poly_slot_of(uint8_t row, uint8_t col) { return tutorial_slot_of(row, col); }
 
 uint8_t tutorial_collect_candidates(uint8_t* out, uint8_t max) {
     uint8_t n = 0;

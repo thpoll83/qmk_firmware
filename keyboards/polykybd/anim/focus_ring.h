@@ -67,6 +67,10 @@ bool poly_focus_sweep_band(poly_focus_band_t *out);
 // "only ring artifacts on the actual key"; the return value is informational.)
 bool poly_focus_draw_legend(uint8_t slot);
 
+// Provided by poly_keymap.c: the display slot (TUT_SLOT packing) of the key at
+// (row, col), TUT_SLOT_NONE when it has no panel.
+uint8_t poly_slot_of(uint8_t row, uint8_t col);
+
 // Select panel `idx` on this half (the shift-register chip-select latch).
 void poly_key_select(uint8_t idx);
 

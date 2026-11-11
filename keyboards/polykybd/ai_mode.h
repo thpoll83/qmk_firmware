@@ -47,6 +47,12 @@ bool ai_render_key(uint8_t row, uint8_t col);
 void ai_rgb_paint(void);
 #endif
 
+// Housekeeping, both halves (split72; nothing on split42): while an agent waits,
+// the Eden intro's focus ripple (anim/focus_ring.h) runs from its number key, once
+// every AI_ATTENTION_PERIOD_MS, taking turns when several wait. It never starts over
+// a running ripple, during the tutorial, or while the keycaps are not being drawn.
+void ai_attention_tick(void);
+
 // HID cmd 45 (AI) and cmd 46 (AI_CARD), protocol v31. Both reply into `data`.
 void ai_hid_cmd(uint8_t *data, uint8_t length);
 void ai_hid_card(uint8_t *data, uint8_t length);

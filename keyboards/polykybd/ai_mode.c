@@ -22,6 +22,10 @@
 #include "keycode_helper.h"     // KC_AI
 #include "bridge_helper.h"      // send_to_bridge
 #include "split_sync.h"         // overlay_sync_t, OVERLAY_SEG_RAW_SLOT
+#include "anim/focus_ring.h"    // poly_focus_start, poly_slot_of (attention ripple)
+#include "anim/tutorial.h"      // tutorial_active
+#include "anim/menu_cascade.h"  // poly_render_live
+#include "base/tutorial_plan.h" // TUT_SLOT_NONE
 #ifdef RGB_MATRIX_ENABLE
 #    include <lib/lib8tion/lib8tion.h>   // sin8
 #endif
@@ -437,4 +441,36 @@ void ai_hid_card(uint8_t *data, uint8_t length) {
     data[1] = AI_CARD_CMD;
     data[2] = ok ? '.' : '!';
     raw_hid_send(data, length);
+}
+
+// ---- attention ripple ---------------------------------------------------------------
+
+// One ripple runs TUT_RIPPLE_MS (2.2 s); the rest of the period is still, so the ring
+// reads as a pulse, not a constant motion. Both halves run this from the synced key
+// states with the same period, so their rings start within the sync latency.
+#define AI_ATTENTION_PERIOD_MS 4000u
+
+void ai_attention_tick(void) {
+#ifdef KEYBOARD_polykybd_split72
+    static uint32_t s_last;
+    static bool     s_started;
+    static uint8_t  s_next;
+    const poly_sync_t *s = get_local_state();
+    if (tutorial_active() || !poly_render_live() || poly_focus_active()) return;
+    if (s_started && timer_elapsed32(s_last) < AI_ATTENTION_PERIOD_MS) return;
+    for (uint8_t k = 0; k < AI_NUM_KEYS; ++k) {
+        const uint8_t i = (uint8_t)((s_next + k) % AI_NUM_KEYS);
+        if (s->ai_state[i] != AI_STATE_WAITING) continue;
+        uint8_t rc[AI_KEY_COUNT];
+        ai_find_keys(rc);
+        if (rc[i] == NO_KEY) continue;
+        const uint8_t slot = poly_slot_of((uint8_t)(rc[i] >> 4), (uint8_t)(rc[i] & 0x0Fu));
+        if (slot == TUT_SLOT_NONE) continue;
+        poly_focus_start(slot);
+        s_last    = timer_read32();
+        s_started = true;
+        s_next    = (uint8_t)(i + 1u);
+        return;
+    }
+#endif
 }

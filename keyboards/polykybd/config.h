@@ -397,6 +397,18 @@
 #    define CDC_OUT_CAPACITY 8
 #endif
 
+// USB MIDI (rules.mk POLYKYBD_MIDI). MIDI_ADVANCED handles every QMK_MIDI_*
+// keycode the host editor offers (notes, octave, transpose, velocity, channel,
+// pedals, modulation, pitch bend). MIDI_SEND_ONLY is a PolyKybd patch to QMK
+// (UPSTREAM_PATCHES.md): the keyboard only plays, so the computer->keyboard
+// endpoint, its two jacks and the 192 B parse queue are left out. Two 64 B send
+// buffers hold 32 note events, more than ten fingers produce between USB polls.
+#ifdef MIDI_ENABLE
+#    define MIDI_ADVANCED
+#    define MIDI_SEND_ONLY
+#    define MIDI_STREAM_IN_CAPACITY 2
+#endif
+
 // segement * bytes = 360 (=2880/8 => all bits of an overlay)
 #define NUM_SEGMENTS_PER_OVERLAY 6
 #define BYTES_PER_SEGMENT 60

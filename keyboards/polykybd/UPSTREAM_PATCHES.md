@@ -36,7 +36,37 @@ that upstream left the files alone —
 `git diff --stat <old-base>..<tag> -- <the five files>` (empty in the 0.33.13
 merge, 2026-08-11) — and finish with a `grep` for one marker per patch
 (`raw_hid_pre_receive_kb`, `ifndef RAW_EPSIZE`, `ifndef CDC_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`,
-`POLYKYBD_VREG_VSEL`, `oled_render_dirty(true)`, `wear_leveling_rp2040_flash_quiesce`).
+`POLYKYBD_VREG_VSEL`, `oled_render_dirty(true)`, `wear_leveling_rp2040_flash_quiesce`,
+`MIDI_SEND_ONLY`).
+
+## `MIDI_SEND_ONLY`: a USB MIDI interface without the receive path (8 files)
+
+Added 2026-11-11 with the MIDI layer. QMK's MIDI always declares both directions.
+The keyboard only plays, so `keyboards/polykybd/config.h` defines `MIDI_SEND_ONLY`
+and these guards drop everything that carries MIDI from the computer to the
+keyboard. Without the define every file compiles exactly as upstream's.
+
+| file | change |
+|---|---|
+| `tmk_core/protocol/usb_descriptor.h` | no `MIDI_In_Jack_Emb`, `MIDI_Out_Jack_Ext`, OUT endpoint descriptors in the struct; no `MIDI_STREAM_OUT_EPNUM` |
+| `tmk_core/protocol/usb_descriptor.c` | the same three blocks left out; the streaming interface declares 1 endpoint |
+| `tmk_core/protocol/chibios/usb_endpoints.h` / `.c` | no `USB_ENDPOINT_OUT_MIDI` |
+| `tmk_core/protocol/chibios/usb_main.c` | `recv_midi_packet()` returns false |
+| `tmk_core/protocol/lufa/lufa.c` | no OUT endpoint setup; `recv_midi_packet()` returns false. **Not compiled here** (no AVR toolchain) |
+| `quantum/midi/midi_device.h` | `MIDI_INPUT_QUEUE_LENGTH` gets an `#ifndef`, and defaults to 1 under `MIDI_SEND_ONLY` |
+| `quantum/midi/qmk_midi.c` | the receive poll and its two callbacks are not registered (or compiled) |
+
+What remains is one external IN jack (0x02) feeding the embedded OUT jack (0x03),
+carried by the IN endpoint. That is a valid USB-MIDI 1.0 topology.
+
+Measured on split72 (local gcc 13.2, `tools/ram_report.py`): RAM headroom 9052 B
+without MIDI, 7868 B with QMK's default MIDI, 8604 B with `MIDI_SEND_ONLY` and
+`MIDI_STREAM_IN_CAPACITY 2`. MIDI costs 448 B instead of 1184 B. The decoded
+configuration descriptor walks exactly to its `wTotalLength` and the MIDI
+streaming header's length (36 B) equals the sum of its parts.
+
+This patch was written to be offered upstream: it is opt-in, it changes nothing
+without the define, and it covers LUFA too.
 
 ## tmk_core/protocol/usb_descriptor.h
 

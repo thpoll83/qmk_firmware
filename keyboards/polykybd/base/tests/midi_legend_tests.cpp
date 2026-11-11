@@ -11,6 +11,7 @@
 
 extern "C" {
 #include "midi_legend.h"
+#include "lang/named_glyphs.h"
 #include "quantum_keycodes.h"
 }
 
@@ -70,7 +71,7 @@ TEST(MidiLegendTest, AnUnsyncedSlaveDrawsTheStartValues) {
 TEST(MidiLegendTest, SharpsAreRaisedAndCarryTheirOctave) {
     const uint32_t* s = midi_legend(QK_MIDI_NOTE_C_SHARP_0, DEFAULT);
     EXPECT_EQ(text(s), " C#4");
-    EXPECT_TRUE(has(s, 0x100029 + 1));   // ICON_MIDI_STAFF_CS
+    EXPECT_TRUE(has(s, ICON_MIDI_STAFF_CS[0]));
 }
 
 TEST(MidiLegendTest, OctaveAndTransposeMoveTheNoteName) {

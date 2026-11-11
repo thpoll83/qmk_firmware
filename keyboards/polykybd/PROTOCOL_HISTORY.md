@@ -409,6 +409,67 @@ reading before you change either one.
   - The `AS_TOGG`, `AS_ON`, `AS_OFF`, `AS_UP`, `AS_DOWN` keycodes change the same
     persisted setting (`process_record_user()`); `AS_UP`/`AS_DOWN` step 10 ms.
   - A v29 firmware ignores the new bytes and ACKs, so the host gates them on v30.
+  **v31** adds cmd `45` AI and cmd `46` AI_CARD for **AI mode** (`ai_mode.h`,
+  `base/ai_events.h`; design: PolyKybdHost `docs/agent-registry-plan.md`). The
+  `KC_AI` key (0x7E2A, bound in no keymap) turns the number row `1`..`0` into agent
+  cards, ESC into the pager, `-` into dictation and `=` (`+`) into "next waiting
+  agent". The keys are found by their keycode on the active default layer
+  (`def_layer`). All of it is RAM only and synced to the slave in `poly_sync_t`
+  (100 -> 136 bytes).
+  - Cmd `45`, op in `data[2]`, closed: any other op NACKs.
+    - `0` QUERY. Reply `data[3]` AI mode (0/1), `data[4]` newest event seq (0 = none),
+      `data[5]` number keys found on the default layer (0..10), `data[6]` 1 if ESC was found.
+    - `1` SET_KEYS. `data[3..12]` state of keys 0..9 (0 empty, 1 working, 2 waiting,
+      3 done, 4 idle, 5 stale), `data[13]` flags (bit 0 ESC attention, bit 1 more
+      than one page: ESC shows "Next" and pages, bit 2 an agent waits: `+` blinks red
+      in AI mode, bit 3 the `-`/`+` cards are there), `data[14..37]` 12 card pool
+      slots, u16 little-endian, keys 1..9,0 then `-` then `+`, `0xFFFF` = no card. A
+      state past 5, any other flag bit, or a slot of 600 or more (other than `0xFFFF`)
+      NACKs and changes nothing. ACK has no data. A number key draws its card only
+      when its state is not empty, and `-`/`+` only with flag bit 3, because the
+      zeroed slots read as the valid pool slot 0 until the host has sent op 1.
+      The host sends op 1 every second, changed or not. The master clears the
+      states, flags and slots (and leaves AI mode) at USB suspend and after
+      `AI_KEYS_HOST_TIMEOUT_MS` (30 s) without an op 1, so a host that quit, slept or
+      was killed leaves no lit key. A host that sends op 1 only on a change sees its
+      keys cleared after 30 s.
+    - `2` READ_EVENTS. `data[3]` the last seq the host has seen (0 = none). Reply
+      `data[3]` newest seq, `data[4]` count n (0..8), then n pairs `data[5+2i]` seq,
+      `data[6+2i]` key, oldest first, only the events after the host's seq in ring
+      order; a seq not in the ring returns every event held. Nothing is cleared.
+  - Cmd `46`: `data[2..3]` u16 little-endian, bits 0..9 pool slot, bits 12..14
+    segment 0..5; `data[4..63]` that 60-byte segment of the 360-byte image. Written
+    straight into the pool slot, NOT through `display_to_pool`, because the cards are
+    written while an app's mapping is live. Relayed to the slave on
+    `USER_SYNC_OVERLAY_DATA` with `OVERLAY_SEG_RAW_SLOT` (segment bit 7), so the slave
+    marks no display position for it. A slot of 600 or more or a segment past 5 NACKs,
+    and so does a segment the slave did not confirm: the master's copy is written, and
+    the host sends the whole card again on its next pass.
+    Dropped without a reply while DOOM borrows the pool, like cmd 42.
+  - A key event in AI mode (a number key 0..9, ESC = 10 the pager, only with flag
+    bit 1; `-` = 11 dictation; `+` = 12 next waiting agent) goes into a ring
+    of 8 `{seq, key}` entries. seq starts at 1 and wraps from 255 to 1. Each event
+    increments the GET_ID `G` counter and prints `ai ev <seq> <key>` on the console.
+    Host writes (op 1, cmd 46) do not move `G`.
+  - Older firmware NACKs both commands.
+
+  **v32** adds cmd `47` **KEY ATTENTION** (`anim/key_attention.h`): the Eden
+  intro's focus ripple (`anim/focus_ring.h`) on one key, for a program tutorial or
+  anything else that points at a key.
+  - `data[2]` op, closed: `0` START, `1` CANCEL; any other op NACKs.
+  - START: `data[3]` row, `data[4]` col (matrix position; a key without a display
+    NACKs), `data[5]` number of ripples (0 = until cancelled), `data[6]` period in
+    100 ms units, CLOSED 23..100 (one ripple runs 2.2 s). A bad field NACKs and
+    changes nothing; a START replaces a running request.
+  - CANCEL ends the request; a ripple already running finishes, so no arc is left
+    on the keys it was crossing.
+  - Reply `"P\x2F."` / `"P\x2F!"`, no data. RAM only: the request reaches the
+    slave in `poly_sync_t` (`attn_seq`, `attn_slot`, `attn_count`, `attn_period`;
+    136 -> 140 bytes), and each half starts its own ripples when it sees a new
+    `attn_seq`.
+  - split42 has no per-keycap ripple: it ACKs a valid request and draws nothing.
+  - While a request runs, AI mode's waiting-agent ripple (protocol v31) waits.
+  - Older firmware NACKs the command.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
@@ -438,6 +499,8 @@ reading before you change either one.
   | 17 | `20` SET_UNICODE_MODE | VOLATILE flag in `data[3]` — apply in RAM, leave EEPROM alone |
   | 25 | `33` SEND_OVERLAY_MAPPING_W | a `to` of 600..1199 is slot `to - 600` drawn without the legend |
   | 29 | `44` GET/SET_TAP_TERMS | tapping term and Flow Tap term; ranges CLOSED, unknown NACKs |
+  | 31 | `45` AI, `46` AI_CARD | AI mode: number-row states and cards, key events; op and states CLOSED |
+  | 32 | `47` KEY_ATTENTION | the focus ripple on one key; op and period CLOSED |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs

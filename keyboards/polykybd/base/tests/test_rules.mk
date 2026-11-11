@@ -371,6 +371,16 @@ polykybd_mines_plan_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# ai_events.c is the pure part of AI mode (ai_mode.h): the event ring of cmd 45 op 2,
+# the key-index mapping and the checks on op 1 and cmd 46. The firmware binding is
+# ai_mode.c.
+polykybd_ai_events_SRC := \
+	$(POLY_BASE_PATH)/ai_events.c \
+	$(POLY_BASE_PATH)/tests/ai_events_tests.cpp
+
+polykybd_ai_events_INC := \
+	$(POLY_BASE_PATH)
+
 # The idle style table is pure (no quantum.h), so it links with just the tests.
 polykybd_idle_style_SRC := \
 	$(POLY_BASE_PATH)/idle_style.c \

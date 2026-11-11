@@ -164,7 +164,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "1.11.6"
+#define FW_VERSION "1.12.0"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -305,7 +305,12 @@
 //      sets leave Auto Shift alone. Reply data[7] gains bit 1 (Auto Shift compiled
 //      in) and bit 2 (Auto Shift on), data[8..9] = the timeout. A v29 firmware
 //      ignores the new request bytes, so the host gates them on v30.
-#define PROTOCOL_VERSION 30
+//  v31 cmd 45 (AI: query, set the number-row states / cards, read key events) and
+//      cmd 46 (AI_CARD: one 60-byte segment straight into a pool slot) for AI mode
+//      (ai_mode.h, KC_AI). Older firmware NACKs both, which is the host's signal.
+//  v32 cmd 47 (key attention: the focus ripple on one key, a count of times or until
+//      cancelled, anim/key_attention.h). Older firmware NACKs it.
+#define PROTOCOL_VERSION 32
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2

@@ -67,8 +67,9 @@ void midi_init(void) {
 
 // A channel change must not strand what is sounding on the old channel: a note-off or
 // a pedal release is sent on the CURRENT channel, so a key held across the change
-// would hang (PolyKybd patch, UPSTREAM_PATCHES.md). Release every held note and the
-// three pedals on the old channel first; the held keys then release nothing.
+// would hang (PolyKybd patch, UPSTREAM_PATCHES.md). Release every held note, the three
+// pedals, the pitch bend and the mod wheel on the old channel first; the held keys then
+// release nothing there.
 static void midi_set_channel(uint8_t channel) {
     channel &= 0x0F;
     if (channel == midi_config.channel) return;
@@ -78,10 +79,14 @@ static void midi_set_channel(uint8_t channel) {
             tone_status[i] = MIDI_INVALID_NOTE;
         }
     }
-    midi_send_cc(&midi_device, midi_config.channel, 0x40, 0); // sustain
-    midi_send_cc(&midi_device, midi_config.channel, 0x42, 0); // sostenuto
-    midi_send_cc(&midi_device, midi_config.channel, 0x43, 0); // soft
-    midi_config.channel = channel;
+    midi_send_cc(&midi_device, midi_config.channel, 0x40, 0);  // sustain
+    midi_send_cc(&midi_device, midi_config.channel, 0x42, 0);  // sostenuto
+    midi_send_cc(&midi_device, midi_config.channel, 0x43, 0);  // soft
+    midi_send_pitchbend(&midi_device, midi_config.channel, 0); // a held bend
+    midi_send_cc(&midi_device, midi_config.channel, 0x01, 0);  // a held mod wheel
+    midi_modulation      = 0;
+    midi_modulation_step = 0;
+    midi_config.channel  = channel;
 }
 
 uint8_t midi_compute_note(uint16_t keycode) {

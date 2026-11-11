@@ -550,7 +550,11 @@ void send_midi_packet(MIDI_EventPacket_t *event) {
 }
 
 bool recv_midi_packet(MIDI_EventPacket_t *const event) {
+#    ifdef MIDI_SEND_ONLY
+    return false;
+#    else
     return receive_report(USB_ENDPOINT_OUT_MIDI, (uint8_t *)event, sizeof(MIDI_EventPacket_t));
+#    endif
 }
 
 #endif

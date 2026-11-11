@@ -60,7 +60,7 @@ VBUS divider on GP24 — is on **both** boards, identically.
 
 _Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
 
-RGB matrix (72 LEDs, 41 `ENABLE_RGB_MATRIX_*` effects per variant), dynamic keymap (8 host-remappable layers, 0..7), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
+RGB matrix (72 LEDs, 41 `ENABLE_RGB_MATRIX_*` effects per variant), dynamic keymap (9 host-remappable layers, 0..8), unicode input (Linux/macOS/Windows/BSD), Cirque trackpad (split72 variant), `USE_CORE1` multicore.
 
 ⚠️ **VIA is NOT supported and must not be advertised as such.** `VIA_ENABLE` is
 unset on both variants — only `DYNAMIC_KEYMAP_ENABLE` is on, and remapping happens

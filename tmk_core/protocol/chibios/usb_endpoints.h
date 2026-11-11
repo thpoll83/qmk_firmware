@@ -136,7 +136,7 @@ typedef enum {
     USB_ENDPOINT_OUT_RAW,
 #endif
 
-#if defined(MIDI_ENABLE)
+#if defined(MIDI_ENABLE) && !defined(MIDI_SEND_ONLY)
     USB_ENDPOINT_OUT_MIDI,
 #endif
 #if defined(VIRTSER_ENABLE)

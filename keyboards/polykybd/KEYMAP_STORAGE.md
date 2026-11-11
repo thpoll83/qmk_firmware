@@ -5,23 +5,25 @@ and relative links were adjusted to suit a standalone file.
 
 ## EEPROM layout: the reclaimed dynamic-keymap tail
 
-`DYNAMIC_KEYMAP_LAYER_COUNT` must stay **12** — QMK asserts it is >= the compiled
-layer count (`keymap_introspection.c`) — but only layers **0..7** are ever read or
+`DYNAMIC_KEYMAP_LAYER_COUNT` must stay **13** — QMK asserts it is >= the compiled
+layer count (`keymap_introspection.c`) — but only layers **0..8** are ever read or
 written from EEPROM; `_SL` and up are served straight out of flash by
 `poly_keycode_at()`. QMK's default addresses put the encoder map and the macro buffer
-after all twelve, so 640 B of keymap plus 32 B of encoder map sat there addressed by
+after all of them, so 640 B of keymap plus 32 B of encoder map sat there addressed by
 nothing. `config.h` rebases both on **`DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT`**:
-measured on split72, the macro region went **1787 → 2459 B (+672)**.
+measured on split72, the macro region went **1787 → 2459 B (+672)**. The MIDI
+layer (`_ML`, stored layer 8, 2026-11) then took 160 B of keymap and 4 B of encoder
+map back out of it.
 
 ⚠️ **The reclaim is only sound while nothing writes layers >= the cap, and QMK's own
 `dynamic_keymap_reset()` DOES.** It loops to `DYNAMIC_KEYMAP_LAYER_COUNT` through a
-bound check that is also `DYNAMIC_KEYMAP_LAYER_COUNT`, so it writes layers 8..11
+bound check that is also `DYNAMIC_KEYMAP_LAYER_COUNT`, so it writes layers 9..12
 straight over both reclaimed regions. Two guards, and both are load-bearing:
 - `dynamic_keymap_reset_poly()` **no longer calls it** — it walks the cap itself,
   resets the capped encoder map and zeroes the macro buffer.
 - `eeconfig_init_kb()` **repairs after the one call site we cannot remove**
   (`eeconfig_init_quantum`, three lines above ours in the same function,
-  unconditional). Because that repair rewrites layers 0..7 from flash and zeroes the
+  unconditional). Because that repair rewrites layers 0..8 from flash and zeroes the
   macros, it IS the state a fresh EEPROM wants rather than a fix-up bolted on. ⚠️ The
   override also has to replicate the weak default's `eeconfig_update_kb(0)`, which
   replacing the body would otherwise drop silently.
@@ -114,7 +116,7 @@ recoveries (the third, the host's reset, is below), and they are not equivalent:
 **The host's keymap reset is the third route, and it is not a selective one.** Tray
 Maintenance → "Reset keymap to default…" (and the control-socket method `keymap.reset`;
 there is no `polyctl` command) sends `id_dynamic_keymap_reset`. `legacy_command_kb()` in
-`hid_com.c` answers it with `dynamic_keymap_reset_poly()`, so it rewrites layers 0..7
+`hid_com.c` answers it with `dynamic_keymap_reset_poly()`, so it rewrites layers 0..8
 from the compiled keymap, restores their encoder bindings from the compiled
 `encoder_map[]` (both default keymaps set `ENCODER_MAP_ENABLE`), **and zeroes the macro
 buffer**, the same as a format-stamp bump on one board. It exists since host commit `a1180727` (2026-02).

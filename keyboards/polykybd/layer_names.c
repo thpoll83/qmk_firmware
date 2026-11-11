@@ -30,6 +30,7 @@ static const char* const fixed_wire[] = {
     "Fn",       // _FL
     "Numpad",   // _NL
     "Utility",  // _UL
+    "MIDI",     // _ML
 };
 
 // The host may only remap layers below the write cap, so anything at or above it

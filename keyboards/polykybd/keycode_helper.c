@@ -354,6 +354,9 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case OSL(_UL):                      return U"Util\r\v\t" ICON_LAYER LAYER_ONESHOT;
         case MO(_UL):                       return U"Util\r\v\t" ICON_LAYER;
         case TO(_UL):                       return U"Util\r\v\t" ICON_LAYER LAYER_SWITCH;
+        // The treble clef (tools/midi_glyphs.py) instead of a word: it carries its own
+        // position and draws with xAdvance 0, so the layer marks sit where Util's do.
+        case TO(_ML):                       return ICON_MIDI_CLEF U"\r\v\t" ICON_LAYER LAYER_SWITCH;
         case MO(_ADDLANG1):                 return (state_flags & MORE_TEXT) != 0 ? U"Intl" : INTL_LAYER_LEGEND;
         case KC_LAT_REMAP:                  return (state_flags & MORE_TEXT) != 0 ? U"Map" : INTL_REMAP_LEGEND;
         case KC_F1:                         return U" F1";

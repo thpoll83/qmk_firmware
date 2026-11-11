@@ -48,7 +48,15 @@ extern "C" {
 
 #include "midi_function_types.h"
 #include "bytequeue/bytequeue.h"
-#define MIDI_INPUT_QUEUE_LENGTH 192
+#ifndef MIDI_INPUT_QUEUE_LENGTH
+#    ifdef MIDI_SEND_ONLY
+// Nothing is ever received, so the queue only has to exist. A 1-byte bytequeue
+// reads as empty (start == end) and refuses every enqueue.
+#        define MIDI_INPUT_QUEUE_LENGTH 1
+#    else
+#        define MIDI_INPUT_QUEUE_LENGTH 192
+#    endif
+#endif
 
 typedef enum { IDLE, ONE_BYTE_MESSAGE = 1, TWO_BYTE_MESSAGE = 2, THREE_BYTE_MESSAGE = 3, SYSEX_MESSAGE } input_state_t;
 

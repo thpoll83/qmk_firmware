@@ -402,6 +402,18 @@
 #    define CDC_OUT_CAPACITY 8
 #endif
 
+// USB MIDI (rules.mk POLYKYBD_MIDI). MIDI_ADVANCED handles every QMK_MIDI_*
+// keycode the host editor offers (notes, octave, transpose, velocity, channel,
+// pedals, modulation, pitch bend). MIDI_SEND_ONLY is a PolyKybd patch to QMK
+// (UPSTREAM_PATCHES.md): the keyboard only plays, so the computer->keyboard
+// endpoint, its two jacks and the 192 B parse queue are left out. Two 64 B send
+// buffers hold 32 note events, more than ten fingers produce between USB polls.
+#ifdef MIDI_ENABLE
+#    define MIDI_ADVANCED
+#    define MIDI_SEND_ONLY
+#    define MIDI_STREAM_IN_CAPACITY 2
+#endif
+
 // segement * bytes = 360 (=2880/8 => all bits of an overlay)
 #define NUM_SEGMENTS_PER_OVERLAY 6
 #define BYTES_PER_SEGMENT 60
@@ -528,14 +540,14 @@
 
 #define USE_CORE1
 
-#define DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT 8
+#define DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT 9
 
 // Reclaim the storage QMK reserves for the layers we never store.
 //
-// DYNAMIC_KEYMAP_LAYER_COUNT must stay 12 (QMK asserts it is >= the compiled layer
-// count, keymap_introspection.c), but only layers 0..7 are ever READ or WRITTEN from
+// DYNAMIC_KEYMAP_LAYER_COUNT must stay 13 (QMK asserts it is >= the compiled layer
+// count, keymap_introspection.c), but only layers 0..8 are ever READ or WRITTEN from
 // EEPROM -- everything from _SL up is served straight out of flash by poly_keycode_at().
-// QMK's default addresses put the encoder map and the macro buffer after all TWELVE
+// QMK's default addresses put the encoder map and the macro buffer after all THIRTEEN
 // layers, so 640 B (split72) / 384 B (split42) of keymap plus a further 32 B of encoder
 // map sit there addressed by nothing. Basing both on the write cap instead hands that
 // space to the macro buffer, which is the one region sized by "whatever is left".
@@ -549,7 +561,7 @@
 // / _set_buffer_poly clamp to the cap), and OUR reset walks the cap rather than
 // DYNAMIC_KEYMAP_LAYER_COUNT. QMK's own dynamic_keymap_reset() does NOT -- it loops to
 // DYNAMIC_KEYMAP_LAYER_COUNT and calls nvm_dynamic_keymap_update_keycode(), whose bound
-// check is also DYNAMIC_KEYMAP_LAYER_COUNT, so it writes layers 8..11 straight over the
+// check is also DYNAMIC_KEYMAP_LAYER_COUNT, so it writes layers 9..12 straight over the
 // encoder map and the macro buffer. It is still reachable from eeconfig_init_quantum();
 // eeconfig_init_kb() repairs after it (see poly_keymap.c). Do not add a third call site.
 #define DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR \

@@ -878,7 +878,11 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor = {
         },
         .InterfaceNumber        = AS_INTERFACE,
         .AlternateSetting       = 0,
+#    ifdef MIDI_SEND_ONLY
+        .TotalEndpoints         = 1,
+#    else
         .TotalEndpoints         = 2,
+#    endif
         .Class                  = AUDIO_CSCP_AudioClass,
         .SubClass               = AUDIO_CSCP_MIDIStreamingSubclass,
         .Protocol               = AUDIO_CSCP_StreamingProtocol,
@@ -893,6 +897,12 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor = {
         .AudioSpecification     = VERSION_BCD(1, 0, 0),
         .TotalLength            = offsetof(USB_Descriptor_Configuration_t, MIDI_Out_Jack_Endpoint_SPC) + sizeof(USB_MIDI_Descriptor_Jack_Endpoint_t) - offsetof(USB_Descriptor_Configuration_t, Audio_StreamInterface_SPC)
     },
+    /*
+     * MIDI_SEND_ONLY keeps one path, keyboard -> computer: the external IN jack
+     * (0x02) feeds the embedded OUT jack (0x03), which the IN endpoint carries. The
+     * computer -> keyboard path (jacks 0x01 and 0x04, the OUT endpoint) is left out.
+     */
+#    ifndef MIDI_SEND_ONLY
     .MIDI_In_Jack_Emb = {
         .Header = {
             .Size               = sizeof(USB_MIDI_Descriptor_InputJack_t),
@@ -903,6 +913,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor = {
         .JackID = 0x01,
         .JackStrIndex           = NO_DESCRIPTOR
     },
+#    endif
     .MIDI_In_Jack_Ext = {
         .Header = {
             .Size               = sizeof(USB_MIDI_Descriptor_InputJack_t),
@@ -926,6 +937,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor = {
         .SourcePinID            = {0x01},
         .JackStrIndex           = NO_DESCRIPTOR
     },
+#    ifndef MIDI_SEND_ONLY
     .MIDI_Out_Jack_Ext = {
         .Header = {
             .Size               = sizeof(USB_MIDI_Descriptor_OutputJack_t),
@@ -962,6 +974,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor = {
         .TotalEmbeddedJacks     = 0x01,
         .AssociatedJackID       = {0x01}
     },
+#    endif
     .MIDI_Out_Jack_Endpoint = {
         .Endpoint = {
             .Header = {

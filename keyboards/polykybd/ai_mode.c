@@ -23,6 +23,7 @@
 #include "bridge_helper.h"      // send_to_bridge
 #include "split_sync.h"         // overlay_sync_t, OVERLAY_SEG_RAW_SLOT
 #include "anim/focus_ring.h"    // poly_focus_start, poly_slot_of (attention ripple)
+#include "anim/key_attention.h" // key_attention_pending
 #include "anim/tutorial.h"      // tutorial_active
 #include "anim/menu_cascade.h"  // poly_render_live
 #include "base/tutorial_plan.h" // TUT_SLOT_NONE
@@ -457,6 +458,7 @@ void ai_attention_tick(void) {
     static uint8_t  s_next;
     const poly_sync_t *s = get_local_state();
     if (tutorial_active() || !poly_render_live() || poly_focus_active()) return;
+    if (key_attention_pending()) return;   // a host request (cmd 47) has the ring
     if (s_started && timer_elapsed32(s_last) < AI_ATTENTION_PERIOD_MS) return;
     for (uint8_t k = 0; k < AI_NUM_KEYS; ++k) {
         const uint8_t i = (uint8_t)((s_next + k) % AI_NUM_KEYS);

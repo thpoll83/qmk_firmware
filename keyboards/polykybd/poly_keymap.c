@@ -75,6 +75,7 @@
 #include "anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
 #include "mines_mode.h"                   // the idle-screen mine sweeper (hold Hyper while idle)
 #include "ai_mode.h"                      // AI mode: agent cards on the number row (KC_AI)
+#include "anim/key_attention.h"            // cmd 47: the focus ripple on a key
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
@@ -1858,7 +1859,9 @@ void housekeeping_task_user(void) {
             menu_cascade_tick();
             lang_sparkle_tick();   // the language preview's twinkles; self-gating
         }
-        // An agent that waits gets the focus ripple on its number key (ai_mode.h).
+        // The host's key attention request (cmd 47) first, then an agent that waits
+        // (ai_mode.h): both run the focus ripple, one at a time.
+        key_attention_tick();
         ai_attention_tick();
         // Advance the focus ripple, if one is live. Self-gating and bounded to
         // POLY_FOCUS_SLICE_MS, so an idle keyboard pays a single boolean test.

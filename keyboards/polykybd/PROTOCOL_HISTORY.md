@@ -446,6 +446,24 @@ reading before you change either one.
     Host writes (op 1, cmd 46) do not move `G`.
   - Older firmware NACKs both commands.
 
+  **v32** adds cmd `47` **KEY ATTENTION** (`anim/key_attention.h`): the Eden
+  intro's focus ripple (`anim/focus_ring.h`) on one key, for a program tutorial or
+  anything else that points at a key.
+  - `data[2]` op, closed: `0` START, `1` CANCEL; any other op NACKs.
+  - START: `data[3]` row, `data[4]` col (matrix position; a key without a display
+    NACKs), `data[5]` number of ripples (0 = until cancelled), `data[6]` period in
+    100 ms units, CLOSED 23..100 (one ripple runs 2.2 s). A bad field NACKs and
+    changes nothing; a START replaces a running request.
+  - CANCEL ends the request; a ripple already running finishes, so no arc is left
+    on the keys it was crossing.
+  - Reply `"P\x2F."` / `"P\x2F!"`, no data. RAM only: the request reaches the
+    slave in `poly_sync_t` (`attn_seq`, `attn_slot`, `attn_count`, `attn_period`;
+    136 -> 140 bytes), and each half starts its own ripples when it sees a new
+    `attn_seq`.
+  - split42 has no per-keycap ripple: it ACKs a valid request and draws nothing.
+  - While a request runs, AI mode's waiting-agent ripple (protocol v31) waits.
+  - Older firmware NACKs the command.
+
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)

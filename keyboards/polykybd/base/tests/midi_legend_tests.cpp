@@ -83,12 +83,16 @@ TEST(MidiLegendTest, OctaveAndTransposeMoveTheNoteName) {
     EXPECT_EQ(text(midi_legend(QK_MIDI_CHANNEL_UP, moved)), "CHAN+ 3");
 }
 
-TEST(MidiLegendTest, NotesStayInsideTheMidiRange) {
-    // QMK's octave 7 plus transpose +6 puts B5 past note 127; the legend shows 127 (G9).
+TEST(MidiLegendTest, NotesPastTheMidiRangeNameTheWrappedNoteQmkSends) {
+    // midi_compute_note() is a uint8_t sum and midi_send_noteon() masks it with 0x7F.
+    // Octave index 9 + transpose +6 on B5: 108 + 71 + 6 = 185 -> 57, A3.
     const uint32_t top = midi_cfg_pack(9, 6, 127, 0);
-    EXPECT_EQ(text(midi_legend(QK_MIDI_NOTE_B_5, top)), " G9");
+    EXPECT_EQ(text(midi_legend(QK_MIDI_NOTE_B_5, top)), " A3");
+    // Octave index 0 + transpose -6 on C: -6 -> 250 -> 122, D9.
     const uint32_t bottom = midi_cfg_pack(0, -6, 127, 0);
-    EXPECT_EQ(text(midi_legend(QK_MIDI_NOTE_C_0, bottom)), " C-1");
+    EXPECT_EQ(text(midi_legend(QK_MIDI_NOTE_C_0, bottom)), " D9");
+    // Inside the range nothing changes: index 0, no transpose, C is note 0, C-1.
+    EXPECT_EQ(text(midi_legend(QK_MIDI_NOTE_C_0, midi_cfg_pack(0, 0, 127, 0))), " C-1");
 }
 
 TEST(MidiLegendTest, PresetsNameTheirOwnValue) {

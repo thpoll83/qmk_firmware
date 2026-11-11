@@ -310,7 +310,8 @@ POLYKYBD_MIDI ?= yes
 # unset therefore gets MIDI anyway: the monolith did, until this line.
 MIDI_ENABLE = no
 ifeq ($(strip $(POLYKYBD_MIDI)), yes)
-    ifneq ($(strip $(POLYKYBD_DOOM)):$(strip $(POLYKYBD_DOOM_PACK)), yes:)
+    # Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`).
+    ifneq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
         MIDI_ENABLE = yes
         # The legends read the synced settings; a build without MIDI draws the
         # keycodes as plain QMK names would (nothing), and saves the buffer.

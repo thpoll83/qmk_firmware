@@ -105,13 +105,11 @@ static const uint32_t* const STAFF[12] = {
 static const char LETTER[12] = {'C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B'};
 static const bool SHARP[12]  = {false, true, false, true, false, false, true, false, true, false, true, false};
 
-// What QMK's midi_compute_note() will send, kept in 0..127 like its uint8_t would
-// not be: a note off the end of the MIDI range is shown at the end it fell off.
+// The note QMK actually sends: midi_compute_note() returns the sum as a uint8_t and
+// midi_send_noteon() masks it with 0x7F, so past either end of the MIDI range it
+// wraps rather than stops. The legend names that note, not the one intended.
 static uint8_t note_of(uint16_t keycode, cfg_t c) {
-    int16_t n = (int16_t)(12 * c.octave + (keycode - QK_MIDI_NOTE_C_0) + c.transpose);
-    if (n < 0) n = 0;
-    if (n > 127) n = 127;
-    return (uint8_t)n;
+    return (uint8_t)(12 * c.octave + (keycode - QK_MIDI_NOTE_C_0) + c.transpose) & 0x7F;
 }
 
 // The staff first (xAdvance 0, it sits at x 42..71), then a big letter with a half-size

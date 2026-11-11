@@ -37,7 +37,7 @@ that upstream left the files alone —
 merge, 2026-08-11) — and finish with a `grep` for one marker per patch
 (`raw_hid_pre_receive_kb`, `ifndef RAW_EPSIZE`, `ifndef CDC_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`,
 `POLYKYBD_VREG_VSEL`, `oled_render_dirty(true)`, `wear_leveling_rp2040_flash_quiesce`,
-`MIDI_SEND_ONLY`).
+`MIDI_SEND_ONLY`, `midi_set_channel`).
 
 ## `MIDI_SEND_ONLY`: a USB MIDI interface without the receive path (8 files)
 
@@ -67,6 +67,19 @@ streaming header's length (36 B) equals the sum of its parts.
 
 This patch was written to be offered upstream: it is opt-in, it changes nothing
 without the define, and it covers LUFA too.
+
+## quantum/process_keycode/process_midi.c: a channel change releases what sounds
+
+Added 2026-11-11 with the MIDI layer (found in review of qmk#427). QMK sends a note-off
+and a pedal release on the channel that is current at RELEASE, so a note or a pedal
+held while CHAN+/CHAN-/MI_CHx changes the channel was never released on the channel
+it started on: a hung note in the DAW. The MIDI layer puts the channel keys next to the
+piano, which makes that easy to hit.
+
+`midi_set_channel()` replaces the three direct writes to `midi_config.channel`. When the
+channel really changes, it sends a note-off on the OLD channel for every held tone
+(`tone_status`), marks them released so the key release sends nothing, and releases
+sustain, sostenuto and soft (CC 64/66/67) there too. No RAM; a candidate for upstream.
 
 ## tmk_core/protocol/usb_descriptor.h
 

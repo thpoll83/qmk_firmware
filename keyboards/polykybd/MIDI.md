@@ -29,7 +29,12 @@ into a small piano with live note names on the keycaps. It is reached with `TO(_
 `MI_C` is C3, so `keyboard_post_init_user()` starts one index higher. Every octave a
 keycap shows is in scientific pitch notation, including the `OCT` presets: `MI_OC3`
 reads "OCT 4" because it makes `MI_C` play C4. A note legend includes the transpose,
-so it always names the note the key sends.
+so it always names the note the key sends. Past either end of the MIDI range QMK wraps
+the number (a `uint8_t` sum masked with 0x7F), and the legend shows the wrapped note.
+
+A channel change first releases every held note and the three pedals on the old
+channel (`midi_set_channel()` in `process_midi.c`, a PolyKybd patch): QMK sends a
+release on the channel current at release time, so a key held across the change hung.
 
 ## The slave half
 

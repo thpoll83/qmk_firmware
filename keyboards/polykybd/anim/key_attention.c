@@ -11,6 +11,7 @@
 #include "tutorial.h"            // tutorial_active
 #include "menu_cascade.h"        // poly_render_live
 #include "base/tutorial_plan.h"  // TUT_SLOT_NONE
+#include "base/update.h"         // request_disp_refresh
 
 static void reply(uint8_t *data, uint8_t length, bool ok) {
     memset(data, 0, length);
@@ -76,6 +77,12 @@ void key_attention_tick(void) {
         s_period_ms = (uint16_t)(s->attn_period * 100u);
         s_next      = timer_read32();
         s_restart   = s_slot != TUT_SLOT_NONE;
+    }
+    // The firmware prompt owns every panel: stop any ripple still crossing it (this
+    // half's own, from cmd 47, an agent or the tutorial) and redraw the prompt whole.
+    if (s->fw_confirm && poly_focus_active()) {
+        poly_focus_cancel();
+        request_disp_refresh();
     }
     if (!key_attention_pending()) return;
     // Deferred, not dropped, while the firmware prompt owns the displays.

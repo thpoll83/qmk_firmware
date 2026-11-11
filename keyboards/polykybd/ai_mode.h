@@ -4,10 +4,13 @@
 // AI mode: the number row 1..9,0 and ESC show the host's agent registry
 // (PolyKybdHost docs/agent-registry-plan.md). PROTOTYPE.
 //
-// - KC_AI (bound in no keymap) enters the mode on its press. Held longer than the
-//   tapping term, the mode ends on its release. Tapped, the mode stays on until a
-//   number key, another KC_AI press, any other key press (swallowed), or
-//   AI_MODE_LATCH_TIMEOUT_MS without a key press.
+// - KC_AI (bound in no keymap) is a tap-hold key. TAPPED, it is a one-shot Hyper: the
+//   next key gets Ctrl+Shift+Alt+GUI, for global shortcuts; a tap never shows the
+//   cards. HELD past the tapping term, or with another key pressed while it is down,
+//   it turns the mode on. Released after a key was pressed in the mode, the mode
+//   ends; released with nothing pressed (a long press), the mode stays on until a
+//   number key, '-', '+', any other key or AI_MODE_LATCH_TIMEOUT_MS, so the same hand
+//   can reach 6..0 (the AI key is on the right half).
 // - In the mode, a number key press is an event for the host (key 0..9) and ends the
 //   mode; ESC is the pager (key 10) and does not. Every press and release is swallowed,
 //   except the release of a key that was already down when the mode started, and the
@@ -23,7 +26,7 @@
 #include "action.h"   // keyrecord_t
 
 // PROTOTYPE value, to be decided by the maintainer (agent-registry-plan.md, open
-// question 1): a tapped AI key leaves the mode after this long without a key press.
+// question 1): after a long press, the mode ends after this long without a key press.
 #define AI_MODE_LATCH_TIMEOUT_MS 10000u
 
 // True while AI mode owns the number row and ESC (both halves; the synced flag).

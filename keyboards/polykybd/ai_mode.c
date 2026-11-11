@@ -58,6 +58,8 @@ static uint8_t  s_ai_row;
 static uint8_t  s_ai_col;
 static uint16_t s_ai_t;
 static bool     s_ai_entered;   // this press turned the mode on (a toggle-off press did not)
+static bool     s_ai_pending;   // down, not yet a hold: a release now is a tap (Hyper)
+static bool     s_ai_used;      // a key was pressed in the mode while the AI key was held
 static uint32_t s_last_input;   // for AI_MODE_LATCH_TIMEOUT_MS
 // Keys already down when the mode started: their releases are not ours.
 static matrix_row_t s_held_at_start[MATRIX_ROWS];
@@ -146,19 +148,35 @@ bool ai_process_record(uint16_t keycode, keyrecord_t *record) {
         return ai_mode_active();
     }
 
-    // The AI key's own release: the end of a hold, or the start of the latch.
+    // The AI key's own release: a tap is a one-shot Hyper (the next key gets
+    // Ctrl+Shift+Alt+GUI); the end of a hold ends the mode.
     if (!pressed && s_ai_down && row == s_ai_row && col == s_ai_col) {
         s_ai_down = false;
         rc_clear(s_swallowed, row, col);
-        if (ai_mode_active() && s_ai_entered) {
-            if (timer_elapsed(s_ai_t) > get_poly_tapping_term()) {
+        if (s_ai_pending) {
+            s_ai_pending = false;
+#ifndef NO_ACTION_ONESHOT
+            add_oneshot_mods(MOD_BIT(KC_LCTL) | MOD_BIT(KC_LSFT) | MOD_BIT(KC_LALT) | MOD_BIT(KC_LGUI));
+#endif
+        } else if (ai_mode_active() && s_ai_entered) {
+            if (s_ai_used) {
                 ai_leave("hold");
             } else {
-                s_last_input = timer_read32();   // latched: the timeout starts now
+                // A long press released with nothing pressed: the mode stays on, so
+                // the same hand can reach 6..0 (the AI key is on the right half).
+                s_last_input = timer_read32();
             }
         }
         return true;
     }
+    // Another key while the AI key is down but not yet a hold: that makes it a hold
+    // now, and this press is handled in the mode.
+    if (pressed && s_ai_down && s_ai_pending) {
+        s_ai_pending = false;
+        s_ai_entered = true;
+        ai_enter();
+    }
+    if (pressed && s_ai_down && !(row == s_ai_row && col == s_ai_col)) s_ai_used = true;
     // A release whose press the mode swallowed.
     if (!pressed && rc_test(s_swallowed, row, col)) {
         rc_clear(s_swallowed, row, col);
@@ -170,12 +188,16 @@ bool ai_process_record(uint16_t keycode, keyrecord_t *record) {
             // Wake the board as any key does. A dead wake press (displays off,
             // DEAD_KEY_ON_WAKEUP) is only a wake.
             if (!display_wakeup(record)) return true;
+            // Not in the mode yet: held past the tapping term (ai_mode_tick) or with
+            // another key pressed it is a hold; released before, a tap (Hyper). So a
+            // tap never flashes the cards.
             s_ai_down    = true;
             s_ai_row     = row;
             s_ai_col     = col;
             s_ai_t       = timer_read();
-            s_ai_entered = true;
-            ai_enter();
+            s_ai_entered = false;
+            s_ai_pending = true;
+            s_ai_used    = false;
             return true;
         }
         return false;
@@ -234,6 +256,12 @@ bool ai_process_record(uint16_t keycode, keyrecord_t *record) {
 }
 
 void ai_mode_tick(void) {
+    if (s_ai_down && s_ai_pending && timer_elapsed(s_ai_t) > get_poly_tapping_term()) {
+        s_ai_pending = false;     // held: the mode is on while the key stays down
+        s_ai_entered = true;
+        ai_enter();
+        return;
+    }
     if (!ai_mode_active() || s_ai_down) return;
     if (timer_elapsed32(s_last_input) > AI_MODE_LATCH_TIMEOUT_MS) ai_leave("timeout");
 }

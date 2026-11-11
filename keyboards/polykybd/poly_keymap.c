@@ -4451,6 +4451,13 @@ bool poly_slot_visible(uint8_t slot) {
 bool poly_focus_draw_legend(uint8_t slot) {
     uint8_t r, c;
     if (!tutorial_matrix_of(slot, &r, &c)) return false;
+    // The firmware prompt owns every panel: a ripple still running when it opened
+    // repaints the prompt's state (one key or dark), as update_displays() does.
+    if (get_local_state()->fw_confirm) {
+        if (r == FW_CONFIRM_ROW && c == FW_CONFIRM_COL) render_fw_confirm_key(is_left_side());
+        else kdisp_set_buffer(0x00);
+        return true;
+    }
     // An agent card (AI mode) under the ripple, not the key's ordinary legend.
     if (ai_render_key(r, c)) return true;
     if (!tutorial_key_visible(r, c)) return false;

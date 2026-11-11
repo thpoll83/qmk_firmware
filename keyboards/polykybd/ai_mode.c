@@ -563,7 +563,7 @@ void ai_attention_tick(void) {
     static bool     s_started;
     static uint8_t  s_next;
     const poly_sync_t *s = get_local_state();
-    if (tutorial_active() || !poly_render_live() || poly_focus_active()) return;
+    if (tutorial_active() || !poly_render_live() || poly_focus_active() || s->fw_confirm) return;
     if (key_attention_pending()) return;   // a host request (cmd 47) has the ring
     if (s_started && timer_elapsed32(s_last) < AI_ATTENTION_PERIOD_MS) return;
     for (uint8_t k = 0; k < AI_NUM_KEYS; ++k) {

@@ -78,7 +78,8 @@ void key_attention_tick(void) {
         s_restart   = s_slot != TUT_SLOT_NONE;
     }
     if (!key_attention_pending()) return;
-    if (tutorial_active() || !poly_render_live()) return;
+    // Deferred, not dropped, while the firmware prompt owns the displays.
+    if (tutorial_active() || !poly_render_live() || s->fw_confirm) return;
     // A START replaces whatever ripple runs now (poly_focus_start keeps the panels the
     // old one still owes a restore); otherwise wait for the running one to finish.
     if (poly_focus_active() && !s_restart) return;

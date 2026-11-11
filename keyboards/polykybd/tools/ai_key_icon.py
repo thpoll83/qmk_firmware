@@ -54,16 +54,17 @@ def _star(cx, cy, r):
 
 TAG_SCALE = 0.6   # for a font-drawn word only: 0.5 = HINT_SMALL, larger = the face scaled
 # The tag is a drawn "AI": the A leans on the I, its right stroke parallel to the I.
-# (I bar x, top row, stroke px, gap A->I, A width, crossbar top row, crossbar rows) on a
-# 26x18 grid, 8x supersampled.
-LEAN = (20, 5, 2.0, 2, 12, 12, 2)   # 13 px tall, the A at 45 degrees
+# (I bar x, top row, stroke px, gap A->I, A width, crossbar top row, crossbar rows, left
+# stroke shift in px) on a 26x18 grid, 8x supersampled.
+LEAN = (20, 5, 2.0, 2, 12, 12, 2, -1)   # 13 px tall, the A at 45 degrees
 
 
 def _lean_ai(spec=None):
     spec = LEAN if spec is None else spec   # read at call time, so a caller can set LEAN
     from PIL import Image, ImageDraw
     ss, w, h = 8, 26, 18
-    ix, top, t, gap, a_w, bar_y, bar_h = spec
+    ix, top, t, gap, a_w, bar_y, bar_h = spec[:7]
+    shift = spec[7] if len(spec) > 7 else 0
     im = Image.new('L', (w * ss, h * ss), 0)
     d = ImageDraw.Draw(im)
     b = h - 1
@@ -73,11 +74,11 @@ def _lean_ai(spec=None):
     rect(ix, top, ix + t, b + 1)                          # I
     apx, apy = ix - gap, top + 0.5
     lfx = apx - a_w
-    line(lfx, b + 0.5, apx, apy, t)                       # A, left stroke
+    line(lfx + shift, b + 0.5, apx + shift, apy, t)       # A, left stroke
     rect(apx - t, apy - 0.5, apx, b + 1)                  # A, right stroke, parallel to the I
     # Crossbar: whole rows, from the left stroke's centre to the right stroke.
     yc = bar_y + bar_h / 2
-    rect(lfx + (apx - lfx) * (b + 0.5 - yc) / (b + 0.5 - apy), bar_y, apx - t, bar_y + bar_h)
+    rect(lfx + shift + (apx - lfx) * (b + 0.5 - yc) / (b + 0.5 - apy), bar_y, apx - t, bar_y + bar_h)
     ink = set()
     for y in range(h):
         for x in range(w):

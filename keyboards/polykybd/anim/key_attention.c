@@ -78,6 +78,7 @@ void key_attention_tick(void) {
         s_period_ms = (uint16_t)(s->attn_period * 100u);
         s_next      = timer_read32();
         s_restart   = s_slot != TUT_SLOT_NONE;
+        s_ours      = false;   // a running ripple belongs to the old request
     }
     // The firmware prompt owns every panel: stop any ripple still crossing it (this
     // half's own, from cmd 47, an agent or the tutorial) and redraw the prompt whole.

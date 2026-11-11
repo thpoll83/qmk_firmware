@@ -11,6 +11,11 @@
 //   ends; released with nothing pressed (a long press), the mode stays on until a
 //   number key, '-', '+', any other key or AI_MODE_LATCH_TIMEOUT_MS, so the same hand
 //   can reach 6..0 (the AI key is on the right half).
+// - Outside the mode, a number key whose agent WAITS (red) is a tap-hold key: held
+//   past the tapping term it raises that agent, as AI key + number would; tapped, or
+//   with another key pressed meanwhile, it types its digit (the press is replayed
+//   through process_record(), so a language layer's keycode works). Keys of agents
+//   that do not wait are never held back.
 // - In the mode, a number key press is an event for the host (key 0..9) and ends the
 //   mode; ESC is the pager (key 10) and does not. Every press and release is swallowed,
 //   except the release of a key that was already down when the mode started, and the

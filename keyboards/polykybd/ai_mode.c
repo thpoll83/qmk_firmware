@@ -57,6 +57,14 @@ static bool     s_ai_down;
 static uint8_t  s_ai_row;
 static uint8_t  s_ai_col;
 static uint16_t s_ai_t;
+// A number key pressed outside the mode while its agent WAITS: held past the tapping
+// term it raises that agent (as AI key + number); a tap types the digit. The press
+// is held back until that is decided, then replayed through process_record().
+static bool        s_num_pending;
+static uint8_t     s_num_key;
+static keyrecord_t s_num_rec;
+static bool        s_replaying;
+static uint16_t    s_num_t;
 static bool     s_ai_entered;   // this press turned the mode on (a toggle-off press did not)
 static uint32_t s_keys_set_at;  // the last SET_KEYS (AI_KEYS_HOST_TIMEOUT_MS)
 static bool     s_ai_pending;   // down, not yet a hold: a release now is a tap (a Hyper tap)
@@ -140,6 +148,7 @@ void ai_reset_keys(const char *why) {
     ls->ai_flags = 0;
     if (ls->ai_mode) ai_leave(why);
     s_ai_down = s_ai_pending = false;
+    s_num_pending = false;
     request_disp_refresh();
     uprintf("ai: keys cleared (%s)\n", why);
 }
@@ -155,10 +164,28 @@ static bool is_layer_key(uint16_t kc) {
            IS_QK_LAYER_TAP_TOGGLE(kc) || IS_QK_TO(kc) || IS_QK_TOGGLE_LAYER(kc);
 }
 
+// The held-back number press goes through the whole pipeline now (process_record_user
+// included, so a language layer's digit keycode works), and its real release later.
+static void num_replay_press(void) {
+    s_num_pending = false;
+    keyrecord_t rec = s_num_rec;
+    s_replaying = true;
+    process_record(&rec);
+    s_replaying = false;
+}
+
 bool ai_process_record(uint16_t keycode, keyrecord_t *record) {
     const uint8_t row     = record->event.key.row;
     const uint8_t col     = record->event.key.col;
     const bool    pressed = record->event.pressed;
+    if (s_replaying) return false;
+    if (s_num_pending) {
+        if (!pressed && row == s_num_rec.event.key.row && col == s_num_rec.event.key.col) {
+            num_replay_press();   // released before the tapping term: a tap
+            return false;         // and this release follows it normally
+        }
+        if (pressed) num_replay_press();   // another key: the digit first, in order
+    }
     if (row >= MATRIX_ROWS || col >= MATRIX_COLS) {
         // Not a matrix key (an encoder step): swallowed while the mode is on.
         return ai_mode_active();
@@ -202,6 +229,16 @@ bool ai_process_record(uint16_t keycode, keyrecord_t *record) {
     }
 
     if (!ai_mode_active()) {
+        if (pressed && is_keyboard_master()) {
+            const uint8_t key = ai_key_at(row, col);
+            if (key < AI_NUM_KEYS && get_local_state()->ai_state[key] == AI_STATE_WAITING) {
+                s_num_pending       = true;
+                s_num_key           = key;
+                s_num_rec           = *record;
+                s_num_t             = timer_read();
+                return true;      // decided in ai_mode_tick or by the next event
+            }
+        }
         if (pressed && keycode == KC_AI) {
             // Wake the board as any key does. A dead wake press (displays off,
             // DEAD_KEY_ON_WAKEUP) is only a wake.
@@ -274,6 +311,14 @@ bool ai_process_record(uint16_t keycode, keyrecord_t *record) {
 }
 
 void ai_mode_tick(void) {
+    if (s_num_pending && timer_elapsed(s_num_t) > get_poly_tapping_term()) {
+        // Held: raise the waiting agent, as AI key + this number would. Its release
+        // is swallowed; no digit is typed.
+        s_num_pending = false;
+        rc_set(s_swallowed, s_num_rec.event.key.row, s_num_rec.event.key.col);
+        ai_record(s_num_key);
+        uprintf("ai: hold on key %u\n", (unsigned)s_num_key);
+    }
     if (s_ai_down && s_ai_pending && timer_elapsed(s_ai_t) > get_poly_tapping_term()) {
         s_ai_pending = false;     // held: the mode is on while the key stays down
         s_ai_entered = true;

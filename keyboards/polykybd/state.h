@@ -188,11 +188,13 @@ typedef struct _poly_sync_t {
     // fail in. Master-authoritative, RAM-only, never persisted: a reboot is a
     // fresh decision.
     uint32_t doom_pack_auth_crc;
-    // QMK's midi_config_t.raw (octave, transpose, velocity, channel, modulation
-    // interval) as the master last saw it, 0 on a build without MIDI. Only the master
-    // runs process_midi, so this is how the slave's note and setting keycaps learn the
-    // live values; a change is a state diff and redraws both halves. A 4-byte member,
-    // so it sits with the other two to keep the struct padding-free.
+    // QMK's MIDI settings as the master last saw them, packed by midi_cfg_pack()
+    // (midi_legend.h: octave index, transpose, velocity, channel, one byte each),
+    // 0 on a build without MIDI. Only the master runs process_midi, so this is how
+    // the slave's note and setting keycaps learn the live values; a change is a state
+    // diff and redraws both halves. Packed by hand rather than copying midi_config_t's
+    // bitfield union, whose layout is the compiler's choice. A 4-byte member, so it
+    // sits with the other two to keep the struct padding-free.
     uint32_t midi_cfg;
     // Emoji search mode (emoji_layer.h): the typed query as BMP codepoints, and
     // {flags (bit 0 search mode), result page, query length, reserved}. Synced so

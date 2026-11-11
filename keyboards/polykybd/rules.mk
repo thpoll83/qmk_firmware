@@ -312,6 +312,9 @@ MIDI_ENABLE = no
 ifeq ($(strip $(POLYKYBD_MIDI)), yes)
     ifneq ($(strip $(POLYKYBD_DOOM)):$(strip $(POLYKYBD_DOOM_PACK)), yes:)
         MIDI_ENABLE = yes
+        # The legends read the synced settings; a build without MIDI draws the
+        # keycodes as plain QMK names would (nothing), and saves the buffer.
+        SRC += midi_legend.c
     endif
 endif
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)

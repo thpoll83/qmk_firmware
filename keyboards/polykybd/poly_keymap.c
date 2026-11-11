@@ -62,6 +62,7 @@
 #include "base/text_helper.h"
 #include "base/fonts/gfx_used_fonts.h"
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
+#include "midi_legend.h"                 // QK_MIDI_* legends from the synced MIDI settings
 #include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
 #include "base/ime_key_plan.h"           // what KC_IME sends, per language and OS
 #include "base/ime_held_slots.h"         // which KC_IME key holds which usage
@@ -902,7 +903,8 @@ void sync_and_refresh_displays(void) {
         }
         access_local_state()->lang_page    = lang_pack_state();
 #ifdef MIDI_ENABLE
-        access_local_state()->midi_cfg     = midi_config.raw;
+        access_local_state()->midi_cfg     = midi_cfg_pack(midi_config.octave, midi_config.transpose,
+                                                           midi_config.velocity, midi_config.channel);
 #endif
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
@@ -2174,6 +2176,14 @@ const uint32_t* to_static_text(uint16_t keycode, led_t state) {
 
     const uint32_t *emj = emj_display_text(keycode);
     if (emj != NULL) return emj;
+
+    // MIDI keys show live values (the note an octave change moves, the current
+    // velocity), so they read the SYNCED settings, like KC_GLYPH_SIZE_UP below:
+    // only the master runs process_midi, and the slave knows them from poly_sync_t.
+#ifdef MIDI_ENABLE
+    const uint32_t *midi = midi_legend(keycode, get_local_state()->midi_cfg);
+    if (midi != NULL) return midi;
+#endif
 
     const uint32_t *lng = lang_display_text(keycode);
     if (lng != NULL) return lng;

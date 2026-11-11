@@ -128,6 +128,21 @@ static void ai_leave(const char *why) {
     uprintf("ai: off (%s)\n", why);
 }
 
+void ai_reset_keys(const char *why) {
+    if (!is_keyboard_master()) return;   // the slave takes the master's state
+    poly_sync_t *ls = access_local_state();
+    bool any = ls->ai_flags != 0;
+    for (uint8_t i = 0; i < AI_NUM_KEYS; ++i) any |= ls->ai_state[i] != 0;
+    if (!any && !ls->ai_mode) return;    // suspend calls this every ~17 ms
+    memset(ls->ai_state, 0, sizeof(ls->ai_state));
+    for (uint8_t i = 0; i < AI_NUM_CARDS; ++i) ls->ai_slot[i] = AI_SLOT_NONE;
+    ls->ai_flags = 0;
+    if (ls->ai_mode) ai_leave(why);
+    s_ai_down = s_ai_pending = false;
+    request_disp_refresh();
+    uprintf("ai: keys cleared (%s)\n", why);
+}
+
 static void ai_record(uint8_t key) {
     const uint8_t seq = ai_ring_push(&s_ring, key);
     poly_state_touch();   // the GET_ID 'G' counter: the host reads op 2 when it moves
@@ -410,12 +425,17 @@ void ai_hid_cmd(uint8_t *data, uint8_t length) {
         uint8_t  flags;
         uint16_t slot[AI_NUM_CARDS];
         ai_set_keys_decode(&data[3], state, &flags, slot);
+        // The host sends the keys on every pass (so a keyboard that cleared them, at
+        // USB suspend, gets them back): redraw only on a change.
+        const bool changed = memcmp(ls->ai_state, state, sizeof(state)) != 0
+                          || memcmp(ls->ai_slot, slot, sizeof(slot)) != 0
+                          || ls->ai_flags != flags;
         memcpy(ls->ai_state, state, sizeof(state));
         memcpy(ls->ai_slot, slot, sizeof(slot));
         ls->ai_flags = flags;
         // The housekeeping state diff sends it to the slave; that also redraws the
         // slave's keys (user_sync_poly_data_handler).
-        if (ls->ai_mode) request_disp_refresh();
+        if (changed && ls->ai_mode) request_disp_refresh();
         memset(data, 0, length);
         data[0] = 'P';
         data[1] = AI_CMD;

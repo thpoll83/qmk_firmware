@@ -8101,6 +8101,8 @@ void suspend_power_down_kb(void) {
     if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
         return;
     }
+    // The host that set the agent keys is asleep or gone: no stale lights on wake.
+    ai_reset_keys("usb suspend");
     poly_suspend();
     // After poly_suspend() stopped Eden: no new jobs reach core1, so what it still owes
     // either finishes within a few ms or is a stall (multicore_exec.h).

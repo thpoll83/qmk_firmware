@@ -58,4 +58,8 @@ void ai_attention_tick(void);
 
 // HID cmd 45 (AI) and cmd 46 (AI_CARD), protocol v31. Both reply into `data`.
 void ai_hid_cmd(uint8_t *data, uint8_t length);
+// Clears the agent states, cards and flags and leaves the mode (master only; a no-op
+// when there is nothing to clear). Called at USB suspend: the host that set them is
+// gone or asleep, and it sends them again on its next pass.
+void ai_reset_keys(const char *why);
 void ai_hid_card(uint8_t *data, uint8_t length);

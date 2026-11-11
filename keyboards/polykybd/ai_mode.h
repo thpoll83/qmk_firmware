@@ -4,9 +4,9 @@
 // AI mode: the number row 1..9,0 and ESC show the host's agent registry
 // (PolyKybdHost docs/agent-registry-plan.md). PROTOTYPE.
 //
-// - KC_AI (bound in no keymap) is a tap-hold key. TAPPED, it is a one-shot Hyper: the
-//   next key gets Ctrl+Shift+Alt+GUI, for global shortcuts; a tap never shows the
-//   cards. HELD past the tapping term, or with another key pressed while it is down,
+// - KC_AI (bound in no keymap) is a tap-hold key. TAPPED, it sends a Hyper tap
+//   (Ctrl+Shift+Alt+GUI pressed and released), as KC_HYPR does when tapped; on
+//   Windows that opens Copilot. A tap never shows the cards. HELD past the tapping term, or with another key pressed while it is down,
 //   it turns the mode on. Released after a key was pressed in the mode, the mode
 //   ends; released with nothing pressed (a long press), the mode stays on until a
 //   number key, '-', '+', any other key or AI_MODE_LATCH_TIMEOUT_MS, so the same hand

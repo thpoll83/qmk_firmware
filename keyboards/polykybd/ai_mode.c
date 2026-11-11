@@ -58,7 +58,7 @@ static uint8_t  s_ai_row;
 static uint8_t  s_ai_col;
 static uint16_t s_ai_t;
 static bool     s_ai_entered;   // this press turned the mode on (a toggle-off press did not)
-static bool     s_ai_pending;   // down, not yet a hold: a release now is a tap (Hyper)
+static bool     s_ai_pending;   // down, not yet a hold: a release now is a tap (a Hyper tap)
 static bool     s_ai_used;      // a key was pressed in the mode while the AI key was held
 static uint32_t s_last_input;   // for AI_MODE_LATCH_TIMEOUT_MS
 // Keys already down when the mode started: their releases are not ours.
@@ -148,16 +148,18 @@ bool ai_process_record(uint16_t keycode, keyrecord_t *record) {
         return ai_mode_active();
     }
 
-    // The AI key's own release: a tap is a one-shot Hyper (the next key gets
-    // Ctrl+Shift+Alt+GUI); the end of a hold ends the mode.
+    // The AI key's own release: a tap sends a Hyper tap (Ctrl+Shift+Alt+GUI
+    // pressed and released), as the plain KC_HYPR key did; on Windows that opens
+    // Copilot. The end of a hold ends the mode.
     if (!pressed && s_ai_down && row == s_ai_row && col == s_ai_col) {
         s_ai_down = false;
         rc_clear(s_swallowed, row, col);
         if (s_ai_pending) {
             s_ai_pending = false;
-#ifndef NO_ACTION_ONESHOT
-            add_oneshot_mods(MOD_BIT(KC_LCTL) | MOD_BIT(KC_LSFT) | MOD_BIT(KC_LALT) | MOD_BIT(KC_LGUI));
-#endif
+            const uint8_t hyper = MOD_BIT(KC_LCTL) | MOD_BIT(KC_LSFT) | MOD_BIT(KC_LALT) | MOD_BIT(KC_LGUI);
+            register_mods(hyper);      // sends the report: the PC sees Hyper down
+            wait_ms(TAP_CODE_DELAY);
+            unregister_mods(hyper);    // and up, with no key between
         } else if (ai_mode_active() && s_ai_entered) {
             if (s_ai_used) {
                 ai_leave("hold");

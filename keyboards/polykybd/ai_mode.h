@@ -28,6 +28,10 @@
 // PROTOTYPE value, to be decided by the maintainer (agent-registry-plan.md, open
 // question 1): after a long press, the mode ends after this long without a key press.
 #define AI_MODE_LATCH_TIMEOUT_MS 10000u
+// The host sends the agent keys every second. With no SET_KEYS for this long (the
+// host process was killed, the PC stays awake) the keys are cleared, so no light
+// stays on that nothing updates.
+#define AI_KEYS_HOST_TIMEOUT_MS 30000u
 
 // True while AI mode owns the number row and ESC (both halves; the synced flag).
 bool ai_mode_active(void);

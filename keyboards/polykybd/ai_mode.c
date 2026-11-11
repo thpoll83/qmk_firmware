@@ -58,6 +58,7 @@ static uint8_t  s_ai_row;
 static uint8_t  s_ai_col;
 static uint16_t s_ai_t;
 static bool     s_ai_entered;   // this press turned the mode on (a toggle-off press did not)
+static uint32_t s_keys_set_at;  // the last SET_KEYS (AI_KEYS_HOST_TIMEOUT_MS)
 static bool     s_ai_pending;   // down, not yet a hold: a release now is a tap (a Hyper tap)
 static bool     s_ai_used;      // a key was pressed in the mode while the AI key was held
 static uint32_t s_last_input;   // for AI_MODE_LATCH_TIMEOUT_MS
@@ -279,6 +280,10 @@ void ai_mode_tick(void) {
         ai_enter();
         return;
     }
+    if (timer_elapsed32(s_keys_set_at) > AI_KEYS_HOST_TIMEOUT_MS) {
+        ai_reset_keys("no host update");   // a no-op when nothing is set
+        s_keys_set_at = timer_read32();    // and checked again only every 30 s
+    }
     if (!ai_mode_active() || s_ai_down) return;
     if (timer_elapsed32(s_last_input) > AI_MODE_LATCH_TIMEOUT_MS) ai_leave("timeout");
 }
@@ -433,6 +438,7 @@ void ai_hid_cmd(uint8_t *data, uint8_t length) {
         memcpy(ls->ai_state, state, sizeof(state));
         memcpy(ls->ai_slot, slot, sizeof(slot));
         ls->ai_flags = flags;
+        s_keys_set_at = timer_read32();
         // The housekeeping state diff sends it to the slave; that also redraws the
         // slave's keys (user_sync_poly_data_handler).
         if (changed && ls->ai_mode) request_disp_refresh();

@@ -428,6 +428,11 @@ reading before you change either one.
       NACKs and changes nothing. ACK has no data. A number key draws its card only
       when its state is not empty, and `-`/`+` only with flag bit 3, because the
       zeroed slots read as the valid pool slot 0 until the host has sent op 1.
+      The host sends op 1 every second, changed or not. The master clears the
+      states, flags and slots (and leaves AI mode) at USB suspend and after
+      `AI_KEYS_HOST_TIMEOUT_MS` (30 s) without an op 1, so a host that quit, slept or
+      was killed leaves no lit key. A host that sends op 1 only on a change sees its
+      keys cleared after 30 s.
     - `2` READ_EVENTS. `data[3]` the last seq the host has seen (0 = none). Reply
       `data[3]` newest seq, `data[4]` count n (0..8), then n pairs `data[5+2i]` seq,
       `data[6+2i]` key, oldest first, only the events after the host's seq in ring

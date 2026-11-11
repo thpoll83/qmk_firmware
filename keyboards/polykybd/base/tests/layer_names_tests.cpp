@@ -75,11 +75,12 @@ TEST(LayerNamesPayloadTest, EveryLayerDecodesToItsWireName) {
 
 TEST(LayerNamesPayloadTest, TheBaseLayoutAndFixedLayersAreNamed) {
     // A literal spot check so a table swap cannot slip past the self-referential
-    // comparison above: layer 0 is the Qwerty base and the write cap's last
-    // layer is the utility layer.
+    // comparison above: layer 0 is the Qwerty base, the utility layer comes
+    // before the write cap's last layer, and that last layer is MIDI.
     auto names = decode(build());
     EXPECT_EQ(names.front(), "Qwerty");
-    EXPECT_EQ(names.back(), "Utility");
+    EXPECT_EQ(names[names.size() - 2], "Utility");
+    EXPECT_EQ(names.back(), "MIDI");
 }
 
 TEST(LayerNamesPayloadTest, NoNameNeedsMoreThanTheBudget) {

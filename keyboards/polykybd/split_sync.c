@@ -377,9 +377,9 @@ void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column,
 // shape this codebase keeps getting caught by.
 //
 // ⚠️ This deliberately does NOT call QMK's dynamic_keymap_reset(). That one loops to
-// DYNAMIC_KEYMAP_LAYER_COUNT (12) and writes through nvm_dynamic_keymap_update_keycode(),
-// whose bound check is the same 12 — so with the encoder/macro regions rebased on the
-// 8-layer offset (config.h) it writes layers 8..11 straight over them. Walking the write
+// DYNAMIC_KEYMAP_LAYER_COUNT (13) and writes through nvm_dynamic_keymap_update_keycode(),
+// whose bound check is the same 13 — so with the encoder/macro regions rebased on the
+// 9-layer offset (config.h) it writes layers 9..12 straight over them. Walking the write
 // cap instead is also what the reclaim is FOR: those four layers are served from flash
 // by poly_keycode_at(), so storing them was only ever paying rent on unread bytes.
 //

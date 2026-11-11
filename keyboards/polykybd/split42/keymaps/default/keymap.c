@@ -153,7 +153,20 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // under it. TO(_SL) keeps the last slot of the row it has always had.
         KC_MRWD, KC_MUTE, KC_VOLD, KC_VOLU, KC_MFFD, TO(_SL),
         KC_MPRV, KC_MPLY, KC_GLYPH_SIZE_UP, KC_MSTP, KC_MNXT, KC_RSFT,
-        KC_DAUTO,KC_NO,   KC_BASE
+        KC_DAUTO,TO(_ML), KC_BASE
+    ),
+    /* MIDI layer -- see the note on split72's _ML. The same DAW piano (C4..F5, black
+       keys above, blank where a piano has none); the Corne has no number row, so the
+       pedals move to the thumbs and Tab takes Sostenuto. KC_BASE leaves the layer. */
+    [_ML] = POLY_LAYOUT(
+        MI_SOST, KC_NO,   MI_Cs,   MI_Ds,   KC_NO,   MI_Fs,
+        KC_BASE, MI_C,    MI_D,    MI_E,    MI_F,    MI_G,
+        MI_AOFF, MI_OCTD, MI_OCTU, MI_VELD, MI_VELU, MI_TRSD,
+        MI_MOD,  MI_SOFT, MI_SUST,
+        MI_Gs,   MI_As,   KC_NO,   MI_Cs1,  MI_Ds1,  MI_AOFF,
+        MI_A,    MI_B,    MI_C1,   MI_D1,   MI_E1,   MI_F1,
+        MI_TRSU, MI_BNDD, MI_BNDU, MI_CHND, MI_CHNU, KC_BASE,
+        MI_SUST, MI_SOST, MI_LEG
     ),
     /* Settings layer */
     [_SL] = POLY_LAYOUT(
@@ -243,18 +256,19 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 
 const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
-    [0]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [1]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [2]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [3]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [4]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [5]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [6]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [7]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [8]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [9]  = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [10] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
-    [11] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_L0]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_L1]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_L2]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_L3]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_L4]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_FL]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_NL]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_UL]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_ML]       = { ENCODER_CCW_CW(MI_VELD, MI_VELU) },   // the knob sets the velocity
+    [_SL]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_LL]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_ADDLANG1] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
+    [_EMJ]      = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU) },
 };
 
 

@@ -12,6 +12,7 @@ enum kb_layers {
     _FL,
     _NL,
     _UL,
+    _ML,      // MIDI: the last stored layer, so the host can remap it
     _SL,
     _LL,
     _ADDLANG1,

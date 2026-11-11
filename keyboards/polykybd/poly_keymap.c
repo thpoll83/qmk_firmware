@@ -901,6 +901,9 @@ void sync_and_refresh_displays(void) {
             emj_search_export(&ls->emj_search[0], &ls->emj_search[1], &ls->emj_search[2], ls->emj_query);
         }
         access_local_state()->lang_page    = lang_pack_state();
+#ifdef MIDI_ENABLE
+        access_local_state()->midi_cfg     = midi_config.raw;
+#endif
         state_diff = differ(get_local_state(), get_global_state(), sizeof(poly_sync_t));
         if ( state_diff ) {
             // Periodic syncs use a SMALL retry count (PERIODIC_SYNC_RETRIES, was
@@ -7478,6 +7481,12 @@ static void boot_trace(const uint32_t* digit) {
 // Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
 // Global variables: com
 void keyboard_post_init_user(void) {
+#ifdef MIDI_ENABLE
+    // QMK starts at octave index 4 (OCTAVE_2), where MI_C plays MIDI note 48, C3. One
+    // index higher puts MI_C on middle C (60, C4), which is what the MIDI layer's home
+    // row is drawn as. setup_midi() already ran from protocol_pre_init().
+    midi_config.octave = QK_MIDI_OCTAVE_3 - MIDI_OCTAVE_MIN;
+#endif
     // (The previous run's crash record was captured and archived at the top of
     // keyboard_pre_init_user(); the boot banner reports it.)
     // Put the EEPROM handedness byte back when the flash stamp outvoted it.
@@ -7969,16 +7978,16 @@ void keyboard_pre_init_user(void) {
 //
 // That call is the ONE remaining reachable use of the unbounded reset, and with the
 // encoder/macro regions rebased on DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT (config.h) it
-// writes layers 8..11 straight over both of them. It cannot be prevented from here --
+// writes layers 9..12 straight over both of them. It cannot be prevented from here --
 // eeconfig.c is upstream and we deliberately do not patch it for this -- but it CAN be
 // repaired, because eeconfig_init_quantum() calls us three lines later, unconditionally,
-// in the same function. dynamic_keymap_reset_poly() rewrites layers 0..7 and the capped
+// in the same function. dynamic_keymap_reset_poly() rewrites layers 0..8 and the capped
 // encoder map from flash and zeroes the macro buffer, which is exactly the state a fresh
 // EEPROM should be in, so this is the normal initialisation rather than a fix-up that
 // happens to also repair.
 //
 // Nearly free despite running second: eeprom_update_byte() only writes a byte that
-// actually changed, and QMK's pass has already put the correct values in layers 0..7.
+// actually changed, and QMK's pass has already put the correct values in layers 0..8.
 void eeconfig_init_kb(void) {
     // Replicate what the weak default does before adding the repair -- overriding it
     // replaces the whole body, and dropping either half here would be silent

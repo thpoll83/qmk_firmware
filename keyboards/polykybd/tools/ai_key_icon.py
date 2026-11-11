@@ -111,8 +111,8 @@ def _tag(word=None, scale=None):
                 cells = [(x0 + sx, y0 + sy) for sx in range(sx0, sx1) for sy in range(sy0, sy1)]
                 if sum(c in full for c in cells) * 2 >= len(cells):
                     ink.add((tx, ty))
-    dx = W - 2 - max(p[0] for p in ink)
-    dy = H - 2 - max(p[1] for p in ink)
+    dx = W - 1 - max(p[0] for p in ink)   # flush with the right edge
+    dy = H - 1 - max(p[1] for p in ink)   # and the bottom edge
     return {(x + dx, y + dy) for x, y in ink}
 
 

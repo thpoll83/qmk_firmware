@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """The AI key legend (ICON_AI_KEY, IconsFont U+100029): five sigmoid curves of
-different slope, a few tiny stars and dots, and "ai" small in the lower right.
+different slope, a few tiny stars and dots, and a small drawn "AI" in the lower
+right, the A leaning on the I with its right stroke parallel to it.
 
 One source for both outputs, so the bitmap and the preview cannot disagree:
 
@@ -9,7 +10,7 @@ One source for both outputs, so the bitmap and the preview cannot disagree:
 
 The glyph is the whole 72x40 keycap (xOffset 0, yOffset -23: the legend cursor is
 (BUFFER_X, 23) and IconsFont's yAdvance 40 is the baseline every font aligns to).
-The "ai" is the legend face scaled to TAG_SCALE (0.5 would be HINT_SMALL).
+Stars that would touch the "AI" are left out (art() raises on that; see SPARKS).
 """
 import argparse
 import math
@@ -51,13 +52,43 @@ def _star(cx, cy, r):
     return ink
 
 
-TAG_SCALE = 0.6   # 0.5 = the firmware's HINT_SMALL face; larger is the full face scaled
+TAG_SCALE = 0.6   # for a font-drawn word only: 0.5 = HINT_SMALL, larger = the face scaled
+# The tag is a drawn "AI": the A leans on the I, its right stroke parallel to the I.
+# (I bar x, top row, stroke px, gap A->I, A width) on a 26x18 grid, 8x supersampled.
+LEAN = (20, 7, 2.0, 1, 13)
 
 
-def _tag(word='ai', scale=None):
+def _lean_ai(spec=LEAN):
+    from PIL import Image, ImageDraw
+    ss, w, h = 8, 26, 18
+    ix, top, t, gap, a_w = spec
+    im = Image.new('L', (w * ss, h * ss), 0)
+    d = ImageDraw.Draw(im)
+    b = h - 1
+    rect = lambda x0, y0, x1, y1: d.rectangle([x0 * ss, y0 * ss, x1 * ss - 1, y1 * ss - 1], fill=255)
+    line = lambda x0, y0, x1, y1, th: d.line([(x0 * ss, y0 * ss), (x1 * ss, y1 * ss)],
+                                             fill=255, width=int(th * ss))
+    rect(ix, top, ix + t, b + 1)                          # I
+    apx, apy = ix - gap, top + 0.5
+    lfx = apx - a_w
+    line(lfx, b + 0.5, apx, apy, t)                       # A, left stroke
+    rect(apx - t, apy - 0.5, apx, b + 1)                  # A, right stroke, parallel to the I
+    yb = top + (b - top) * 0.62
+    line(lfx + (apx - lfx) * (b + 0.5 - yb) / (b + 0.5 - apy), yb, apx - t, yb, max(1, t * 0.7))
+    ink = set()
+    for y in range(h):
+        for x in range(w):
+            if sum(im.crop((x * ss, y * ss, x * ss + ss, y * ss + ss)).get_flattened_data()) >= 255 * ss * ss * 0.4:
+                ink.add((x, y))
+    return ink
+
+
+def _tag(word=None, scale=None):
     scale = TAG_SCALE if scale is None else scale
     ink, x = set(), 0
-    if scale == 0.5:
+    if word is None:
+        ink = _lean_ai()
+    elif scale == 0.5:
         for c in word:
             f, g = K.find(ord(c))
             ink |= K.small_ink(ord(c), x, 0)

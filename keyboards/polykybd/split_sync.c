@@ -21,7 +21,7 @@
 #include "keymap_introspection.h"   // keycode_at_keymap_location_raw() for the capped reset
 #include "poly_keymap.h"   // poly_fl_row_cache_invalidate()
 #include "poly_macro.h"
-#include "poly_combos.h"   // cmd 45 records bridged to this half (v31)
+#include "poly_combos.h"   // cmd 48 records bridged to this half (v33)
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/update.h"
@@ -133,8 +133,16 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
                               incoming->glyph_place != current->glyph_place;
     // A move in the idle-screen mine sweeper -> redraw this half's cells.
     bool mines_changed = memcmp(&incoming->mines, &current->mines, sizeof(incoming->mines)) != 0;
+    // AI mode turned on or off, or the cards, states or flags changed while it is on
+    // -> redraw the number row, ESC, '-' and '+' (ai_mode.h). An empty key draws no
+    // card and ESC shows "Next" only with more pages, so states and flags count too.
+    bool ai_changed = incoming->ai_mode != current->ai_mode ||
+                      (incoming->ai_mode &&
+                       (incoming->ai_flags != current->ai_flags ||
+                        memcmp(incoming->ai_state, current->ai_state, sizeof(incoming->ai_state)) != 0 ||
+                        memcmp(incoming->ai_slot, current->ai_slot, sizeof(incoming->ai_slot)) != 0));
     copy_local_state(incoming);
-    if (doom_ctl_changed || fw_confirm_changed || glyph_size_changed || mines_changed) {
+    if (doom_ctl_changed || fw_confirm_changed || glyph_size_changed || mines_changed || ai_changed) {
         request_disp_refresh();
     }
     // ⚠️ RECORD, never start, here. This handler runs on the slave's split-protocol
@@ -251,10 +259,17 @@ void user_sync_overlay_data_handler(uint8_t in_len, const void* in_data, uint8_t
     // HID path (hid_com.c case 10) bounds `segment` on the way in, so normal
     // traffic never carries an out-of-range value. (adj_idx is still bounded by
     // get_overlay()/FW-4.)
-    memcpy(get_overlay(ov->adj_idx) + ov->segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
-    if(ov->segment==NUM_SEGMENTS_PER_OVERLAY-1) {
-        mark_display_has_overlay_post_upload(ov->adj_idx);
-        request_disp_refresh();
+    // OVERLAY_SEG_RAW_SLOT (an AI card, cmd 46) writes the slot and marks nothing.
+    const bool    raw     = (ov->segment & OVERLAY_SEG_RAW_SLOT) != 0;
+    const uint8_t segment = (uint8_t)(ov->segment & (uint8_t)~OVERLAY_SEG_RAW_SLOT);
+    memcpy(get_overlay(ov->adj_idx) + segment*BYTES_PER_SEGMENT, ov->overlay, BYTES_PER_SEGMENT);
+    if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
+        if (!raw) {
+            mark_display_has_overlay_post_upload(ov->adj_idx);
+            request_disp_refresh();
+        } else if (get_local_state()->ai_mode) {
+            request_disp_refresh();
+        }
     }
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
 }

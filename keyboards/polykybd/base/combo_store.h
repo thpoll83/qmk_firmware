@@ -1,7 +1,7 @@
 // Copyright 2026 Thomas Pollak
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Runtime combos and tap dance (HID cmd 45, protocol v31): the record format, its
+// Runtime combos and tap dance (HID cmd 48, protocol v33): the record format, its
 // validation and the tap-dance decision. Header-only and pure (no QMK headers), so
 // it is unit-tested on the host (make test:polykybd_combo_store). The flash sector,
 // the RAM tables and the QMK hooks are in combo_store.c.
@@ -95,7 +95,7 @@ static inline bool poly_combo_words_zero(const uint16_t w[POLY_COMBO_REC_WORDS])
     return true;
 }
 
-// ---- Validation (both CLOSED: cmd 45 NACKs a record that fails) --------------
+// ---- Validation (both CLOSED: cmd 48 NACKs a record that fails) --------------
 
 // Number of trigger keys, or 0 when the record is empty or malformed.
 static inline uint8_t poly_combo_key_count(const poly_combo_rec_t *r) {

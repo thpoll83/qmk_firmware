@@ -1,7 +1,7 @@
 // Copyright 2026 Thomas Pollak
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Runtime combos and tap dance (HID cmd 45, protocol v31). The record format and
+// Runtime combos and tap dance (HID cmd 48, protocol v33). The record format and
 // the tap-dance decision are in base/combo_store.h; this file holds the flash
 // sector, the RAM tables QMK's engines read, and the copy to the other half.
 //
@@ -50,7 +50,7 @@
 
 // ---- RAM tables ---------------------------------------------------------------
 
-// The records as stored (all slots, empty ones included) -- what cmd 45 reads back.
+// The records as stored (all slots, empty ones included) -- what cmd 48 reads back.
 static poly_combo_store_t s_store;
 
 // What QMK's combo engine reads: the active combos only, compacted. A combo with an

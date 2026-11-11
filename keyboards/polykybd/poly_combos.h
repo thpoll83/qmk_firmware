@@ -1,7 +1,7 @@
 // Copyright 2026 Thomas Pollak
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Runtime combos and tap dance (HID cmd 45, protocol v31): the firmware side of the
+// Runtime combos and tap dance (HID cmd 48, protocol v33): the firmware side of the
 // store. The record format is base/combo_store.h; the implementation, the RAM cost
 // and the way to reduce it are described at the top of poly_combos.c.
 //
@@ -19,7 +19,7 @@
 // Loads the sector into RAM and builds QMK's tables. Call once at boot, on both halves.
 void poly_combos_init(void);
 
-// One record as cmd 45 sends it (POLY_COMBO_REC_BYTES, little-endian). false for a
+// One record as cmd 48 sends it (POLY_COMBO_REC_BYTES, little-endian). false for a
 // kind or index out of range, or (set) a record that fails validation.
 bool poly_combo_record_get(uint8_t kind, uint8_t index, uint8_t out[POLY_COMBO_REC_BYTES]);
 bool poly_combo_record_set(uint8_t kind, uint8_t index, const uint8_t in[POLY_COMBO_REC_BYTES]);

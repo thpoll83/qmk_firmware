@@ -20,6 +20,11 @@
 #include <stdbool.h>
 
 
+// overlay_sync_t.segment bit 7: a raw pool-slot write (cmd 46, an AI card, ai_mode.c).
+// adj_idx is the pool slot as always, but no display position is marked as having an
+// overlay: the card is drawn by AI mode, not by the app's mapping.
+#define OVERLAY_SEG_RAW_SLOT 0x80u
+
 typedef struct _overlay_sync_t {
     uint32_t crc32;
     uint16_t adj_idx;
@@ -131,7 +136,7 @@ void dynamic_keymap_reset_poly(void);
 // (id_dynamic_keymap_set_keycode 0x05, _reset 0x06, id_custom_save 0x09,
 // _set_buffer 0x13, plus the private 'P' 0x50) and below id_unhandled 0xFF.
 #define POLY_KEYMAP_OP_MACRO_LABEL 0xB1
-// Runtime combos / tap dance (cmd 45, poly_combos.c): one record per message
+// Runtime combos / tap dance (cmd 48, poly_combos.c): one record per message
 // ([kind][index][10-byte record]), then a commit that makes the slave write its own
 // flash sector in housekeeping.
 #define POLY_KEYMAP_OP_COMBO_REC    0xB2

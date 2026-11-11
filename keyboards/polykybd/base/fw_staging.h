@@ -71,7 +71,7 @@
 // reach it. Carved out of the staging maximum the same way the crash log was:
 // FW_UP_MAX_SIZE 0x1F6000 -> 0x1F5000 (PolyKybdHost hid_fw_up.py mirrors it).
 #define FW_HAND_STAMP_OFFSET   (FW_CRASH_LOG_OFFSET - 4096UL)
-// One sector below the handedness stamp: the runtime combos and tap dances (cmd 45,
+// One sector below the handedness stamp: the runtime combos and tap dances (cmd 48,
 // base/combo_store.h). Not in the emulated EEPROM, which is full and costs a RAM byte
 // per byte (the wear-levelling cache), and whose recovery clears everything. Written
 // only when the host commits a change. Carved out of the staging maximum the same

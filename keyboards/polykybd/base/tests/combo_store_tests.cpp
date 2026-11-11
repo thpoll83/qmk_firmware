@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Tests for base/combo_store.h: record validation, the wire encoding and the
-// tap-dance decision (HID cmd 45).
+// tap-dance decision (HID cmd 48).
 
 #include "gtest/gtest.h"
 

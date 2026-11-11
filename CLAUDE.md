@@ -188,7 +188,7 @@ keycodes stay on the release edge. [`KEYCODE_HANDLING.md`](keyboards/polykybd/KE
 - ⚠️ **Tap-hold settings are `config.h` defines.** A make variable is a switch only if
   some `.mk` translates it: `grep -rn "<NAME>" builddefs/` before trusting a `rules.mk`
   line. `HOLD_ON_OTHER_KEY_PRESS` is deliberately not defined.
-- **Runtime combos and tap dance (cmd 45, v31) are in their own flash sector**
+- **Runtime combos and tap dance (cmd 48, v33) are in their own flash sector**
   (`FW_COMBO_STORE_OFFSET`, `poly_combos.c`), not the EEPROM, and are left out of the
   DOOM monolith. ⚠️ `rules.mk` sets `COMBO_ENABLE`/`TAP_DANCE_ENABLE` through
   `$(eval)`: QMK's info generator reads `rules.mk` as text and would enable a literal
@@ -198,7 +198,7 @@ keycodes stay on the release edge. [`KEYCODE_HANDLING.md`](keyboards/polykybd/KE
 ### HID protocol
 
 Byte 0 report ID, byte 1 command ID, byte 2+ payload; replies `"P\xNN."` (ACK) or
-`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (31, `config.h`) gates host features. Read
+`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (33, `config.h`) gates host features. Read
 [`PROTOCOL_HISTORY.md`](keyboards/polykybd/PROTOCOL_HISTORY.md) before changing any
 command; several were shaped by a contrast the wire format does not show. A new command
 goes through the `add-gated-hid-command` skill.

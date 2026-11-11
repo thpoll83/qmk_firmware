@@ -49,9 +49,11 @@
 #include "layer_names.h"
 #include "base/crash_record.h"
 #include "multicore_exec.h"   // core1_stall_report
-#include "poly_combos.h"      // cmd 45 runtime combos / tap dance (v31)
+#include "poly_combos.h"      // cmd 48 runtime combos / tap dance (v33)
 #include "boot_diag.h"        // boot_banner_on_host_probe
 #include "ltr559_policy.h"    // poly_ltr559_drives_brightness
+#include "ai_mode.h"          // cmd 45 / 46 (protocol v31)
+#include "anim/key_attention.h"   // cmd 47 (protocol v32)
 
 
 /*[[[cog
@@ -1706,7 +1708,19 @@ static void hid_cmd_44(uint8_t *data, uint8_t length, const poly_layer_t *local_
     return;
 }
 
-// Cmd 45 operations (data[2]).
+static void hid_cmd_45(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //AI mode: query / set keys / read events (protocol v31+)
+    ai_hid_cmd(data, length);
+}
+
+static void hid_cmd_46(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //AI card segment into a pool slot (protocol v31+)
+    ai_hid_card(data, length);
+}
+
+static void hid_cmd_47(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //key attention: the focus ripple on a key (protocol v32+)
+    key_attention_hid(data, length);
+}
+
+// Cmd 48 operations (data[2]).
 #define COMBO_OP_INFO   0u
 #define COMBO_OP_GET    1u
 #define COMBO_OP_SET    2u
@@ -1714,7 +1728,7 @@ static void hid_cmd_44(uint8_t *data, uint8_t length, const poly_layer_t *local_
 #define COMBO_INFO_FLAG_AVAILABLE 0x01u   // this build has runtime combos / tap dance
 #define COMBO_COMMIT_FLAG_SLAVE   0x01u   // the other half took the copy
 
-static void hid_cmd_45(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //runtime combos and tap dance (protocol v31+)
+static void hid_cmd_48(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //runtime combos and tap dance (protocol v33+)
     {
         // Request: data[2] = op.
         //   0 info    reply data[3] combo slots, data[4] tap-dance slots, data[5] record
@@ -1760,7 +1774,7 @@ static void hid_cmd_45(uint8_t *data, uint8_t length, const poly_layer_t *local_
             }
         }
         memset(data, 0, length);
-        hid_reply(data, 0x2D, ok);
+        hid_reply(data, 0x30, ok);
         if (op == COMBO_OP_INFO) {
             data[3] = available ? POLY_COMBO_SLOTS : 0;
             data[4] = available ? POLY_TAP_DANCE_SLOTS : 0;
@@ -1913,6 +1927,9 @@ static const hid_cmd_t s_hid_cmds[] = {
     [43] = {hid_cmd_43, 0},
     [44] = {hid_cmd_44, 0},
     [45] = {hid_cmd_45, 0},
+    [46] = {hid_cmd_46, 0},
+    [47] = {hid_cmd_47, 0},
+    [48] = {hid_cmd_48, 0},
 };
 
 void raw_hid_receive(uint8_t *data, uint8_t length) {

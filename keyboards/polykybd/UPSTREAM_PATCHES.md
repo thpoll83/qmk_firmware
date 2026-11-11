@@ -79,7 +79,7 @@ piano, which makes that easy to hit.
 `midi_set_channel()` replaces the three direct writes to `midi_config.channel`. When the
 channel really changes, it sends a note-off on the OLD channel for every held tone
 (`tone_status`), marks them released so the key release sends nothing, and releases
-sustain, sostenuto and soft (CC 64/66/67), centres the pitch bend and zeroes the mod
+sustain, portamento, sostenuto, soft and legato (CC 64–68), centres the pitch bend and zeroes the mod
 wheel (CC 1, and the modulation ramp) there too. No RAM; a candidate for upstream.
 
 ## tmk_core/protocol/usb_descriptor.h

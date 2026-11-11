@@ -32,7 +32,7 @@ reads "OCT 4" because it makes `MI_C` play C4. A note legend includes the transp
 so it always names the note the key sends. Past either end of the MIDI range QMK wraps
 the number (a `uint8_t` sum masked with 0x7F), and the legend shows the wrapped note.
 
-A channel change first releases every held note, the three pedals, the pitch bend and
+A channel change first releases every held note, the three pedals, portamento, legato, the pitch bend and
 the mod wheel on the old channel (`midi_set_channel()` in `process_midi.c`, a PolyKybd patch): QMK sends a
 release on the channel current at release time, so a key held across the change hung.
 

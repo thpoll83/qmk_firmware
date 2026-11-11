@@ -80,8 +80,10 @@ static void midi_set_channel(uint8_t channel) {
         }
     }
     midi_send_cc(&midi_device, midi_config.channel, 0x40, 0);  // sustain
+    midi_send_cc(&midi_device, midi_config.channel, 0x41, 0);  // portamento
     midi_send_cc(&midi_device, midi_config.channel, 0x42, 0);  // sostenuto
     midi_send_cc(&midi_device, midi_config.channel, 0x43, 0);  // soft
+    midi_send_cc(&midi_device, midi_config.channel, 0x44, 0);  // legato
     midi_send_pitchbend(&midi_device, midi_config.channel, 0); // a held bend
     midi_send_cc(&midi_device, midi_config.channel, 0x01, 0);  // a held mod wheel
     midi_modulation      = 0;

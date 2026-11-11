@@ -2349,6 +2349,9 @@
 #define ICON_EISU_KANA              	U"\x100027"
 // KC_IME's ja-JP legend while Shift is held: カナ, the katakana a Shift+tap selects.
 #define ICON_KATAKANA               	U"\x100028"
+// The AI key (KC_AI) legend: the whole 72x40 keycap, five sigmoids, stars and a small
+// "ai" (tools/ai_key_icon.py generates the bitmap). Resident, so no pack is needed.
+#define ICON_AI_KEY                 	U"\x100029"
 // Press and hold, two frames the tutorial alternates beside every "hold" line: the key
 // up with the arrow pushing, then pressed flat onto the line (round 43).
 #define ICON_HOLD_UP                	U"\x100002"

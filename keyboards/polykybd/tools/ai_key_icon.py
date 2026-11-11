@@ -9,7 +9,7 @@ One source for both outputs, so the bitmap and the preview cannot disagree:
 
 The glyph is the whole 72x40 keycap (xOffset 0, yOffset -23: the legend cursor is
 (BUFFER_X, 23) and IconsFont's yAdvance 40 is the baseline every font aligns to).
-The "ai" is drawn with the firmware's HINT_SMALL path (keycap_preview.small_ink).
+The "ai" is the legend face scaled to TAG_SCALE (0.5 would be HINT_SMALL).
 """
 import argparse
 import math
@@ -51,12 +51,33 @@ def _star(cx, cy, r):
     return ink
 
 
-def _tag(word='ai'):
+TAG_SCALE = 0.6   # 0.5 = the firmware's HINT_SMALL face; larger is the full face scaled
+
+
+def _tag(word='ai', scale=None):
+    scale = TAG_SCALE if scale is None else scale
     ink, x = set(), 0
-    for c in word:
-        f, g = K.find(ord(c))
-        ink |= K.small_ink(ord(c), x, 0)
-        x += (g['xAdvance'] + 1) // 2
+    if scale == 0.5:
+        for c in word:
+            f, g = K.find(ord(c))
+            ink |= K.small_ink(ord(c), x, 0)
+            x += (g['xAdvance'] + 1) // 2
+    else:
+        full = set()
+        for c in word:
+            f, g = K.find(ord(c))
+            full |= K.full_ink(ord(c), x, 0)
+            x += g['xAdvance']
+        x0 = min(p[0] for p in full); y0 = min(p[1] for p in full)
+        w = max(p[0] for p in full) - x0 + 1; h = max(p[1] for p in full) - y0 + 1
+        # Area sampling: a target pixel is lit when most of its source area is ink.
+        for ty in range(math.ceil(h * scale)):
+            for tx in range(math.ceil(w * scale)):
+                sx0, sx1 = int(tx / scale), max(int((tx + 1) / scale), int(tx / scale) + 1)
+                sy0, sy1 = int(ty / scale), max(int((ty + 1) / scale), int(ty / scale) + 1)
+                cells = [(x0 + sx, y0 + sy) for sx in range(sx0, sx1) for sy in range(sy0, sy1)]
+                if sum(c in full for c in cells) * 2 >= len(cells):
+                    ink.add((tx, ty))
     dx = W - 2 - max(p[0] for p in ink)
     dy = H - 2 - max(p[1] for p in ink)
     return {(x + dx, y + dy) for x, y in ink}

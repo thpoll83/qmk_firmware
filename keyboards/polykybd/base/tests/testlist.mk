@@ -10,6 +10,7 @@ TEST_LIST += polykybd_idle_update
 TEST_LIST += polykybd_idle_timeout
 TEST_LIST += polykybd_tap_terms
 TEST_LIST += polykybd_caps_word_letter
+TEST_LIST += polykybd_combo_store
 TEST_LIST += polykybd_layer_names
 TEST_LIST += polykybd_legend_plan
 TEST_LIST += polykybd_font_bbox

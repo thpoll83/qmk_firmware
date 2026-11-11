@@ -12,6 +12,7 @@
 #include "layers.h"
 #include "keycode_helper.h"
 #include "emoji/emoji_layer.h"
+#include "poly_combos_keymap.h"   // QMK needs the tables; the real ones are runtime (cmd 45)
 #include "lang_layer.h"
 
 const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {

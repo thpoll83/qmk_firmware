@@ -107,6 +107,7 @@
 
 #include "lang/lang_lut.h"
 #include "base/caps_word_letter.h"
+#include "poly_combos.h"
 #include "lang/lang_lut_ext.h"
 
 #include "layers.h"
@@ -1743,6 +1744,8 @@ void housekeeping_task_user(void) {
         split_sync_drain_anim_replay();
         // A keymap reset the split handler recorded (too slow to run there).
         split_sync_drain_keymap_reset();
+        // Combos / tap dances the master sent: this half's flash write (cmd 45).
+        poly_combos_drain_pending();
         // One-time startup animation: render a frame while active (both halves
         // render their own keycaps). On the finishing edge, persist the "played"
         // marker and request a normal refresh so the base legends come back. Gated
@@ -4086,7 +4089,9 @@ bool caps_word_press_user(uint16_t keycode) {
 #endif
 
 uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
-    return get_poly_tapping_term();
+    // A runtime tap dance (cmd 45) can carry its own term; 0 means the global one.
+    const uint16_t td_term = poly_tap_dance_term(keycode);
+    return td_term != 0 ? td_term : get_poly_tapping_term();
 }
 
 // QUICK_TAP_TERM is still the compile-time value (it defaults to TAPPING_TERM);
@@ -7488,6 +7493,7 @@ void keyboard_post_init_user(void) {
     // exactly the state a wipe leaves behind. Ahead of emit_boot_banner() below,
     // so the banner can report the repair.
     poly_hand_post_init();
+    poly_combos_init();   // cmd 45: this half's flash sector into QMK's tables
     // Labels live in RAM on both halves (the render path reads one per macro keycap per
     // refresh). Each half loads its own EEPROM copy, then the master overwrites the
     // slave's over the link -- so a role swap makes whichever half the host talks to

@@ -305,7 +305,13 @@
 //      sets leave Auto Shift alone. Reply data[7] gains bit 1 (Auto Shift compiled
 //      in) and bit 2 (Auto Shift on), data[8..9] = the timeout. A v29 firmware
 //      ignores the new request bytes, so the host gates them on v30.
-#define PROTOCOL_VERSION 30
+//  v31 cmd 45 (runtime combos and tap dance, poly_combos.c): op 0 info, 1 get, 2 set,
+//      3 commit. 16 combos (2..4 trigger keycodes + a result) and 16 tap dances
+//      (TD(0)..TD(15): on tap, on hold, on double tap, on tap-then-hold, own term),
+//      10-byte records, closed validation. Stored in its own flash sector
+//      (FW_COMBO_STORE_OFFSET), copied to the other half on commit. Older firmware
+//      NACKs the command; FW_UP_MAX_SIZE shrank to 0x1F4000 for the sector.
+#define PROTOCOL_VERSION 31
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2

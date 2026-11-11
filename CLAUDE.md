@@ -128,8 +128,9 @@ figures in `FW_STAGING.md`), partitioned (authoritative map: `base/fw_staging.h`
 0–2 MB running firmware, 2–4 MB update staging, 4–8 MB resources/overlays. The budget
 that matters is the 2 MB firmware partition. `FW_STAGING_OFFSET` equals the linker
 `flash1` length, so an oversized image fails to link. ⚠️ Sectors taken from the top of
-staging (apply log, crash archive, handedness stamp) need an alignment assert as well as
-an overlap assert.
+staging (apply log, crash archive, handedness stamp, combo store) need an alignment assert
+as well as an overlap assert, and each one shrinks `FW_UP_MAX_SIZE`, which the host's
+`hid_fw_up.py` mirrors.
 
 Split keyboard (halves over a full-duplex UART at 1843200 baud), up to 72 per-keycap 72×40 OLEDs plus a
 128×64 status OLED. The host talks over 64-byte raw HID reports.
@@ -187,11 +188,17 @@ keycodes stay on the release edge. [`KEYCODE_HANDLING.md`](keyboards/polykybd/KE
 - ⚠️ **Tap-hold settings are `config.h` defines.** A make variable is a switch only if
   some `.mk` translates it: `grep -rn "<NAME>" builddefs/` before trusting a `rules.mk`
   line. `HOLD_ON_OTHER_KEY_PRESS` is deliberately not defined.
+- **Runtime combos and tap dance (cmd 45, v31) are in their own flash sector**
+  (`FW_COMBO_STORE_OFFSET`, `poly_combos.c`), not the EEPROM, and are left out of the
+  DOOM monolith. ⚠️ `rules.mk` sets `COMBO_ENABLE`/`TAP_DANCE_ENABLE` through
+  `$(eval)`: QMK's info generator reads `rules.mk` as text and would enable a literal
+  `*_ENABLE = yes` in every build. The RAM cost (1.26 KB) and how to cut it are at the
+  top of `poly_combos.c`.
 
 ### HID protocol
 
 Byte 0 report ID, byte 1 command ID, byte 2+ payload; replies `"P\xNN."` (ACK) or
-`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (30, `config.h`) gates host features. Read
+`"P\xNN!"` (NACK). `PROTOCOL_VERSION` (31, `config.h`) gates host features. Read
 [`PROTOCOL_HISTORY.md`](keyboards/polykybd/PROTOCOL_HISTORY.md) before changing any
 command; several were shaped by a contrast the wire format does not show. A new command
 goes through the `add-gated-hid-command` skill.

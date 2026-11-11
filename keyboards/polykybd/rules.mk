@@ -294,6 +294,25 @@ ifeq ($(strip $(POLYKYBD_DOOM_PACK)), yes)
     POLYKYBD_DOOM = yes
     OPT_DEFS += -DPOLYKYBD_DOOM_PACK
 endif
+# Runtime combos and tap dance (HID cmd 45, poly_combos.c): every build except the
+# DOOM monolith, the developer build with the engine linked in. It has ~3.3 KB of RAM
+# left, the release workflow still has to link it, and nothing in the DOOM pack
+# comes from the keyboard code (build_pack.sh takes only the engine objects), so
+# leaving the ~1 KB out of it changes nothing users run.
+#
+# ⚠️ The two feature switches are set through $(eval), not as `COMBO_ENABLE = yes`:
+# QMK's info generator reads rules.mk as TEXT (lib/python/qmk/makefile.py), ignores
+# the ifeq, and puts any literal `*_ENABLE = yes` into every build's info_rules.mk,
+# so the monolith got COMBO_ENABLE without the tables and failed to compile
+# keymap_introspection.c. A non-boolean value is refused by its schema instead.
+ifeq ($(strip $(POLYKYBD_DOOM))-$(strip $(POLYKYBD_DOOM_PACK)), yes-)
+    # monolith: no runtime combos / tap dance
+else
+    $(eval COMBO_ENABLE := yes)
+    $(eval TAP_DANCE_ENABLE := yes)
+    OPT_DEFS += -DPOLY_RUNTIME_COMBOS
+    SRC += poly_combos.c
+endif
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     OPT_DEFS += -DPOLYKYBD_DOOM
     SRC += doom/doom_mode.c doom/doom_blit.c doom/doom_fire.c

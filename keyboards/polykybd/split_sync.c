@@ -21,6 +21,7 @@
 #include "keymap_introspection.h"   // keycode_at_keymap_location_raw() for the capped reset
 #include "poly_keymap.h"   // poly_fl_row_cache_invalidate()
 #include "poly_macro.h"
+#include "poly_combos.h"   // cmd 45 records bridged to this half (v31)
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/update.h"
@@ -471,6 +472,16 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                         poly_macro_look_adopt(command_data[0], &look);
                         request_disp_refresh();
                     }
+                    break;
+                case POLY_KEYMAP_OP_COMBO_REC:
+                    // RAM only here; the flash write is poly_combos_drain_pending(),
+                    // in housekeeping. Same own length check as the macro look: the
+                    // CRC does not pin the frame length.
+                    if (in_len < sizeof(uint32_t) + 3 + POLY_COMBO_REC_BYTES) break;
+                    poly_combos_slave_record(command_data[0], command_data[1], &command_data[2]);
+                    break;
+                case POLY_KEYMAP_OP_COMBO_COMMIT:
+                    poly_combos_slave_commit();
                     break;
                 case id_custom_save: //handle the same way
                 case 'P':

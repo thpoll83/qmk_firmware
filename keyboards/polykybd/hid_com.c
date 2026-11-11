@@ -49,6 +49,7 @@
 #include "layer_names.h"
 #include "base/crash_record.h"
 #include "multicore_exec.h"   // core1_stall_report
+#include "poly_combos.h"      // cmd 45 runtime combos / tap dance (v31)
 #include "boot_diag.h"        // boot_banner_on_host_probe
 #include "ltr559_policy.h"    // poly_ltr559_drives_brightness
 
@@ -1705,6 +1706,82 @@ static void hid_cmd_44(uint8_t *data, uint8_t length, const poly_layer_t *local_
     return;
 }
 
+// Cmd 45 operations (data[2]).
+#define COMBO_OP_INFO   0u
+#define COMBO_OP_GET    1u
+#define COMBO_OP_SET    2u
+#define COMBO_OP_COMMIT 3u
+#define COMBO_INFO_FLAG_AVAILABLE 0x01u   // this build has runtime combos / tap dance
+#define COMBO_COMMIT_FLAG_SLAVE   0x01u   // the other half took the copy
+
+static void hid_cmd_45(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //runtime combos and tap dance (protocol v31+)
+    {
+        // Request: data[2] = op.
+        //   0 info    reply data[3] combo slots, data[4] tap-dance slots, data[5] record
+        //             bytes, data[6] flags (bit 0: available), data[7..8] combo term ms
+        //   1 get     data[3] kind (0 combo, 1 tap dance), data[4] index
+        //             reply data[3] kind, data[4] index, data[5..14] the record
+        //   2 set     data[3] kind, data[4] index, data[5..14] the record
+        //             (RAM only; reply as for get, with the record now in RAM)
+        //   3 commit  writes this half's flash sector and copies every record to the
+        //             other half; reply data[3] bit 0 = the other half took it
+        // Records: base/combo_store.h. Both kinds are CLOSED: a record that fails
+        // validation is NACKed and nothing changes. The DOOM monolith has no
+        // runtime combos and NACKs every op (info reports flags 0).
+        const uint8_t op    = hid_payload_avail(length, 2) > 0 ? data[2] : 0xFFu;
+        const uint8_t kind  = hid_payload_avail(length, 3) > 0 ? data[3] : 0xFFu;
+        const uint8_t index = hid_payload_avail(length, 4) > 0 ? data[4] : 0xFFu;
+        uint8_t rec[POLY_COMBO_REC_BYTES];
+        memset(rec, 0, sizeof(rec));
+        bool ok = false;
+        bool slave_ok = false;
+#ifdef POLY_RUNTIME_COMBOS
+        const bool available = true;
+#else
+        const bool available = false;
+#endif
+        if (op == COMBO_OP_INFO) {
+            ok = available;
+        } else if (op == COMBO_OP_GET) {
+            ok = poly_combo_record_get(kind, index, rec);
+        } else if (op == COMBO_OP_SET) {
+            if (hid_payload_avail(length, 5) >= POLY_COMBO_REC_BYTES) {
+                memcpy(rec, &data[5], POLY_COMBO_REC_BYTES);
+                ok = poly_combo_record_set(kind, index, rec);
+                if (!ok) uprintf("Refused combo record kind %u index %u.\n", (unsigned)kind, (unsigned)index);
+            }
+            if (!ok) memset(rec, 0, sizeof(rec));
+            poly_combo_record_get(kind, index, rec);   // the record as it is now
+        } else if (op == COMBO_OP_COMMIT) {
+            ok = available;
+            if (ok) {
+                slave_ok = poly_combos_commit();
+                uprintf("Combos committed; other half %s.\n", slave_ok ? "updated" : "NOT updated");
+            }
+        }
+        memset(data, 0, length);
+        hid_reply(data, 0x2D, ok);
+        if (op == COMBO_OP_INFO) {
+            data[3] = available ? POLY_COMBO_SLOTS : 0;
+            data[4] = available ? POLY_TAP_DANCE_SLOTS : 0;
+            data[5] = POLY_COMBO_REC_BYTES;
+            data[6] = available ? COMBO_INFO_FLAG_AVAILABLE : 0;
+#ifdef COMBO_TERM
+            data[7] = (uint8_t)(COMBO_TERM & 0xFFu);
+            data[8] = (uint8_t)(COMBO_TERM >> 8);
+#endif
+        } else if (op == COMBO_OP_GET || op == COMBO_OP_SET) {
+            data[3] = kind;
+            data[4] = index;
+            memcpy(&data[5], rec, POLY_COMBO_REC_BYTES);
+        } else if (op == COMBO_OP_COMMIT) {
+            data[3] = slave_ok ? COMBO_COMMIT_FLAG_SLAVE : 0;
+        }
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
 #ifdef POLYKYBD_LOOP_PROFILE
 static void hid_cmd_32(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //main-loop profiler control (POLYKYBD_LOOP_PROFILE builds only)
     {
@@ -1835,6 +1912,7 @@ static const hid_cmd_t s_hid_cmds[] = {
     [42] = {hid_cmd_42, HID_CMD_OVERLAY_BURST},
     [43] = {hid_cmd_43, 0},
     [44] = {hid_cmd_44, 0},
+    [45] = {hid_cmd_45, 0},
 };
 
 void raw_hid_receive(uint8_t *data, uint8_t length) {

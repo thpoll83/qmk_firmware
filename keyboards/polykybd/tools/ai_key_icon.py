@@ -56,10 +56,11 @@ TAG_SCALE = 0.6   # for a font-drawn word only: 0.5 = HINT_SMALL, larger = the f
 # The tag is a drawn "AI": the A leans on the I, its right stroke parallel to the I.
 # (I bar x, top row, stroke px, gap A->I, A width, crossbar top row, crossbar rows) on a
 # 26x18 grid, 8x supersampled.
-LEAN = (20, 6, 2.0, 2, 14, 13, 2)
+LEAN = (20, 5, 2.0, 2, 12, 12, 2)   # 13 px tall, the A at 45 degrees
 
 
-def _lean_ai(spec=LEAN):
+def _lean_ai(spec=None):
+    spec = LEAN if spec is None else spec   # read at call time, so a caller can set LEAN
     from PIL import Image, ImageDraw
     ss, w, h = 8, 26, 18
     ix, top, t, gap, a_w, bar_y, bar_h = spec

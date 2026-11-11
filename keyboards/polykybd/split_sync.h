@@ -20,6 +20,11 @@
 #include <stdbool.h>
 
 
+// overlay_sync_t.segment bit 7: a raw pool-slot write (cmd 46, an AI card, ai_mode.c).
+// adj_idx is the pool slot as always, but no display position is marked as having an
+// overlay: the card is drawn by AI mode, not by the app's mapping.
+#define OVERLAY_SEG_RAW_SLOT 0x80u
+
 typedef struct _overlay_sync_t {
     uint32_t crc32;
     uint16_t adj_idx;

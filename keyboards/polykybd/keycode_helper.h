@@ -170,6 +170,11 @@ enum my_keycodes {
     KC_EMJ_S_CLEAR,
     KC_EMJ_S_BKSP,
     KC_EMJ_S_SPACE,
+    // The AI key (ai_mode.h): turns the number row and ESC into the agent cards of
+    // the host's agent registry (cmd 45 / 46). Bound in no keymap; the user puts it
+    // on a key with the host's layout editor. Handled and SWALLOWED in
+    // process_record_user(). Appended for the same no-renumbering reason as KC_DAUTO.
+    KC_AI,
     // ⚠️ FROZEN at the first 160 languages (KCL_FROZEN_COUNT). Every keycode after
     // this block is a value a keyboard may have stored in EEPROM (KC_OS_*, KC_IME,
     // the emoji and language layers), so growing the block would repoint them all.
@@ -364,8 +369,9 @@ static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 // appended after it, so the two asserts above silently stopped covering the tail
 // they exist to bound.  Re-anchor these whenever something is appended to the
 // QK_KB_0 block.
-static_assert((int)KC_EMJ_S_SPACE <= (int)QK_KB_MAX, "Too many custom QK key codes");
-static_assert((int)KC_EMJ_S_SPACE < (int)KCL_ENUS, "Overlap detected");
+static_assert((int)KC_AI <= (int)QK_KB_MAX, "Too many custom QK key codes");
+static_assert((int)KC_AI < (int)KCL_ENUS, "Overlap detected");
+static_assert((int)KC_AI == 0x7E2A, "KC_AI moved: the host binds it as 0x7E2A");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 // ⚠️ Same re-anchoring rule as the QK_KB guards above, and the same way it goes

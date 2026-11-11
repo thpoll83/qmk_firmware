@@ -74,6 +74,8 @@
 #include "anim/tutorial.h"
 #include "anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
 #include "mines_mode.h"                   // the idle-screen mine sweeper (hold Hyper while idle)
+#include "ai_mode.h"                      // AI mode: agent cards on the number row (KC_AI)
+#include "anim/key_attention.h"            // cmd 47: the focus ripple on a key
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
@@ -371,6 +373,7 @@ bool rgb_matrix_indicators_kb(void) {
         }
     }
     if (tutorial_rgb_paint()) return false;   // the first-run show and the lesson
+    ai_rgb_paint();   // agent states on the number row; other LEDs keep the effect
     return rgb_matrix_indicators_user();
 }
 
@@ -1724,6 +1727,8 @@ void housekeeping_task_user(void) {
         // hands the board back to the idle animation on hide or after 2 min untouched.
         // Before the idle block for the same reason as the demo.
         if (is_keyboard_master()) mines_tick();
+        // AI mode's latch timeout (ai_mode.h).
+        if (is_keyboard_master()) ai_mode_tick();
         // The segment just entered may preview another language or script: write it
         // BEFORE the render below, or each board is first drawn in the previous
         // segment's language and repainted a pass later (the tutorial's lesson, see
@@ -1854,6 +1859,10 @@ void housekeeping_task_user(void) {
             menu_cascade_tick();
             lang_sparkle_tick();   // the language preview's twinkles; self-gating
         }
+        // The host's key attention request (cmd 47) first, then an agent that waits
+        // (ai_mode.h): both run the focus ripple, one at a time.
+        key_attention_tick();
+        ai_attention_tick();
         // Advance the focus ripple, if one is live. Self-gating and bounded to
         // POLY_FOCUS_SLICE_MS, so an idle keyboard pays a single boolean test.
         poly_focus_tick();
@@ -4323,6 +4332,10 @@ static uint8_t tutorial_slot_of(uint8_t row, uint8_t col) {
     return TUT_SLOT(row >= MATRIX_ROWS_PER_SIDE ? 1 : 0, idx);
 }
 
+// The display slot (TUT_SLOT packing) of the key at (row, col), TUT_SLOT_NONE for a
+// key without a panel. For poly_focus_start() outside the tutorial (ai_mode.c).
+uint8_t poly_slot_of(uint8_t row, uint8_t col) { return tutorial_slot_of(row, col); }
+
 uint8_t tutorial_collect_candidates(uint8_t* out, uint8_t max) {
     uint8_t n = 0;
     for (uint8_t r = 0; r < MATRIX_ROWS && n < max; ++r) {
@@ -4438,6 +4451,20 @@ bool poly_slot_visible(uint8_t slot) {
 bool poly_focus_draw_legend(uint8_t slot) {
     uint8_t r, c;
     if (!tutorial_matrix_of(slot, &r, &c)) return false;
+    // The firmware prompt owns every panel: a ripple still running when it opened
+    // repaints the prompt's state (one key or dark), as update_displays() does.
+    if (get_local_state()->fw_confirm) {
+        // r is the board row (the right half starts at MATRIX_ROWS_PER_SIDE);
+        // update_displays() compares the half-local one.
+        if (r % MATRIX_ROWS_PER_SIDE == FW_CONFIRM_ROW && c == FW_CONFIRM_COL) {
+            render_fw_confirm_key(is_left_side());
+        } else {
+            kdisp_set_buffer(0x00);
+        }
+        return true;
+    }
+    // An agent card (AI mode) under the ripple, not the key's ordinary legend.
+    if (ai_render_key(r, c)) return true;
     if (!tutorial_key_visible(r, c)) return false;
     if (menu_cascade_hidden(r, c)) return false;   // not its turn in the cascade yet
     // The chrome keys show the lesson's labels, here as in update_displays(), or a ring
@@ -5725,6 +5752,17 @@ void update_displays(enum refresh_mode mode) {
                         mines_render_key((uint8_t)(r + offset), c);
                         kdisp_send_window();
                         doom_handled = true;
+                    } else if (ai_render_key((uint8_t)(r + offset), c)) {
+                        // AI mode: the number row shows the host's agent cards and
+                        // ESC the pager. Every other key renders normally below.
+                        // From the SYNCED state, so the slave draws its half too.
+                        // The focus ripple composites on top, as on any other key.
+                        if (poly_focus_active()) {
+                            const sa_geom_t fg = startup_anim_key_geom(!is_left_side(), disp_idx);
+                            poly_focus_overlay(disp_idx, &fg);
+                        }
+                        kdisp_send_window();
+                        doom_handled = true;
                     } else if (tutorial_intro_mode() &&
                                tutorial_is_chrome_key((uint8_t)(r + offset), c)) {
                         // The tutorial's chrome: "Hold to / skip..." on Esc, the chapter
@@ -6684,6 +6722,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     // (mines_mode.h); a shorter tap only wakes the board.
     if (mines_active()) {
         return !mines_process_record(keycode, record);
+    }
+    // AI mode (ai_mode.h): KC_AI turns the number row and ESC into the host's agent
+    // cards. While it is on every key event is swallowed and answered there, except
+    // the releases a held key or a modifier / layer key needs.
+    if (ai_process_record(keycode, record)) {
+        return false;
     }
     if (mines_try_start(keycode, record)) {
         return false;
@@ -8076,6 +8120,8 @@ void suspend_power_down_kb(void) {
     if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
         return;
     }
+    // The host that set the agent keys is asleep or gone: no stale lights on wake.
+    ai_reset_keys("usb suspend");
     poly_suspend();
     // After poly_suspend() stopped Eden: no new jobs reach core1, so what it still owes
     // either finishes within a few ms or is a stall (multicore_exec.h).

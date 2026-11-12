@@ -310,7 +310,13 @@
 //      (ai_mode.h, KC_AI). Older firmware NACKs both, which is the host's signal.
 //  v32 cmd 47 (key attention: the focus ripple on one key, a count of times or until
 //      cancelled, anim/key_attention.h). Older firmware NACKs it.
-#define PROTOCOL_VERSION 32
+//  v33 cmd 48 (runtime combos and tap dance, poly_combos.c): op 0 info, 1 get, 2 set,
+//      3 commit. 16 combos (2..4 trigger keycodes + a result) and 16 tap dances
+//      (TD(0)..TD(15): on tap, on hold, on double tap, on tap-then-hold, own term),
+//      10-byte records, closed validation. Stored in two flash sectors of its own
+//      (FW_COMBO_STORE_OFFSET), copied to the other half on commit and checked by
+//      CRC. Older firmware NACKs the command; FW_UP_MAX_SIZE shrank to 0x1F3000.
+#define PROTOCOL_VERSION 33
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2

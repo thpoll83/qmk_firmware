@@ -27,6 +27,13 @@ per-variant copies of the keymap logic (that drift is exactly what this
 extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
 `run_cog.sh` targets `poly_keymap.c`.
 
+⚠️ **Every `keymap.c` must `#include "poly_combos_keymap.h"`.** QMK's
+`keymap_introspection.c` includes `keymap.c` and needs `key_combos[]` and
+`tap_dance_actions[]` there whenever `COMBO_ENABLE` / `TAP_DANCE_ENABLE` are on, which
+`rules.mk` does for every build except the DOOM monolith. The header supplies the
+two stub tables (the runtime records replace them through `combo_get()` /
+`tap_dance_get()`). A new keymap without the include fails to compile.
+
 ⚠️ **The two variants also share the MCU SCHEMATIC, so an MCU-level question is
 never answered from `variations/poly_corne/` — that directory contains no
 processor.** In the hardware repo (`thpoll83/polykybd`) split42's sheets live in

@@ -218,8 +218,10 @@ static bool store_valid(const poly_combo_store_t *st) {
 // The sector holds STORE_SLOTS images of the store, appended as in hand_stamp.c: a
 // commit programs the next erased slot without an erase, and boot loads the LAST
 // valid one. Power lost while a slot is programmed leaves that slot invalid and the
-// previous one in force. Only the commit that finds every slot used erases the
-// sector first, once every STORE_SLOTS commits.
+// previous one in force. The exception is the commit that finds every slot used,
+// once every STORE_SLOTS commits: it erases the sector before programming slot 0,
+// and power lost between the two leaves no valid image, so the next boot starts
+// with no combos or tap dances (the handedness stamp has the same window).
 #define STORE_SLOT_BYTES 512u
 #define STORE_SLOTS      (4096u / STORE_SLOT_BYTES)
 _Static_assert(sizeof(poly_combo_store_t) <= STORE_SLOT_BYTES, "a store image fits its slot");

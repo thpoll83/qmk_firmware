@@ -19,6 +19,7 @@
 #include "layers.h"
 #include "keycode_helper.h"
 #include "emoji/emoji_layer.h"
+#include "poly_combos_keymap.h"   // QMK needs the tables; the real ones are runtime (cmd 48)
 #include "lang_layer.h"
 
 // Right-half mirror (POLY_SPLIT42_MIRROR_RIGHT, config.h). split42 currently ships as
@@ -152,8 +153,9 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // the single legend-size key (Shift reverses, the legend shows the tier) sits
         // under it. TO(_SL) keeps the last slot of the row it has always had.
         KC_MRWD, KC_MUTE, KC_VOLD, KC_VOLU, KC_MFFD, TO(_SL),
-        KC_MPRV, KC_MPLY, KC_GLYPH_SIZE_UP, KC_MSTP, KC_MNXT, KC_RSFT,
-        KC_DAUTO,TO(_ML), KC_BASE
+        // TO(_ML) directly under TO(_SL); Right Shift moves to the thumb it had.
+        KC_MPRV, KC_MPLY, KC_GLYPH_SIZE_UP, KC_MSTP, KC_MNXT, TO(_ML),
+        KC_DAUTO,KC_RSFT, KC_BASE
     ),
     /* MIDI layer -- see the note on split72's _ML. The same DAW piano (C4..F5, black
        keys above, blank where a piano has none); the Corne has no number row, so the

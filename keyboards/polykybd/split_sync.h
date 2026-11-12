@@ -125,6 +125,7 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
 // indices >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT stay read-only.
 void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column, uint16_t keycode);
 void dynamic_keymap_reset_poly(void);
+uint8_t dynamic_keymap_migrate_poly(uint16_t from, uint16_t to);
 
 // Macro labels ride the DYNAMIC KEYMAP transaction rather than spending one of the 32
 // split-transaction slots (config.h explains how close to the cap that table is). That
@@ -136,6 +137,12 @@ void dynamic_keymap_reset_poly(void);
 // (id_dynamic_keymap_set_keycode 0x05, _reset 0x06, id_custom_save 0x09,
 // _set_buffer 0x13, plus the private 'P' 0x50) and below id_unhandled 0xFF.
 #define POLY_KEYMAP_OP_MACRO_LABEL 0xB1
+// Runtime combos / tap dance (cmd 48, poly_combos.c): one record per message
+// ([kind][index][10-byte record]), then a commit that makes the slave write its own
+// flash sector in housekeeping.
+#define POLY_KEYMAP_OP_COMBO_REC    0xB2
+#define POLY_KEYMAP_OP_COMBO_COMMIT 0xB3
+#define POLY_KEYMAP_OP_COMBO_CHECK  0xB4   // + uint32 LE: the master's record CRC; ACK when the slave's flash matches
 
 // Push one macro's whole look to the slave. Returns true only on a real ACK -- callers
 // use that to decide whether to keep it queued.

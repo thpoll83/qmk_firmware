@@ -212,6 +212,13 @@ void emit_idle_config(void) {
 static uint8_t  s_keymap_fmt_seen  = 0xFF;   // 0xFF = post_init has not run yet
 static bool     s_keymap_reset_ran = false;
 static uint32_t s_keymap_reset_ms  = 0;
+static uint8_t  s_keymap_mig       = 0;      // 0 = no migration ran this boot
+static uint8_t  s_keymap_mig_keys  = 0;
+
+void note_keymap_migration(uint8_t marker, uint8_t keys_changed) {
+    s_keymap_mig      = marker;
+    s_keymap_mig_keys = keys_changed;
+}
 
 void note_keymap_storage(uint8_t stored_fmt, bool reset_ran, uint32_t elapsed_ms) {
     s_keymap_fmt_seen  = stored_fmt;
@@ -303,6 +310,10 @@ void emit_keymap_storage_line(void) {
             s_keymap_reset_ran ? "" : " (no discard needed)");
     if (s_keymap_reset_ran) {
         uprintf("   keymap: discard took %lums\n", (unsigned long)s_keymap_reset_ms);
+    }
+    if (s_keymap_mig) {
+        uprintf("   keymap: migration 0x%02X changed %u stored key(s)\n",
+                (unsigned int)s_keymap_mig, (unsigned int)s_keymap_mig_keys);
     }
 }
 

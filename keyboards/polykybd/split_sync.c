@@ -21,6 +21,7 @@
 #include "keymap_introspection.h"   // keycode_at_keymap_location_raw() for the capped reset
 #include "poly_keymap.h"   // poly_fl_row_cache_invalidate()
 #include "poly_macro.h"
+#include "poly_combos.h"   // cmd 48 records bridged to this half (v33)
 #include "base/com.h"
 #include "base/disp_array.h"
 #include "base/update.h"
@@ -386,6 +387,28 @@ void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column,
     poly_fl_row_cache_invalidate();
 }
 
+// One-time migration of the stored keymap: every key that still holds `from` where
+// the built-in default now has `to` gets `to`. A key the user remapped (anything but
+// `from`) is left as it is. Returns how many keys changed. Runs at boot, before the
+// split link, so each half migrates its own copy by the same rule.
+uint8_t dynamic_keymap_migrate_poly(uint16_t from, uint16_t to) {
+    uint8_t changed = 0;
+    for (uint8_t layer = 0; layer < DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT; layer++) {
+        crash_watchdog_feed();   // under the late-boot guard, as dynamic_keymap_reset_poly()
+        for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+            for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+                if (keycode_at_keymap_location_raw(layer, row, col) == to &&
+                    dynamic_keymap_get_keycode(layer, row, col) == from) {
+                    dynamic_keymap_set_keycode(layer, row, col, to);
+                    changed++;
+                }
+            }
+        }
+    }
+    if (changed) poly_fl_row_cache_invalidate();
+    return changed;
+}
+
 // Reset wrapper, so that EVERY mutation of the dynamic keymap goes through a *_poly
 // function and none can forget the cache invalidation. Deliberately a wrapper rather
 // than a list of "remember to also call this here" call sites — that is the guard
@@ -451,6 +474,7 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
         const dynamic_keymap_sync_t* data = (const dynamic_keymap_sync_t *)in_data;
         if(crc32 == data->crc32) {
             const uint8_t* command_data = &data->commands[1];
+            bool refused = false;
             switch(data->commands[0]) {
                 case id_dynamic_keymap_reset:
                     // Deferred to housekeeping (split_sync_drain_keymap_reset). A
@@ -487,6 +511,25 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                         request_disp_refresh();
                     }
                     break;
+                case POLY_KEYMAP_OP_COMBO_REC:
+                    // RAM only here; the flash write is poly_combos_drain_pending(),
+                    // in housekeeping. Same own length check as the macro look: the
+                    // CRC does not pin the frame length.
+                    // Refused while the previous commit's flash write is pending, or
+                    // for an invalid record; the master then reports the other half
+                    // as not updated.
+                    if (in_len < sizeof(uint32_t) + 3 + POLY_COMBO_REC_BYTES) { refused = true; break; }
+                    refused = !poly_combos_slave_record(command_data[0], command_data[1], &command_data[2]);
+                    break;
+                case POLY_KEYMAP_OP_COMBO_COMMIT:
+                    poly_combos_slave_commit();
+                    break;
+                case POLY_KEYMAP_OP_COMBO_CHECK:
+                    // Compares only; a mismatch makes the master send everything again.
+                    if (in_len < sizeof(uint32_t) + 1 + sizeof(uint32_t)) { refused = true; break; }
+                    refused = !poly_combos_slave_check((uint32_t)command_data[0] | ((uint32_t)command_data[1] << 8) |
+                                                       ((uint32_t)command_data[2] << 16) | ((uint32_t)command_data[3] << 24));
+                    break;
                 case id_custom_save: //handle the same way
                 case 'P':
                     if(command_data[0]==14) {
@@ -506,7 +549,7 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     break;
                 default: break;
             }
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+            ((poly_sync_reply_t*)out_data)->ack = refused ? SYNC_NACK_REFUSED : SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
         }

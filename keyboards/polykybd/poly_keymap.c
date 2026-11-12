@@ -110,6 +110,7 @@
 
 #include "lang/lang_lut.h"
 #include "base/caps_word_letter.h"
+#include "poly_combos.h"
 #include "lang/lang_lut_ext.h"
 
 #include "layers.h"
@@ -1753,6 +1754,8 @@ void housekeeping_task_user(void) {
         split_sync_drain_anim_replay();
         // A keymap reset the split handler recorded (too slow to run there).
         split_sync_drain_keymap_reset();
+        // Combos / tap dances the master sent: this half's flash write (cmd 48).
+        poly_combos_drain_pending();
         // One-time startup animation: render a frame while active (both halves
         // render their own keycaps). On the finishing edge, persist the "played"
         // marker and request a normal refresh so the base legends come back. Gated
@@ -4108,7 +4111,9 @@ bool caps_word_press_user(uint16_t keycode) {
 #endif
 
 uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
-    return get_poly_tapping_term();
+    // A runtime tap dance (cmd 48) can carry its own term; 0 means the global one.
+    const uint16_t td_term = poly_tap_dance_term(keycode);
+    return td_term != 0 ? td_term : get_poly_tapping_term();
 }
 
 // QUICK_TAP_TERM is still the compile-time value (it defaults to TAPPING_TERM);
@@ -6730,19 +6735,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     }
 
     // The idle-screen mine sweeper IS the board while it runs: every key event is
-    // swallowed and answered there, so nothing reaches the host. Holding Hyper for 1 s
+    // swallowed and answered there, so nothing reaches the host. Holding Hyper or the AI key for 1 s
     // while an idle animation runs starts it, or resumes the board hidden last
     // (mines_mode.h); a shorter tap only wakes the board.
     if (mines_active()) {
         return !mines_process_record(keycode, record);
     }
+    // The mine sweeper's start gesture goes BEFORE AI mode: on the idle screen the
+    // AI key (which replaced Hyper on the split72 layouts) starts the game, as Hyper
+    // does, instead of turning AI mode on. Away from the idle screen it passes.
+    if (mines_try_start(keycode, record)) {
+        return false;
+    }
     // AI mode (ai_mode.h): KC_AI turns the number row and ESC into the host's agent
     // cards. While it is on every key event is swallowed and answered there, except
     // the releases a held key or a modifier / layer key needs.
     if (ai_process_record(keycode, record)) {
-        return false;
-    }
-    if (mines_try_start(keycode, record)) {
         return false;
     }
 
@@ -7551,6 +7559,7 @@ void keyboard_post_init_user(void) {
     // exactly the state a wipe leaves behind. Ahead of emit_boot_banner() below,
     // so the banner can report the repair.
     poly_hand_post_init();
+    poly_combos_init();   // cmd 48: this half's flash sector into QMK's tables
     // Labels live in RAM on both halves (the render path reads one per macro keycap per
     // refresh). Each half loads its own EEPROM copy, then the master overwrites the
     // slave's over the link -- so a role swap makes whichever half the host talks to
@@ -7744,6 +7753,15 @@ void keyboard_post_init_user(void) {
     }
     note_keymap_storage(stored_fmt, need_reset,
                         need_reset ? timer_elapsed32(reset_t0) : 0);
+    // The split72 default layouts have the AI key where Hyper was. A stored keymap
+    // takes priority over the defaults, so a board that stored one gets the change
+    // once here: only keys that still hold Hyper at those positions change, the rest
+    // of the keymap and the macros stay (state.h, keymap_mig).
+    if (ee.keymap_mig < KEYMAP_MIG_AI_KEY) {
+        const uint8_t moved = dynamic_keymap_migrate_poly(KC_HYPR, KC_AI);
+        stamp_keymap_mig(KEYMAP_MIG_AI_KEY);
+        note_keymap_migration(KEYMAP_MIG_AI_KEY, moved);   // printed on the banner tick
+    }
     // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
     // a fresh EEPROM re-resolves per host via detection / host push; a manual pin
     // (e.g. Android) sticks. Seed local_state->active_os so the first render before
@@ -8079,6 +8097,7 @@ void eeconfig_init_user(void) {
     ee.tail_fmt       = TAIL_FMT_OK;
     ee.auto_shift     = auto_shift_pack(false, POLY_DEFAULT_AUTO_SHIFT_MS);
     ee.tail2_fmt      = TAIL2_FMT_OK;
+    ee.keymap_mig     = KEYMAP_MIG_AI_KEY;   // the keymap was just written from the defaults
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.

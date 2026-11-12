@@ -167,7 +167,33 @@ static const uint32_t* glyph_script_legend(void) {
     return (v < ARRAY_SIZE(names)) ? names[v] : SETTING_LBL("SCRIPT:", "?");
 }
 
+// TD(0)..TD(15): runtime tap dances (cmd 48). Numbered from 1, as the host shows them.
+// The legend names the slot, not its actions: the slave draws half the keys and does
+// not need the records for it.
+static const uint32_t* const s_tap_dance_legends[] = {
+    HINT_SMALL U"    Tap\r\v   dance 1",
+    HINT_SMALL U"    Tap\r\v   dance 2",
+    HINT_SMALL U"    Tap\r\v   dance 3",
+    HINT_SMALL U"    Tap\r\v   dance 4",
+    HINT_SMALL U"    Tap\r\v   dance 5",
+    HINT_SMALL U"    Tap\r\v   dance 6",
+    HINT_SMALL U"    Tap\r\v   dance 7",
+    HINT_SMALL U"    Tap\r\v   dance 8",
+    HINT_SMALL U"    Tap\r\v   dance 9",
+    HINT_SMALL U"    Tap\r\v  dance 10",
+    HINT_SMALL U"    Tap\r\v  dance 11",
+    HINT_SMALL U"    Tap\r\v  dance 12",
+    HINT_SMALL U"    Tap\r\v  dance 13",
+    HINT_SMALL U"    Tap\r\v  dance 14",
+    HINT_SMALL U"    Tap\r\v  dance 15",
+    HINT_SMALL U"    Tap\r\v  dance 16",
+};
+
 const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t state_flags) {
+    if (IS_QK_TAP_DANCE(keycode)) {
+        const uint16_t i = keycode - QK_TAP_DANCE;
+        return i < ARRAY_SIZE(s_tap_dance_legends) ? s_tap_dance_legends[i] : NULL;
+    }
     switch (keycode) {
         case SC_LCPO:                       return U"(   " CURRENCY_SIGN;
         case SC_RCPC:                       return U")   " CURRENCY_SIGN;
@@ -354,9 +380,7 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case OSL(_UL):                      return U"Util\r\v\t" ICON_LAYER LAYER_ONESHOT;
         case MO(_UL):                       return U"Util\r\v\t" ICON_LAYER;
         case TO(_UL):                       return U"Util\r\v\t" ICON_LAYER LAYER_SWITCH;
-        // The treble clef (tools/midi_glyphs.py) instead of a word: it carries its own
-        // position and draws with xAdvance 0, so the layer marks sit where Util's do.
-        case TO(_ML):                       return ICON_MIDI_CLEF U"\r\v\t" ICON_LAYER LAYER_SWITCH;
+        case TO(_ML):                       return U"MIDI\r\v\t" ICON_LAYER LAYER_SWITCH;
         case MO(_ADDLANG1):                 return (state_flags & MORE_TEXT) != 0 ? U"Intl" : INTL_LAYER_LEGEND;
         case KC_LAT_REMAP:                  return (state_flags & MORE_TEXT) != 0 ? U"Map" : INTL_REMAP_LEGEND;
         case KC_F1:                         return U" F1";

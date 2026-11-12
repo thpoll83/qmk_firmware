@@ -254,12 +254,13 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
                     QK_MACRO_6, QK_MACRO_7, QK_MACRO_8, QK_MACRO_9, QK_MACRO_10, QK_MACRO_11, KC_NO,
-                    TO(_ML),    KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_IDDQD,   TO(_SL),
+                    KC_NO,      KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_IDDQD,   TO(_SL),
         // Sound sits directly under the transport row so the whole media block reads as
         // one group: MRWD/MFFD bracket the volume trio, each under its transport key.
         // Shifted one column OUTWARD to make that alignment true - MRWD now sits under
         // MPRV, MUTE under MPLY, and so on to MFFD under the IDDQD slot.
-        _______,    KC_NO,      KC_MRWD,    KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_MFFD,    KC_NO,
+        // TO(_ML) sits directly under TO(_SL), so both layer switches share the outer column.
+        _______,    KC_NO,      KC_MRWD,    KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_MFFD,    TO(_ML),
         // KC_GLYPH_SIZE_UP is the SINGLE legend-size key - Shift reverses the direction
         // and the legend carries the current tier as a digit, so no second key is needed.
         // It sits where Ctx (KC_APP) lives on the base layers.

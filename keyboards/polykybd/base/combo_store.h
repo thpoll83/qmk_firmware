@@ -3,14 +3,14 @@
 //
 // Runtime combos and tap dance (HID cmd 48, protocol v33): the record format, its
 // validation and the tap-dance decision. Header-only and pure (no QMK headers), so
-// it is unit-tested on the host (make test:polykybd_combo_store). The flash sector,
+// it is unit-tested on the host (make test:polykybd_combo_store). The flash sectors,
 // the RAM tables and the QMK hooks are in poly_combos.c.
 //
-// Storage: one 4 KB flash sector of its own at FW_COMBO_STORE_OFFSET (top of the
+// Storage: two 4 KB flash sectors of their own at FW_COMBO_STORE_OFFSET (top of the
 // staging region, below the handedness stamp), NOT the emulated EEPROM. The EEPROM
 // is full (the macro body buffer takes all the space it leaves), every EEPROM byte
 // is also a RAM byte (the wear-levelling cache), and a wear-levelling recovery
-// clears the whole store; a sector of our own has none of those costs.
+// clears the whole store; sectors of our own have none of those costs.
 //
 // A record is five little-endian uint16 values (10 bytes on the wire and in flash):
 //   combo      keys[0..3], result        keys packed from the front, 0 = unused

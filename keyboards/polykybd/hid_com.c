@@ -1775,8 +1775,11 @@ static void hid_cmd_48(uint8_t *data, uint8_t length, const poly_layer_t *local_
         } else if (op == COMBO_OP_COMMIT) {
             ok = available && !fw_busy;
             if (ok) {
-                slave_ok = poly_combos_commit();
-                uprintf("Combos committed; other half %s.\n", slave_ok ? "stored them" : "NOT confirmed");
+                const uint8_t stored = poly_combos_commit();
+                ok       = (stored & POLY_COMBOS_STORED_HERE) != 0;   // NACK: this half's flash failed
+                slave_ok = (stored & POLY_COMBOS_STORED_OTHER) != 0;
+                uprintf("Combos committed: %s; other half %s.\n", ok ? "stored" : "FLASH WRITE FAILED",
+                        slave_ok ? "stored them" : "NOT confirmed");
             }
         }
         memset(data, 0, length);

@@ -283,38 +283,34 @@ static void load_from_flash(void) {
 
 // Same shape as hand_stamp.c's stamp_flash(): core1 runs from XIP (Eden, RLE
 // decode), so it is held for the erase and the programs.
-static void write_to_flash(void) {
-    const poly_combo_store_t *newest;
-    uint32_t sector = newest_image(&newest);
-
-    s_store.magic           = POLY_COMBO_STORE_MAGIC;
-    s_store.version         = POLY_COMBO_STORE_VERSION;
-    s_store.combo_slots     = POLY_COMBO_SLOTS;
-    s_store.tap_dance_slots = POLY_TAP_DANCE_SLOTS;
-    s_store.reserved        = 0;
-    s_store.seq             = newest != NULL ? newest->seq + 1u : 1u;
-    s_store.crc             = store_crc(&s_store);
-
-    // The next slot whose first word is still erased, in the newest image's sector.
-    // A torn write has programmed its slot, so it is skipped and never reused
-    // before that sector is erased.
-    uint32_t slot = STORE_SLOTS_PER_SECTOR;
-    if (sector < STORE_SECTORS) {
-        for (uint32_t i = 0; i < STORE_SLOTS_PER_SECTOR; i++) {
-            if (store_slot(sector, i)->magic == 0xFFFFFFFFu) { slot = i; break; }
-        }
+static bool slot_erased(uint32_t sector, uint32_t slot) {
+    const uint32_t *w = (const uint32_t *)store_slot(sector, slot);
+    for (uint32_t i = 0; i < STORE_SLOT_BYTES / sizeof(uint32_t); i++) {
+        if (w[i] != 0xFFFFFFFFu) return false;
     }
+    return true;
+}
+
+// Picks the slot for the next image and programs it. A slot counts as free only when
+// all of it is erased: a write cut off by power loss can leave its first word erased
+// and other bytes programmed, and NOR flash cannot program those back.
+static void program_next_slot(const poly_combo_store_t *newest, uint32_t sector,
+                              uint32_t *out_sector, uint32_t *out_slot) {
+    uint32_t slot = STORE_SLOTS_PER_SECTOR;
     bool erase = false;
     if (sector == STORE_SECTORS) {
-        // No valid image anywhere: start in sector 0, erasing it unless slot 0 is clean.
+        // No valid image anywhere: sector 0, erased first unless a slot there is clean.
         sector = 0;
-        slot   = 0;
-        erase  = store_slot(0, 0)->magic != 0xFFFFFFFFu;
-    } else if (slot == STORE_SLOTS_PER_SECTOR) {
-        // This sector is full: move to the other one. The newest image stays where it is.
-        sector = (sector + 1u) % STORE_SECTORS;
-        slot   = 0;
-        erase  = true;
+    }
+    for (uint32_t i = 0; i < STORE_SLOTS_PER_SECTOR; i++) {
+        if (slot_erased(sector, i)) { slot = i; break; }
+    }
+    if (slot == STORE_SLOTS_PER_SECTOR) {
+        // No clean slot here. With a newest image in this sector, move to the other
+        // one, so the newest image is never in the sector being erased.
+        if (newest != NULL) sector = (sector + 1u) % STORE_SECTORS;
+        slot  = 0;
+        erase = true;
     }
     const uint32_t base = sector_offset(sector) + slot * STORE_SLOT_BYTES;
 
@@ -337,10 +333,41 @@ static void write_to_flash(void) {
     restore_interrupts(irq);
     core1_release();
     crash_phase_leave(tag);
-    s_flashed_crc = records_crc(&s_store);
+    *out_sector = sector;
+    *out_slot   = slot;
 }
 
+// Writes s_store as a new image and reads it back. false when no attempt produced a
+// valid copy; this half then keeps its previous image and s_flashed_crc.
+#define STORE_WRITE_TRIES 3u
 
+static bool write_to_flash(void) {
+    const poly_combo_store_t *newest;
+    const uint32_t newest_sector = newest_image(&newest);
+
+    s_store.magic           = POLY_COMBO_STORE_MAGIC;
+    s_store.version         = POLY_COMBO_STORE_VERSION;
+    s_store.combo_slots     = POLY_COMBO_SLOTS;
+    s_store.tap_dance_slots = POLY_TAP_DANCE_SLOTS;
+    s_store.reserved        = 0;
+    s_store.seq             = newest != NULL ? newest->seq + 1u : 1u;
+    s_store.crc             = store_crc(&s_store);
+
+    for (uint8_t attempt = 0; attempt < STORE_WRITE_TRIES; attempt++) {
+        uint32_t sector, slot;
+        // Each attempt starts from the newest image's sector: a failed slot is no
+        // longer erased, so the next attempt takes the slot after it.
+        program_next_slot(newest, newest_sector, &sector, &slot);
+        const poly_combo_store_t *img = store_slot(sector, slot);
+        if (store_valid(img) && img->seq == s_store.seq && img->crc == s_store.crc) {
+            s_flashed_crc = records_crc(&s_store);
+            return true;
+        }
+        uprintf("Combos: the flash image did not read back (sector %lu slot %lu).\n",
+                (unsigned long)sector, (unsigned long)slot);
+    }
+    return false;
+}
 
 // ---- Public API (combo_store.h) --------------------------------------------------
 
@@ -428,14 +455,16 @@ static uint8_t send_check(void) {
 #define COMBO_VERIFY_TRIES   10u
 #define COMBO_VERIFY_WAIT_MS 15u
 
-bool poly_combos_commit(void) {
-    write_to_flash();
-    if (!bridge_all(&s_store)) return false;   // s_store is what was just written
+uint8_t poly_combos_commit(void) {
+    // Nothing goes to the other half unless this half stored it: the other half
+    // must never hold records this half's flash does not.
+    if (!write_to_flash()) return 0;
+    if (!bridge_all(&s_store)) return POLY_COMBOS_STORED_HERE;   // s_store is what was just written
     for (uint8_t i = 0; i < COMBO_VERIFY_TRIES; i++) {
         wait_ms(COMBO_VERIFY_WAIT_MS);
-        if (sync_succeeded(send_check())) return true;
+        if (sync_succeeded(send_check())) return POLY_COMBOS_STORED_HERE | POLY_COMBOS_STORED_OTHER;
     }
-    return false;
+    return POLY_COMBOS_STORED_HERE;
 }
 
 // ---- The master's periodic check ----------------------------------------------------
@@ -519,7 +548,7 @@ void poly_combos_drain_pending(void) {
     if (s_rebuild_pending) rebuild_tables();
     if (s_commit_pending) {
         rebuild_tables();
-        write_to_flash();
+        write_to_flash();   // on failure s_flashed_crc stays old: the master's check sends again
         s_commit_pending = false;   // after the write, so no record lands in the copy
     }
     master_check();

@@ -14,6 +14,10 @@
 #include <stdint.h>
 #include "base/combo_store.h"
 
+// poly_combos_commit()'s result bits (defined in every build: hid_com.c reads them).
+#define POLY_COMBOS_STORED_HERE  0x01u
+#define POLY_COMBOS_STORED_OTHER 0x02u
+
 #ifdef POLY_RUNTIME_COMBOS
 
 // Loads the sector into RAM and builds QMK's tables. Call once at boot, on both halves.
@@ -24,9 +28,10 @@ void poly_combos_init(void);
 bool poly_combo_record_get(uint8_t kind, uint8_t index, uint8_t out[POLY_COMBO_REC_BYTES]);
 bool poly_combo_record_set(uint8_t kind, uint8_t index, const uint8_t in[POLY_COMBO_REC_BYTES]);
 
-// Writes the RAM records to this half's flash sector and sends them to the other
-// half. Main loop only. false when the copy to the other half failed.
-bool poly_combos_commit(void);
+// Writes the RAM records to this half's flash and sends them to the other half.
+// Main loop only. Returns POLY_COMBOS_STORED_HERE when this half's flash read back
+// correctly, plus POLY_COMBOS_STORED_OTHER when the other half's flash matches.
+uint8_t poly_combos_commit(void);
 
 // The per-dance tapping term for a TD(n) keycode, or 0 for "use the global term".
 uint16_t poly_tap_dance_term(uint16_t keycode);
@@ -45,7 +50,7 @@ void poly_combos_drain_pending(void);
 static inline void poly_combos_init(void) {}
 static inline bool poly_combo_record_get(uint8_t kind, uint8_t index, uint8_t out[POLY_COMBO_REC_BYTES]) { (void)kind; (void)index; (void)out; return false; }
 static inline bool poly_combo_record_set(uint8_t kind, uint8_t index, const uint8_t in[POLY_COMBO_REC_BYTES]) { (void)kind; (void)index; (void)in; return false; }
-static inline bool poly_combos_commit(void) { return false; }
+static inline uint8_t poly_combos_commit(void) { return 0; }
 static inline uint16_t poly_tap_dance_term(uint16_t keycode) { (void)keycode; return 0; }
 static inline bool poly_combos_slave_record(uint8_t kind, uint8_t index, const uint8_t rec[POLY_COMBO_REC_BYTES]) { (void)kind; (void)index; (void)rec; return false; }
 static inline void poly_combos_slave_commit(void) {}

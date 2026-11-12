@@ -166,7 +166,10 @@ per-variant logic. [`VARIANTS.md`](keyboards/polykybd/VARIANTS.md).
   names older boards' layer keys wrong (KEYMAP_STORAGE.md).
 - ⚠️ **A keymap edit below the write cap is invisible on any board that stored a
   keymap.** Increasing the format stamp reaches every board and wipes the user's macros;
-  `polyctl keymap set <layer> <row> <col> <keycode>` is non-destructive.
+  `polyctl keymap set <layer> <row> <col> <keycode>` is non-destructive. To ship a
+  default-key change to existing boards, add a `KEYMAP_MIG_*` value (`state.h`) and a
+  `dynamic_keymap_migrate_poly(old, new)` call: it changes only keys that still hold
+  the old default (KEYMAP_STORAGE.md → *One-time migrations*).
 - ⚠️ **The host's keymap reset also wipes every macro.** Tray Maintenance → "Reset keymap
   to default…" (control method `keymap.reset`, no `polyctl`) sends
   `id_dynamic_keymap_reset`, and `dynamic_keymap_reset_poly()` resets layers 0..8 (keys

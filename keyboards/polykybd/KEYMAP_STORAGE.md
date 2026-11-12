@@ -172,3 +172,29 @@ derivation on a remappable layer faces the same three-way choice.
 `poly_keycode_at()` runs per keycap per render, not just per keypress. See the `_poly`
 wrapper invariant above for how it is invalidated.
 
+
+## One-time migrations of the stored keymap
+
+A changed default key does not reach a board that stored a keymap, and increasing
+`KEYMAP_STORAGE_CURRENT` wipes the keymap and every macro. For a change of a key's
+contents, `poly_eeconf_t.keymap_mig` (user offset 166) records the newest one-time
+migration the board has had. The markers are ordered. At boot,
+`keyboard_post_init_user` runs each migration whose `KEYMAP_MIG_*` value is above the
+stored marker (`dynamic_keymap_migrate_poly(old, new)`), oldest first, then stamps the
+newest marker (`stamp_keymap_mig()`).
+
+- The migration changes a stored key only where the built-in default now has `new`
+  AND the stored key still holds `old`. A key the user remapped stays as it is, and
+  the macros stay.
+- Each half migrates its own copy by the same rule, before the split link is up.
+- A fresh EEPROM is born with the current marker (`eeconfig_init_user()`): its keymap
+  was just written from the defaults.
+- The banner tick prints `keymap: migration 0xNN changed N stored key(s)` on the boot
+  that ran it.
+- The next migration takes the next value up (0xC8). Every value stays above 0x7F:
+  offset 166 was the high byte of an old keycode (at most 0x7F), so a board that
+  never ran a migration reads below all of them.
+
+| Marker | Since | Change |
+|---|---|---|
+| `KEYMAP_MIG_AI_KEY` 0xC7 | this change | split72 default layouts: Hyper → AI key (`KC_AI`) on QWERTY, Stag, Colemak DH and Workman |

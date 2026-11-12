@@ -33,6 +33,10 @@ void emit_idle_config(void);
 // whether that forced a dynamic-keymap discard (and how long the discard blocked).
 void note_keymap_storage(uint8_t stored_fmt, bool reset_ran, uint32_t elapsed_ms);
 
+// Records a one-time stored-keymap migration this boot ran (poly_eeconf_t.keymap_mig):
+// the marker it applied and how many stored keys it changed.
+void note_keymap_migration(uint8_t marker, uint8_t keys_changed);
+
 // The stored dynamic-keymap format version + whether this boot discarded the keymap.
 // Re-emitted by the banner tick, like emit_idle_config().
 void emit_keymap_storage_line(void);

@@ -215,12 +215,29 @@ static bool store_valid(const poly_combo_store_t *st) {
     return true;
 }
 
+// The sector holds STORE_SLOTS images of the store, appended as in hand_stamp.c: a
+// commit programs the next erased slot without an erase, and boot loads the LAST
+// valid one. Power lost while a slot is programmed leaves that slot invalid and the
+// previous one in force. Only the commit that finds every slot used erases the
+// sector first, once every STORE_SLOTS commits.
+#define STORE_SLOT_BYTES 512u
+#define STORE_SLOTS      (4096u / STORE_SLOT_BYTES)
+_Static_assert(sizeof(poly_combo_store_t) <= STORE_SLOT_BYTES, "a store image fits its slot");
+_Static_assert(STORE_SLOT_BYTES % FLASH_PAGE_SIZE == 0, "a slot is whole flash pages");
+
+static const poly_combo_store_t *store_slot(uint32_t i) {
+    return (const poly_combo_store_t *)(XIP_BASE + FW_COMBO_STORE_OFFSET + i * STORE_SLOT_BYTES);
+}
+
 static void load_from_flash(void) {
-    const poly_combo_store_t *flash = (const poly_combo_store_t *)(XIP_BASE + FW_COMBO_STORE_OFFSET);
-    if (store_valid(flash)) {
-        memcpy(&s_store, flash, sizeof(s_store));
+    const poly_combo_store_t *found = NULL;
+    for (uint32_t i = 0; i < STORE_SLOTS; i++) {
+        if (store_valid(store_slot(i))) found = store_slot(i);   // the last valid wins
+    }
+    if (found != NULL) {
+        memcpy(&s_store, found, sizeof(s_store));
     } else {
-        // Erased (0xFF), an older format or a torn write: no entries.
+        // Erased (0xFF), an older format or only torn writes: no entries.
         memset(&s_store, 0, sizeof(s_store));
     }
 }
@@ -236,21 +253,31 @@ static void write_to_flash(void) {
     s_store.reserved2       = 0;
     s_store.crc             = store_crc(&s_store);
 
+    // A slot whose first word is still erased has never been programmed. A torn
+    // write has programmed it, so it is skipped and never reused before an erase.
+    uint32_t slot = STORE_SLOTS;
+    for (uint32_t i = 0; i < STORE_SLOTS; i++) {
+        if (store_slot(i)->magic == 0xFFFFFFFFu) { slot = i; break; }
+    }
+    const bool erase = slot == STORE_SLOTS;
+    if (erase) slot = 0;
+    const uint32_t base = FW_COMBO_STORE_OFFSET + slot * STORE_SLOT_BYTES;
+
     // flash_range_program() takes whole 256-byte pages from RAM. On the stack, as in
     // hand_stamp.c: this runs from the main loop only.
     uint8_t page[FLASH_PAGE_SIZE];
     const uint32_t pages = (sizeof(s_store) + FLASH_PAGE_SIZE - 1u) / FLASH_PAGE_SIZE;
 
-    uint32_t tag = crash_phase_enter(CRASH_PHASE_FLASH, 2);
+    uint32_t tag = crash_phase_enter(CRASH_PHASE_FLASH, erase ? 2 : 1);
     core1_hold();
     uint32_t irq = save_and_disable_interrupts();
-    flash_range_erase(FW_COMBO_STORE_OFFSET, FLASH_SECTOR_SIZE);
+    if (erase) flash_range_erase(FW_COMBO_STORE_OFFSET, FLASH_SECTOR_SIZE);
     for (uint32_t p = 0; p < pages; p++) {
         const uint32_t off = p * FLASH_PAGE_SIZE;
         const uint32_t n   = (sizeof(s_store) - off) < FLASH_PAGE_SIZE ? (sizeof(s_store) - off) : FLASH_PAGE_SIZE;
         memset(page, 0xFF, sizeof(page));
         memcpy(page, (const uint8_t *)&s_store + off, n);
-        flash_range_program(FW_COMBO_STORE_OFFSET + off, page, FLASH_PAGE_SIZE);
+        flash_range_program(base + off, page, FLASH_PAGE_SIZE);
     }
     restore_interrupts(irq);
     core1_release();

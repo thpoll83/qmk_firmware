@@ -53,8 +53,8 @@ typedef struct {
 POLY_COMBO_STATIC_ASSERT(sizeof(poly_combo_rec_t) == POLY_COMBO_REC_BYTES, "combo record is 10 bytes");
 POLY_COMBO_STATIC_ASSERT(sizeof(poly_tap_dance_rec_t) == POLY_COMBO_REC_BYTES, "tap dance record is 10 bytes");
 
-// The flash image of the sector's first bytes. A header that does not match (an
-// erased sector reads 0xFF, a format change, a torn write) means "no entries".
+// One image of the store; the sector holds eight of them (poly_combos.c). A header that
+// does not match (an erased slot reads 0xFF, a format change, a torn write) is skipped.
 #define POLY_COMBO_STORE_MAGIC   0x424D4350u   // "PCMB"
 #define POLY_COMBO_STORE_VERSION 1u
 

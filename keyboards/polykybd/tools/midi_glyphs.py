@@ -15,7 +15,7 @@ clears a 3 px courtyard around every glyph box before plotting it
 
 Sources:
   * staff, hairpins, slur, glide, vibrato wave, bend curves: drawn here.
-  * dynamics (U+1D18F..1D191), flat, sharp, treble clef (U+1D11E) and the text marks
+  * dynamics (U+1D18F..1D191), flat, sharp and the text marks
     (8va, 8vb, Ped., Sost., u.c.): GNU FreeFont FreeSerif / FreeSerifBoldItalic
     (GPLv3 with the font exception; Debian package fonts-freefont-ttf). Only the
     rendered 1-bit bitmaps are stored, below.
@@ -203,12 +203,6 @@ def bend(up):  # under "BEND", y 22..36
     return c
 
 
-def clef():  # the MIDI layer key, left column
-    c = canvas()
-    paste(c, font_glyph("\U0001D11E", 33), 4, 2)
-    return c
-
-
 GLYPHS = ([(f"ICON_MIDI_STAFF_{n.replace('#', 'S')}", staff(n), f"staff, {n}") for n in NOTE_NAMES] + [
     ("ICON_MIDI_PP", dynamic("pp"), "dynamic pp"),
     ("ICON_MIDI_P", dynamic("p"), "dynamic p"),
@@ -230,7 +224,6 @@ GLYPHS = ([(f"ICON_MIDI_STAFF_{n.replace('#', 'S')}", staff(n), f"staff, {n}") f
     ("ICON_MIDI_WAVE", wave(), "vibrato wave, modulation"),
     ("ICON_MIDI_BEND_UP", bend(True), "pitch bend up"),
     ("ICON_MIDI_BEND_DOWN", bend(False), "pitch bend down"),
-    ("ICON_MIDI_CLEF", clef(), "treble clef, the MIDI layer key"),
 ])
 
 

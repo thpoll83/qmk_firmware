@@ -2,7 +2,7 @@
 
 The keyboard is also a class-compliant USB MIDI input. The MIDI layer `_ML` turns it
 into a small piano with live note names on the keycaps. It is reached with `TO(_ML)`
-(the treble-clef key on the utility layer) and left with `KC_BASE`.
+(the `MIDI` key on the utility layer, directly under the settings key `TO(_SL)`) and left with `KC_BASE`.
 
 ## What is built
 
@@ -51,7 +51,7 @@ Each symbol is an `IconsFont` glyph that carries its own position on the keycap
 (xOffset, yOffset) and has xAdvance 0. A legend draws the symbol first and its text
 after it. Change a symbol in `tools/midi_glyphs.py` and rerun it; `--check` fails when
 a header is out of date and `--sheet out.png` shows every glyph on a keycap. Dynamics,
-flat, sharp, the clef and the text marks are rendered from GNU FreeFont FreeSerif
+flat, sharp and the text marks are rendered from GNU FreeFont FreeSerif
 (GPLv3 with the font exception, Debian `fonts-freefont-ttf`); the staff, hairpins,
 slur, glide, wave and bend curves are drawn by the script.
 

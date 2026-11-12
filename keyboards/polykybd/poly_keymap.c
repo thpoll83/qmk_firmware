@@ -7756,6 +7756,14 @@ void keyboard_post_init_user(void) {
         stamp_keymap_mig(KEYMAP_MIG_AI_KEY);
         note_keymap_migration(KEYMAP_MIG_AI_KEY, moved);   // printed on the banner tick
     }
+    // Fn + the key above the right Shift opens the MIDI layer (split72 default, the
+    // key the host's MIDI guide points at). A stored Fn layer still has it
+    // transparent: change it there once, and only where it is still transparent.
+    if (ee.keymap_mig < KEYMAP_MIG_FN_MIDI) {
+        const uint8_t moved = dynamic_keymap_migrate_poly(KC_TRNS, TO(_ML));
+        stamp_keymap_mig(KEYMAP_MIG_FN_MIDI);
+        note_keymap_migration(KEYMAP_MIG_FN_MIDI, moved);
+    }
     // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
     // a fresh EEPROM re-resolves per host via detection / host push; a manual pin
     // (e.g. Android) sticks. Seed local_state->active_os so the first render before
@@ -8091,7 +8099,7 @@ void eeconfig_init_user(void) {
     ee.tail_fmt       = TAIL_FMT_OK;
     ee.auto_shift     = auto_shift_pack(false, POLY_DEFAULT_AUTO_SHIFT_MS);
     ee.tail2_fmt      = TAIL2_FMT_OK;
-    ee.keymap_mig     = KEYMAP_MIG_AI_KEY;   // the keymap was just written from the defaults
+    ee.keymap_mig     = KEYMAP_MIG_FN_MIDI;  // the keymap was just written from the defaults
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.

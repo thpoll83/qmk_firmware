@@ -17,12 +17,14 @@
 #define KEY_ATTN_CMD          47
 #define KEY_ATTN_OP_START      0
 #define KEY_ATTN_OP_CANCEL     1
+// Op 2 GUIDE (protocol v33) is ATTN_GUIDE_OP in base/attn_guide.h: a path of layer
+// keys to a target layer, rung on the step whose layer is active.
 // Ripple period in units of 100 ms, a CLOSED range: one ripple lasts 2.2 s, so a
 // shorter period would start the next one over it, and more than 10 s reads as gone.
 #define KEY_ATTN_PERIOD_MIN   23
 #define KEY_ATTN_PERIOD_MAX  100
 
-// Cmd 47, master. data[2] op: 0 START, 1 CANCEL.
+// Cmd 47, master. data[2] op: 0 START, 1 CANCEL, 2 GUIDE (base/attn_guide.h).
 //   START  data[3] row, data[4] col (matrix position; the key must have a display),
 //          data[5] count of ripples (0 = until cancelled), data[6] period / 100 ms
 //          (KEY_ATTN_PERIOD_MIN..MAX). A bad field NACKs and changes nothing; a

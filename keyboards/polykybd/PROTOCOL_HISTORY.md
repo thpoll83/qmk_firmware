@@ -471,6 +471,27 @@ reading before you change either one.
   - While a request runs, AI mode's waiting-agent ripple (protocol v31) waits.
   - Older firmware NACKs the command.
 
+  **v33** adds op `2` **GUIDE** to cmd `47` (`base/attn_guide.h`): the ripple walks
+  the user along a path of layer keys to a target layer. The host's MIDI guide
+  sends "Fn on the base layer, then the MIDI key on the Fn layer, until the MIDI
+  layer is active".
+  - `data[3]` ripples in total (0 = until done or cancelled), `data[4]` period in
+    100 ms units (the same closed range as START), `data[5]` target layer,
+    `data[6]` number of steps 1..4, then `{row, col, layer}` per step from `data[7]`.
+    `layer` is the layer the key is on. A step on the target layer, two steps on
+    one layer, a key without a display or any field out of range NACKs and changes
+    nothing.
+  - The master reads the active layer (the highest of the layer and default layer
+    states) on each housekeeping tick and writes the step for it into the same
+    `attn_*` fields START uses, so the slave needs nothing new and `poly_sync_t`
+    does not grow. Holding Fn moves the ripple at once (a new step replaces the
+    running ripple); letting go moves it back. On a layer no step names, nothing
+    ripples until one does. The guide ends when the target layer is active, when
+    its ripples run out, or on a CANCEL or START.
+  - Console: `attn: guide N step(s) to layer L`, `attn: guide step I`,
+    `attn: guide done`, `attn: guide ran out`, `attn: refused guide`.
+  - A v32 firmware NACKs op 2 (the op range is closed).
+
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)
@@ -501,6 +522,7 @@ reading before you change either one.
   | 29 | `44` GET/SET_TAP_TERMS | tapping term and Flow Tap term; ranges CLOSED, unknown NACKs |
   | 31 | `45` AI, `46` AI_CARD | AI mode: number-row states and cards, key events; op and states CLOSED |
   | 32 | `47` KEY_ATTENTION | the focus ripple on one key; op and period CLOSED |
+  | 33 | `47` op 2 GUIDE | the ripple follows a path of layer keys to a target layer |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs

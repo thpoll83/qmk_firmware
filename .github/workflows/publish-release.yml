@@ -8,9 +8,12 @@ name: Publish release
 # runs detects which repo it is in.
 #
 # ⚠️ Publishing needs the RELEASE_TOKEN secret: a fine-grained token with
-# Contents read/write on this repo. A release created with the built-in
-# GITHUB_TOKEN does not start other workflows, so the `release: published`
-# build in release.yml would never run and the release would have no assets.
+# Contents read/write on this repo. Add Workflows read/write if a release
+# commit can change files under .github/workflows/ compared with the default
+# branch: GitHub refuses that release without it. A release created with the
+# built-in GITHUB_TOKEN does not start other workflows, so the
+# `release: published` build in release.yml would never run and the release
+# would have no assets.
 # A dry run works without the secret.
 
 on:
@@ -37,7 +40,8 @@ jobs:
   publish:
     name: Publish
     # Write access is enough to dispatch a workflow; publishing is the owner's call.
-    if: github.actor == github.repository_owner
+    # A re-run keeps github.actor of the first run, so check who started this attempt too.
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2

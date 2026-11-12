@@ -57,7 +57,7 @@ POLY_COMBO_STATIC_ASSERT(sizeof(poly_tap_dance_rec_t) == POLY_COMBO_REC_BYTES, "
 // that does not match (an erased slot reads 0xFF, a format change, a torn write) is
 // skipped.
 #define POLY_COMBO_STORE_MAGIC   0x424D4350u   // "PCMB"
-#define POLY_COMBO_STORE_VERSION 1u
+#define POLY_COMBO_STORE_VERSION 2u   // 2: the CRC covers seq as well
 
 typedef struct {
     uint32_t             magic;
@@ -65,7 +65,7 @@ typedef struct {
     uint8_t              combo_slots;
     uint8_t              tap_dance_slots;
     uint8_t              reserved;
-    uint32_t             crc;        // over combos[] and tap_dances[]
+    uint32_t             crc;        // over combos[], tap_dances[], then seq
     uint32_t             seq;        // commit counter: the highest valid copy is loaded
     poly_combo_rec_t     combos[POLY_COMBO_SLOTS];
     poly_tap_dance_rec_t tap_dances[POLY_TAP_DANCE_SLOTS];

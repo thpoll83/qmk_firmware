@@ -197,8 +197,17 @@ static void rebuild_tables_now(void) {
 
 // ---- The flash sector ------------------------------------------------------------
 
-static uint32_t store_crc(const poly_combo_store_t *st) {
+// The records alone: equal on both halves when they hold the same combos and tap
+// dances (their seq differs), so this is what POLY_KEYMAP_OP_COMBO_CHECK compares.
+static uint32_t records_crc(const poly_combo_store_t *st) {
     return crc32_1byte(&st->combos, (uint16_t)(sizeof(*st) - offsetof(poly_combo_store_t, combos)), 0);
+}
+
+// The stored image's CRC: the records, then seq. seq has to be covered too: an
+// interrupted erase sets bits to 1, and an old image whose seq rose that way while
+// its records survived would otherwise be loaded as the newest.
+static uint32_t store_crc(const poly_combo_store_t *st) {
+    return crc32_1byte(&st->seq, sizeof(st->seq), records_crc(st));
 }
 
 static bool store_valid(const poly_combo_store_t *st) {
@@ -269,7 +278,7 @@ static void load_from_flash(void) {
         // Erased (0xFF), an older format or only torn writes: no entries.
         memset(&s_store, 0, sizeof(s_store));
     }
-    s_flashed_crc = store_crc(&s_store);
+    s_flashed_crc = records_crc(&s_store);
 }
 
 // Same shape as hand_stamp.c's stamp_flash(): core1 runs from XIP (Eden, RLE
@@ -328,7 +337,7 @@ static void write_to_flash(void) {
     restore_interrupts(irq);
     core1_release();
     crash_phase_leave(tag);
-    s_flashed_crc = s_store.crc;
+    s_flashed_crc = records_crc(&s_store);
 }
 
 

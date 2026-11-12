@@ -1758,7 +1758,8 @@ static void hid_cmd_48(uint8_t *data, uint8_t length, const poly_layer_t *local_
         // No record change and no commit while a firmware update runs: the slave's
         // flash write is skipped then (housekeeping is gated on it), and the apply
         // resets both halves, so the copy would be lost with a success reply.
-        const bool fw_busy = fw_staging_fw_up_active() || fw_staging_commit_pending();
+        const bool fw_busy = fw_staging_fw_up_active() || fw_staging_commit_pending() ||
+                             fw_staging_reboot_pending();
         if (op == COMBO_OP_INFO) {
             ok = available;
         } else if (op == COMBO_OP_GET) {

@@ -381,9 +381,12 @@ bool poly_combo_record_set(uint8_t kind, uint8_t index, const uint8_t in[POLY_CO
     return true;
 }
 
-// Sends every record, then the commit, to the slave. Returns false when the link
-// dropped a message; the slave then keeps its previous sector.
-static bool bridge_all(void) {
+// Sends every record of `src`, then the commit, to the slave. `src` NULL sends an
+// empty store. Returns false when the link dropped a message or the slave refused
+// one; the slave then keeps its previous flash.
+static bool bridge_all(const poly_combo_store_t *src) {
+    static const poly_combo_store_t s_empty;   // zero-initialised: every slot empty
+    if (src == NULL) src = &s_empty;
     dynamic_keymap_sync_t msg;
     for (uint8_t kind = 0; kind < 2; kind++) {
         const uint8_t slots = kind == POLY_COMBO_KIND_COMBO ? POLY_COMBO_SLOTS : POLY_TAP_DANCE_SLOTS;
@@ -392,7 +395,9 @@ static bool bridge_all(void) {
             msg.commands[0] = POLY_KEYMAP_OP_COMBO_REC;
             msg.commands[1] = kind;
             msg.commands[2] = i;
-            poly_combo_record_get(kind, i, &msg.commands[3]);
+            const uint16_t *w = kind == POLY_COMBO_KIND_COMBO ? (const uint16_t *)&src->combos[i]
+                                                              : (const uint16_t *)&src->tap_dances[i];
+            poly_combo_words_put(&msg.commands[3], w);
             const uint8_t payload = (uint8_t)(sizeof(uint32_t) + 3 + POLY_COMBO_REC_BYTES);
             if (!sync_succeeded(send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, &msg, payload, 3))) {
                 return false;
@@ -425,7 +430,7 @@ static uint8_t send_check(void) {
 
 bool poly_combos_commit(void) {
     write_to_flash();
-    if (!bridge_all()) return false;
+    if (!bridge_all(&s_store)) return false;   // s_store is what was just written
     for (uint8_t i = 0; i < COMBO_VERIFY_TRIES; i++) {
         wait_ms(COMBO_VERIFY_WAIT_MS);
         if (sync_succeeded(send_check())) return true;
@@ -455,7 +460,11 @@ static void master_check(void) {
     }
     if (ack == SYNC_NACK_REFUSED) {
         uprintf("Combos: the other half differs; sending them again.\n");
-        bridge_all();   // checked again at the next retry
+        // What this half has in FLASH, not s_store: RAM can hold a set the host has
+        // not committed, and that must not reach the other half before the commit.
+        const poly_combo_store_t *flashed;
+        newest_image(&flashed);
+        bridge_all(flashed);   // checked again at the next retry
     }
     s_next_check = timer_read32() + COMBO_CHECK_RETRY_MS;
 }

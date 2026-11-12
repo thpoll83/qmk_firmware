@@ -129,6 +129,7 @@ TEST(TapDancePlan, EmptyRecordDoesNothing) {
 namespace {
 struct Clean {
     bool c[POLY_COMBO_STORE_SECTORS][POLY_COMBO_STORE_SLOTS];
+    bool tried[POLY_COMBO_STORE_SECTORS][POLY_COMBO_STORE_SLOTS] = {};
     Clean(bool all) {
         for (auto &sec : c)
             for (auto &s : sec) s = all;
@@ -139,7 +140,7 @@ const uint8_t NO_IMAGE = POLY_COMBO_STORE_SECTORS;
 
 TEST(ComboSlotPick, AFreshStoreStartsAtSector0Slot0WithoutErase) {
     Clean cl(true);
-    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, NO_IMAGE);
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, cl.tried, NO_IMAGE);
     EXPECT_EQ(p.sector, 0);
     EXPECT_EQ(p.slot, 0);
     EXPECT_FALSE(p.erase);
@@ -148,7 +149,7 @@ TEST(ComboSlotPick, AFreshStoreStartsAtSector0Slot0WithoutErase) {
 TEST(ComboSlotPick, AppendsInTheNewestImagesSector) {
     Clean cl(true);
     cl.c[1][0] = cl.c[1][1] = cl.c[1][2] = false;   // three images in sector 1
-    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, 1);
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, cl.tried, 1);
     EXPECT_EQ(p.sector, 1);
     EXPECT_EQ(p.slot, 3);
     EXPECT_FALSE(p.erase);
@@ -158,7 +159,7 @@ TEST(ComboSlotPick, AFullSectorMovesToACleanSlotOfTheOtherWithoutErase) {
     Clean cl(true);
     for (auto &s : cl.c[0]) s = false;               // sector 0 full, newest there
     cl.c[1][0] = false;                              // a failed slot 0 in sector 1
-    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, 0);
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, cl.tried, 0);
     EXPECT_EQ(p.sector, 1);
     EXPECT_EQ(p.slot, 1);                            // skips the failed slot, no erase
     EXPECT_FALSE(p.erase);
@@ -166,18 +167,37 @@ TEST(ComboSlotPick, AFullSectorMovesToACleanSlotOfTheOtherWithoutErase) {
 
 TEST(ComboSlotPick, NoCleanSlotErasesTheSectorWithoutTheNewestImage) {
     Clean cl(false);
-    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, 1);
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, cl.tried, 1);
     EXPECT_EQ(p.sector, 0);
     EXPECT_EQ(p.slot, 0);
     EXPECT_TRUE(p.erase);
-    p = poly_combo_pick_slot(cl.c, 0);
+    p = poly_combo_pick_slot(cl.c, cl.tried, 0);
     EXPECT_EQ(p.sector, 1);
     EXPECT_TRUE(p.erase);
 }
 
 TEST(ComboSlotPick, NoImageAndNoCleanSlotErasesSector0) {
     Clean cl(false);
-    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, NO_IMAGE);
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, cl.tried, NO_IMAGE);
     EXPECT_EQ(p.sector, 0);
     EXPECT_TRUE(p.erase);
+}
+
+TEST(ComboSlotPick, ATriedSlotIsNotPickedAgainEvenIfStillErased) {
+    Clean cl(true);
+    cl.tried[0][0] = true;                           // a write that did not take
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, cl.tried, NO_IMAGE);
+    EXPECT_EQ(p.sector, 0);
+    EXPECT_EQ(p.slot, 1);
+    EXPECT_FALSE(p.erase);
+}
+
+TEST(ComboSlotPick, TheEraseFallbackSkipsATriedSlot) {
+    Clean cl(false);                                 // sector 0 full, newest there
+    cl.c[1][0] = true;                               // the only clean slot ...
+    cl.tried[1][0] = true;                           // ... and its write failed
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, cl.tried, 0);
+    EXPECT_EQ(p.sector, 1);
+    EXPECT_TRUE(p.erase);
+    EXPECT_EQ(p.slot, 1);
 }

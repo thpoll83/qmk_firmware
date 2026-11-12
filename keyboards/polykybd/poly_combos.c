@@ -302,9 +302,9 @@ static void program_next_slot(uint32_t newest_sector, const bool tried[STORE_SEC
                               uint32_t *out_sector, uint32_t *out_slot) {
     bool clean[STORE_SECTORS][STORE_SLOTS_PER_SECTOR];
     for (uint32_t sec = 0; sec < STORE_SECTORS; sec++) {
-        for (uint32_t i = 0; i < STORE_SLOTS_PER_SECTOR; i++) clean[sec][i] = !tried[sec][i] && slot_erased(sec, i);
+        for (uint32_t i = 0; i < STORE_SLOTS_PER_SECTOR; i++) clean[sec][i] = slot_erased(sec, i);
     }
-    const poly_combo_slot_pick_t pick = poly_combo_pick_slot(clean, (uint8_t)newest_sector);
+    const poly_combo_slot_pick_t pick = poly_combo_pick_slot(clean, tried, (uint8_t)newest_sector);
     const uint32_t sector = pick.sector;
     const uint32_t slot   = pick.slot;
     const bool     erase  = pick.erase;

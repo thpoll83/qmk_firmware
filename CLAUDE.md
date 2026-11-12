@@ -189,7 +189,7 @@ keycodes stay on the release edge. [`KEYCODE_HANDLING.md`](keyboards/polykybd/KE
 - ⚠️ **Tap-hold settings are `config.h` defines.** A make variable is a switch only if
   some `.mk` translates it: `grep -rn "<NAME>" builddefs/` before trusting a `rules.mk`
   line. `HOLD_ON_OTHER_KEY_PRESS` is deliberately not defined.
-- **Runtime combos and tap dance (cmd 48, v33) are in their own flash sector**
+- **Runtime combos and tap dance (cmd 48, v33) are in two flash sectors of their own**
   (`FW_COMBO_STORE_OFFSET`, `poly_combos.c`), not the EEPROM, and are left out of the
   DOOM monolith. ⚠️ `rules.mk` sets `COMBO_ENABLE`/`TAP_DANCE_ENABLE` through
   `$(eval)`: QMK's info generator reads `rules.mk` as text and would enable a literal

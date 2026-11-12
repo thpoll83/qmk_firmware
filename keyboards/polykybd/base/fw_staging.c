@@ -41,7 +41,7 @@ _Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_APPLY_LOG_OFFSET,
 // carved off, or a raised FW_UP_MAX_SIZE will silently overwrite it.
 _Static_assert(FW_STAGING_DATA_OFFSET + FW_UP_MAX_SIZE <= FW_COMBO_STORE_OFFSET,
                "a staged image can reach the combo store / handedness stamp / crash archive");
-_Static_assert(FW_COMBO_STORE_OFFSET + 4096UL <= FW_HAND_STAMP_OFFSET,
+_Static_assert(FW_COMBO_STORE_OFFSET + FW_COMBO_STORE_BYTES <= FW_HAND_STAMP_OFFSET,
                "the combo store overlaps the handedness stamp");
 _Static_assert(FW_COMBO_STORE_OFFSET % 4096UL == 0,
                "the combo store is not sector-aligned; flash_range_erase() requires it");

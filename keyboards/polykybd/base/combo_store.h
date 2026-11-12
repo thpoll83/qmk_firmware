@@ -53,8 +53,9 @@ typedef struct {
 POLY_COMBO_STATIC_ASSERT(sizeof(poly_combo_rec_t) == POLY_COMBO_REC_BYTES, "combo record is 10 bytes");
 POLY_COMBO_STATIC_ASSERT(sizeof(poly_tap_dance_rec_t) == POLY_COMBO_REC_BYTES, "tap dance record is 10 bytes");
 
-// One image of the store; the sector holds eight of them (poly_combos.c). A header that
-// does not match (an erased slot reads 0xFF, a format change, a torn write) is skipped.
+// One image of the store; each of the two sectors holds eight (poly_combos.c). A header
+// that does not match (an erased slot reads 0xFF, a format change, a torn write) is
+// skipped.
 #define POLY_COMBO_STORE_MAGIC   0x424D4350u   // "PCMB"
 #define POLY_COMBO_STORE_VERSION 1u
 
@@ -65,7 +66,7 @@ typedef struct {
     uint8_t              tap_dance_slots;
     uint8_t              reserved;
     uint32_t             crc;        // over combos[] and tap_dances[]
-    uint32_t             reserved2;
+    uint32_t             seq;        // commit counter: the highest valid copy is loaded
     poly_combo_rec_t     combos[POLY_COMBO_SLOTS];
     poly_tap_dance_rec_t tap_dances[POLY_TAP_DANCE_SLOTS];
 } poly_combo_store_t;

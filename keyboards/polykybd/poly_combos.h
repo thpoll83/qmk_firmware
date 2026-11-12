@@ -34,6 +34,10 @@ uint16_t poly_tap_dance_term(uint16_t keycode);
 // Slave side: the split handler records, housekeeping writes (poly_combos.c).
 bool poly_combos_slave_record(uint8_t kind, uint8_t index, const uint8_t rec[POLY_COMBO_REC_BYTES]);
 void poly_combos_slave_commit(void);
+bool poly_combos_slave_check(uint32_t master_crc);
+// Housekeeping, both halves: the slave's pending flash write, a deferred table
+// rebuild, and on the master the periodic check that the other half has the same
+// records (sending them again when it has not).
 void poly_combos_drain_pending(void);
 
 #else
@@ -45,6 +49,7 @@ static inline bool poly_combos_commit(void) { return false; }
 static inline uint16_t poly_tap_dance_term(uint16_t keycode) { (void)keycode; return 0; }
 static inline bool poly_combos_slave_record(uint8_t kind, uint8_t index, const uint8_t rec[POLY_COMBO_REC_BYTES]) { (void)kind; (void)index; (void)rec; return false; }
 static inline void poly_combos_slave_commit(void) {}
+static inline bool poly_combos_slave_check(uint32_t master_crc) { (void)master_crc; return false; }
 static inline void poly_combos_drain_pending(void) {}
 
 #endif

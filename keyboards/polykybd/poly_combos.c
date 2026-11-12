@@ -3,7 +3,7 @@
 //
 // Runtime combos and tap dance (HID cmd 48, protocol v33). The record format and
 // the tap-dance decision are in base/combo_store.h; this file holds the flash
-// sector, the RAM tables QMK's engines read, and the copy to the other half.
+// sectors, the RAM tables QMK's engines read, and the copy to the other half.
 //
 // Compiled into every build except the DOOM monolith (POLYKYBD_DOOM without the
 // pack flavour, rules.mk): the monolith is a developer build with ~3.3 KB of RAM
@@ -41,6 +41,7 @@
 #include "bridge_helper.h"       // send_to_bridge()
 #include "split_sync.h"          // dynamic_keymap_sync_t, POLY_KEYMAP_OP_COMBO_*
 #include "transactions.h"        // USER_SYNC_DYNAMIC_KEYMAP_DATA
+#include "split_util.h"          // is_transport_connected()
 
 #include "hardware/flash.h"
 #include "hardware/sync.h"
@@ -215,55 +216,98 @@ static bool store_valid(const poly_combo_store_t *st) {
     return true;
 }
 
-// The sector holds STORE_SLOTS images of the store, appended as in hand_stamp.c: a
-// commit programs the next erased slot without an erase, and boot loads the LAST
-// valid one. Power lost while a slot is programmed leaves that slot invalid and the
-// previous one in force. The exception is the commit that finds every slot used,
-// once every STORE_SLOTS commits: it erases the sector before programming slot 0,
-// and power lost between the two leaves no valid image, so the next boot starts
-// with no combos or tap dances (the handedness stamp has the same window).
-#define STORE_SLOT_BYTES 512u
-#define STORE_SLOTS      (4096u / STORE_SLOT_BYTES)
+// Two sectors of eight 512 B slots each, one image of the store per slot. A commit
+// appends to the next erased slot of the sector that holds the newest image, so it
+// only programs. When that sector is full, the commit erases the OTHER sector and
+// writes its slot 0. The newest valid image is therefore never in the sector being
+// erased or programmed, and power lost at any point of a commit leaves the previous
+// records in force. Boot loads the valid image with the highest `seq`. An erase
+// happens once every STORE_SLOTS_PER_SECTOR commits, so each sector is erased once
+// every 16 commits.
+#define STORE_SECTORS          2u
+#define STORE_SLOT_BYTES       512u
+#define STORE_SLOTS_PER_SECTOR (FLASH_SECTOR_SIZE / STORE_SLOT_BYTES)
 _Static_assert(sizeof(poly_combo_store_t) <= STORE_SLOT_BYTES, "a store image fits its slot");
 _Static_assert(STORE_SLOT_BYTES % FLASH_PAGE_SIZE == 0, "a slot is whole flash pages");
+_Static_assert(STORE_SECTORS * FLASH_SECTOR_SIZE == FW_COMBO_STORE_BYTES, "the store is two sectors");
 
-static const poly_combo_store_t *store_slot(uint32_t i) {
-    return (const poly_combo_store_t *)(XIP_BASE + FW_COMBO_STORE_OFFSET + i * STORE_SLOT_BYTES);
+static uint32_t sector_offset(uint32_t sector) {
+    return FW_COMBO_STORE_OFFSET + sector * FLASH_SECTOR_SIZE;
 }
 
-static void load_from_flash(void) {
-    const poly_combo_store_t *found = NULL;
-    for (uint32_t i = 0; i < STORE_SLOTS; i++) {
-        if (store_valid(store_slot(i))) found = store_slot(i);   // the last valid wins
+static const poly_combo_store_t *store_slot(uint32_t sector, uint32_t slot) {
+    return (const poly_combo_store_t *)(XIP_BASE + sector_offset(sector) + slot * STORE_SLOT_BYTES);
+}
+
+// The newest valid image: its sector, or STORE_SECTORS when there is none.
+static uint32_t newest_image(const poly_combo_store_t **out) {
+    uint32_t sector = STORE_SECTORS;
+    *out = NULL;
+    for (uint32_t sec = 0; sec < STORE_SECTORS; sec++) {
+        for (uint32_t i = 0; i < STORE_SLOTS_PER_SECTOR; i++) {
+            const poly_combo_store_t *img = store_slot(sec, i);
+            if (store_valid(img) && (*out == NULL || img->seq >= (*out)->seq)) {
+                *out   = img;
+                sector = sec;
+            }
+        }
     }
+    return sector;
+}
+
+// The CRC of the records this half has in flash (of an empty store when it has
+// none). The master compares it with its own to see whether the other half has
+// stored the same records (POLY_KEYMAP_OP_COMBO_CHECK).
+static uint32_t s_flashed_crc;
+
+static void load_from_flash(void) {
+    const poly_combo_store_t *found;
+    newest_image(&found);
     if (found != NULL) {
         memcpy(&s_store, found, sizeof(s_store));
     } else {
         // Erased (0xFF), an older format or only torn writes: no entries.
         memset(&s_store, 0, sizeof(s_store));
     }
+    s_flashed_crc = store_crc(&s_store);
 }
 
 // Same shape as hand_stamp.c's stamp_flash(): core1 runs from XIP (Eden, RLE
 // decode), so it is held for the erase and the programs.
 static void write_to_flash(void) {
+    const poly_combo_store_t *newest;
+    uint32_t sector = newest_image(&newest);
+
     s_store.magic           = POLY_COMBO_STORE_MAGIC;
     s_store.version         = POLY_COMBO_STORE_VERSION;
     s_store.combo_slots     = POLY_COMBO_SLOTS;
     s_store.tap_dance_slots = POLY_TAP_DANCE_SLOTS;
     s_store.reserved        = 0;
-    s_store.reserved2       = 0;
+    s_store.seq             = newest != NULL ? newest->seq + 1u : 1u;
     s_store.crc             = store_crc(&s_store);
 
-    // A slot whose first word is still erased has never been programmed. A torn
-    // write has programmed it, so it is skipped and never reused before an erase.
-    uint32_t slot = STORE_SLOTS;
-    for (uint32_t i = 0; i < STORE_SLOTS; i++) {
-        if (store_slot(i)->magic == 0xFFFFFFFFu) { slot = i; break; }
+    // The next slot whose first word is still erased, in the newest image's sector.
+    // A torn write has programmed its slot, so it is skipped and never reused
+    // before that sector is erased.
+    uint32_t slot = STORE_SLOTS_PER_SECTOR;
+    if (sector < STORE_SECTORS) {
+        for (uint32_t i = 0; i < STORE_SLOTS_PER_SECTOR; i++) {
+            if (store_slot(sector, i)->magic == 0xFFFFFFFFu) { slot = i; break; }
+        }
     }
-    const bool erase = slot == STORE_SLOTS;
-    if (erase) slot = 0;
-    const uint32_t base = FW_COMBO_STORE_OFFSET + slot * STORE_SLOT_BYTES;
+    bool erase = false;
+    if (sector == STORE_SECTORS) {
+        // No valid image anywhere: start in sector 0, erasing it unless slot 0 is clean.
+        sector = 0;
+        slot   = 0;
+        erase  = store_slot(0, 0)->magic != 0xFFFFFFFFu;
+    } else if (slot == STORE_SLOTS_PER_SECTOR) {
+        // This sector is full: move to the other one. The newest image stays where it is.
+        sector = (sector + 1u) % STORE_SECTORS;
+        slot   = 0;
+        erase  = true;
+    }
+    const uint32_t base = sector_offset(sector) + slot * STORE_SLOT_BYTES;
 
     // flash_range_program() takes whole 256-byte pages from RAM. On the stack, as in
     // hand_stamp.c: this runs from the main loop only.
@@ -273,7 +317,7 @@ static void write_to_flash(void) {
     uint32_t tag = crash_phase_enter(CRASH_PHASE_FLASH, erase ? 2 : 1);
     core1_hold();
     uint32_t irq = save_and_disable_interrupts();
-    if (erase) flash_range_erase(FW_COMBO_STORE_OFFSET, FLASH_SECTOR_SIZE);
+    if (erase) flash_range_erase(sector_offset(sector), FLASH_SECTOR_SIZE);
     for (uint32_t p = 0; p < pages; p++) {
         const uint32_t off = p * FLASH_PAGE_SIZE;
         const uint32_t n   = (sizeof(s_store) - off) < FLASH_PAGE_SIZE ? (sizeof(s_store) - off) : FLASH_PAGE_SIZE;
@@ -284,9 +328,10 @@ static void write_to_flash(void) {
     restore_interrupts(irq);
     core1_release();
     crash_phase_leave(tag);
+    s_flashed_crc = s_store.crc;
 }
 
-_Static_assert(sizeof(poly_combo_store_t) <= 4096u, "the combo store fits its sector");
+
 
 // ---- Public API (combo_store.h) --------------------------------------------------
 
@@ -350,9 +395,60 @@ static bool bridge_all(void) {
     return sync_succeeded(send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, &msg, sizeof(uint32_t) + 1, 3));
 }
 
+// Asks the other half whether its flash holds the records this half has in flash.
+// One attempt: the callers retry on their own schedule.
+static uint8_t send_check(void) {
+    dynamic_keymap_sync_t msg;
+    memset(&msg, 0, sizeof(msg));
+    msg.commands[0] = POLY_KEYMAP_OP_COMBO_CHECK;
+    msg.commands[1] = (uint8_t)(s_flashed_crc & 0xFFu);
+    msg.commands[2] = (uint8_t)((s_flashed_crc >> 8) & 0xFFu);
+    msg.commands[3] = (uint8_t)((s_flashed_crc >> 16) & 0xFFu);
+    msg.commands[4] = (uint8_t)(s_flashed_crc >> 24);
+    return send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, &msg, sizeof(uint32_t) + 1 + sizeof(uint32_t), 1);
+}
+
+// After a commit the other half writes its flash at its next housekeeping pass. The
+// commit reports success only once its flash matches, so "the other half took it"
+// means written, not received. Up to ~150 ms; a sector erase takes ~45 ms.
+#define COMBO_VERIFY_TRIES   10u
+#define COMBO_VERIFY_WAIT_MS 15u
+
 bool poly_combos_commit(void) {
     write_to_flash();
-    return bridge_all();
+    if (!bridge_all()) return false;
+    for (uint8_t i = 0; i < COMBO_VERIFY_TRIES; i++) {
+        wait_ms(COMBO_VERIFY_WAIT_MS);
+        if (sync_succeeded(send_check())) return true;
+    }
+    return false;
+}
+
+// ---- The master's periodic check ----------------------------------------------------
+//
+// The other half can miss a commit: a link that drops during the copy, a restart
+// between the ACK and its flash write, a half swapped in from another keyboard. Every
+// COMBO_CHECK_PERIOD_MS, and 3 s after boot, the master asks; a mismatch makes it send
+// every record and the commit again. One 9-byte message per minute while they match.
+#define COMBO_CHECK_FIRST_MS  3000u
+#define COMBO_CHECK_PERIOD_MS 60000u
+#define COMBO_CHECK_RETRY_MS  2000u
+
+static uint32_t s_next_check = COMBO_CHECK_FIRST_MS;
+
+static void master_check(void) {
+    if (!is_keyboard_master() || !is_transport_connected()) return;
+    if (timer_read32() - s_next_check > 0x80000000u) return;   // not yet due
+    const uint8_t ack = send_check();
+    if (sync_succeeded(ack)) {
+        s_next_check = timer_read32() + COMBO_CHECK_PERIOD_MS;
+        return;
+    }
+    if (ack == SYNC_NACK_REFUSED) {
+        uprintf("Combos: the other half differs; sending them again.\n");
+        bridge_all();   // checked again at the next retry
+    }
+    s_next_check = timer_read32() + COMBO_CHECK_RETRY_MS;
 }
 
 // ---- The slave side ---------------------------------------------------------------
@@ -395,10 +491,18 @@ void poly_combos_slave_commit(void) {
     s_commit_pending = true;
 }
 
+// Split handler (slave): true when this half's flash holds the master's records. A
+// pending write has not reached the flash yet, so it does not match.
+bool poly_combos_slave_check(uint32_t master_crc) {
+    return !s_commit_pending && master_crc == s_flashed_crc;
+}
+
 void poly_combos_drain_pending(void) {
     if (s_rebuild_pending) rebuild_tables();
-    if (!s_commit_pending) return;
-    rebuild_tables();
-    write_to_flash();
-    s_commit_pending = false;   // after the write, so no record lands in the copy
+    if (s_commit_pending) {
+        rebuild_tables();
+        write_to_flash();
+        s_commit_pending = false;   // after the write, so no record lands in the copy
+    }
+    master_check();
 }

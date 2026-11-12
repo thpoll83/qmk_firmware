@@ -141,6 +141,7 @@ void dynamic_keymap_reset_poly(void);
 // flash sector in housekeeping.
 #define POLY_KEYMAP_OP_COMBO_REC    0xB2
 #define POLY_KEYMAP_OP_COMBO_COMMIT 0xB3
+#define POLY_KEYMAP_OP_COMBO_CHECK  0xB4   // + uint32 LE: the master's record CRC; ACK when the slave's flash matches
 
 // Push one macro's whole look to the slave. Returns true only on a real ACK -- callers
 // use that to decide whether to keep it queued.

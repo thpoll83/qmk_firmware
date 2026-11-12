@@ -502,6 +502,12 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                 case POLY_KEYMAP_OP_COMBO_COMMIT:
                     poly_combos_slave_commit();
                     break;
+                case POLY_KEYMAP_OP_COMBO_CHECK:
+                    // Compares only; a mismatch makes the master send everything again.
+                    if (in_len < sizeof(uint32_t) + 1 + sizeof(uint32_t)) { refused = true; break; }
+                    refused = !poly_combos_slave_check((uint32_t)command_data[0] | ((uint32_t)command_data[1] << 8) |
+                                                       ((uint32_t)command_data[2] << 16) | ((uint32_t)command_data[3] << 24));
+                    break;
                 case id_custom_save: //handle the same way
                 case 'P':
                     if(command_data[0]==14) {

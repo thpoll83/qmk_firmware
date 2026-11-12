@@ -1727,7 +1727,7 @@ static void hid_cmd_47(uint8_t *data, uint8_t length, const poly_layer_t *local_
 #define COMBO_OP_SET    2u
 #define COMBO_OP_COMMIT 3u
 #define COMBO_INFO_FLAG_AVAILABLE 0x01u   // this build has runtime combos / tap dance
-#define COMBO_COMMIT_FLAG_SLAVE   0x01u   // the other half took the copy
+#define COMBO_COMMIT_FLAG_SLAVE   0x01u   // the other half stored the copy (its flash CRC matches)
 
 static void hid_cmd_48(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //runtime combos and tap dance (protocol v33+)
     {
@@ -1739,7 +1739,7 @@ static void hid_cmd_48(uint8_t *data, uint8_t length, const poly_layer_t *local_
         //   2 set     data[3] kind, data[4] index, data[5..14] the record
         //             (RAM only; reply as for get, with the record now in RAM)
         //   3 commit  writes this half's flash sector and copies every record to the
-        //             other half; reply data[3] bit 0 = the other half took it
+        //             other half; reply data[3] bit 0 = the other half stored it
         // Records: base/combo_store.h. Both kinds are CLOSED: a record that fails
         // validation is NACKed and nothing changes. The DOOM monolith has no
         // runtime combos and NACKs every op (info reports flags 0).
@@ -1776,7 +1776,7 @@ static void hid_cmd_48(uint8_t *data, uint8_t length, const poly_layer_t *local_
             ok = available && !fw_busy;
             if (ok) {
                 slave_ok = poly_combos_commit();
-                uprintf("Combos committed; other half %s.\n", slave_ok ? "updated" : "NOT updated");
+                uprintf("Combos committed; other half %s.\n", slave_ok ? "stored them" : "NOT confirmed");
             }
         }
         memset(data, 0, length);

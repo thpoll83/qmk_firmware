@@ -305,6 +305,8 @@ endif
 # the ifeq, and puts any literal `*_ENABLE = yes` into every build's info_rules.mk,
 # so the monolith got COMBO_ENABLE without the tables and failed to compile
 # keymap_introspection.c. A non-boolean value is refused by its schema instead.
+# Every keymap.c must #include "poly_combos_keymap.h" for the two stub tables
+# (VARIANTS.md).
 # Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`), as for MIDI below.
 ifeq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
     # monolith: no runtime combos / tap dance

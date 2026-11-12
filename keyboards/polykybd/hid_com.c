@@ -6,6 +6,7 @@
 #include "poly_macro.h"
 #include "hid_fontpack.h"
 #include "split_fw_up.h"
+#include "base/fw_staging.h"
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"
@@ -1754,12 +1755,16 @@ static void hid_cmd_48(uint8_t *data, uint8_t length, const poly_layer_t *local_
 #else
         const bool available = false;
 #endif
+        // No record change and no commit while a firmware update runs: the slave's
+        // flash write is skipped then (housekeeping is gated on it), and the apply
+        // resets both halves, so the copy would be lost with a success reply.
+        const bool fw_busy = fw_staging_fw_up_active() || fw_staging_commit_pending();
         if (op == COMBO_OP_INFO) {
             ok = available;
         } else if (op == COMBO_OP_GET) {
             ok = poly_combo_record_get(kind, index, rec);
         } else if (op == COMBO_OP_SET) {
-            if (hid_payload_avail(length, 5) >= POLY_COMBO_REC_BYTES) {
+            if (!fw_busy && hid_payload_avail(length, 5) >= POLY_COMBO_REC_BYTES) {
                 memcpy(rec, &data[5], POLY_COMBO_REC_BYTES);
                 ok = poly_combo_record_set(kind, index, rec);
                 if (!ok) uprintf("Refused combo record kind %u index %u.\n", (unsigned)kind, (unsigned)index);
@@ -1767,7 +1772,7 @@ static void hid_cmd_48(uint8_t *data, uint8_t length, const poly_layer_t *local_
             if (!ok) memset(rec, 0, sizeof(rec));
             poly_combo_record_get(kind, index, rec);   // the record as it is now
         } else if (op == COMBO_OP_COMMIT) {
-            ok = available;
+            ok = available && !fw_busy;
             if (ok) {
                 slave_ok = poly_combos_commit();
                 uprintf("Combos committed; other half %s.\n", slave_ok ? "updated" : "NOT updated");

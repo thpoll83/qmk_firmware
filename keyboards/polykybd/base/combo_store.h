@@ -4,7 +4,7 @@
 // Runtime combos and tap dance (HID cmd 48, protocol v33): the record format, its
 // validation and the tap-dance decision. Header-only and pure (no QMK headers), so
 // it is unit-tested on the host (make test:polykybd_combo_store). The flash sector,
-// the RAM tables and the QMK hooks are in combo_store.c.
+// the RAM tables and the QMK hooks are in poly_combos.c.
 //
 // Storage: one 4 KB flash sector of its own at FW_COMBO_STORE_OFFSET (top of the
 // staging region, below the handedness stamp), NOT the emulated EEPROM. The EEPROM
@@ -104,6 +104,13 @@ static inline uint8_t poly_combo_key_count(const poly_combo_rec_t *r) {
     for (uint8_t i = n; i < POLY_COMBO_MAX_KEYS; i++) {
         if (r->keys[i] != 0u) return 0;   // a gap: keys must be packed from the front
     }
+    // The same key twice: QMK maps both presses to one trigger index, so the combo
+    // could never complete.
+    for (uint8_t i = 0; i < n; i++) {
+        for (uint8_t j = (uint8_t)(i + 1u); j < n; j++) {
+            if (r->keys[i] == r->keys[j]) return 0;
+        }
+    }
     return n;
 }
 
@@ -118,7 +125,7 @@ static inline bool poly_combo_rec_active(const poly_combo_rec_t *r) {
 }
 
 // The keycodes a tap-dance action can send: what the generic handler can press and
-// release without a key position of its own (combo_store.c td_key_down/up).
+// release without a key position of its own (poly_combos.c td_key_down/up).
 //   0x0000..0x1FFF  basic keycodes, with or without modifiers (QK_MODS range)
 //   0x5200..0x521F  TO(layer)          0x5220..0x523F  MO(layer)
 //   0x5260..0x527F  TG(layer)

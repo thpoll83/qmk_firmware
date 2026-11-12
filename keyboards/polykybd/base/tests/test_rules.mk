@@ -150,7 +150,7 @@ polykybd_tap_terms_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
-# combo_store.h is header-only and pure: the cmd 45 records and the tap-dance plan.
+# combo_store.h is header-only and pure: the cmd 48 records and the tap-dance plan.
 polykybd_combo_store_SRC := \
 	$(POLY_BASE_PATH)/tests/combo_store_tests.cpp
 

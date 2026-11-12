@@ -32,7 +32,7 @@ bool poly_combos_commit(void);
 uint16_t poly_tap_dance_term(uint16_t keycode);
 
 // Slave side: the split handler records, housekeeping writes (poly_combos.c).
-void poly_combos_slave_record(uint8_t kind, uint8_t index, const uint8_t rec[POLY_COMBO_REC_BYTES]);
+bool poly_combos_slave_record(uint8_t kind, uint8_t index, const uint8_t rec[POLY_COMBO_REC_BYTES]);
 void poly_combos_slave_commit(void);
 void poly_combos_drain_pending(void);
 
@@ -43,7 +43,7 @@ static inline bool poly_combo_record_get(uint8_t kind, uint8_t index, uint8_t ou
 static inline bool poly_combo_record_set(uint8_t kind, uint8_t index, const uint8_t in[POLY_COMBO_REC_BYTES]) { (void)kind; (void)index; (void)in; return false; }
 static inline bool poly_combos_commit(void) { return false; }
 static inline uint16_t poly_tap_dance_term(uint16_t keycode) { (void)keycode; return 0; }
-static inline void poly_combos_slave_record(uint8_t kind, uint8_t index, const uint8_t rec[POLY_COMBO_REC_BYTES]) { (void)kind; (void)index; (void)rec; }
+static inline bool poly_combos_slave_record(uint8_t kind, uint8_t index, const uint8_t rec[POLY_COMBO_REC_BYTES]) { (void)kind; (void)index; (void)rec; return false; }
 static inline void poly_combos_slave_commit(void) {}
 static inline void poly_combos_drain_pending(void) {}
 

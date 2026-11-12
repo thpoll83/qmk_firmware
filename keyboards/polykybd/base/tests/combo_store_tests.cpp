@@ -45,6 +45,15 @@ TEST(ComboRecord, MalformedRecordsAreRefused) {
     EXPECT_FALSE(poly_combo_rec_valid(&no_result));
 }
 
+TEST(ComboRecord, TheSameKeyTwiceIsRefused) {
+    // QMK maps both presses to one trigger index, so it could never complete.
+    poly_combo_rec_t twice     = {{A, A, 0, 0}, ESC};
+    poly_combo_rec_t twice_far = {{A, B, ESC, B}, ESC};
+    EXPECT_FALSE(poly_combo_rec_valid(&twice));
+    EXPECT_FALSE(poly_combo_rec_valid(&twice_far));
+    EXPECT_FALSE(poly_combo_rec_active(&twice));
+}
+
 TEST(ComboRecord, WireBytesAreLittleEndian) {
     poly_combo_rec_t r = {{A, MO1, 0, 0}, 0x1234};
     uint8_t wire[POLY_COMBO_REC_BYTES];

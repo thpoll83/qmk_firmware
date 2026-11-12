@@ -138,7 +138,31 @@ static void td_reset(tap_dance_state_t *state, void *user_data) {
 
 // ---- Building the engine tables from s_store -------------------------------------
 
+static bool s_rebuild_pending = false;
+
+// True while QMK holds a combo's result: its combo_t is what releases the result
+// when the trigger keys come up, so it must not be replaced until then.
+static bool any_combo_active(void) {
+    for (uint8_t i = 0; i < s_combo_count; i++) {
+        if (s_combos[i].active) return true;
+    }
+    return false;
+}
+
+static void rebuild_tables_now(void);
+
+// A record change rebuilds the tables at once, or, while a combo result is held,
+// at the first housekeeping pass after it is released (poly_combos_drain_pending).
 static void rebuild_tables(void) {
+    if (any_combo_active()) {
+        s_rebuild_pending = true;
+        return;
+    }
+    s_rebuild_pending = false;
+    rebuild_tables_now();
+}
+
+static void rebuild_tables_now(void) {
     // The combo engine buffers pressed keys and keeps per-combo state; drop both
     // before the table under it changes. combo_disable() clears the buffers.
     const bool was_enabled = is_combo_enabled();
@@ -314,18 +338,28 @@ bool poly_combos_commit(void) {
 
 static volatile bool s_commit_pending = false;
 
-void poly_combos_slave_record(uint8_t kind, uint8_t index, const uint8_t rec[POLY_COMBO_REC_BYTES]) {
+// Refused (false) while the previous commit's flash write is still pending: the
+// write takes s_store as it is then, and a record of the next transfer must not get
+// into that copy. The master then reports that the other half did not take it.
+bool poly_combos_slave_record(uint8_t kind, uint8_t index, const uint8_t rec[POLY_COMBO_REC_BYTES]) {
+    if (s_commit_pending) return false;
     uint16_t w[POLY_COMBO_REC_WORDS];
     poly_combo_words_get(rec, w);
     if (kind == POLY_COMBO_KIND_COMBO && index < POLY_COMBO_SLOTS) {
         poly_combo_rec_t r;
         memcpy(&r, w, sizeof(r));
-        if (poly_combo_rec_valid(&r)) s_store.combos[index] = r;
-    } else if (kind == POLY_COMBO_KIND_TAP_DANCE && index < POLY_TAP_DANCE_SLOTS) {
+        if (!poly_combo_rec_valid(&r)) return false;
+        s_store.combos[index] = r;
+        return true;
+    }
+    if (kind == POLY_COMBO_KIND_TAP_DANCE && index < POLY_TAP_DANCE_SLOTS) {
         poly_tap_dance_rec_t r;
         memcpy(&r, w, sizeof(r));
-        if (poly_td_rec_valid(&r)) s_store.tap_dances[index] = r;
+        if (!poly_td_rec_valid(&r)) return false;
+        s_store.tap_dances[index] = r;
+        return true;
     }
+    return false;
 }
 
 void poly_combos_slave_commit(void) {
@@ -333,8 +367,9 @@ void poly_combos_slave_commit(void) {
 }
 
 void poly_combos_drain_pending(void) {
+    if (s_rebuild_pending) rebuild_tables();
     if (!s_commit_pending) return;
-    s_commit_pending = false;
     rebuild_tables();
     write_to_flash();
+    s_commit_pending = false;   // after the write, so no record lands in the copy
 }

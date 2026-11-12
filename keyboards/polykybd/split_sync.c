@@ -452,6 +452,7 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
         const dynamic_keymap_sync_t* data = (const dynamic_keymap_sync_t *)in_data;
         if(crc32 == data->crc32) {
             const uint8_t* command_data = &data->commands[1];
+            bool refused = false;
             switch(data->commands[0]) {
                 case id_dynamic_keymap_reset:
                     // Deferred to housekeeping (split_sync_drain_keymap_reset). A
@@ -492,8 +493,11 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     // RAM only here; the flash write is poly_combos_drain_pending(),
                     // in housekeeping. Same own length check as the macro look: the
                     // CRC does not pin the frame length.
-                    if (in_len < sizeof(uint32_t) + 3 + POLY_COMBO_REC_BYTES) break;
-                    poly_combos_slave_record(command_data[0], command_data[1], &command_data[2]);
+                    // Refused while the previous commit's flash write is pending, or
+                    // for an invalid record; the master then reports the other half
+                    // as not updated.
+                    if (in_len < sizeof(uint32_t) + 3 + POLY_COMBO_REC_BYTES) { refused = true; break; }
+                    refused = !poly_combos_slave_record(command_data[0], command_data[1], &command_data[2]);
                     break;
                 case POLY_KEYMAP_OP_COMBO_COMMIT:
                     poly_combos_slave_commit();
@@ -517,7 +521,7 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     break;
                 default: break;
             }
-            ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
+            ((poly_sync_reply_t*)out_data)->ack = refused ? SYNC_NACK_REFUSED : SYNC_ACK;
         } else {
             ((poly_sync_reply_t*)out_data)->ack = SYNC_CRC32_ERR;
         }

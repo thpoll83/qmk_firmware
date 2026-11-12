@@ -1,0 +1,79 @@
+name: Publish release
+
+# Runs scripts/publish_release.py on GitHub, so a release can be published
+# without a checkout: from the Actions tab, or from the PolyKybd Flasher app's
+# maintenance menu (PolyKybdHost android/), which dispatches this workflow.
+#
+# This file is byte-identical in qmk_firmware and PolyKybdHost; the script it
+# runs detects which repo it is in.
+#
+# ⚠️ Publishing needs the RELEASE_TOKEN secret: a fine-grained token with
+# Contents read/write on this repo. A release created with the built-in
+# GITHUB_TOKEN does not start other workflows, so the `release: published`
+# build in release.yml would never run and the release would have no assets.
+# A dry run works without the secret.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only show what would be published"
+        type: boolean
+        default: true
+      tag:
+        description: "Prepared tag to publish (empty = newest on the release-notes branch)"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish
+    # Write access is enough to dispatch a workflow; publishing is the owner's call.
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          # The script finds the commit that declares the version in history,
+          # and reads the release-notes branch.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Publish
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          READ_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          args=()
+          if [ "$DRY_RUN" = "true" ]; then
+            args+=(--dry-run)
+            export GH_TOKEN="${RELEASE_TOKEN:-$READ_TOKEN}"
+          else
+            if [ -z "$RELEASE_TOKEN" ]; then
+              echo "::error::RELEASE_TOKEN secret is not set. Without it the release build would not run."
+              exit 1
+            fi
+            export GH_TOKEN="$RELEASE_TOKEN"
+          fi
+          if [ -n "$TAG" ]; then
+            if ! [[ "$TAG" =~ ^[A-Za-z0-9._-]+$ ]]; then
+              echo "::error::tag must contain only letters, digits, '.', '_' and '-'"
+              exit 1
+            fi
+            args+=(--tag "$TAG")
+          fi
+          rc=0
+          python3 scripts/publish_release.py "${args[@]}" > publish.log 2>&1 || rc=$?
+          cat publish.log
+          { echo '```'; cat publish.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"

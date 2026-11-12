@@ -84,8 +84,8 @@ or `lib/` is upstream's. Two checks decide it: `diff` the path against upstream'
 file (identical is conclusive; a difference is not proof we own it, so check
 [`UPSTREAM_PATCHES.md`](keyboards/polykybd/UPSTREAM_PATCHES.md)), and read the triggers
 (`workflow_call`-only and `github.repository == 'qmk/qmk_firmware'` gates never run here).
-For a workflow, a 404 from upstream means ours: 5 of the 24 are (`bump-version.yml`,
-`cppcheck.yml`, `polykybd-unit-test.yml`, `qmk-test.yml`, `release.yml`).
+For a workflow, a 404 from upstream means ours: 6 of the 25 are (`bump-version.yml`,
+`cppcheck.yml`, `polykybd-unit-test.yml`, `publish-release.yml`, `qmk-test.yml`, `release.yml`).
 
 - ⚠️ **The scanner looked at the inherited file and not at ours.** The one real
   injection in that sweep was in `bump-version.yml`. A report naming an upstream path is

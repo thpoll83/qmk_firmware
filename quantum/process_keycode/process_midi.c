@@ -65,6 +65,32 @@ void midi_init(void) {
     midi_modulation_timer = 0;
 }
 
+// A channel change must not strand what is sounding on the old channel: a note-off or
+// a pedal release is sent on the CURRENT channel, so a key held across the change
+// would hang (PolyKybd patch, UPSTREAM_PATCHES.md). Release every held note, the three
+// pedals, the pitch bend and the mod wheel on the old channel first; the held keys then
+// release nothing there.
+static void midi_set_channel(uint8_t channel) {
+    channel &= 0x0F;
+    if (channel == midi_config.channel) return;
+    for (uint8_t i = 0; i < MIDI_TONE_COUNT; i++) {
+        if (tone_status[i] != MIDI_INVALID_NOTE) {
+            midi_send_noteoff(&midi_device, midi_config.channel, tone_status[i], midi_config.velocity);
+            tone_status[i] = MIDI_INVALID_NOTE;
+        }
+    }
+    midi_send_cc(&midi_device, midi_config.channel, 0x40, 0);  // sustain
+    midi_send_cc(&midi_device, midi_config.channel, 0x41, 0);  // portamento
+    midi_send_cc(&midi_device, midi_config.channel, 0x42, 0);  // sostenuto
+    midi_send_cc(&midi_device, midi_config.channel, 0x43, 0);  // soft
+    midi_send_cc(&midi_device, midi_config.channel, 0x44, 0);  // legato
+    midi_send_pitchbend(&midi_device, midi_config.channel, 0); // a held bend
+    midi_send_cc(&midi_device, midi_config.channel, 0x01, 0);  // a held mod wheel
+    midi_modulation      = 0;
+    midi_modulation_step = 0;
+    midi_config.channel  = channel;
+}
+
 uint8_t midi_compute_note(uint16_t keycode) {
     return 12 * midi_config.octave + (keycode - MIDI_TONE_MIN) + midi_config.transpose;
 }
@@ -161,19 +187,19 @@ bool process_midi(uint16_t keycode, keyrecord_t *record) {
             return false;
         case MIDI_CHANNEL_MIN ... MIDI_CHANNEL_MAX:
             if (record->event.pressed) {
-                midi_config.channel = keycode - MIDI_CHANNEL_MIN;
+                midi_set_channel(keycode - MIDI_CHANNEL_MIN);
                 dprintf("midi channel %d\n", midi_config.channel);
             }
             return false;
         case QK_MIDI_CHANNEL_DOWN:
             if (record->event.pressed) {
-                midi_config.channel--;
+                midi_set_channel(midi_config.channel - 1);
                 dprintf("midi channel %d\n", midi_config.channel);
             }
             return false;
         case QK_MIDI_CHANNEL_UP:
             if (record->event.pressed) {
-                midi_config.channel++;
+                midi_set_channel(midi_config.channel + 1);
                 dprintf("midi channel %d\n", midi_config.channel);
             }
             return false;

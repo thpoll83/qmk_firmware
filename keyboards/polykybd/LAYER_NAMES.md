@@ -58,7 +58,7 @@ whole point of cmd 35. Three things are worth knowing:
     scenarios the firmware can actually emit.
 - **`LAYER_NAMES_PAYLOAD_MAX` is `_Static_assert`ed to stay under 255**, since the
   total is one byte. Mutation-checked by widening `POLY_LAYER_NAME_MAX` to 32, which
-  fails the build with the assert's own message. At 12 layers × 8 chars it is 110.
+  fails the build with the assert's own message. At 9 named layers × (8 chars + NUL) it is 83.
 - **Names are capped at 8 chars, so "Colemak DH" ships as `ColemkDH`.** The cap is
   the host tab label's budget; the emitter clamps rather than trusting the table, so
   an over-long name can never run past the buffer.

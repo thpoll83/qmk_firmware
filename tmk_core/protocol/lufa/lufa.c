@@ -360,7 +360,9 @@ void EVENT_USB_Device_ConfigurationChanged(void) {
 #ifdef MIDI_ENABLE
     /* Setup MIDI stream endpoints */
     ConfigSuccess &= Endpoint_ConfigureEndpoint((MIDI_STREAM_IN_EPNUM | ENDPOINT_DIR_IN), EP_TYPE_BULK, MIDI_STREAM_EPSIZE, 1);
+#    ifndef MIDI_SEND_ONLY
     ConfigSuccess &= Endpoint_ConfigureEndpoint((MIDI_STREAM_OUT_EPNUM | ENDPOINT_DIR_OUT), EP_TYPE_BULK, MIDI_STREAM_EPSIZE, 1);
+#    endif
 #endif
 
 #ifdef VIRTSER_ENABLE
@@ -664,11 +666,13 @@ USB_ClassInfo_MIDI_Device_t USB_MIDI_Interface = {
             .Size                 = MIDI_STREAM_EPSIZE,
             .Banks                = 1
         },
+#    ifndef MIDI_SEND_ONLY
         .DataOUTEndpoint = {
             .Address              = (MIDI_STREAM_OUT_EPNUM | ENDPOINT_DIR_OUT),
             .Size                 = MIDI_STREAM_EPSIZE,
             .Banks                = 1
         }
+#    endif
     }
 };
 
@@ -679,7 +683,11 @@ void send_midi_packet(MIDI_EventPacket_t *event) {
 }
 
 bool recv_midi_packet(MIDI_EventPacket_t *const event) {
+#    ifdef MIDI_SEND_ONLY
+    return false;
+#    else
     return MIDI_Device_ReceiveEventPacket(&USB_MIDI_Interface, event);
+#    endif
 }
 
 #endif

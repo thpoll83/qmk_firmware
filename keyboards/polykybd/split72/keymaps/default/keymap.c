@@ -255,7 +255,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
                     QK_MACRO_6, QK_MACRO_7, QK_MACRO_8, QK_MACRO_9, QK_MACRO_10, QK_MACRO_11, KC_NO,
-                    KC_NO,      KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_IDDQD,   TO(_SL),
+                    TO(_ML),    KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_IDDQD,   TO(_SL),
         // Sound sits directly under the transport row so the whole media block reads as
         // one group: MRWD/MFFD bracket the volume trio, each under its transport key.
         // Shifted one column OUTWARD to make that alignment true - MRWD now sits under
@@ -266,6 +266,33 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // It sits where Ctx (KC_APP) lives on the base layers.
         KC_NO,      KC_GLYPH_SIZE_UP, KC_NO, KC_NO,     KC_NO,      KC_NO,      KC_NO,      KC_RSFT,
         KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,      KC_BASE
+        ),
+    // MIDI layer (USB MIDI, send-only; reached with TO(_ML) on _UL, left with KC_BASE on
+    // the lower-left corner key, where Ctrl sits on the base layers). Esc is All Notes Off,
+    // the panic key; the number row's inner key returns to the home octave (OCT 4).
+    // The piano follows the computer-keyboard mode of Ableton Live and Logic Pro: white
+    // keys C4..F5 on the home row, black keys above them, and blank keys where a piano
+    // has no black key (B-C, E-F). Z/X octave and C/V velocity are the same in both
+    // DAWs; Tab sustain and 1/2 pitch bend are Logic's. MI_C plays C4 because
+    // keyboard_post_init_user() starts the octave one above QMK's default.
+    // No function appears twice on one half; each half has its own pedals, octave,
+    // channel and panic keys, so one hand can use them while the other plays.
+    // The arguments follow the LAYOUT macro's order, not the visual rows: the two
+    // encoder positions (3,7) and (8,0) are transparent.
+    [_ML] = LAYOUT_left_right_stacked(
+        MI_AOFF, MI_BNDD, MI_BNDU, MI_MOD, MI_CHND, MI_CHNU, MI_OC3,
+        MI_SUST, KC_NO, MI_Cs, MI_Ds, KC_NO, MI_Fs, MI_TR0,
+        MI_LEG, MI_C, MI_D, MI_E, MI_F, MI_G, MI_PORT,
+        _______, MI_CH1, MI_OCTD, MI_OCTU, MI_VELD, MI_VELU, MI_TRSD, MI_TRSU,
+        KC_NO, KC_BASE, MI_MODD, MI_MODU, MI_OC2, MI_SOST, MI_SOFT, MI_VL6,
+
+        MI_VL2, MI_VL3, MI_VL5, MI_VL6, MI_VL8, MI_VL10, MI_AOFF,
+        MI_MOD, MI_Gs, MI_As, KC_NO, MI_Cs1, MI_Ds1, KC_NO,
+        _______,
+        MI_PORT, MI_A, MI_B, MI_C1, MI_D1, MI_E1, MI_F1,
+        MI_CHND,
+        MI_CHNU, MI_OC1, MI_OC2, MI_OC3, MI_OC4, MI_OCTU, MI_LEG,
+        MI_SOFT, MI_SOST, MI_SUST, MI_OC5, MI_BNDD, MI_OCTD, MI_BNDU
         ),
     //Settings Layer — row 2 hosts the OS selection keys: KC_OS_SET_AUTO returns to
     // auto (host/USB detection) and the rest pin a specific OS. They are radio-style
@@ -464,17 +491,18 @@ __attribute__((section(".rodata"))) led_config_t g_led_config = { {// Key Matrix
 
 
 const uint16_t encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
-    [0] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [1] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [2] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [3] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [4] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [5] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [6] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [7] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [8] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [9] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [10] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
-    [11] =  { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_L0]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_L1]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_L2]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_L3]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_L4]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_FL]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_NL]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_UL]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_ML]       = { ENCODER_CCW_CW(MI_VELD, MI_VELU)},   // the knob sets the velocity
+    [_SL]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_LL]       = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_ADDLANG1] = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
+    [_EMJ]      = { ENCODER_CCW_CW(MS_WHLD, MS_WHLU)},
 };
 

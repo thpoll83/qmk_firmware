@@ -77,6 +77,7 @@ static void usb_send_func(MidiDevice* device, uint16_t cnt, uint8_t byte0, uint8
     send_midi_packet(&event);
 }
 
+#ifndef MIDI_SEND_ONLY
 static void usb_get_midi(MidiDevice* device) {
     MIDI_EventPacket_t event;
     while (recv_midi_packet(&event)) {
@@ -104,7 +105,7 @@ static void usb_get_midi(MidiDevice* device) {
 }
 
 static void fallthrough_callback(MidiDevice* device, uint16_t cnt, uint8_t byte0, uint8_t byte1, uint8_t byte2) {
-#ifdef AUDIO_ENABLE
+#    ifdef AUDIO_ENABLE
     if (cnt == 3) {
         switch (byte0 & 0xF0) {
             case MIDI_NOTEON:
@@ -118,13 +119,14 @@ static void fallthrough_callback(MidiDevice* device, uint16_t cnt, uint8_t byte0
     if (byte0 == MIDI_STOP) {
         stop_all_notes();
     }
-#endif
+#    endif
 }
 
 static void cc_callback(MidiDevice* device, uint8_t chan, uint8_t num, uint8_t val) {
     // sending it back on the next channel
     // midi_send_cc(device, (chan + 1) % 16, num, val);
 }
+#endif
 
 void midi_init(void);
 
@@ -134,7 +136,9 @@ void setup_midi(void) {
 #endif
     midi_device_init(&midi_device);
     midi_device_set_send_func(&midi_device, usb_send_func);
+#ifndef MIDI_SEND_ONLY
     midi_device_set_pre_input_process_func(&midi_device, usb_get_midi);
     midi_register_fallthrough_callback(&midi_device, fallthrough_callback);
     midi_register_cc_callback(&midi_device, cc_callback);
+#endif
 }

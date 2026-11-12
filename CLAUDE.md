@@ -155,19 +155,20 @@ per-variant logic. [`VARIANTS.md`](keyboards/polykybd/VARIANTS.md).
 
 ### The dynamic keymap
 
-`DYNAMIC_KEYMAP_LAYER_COUNT` is 12, but only layers 0..7 are stored in EEPROM
-(`DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT` = 8); `_SL` and up come from flash.
+`DYNAMIC_KEYMAP_LAYER_COUNT` is 13, but only layers 0..8 are stored in EEPROM
+(`DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT` = 9, the last being the MIDI layer `_ML`);
+`_SL` and up come from flash.
 [`KEYMAP_STORAGE.md`](keyboards/polykybd/KEYMAP_STORAGE.md).
 
-- ⚠️ **The stored keymap is indexed by layer number, unversioned.** Increase
-  `KEYMAP_LAYERS_FL_MERGED` when a layer is added, removed or reordered, never when its
-  contents change.
+- ⚠️ **The stored keymap is indexed by layer number, unversioned.** Add a new
+  `KEYMAP_STORAGE_*` value (`state.h`) and point `KEYMAP_STORAGE_CURRENT` at it when a
+  layer is added, removed or reordered, never when its contents change.
 - ⚠️ **A keymap edit below the write cap is invisible on any board that stored a
   keymap.** Increasing the format stamp reaches every board and wipes the user's macros;
   `polyctl keymap set <layer> <row> <col> <keycode>` is non-destructive.
 - ⚠️ **The host's keymap reset also wipes every macro.** Tray Maintenance → "Reset keymap
   to default…" (control method `keymap.reset`, no `polyctl`) sends
-  `id_dynamic_keymap_reset`, and `dynamic_keymap_reset_poly()` resets layers 0..7 (keys
+  `id_dynamic_keymap_reset`, and `dynamic_keymap_reset_poly()` resets layers 0..8 (keys
   and encoder bindings) and zeroes the macro buffer. The host has no EEPROM clear.
 - **All keymap mutation goes through a `*_poly` wrapper in `split_sync.c`.**
 - ⚠️ **`poly_keycode_at()` is the one resolver for legend and action**, so a derivation
@@ -379,6 +380,10 @@ Each has a doc; the rules below bind code outside it.
   annotates the normal renderer, never redraws the board. On the slave, what the master
   drew is known only as what the link carried. GET_LANG reads `poly_reported_lang()`, so
   the preview never reaches the host.
+- **USB MIDI and the MIDI layer** ([`MIDI.md`](keyboards/polykybd/MIDI.md)): send-only
+  (`MIDI_SEND_ONLY`, a patch to QMK core), off in the DOOM monolith. The slave learns
+  the octave and velocity only from `poly_sync_t.midi_cfg`. The symbols are generated:
+  edit `tools/midi_glyphs.py`, never the `gfx_icons.h` block.
 - **Demo mode** ([`anim/DEMO_MODE.md`](keyboards/polykybd/anim/DEMO_MODE.md)): ⚠️ demo
   mode must not change any behaviour outside demo mode (maintainer's rule). The key demo
   sends no modifier and no Tab. Its typing text IS the idle screen's poems.

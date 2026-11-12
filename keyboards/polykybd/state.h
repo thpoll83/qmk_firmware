@@ -188,6 +188,14 @@ typedef struct _poly_sync_t {
     // fail in. Master-authoritative, RAM-only, never persisted: a reboot is a
     // fresh decision.
     uint32_t doom_pack_auth_crc;
+    // QMK's MIDI settings as the master last saw them, packed by midi_cfg_pack()
+    // (midi_legend.h: octave index, transpose, velocity, channel, one byte each),
+    // 0 on a build without MIDI. Only the master runs process_midi, so this is how
+    // the slave's note and setting keycaps learn the live values; a change is a state
+    // diff and redraws both halves. Packed by hand rather than copying midi_config_t's
+    // bitfield union, whose layout is the compiler's choice. A 4-byte member, so it
+    // sits with the other two to keep the struct padding-free.
+    uint32_t midi_cfg;
     // Emoji search mode (emoji_layer.h): the typed query as BMP codepoints, and
     // {flags (bit 0 search mode), result page, query length, reserved}. Synced so
     // the slave shows its half of the same search; it runs the search itself on
@@ -659,7 +667,10 @@ _Static_assert(offsetof(poly_eeconf_t, tail_fmt) == offsetof(poly_eeconf_t, tapp
                                       // itself did not move, but the ENCODER map did, so
                                       // a board flashed over 0x71 would read two layers'
                                       // worth of keycodes as its encoder assignments.
-#define KEYMAP_STORAGE_CURRENT   KEYMAP_STORAGE_RECLAIMED
+#define KEYMAP_STORAGE_MIDI_LAYER 0x73 // ...and _ML inserted as stored layer 8: _SL and up
+                                       // moved one index, and the encoder map and macro
+                                       // buffer moved one layer (160 B split72) down
+#define KEYMAP_STORAGE_CURRENT   KEYMAP_STORAGE_MIDI_LAYER
 // ⚠️ 0xC3 is deliberately NOT the current version. The build that introduced it
 // assumed an unwritten EEPROM reads 0xFF, so it copied the assignment map straight
 // out of a block that had never held one — read back as all-zero, i.e. "every key

@@ -305,13 +305,38 @@ endif
 # the ifeq, and puts any literal `*_ENABLE = yes` into every build's info_rules.mk,
 # so the monolith got COMBO_ENABLE without the tables and failed to compile
 # keymap_introspection.c. A non-boolean value is refused by its schema instead.
-ifeq ($(strip $(POLYKYBD_DOOM))-$(strip $(POLYKYBD_DOOM_PACK)), yes-)
+# Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`), as for MIDI below.
+ifeq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
     # monolith: no runtime combos / tap dance
 else
     $(eval COMBO_ENABLE := yes)
     $(eval TAP_DANCE_ENABLE := yes)
     OPT_DEFS += -DPOLY_RUNTIME_COMBOS
     SRC += poly_combos.c
+endif
+
+# USB MIDI (send-only, MIDI_ADVANCED; config.h has the buffer sizes). The keyboard
+# shows up as a class-compliant MIDI input, and the MIDI layer (_ML) plays notes
+# through it. ON for every flavour except the DOOM monolith (POLYKYBD_DOOM=yes
+# without POLYKYBD_DOOM_PACK): that build only exists to compile the engine objects
+# for the .plyx pack and has the least RAM to spare. It sits here, after the block
+# above, because the pack flavour sets POLYKYBD_DOOM itself, so "monolith" is DOOM
+# without DOOM_PACK. `-e POLYKYBD_MIDI=no` drops it from any flavour.
+# Measured cost (split72, send-only, 2 send buffers): see config.h.
+POLYKYBD_MIDI ?= yes
+# ⚠️ Assign MIDI_ENABLE on EVERY path, `no` first. QMK's data-driven step reads this
+# file without evaluating the conditionals, sees the `= yes` below and generates
+# `MIDI_ENABLE ?= yes` in .build/.../info_rules.mk. A path that leaves the variable
+# unset therefore gets MIDI anyway: the monolith did, until this line.
+MIDI_ENABLE = no
+ifeq ($(strip $(POLYKYBD_MIDI)), yes)
+    # Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`).
+    ifneq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
+        MIDI_ENABLE = yes
+        # The legends read the synced settings; a build without MIDI draws the
+        # keycodes as plain QMK names would (nothing), and saves the buffer.
+        SRC += midi_legend.c
+    endif
 endif
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     OPT_DEFS += -DPOLYKYBD_DOOM

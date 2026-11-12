@@ -86,6 +86,16 @@ A stale cap does not error — it just tells the host it may write to a layer
 `poly_keycode_at()` serves from flash. Mutation-checked: setting the cap back to 9 fails
 the build with the assert's own message.
 
+⚠️ **A new stored layer goes at the END of the stored block, right before `_SL`**, as `_ML`
+did (2026-11, firmware 1.13.0). Every flash layer then moves up by the same amount, and
+the host's layout editor renumbers them from the count the keyboard reports
+(`qmk_keycode_helper.fold_layer_tags()` in PolyKybdHost, host#797). That is how a host
+built against 13 layers still names `TO(8)` as `_SL` on a 1.11.x board that stores 8. A
+layer inserted in the MIDDLE of the stored block moves stored layers too, and the
+fold cannot recover that: older boards would preview the wrong legend on their layer
+keys. The host reads `layers.h` (`parse_layers_h()`); it now strips C comments, after
+the comment on `_ML` made it drop `_SL`.
+
 ⚠️ **Every mutation goes through a `*_poly` wrapper in `split_sync.c`** —
 `dynamic_keymap_set_buffer_poly`, `dynamic_keymap_set_keycode_poly`, and
 `dynamic_keymap_reset_poly()` (added purely so the reset has one too). That is

@@ -654,6 +654,9 @@ typedef struct _poly_eeconf_t {
 // KEYMAP_MIG_AI_KEY: the stored layouts have the AI key where the split72 defaults
 // replaced Hyper with it.
 #define KEYMAP_MIG_AI_KEY   0xC7
+// KEYMAP_MIG_FN_MIDI: the stored Fn layer has TO(_ML) above the right Shift, where
+// the split72 default added it (it was transparent before).
+#define KEYMAP_MIG_FN_MIDI  0xC8
 _Static_assert(offsetof(poly_eeconf_t, keymap_mig) == 166, "keymap_mig must stay at user offset 166 (an even, high-byte offset of the old keymap)");
 _Static_assert(offsetof(poly_eeconf_t, keymap_mig) == offsetof(poly_eeconf_t, keymap_mig_pad) + 1,
                "stamp_keymap_mig() writes keymap_mig_pad..keymap_mig as one 2-byte block");

@@ -205,7 +205,10 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
        runtime derivation, so aligning an edited row would show one keycode and type
        another). They are also what a pristine Qwerty board resolves to, so the
        default case is a no-op — verified, not assumed.
-       CAPS/INS keep _FL0's placement, the one Qwerty has always used. */
+       CAPS/INS keep _FL0's placement, the one Qwerty has always used.
+       Fn + the key above the right Shift (\ on QWERTY) is TO(_ML), the MIDI layer.
+       The host's MIDI guide (cmd 47 op 2) rings Fn and then this key; boards that
+       stored a keymap get it once from KEYMAP_MIG_FN_MIDI. */
     [_FL] = LAYOUT_left_right_stacked(
         OSL(_UL),   KC_F1,      KC_F2,      KC_F3,      KC_F4,      KC_F5,     TO(_UL),
         _______,    _______,    _______,    _______,    _______,    _______,    _______,
@@ -215,7 +218,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
                     KC_F6,      KC_F7,      KC_F8,      KC_F9,      KC_F10,      KC_F11,    KC_F12,
                     MS_BTN1,    MS_BTN2,    _______,    _______,    _______,    _______,    TO(_SL),
-        _______,    MS_BTN3,    _______,    _______,    _______,   _______,    _______,    _______,
+        _______,    MS_BTN3,    _______,    _______,    _______,   _______,    _______,    TO(_ML),
         TO(_NL),    _______,    _______,    _______,    _______,    _______,    _______,    KC_INS,
         KC_RALT,    KC_RWIN,    KC_RCTL,                KC_HOME,    KC_PGUP,    KC_PGDN,    KC_END
         ),

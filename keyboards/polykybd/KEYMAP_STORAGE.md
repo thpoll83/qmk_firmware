@@ -189,12 +189,13 @@ newest marker (`stamp_keymap_mig()`).
 - Each half migrates its own copy by the same rule, before the split link is up.
 - A fresh EEPROM is born with the current marker (`eeconfig_init_user()`): its keymap
   was just written from the defaults.
-- The banner tick prints `keymap: migration 0xNN changed N stored key(s)` on the boot
+- The banner tick prints `keymap: migration 0xNN changed N stored key(s)`, one line per migration, on the boot
   that ran it.
-- The next migration takes the next value up (0xC8). Every value stays above 0x7F:
+- The next migration takes the next value up (0xC9). Every value stays above 0x7F:
   offset 166 was the high byte of an old keycode (at most 0x7F), so a board that
   never ran a migration reads below all of them.
 
 | Marker | Since | Change |
 |---|---|---|
-| `KEYMAP_MIG_AI_KEY` 0xC7 | this change | split72 default layouts: Hyper → AI key (`KC_AI`) on QWERTY, Stag, Colemak DH and Workman |
+| `KEYMAP_MIG_AI_KEY` 0xC7 | #433 | split72 default layouts: Hyper → AI key (`KC_AI`) on QWERTY, Stag, Colemak DH and Workman |
+| `KEYMAP_MIG_FN_MIDI` 0xC8 | this change | split72 Fn layer only (`dynamic_keymap_migrate_layers_poly`): the key above the right Shift, transparent → `TO(_ML)` (the MIDI guide's second key) |

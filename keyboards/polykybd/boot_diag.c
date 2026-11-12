@@ -212,12 +212,20 @@ void emit_idle_config(void) {
 static uint8_t  s_keymap_fmt_seen  = 0xFF;   // 0xFF = post_init has not run yet
 static bool     s_keymap_reset_ran = false;
 static uint32_t s_keymap_reset_ms  = 0;
-static uint8_t  s_keymap_mig       = 0;      // 0 = no migration ran this boot
-static uint8_t  s_keymap_mig_keys  = 0;
+// Up to two migrations can run on one boot (a board that skipped a release), and
+// each gets its own banner line.
+#define KEYMAP_MIG_NOTES 2
+static uint8_t  s_keymap_mig[KEYMAP_MIG_NOTES];       // 0 = no migration ran this boot
+static uint8_t  s_keymap_mig_keys[KEYMAP_MIG_NOTES];
 
 void note_keymap_migration(uint8_t marker, uint8_t keys_changed) {
-    s_keymap_mig      = marker;
-    s_keymap_mig_keys = keys_changed;
+    for (uint8_t i = 0; i < KEYMAP_MIG_NOTES; i++) {
+        if (!s_keymap_mig[i] || i == KEYMAP_MIG_NOTES - 1) {
+            s_keymap_mig[i]      = marker;
+            s_keymap_mig_keys[i] = keys_changed;
+            return;
+        }
+    }
 }
 
 void note_keymap_storage(uint8_t stored_fmt, bool reset_ran, uint32_t elapsed_ms) {
@@ -311,9 +319,9 @@ void emit_keymap_storage_line(void) {
     if (s_keymap_reset_ran) {
         uprintf("   keymap: discard took %lums\n", (unsigned long)s_keymap_reset_ms);
     }
-    if (s_keymap_mig) {
+    for (uint8_t i = 0; i < KEYMAP_MIG_NOTES && s_keymap_mig[i]; i++) {
         uprintf("   keymap: migration 0x%02X changed %u stored key(s)\n",
-                (unsigned int)s_keymap_mig, (unsigned int)s_keymap_mig_keys);
+                (unsigned int)s_keymap_mig[i], (unsigned int)s_keymap_mig_keys[i]);
     }
 }
 

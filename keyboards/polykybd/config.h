@@ -316,7 +316,10 @@
 //      10-byte records, closed validation. Stored in two flash sectors of its own
 //      (FW_COMBO_STORE_OFFSET), copied to the other half on commit and checked by
 //      CRC. Older firmware NACKs the command; FW_UP_MAX_SIZE shrank to 0x1F3000.
-#define PROTOCOL_VERSION 33
+//  v34 cmd 47 op 2 GUIDE: the ripple walks a path of up to 4 layer keys to a target
+//      layer (Fn, then the MIDI key), on the step whose layer is active. A v33
+//      firmware NACKs op 2 (closed op range), which is the host's signal.
+#define PROTOCOL_VERSION 34
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2

@@ -123,3 +123,61 @@ TEST(TapDancePlan, EmptyRecordDoesNothing) {
 }
 
 } // namespace
+
+// ---- poly_combo_pick_slot(): where the next store image goes ----------------------
+
+namespace {
+struct Clean {
+    bool c[POLY_COMBO_STORE_SECTORS][POLY_COMBO_STORE_SLOTS];
+    Clean(bool all) {
+        for (auto &sec : c)
+            for (auto &s : sec) s = all;
+    }
+};
+const uint8_t NO_IMAGE = POLY_COMBO_STORE_SECTORS;
+}  // namespace
+
+TEST(ComboSlotPick, AFreshStoreStartsAtSector0Slot0WithoutErase) {
+    Clean cl(true);
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, NO_IMAGE);
+    EXPECT_EQ(p.sector, 0);
+    EXPECT_EQ(p.slot, 0);
+    EXPECT_FALSE(p.erase);
+}
+
+TEST(ComboSlotPick, AppendsInTheNewestImagesSector) {
+    Clean cl(true);
+    cl.c[1][0] = cl.c[1][1] = cl.c[1][2] = false;   // three images in sector 1
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, 1);
+    EXPECT_EQ(p.sector, 1);
+    EXPECT_EQ(p.slot, 3);
+    EXPECT_FALSE(p.erase);
+}
+
+TEST(ComboSlotPick, AFullSectorMovesToACleanSlotOfTheOtherWithoutErase) {
+    Clean cl(true);
+    for (auto &s : cl.c[0]) s = false;               // sector 0 full, newest there
+    cl.c[1][0] = false;                              // a failed slot 0 in sector 1
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, 0);
+    EXPECT_EQ(p.sector, 1);
+    EXPECT_EQ(p.slot, 1);                            // skips the failed slot, no erase
+    EXPECT_FALSE(p.erase);
+}
+
+TEST(ComboSlotPick, NoCleanSlotErasesTheSectorWithoutTheNewestImage) {
+    Clean cl(false);
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, 1);
+    EXPECT_EQ(p.sector, 0);
+    EXPECT_EQ(p.slot, 0);
+    EXPECT_TRUE(p.erase);
+    p = poly_combo_pick_slot(cl.c, 0);
+    EXPECT_EQ(p.sector, 1);
+    EXPECT_TRUE(p.erase);
+}
+
+TEST(ComboSlotPick, NoImageAndNoCleanSlotErasesSector0) {
+    Clean cl(false);
+    poly_combo_slot_pick_t p = poly_combo_pick_slot(cl.c, NO_IMAGE);
+    EXPECT_EQ(p.sector, 0);
+    EXPECT_TRUE(p.erase);
+}

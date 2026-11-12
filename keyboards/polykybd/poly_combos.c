@@ -233,9 +233,10 @@ static bool store_valid(const poly_combo_store_t *st) {
 // records in force. Boot loads the valid image with the highest `seq`. An erase
 // happens once every STORE_SLOTS_PER_SECTOR commits, so each sector is erased once
 // every 16 commits.
-#define STORE_SECTORS          2u
+#define STORE_SECTORS          POLY_COMBO_STORE_SECTORS
 #define STORE_SLOT_BYTES       512u
-#define STORE_SLOTS_PER_SECTOR (FLASH_SECTOR_SIZE / STORE_SLOT_BYTES)
+#define STORE_SLOTS_PER_SECTOR POLY_COMBO_STORE_SLOTS
+_Static_assert(STORE_SLOTS_PER_SECTOR * STORE_SLOT_BYTES == FLASH_SECTOR_SIZE, "eight slots fill a sector");
 _Static_assert(sizeof(poly_combo_store_t) <= STORE_SLOT_BYTES, "a store image fits its slot");
 _Static_assert(STORE_SLOT_BYTES % FLASH_PAGE_SIZE == 0, "a slot is whole flash pages");
 _Static_assert(STORE_SECTORS * FLASH_SECTOR_SIZE == FW_COMBO_STORE_BYTES, "the store is two sectors");
@@ -291,27 +292,19 @@ static bool slot_erased(uint32_t sector, uint32_t slot) {
     return true;
 }
 
-// Picks the slot for the next image and programs it. A slot counts as free only when
-// all of it is erased: a write cut off by power loss can leave its first word erased
-// and other bytes programmed, and NOR flash cannot program those back.
-static void program_next_slot(const poly_combo_store_t *newest, uint32_t sector,
-                              uint32_t *out_sector, uint32_t *out_slot) {
-    uint32_t slot = STORE_SLOTS_PER_SECTOR;
-    bool erase = false;
-    if (sector == STORE_SECTORS) {
-        // No valid image anywhere: sector 0, erased first unless a slot there is clean.
-        sector = 0;
+// Picks the slot for the next image (poly_combo_pick_slot(), base/combo_store.h) and
+// programs it. A slot counts as clean only when all of it is erased: a write cut off
+// by power loss can leave its first word erased and other bytes programmed, and NOR
+// flash cannot program those back.
+static void program_next_slot(uint32_t newest_sector, uint32_t *out_sector, uint32_t *out_slot) {
+    bool clean[STORE_SECTORS][STORE_SLOTS_PER_SECTOR];
+    for (uint32_t sec = 0; sec < STORE_SECTORS; sec++) {
+        for (uint32_t i = 0; i < STORE_SLOTS_PER_SECTOR; i++) clean[sec][i] = slot_erased(sec, i);
     }
-    for (uint32_t i = 0; i < STORE_SLOTS_PER_SECTOR; i++) {
-        if (slot_erased(sector, i)) { slot = i; break; }
-    }
-    if (slot == STORE_SLOTS_PER_SECTOR) {
-        // No clean slot here. With a newest image in this sector, move to the other
-        // one, so the newest image is never in the sector being erased.
-        if (newest != NULL) sector = (sector + 1u) % STORE_SECTORS;
-        slot  = 0;
-        erase = true;
-    }
+    const poly_combo_slot_pick_t pick = poly_combo_pick_slot(clean, (uint8_t)newest_sector);
+    const uint32_t sector = pick.sector;
+    const uint32_t slot   = pick.slot;
+    const bool     erase  = pick.erase;
     const uint32_t base = sector_offset(sector) + slot * STORE_SLOT_BYTES;
 
     // flash_range_program() takes whole 256-byte pages from RAM. On the stack, as in
@@ -355,9 +348,8 @@ static bool write_to_flash(void) {
 
     for (uint8_t attempt = 0; attempt < STORE_WRITE_TRIES; attempt++) {
         uint32_t sector, slot;
-        // Each attempt starts from the newest image's sector: a failed slot is no
-        // longer erased, so the next attempt takes the slot after it.
-        program_next_slot(newest, newest_sector, &sector, &slot);
+        // A failed slot is no longer clean, so the next attempt takes another one.
+        program_next_slot(newest_sector, &sector, &slot);
         const poly_combo_store_t *img = store_slot(sector, slot);
         if (store_valid(img) && img->seq == s_store.seq && img->crc == s_store.crc) {
             s_flashed_crc = records_crc(&s_store);

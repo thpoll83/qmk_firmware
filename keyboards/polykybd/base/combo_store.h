@@ -202,3 +202,44 @@ static inline poly_td_plan_t poly_td_plan(const poly_tap_dance_rec_t *r, uint8_t
     if (p.tap_kc == 0u) p.taps = 0;
     return p;
 }
+
+// ---- Where the next store image goes -------------------------------------------
+//
+// The store is POLY_COMBO_STORE_SECTORS sectors of POLY_COMBO_STORE_SLOTS slots,
+// one image per slot (poly_combos.c). clean[s][i] is true when slot i of sector s
+// is fully erased; newest is the sector of the newest valid image, or
+// POLY_COMBO_STORE_SECTORS when there is none. The rule:
+//   1. a clean slot in the newest image's sector (or sector 0 with no image);
+//   2. else a clean slot in another sector, without an erase;
+//   3. else erase a sector that does NOT hold the newest image, and use its slot 0.
+// So the newest valid image is never erased, and a slot that failed to program is
+// skipped (it is no longer clean) instead of being erased and retried.
+#define POLY_COMBO_STORE_SECTORS 2u
+#define POLY_COMBO_STORE_SLOTS   8u
+
+typedef struct {
+    uint8_t sector;
+    uint8_t slot;
+    bool    erase;   // erase `sector` first
+} poly_combo_slot_pick_t;
+
+static inline poly_combo_slot_pick_t poly_combo_pick_slot(
+        const bool clean[POLY_COMBO_STORE_SECTORS][POLY_COMBO_STORE_SLOTS], uint8_t newest) {
+    poly_combo_slot_pick_t p = {0, 0, false};
+    const uint8_t first = newest < POLY_COMBO_STORE_SECTORS ? newest : 0u;
+    for (uint8_t k = 0; k < POLY_COMBO_STORE_SECTORS; k++) {
+        const uint8_t sec = (uint8_t)((first + k) % POLY_COMBO_STORE_SECTORS);
+        for (uint8_t i = 0; i < POLY_COMBO_STORE_SLOTS; i++) {
+            if (clean[sec][i]) {
+                p.sector = sec;
+                p.slot   = i;
+                return p;
+            }
+        }
+    }
+    // No clean slot anywhere: erase the sector after the newest image's one (with no
+    // image, sector 0).
+    p.sector = newest < POLY_COMBO_STORE_SECTORS ? (uint8_t)((newest + 1u) % POLY_COMBO_STORE_SECTORS) : 0u;
+    p.erase  = true;
+    return p;
+}

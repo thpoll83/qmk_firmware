@@ -296,10 +296,13 @@ static bool slot_erased(uint32_t sector, uint32_t slot) {
 // programs it. A slot counts as clean only when all of it is erased: a write cut off
 // by power loss can leave its first word erased and other bytes programmed, and NOR
 // flash cannot program those back.
-static void program_next_slot(uint32_t newest_sector, uint32_t *out_sector, uint32_t *out_slot) {
+// `tried` marks the slots this commit has already programmed: a write that did not
+// take can leave a slot fully erased, and it must not be picked again.
+static void program_next_slot(uint32_t newest_sector, const bool tried[STORE_SECTORS][STORE_SLOTS_PER_SECTOR],
+                              uint32_t *out_sector, uint32_t *out_slot) {
     bool clean[STORE_SECTORS][STORE_SLOTS_PER_SECTOR];
     for (uint32_t sec = 0; sec < STORE_SECTORS; sec++) {
-        for (uint32_t i = 0; i < STORE_SLOTS_PER_SECTOR; i++) clean[sec][i] = slot_erased(sec, i);
+        for (uint32_t i = 0; i < STORE_SLOTS_PER_SECTOR; i++) clean[sec][i] = !tried[sec][i] && slot_erased(sec, i);
     }
     const poly_combo_slot_pick_t pick = poly_combo_pick_slot(clean, (uint8_t)newest_sector);
     const uint32_t sector = pick.sector;
@@ -346,10 +349,13 @@ static bool write_to_flash(void) {
     s_store.seq             = newest != NULL ? newest->seq + 1u : 1u;
     s_store.crc             = store_crc(&s_store);
 
+    bool tried[STORE_SECTORS][STORE_SLOTS_PER_SECTOR];
+    memset(tried, 0, sizeof(tried));
     for (uint8_t attempt = 0; attempt < STORE_WRITE_TRIES; attempt++) {
         uint32_t sector, slot;
-        // A failed slot is no longer clean, so the next attempt takes another one.
-        program_next_slot(newest_sector, &sector, &slot);
+        // A failed slot is skipped by the next attempt, even if it still reads erased.
+        program_next_slot(newest_sector, (const bool (*)[STORE_SLOTS_PER_SECTOR])tried, &sector, &slot);
+        tried[sector][slot] = true;
         const poly_combo_store_t *img = store_slot(sector, slot);
         if (store_valid(img) && img->seq == s_store.seq && img->crc == s_store.crc) {
             s_flashed_crc = records_crc(&s_store);

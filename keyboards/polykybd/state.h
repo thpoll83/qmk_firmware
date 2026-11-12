@@ -634,11 +634,29 @@ typedef struct _poly_eeconf_t {
     // keymap data. Offset 164 was the HIGH byte of a keycode (at most 0x7F), so the
     // marker cannot read as 0xB6 by accident. stamp_tail2_fmt() writes both bytes.
     uint8_t  tail2_fmt;
+    // Not used; written as 0 by stamp_keymap_mig(). Offset 165 was the LOW byte of an
+    // old keycode, so it can hold anything, and nothing reads it.
+    uint8_t  keymap_mig_pad;
+    // The newest one-time edit of the STORED keymap that this board has had
+    // (KEYMAP_MIG_*, poly_keymap.c). Unlike keymap_layers_fmt it never resets the
+    // keymap: a migration rewrites only keys that still hold the old default.
+    // Offset 166 was the HIGH byte of an old keycode (at most 0x7F), so a marker
+    // above 0x7F cannot read as written by accident.
+    uint8_t  keymap_mig;
 } poly_eeconf_t;
 
 #define EMJ_SEARCH_MODE_ON  0x01   // poly_eeconf_t.emj_search_mode: search mode chosen
 #define TAIL_FMT_OK         0xA5   // poly_eeconf_t.tail_fmt: the tail bytes are real
 #define TAIL2_FMT_OK        0xB6   // poly_eeconf_t.tail2_fmt: auto_shift is real
+// poly_eeconf_t.keymap_mig, ordered: a board has had every migration whose value is
+// <= its marker. Any value below the first one (0..0x7F, old keymap data) means none.
+// A later migration takes the next value up and runs where the marker is below it.
+// KEYMAP_MIG_AI_KEY: the stored layouts have the AI key where the split72 defaults
+// replaced Hyper with it.
+#define KEYMAP_MIG_AI_KEY   0xC7
+_Static_assert(offsetof(poly_eeconf_t, keymap_mig) == 166, "keymap_mig must stay at user offset 166 (an even, high-byte offset of the old keymap)");
+_Static_assert(offsetof(poly_eeconf_t, keymap_mig) == offsetof(poly_eeconf_t, keymap_mig_pad) + 1,
+               "stamp_keymap_mig() writes keymap_mig_pad..keymap_mig as one 2-byte block");
 _Static_assert(offsetof(poly_eeconf_t, tail2_fmt) == 164, "tail2_fmt must stay at user offset 164 (an even, high-byte offset of the old keymap)");
 _Static_assert(offsetof(poly_eeconf_t, tail2_fmt) == offsetof(poly_eeconf_t, auto_shift) + 1,
                "stamp_tail2_fmt() writes auto_shift..tail2_fmt as one 2-byte block");
@@ -751,6 +769,7 @@ void stamp_keymap_layers_fmt(void);
 void stamp_tail_fmt(void);
 // Zeroes auto_shift and writes TAIL2_FMT_OK.
 void stamp_tail2_fmt(void);
+void stamp_keymap_mig(uint8_t marker);
 void save_user_eeconf(void);
 
 // Loads user keyboard configuration from EEPROM with brightness validation against maximum.

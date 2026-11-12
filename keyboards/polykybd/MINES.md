@@ -6,10 +6,11 @@ test:polykybd_mines_plan`).
 
 ## How it plays
 
-- **Start**: hold Hyper for 1 s (`MINES_START_HOLD_MS`) while an idle animation runs
+- **Start**: hold Hyper or the AI key for 1 s (`MINES_START_HOLD_MS`) while an idle animation runs
   (`DISP_IDLE`: pulse, jitter, Eden). A shorter tap only wakes the board. The doom
   attract screensaver does not set `DISP_IDLE`, so it is not a start point.
-  ⚠️ split42's default keymap has no Hyper key; map one in the layout editor.
+  The split72 default layouts have the AI key where Hyper was. ⚠️ The split72 Neo
+  layout and split42's default keymap have neither; map one in the layout editor.
 - **Board**: every key above the thumb row, both halves side by side. split72 14×4,
   split42 12×3. The inner edges of the two halves are neighbours.
 - **Tap** opens a cell (the first tap of a game always opens a 3×3 area). **Hold 300 ms**
@@ -22,7 +23,7 @@ test:polykybd_mines_plan`).
   New, or a loss, goes back to level 1. Nothing is persisted: a reboot ends the game.
 - **Leaving**: Hide, or 2 min without a key press (`MINES_INACTIVE_MS`), repaints the
   normal legends for 400 ms and then hands the keycaps to the idle animation. A key
-  typed in those 400 ms keeps the board awake. Hold Hyper again to resume.
+  typed in those 400 ms keeps the board awake. Hold Hyper or the AI key again to resume.
 - Every key event is swallowed while the game runs; nothing reaches the host.
 
 ## How it works

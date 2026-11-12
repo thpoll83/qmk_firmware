@@ -18,6 +18,7 @@
 extern const GFXfont NotoSans_Regular_Mid_19px7b;
 #include "state.h"
 #include "poly_keymap.h"           // poly_set_awake_state / poly_fw_screen
+#include "keycode_helper.h"        // KC_AI
 #include "anim/startup_anim.h"     // startup_anim_stop (the Eden idle loop)
 #include "anim/demo_mode.h"
 #include "anim/tutorial.h"
@@ -151,7 +152,9 @@ bool mines_try_start(uint16_t keycode, keyrecord_t *record) {
         s_hyper_armed = false;
         return false;
     }
-    if (!record->event.pressed || keycode != KC_HYPR || !start_allowed()) return false;
+    // The AI key took Hyper's place on the split72 default layouts; a keymap that
+    // still has Hyper starts the game with it as before.
+    if (!record->event.pressed || (keycode != KC_HYPR && keycode != KC_AI) || !start_allowed()) return false;
     s_hyper_armed = true;
     s_hyper_row   = row;
     s_hyper_col   = col;

@@ -470,6 +470,29 @@ reading before you change either one.
   - split42 has no per-keycap ripple: it ACKs a valid request and draws nothing.
   - While a request runs, AI mode's waiting-agent ripple (protocol v31) waits.
   - Older firmware NACKs the command.
+  **v33** adds cmd `48`, **runtime combos and tap dance** (`poly_combos.c`,
+  `base/combo_store.h`).
+  - `data[2]` op: 0 info (`[3]` combo slots, `[4]` tap-dance slots, `[5]` record bytes,
+    `[6]` bit 0 available, `[7..8]` combo term ms), 1 get / 2 set (`[3]` kind 0 combo,
+    1 tap dance, `[4]` index, `[5..14]` the record), 3 commit (`[3]` bit 0: the other
+    half stored the copy, i.e. its flash CRC matches). Set changes RAM only; commit
+    writes the flash. SET and COMMIT are refused during a firmware update.
+  - Records are five little-endian uint16. Combo: 2..4 trigger keycodes packed from
+    the front, then the result. Tap dance: on tap, on hold, on double tap, on
+    tap-then-hold, term (0 = the global tapping term, else 100..500 ms in 10 ms
+    steps). Tap-dance actions accept basic and modified keycodes, MO, TO and TG only.
+    All-zero is an empty slot. Both are CLOSED: a bad record is NACKed.
+  - 16 + 16 slots, `TD(0)`..`TD(15)`, in two 4 KB sectors of their own
+    (`FW_COMBO_STORE_OFFSET`, below the handedness stamp), so `FW_UP_MAX_SIZE` shrank
+    0x1F5000 -> 0x1F3000. A commit appends an image to a free 512 B slot and erases
+    only the sector that does not hold the newest image, so power lost during a
+    commit keeps the previous records.
+  - Each half keeps its own copy. Commit sends every record and the slave writes its
+    flash in housekeeping; the master then asks with split op `0xB4` (its record CRC)
+    until the slave's flash matches, and only then sets the commit's bit 0. The same
+    check runs 3 s after boot and every 60 s, and a mismatch sends every record again.
+  - The DOOM monolith has no runtime combos and NACKs every op. v32 and older
+    firmware NACK the command.
 
   **v34** adds op `2` **GUIDE** to cmd `47` (`base/attn_guide.h`): the ripple walks
   the user along a path of layer keys to a target layer. The host's MIDI guide

@@ -2387,7 +2387,6 @@
 #define ICON_MIDI_WAVE              U"\x100047"
 #define ICON_MIDI_BEND_UP           U"\x100048"
 #define ICON_MIDI_BEND_DOWN         U"\x100049"
-#define ICON_MIDI_CLEF              U"\x10004A"
 // ---- END MIDI glyphs ----
 // Press and hold, two frames the tutorial alternates beside every "hold" line: the key
 // up with the arrow pushing, then pressed flat onto the line (round 43).

@@ -164,7 +164,7 @@
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "1.13.1"
+#define FW_VERSION "1.13.3"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -310,6 +310,12 @@
 //      (ai_mode.h, KC_AI). Older firmware NACKs both, which is the host's signal.
 //  v32 cmd 47 (key attention: the focus ripple on one key, a count of times or until
 //      cancelled, anim/key_attention.h). Older firmware NACKs it.
+//  v33 cmd 48 (runtime combos and tap dance, poly_combos.c): op 0 info, 1 get, 2 set,
+//      3 commit. 16 combos (2..4 trigger keycodes + a result) and 16 tap dances
+//      (TD(0)..TD(15): on tap, on hold, on double tap, on tap-then-hold, own term),
+//      10-byte records, closed validation. Stored in two flash sectors of its own
+//      (FW_COMBO_STORE_OFFSET), copied to the other half on commit and checked by
+//      CRC. Older firmware NACKs the command; FW_UP_MAX_SIZE shrank to 0x1F3000.
 //  v34 cmd 47 op 2 GUIDE: the ripple walks a path of up to 4 layer keys to a target
 //      layer (Fn, then the MIDI key), on the step whose layer is active. A v33
 //      firmware NACKs op 2 (closed op range), which is the host's signal.

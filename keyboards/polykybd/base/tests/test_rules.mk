@@ -150,6 +150,14 @@ polykybd_tap_terms_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# combo_store.h is header-only and pure: the cmd 48 records and the tap-dance plan.
+polykybd_combo_store_SRC := \
+	$(POLY_BASE_PATH)/tests/combo_store_tests.cpp
+
+polykybd_combo_store_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
 # caps_word_letter.h is header-only and pure: Caps Word's letter test.
 polykybd_caps_word_letter_SRC := \
 	$(POLY_BASE_PATH)/tests/caps_word_letter_tests.cpp

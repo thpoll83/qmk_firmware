@@ -294,6 +294,28 @@ ifeq ($(strip $(POLYKYBD_DOOM_PACK)), yes)
     POLYKYBD_DOOM = yes
     OPT_DEFS += -DPOLYKYBD_DOOM_PACK
 endif
+# Runtime combos and tap dance (HID cmd 48, poly_combos.c): every build except the
+# DOOM monolith, the developer build with the engine linked in. It has ~3.3 KB of RAM
+# left, the release workflow still has to link it, and nothing in the DOOM pack
+# comes from the keyboard code (build_pack.sh takes only the engine objects), so
+# leaving the ~1 KB out of it changes nothing users run.
+#
+# ⚠️ The two feature switches are set through $(eval), not as `COMBO_ENABLE = yes`:
+# QMK's info generator reads rules.mk as TEXT (lib/python/qmk/makefile.py), ignores
+# the ifeq, and puts any literal `*_ENABLE = yes` into every build's info_rules.mk,
+# so the monolith got COMBO_ENABLE without the tables and failed to compile
+# keymap_introspection.c. A non-boolean value is refused by its schema instead.
+# Every keymap.c must #include "poly_combos_keymap.h" for the two stub tables
+# (VARIANTS.md).
+# Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`), as for MIDI below.
+ifeq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
+    # monolith: no runtime combos / tap dance
+else
+    $(eval COMBO_ENABLE := yes)
+    $(eval TAP_DANCE_ENABLE := yes)
+    OPT_DEFS += -DPOLY_RUNTIME_COMBOS
+    SRC += poly_combos.c
+endif
 
 # USB MIDI (send-only, MIDI_ADVANCED; config.h has the buffer sizes). The keyboard
 # shows up as a class-compliant MIDI input, and the MIDI layer (_ML) plays notes

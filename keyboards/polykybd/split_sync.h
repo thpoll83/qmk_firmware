@@ -125,6 +125,7 @@ void dynamic_keymap_set_buffer_poly(uint16_t offset, uint16_t size, const uint8_
 // indices >= DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT stay read-only.
 void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column, uint16_t keycode);
 void dynamic_keymap_reset_poly(void);
+uint8_t dynamic_keymap_migrate_poly(uint16_t from, uint16_t to);
 
 // Macro labels ride the DYNAMIC KEYMAP transaction rather than spending one of the 32
 // split-transaction slots (config.h explains how close to the cap that table is). That

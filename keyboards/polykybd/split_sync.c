@@ -387,6 +387,28 @@ void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column,
     poly_fl_row_cache_invalidate();
 }
 
+// One-time migration of the stored keymap: every key that still holds `from` where
+// the built-in default now has `to` gets `to`. A key the user remapped (anything but
+// `from`) is left as it is. Returns how many keys changed. Runs at boot, before the
+// split link, so each half migrates its own copy by the same rule.
+uint8_t dynamic_keymap_migrate_poly(uint16_t from, uint16_t to) {
+    uint8_t changed = 0;
+    for (uint8_t layer = 0; layer < DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT; layer++) {
+        crash_watchdog_feed();   // under the late-boot guard, as dynamic_keymap_reset_poly()
+        for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+            for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+                if (keycode_at_keymap_location_raw(layer, row, col) == to &&
+                    dynamic_keymap_get_keycode(layer, row, col) == from) {
+                    dynamic_keymap_set_keycode(layer, row, col, to);
+                    changed++;
+                }
+            }
+        }
+    }
+    if (changed) poly_fl_row_cache_invalidate();
+    return changed;
+}
+
 // Reset wrapper, so that EVERY mutation of the dynamic keymap goes through a *_poly
 // function and none can forget the cache invalidation. Deliberately a wrapper rather
 // than a list of "remember to also call this here" call sites — that is the guard

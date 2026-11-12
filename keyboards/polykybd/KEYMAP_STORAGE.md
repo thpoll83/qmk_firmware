@@ -86,6 +86,16 @@ A stale cap does not error — it just tells the host it may write to a layer
 `poly_keycode_at()` serves from flash. Mutation-checked: setting the cap back to 9 fails
 the build with the assert's own message.
 
+⚠️ **A new stored layer goes at the END of the stored block, right before `_SL`**, as `_ML`
+did (2026-11, firmware 1.13.0). Every flash layer then moves up by the same amount, and
+the host's layout editor renumbers them from the count the keyboard reports
+(`qmk_keycode_helper.fold_layer_tags()` in PolyKybdHost, host#797). That is how a host
+built against 13 layers still names `TO(8)` as `_SL` on a 1.11.x board that stores 8. A
+layer inserted in the MIDDLE of the stored block moves stored layers too, and the
+fold cannot recover that: older boards would preview the wrong legend on their layer
+keys. The host reads `layers.h` (`parse_layers_h()`); it now strips C comments, after
+the comment on `_ML` made it drop `_SL`.
+
 ⚠️ **Every mutation goes through a `*_poly` wrapper in `split_sync.c`** —
 `dynamic_keymap_set_buffer_poly`, `dynamic_keymap_set_keycode_poly`, and
 `dynamic_keymap_reset_poly()` (added purely so the reset has one too). That is
@@ -162,3 +172,29 @@ derivation on a remappable layer faces the same three-way choice.
 `poly_keycode_at()` runs per keycap per render, not just per keypress. See the `_poly`
 wrapper invariant above for how it is invalidated.
 
+
+## One-time migrations of the stored keymap
+
+A changed default key does not reach a board that stored a keymap, and increasing
+`KEYMAP_STORAGE_CURRENT` wipes the keymap and every macro. For a change of a key's
+contents, `poly_eeconf_t.keymap_mig` (user offset 166) records the newest one-time
+migration the board has had. The markers are ordered. At boot,
+`keyboard_post_init_user` runs each migration whose `KEYMAP_MIG_*` value is above the
+stored marker (`dynamic_keymap_migrate_poly(old, new)`), oldest first, then stamps the
+newest marker (`stamp_keymap_mig()`).
+
+- The migration changes a stored key only where the built-in default now has `new`
+  AND the stored key still holds `old`. A key the user remapped stays as it is, and
+  the macros stay.
+- Each half migrates its own copy by the same rule, before the split link is up.
+- A fresh EEPROM is born with the current marker (`eeconfig_init_user()`): its keymap
+  was just written from the defaults.
+- The banner tick prints `keymap: migration 0xNN changed N stored key(s)` on the boot
+  that ran it.
+- The next migration takes the next value up (0xC8). Every value stays above 0x7F:
+  offset 166 was the high byte of an old keycode (at most 0x7F), so a board that
+  never ran a migration reads below all of them.
+
+| Marker | Since | Change |
+|---|---|---|
+| `KEYMAP_MIG_AI_KEY` 0xC7 | this change | split72 default layouts: Hyper → AI key (`KC_AI`) on QWERTY, Stag, Colemak DH and Workman |

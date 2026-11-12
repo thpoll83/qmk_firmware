@@ -6735,19 +6735,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     }
 
     // The idle-screen mine sweeper IS the board while it runs: every key event is
-    // swallowed and answered there, so nothing reaches the host. Holding Hyper for 1 s
+    // swallowed and answered there, so nothing reaches the host. Holding Hyper or the AI key for 1 s
     // while an idle animation runs starts it, or resumes the board hidden last
     // (mines_mode.h); a shorter tap only wakes the board.
     if (mines_active()) {
         return !mines_process_record(keycode, record);
     }
+    // The mine sweeper's start gesture goes BEFORE AI mode: on the idle screen the
+    // AI key (which replaced Hyper on the split72 layouts) starts the game, as Hyper
+    // does, instead of turning AI mode on. Away from the idle screen it passes.
+    if (mines_try_start(keycode, record)) {
+        return false;
+    }
     // AI mode (ai_mode.h): KC_AI turns the number row and ESC into the host's agent
     // cards. While it is on every key event is swallowed and answered there, except
     // the releases a held key or a modifier / layer key needs.
     if (ai_process_record(keycode, record)) {
-        return false;
-    }
-    if (mines_try_start(keycode, record)) {
         return false;
     }
 
@@ -7750,6 +7753,15 @@ void keyboard_post_init_user(void) {
     }
     note_keymap_storage(stored_fmt, need_reset,
                         need_reset ? timer_elapsed32(reset_t0) : 0);
+    // The split72 default layouts have the AI key where Hyper was. A stored keymap
+    // takes priority over the defaults, so a board that stored one gets the change
+    // once here: only keys that still hold Hyper at those positions change, the rest
+    // of the keymap and the macros stay (state.h, keymap_mig).
+    if (ee.keymap_mig < KEYMAP_MIG_AI_KEY) {
+        const uint8_t moved = dynamic_keymap_migrate_poly(KC_HYPR, KC_AI);
+        stamp_keymap_mig(KEYMAP_MIG_AI_KEY);
+        note_keymap_migration(KEYMAP_MIG_AI_KEY, moved);   // printed on the banner tick
+    }
     // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
     // a fresh EEPROM re-resolves per host via detection / host push; a manual pin
     // (e.g. Android) sticks. Seed local_state->active_os so the first render before
@@ -8085,6 +8097,7 @@ void eeconfig_init_user(void) {
     ee.tail_fmt       = TAIL_FMT_OK;
     ee.auto_shift     = auto_shift_pack(false, POLY_DEFAULT_AUTO_SHIFT_MS);
     ee.tail2_fmt      = TAIL2_FMT_OK;
+    ee.keymap_mig     = KEYMAP_MIG_AI_KEY;   // the keymap was just written from the defaults
     memset(ee.latin_ex, 0, sizeof(ee.latin_ex));
     // A fresh EEPROM is born already widened: zeroed picks (every letter on its
     // first variation) plus the sentinel, so it never runs the legacy conversion.

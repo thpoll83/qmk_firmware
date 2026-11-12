@@ -115,6 +115,13 @@ void stamp_tail2_fmt(void) {
     eeconfig_update_user_datablock(tail, offsetof(poly_eeconf_t, auto_shift), sizeof(tail));
 }
 
+// Written straight through at boot, after the keymap migration it records
+// (poly_keymap.c, KEYMAP_MIG_*). The pad byte is zeroed in the same write.
+void stamp_keymap_mig(uint8_t marker) {
+    const uint8_t tail[2] = {0, marker};
+    eeconfig_update_user_datablock(tail, offsetof(poly_eeconf_t, keymap_mig_pad), sizeof(tail));
+}
+
 // Saves both settings and latin table. Use save_user_settings() or save_user_latin() when only one part changed.
 void save_user_eeconf(void) {
     save_user_settings();

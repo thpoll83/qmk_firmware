@@ -24,7 +24,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
    ┌────────┬───────┬───────┬───────┬───────┬───────┬───────┐                    ┌───────┬───────┬───────┬───────┬───────┬───────┬────────┐
    │  Esc   │   1   │   2   │   3   │   4   │   5   │  IME  │ ╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮ │   6   │   7   │   8   │   9   │   0   │   -   │ BckSp  │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤ │╰╯╰╯╰╯╰╯╰╯╰╯╰╯╰╯│ ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  TAB   │   q   │   w   │   e   │   r   │   t   │   `   ├─╯                ╰─┤  Hypr │   y   │   u   │   i   │   o   │   p   │   \    │
+   │  TAB   │   q   │   w   │   e   │   r   │   t   │   `   ├─╯                ╰─┤   AI  │   y   │   u   │   i   │   o   │   p   │   \    │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤                    ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
    │  FN    │   a   │   s   │   d   │   f   │   g   │   '   │  (MB1)             │  Intl │   h   │   j   │   k   │   l   │   =   │  Ret   │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────╮  ╭────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────┤
@@ -41,7 +41,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
 
                     KC_6,       KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_BSPC,
-                    KC_HYPR,    KC_Y,       KC_U,       KC_I,       KC_O,       KC_P,       KC_BSLS,
+                    KC_AI,      KC_Y,       KC_U,       KC_I,       KC_O,       KC_P,       KC_BSLS,
         KC_NO,      MO(_ADDLANG1),KC_H,     KC_J,       KC_K,       KC_L,       KC_EQUAL,   KC_ENTER,
         KC_LBRC,    KC_RBRC,    KC_N,       KC_M,       KC_COMMA,   KC_SCLN,    KC_UP,      KC_RSFT,
         KC_LANG,    KC_SLASH,    KC_SPC,                KC_DOT,     KC_LEFT,    KC_DOWN,    KC_RIGHT
@@ -52,7 +52,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                                                               │     QWERTY!    │
                                                               └────────────────┘
    ┌────────┬───────┬───────┬───────┬───────┬───────┬───────┐                    ┌───────┬───────┬───────┬───────┬───────┬───────┬────────┐
-   │  Esc   │   1   │   2   │   3   │   4   │   5   │   6   │ ╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮ │   7   │   8   │   9   │   0   │   -   │   =   │  Hypr  │
+   │  Esc   │   1   │   2   │   3   │   4   │   5   │   6   │ ╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮ │   7   │   8   │   9   │   0   │   -   │   =   │   AI   │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤ │╰╯╰╯╰╯╰╯╰╯╰╯╰╯╰╯│ ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
    │  TAB   │   q   │   w   │   e   │   r   │   t   │   `   ├─╯                ╰─┤   y   │   u   │   i   │   o   │   p   │   [   │  IME   │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤                    ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
@@ -71,7 +71,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_LSFT,    TO(_EMJ),   KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    MO(_ADDLANG1),          KC_SPACE,   KC_DEL,     KC_ENTER,
 
-                    KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_EQUAL,   KC_HYPR,
+                    KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_EQUAL,   KC_AI,
                     KC_Y,       KC_U,       KC_I,       KC_O,       KC_P,       KC_LBRC,    KC_IME,
         KC_NO,      KC_H,       KC_J,       KC_K,       KC_L,       KC_SCLN,    KC_RBRC,    KC_BSLS,
         KC_LANG,    KC_APP,     KC_N,       KC_M,       KC_COMMA,   KC_DOT,     KC_SLASH,   KC_RSFT,
@@ -88,7 +88,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤                    ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
    │  FN    │   a   │   r   │   s   │   t   │   g   │   '   │  (MB1)             │   m   │   n   │   e   │   i   │   o   │   ]   │    \   │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────╮  ╭────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │ Shift  │   z   │   x   │   c   │   d   │   v   │  Nuhs |  Num!  │  │  Lang  │  Hypr │   k   │   h   │   ,   │   .   │   /   │ Shift  │
+   │ Shift  │   z   │   x   │   c   │   d   │   v   │  Nuhs |  Num!  │  │  Lang  │   AI  │   k   │   h   │   ,   │   .   │   /   │ Shift  │
    └┬───────┼───────┼───────┼───────┼──────┬┴───────┼───────┼────────┤  ├────────┼───────┼───────┴┬──────┼───────┼───────┼───────┼───────┬┘
     │ Ctrl  │  Os   │  Alt  │  Ctx  │      │  Space │  Del  │   Ret  │  │  Ret   │ BckSp │ Space  │      │ Left  │   Up  │  Down │ Right │
     └───────┴───────┴───────┴───────┘      └────────┴───────┴────────╯  └────────┴───────┴────────┘      └───────┴───────┴───────┴───────┘
@@ -103,7 +103,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                     KC_6,       KC_7,       KC_8,       KC_9,       KC_0,       KC_MINUS,   KC_EQUAL,
                     KC_J,       KC_L,       KC_U,       KC_Y,       KC_SCLN,    KC_LBRC,    MO(_ADDLANG1),
         KC_NO,      KC_M,       KC_N,       KC_E,       KC_I,       KC_O,       KC_RBRC,    KC_BSLS,
-        KC_LANG,    KC_HYPR,    KC_K,       KC_H,       KC_COMMA,   KC_DOT,     KC_SLASH,   KC_RSFT,
+        KC_LANG,    KC_AI,      KC_K,       KC_H,       KC_COMMA,   KC_DOT,     KC_SLASH,   KC_RSFT,
         KC_ENTER,   KC_BSPC,    KC_SPC,                 KC_LEFT,    KC_UP,      KC_DOWN,    KC_RIGHT
         ),
         /*
@@ -158,12 +158,12 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
    ⚠️ Tuning lives in split72/config.h (TAPPING_TERM / CHORDAL_HOLD /
    PERMISSIVE_HOLD / FLOW_TAP_TERM). Since protocol v29 TAPPING_TERM and
    FLOW_TAP_TERM are only the defaults: the host sets both at runtime (HID cmd
-   44, base/tap_terms.h). Nothing else on the default keymap is a tap-hold key,
-   so those settings reach these eight keys and any the user maps.
+   44, base/tap_terms.h). Besides these eight keys only the AI key reads the
+   tapping term (ai_mode.h), so those settings reach them and any key the user maps.
    ┌────────┬───────┬───────┬───────┬───────┬───────┬───────┐                    ┌───────┬───────┬───────┬───────┬───────┬───────┬────────┐
    │  Esc   │   1   │   2   │   3   │   4   │   5   │   `   │ ╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮╭╮ │   6   │   7   │   8   │   9   │   0   │   -   │   =    │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤ │╰╯╰╯╰╯╰╯╰╯╰╯╰╯╰╯│ ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
-   │  TAB   │   q   │   d   │   r   │   w   │   b   │  Hypr ├─╯                ╰─┤   j   │   f   │   u   │   p   │   ;   │   [   │   ]    │
+   │  TAB   │   q   │   d   │   r   │   w   │   b   │   AI  ├─╯                ╰─┤   j   │   f   │   u   │   p   │   ;   │   [   │   ]    │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┤                    ├───────┼───────┼───────┼───────┼───────┼───────┼────────┤
    │  FN    │  a/G  │  s/A  │  h/C  │  t/S  │   g   │ Emoji │  (MB1)             │   y   │  n/S  │  e/C  │  o/A  │  i/G  │   '   │   \    │
    ├────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────╮  ╭────────┼───────┼───────┼───────┼───────┼───────┼───────┼────────┤
@@ -174,7 +174,7 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 */
     [_L4] = LAYOUT_left_right_stacked(
         KC_ESC,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_GRAVE,
-        KC_TAB,     KC_Q,       KC_D,       KC_R,       KC_W,       KC_B,       KC_HYPR,
+        KC_TAB,     KC_Q,       KC_D,       KC_R,       KC_W,       KC_B,       KC_AI,
         MO(_FL),   LGUI_T(KC_A), LALT_T(KC_S), LCTL_T(KC_H), LSFT_T(KC_T), KC_G,   TO(_EMJ),     MS_BTN1,
         KC_LSFT,    KC_Z,       KC_X,       KC_M,       KC_C,       KC_V,       MO(_ADDLANG1), MO(_NL),
         KC_LCTL,    KC_LWIN,    KC_LALT,    KC_APP,                 KC_SPACE,   KC_DEL,     KC_ENTER,
@@ -255,12 +255,13 @@ const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_BASE,    KC_NO,      KC_NO,      KC_NO,                  KC_NO,      KC_NO,      KC_NO,
 
                     QK_MACRO_6, QK_MACRO_7, QK_MACRO_8, QK_MACRO_9, QK_MACRO_10, QK_MACRO_11, KC_NO,
-                    TO(_ML),    KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_IDDQD,   TO(_SL),
+                    KC_NO,      KC_MPRV,    KC_MPLY,    KC_MSTP,    KC_MNXT,    KC_IDDQD,   TO(_SL),
         // Sound sits directly under the transport row so the whole media block reads as
         // one group: MRWD/MFFD bracket the volume trio, each under its transport key.
         // Shifted one column OUTWARD to make that alignment true - MRWD now sits under
         // MPRV, MUTE under MPLY, and so on to MFFD under the IDDQD slot.
-        _______,    KC_NO,      KC_MRWD,    KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_MFFD,    KC_NO,
+        // TO(_ML) sits directly under TO(_SL), so both layer switches share the outer column.
+        _______,    KC_NO,      KC_MRWD,    KC_MUTE,    KC_VOLD,    KC_VOLU,    KC_MFFD,    TO(_ML),
         // KC_GLYPH_SIZE_UP is the SINGLE legend-size key - Shift reverses the direction
         // and the legend carries the current tier as a digit, so no second key is needed.
         // It sits where Ctx (KC_APP) lives on the base layers.

@@ -392,8 +392,15 @@ void dynamic_keymap_set_keycode_poly(uint8_t layer, uint8_t row, uint8_t column,
 // `from`) is left as it is. Returns how many keys changed. Runs at boot, before the
 // split link, so each half migrates its own copy by the same rule.
 uint8_t dynamic_keymap_migrate_poly(uint16_t from, uint16_t to) {
+    return dynamic_keymap_migrate_layers_poly(0, DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT, from, to);
+}
+
+// The same, on stored layers first..last-1 only: for a default added on one layer,
+// where another layer has the same keycode and a user's `from` there must stay.
+uint8_t dynamic_keymap_migrate_layers_poly(uint8_t first, uint8_t last, uint16_t from, uint16_t to) {
     uint8_t changed = 0;
-    for (uint8_t layer = 0; layer < DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT; layer++) {
+    if (last > DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT) last = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT;
+    for (uint8_t layer = first; layer < last; layer++) {
         crash_watchdog_feed();   // under the late-boot guard, as dynamic_keymap_reset_poly()
         for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
             for (uint8_t col = 0; col < MATRIX_COLS; col++) {

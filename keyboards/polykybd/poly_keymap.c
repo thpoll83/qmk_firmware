@@ -7765,8 +7765,10 @@ void keyboard_post_init_user(void) {
     // Fn + the key above the right Shift opens the MIDI layer (split72 default, the
     // key the host's MIDI guide points at). A stored Fn layer still has it
     // transparent: change it there once, and only where it is still transparent.
+    // Only on _FL: the utility layer has TO(_ML) too, and a transparent key a user
+    // put there stays.
     if (ee.keymap_mig < KEYMAP_MIG_FN_MIDI) {
-        const uint8_t moved = dynamic_keymap_migrate_poly(KC_TRNS, TO(_ML));
+        const uint8_t moved = dynamic_keymap_migrate_layers_poly(_FL, _FL + 1, KC_TRNS, TO(_ML));
         stamp_keymap_mig(KEYMAP_MIG_FN_MIDI);
         note_keymap_migration(KEYMAP_MIG_FN_MIDI, moved);
     }

@@ -198,4 +198,4 @@ newest marker (`stamp_keymap_mig()`).
 | Marker | Since | Change |
 |---|---|---|
 | `KEYMAP_MIG_AI_KEY` 0xC7 | #433 | split72 default layouts: Hyper → AI key (`KC_AI`) on QWERTY, Stag, Colemak DH and Workman |
-| `KEYMAP_MIG_FN_MIDI` 0xC8 | this change | split72 Fn layer: the key above the right Shift, transparent → `TO(_ML)` (the MIDI guide's second key) |
+| `KEYMAP_MIG_FN_MIDI` 0xC8 | this change | split72 Fn layer only (`dynamic_keymap_migrate_layers_poly`): the key above the right Shift, transparent → `TO(_ML)` (the MIDI guide's second key) |

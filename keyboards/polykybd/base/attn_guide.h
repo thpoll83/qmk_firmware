@@ -1,7 +1,7 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// The pure part of the key-attention GUIDE (HID cmd 47 op 2, protocol v33): the focus
+// The pure part of the key-attention GUIDE (HID cmd 47 op 2, protocol v34): the focus
 // ripple walks the user along a path of layer keys to a target layer, for example
 // "hold FN" and then "press the MIDI key". Each step is a key and the layer that key is
 // on. The ripple is on the step whose layer is the active one, so holding FN moves it

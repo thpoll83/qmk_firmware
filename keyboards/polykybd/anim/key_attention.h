@@ -17,7 +17,7 @@
 #define KEY_ATTN_CMD          47
 #define KEY_ATTN_OP_START      0
 #define KEY_ATTN_OP_CANCEL     1
-// Op 2 GUIDE (protocol v33) is ATTN_GUIDE_OP in base/attn_guide.h: a path of layer
+// Op 2 GUIDE (protocol v34) is ATTN_GUIDE_OP in base/attn_guide.h: a path of layer
 // keys to a target layer, rung on the step whose layer is active.
 // Ripple period in units of 100 ms, a CLOSED range: one ripple lasts 2.2 s, so a
 // shorter period would start the next one over it, and more than 10 s reads as gone.

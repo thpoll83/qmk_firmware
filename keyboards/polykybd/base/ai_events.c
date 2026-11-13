@@ -84,3 +84,15 @@ bool ai_card_header(uint16_t header, uint16_t num_slots, uint16_t *slot, uint8_t
     *segment = seg;
     return true;
 }
+
+void ai_done_rings_update(const uint8_t *prev, const uint8_t *now, uint8_t *left) {
+    for (uint8_t i = 0; i < AI_NUM_KEYS; ++i) {
+        const bool finished = now[i] == AI_STATE_DONE || now[i] == AI_STATE_IDLE;
+        const bool was_busy = prev[i] == AI_STATE_WORKING || prev[i] == AI_STATE_STALE;
+        if (!finished || (prev[i] == AI_STATE_DONE && now[i] == AI_STATE_IDLE)) {
+            left[i] = 0;
+        } else if (was_busy) {
+            left[i] = AI_DONE_RIPPLES;
+        }
+    }
+}

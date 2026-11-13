@@ -76,6 +76,22 @@ static matrix_row_t s_held_at_start[MATRIX_ROWS];
 // ended (a number key ends it on the press).
 static matrix_row_t s_swallowed[MATRIX_ROWS];
 
+// The ripples of a finished agent (ai_attention_tick): still to run per key, and the
+// key and start time of the last one that ran.
+#define AI_ATTENTION_PERIOD_MS 4000u
+static uint8_t  s_done_left[AI_NUM_KEYS];
+static uint8_t  s_done_last_key = AI_KEY_NONE;
+static uint32_t s_done_last_t;
+
+// True while a finished agent's key rings: ripples are still to run, or the last
+// one started less than a period ago. Its number key is then a hold key, as a
+// waiting agent's is.
+static bool ai_done_ringing(uint8_t key) {
+    if (key >= AI_NUM_KEYS) return false;
+    return s_done_left[key] > 0
+        || (s_done_last_key == key && timer_elapsed32(s_done_last_t) < AI_ATTENTION_PERIOD_MS);
+}
+
 static bool rc_test(const matrix_row_t *m, uint8_t row, uint8_t col) {
     return (m[row] & ((matrix_row_t)1 << col)) != 0;
 }
@@ -233,7 +249,8 @@ bool ai_process_record(uint16_t keycode, keyrecord_t *record) {
     if (!ai_mode_active()) {
         if (pressed && is_keyboard_master()) {
             const uint8_t key = ai_key_at(row, col);
-            if (key < AI_NUM_KEYS && get_local_state()->ai_state[key] == AI_STATE_WAITING) {
+            if (key < AI_NUM_KEYS
+                && (get_local_state()->ai_state[key] == AI_STATE_WAITING || ai_done_ringing(key))) {
                 s_num_pending       = true;
                 s_num_key           = key;
                 s_num_rec           = *record;
@@ -319,6 +336,10 @@ void ai_mode_tick(void) {
         s_num_pending = false;
         rc_set(s_swallowed, s_num_rec.event.key.row, s_num_rec.event.key.col);
         ai_record(s_num_key);
+        // The user looks at the agent now: end its ring here. An agent that
+        // reports done stops on the other half when the host marks it seen.
+        s_done_left[s_num_key] = 0;
+        if (s_done_last_key == s_num_key) s_done_last_key = AI_KEY_NONE;
         uprintf("ai: hold on key %u\n", (unsigned)s_num_key);
     }
     if (s_ai_down && s_ai_pending && timer_elapsed(s_ai_t) > get_poly_tapping_term()) {
@@ -554,30 +575,61 @@ void ai_hid_card(uint8_t *data, uint8_t length) {
 
 // One ripple runs TUT_RIPPLE_MS (2.2 s); the rest of the period is still, so the ring
 // reads as a pulse, not a constant motion. Both halves run this from the synced key
-// states with the same period, so their rings start within the sync latency.
-#define AI_ATTENTION_PERIOD_MS 4000u
+// states with the same period (AI_ATTENTION_PERIOD_MS), so their rings start
+// within the sync latency.
+
+#ifdef KEYBOARD_polykybd_split72
+// Start the ripple on agent key i. False when the key is not on the default layer
+// or has no display.
+static bool ai_ring_key(uint8_t i) {
+    uint8_t rc[AI_KEY_COUNT];
+    ai_find_keys(rc);
+    if (rc[i] == NO_KEY) return false;
+    const uint8_t slot = poly_slot_of((uint8_t)(rc[i] >> 4), (uint8_t)(rc[i] & 0x0Fu));
+    if (slot == TUT_SLOT_NONE) return false;
+    poly_focus_start(slot);
+    return true;
+}
+#endif
 
 void ai_attention_tick(void) {
 #ifdef KEYBOARD_polykybd_split72
     static uint32_t s_last;
     static bool     s_started;
     static uint8_t  s_next;
+    static uint8_t  s_next_done;
+    static uint8_t  s_prev[AI_NUM_KEYS];        // the states of the last pass
     const poly_sync_t *s = get_local_state();
+    // Before the gates below: a finish during a running ripple must still count.
+    ai_done_rings_update(s_prev, s->ai_state, s_done_left);
+    // Seen, busy again or gone: the last ripple's key is no longer a hold key.
+    if (s_done_last_key < AI_NUM_KEYS && s_prev[s_done_last_key] != s->ai_state[s_done_last_key]) {
+        s_done_last_key = AI_KEY_NONE;
+    }
+    memcpy(s_prev, s->ai_state, sizeof(s_prev));
     if (tutorial_active() || !poly_render_live() || poly_focus_active() || s->fw_confirm) return;
     if (key_attention_pending()) return;   // a host request (cmd 47) has the ring
     if (s_started && timer_elapsed32(s_last) < AI_ATTENTION_PERIOD_MS) return;
+    // A waiting agent first: it cannot go on without the user.
     for (uint8_t k = 0; k < AI_NUM_KEYS; ++k) {
         const uint8_t i = (uint8_t)((s_next + k) % AI_NUM_KEYS);
-        if (s->ai_state[i] != AI_STATE_WAITING) continue;
-        uint8_t rc[AI_KEY_COUNT];
-        ai_find_keys(rc);
-        if (rc[i] == NO_KEY) continue;
-        const uint8_t slot = poly_slot_of((uint8_t)(rc[i] >> 4), (uint8_t)(rc[i] & 0x0Fu));
-        if (slot == TUT_SLOT_NONE) continue;
-        poly_focus_start(slot);
+        if (s->ai_state[i] != AI_STATE_WAITING || !ai_ring_key(i)) continue;
         s_last    = timer_read32();
         s_started = true;
         s_next    = (uint8_t)(i + 1u);
+        return;
+    }
+    // Then an agent that finished (ai_done_rings_update), AI_DONE_RIPPLES times.
+    for (uint8_t k = 0; k < AI_NUM_KEYS; ++k) {
+        const uint8_t i = (uint8_t)((s_next_done + k) % AI_NUM_KEYS);
+        if (s_done_left[i] == 0) continue;
+        --s_done_left[i];   // also when the key cannot ring, so it does not block others
+        if (!ai_ring_key(i)) continue;
+        s_last          = timer_read32();
+        s_started       = true;
+        s_next_done     = (uint8_t)(i + 1u);
+        s_done_last_key = i;
+        s_done_last_t   = s_last;
         return;
     }
 #endif

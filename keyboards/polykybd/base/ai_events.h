@@ -96,6 +96,17 @@ bool ai_set_keys_valid(const uint8_t *payload, uint16_t num_slots);
 // Op 1 decode, after ai_set_keys_valid(): fills state[10], *flags and slot[12].
 void ai_set_keys_decode(const uint8_t *payload, uint8_t *state, uint8_t *flags, uint16_t *slot);
 
+// An agent that finished: its key rings AI_DONE_RIPPLES times (split72), so the user
+// sees the moment to check the result. Called each housekeeping pass on both halves
+// with the states of the last pass (`prev`) and of this one (`now`); updates the
+// ripples still to run per key (`left`).
+//   working or stale -> done or idle: AI_DONE_RIPPLES (a finished turn; an agent
+//                                     found by its window title reports idle)
+//   done -> idle:                     0 (the user pressed the key or raised the window)
+//   -> working, waiting, stale, empty: 0
+#define AI_DONE_RIPPLES 3u
+void ai_done_rings_update(const uint8_t *prev, const uint8_t *now, uint8_t *left);
+
 // Cmd 46 header: bits 0..9 pool slot, bits 12..14 segment. False if the slot is not
 // below num_slots or the segment is past 5.
 bool ai_card_header(uint16_t header, uint16_t num_slots, uint16_t *slot, uint8_t *segment);

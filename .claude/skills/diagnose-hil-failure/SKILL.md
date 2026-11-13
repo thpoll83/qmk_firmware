@@ -200,8 +200,11 @@ or an unrelated command's failure on such a PR points away from the diff.
   frugal). For a stale-rig or rig-test cause, say plainly it's not the PR's fault.
 - **Log it** in `polykybd-ctnd/docs/RIG_INCIDENTS.md` unless the firmware under test
   was the cause: date, run id (and attempt), the exact log line, the class, the cause
-  and fix, and what it cost. Before classifying, grep that file for the symptom line:
-  an entry with the same line means this is a repeat. A failure you cannot explain
+  and fix, and what it cost. Before classifying, grep that file for the fixed text of
+  the symptom line, the signature from §3 without the values that change between runs
+  (byte counts, CRCs, `status 0xNN`, run ids). A match is only a candidate repeat, since
+  one line can have several causes: add the run to that entry only when the cause is the
+  same, otherwise start a new entry that names the one it resembles. A failure you cannot explain
   gets an **Open** entry; when a later run settles it, move the entry to **Closed**.
   Land the entry as a ctnd docs PR, or in the ctnd PR that fixes the cause.
 

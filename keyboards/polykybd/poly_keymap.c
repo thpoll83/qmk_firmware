@@ -3439,14 +3439,29 @@ bool overlay_slot_displayed(uint16_t base_slot) {
     return (s_displayed_slots[base_slot >> 3] & (uint8_t)(1u << (base_slot & 7))) != 0;
 }
 
-bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
+// The keycode's overlay slot (0..89, before the modifier variant), or -1 for a keycode
+// that has none. One mapping for copy_overlay_to_buffer() and overlay_present().
+static int16_t overlay_key_slot(uint16_t keycode) {
     if(keycode>KC_RGUI || (keycode>KC_NUM_LOCK && keycode<KC_NUBS) || (keycode>KC_APP && keycode<KC_LEFT_CTRL)) {
-        return false;
+        return -1;
     }
     uint16_t idx = (keycode>KC_APP) ? (keycode - KC_LEFT_CTRL + 82) : (keycode>KC_NUM_LOCK ? keycode - KC_NUBS + 80 : keycode - KC_A);
-    if(idx>=90) {
+    return idx < 90 ? (int16_t)idx : -1;
+}
+
+// Whether copy_overlay_to_buffer() would draw an icon on this key. Draws nothing and
+// records nothing, so a legend can be placed for the icon before it is drawn.
+static bool overlay_present(uint16_t keycode, uint8_t mods) {
+    const int16_t slot = overlay_key_slot(keycode);
+    return slot >= 0 && display_has_overlay(adjust_overlay_idx_to_mod((uint16_t)slot, mods));
+}
+
+bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
+    const int16_t slot = overlay_key_slot(keycode);
+    if(slot < 0) {
         return false;
     }
+    uint16_t idx = (uint16_t)slot;
     // Record that this keycode-slot is on screen (LAYER visibility for the render gate).
     s_displayed_slots[idx >> 3] |= (uint8_t)(1u << (idx & 7));
     idx = adjust_overlay_idx_to_mod(idx, mods);
@@ -5971,8 +5986,13 @@ void update_displays(enum refresh_mode mode) {
                                 uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode) : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
                                 kdisp_write_gfx_char(g_all_fonts, g_all_font_count, BUFFER_X, 23, unicode_map[chr], 0);
                             }
-                        } else if (r == MATRIX_ROWS_PER_SIDE - 1) {
-                            // Bottom (thumb) row: centre the legend horizontally.
+                        } else if (r == MATRIX_ROWS_PER_SIDE - 1 &&
+                                   !(display_overlays && !add_lang && !tutorial_active() &&
+                                     overlay_present(keycode, mods))) {
+                            // Bottom (thumb) row: centre the legend horizontally, unless
+                            // an app overlay is drawn on the key below. Then the legend
+                            // goes top-left like every other row's, clear of the icon in
+                            // the bottom-right (the conditions are the overlay's own).
                             draw_legend_cx_cy(text, 23, invert_key ? 0 : KDISP_CY_DEFAULT);
                         } else {
                             kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text,

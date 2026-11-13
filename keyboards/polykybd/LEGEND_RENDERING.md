@@ -168,6 +168,16 @@ interpreter — and counting pixels outside the 72x40 window. Require **0**.
   through `kdisp_write_gfx_text_cy()` directly — on split72 `MATRIX_ROWS_PER_SIDE` is
   5, so the Ctrl at `[4,0]` takes the *bottom-row* one and fixing only the obvious
   call site changes nothing.
+- **A thumb-row legend is centred only while no app overlay is drawn on that key.**
+  `update_displays()` asks `overlay_present(keycode, mods)` (the lookup
+  `copy_overlay_to_buffer()` uses, without drawing or recording) and, when an icon will
+  follow, draws the legend at `BUFFER_X` like every other row's. The overlay sets put
+  their icons bottom-right, so a centred ␣, ↵ or arrow was cut by the courtyard on
+  every Space, Enter and arrow overlay. Measured over all host overlay sets, the
+  courtyard erased 103,139 legend pixels in 2,520 Space, Enter and arrow cells while
+  centred, and 153 pixels (in 3 Enter cells) after the move. Delete's ⌦ is wide enough
+  to meet the icon from either side: 55,094 erased pixels become 19,999. The tutorial path (`tutorial_draw_board_legend()`) shows no overlays
+  and keeps the centred draw.
 - ⚠️ **`kdisp_write_gfx_text_cy()` walks the list TWICE when a courtyard is asked
   for, and the second pass is what makes the first correct — do not "optimise" it
   back to one.** The courtyard is cleared per GLYPH, immediately before that glyph

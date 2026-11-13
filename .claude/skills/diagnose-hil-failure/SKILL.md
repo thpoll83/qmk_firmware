@@ -198,12 +198,19 @@ or an unrelated command's failure on such a PR points away from the diff.
   self-update. Re-run once deployed.
 - **Report** the class + root cause to the user (in chat, not a PR comment — be
   frugal). For a stale-rig or rig-test cause, say plainly it's not the PR's fault.
+- **Log it** in `polykybd-ctnd/docs/RIG_INCIDENTS.md` unless the firmware under test
+  was the cause: date, run id (and attempt), the exact log line, the class, the cause
+  and fix, and what it cost. Before classifying, grep that file for the symptom line:
+  an entry with the same line means this is a repeat. A failure you cannot explain
+  gets an **Open** entry; when a later run settles it, move the entry to **Closed**.
+  Land the entry as a ctnd docs PR, or in the ctnd PR that fixes the cause.
 
 ## Output
 
 State: (a) rig fresh or stale (from the settle line), (b) the failure class, (c)
 root cause + which repo owns the fix, (d) the action taken (re-run / ctnd fix /
-flag rig). One or two sentences per point.
+flag rig), (e) the `RIG_INCIDENTS.md` entry added, or an earlier entry this repeats.
+One or two sentences per point.
 
 ## Pitfalls
 

@@ -178,4 +178,77 @@ TEST(AiCard, HeaderFields) {
     EXPECT_FALSE(ai_card_header((uint16_t)(7 << 12), 600, &slot, &seg));
 }
 
+// ---- the ripples of a finished agent ---------------------------------------------
+
+struct DoneRings {
+    uint8_t prev[AI_NUM_KEYS] = {};
+    uint8_t now[AI_NUM_KEYS]  = {};
+    uint8_t left[AI_NUM_KEYS] = {};
+    // One housekeeping pass that moves key 0 to `state`.
+    void pass(uint8_t state) {
+        now[0] = state;
+        ai_done_rings_update(prev, now, left);
+        memcpy(prev, now, sizeof(prev));
+    }
+};
+
+TEST(AiDoneRings, AFinishedTurnRings) {
+    DoneRings r;
+    r.pass(AI_STATE_WORKING);
+    EXPECT_EQ(r.left[0], 0);
+    r.pass(AI_STATE_DONE);
+    EXPECT_EQ(r.left[0], AI_DONE_RIPPLES);
+    r.left[0] = 1;                      // the tick ran two of them
+    r.pass(AI_STATE_DONE);              // the host sends the same state again
+    EXPECT_EQ(r.left[0], 1);
+}
+
+TEST(AiDoneRings, WorkingToIdleAndStaleToDoneRing) {
+    DoneRings r;
+    r.pass(AI_STATE_WORKING);
+    r.pass(AI_STATE_IDLE);              // an agent found by its window title
+    EXPECT_EQ(r.left[0], AI_DONE_RIPPLES);
+    DoneRings s;
+    s.pass(AI_STATE_STALE);
+    s.pass(AI_STATE_DONE);
+    EXPECT_EQ(s.left[0], AI_DONE_RIPPLES);
+}
+
+TEST(AiDoneRings, PressingTheKeyEndsIt) {
+    DoneRings r;
+    r.pass(AI_STATE_WORKING);
+    r.pass(AI_STATE_DONE);
+    r.pass(AI_STATE_IDLE);              // registry.mark_seen: done becomes idle
+    EXPECT_EQ(r.left[0], 0);
+}
+
+TEST(AiDoneRings, BusyAgainOrGoneEndsIt) {
+    for (uint8_t next : {AI_STATE_WORKING, AI_STATE_WAITING, AI_STATE_EMPTY, AI_STATE_STALE}) {
+        DoneRings r;
+        r.pass(AI_STATE_WORKING);
+        r.pass(AI_STATE_DONE);
+        r.pass(next);
+        EXPECT_EQ(r.left[0], 0) << (int)next;
+    }
+}
+
+TEST(AiDoneRings, NoRingWithoutABusyTurn) {
+    // A key that appears done (a restored agent, USB resume) or a waiting agent
+    // that ends without working does not ring: it did not just finish.
+    for (uint8_t from : {AI_STATE_EMPTY, AI_STATE_IDLE, AI_STATE_WAITING}) {
+        DoneRings r;
+        r.pass(from);
+        r.pass(AI_STATE_DONE);
+        EXPECT_EQ(r.left[0], 0) << (int)from;
+    }
+    DoneRings r;                        // only the key that changed
+    r.prev[3] = AI_STATE_WORKING;
+    r.now[3]  = AI_STATE_WORKING;
+    r.pass(AI_STATE_WORKING);
+    r.now[3] = AI_STATE_DONE;
+    r.pass(AI_STATE_WORKING);
+    EXPECT_EQ(r.left[3], AI_DONE_RIPPLES);
+    EXPECT_EQ(r.left[0], 0);
+}
+
 }  // namespace

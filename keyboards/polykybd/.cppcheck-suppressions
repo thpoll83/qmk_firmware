@@ -30,6 +30,10 @@ unmatchedSuppression
 # had they been `extern uint32_t` this would have silently returned size/4,
 # which is the actual bug worth watching for here.
 comparePointers:*/base/fw_staging.c
+# cppcheck 2.19 (ubuntu-latest from 2026-11) reports the same line as
+# subtractPointers; older versions called it comparePointers. Both ids stay, and
+# unmatchedSuppression above keeps the unused one quiet.
+subtractPointers:*/base/fw_staging.c
 
 # os_hint_for_keycode() is declared `const uint32_t*` and returns U"..." char32_t
 # literals — the codebase relies on char32_t and uint32_t being the same 32-bit

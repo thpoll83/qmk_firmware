@@ -140,3 +140,7 @@ uint32_t host_tut_state_crc(const host_tut_text_t *text, bool spot_on,
     if (mask != NULL) h = fnv1a(h, mask, HOST_TUT_MASK_BYTES);
     return h;
 }
+
+uint8_t host_tut_sendable(uint8_t dirty, bool reveal_on) {
+    return reveal_on ? (uint8_t)(dirty & (uint8_t)~HOST_TUT_DIRTY_SPOT) : dirty;
+}

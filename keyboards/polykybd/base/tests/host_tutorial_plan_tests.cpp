@@ -200,6 +200,19 @@ TEST(HostTutArm, Refusals) {
     EXPECT_EQ(0, memcmp(&c, &before, sizeof c));
 }
 
+// ---- what the master may send the slave now ------------------------------------
+
+TEST(HostTutSendable, SpotlightWaitsForTheReveal) {
+    const uint8_t all = HOST_TUT_DIRTY_END | HOST_TUT_DIRTY_TEXT | HOST_TUT_DIRTY_SPOT;
+    EXPECT_EQ(host_tut_sendable(all, false), all);
+    EXPECT_EQ(host_tut_sendable(all, true), HOST_TUT_DIRTY_END | HOST_TUT_DIRTY_TEXT);
+    // A link-up resync during a reveal queues TEXT and SPOTLIGHT: only TEXT goes now.
+    EXPECT_EQ(host_tut_sendable(HOST_TUT_DIRTY_TEXT | HOST_TUT_DIRTY_SPOT, true),
+              HOST_TUT_DIRTY_TEXT);
+    EXPECT_EQ(host_tut_sendable(HOST_TUT_DIRTY_SPOT, true), 0);
+    EXPECT_EQ(host_tut_sendable(HOST_TUT_DIRTY_SPOT, false), HOST_TUT_DIRTY_SPOT);
+}
+
 // ---- the VERIFY checksum -------------------------------------------------------
 
 TEST(HostTutCrc, SameStateSameCrcAndEveryFieldCounts) {

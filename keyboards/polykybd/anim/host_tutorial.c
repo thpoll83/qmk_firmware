@@ -38,9 +38,9 @@ static host_tut_conds_t s_conds;
 static uint32_t         s_last_ms;      // the last cmd 49 report, for the watchdog
 // What the slave still has to get. END first, so a TEXT or SPOTLIGHT that follows an
 // END is applied after it.
-#define DIRTY_END  0x01u
-#define DIRTY_TEXT 0x02u
-#define DIRTY_SPOT 0x04u
+#define DIRTY_END  HOST_TUT_DIRTY_END
+#define DIRTY_TEXT HOST_TUT_DIRTY_TEXT
+#define DIRTY_SPOT HOST_TUT_DIRTY_SPOT
 static uint8_t  s_dirty;
 static bool     s_link_up;     // the split link as the last tick saw it
 static uint32_t s_verify_at;   // the next VERIFY of the slave's copy
@@ -140,8 +140,11 @@ static void push_dirty(void) {
     static const struct { uint8_t bit, op; } order[] = {
         {DIRTY_END, HOST_TUT_OP_END}, {DIRTY_TEXT, HOST_TUT_OP_TEXT}, {DIRTY_SPOT, HOST_TUT_OP_SPOTLIGHT}};
     uint8_t r[HOST_TUT_REPORT_BYTES];
+    // A SPOTLIGHT waits for a running reveal to end (host_tut_sendable): whatever queued
+    // it (a link-up resync, a failed relay), it would cancel the slave's reveal.
+    const uint8_t now = host_tut_sendable(s_dirty, s_reveal_on);
     for (uint8_t i = 0; i < 3u; ++i) {
-        if (!(s_dirty & order[i].bit)) continue;
+        if (!(now & order[i].bit)) continue;
         build_report(r, order[i].op);
         if (!relay(r)) {
             s_resend_at = timer_read32() + RESEND_MS;
@@ -246,12 +249,12 @@ void host_tutorial_hid(uint8_t *data, uint8_t length) {
                 uint8_t r[HOST_TUT_REPORT_BYTES];
                 memset(r, 0, sizeof r);
                 memcpy(r, data, length < sizeof r ? length : sizeof r);
-                apply_reveal(slot);
-                // A pending TEXT or SPOTLIGHT goes first: a SPOTLIGHT retry that reached
-                // the slave after the REVEAL would cancel its reveal. When it still fails,
-                // the reveal is not sent either; the slave gets the end state instead (the
-                // spotlight-off the tick queues when the reveal ends).
+                // A pending TEXT or SPOTLIGHT goes first, before the reveal runs (while it
+                // runs push_dirty() withholds SPOTLIGHT). When it still fails, the reveal is
+                // not sent either; the slave gets the end state instead (the spotlight-off
+                // the tick queues when the reveal ends).
                 push_dirty();
+                apply_reveal(slot);
                 if (s_dirty) {
                     uprintf("host tut: reveal not sent, the slave is behind\n");
                 } else if (!relay(r)) {

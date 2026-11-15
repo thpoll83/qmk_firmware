@@ -110,6 +110,14 @@ void host_tut_note_layers(host_tut_conds_t *c, uint32_t layers_on);
 // more before `now_ms`. Wrap-safe.
 bool host_tut_expired(uint32_t last_ms, uint32_t now_ms);
 
+// What the master still has to send the slave (anim/host_tutorial.c), sent in this order.
+#define HOST_TUT_DIRTY_END  0x01u
+#define HOST_TUT_DIRTY_TEXT 0x02u
+#define HOST_TUT_DIRTY_SPOT 0x04u
+// The dirty bits that may go out now. A SPOTLIGHT is withheld while a reveal runs: on the
+// slave it would cancel the reveal, and the reveal's end queues the spotlight-off anyway.
+uint8_t host_tut_sendable(uint8_t dirty, bool reveal_on);
+
 // A 32-bit FNV-1a checksum of the text (both lengths and the used bytes), the spotlight
 // flag and the mask, as the VERIFY relay compares them. Bytes past the used text do not
 // count, so two copies of the same lines always match.

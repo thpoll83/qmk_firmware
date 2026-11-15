@@ -18,6 +18,8 @@
 #include "poly_macro.h"          // POLY_MACRO_COUNT
 #include "poly_macro_record.h"   // enum poly_rec_state + the recording read-outs
 #include "anim/demo_mode.h"      // demo_sync_active(): the "how do I stop this" hint
+#include "anim/host_tutorial.h"  // cmd 49: the host tutorial's two lines
+#include "base/host_tutorial_plan.h"   // HOST_TUT_TEXT_BYTES
 #ifdef POLYKYBD_DOOM
 #include "doom/doom_mode.h"
 #include "doom/doom_logo_oled.h"
@@ -970,6 +972,33 @@ static void oled_demo_screen(void) {
     oled_present_now();
 }
 
+// The host tutorial's two lines (cmd 49, anim/host_tutorial.h), both halves alike: each
+// half draws its own copy of the forwarded TEXT report. The bytes are ASCII 0x20..0x7E
+// (the parser refuses the rest), all in the status face. The host measures each line
+// against the panel width before it sends it; a wider line is cut at the right edge.
+static void oled_host_tutorial_screen(void) {
+    const bool     tall    = OLED_DISPLAY_HEIGHT >= 64;
+    const GFXfont *small[] = { &NotoSans_Regular_Small_15px7b };
+    uint32_t       text[HOST_TUT_TEXT_BYTES + 1];
+    uint8_t        len0 = 0, len1 = 0;
+    const char    *l0 = host_tutorial_line(0, &len0);
+    const char    *l1 = host_tutorial_line(1, &len1);
+    kdisp_set_buffer(0);
+    const bool two = len0 > 0u && len1 > 0u;
+    for (uint8_t i = 0; i < 2u; ++i) {
+        const char   *src = i == 0u ? l0 : l1;
+        const uint8_t n   = i == 0u ? len0 : len1;
+        if (n == 0u) continue;
+        for (uint8_t k = 0; k < n; ++k) text[k] = (uint8_t)src[k];
+        text[n] = 0u;
+        // Two lines sit like the demo screen's two; one line sits in the middle.
+        const int8_t y = two ? (int8_t)(i == 0u ? (tall ? 26 : 14) : (tall ? 52 : 30))
+                             : (int8_t)(tall ? 38 : 22);
+        oled_draw_text_centred(small, y, text);
+    }
+    oled_present_now();
+}
+
 // Show the demo hint for the first 4 s of every 12 s; the rest of the time the status
 // panel shows what it always does (layer, language, speed), which is part of the show.
 // Each half runs its own clock, so the two may swap a few ms apart; nobody can tell.
@@ -1061,6 +1090,16 @@ bool oled_task_user(void) {
             return false;
         }
         oled_tutorial_screen();
+    } else if (host_tutorial_text_active()) {
+        // The host tutorial's text (cmd 49). Below the firmware screens, Eden and the
+        // first-run lesson; above the game, the recorder and the status readout. It
+        // obeys the status-display flag for the same reason the lesson above does.
+        oled_scroll_off();
+        if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
+            oled_off();
+            return false;
+        }
+        oled_host_tutorial_screen();
 #ifdef POLYKYBD_DOOM
     } else if (doom_mode_active() || get_local_state()->doom_ctl) {
         // Game mode status OLED — master directly, slave via the synced

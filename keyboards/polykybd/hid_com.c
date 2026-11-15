@@ -55,6 +55,7 @@
 #include "ltr559_policy.h"    // poly_ltr559_drives_brightness
 #include "ai_mode.h"          // cmd 45 / 46 (protocol v31)
 #include "anim/key_attention.h"   // cmd 47 (protocol v32)
+#include "anim/host_tutorial.h"   // cmd 49 (protocol v35)
 
 
 /*[[[cog
@@ -1721,6 +1722,10 @@ static void hid_cmd_47(uint8_t *data, uint8_t length, const poly_layer_t *local_
     key_attention_hid(data, length);
 }
 
+static void hid_cmd_49(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //host tutorial: status text, spotlight, reveal, conditions (protocol v35+)
+    host_tutorial_hid(data, length);
+}
+
 // Cmd 48 operations (data[2]).
 #define COMBO_OP_INFO   0u
 #define COMBO_OP_GET    1u
@@ -1939,6 +1944,7 @@ static const hid_cmd_t s_hid_cmds[] = {
     [46] = {hid_cmd_46, 0},
     [47] = {hid_cmd_47, 0},
     [48] = {hid_cmd_48, 0},
+    [49] = {hid_cmd_49, 0},
 };
 
 void raw_hid_receive(uint8_t *data, uint8_t length) {

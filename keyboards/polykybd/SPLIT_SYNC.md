@@ -95,3 +95,38 @@ warm app switch's reset started a slave render, ESC (row 0) was drawn before the
 chunk arrived, and the ESC program mark stayed stale until the next refresh (fixed
 2026-10-18).
 
+## Host state goes to the slave as the report
+
+Maintainer's rule, 2026-11-15. When a host HID command sets state that the slave also
+draws (text, a key mask, a mode), the master forwards the HID report itself. It does not
+add fields to `poly_sync_t`.
+
+How:
+
+1. The master handles the report, then copies it into `dynamic_keymap_sync_t.commands`
+   (`RAW_EPSIZE`, 64 bytes) and sends it on `USER_SYNC_DYNAMIC_KEYMAP_DATA`. The VIA
+   keymap writes and cmd 14 (KEYPRESS) do this in `hid_com.c`.
+2. `user_sync_dynamic_keymap_data_handler()` (`split_sync.c`) dispatches on
+   `commands[0]` and, for `'P'`, on the command byte after it. It runs on the slave's
+   split-protocol thread, so it copies the report and sets a flag; housekeeping applies
+   it.
+3. Both halves run the same parse and apply code on the same bytes.
+
+The overlay uploads (cmds 10, 16-19, 41) follow the same idea on transactions of their
+own: `fill_overlay.c` copies the bytes from the report into `overlay_sync_t`,
+`compressed_overlay_sync_t` or `roi_overlay_sync_t`, with only the target slot added.
+
+Why:
+
+- `poly_sync_t` is sent whole on every state change (language, layer page, MIDI octave,
+  idle, ...). Each byte added there costs every sync, also when the feature is not in use.
+- A report is at most 64 bytes, so the relay needs no second size limit. The limit the
+  host checks is the report and the feature's own one (pixels on a panel).
+
+What the relay does not give for free: `poly_sync_t` is resent until the slave has it;
+a relayed report is sent once. A feature that must not lose state keeps the last report
+of each kind and resends it from housekeeping until `sync_succeeded()`, and resends it
+after the link comes back.
+
+`poly_sync_t` stays the place for state the master derives itself, such as the active
+layer, the idle state and mode flags.

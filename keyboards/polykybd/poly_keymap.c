@@ -77,6 +77,7 @@
 #include "mines_mode.h"                   // the idle-screen mine sweeper (hold Hyper while idle)
 #include "ai_mode.h"                      // AI mode: agent cards on the number row (KC_AI)
 #include "anim/key_attention.h"            // cmd 47: the focus ripple on a key
+#include "anim/host_tutorial.h"            // cmd 49: the host tutorial (text, spotlight, events)
 #include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
 #include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
@@ -1867,6 +1868,9 @@ void housekeeping_task_user(void) {
             menu_cascade_tick();
             lang_sparkle_tick();   // the language preview's twinkles; self-gating
         }
+        // The host tutorial (cmd 49): a staged report on the slave, the relay, the
+        // watchdog and the layer conditions on the master, the end of a reveal.
+        host_tutorial_tick();
         // The host's key attention request (cmd 47) first, then an agent that waits
         // (ai_mode.h): both run the focus ripple, one at a time.
         key_attention_tick();
@@ -4478,7 +4482,8 @@ static uint16_t display_keycode_at(const poly_layer_t *lyr, uint8_t row, uint8_t
 // Does the tutorial leave this key lit? Always true outside the lesson.
 bool poly_slot_visible(uint8_t slot) {
     uint8_t r, c;
-    return tutorial_matrix_of(slot, &r, &c) && tutorial_key_visible(r, c);
+    return tutorial_matrix_of(slot, &r, &c) && tutorial_key_visible(r, c) &&
+           !host_tutorial_key_hidden(r, c);
 }
 
 bool poly_focus_draw_legend(uint8_t slot) {
@@ -4499,6 +4504,7 @@ bool poly_focus_draw_legend(uint8_t slot) {
     // An agent card (AI mode) under the ripple, not the key's ordinary legend.
     if (ai_render_key(r, c)) return true;
     if (!tutorial_key_visible(r, c)) return false;
+    if (host_tutorial_key_hidden(r, c)) return false;   // cmd 49 spotlight / reveal front
     if (menu_cascade_hidden(r, c)) return false;   // not its turn in the cascade yet
     // The chrome keys show the lesson's labels, here as in update_displays(), or a ring
     // crossing one would paint "Esc" back for a frame.
@@ -5823,6 +5829,15 @@ void update_displays(enum refresh_mode mode) {
                         kdisp_set_buffer(0x00);
                         kdisp_send_window();
                         doom_handled = true;
+                    } else if (host_tutorial_key_hidden((uint8_t)(r + offset), c)) {
+                        // The host tutorial's spotlight (cmd 49): every key outside the
+                        // host's mask is dark, and during a reveal each key lights as the
+                        // front passes it. Like the first-run lesson's intro mode, a dark
+                        // key still acts when pressed. Each half answers from its own copy
+                        // of the forwarded report.
+                        kdisp_set_buffer(0x00);
+                        kdisp_send_window();
+                        doom_handled = true;
                     } else if (menu_cascade_hidden((uint8_t)(r + offset), c)) {
                         // A menu's content rows appear key by key (anim/menu_cascade.h);
                         // until its turn a key stays dark. Asked on both halves, from
@@ -6655,6 +6670,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     if (startup_anim_active() && !startup_anim_is_loop()) {
         return false;
     }
+
+    // The host tutorial's conditions (cmd 49, master only: only the master runs
+    // process_record). It observes and never swallows.
+    host_tutorial_note_key(record->event.key.row, record->event.key.col, keycode,
+                           record->event.pressed);
 
     // ⚠️ ORDER: the confirm prompt outranks the tutorial. Both are "the board IS the
     // dialog" modes and both swallow every key, so whichever runs first wins — and

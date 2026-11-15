@@ -398,6 +398,15 @@ polykybd_attn_guide_SRC := \
 polykybd_attn_guide_INC := \
 	$(POLY_BASE_PATH)
 
+# host_tutorial_plan.c is the pure part of cmd 49 (HOST TUTORIAL): text, spotlight
+# and condition parsing, the matching and the watchdog. The binding is anim/host_tutorial.c.
+polykybd_host_tutorial_plan_SRC := \
+	$(POLY_BASE_PATH)/host_tutorial_plan.c \
+	$(POLY_BASE_PATH)/tests/host_tutorial_plan_tests.cpp
+
+polykybd_host_tutorial_plan_INC := \
+	$(POLY_BASE_PATH)
+
 # The idle style table is pure (no quantum.h), so it links with just the tests.
 polykybd_idle_style_SRC := \
 	$(POLY_BASE_PATH)/idle_style.c \

@@ -980,6 +980,10 @@ static void oled_host_tutorial_screen(void) {
     const GFXfont *small[] = { &NotoSans_Regular_Small_15px7b };
     uint32_t        text[HOST_TUT_TEXT_BYTES + 1];
     host_tut_text_t t;   // a copy: the slave's split thread may rewrite the live one
+    // A resume after suspend left the panel off, and redrawing the same text marks
+    // nothing dirty, so oled_render_dirty() would not switch it on (as in
+    // oled_tutorial_screen). The status-off case returned before this.
+    oled_on();
     kdisp_set_buffer(0);
     if (!host_tutorial_copy_text(&t)) memset(&t, 0, sizeof t);
     const bool two = t.len[0] > 0u && t.len[1] > 0u;

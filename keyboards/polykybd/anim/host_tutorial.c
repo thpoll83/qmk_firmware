@@ -9,6 +9,7 @@
 #include "transactions.h"          // USER_SYNC_DYNAMIC_KEYMAP_DATA
 #include "bridge_helper.h"         // send_to_bridge
 #include "split_sync.h"            // dynamic_keymap_sync_t, sync_succeeded
+#include "split_util.h"             // is_transport_connected: resend after the link returns
 #include "focus_ring.h"            // poly_slot_of, poly_focus_start_sweep
 #include "startup_anim.h"          // startup_anim_key_geom
 #include "tutorial.h"              // tutorial_active: the first-run lesson owns the board
@@ -24,6 +25,11 @@ static uint8_t         s_mask[HOST_TUT_MASK_BYTES];
 static bool            s_spot_on;
 static bool            s_reveal_on;
 static uint8_t         s_reveal_slot = TUT_SLOT_NONE;
+// Counts every spotlight change. A reveal records it when it starts, and ends the
+// spotlight only if no newer spotlight arrived since: on the slave the split thread can
+// install one while the main loop is ending the reveal.
+static uint8_t         s_spot_gen;
+static uint8_t         s_reveal_gen;
 static uint32_t        s_reveal_start;
 
 // ---- master only -------------------------------------------------------------------
@@ -36,6 +42,7 @@ static uint32_t         s_last_ms;      // the last cmd 49 report, for the watch
 #define DIRTY_TEXT 0x02u
 #define DIRTY_SPOT 0x04u
 static uint8_t  s_dirty;
+static bool     s_link_up;     // the split link as the last tick saw it
 static uint32_t s_resend_at;
 #define RESEND_MS 250u
 
@@ -84,6 +91,7 @@ static void apply_text(const host_tut_text_t *t) {
 
 static void apply_spot(bool on, const uint8_t mask[HOST_TUT_MASK_BYTES]) {
     s_spot_on   = on;
+    s_spot_gen  = (uint8_t)(s_spot_gen + 1u);
     s_reveal_on = false;   // a new spotlight replaces a reveal still running
     memcpy(s_mask, mask, HOST_TUT_MASK_BYTES);
     request_disp_refresh();
@@ -91,6 +99,7 @@ static void apply_spot(bool on, const uint8_t mask[HOST_TUT_MASK_BYTES]) {
 
 static void apply_reveal(uint8_t slot) {
     s_reveal_on    = true;
+    s_reveal_gen   = s_spot_gen;
     s_reveal_slot  = slot;
     s_reveal_start = timer_read32();
     poly_focus_start_sweep(slot, 0u, TUT_BOARD_REVEAL_MS);
@@ -210,7 +219,16 @@ void host_tutorial_hid(uint8_t *data, uint8_t length) {
                 memset(r, 0, sizeof r);
                 memcpy(r, data, length < sizeof r ? length : sizeof r);
                 apply_reveal(slot);
-                if (!relay(r)) uprintf("host tut: reveal did not reach the slave\n");
+                // A pending TEXT or SPOTLIGHT goes first: a SPOTLIGHT retry that reached
+                // the slave after the REVEAL would cancel its reveal. When it still fails,
+                // the reveal is not sent either; the slave gets the end state instead (the
+                // spotlight-off the tick queues when the reveal ends).
+                push_dirty();
+                if (s_dirty) {
+                    uprintf("host tut: reveal not sent, the slave is behind\n");
+                } else if (!relay(r)) {
+                    uprintf("host tut: reveal did not reach the slave\n");
+                }
             }
             clear_reply(data, length);
             reply(data, length, ok);
@@ -296,7 +314,8 @@ void host_tutorial_slave_receive(const uint8_t *data, uint8_t length) {
             s_text_on = !host_tut_text_empty(&t);
             break;
         case HOST_TUT_OP_SPOTLIGHT:
-            s_spot_on = spot_on;
+            s_spot_on  = spot_on;
+            s_spot_gen = (uint8_t)(s_spot_gen + 1u);
             memcpy(s_mask, mask, sizeof mask);
             s_pending = (uint8_t)((s_pending & (uint8_t)~PENDING_REVEAL) | PENDING_REDRAW);
             break;
@@ -338,12 +357,27 @@ void host_tutorial_tick(void) {
                 end_session();
             }
         }
+        // After the split link comes back the slave may have restarted and lost its
+        // copy: send the current state again (SPLIT_SYNC.md).
+        const bool link_up = is_transport_connected();
+        if (link_up && !s_link_up && (s_text_on || s_spot_on)) {
+            s_dirty |= (uint8_t)((s_text_on ? DIRTY_TEXT : 0u) | DIRTY_SPOT);
+        }
+        s_link_up = link_up;
         if (s_dirty && (int32_t)(timer_read32() - s_resend_at) >= 0) push_dirty();
     }
-    // The reveal ends the spotlight once its front has crossed the board.
+    // The reveal ends the spotlight once its front has crossed the board, unless a newer
+    // spotlight arrived meanwhile. Under the lock: on the slave the split thread writes
+    // s_spot_on and s_spot_gen.
     if (s_reveal_on && timer_elapsed32(s_reveal_start) >= TUT_BOARD_REVEAL_MS) {
         s_reveal_on = false;
-        s_spot_on   = false;
+        chSysLock();
+        const bool ends = s_spot_gen == s_reveal_gen;
+        if (ends) s_spot_on = false;
+        chSysUnlock();
+        // The master relays the spotlight-off, so a slave whose REVEAL relay failed
+        // does not stay dark.
+        if (ends && is_keyboard_master()) s_dirty |= DIRTY_SPOT;
         request_disp_refresh();
     }
 }

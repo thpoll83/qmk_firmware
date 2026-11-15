@@ -540,6 +540,10 @@ reading before you change either one.
     (`SPLIT_SYNC.md` → *Host state goes to the slave as the report*); `poly_sync_t`
     does not grow. TEXT, SPOTLIGHT and END are resent from housekeeping until the
     slave acks them. Conditions live on the master: only it runs `process_record`.
+  - Every 2 s while text or a spotlight is on (no reveal running), the master sends the
+    slave a VERIFY report (op `0x80`, relay only, a checksum of the state); a slave that
+    restarted unnoticed refuses it and gets TEXT and SPOTLIGHT again. After a link drop
+    the master resends them as well.
   - A session with no cmd 49 report for 10 s ends by itself, so a host that crashed
     does not leave the board dark. The host polls every 0.5 s while a tutorial runs.
   - While the first-run tutorial runs, TEXT, SPOTLIGHT, REVEAL and ARM NACK.

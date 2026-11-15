@@ -43,6 +43,7 @@ static uint32_t         s_last_ms;      // the last cmd 49 report, for the watch
 #define DIRTY_SPOT 0x04u
 static uint8_t  s_dirty;
 static bool     s_link_up;     // the split link as the last tick saw it
+static uint32_t s_verify_at;   // the next VERIFY of the slave's copy
 static uint32_t s_resend_at;
 #define RESEND_MS 250u
 
@@ -147,6 +148,33 @@ static void push_dirty(void) {
             return;
         }
         s_dirty &= (uint8_t)~order[i].bit;
+    }
+}
+
+// A slave that restarted while the link never read as down has lost its copy, and no
+// link edge tells the master (CRASH_DIAGNOSTICS.md, trigger 7: 200 errors must pile up
+// first). Every HOST_TUT_VERIFY_MS, while text or a spotlight is on, no reveal runs and
+// nothing is pending, ask the slave whether it holds the same state; a refusal queues
+// TEXT and SPOTLIGHT again. A match resends nothing, so the slave does not redraw.
+static void verify_slave(void) {
+    if (!(s_text_on || s_spot_on) || s_reveal_on || s_dirty) return;
+    if ((int32_t)(timer_read32() - s_verify_at) < 0) return;
+    s_verify_at = timer_read32() + HOST_TUT_VERIFY_MS;
+    const uint32_t crc = host_tut_state_crc(s_text_on ? &s_text : NULL, s_spot_on, s_mask);
+    dynamic_keymap_sync_t msg;
+    memset(&msg, 0, sizeof msg);
+    msg.commands[0] = 'P';
+    msg.commands[1] = HOST_TUT_CMD;
+    msg.commands[2] = HOST_TUT_RELAY_VERIFY;
+    msg.commands[3] = (uint8_t)(crc & 0xFFu);
+    msg.commands[4] = (uint8_t)((crc >> 8) & 0xFFu);
+    msg.commands[5] = (uint8_t)((crc >> 16) & 0xFFu);
+    msg.commands[6] = (uint8_t)(crc >> 24);
+    const uint8_t ack = send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, &msg,
+                                       (uint8_t)(sizeof(msg.crc32) + 7u), 1);
+    if (ack == SYNC_NACK_REFUSED) {
+        uprintf("host tut: the slave lost its copy, resending\n");
+        s_dirty |= (uint8_t)((s_text_on ? DIRTY_TEXT : 0u) | DIRTY_SPOT);
     }
 }
 
@@ -270,9 +298,20 @@ void host_tutorial_hid(uint8_t *data, uint8_t length) {
 
 // ---- the slave's side of the relay -----------------------------------------------------
 
-void host_tutorial_slave_receive(const uint8_t *data, uint8_t length) {
-    if (data == NULL || length < 3u || data[1] != HOST_TUT_CMD) return;
+bool host_tutorial_slave_receive(const uint8_t *data, uint8_t length) {
+    if (data == NULL || length < 3u || data[1] != HOST_TUT_CMD) return true;
     const uint8_t op = data[2];
+    if (op == HOST_TUT_RELAY_VERIFY) {
+        // Does this half hold what the master holds? The lock keeps the read consistent
+        // with the main loop, which clears s_spot_on when a reveal ends.
+        if (length < 7u) return true;
+        const uint32_t want = (uint32_t)data[3] | ((uint32_t)data[4] << 8) |
+                              ((uint32_t)data[5] << 16) | ((uint32_t)data[6] << 24);
+        chSysLock();
+        const uint32_t have = host_tut_state_crc(s_text_on ? &s_text : NULL, s_spot_on, s_mask);
+        chSysUnlock();
+        return have == want;   // false -> SYNC_NACK_REFUSED -> the master resends
+    }
     // Parse outside the lock; only the copy into the live state is inside it.
     host_tut_text_t t;
     bool            spot_on = false;
@@ -299,7 +338,7 @@ void host_tutorial_slave_receive(const uint8_t *data, uint8_t length) {
         default:
             break;
     }
-    if (!ok) return;
+    if (!ok) return true;   // the master validated it; nothing to ask again
     chSysLock();
     switch (op) {
         case HOST_TUT_OP_END:
@@ -325,6 +364,7 @@ void host_tutorial_slave_receive(const uint8_t *data, uint8_t length) {
             break;
     }
     chSysUnlock();
+    return true;
 }
 
 static void apply_pending(void) {
@@ -365,6 +405,7 @@ void host_tutorial_tick(void) {
         }
         s_link_up = link_up;
         if (s_dirty && (int32_t)(timer_read32() - s_resend_at) >= 0) push_dirty();
+        verify_slave();
     }
     // The reveal ends the spotlight once its front has crossed the board, unless a newer
     // spotlight arrived meanwhile. Under the lock: on the slave the split thread writes

@@ -117,3 +117,26 @@ uint8_t host_tut_reveal_progress(uint32_t elapsed_ms, uint32_t run_ms) {
     if (run_ms == 0u || elapsed_ms >= run_ms) return 255u;
     return (uint8_t)((elapsed_ms * 255u) / run_ms);
 }
+
+static uint32_t fnv1a(uint32_t h, const uint8_t *p, uint16_t n) {
+    for (uint16_t i = 0; i < n; ++i) {
+        h ^= p[i];
+        h *= 16777619u;
+    }
+    return h;
+}
+
+uint32_t host_tut_state_crc(const host_tut_text_t *text, bool spot_on,
+                            const uint8_t mask[HOST_TUT_MASK_BYTES]) {
+    uint32_t h = 2166136261u;
+    if (text != NULL) {
+        h = fnv1a(h, text->len, 2u);
+        uint16_t used = (uint16_t)text->len[0] + text->len[1];
+        if (used > HOST_TUT_TEXT_BYTES) used = HOST_TUT_TEXT_BYTES;
+        h = fnv1a(h, (const uint8_t *)text->buf, used);
+    }
+    const uint8_t on = spot_on ? 1u : 0u;
+    h = fnv1a(h, &on, 1u);
+    if (mask != NULL) h = fnv1a(h, mask, HOST_TUT_MASK_BYTES);
+    return h;
+}

@@ -27,6 +27,14 @@
 #define HOST_TUT_OP_POLL      5u   // reply [3] flags, [4] armed count, [5] matched bits, [6] layer
 #define HOST_TUT_OP_END       6u   // clear text, spotlight and conditions
 #define HOST_TUT_OP_COUNT     7u
+// Master -> slave only, never from the host (the master's handler NACKs it as unknown):
+// [3..6] a host_tut_state_crc() of the master's text and spotlight, little endian. The
+// slave refuses it when its own state differs, and the master then resends TEXT and
+// SPOTLIGHT. This catches a slave that restarted while the link never read as down.
+#define HOST_TUT_RELAY_VERIFY 0x80u
+// How often the master checks the slave's copy while a tutorial shows text or a
+// spotlight (no reveal running, nothing pending).
+#define HOST_TUT_VERIFY_MS    2000u
 
 // Byte offsets in the report: data[0] 'P', data[1] the command, data[2] the op.
 #define HOST_TUT_IDX_ARG      3u
@@ -101,6 +109,12 @@ void host_tut_note_layers(host_tut_conds_t *c, uint32_t layers_on);
 // The watchdog: true when `last_ms` (the last cmd 49 report) is HOST_TUT_WATCHDOG_MS or
 // more before `now_ms`. Wrap-safe.
 bool host_tut_expired(uint32_t last_ms, uint32_t now_ms);
+
+// A 32-bit FNV-1a checksum of the text (both lengths and the used bytes), the spotlight
+// flag and the mask, as the VERIFY relay compares them. Bytes past the used text do not
+// count, so two copies of the same lines always match.
+uint32_t host_tut_state_crc(const host_tut_text_t *text, bool spot_on,
+                            const uint8_t mask[HOST_TUT_MASK_BYTES]);
 
 // The reveal front's progress 0..255 after `elapsed_ms` of a run of `run_ms`.
 uint8_t host_tut_reveal_progress(uint32_t elapsed_ms, uint32_t run_ms);

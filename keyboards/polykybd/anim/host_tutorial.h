@@ -26,8 +26,9 @@
 void host_tutorial_hid(uint8_t *data, uint8_t length);
 
 // Slave, on the split-protocol thread: a forwarded cmd 49 report (data[0] 'P'). Copies
-// it; host_tutorial_tick() applies it.
-void host_tutorial_slave_receive(const uint8_t *data, uint8_t length);
+// it; host_tutorial_tick() applies it. False only for a VERIFY whose checksum differs
+// from this half's state: the handler answers SYNC_NACK_REFUSED and the master resends.
+bool host_tutorial_slave_receive(const uint8_t *data, uint8_t length);
 
 // Housekeeping, both halves: apply a forwarded report (slave), resend to the slave, the
 // watchdog and the layer conditions (master), and end a finished reveal.
@@ -47,9 +48,10 @@ bool host_tutorial_key_hidden(uint8_t row, uint8_t col);
 
 #else  // !POLY_HOST_TUTORIAL: the DOOM monolith
 
-static inline void host_tutorial_slave_receive(const uint8_t *data, uint8_t length) {
+static inline bool host_tutorial_slave_receive(const uint8_t *data, uint8_t length) {
     (void)data;
     (void)length;
+    return true;
 }
 static inline void host_tutorial_tick(void) {}
 static inline void host_tutorial_note_key(uint8_t row, uint8_t col, uint16_t keycode,

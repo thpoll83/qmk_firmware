@@ -200,6 +200,35 @@ TEST(HostTutArm, Refusals) {
     EXPECT_EQ(0, memcmp(&c, &before, sizeof c));
 }
 
+// ---- the VERIFY checksum -------------------------------------------------------
+
+TEST(HostTutCrc, SameStateSameCrcAndEveryFieldCounts) {
+    host_tut_text_t a, b;
+    auto d = text("Hold Fn", "now");
+    ASSERT_TRUE(host_tut_parse_text(d.data(), 64, &a));
+    ASSERT_TRUE(host_tut_parse_text(d.data(), 64, &b));
+    b.buf[HOST_TUT_TEXT_BYTES - 1] = 'x';            // past the used bytes: ignored
+    uint8_t mask[HOST_TUT_MASK_BYTES] = {0};
+    mask[2] = 0x01;
+    const uint32_t base = host_tut_state_crc(&a, true, mask);
+    EXPECT_EQ(base, host_tut_state_crc(&b, true, mask));
+    EXPECT_NE(base, host_tut_state_crc(&a, false, mask));          // spotlight flag
+    uint8_t other[HOST_TUT_MASK_BYTES] = {0};
+    other[2] = 0x02;
+    EXPECT_NE(base, host_tut_state_crc(&a, true, other));          // mask
+    auto e = text("Hold Fn", "nov");
+    ASSERT_TRUE(host_tut_parse_text(e.data(), 64, &b));
+    EXPECT_NE(base, host_tut_state_crc(&b, true, mask));           // text
+    auto f = text("Hold Fnn", "ow");                                // same bytes, other split
+    ASSERT_TRUE(host_tut_parse_text(f.data(), 64, &b));
+    EXPECT_NE(base, host_tut_state_crc(&b, true, mask));
+    host_tut_text_t empty;
+    memset(&empty, 0, sizeof empty);
+    uint8_t zero[HOST_TUT_MASK_BYTES] = {0};
+    // A fresh slave (all zero) never matches a master with text or a spotlight.
+    EXPECT_NE(host_tut_state_crc(&empty, false, zero), base);
+}
+
 // ---- watchdog and reveal -------------------------------------------------------
 
 TEST(HostTutWatchdog, TenSecondsWrapSafe) {

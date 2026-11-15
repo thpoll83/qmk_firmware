@@ -12,9 +12,15 @@
 // from housekeeping until the slave acks it.
 //
 // Conditions (ARM / POLL) live on the master only: only the master runs process_record.
+//
+// Not in the DOOM monolith (rules.mk, POLY_HOST_TUTORIAL): there every hook below is an
+// inline no-op and cmd 49 has no table entry, so it NACKs as an unknown command.
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
+#include "base/host_tutorial_plan.h"   // host_tut_text_t
+
+#ifdef POLY_HOST_TUTORIAL
 
 // Master: cmd 49 from raw_hid_receive().
 void host_tutorial_hid(uint8_t *data, uint8_t length);
@@ -32,8 +38,36 @@ void host_tutorial_note_key(uint8_t row, uint8_t col, uint16_t keycode, bool pre
 
 // Drawing, both halves.
 bool host_tutorial_text_active(void);
-// Line i (0 or 1): its bytes and length. Not NUL-terminated.
-const char *host_tutorial_line(uint8_t i, uint8_t *len);
+// Copy both lines out (host_tut_text_line() reads them); false when there is no text.
+// Copied under a lock: the slave's split thread writes the text.
+bool host_tutorial_copy_text(host_tut_text_t *out);
 // True when the spotlight (or a reveal front that has not reached it) darkens this key.
 // (row, col) is the board matrix position.
 bool host_tutorial_key_hidden(uint8_t row, uint8_t col);
+
+#else  // !POLY_HOST_TUTORIAL: the DOOM monolith
+
+static inline void host_tutorial_slave_receive(const uint8_t *data, uint8_t length) {
+    (void)data;
+    (void)length;
+}
+static inline void host_tutorial_tick(void) {}
+static inline void host_tutorial_note_key(uint8_t row, uint8_t col, uint16_t keycode,
+                                          bool pressed) {
+    (void)row;
+    (void)col;
+    (void)keycode;
+    (void)pressed;
+}
+static inline bool host_tutorial_text_active(void) { return false; }
+static inline bool host_tutorial_copy_text(host_tut_text_t *out) {
+    (void)out;
+    return false;
+}
+static inline bool host_tutorial_key_hidden(uint8_t row, uint8_t col) {
+    (void)row;
+    (void)col;
+    return false;
+}
+
+#endif

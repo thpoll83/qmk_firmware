@@ -1722,9 +1722,11 @@ static void hid_cmd_47(uint8_t *data, uint8_t length, const poly_layer_t *local_
     key_attention_hid(data, length);
 }
 
+#ifdef POLY_HOST_TUTORIAL
 static void hid_cmd_49(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //host tutorial: status text, spotlight, reveal, conditions (protocol v35+)
     host_tutorial_hid(data, length);
 }
+#endif
 
 // Cmd 48 operations (data[2]).
 #define COMBO_OP_INFO   0u
@@ -1944,7 +1946,9 @@ static const hid_cmd_t s_hid_cmds[] = {
     [46] = {hid_cmd_46, 0},
     [47] = {hid_cmd_47, 0},
     [48] = {hid_cmd_48, 0},
-    [49] = {hid_cmd_49, 0},
+#ifdef POLY_HOST_TUTORIAL
+    [49] = {hid_cmd_49, 0},   // not in the DOOM monolith: NACKed as unknown there
+#endif
 };
 
 void raw_hid_receive(uint8_t *data, uint8_t length) {

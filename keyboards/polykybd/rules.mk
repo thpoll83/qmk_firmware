@@ -161,7 +161,7 @@ OS_DETECTION_ENABLE = yes
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
 # covers emoji/emoji_layer.c and hints/os_hints.c.
-POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/key_attention.c anim/host_tutorial.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c anim/demo_mode.c base/demo_plan.c mines_mode.c base/mines_plan.c ai_mode.c base/ai_events.c base/attn_guide.c base/host_tutorial_plan.c base/idle_poem_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c base/crash_record.c base/hand_stamp.c base/core1_owner.c base/core1_owner_hw.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c slave_data.c oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
+POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/key_attention.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c anim/demo_mode.c base/demo_plan.c mines_mode.c base/mines_plan.c ai_mode.c base/ai_events.c base/attn_guide.c base/idle_poem_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c base/crash_record.c base/hand_stamp.c base/core1_owner.c base/core1_owner_hw.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c slave_data.c oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
 SRC += $(POLY_SRC)
 
 # emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
@@ -315,6 +315,11 @@ else
     $(eval TAP_DANCE_ENABLE := yes)
     OPT_DEFS += -DPOLY_RUNTIME_COMBOS
     SRC += poly_combos.c
+    # The host tutorial (HID cmd 49, anim/host_tutorial.c): same reasoning, ~180 B of
+    # RAM per half. The monolith NACKs cmd 49 as an unknown command, and the host then
+    # runs a tutorial with the focus ring only.
+    OPT_DEFS += -DPOLY_HOST_TUTORIAL
+    SRC += anim/host_tutorial.c base/host_tutorial_plan.c
 endif
 
 # USB MIDI (send-only, MIDI_ADVANCED; config.h has the buffer sizes). The keyboard

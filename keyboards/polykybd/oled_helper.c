@@ -19,7 +19,6 @@
 #include "poly_macro_record.h"   // enum poly_rec_state + the recording read-outs
 #include "anim/demo_mode.h"      // demo_sync_active(): the "how do I stop this" hint
 #include "anim/host_tutorial.h"  // cmd 49: the host tutorial's two lines
-#include "base/host_tutorial_plan.h"   // HOST_TUT_TEXT_BYTES
 #ifdef POLYKYBD_DOOM
 #include "doom/doom_mode.h"
 #include "doom/doom_logo_oled.h"
@@ -979,15 +978,14 @@ static void oled_demo_screen(void) {
 static void oled_host_tutorial_screen(void) {
     const bool     tall    = OLED_DISPLAY_HEIGHT >= 64;
     const GFXfont *small[] = { &NotoSans_Regular_Small_15px7b };
-    uint32_t       text[HOST_TUT_TEXT_BYTES + 1];
-    uint8_t        len0 = 0, len1 = 0;
-    const char    *l0 = host_tutorial_line(0, &len0);
-    const char    *l1 = host_tutorial_line(1, &len1);
+    uint32_t        text[HOST_TUT_TEXT_BYTES + 1];
+    host_tut_text_t t;   // a copy: the slave's split thread may rewrite the live one
     kdisp_set_buffer(0);
-    const bool two = len0 > 0u && len1 > 0u;
+    if (!host_tutorial_copy_text(&t)) memset(&t, 0, sizeof t);
+    const bool two = t.len[0] > 0u && t.len[1] > 0u;
     for (uint8_t i = 0; i < 2u; ++i) {
-        const char   *src = i == 0u ? l0 : l1;
-        const uint8_t n   = i == 0u ? len0 : len1;
+        const char   *src = host_tut_text_line(&t, i);
+        const uint8_t n   = t.len[i];
         if (n == 0u) continue;
         for (uint8_t k = 0; k < n; ++k) text[k] = (uint8_t)src[k];
         text[n] = 0u;

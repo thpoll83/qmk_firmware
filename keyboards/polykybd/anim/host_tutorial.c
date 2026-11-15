@@ -39,20 +39,17 @@ static uint8_t  s_dirty;
 static uint32_t s_resend_at;
 #define RESEND_MS 250u
 
-// ---- slave only: reports staged by the split thread ----------------------------------
-// The handler runs on the slave's split-protocol thread (SPLIT_SYNC.md), so it only
-// parses into these and sets a flag; host_tutorial_tick() applies them on the main loop.
-// Both sides touch this block inside chSysLock(), so the tick never copies a block the
-// split thread is half-way through writing, and never clears a flag it just set.
-#define STAGE_END    0x01u
-#define STAGE_TEXT   0x02u
-#define STAGE_SPOT   0x04u
-#define STAGE_REVEAL 0x08u
-static uint8_t          s_staged;
-static host_tut_text_t  s_stage_text;
-static uint8_t          s_stage_mask[HOST_TUT_MASK_BYTES];
-static bool             s_stage_spot_on;
-static uint8_t          s_stage_reveal_slot;
+// ---- slave only: what the split thread left for housekeeping ------------------------
+// The handler runs on the slave's split-protocol thread (SPLIT_SYNC.md). It writes the
+// parsed state straight into s_text / s_mask / s_spot_on inside chSysLock() (a copy, no
+// bus), and leaves the rest for host_tutorial_tick() on the main loop: the keycap redraw
+// and the reveal's focus ring. The status screen copies the text out under the same lock
+// (host_tutorial_copy_text), so it never draws a half-written line. No staging copy of
+// the text or the mask: that saves 72 B of RAM on each half.
+#define PENDING_REDRAW 0x01u
+#define PENDING_REVEAL 0x02u
+static uint8_t s_pending;
+static uint8_t s_pending_reveal_slot = TUT_SLOT_NONE;
 
 static bool session_open(void) {
     return s_text_on || s_spot_on || s_reveal_on || s_conds.count > 0u;
@@ -258,7 +255,7 @@ void host_tutorial_hid(uint8_t *data, uint8_t length) {
 void host_tutorial_slave_receive(const uint8_t *data, uint8_t length) {
     if (data == NULL || length < 3u || data[1] != HOST_TUT_CMD) return;
     const uint8_t op = data[2];
-    // Parse outside the lock; only the copy into the staged block is inside it.
+    // Parse outside the lock; only the copy into the live state is inside it.
     host_tut_text_t t;
     bool            spot_on = false;
     uint8_t         mask[HOST_TUT_MASK_BYTES];
@@ -288,49 +285,50 @@ void host_tutorial_slave_receive(const uint8_t *data, uint8_t length) {
     chSysLock();
     switch (op) {
         case HOST_TUT_OP_END:
-            s_staged = STAGE_END;   // drops anything staged before it
+            s_text_on = false;
+            memset(&s_text, 0, sizeof s_text);
+            s_spot_on = false;
+            memset(s_mask, 0, sizeof s_mask);
+            s_pending = PENDING_REDRAW;   // drops a reveal not yet started
             break;
         case HOST_TUT_OP_TEXT:
-            s_stage_text = t;
-            s_staged |= STAGE_TEXT;
+            s_text    = t;
+            s_text_on = !host_tut_text_empty(&t);
             break;
         case HOST_TUT_OP_SPOTLIGHT:
-            s_stage_spot_on = spot_on;
-            memcpy(s_stage_mask, mask, sizeof mask);
-            s_staged = (uint8_t)((s_staged & (uint8_t)~STAGE_REVEAL) | STAGE_SPOT);
+            s_spot_on = spot_on;
+            memcpy(s_mask, mask, sizeof mask);
+            s_pending = (uint8_t)((s_pending & (uint8_t)~PENDING_REVEAL) | PENDING_REDRAW);
             break;
         default:   // REVEAL
-            s_stage_reveal_slot = rslot;
-            s_staged |= STAGE_REVEAL;
+            s_pending_reveal_slot = rslot;
+            s_pending |= PENDING_REVEAL;
             break;
     }
     chSysUnlock();
 }
 
-static void apply_staged(void) {
-    if (s_staged == 0u) return;   // a byte read: nothing staged costs no lock
-    host_tut_text_t text;
-    uint8_t         mask[HOST_TUT_MASK_BYTES];
+static void apply_pending(void) {
+    if (s_pending == 0u) return;   // a byte read: nothing pending costs no lock
     chSysLock();
-    const uint8_t staged  = s_staged;
-    text                  = s_stage_text;
-    memcpy(mask, s_stage_mask, sizeof mask);
-    const bool    spot_on = s_stage_spot_on;
-    const uint8_t rslot   = s_stage_reveal_slot;
-    s_staged              = 0u;
+    const uint8_t pending = s_pending;
+    const uint8_t rslot   = s_pending_reveal_slot;
+    s_pending             = 0u;
     chSysUnlock();
-    if (staged == 0u) return;
-    if (staged & STAGE_END) apply_end();
-    if (staged & STAGE_TEXT) apply_text(&text);
-    if (staged & STAGE_SPOT) apply_spot(spot_on, mask);
-    if (staged & STAGE_REVEAL) apply_reveal(rslot);
+    // A spotlight or an END ends a reveal still running (as apply_spot/apply_end do on
+    // the master); the split thread leaves that to the main loop, which owns s_reveal_on.
+    if (pending & PENDING_REDRAW) {
+        s_reveal_on = false;
+        request_disp_refresh();
+    }
+    if (pending & PENDING_REVEAL) apply_reveal(rslot);
 }
 
 // ---- housekeeping, both halves -----------------------------------------------------------
 
 void host_tutorial_tick(void) {
     if (!is_keyboard_master()) {
-        apply_staged();
+        apply_pending();
     } else {
         if (session_open()) {
             host_tut_note_layers(&s_conds, (uint32_t)(layer_state | default_layer_state));
@@ -358,9 +356,13 @@ void host_tutorial_note_key(uint8_t row, uint8_t col, uint16_t keycode, bool pre
 
 bool host_tutorial_text_active(void) { return s_text_on; }
 
-const char *host_tutorial_line(uint8_t i, uint8_t *len) {
-    if (len) *len = i < 2u ? s_text.len[i] : 0u;
-    return host_tut_text_line(&s_text, i < 2u ? i : 0u);
+bool host_tutorial_copy_text(host_tut_text_t *out) {
+    // Under the lock: on the slave the split thread may be writing s_text right now.
+    chSysLock();
+    const bool on = s_text_on;
+    *out          = s_text;
+    chSysUnlock();
+    return on;
 }
 
 // Has the reveal front passed this key's centre? Same geometry and curve as the

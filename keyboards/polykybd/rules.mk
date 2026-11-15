@@ -315,6 +315,11 @@ else
     $(eval TAP_DANCE_ENABLE := yes)
     OPT_DEFS += -DPOLY_RUNTIME_COMBOS
     SRC += poly_combos.c
+    # The host tutorial (HID cmd 49, anim/host_tutorial.c): same reasoning, ~180 B of
+    # RAM per half. The monolith NACKs cmd 49 as an unknown command, and the host then
+    # runs a tutorial with the focus ring only.
+    OPT_DEFS += -DPOLY_HOST_TUTORIAL
+    SRC += anim/host_tutorial.c base/host_tutorial_plan.c
 endif
 
 # USB MIDI (send-only, MIDI_ADVANCED; config.h has the buffer sizes). The keyboard

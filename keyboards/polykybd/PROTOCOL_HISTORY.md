@@ -515,6 +515,45 @@ reading before you change either one.
     `attn: guide done`, `attn: guide ran out`, `attn: refused guide`.
   - A v33 or older firmware NACKs op 2 (the op range is closed).
 
+  **v35** adds cmd `49`, the **host tutorial** (`anim/host_tutorial.c`,
+  `base/host_tutorial_plan.h`): the host's tutorial scripts (PolyKybdHost
+  `services/tutorials`) put two lines on the status displays, darken every key outside
+  a set of keys (the spotlight), light them again with the board-reveal wave, and ask
+  the master to watch for a key, a layer or a keycode. `data[2]` op, a closed range:
+  - `0` INFO: reply `[3]` op bitmask `0x7F`, `[4]` max conditions 4, `[5]` watchdog
+    10 s, `[6]` text bytes 59.
+  - `1` TEXT: `[3]` length, line 0, then length, line 1, both in the one report
+    (together at most 59 bytes); every byte `0x20..0x7E`, the status face. Both empty
+    clears the text. The host measures each line against the 128 px panel.
+  - `2` SPOTLIGHT: `[3]` flags (bit 0 on; another bit NACKs), `[4..13]` matrix mask,
+    bit `row * cols + col`. The dark keys still act when pressed, like the first-run
+    lesson's intro mode.
+  - `3` REVEAL: `[3]` row, `[4]` col of a key with a display: the board-reveal front
+    starts there, lights each dark key it passes and ends the spotlight.
+  - `4` ARM: `[3]` count 0..4, then `{kind, a, b}`: `1` key (row, col) pressed, `2`
+    layer `a` on (`b` = 0), `3` a key with keycode `a | b << 8` pressed. Replaces the
+    set and clears the matches.
+  - `5` POLL: reply `[3]` flags (1 text, 2 spotlight, 4 armed), `[4]` armed count,
+    `[5]` matched bits (sticky since ARM), `[6]` the highest active layer.
+  - `6` END: clears text, spotlight and conditions on both halves.
+  - The master forwards TEXT, SPOTLIGHT, REVEAL and END to the slave as the report
+    (`SPLIT_SYNC.md` → *Host state goes to the slave as the report*); `poly_sync_t`
+    does not grow. TEXT, SPOTLIGHT and END are resent from housekeeping until the
+    slave acks them. Conditions live on the master: only it runs `process_record`.
+  - Every 2 s while text or a spotlight is on (no reveal running), the master sends the
+    slave a VERIFY report (op `0x80`, relay only, a checksum of the state); a slave that
+    restarted unnoticed refuses it and gets TEXT and SPOTLIGHT again. After a link drop
+    the master resends them as well.
+  - A session with no cmd 49 report for 10 s ends by itself, so a host that crashed
+    does not leave the board dark. The host polls every 0.5 s while a tutorial runs.
+  - While the first-run tutorial runs, TEXT, SPOTLIGHT, REVEAL and ARM NACK.
+  - Not in the DOOM monolith (`POLY_HOST_TUTORIAL`, `rules.mk`): there cmd 49 NACKs as
+    an unknown command. RAM in the pack firmware: +108 B.
+  - Console: `host tut: op N refused, first-run tutorial active`,
+    `host tut: unknown op N`, `host tut: reveal did not reach the slave`,
+    `host tut: no host for 10 s, ending`.
+  - A v34 or older firmware NACKs cmd 49 (unknown command).
+
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)

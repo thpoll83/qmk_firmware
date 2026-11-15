@@ -319,7 +319,7 @@
 //  v34 cmd 47 op 2 GUIDE: the ripple walks a path of up to 4 layer keys to a target
 //      layer (Fn, then the MIDI key), on the step whose layer is active. A v33
 //      firmware NACKs op 2 (closed op range), which is the host's signal.
-#define PROTOCOL_VERSION 34
+#define PROTOCOL_VERSION 35
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2

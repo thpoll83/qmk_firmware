@@ -3,6 +3,7 @@
 
 #include "split_sync.h"
 #include "anim/tutorial.h"
+#include "anim/host_tutorial.h"   // cmd 49 reports forwarded to this half (v35)
 
 #include "quantum.h"
 
@@ -539,7 +540,13 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     break;
                 case id_custom_save: //handle the same way
                 case 'P':
-                    if(command_data[0]==14) {
+                    if (command_data[0] == 49) {
+                        // Cmd 49 (host tutorial), forwarded whole: SPLIT_SYNC.md ->
+                        // "Host state goes to the slave as the report". Staged here,
+                        // applied by host_tutorial_tick() on the main loop.
+                        refused = !host_tutorial_slave_receive(data->commands,
+                                                               (uint8_t)(in_len - sizeof(uint32_t)));
+                    } else if(command_data[0]==14) {
                         uint16_t keycode = ((uint16_t)command_data[2])<<8 | command_data[3];
                         uint8_t r = 0, c = 0;
                         enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(get_local_layer()->layer), &r, &c, is_left_side());

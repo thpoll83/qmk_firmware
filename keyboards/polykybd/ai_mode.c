@@ -147,8 +147,14 @@ static void ai_enter(void) {
     uprint("ai: on\n");
 }
 
+static void ai_record(uint8_t key);
+
 static void ai_leave(const char *why) {
-    access_local_state()->ai_mode = 0;
+    poly_sync_t *ls = access_local_state();
+    ls->ai_mode = 0;
+    // The host shows page 1 again (AI_EVENT_LEAVE), so an agent never seems gone
+    // because a later page stayed selected. Only when there is a page to return from.
+    if (is_keyboard_master() && (ls->ai_flags & AI_FLAG_MORE_PAGES)) ai_record(AI_EVENT_LEAVE);
     request_disp_refresh();
     uprintf("ai: off (%s)\n", why);
 }
@@ -159,10 +165,12 @@ void ai_reset_keys(const char *why) {
     bool any = ls->ai_flags != 0;
     for (uint8_t i = 0; i < AI_NUM_KEYS; ++i) any |= ls->ai_state[i] != 0;
     if (!any && !ls->ai_mode) return;    // suspend calls this every ~17 ms
+    if (ls->ai_mode) ai_leave(why);      // first: it reads AI_FLAG_MORE_PAGES
     memset(ls->ai_state, 0, sizeof(ls->ai_state));
     for (uint8_t i = 0; i < AI_NUM_CARDS; ++i) ls->ai_slot[i] = AI_SLOT_NONE;
     ls->ai_flags = 0;
-    if (ls->ai_mode) ai_leave(why);
+    ls->ai_page  = 0;
+    ls->ai_pages = 0;   // ai_done_seq stays: the host sends the same value again
     s_ai_down = s_ai_pending = false;
     s_num_pending = false;
     request_disp_refresh();
@@ -360,11 +368,29 @@ void ai_mode_tick(void) {
 
 static const GFXfont *const s_fonts[] = {&NotoSans_Regular_Mid_19px7b};
 
-static void draw_text_centred(const uint32_t *text) {
+// Draws `text` centred horizontally, with its ink centred on row `cy`.
+static void draw_text_at(const uint32_t *text, int8_t cy) {
     int8_t xmin, xmax, ymin, ymax;
     kdisp_gfx_text_bbox(s_fonts, 1, text, &xmin, &xmax, &ymin, &ymax);
     kdisp_write_gfx_text(s_fonts, 1, (int8_t)(BUFFER_X + SCREEN_WIDTH / 2 - (xmax - xmin + 1) / 2 - xmin),
-                         (int8_t)((SCREEN_HEIGHT - (ymax - ymin + 1)) / 2 - ymin), text);
+                         (int8_t)(cy - (ymax - ymin + 1) / 2 - ymin), text);
+}
+
+static void draw_text_centred(const uint32_t *text) {
+    draw_text_at(text, (int8_t)(SCREEN_HEIGHT / 2));
+}
+
+// "1/2" for the page indicator: page + 1 and the count, each 1..255.
+static void page_text(uint32_t *out, uint8_t page, uint8_t pages) {
+    uint8_t  n = 0;
+    uint8_t  v[2] = {(uint8_t)(page + 1u), pages};
+    for (uint8_t part = 0; part < 2; ++part) {
+        if (part) out[n++] = '/';
+        if (v[part] >= 100) out[n++] = (uint32_t)('0' + v[part] / 100);
+        if (v[part] >= 10) out[n++] = (uint32_t)('0' + (v[part] / 10) % 10);
+        out[n++] = (uint32_t)('0' + v[part] % 10);
+    }
+    out[n] = 0;
 }
 
 bool ai_render_key(uint8_t row, uint8_t col) {
@@ -374,8 +400,16 @@ bool ai_render_key(uint8_t row, uint8_t col) {
     kdisp_set_buffer(0x00);
     const poly_sync_t *s = get_local_state();
     if (key == AI_KEY_ESC) {
-        // The pager, only when there is a page to go to; otherwise blank.
-        if (s->ai_flags & AI_FLAG_MORE_PAGES) draw_text_centred(U"Next");
+        // The pager, only when there is a page to go to; otherwise blank. From v36 the
+        // host sends the page, shown under "Next" as "1/2".
+        if ((s->ai_flags & AI_FLAG_MORE_PAGES) && s->ai_pages > 0) {
+            uint32_t pages[8];
+            page_text(pages, s->ai_page, s->ai_pages);
+            draw_text_at(U"Next", (int8_t)(SCREEN_HEIGHT / 4));
+            draw_text_at(pages, (int8_t)(SCREEN_HEIGHT * 3 / 4));
+        } else if (s->ai_flags & AI_FLAG_MORE_PAGES) {
+            draw_text_centred(U"Next");
+        }
         return true;
     }
     if (key == AI_KEY_MINUS || key == AI_KEY_PLUS) {
@@ -493,19 +527,29 @@ void ai_hid_cmd(uint8_t *data, uint8_t length) {
         data[4] = s_ring.seq;
         data[5] = found;
         data[6] = rc[AI_KEY_ESC] != NO_KEY ? 1u : 0u;
-    } else if (op == 1 && length >= 3u + AI_SET_KEYS_LEN && ai_set_keys_valid(&data[3], NUM_OVERLAY_SLOTS)) {
+    } else if (op == 1 && length >= 3u + AI_SET_KEYS_LEN + AI_SET_KEYS_PAGE_LEN
+               && ai_set_keys_valid(&data[3], NUM_OVERLAY_SLOTS)
+               && ai_set_keys_page_valid(&data[3 + AI_SET_KEYS_LEN])) {
+        // Every byte is checked above, before anything changes (a host before v36
+        // zero-pads the page bytes, which is valid: no page count).
         uint8_t  state[AI_NUM_KEYS];
         uint8_t  flags;
         uint16_t slot[AI_NUM_CARDS];
         ai_set_keys_decode(&data[3], state, &flags, slot);
+        const uint8_t *tail = &data[3 + AI_SET_KEYS_LEN];
         // The host sends the keys on every pass (so a keyboard that cleared them, at
         // USB suspend, gets them back): redraw only on a change.
         const bool changed = memcmp(ls->ai_state, state, sizeof(state)) != 0
                           || memcmp(ls->ai_slot, slot, sizeof(slot)) != 0
-                          || ls->ai_flags != flags;
+                          || ls->ai_flags != flags
+                          || ls->ai_page != tail[AI_PAGE_BYTE]
+                          || ls->ai_pages != tail[AI_PAGES_BYTE];
         memcpy(ls->ai_state, state, sizeof(state));
         memcpy(ls->ai_slot, slot, sizeof(slot));
-        ls->ai_flags = flags;
+        ls->ai_flags    = flags;
+        ls->ai_page     = tail[AI_PAGE_BYTE];
+        ls->ai_pages    = tail[AI_PAGES_BYTE];
+        ls->ai_done_seq = tail[AI_DONE_SEQ_BYTE];
         s_keys_set_at = timer_read32();
         // The housekeeping state diff sends it to the slave; that also redraws the
         // slave's keys (user_sync_poly_data_handler).
@@ -590,6 +634,23 @@ static bool ai_ring_key(uint8_t i) {
     poly_focus_start(slot);
     return true;
 }
+
+// Start the ripple on the AI key (KC_AI on the default layer), for an agent on another
+// page. False when the layout has no AI key or it has no display.
+static bool ai_ring_ai_key(void) {
+    const uint8_t layer = (uint8_t)get_local_layer()->def_layer;
+    for (uint8_t r = 0; r < MATRIX_ROWS; ++r) {
+        for (uint8_t c = 0; c < MATRIX_COLS; ++c) {
+            const keypos_t pos = {.col = c, .row = r};
+            if (keymap_key_to_keycode(layer, pos) != KC_AI) continue;
+            const uint8_t slot = poly_slot_of(r, c);
+            if (slot == TUT_SLOT_NONE) return false;
+            poly_focus_start(slot);
+            return true;
+        }
+    }
+    return false;
+}
 #endif
 
 void ai_attention_tick(void) {
@@ -599,14 +660,27 @@ void ai_attention_tick(void) {
     static uint8_t  s_next;
     static uint8_t  s_next_done;
     static uint8_t  s_prev[AI_NUM_KEYS];        // the states of the last pass
+    static uint8_t  s_prev_page;
+    static uint8_t  s_prev_seq;                 // ai_elsewhere_rings_update
+    static bool     s_seq_seen;
+    static uint8_t  s_else_left;                // AI-key ripples still to run
     const poly_sync_t *s = get_local_state();
     // Before the gates below: a finish during a running ripple must still count.
-    ai_done_rings_update(s_prev, s->ai_state, s_done_left);
-    // Seen, busy again or gone: the last ripple's key is no longer a hold key.
-    if (s_done_last_key < AI_NUM_KEYS && s_prev[s_done_last_key] != s->ai_state[s_done_last_key]) {
+    if (s->ai_page != s_prev_page) {
+        // Another page: its states are a new start, not agents that just finished
+        // (paging from a stale agent's key to a done one rang it, 2026-11-16).
+        memset(s_done_left, 0, sizeof(s_done_left));
         s_done_last_key = AI_KEY_NONE;
+        s_prev_page     = s->ai_page;
+    } else {
+        ai_done_rings_update(s_prev, s->ai_state, s_done_left);
+        // Seen, busy again or gone: the last ripple's key is no longer a hold key.
+        if (s_done_last_key < AI_NUM_KEYS && s_prev[s_done_last_key] != s->ai_state[s_done_last_key]) {
+            s_done_last_key = AI_KEY_NONE;
+        }
     }
     memcpy(s_prev, s->ai_state, sizeof(s_prev));
+    ai_elsewhere_rings_update(s->ai_done_seq, s->ai_pages, &s_prev_seq, &s_seq_seen, &s_else_left);
     if (tutorial_active() || !poly_render_live() || poly_focus_active() || s->fw_confirm) return;
     if (key_attention_pending()) return;   // a host request (cmd 47) has the ring
     if (s_started && timer_elapsed32(s_last) < AI_ATTENTION_PERIOD_MS) return;
@@ -617,6 +691,13 @@ void ai_attention_tick(void) {
         s_last    = timer_read32();
         s_started = true;
         s_next    = (uint8_t)(i + 1u);
+        return;
+    }
+    // Then an agent that waits on another page: the AI key leads there. A v35 host
+    // (page count 0) sets the flag too, and keeps the v35 behaviour: no AI-key ring.
+    if (s->ai_pages > 0 && (s->ai_flags & AI_FLAG_ESC_ATTENTION) && ai_ring_ai_key()) {
+        s_last    = timer_read32();
+        s_started = true;
         return;
     }
     // Then an agent that finished (ai_done_rings_update), AI_DONE_RIPPLES times.
@@ -631,6 +712,14 @@ void ai_attention_tick(void) {
         s_done_last_key = i;
         s_done_last_t   = s_last;
         return;
+    }
+    // Last, an agent that finished on another page (the host's counter).
+    if (s_else_left > 0) {
+        --s_else_left;   // also when there is no AI key, so it ends
+        if (ai_ring_ai_key()) {
+            s_last    = timer_read32();
+            s_started = true;
+        }
     }
 #endif
 }

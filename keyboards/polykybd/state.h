@@ -330,6 +330,14 @@ typedef struct _poly_sync_t {
     uint8_t  attn_count;     // ripples, 0 = until cancelled
     uint8_t  attn_period;    // 100 ms units
     uint8_t  attn_reserved;
+    // Cmd 45 op 1 page bytes (protocol v36, base/ai_events.h): the page the host shows
+    // (0-based), the page count (0 = a host before v36), and the finished-elsewhere
+    // counter. Synced so both halves draw "Next p/n" on Esc, take a page change as a
+    // new start instead of finished agents, and ring the AI key. RAM only.
+    uint8_t  ai_page;
+    uint8_t  ai_pages;
+    uint8_t  ai_done_seq;
+    uint8_t  ai_pad;         // keeps the struct a multiple of 4, padding-free
 } poly_sync_t;
 
 // Same reasoning as latin_sync_t's guard: transaction_rpc_exec() refuses a payload
@@ -340,7 +348,7 @@ static_assert(sizeof(poly_sync_t) <= RPC_M2S_BUFFER_SIZE,
               "poly_sync_t exceeds RPC_M2S_BUFFER_SIZE — the split sync would be silently rejected");
 // No padding: the split CRC covers every byte from offset 4, and the AI fields are
 // placed so the struct needs none. A member added in the wrong place fails here.
-static_assert(sizeof(poly_sync_t) == offsetof(poly_sync_t, attn_reserved) + 1,
+static_assert(sizeof(poly_sync_t) == offsetof(poly_sync_t, ai_pad) + 1,
               "poly_sync_t has padding -- reorder the AI fields");
 // The tutorial's sync payload and the field it rides in must stay the same size — a
 // mismatch would silently truncate the ripple origin rather than fail to build.

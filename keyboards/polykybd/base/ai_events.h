@@ -96,6 +96,33 @@ bool ai_set_keys_valid(const uint8_t *payload, uint16_t num_slots);
 // Op 1 decode, after ai_set_keys_valid(): fills state[10], *flags and slot[12].
 void ai_set_keys_decode(const uint8_t *payload, uint8_t *state, uint8_t *flags, uint16_t *slot);
 
+// Op 1 page bytes (protocol v36), right after the AI_SET_KEYS_LEN bytes: the page the
+// host shows (0-based), the page count, and a counter the host increases when an agent
+// on ANOTHER page finishes its turn. A host before v36 zero-pads the report, so all
+// three read 0: page count 0 means "not sent", and the keyboard behaves as before
+// (Esc shows "Next" without the page, the AI key does not ring).
+#define AI_SET_KEYS_PAGE_LEN 3u
+#define AI_PAGE_BYTE         0u
+#define AI_PAGES_BYTE        1u
+#define AI_DONE_SEQ_BYTE     2u
+// Valid when no page count is sent (then the page must be 0 too) or the page is
+// below the count.
+bool ai_set_keys_page_valid(const uint8_t *tail);
+
+// The finished-elsewhere counter, both halves, each pass. `pages` 0 means no v36 host
+// report is in force (no host yet, a v35 host, keys cleared), and the call changes
+// nothing. `*seen` false is the first value of a host report after a boot, taken as the
+// start (an agent that finished before the keyboard started does not ring). After that
+// a NEW nonzero value rings the AI key AI_DONE_RIPPLES times (`*left`); 0 is a
+// restarted host and rings nothing.
+void ai_elsewhere_rings_update(uint8_t seq, uint8_t pages, uint8_t *prev, bool *seen, uint8_t *left);
+
+// Event code in the op 2 ring, beside the key indexes: AI mode ended. The host then
+// shows page 1 again, so an agent never seems gone because a later page stayed
+// selected. Recorded only while there is more than one page. A host before v36
+// treats it as a key with no agent.
+#define AI_EVENT_LEAVE 13u
+
 // An agent that finished: its key rings AI_DONE_RIPPLES times (split72), so the user
 // sees the moment to check the result. Called each housekeeping pass on both halves
 // with the states of the last pass (`prev`) and of this one (`now`); updates the

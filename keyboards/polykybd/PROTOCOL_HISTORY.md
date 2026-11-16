@@ -554,6 +554,24 @@ reading before you change either one.
     `host tut: no host for 10 s, ending`.
   - A v34 or older firmware NACKs cmd 49 (unknown command).
 
+  **v36** adds three **page bytes** to cmd `45` op 1 (SET_KEYS), after the 35 bytes of
+  states, flags and slots (`base/ai_events.h`, `AI_SET_KEYS_PAGE_LEN`): the page the
+  host shows (0-based), the page count, and a counter the host increases when an agent
+  on another page finishes its turn. They reach the slave in `poly_sync_t` (`ai_page`,
+  `ai_pages`, `ai_done_seq`).
+  - Esc in AI mode shows "Next" and the page as `1/2`.
+  - A page change is a new start for the finished-agent ripple: paging from a stale
+    agent's key to a done agent's key rang that key before (2026-11-16).
+  - The AI key ripples while an agent on another page waits (flag `0x01`), and three
+    times when the counter takes a new nonzero value. The first value after a boot is
+    the start; `0` is a restarted host and rings nothing.
+  - Leaving AI mode records event `13` (`AI_EVENT_LEAVE`) in the op 2 ring while there
+    is more than one page, so the host shows page 1 again.
+  - Compatibility runs both ways: a host before v36 zero-pads the report, and page
+    count `0` keeps the v35 behaviour; a v35 firmware ignores the bytes, so the host
+    sends them only from v36. A page not below its count, or a page without a count,
+    is NACKed with the rest of the report, before anything changes.
+
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)

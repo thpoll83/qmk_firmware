@@ -1266,6 +1266,9 @@ void poly_prepare_for_flash(void) {
     doom_screensaver_stop();   // self-guards: only an active attract demo
     startup_anim_stop();       // looping Eden (and a one-shot mid-flight)
     poly_sync_t* local_state = access_local_state();
+    // A flash the host starts while the board is suspended wakes the panels
+    // here, not through poly_set_awake_state(): bring the overlays back too.
+    restore_suspended_overlays(local_state);
     local_state->flags &= ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);
     local_state->flags |= STATUS_DISP_ON;
     local_state->contrast = get_active_brightness();

@@ -123,8 +123,11 @@ bool overlay_slot_displayed(uint16_t base_slot);
 // Power / flash transitions
 // ---------------------------------------------------------------------------
 
-// Enters the suspend display state (panels off, idle tracking disabled).
+// Enters the suspend display state (panels off, idle tracking disabled). The app
+// overlays it switches off come back on at the wake.
 void poly_suspend(void);
+// The host switched the overlays off (cmd 12) while suspended: the wake keeps them off.
+void poly_forget_suspended_overlays(void);
 
 // Wakes the displays on real user activity. Returns true if this call performed the
 // wake (so the caller can swallow the keypress that caused it).

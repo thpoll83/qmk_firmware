@@ -342,7 +342,7 @@
 
 //10 sec
 #define FADE_TRANSITION_TIME 10000
-//10 min
+//20 min. The app overlays it switches off come back on at the wake (poly_suspend()).
 #define TURN_OFF_TIME 1200000
 
 // ⚠️ FADE_OUT_TIME is GONE. The delay before the idle fade starts is a per-board

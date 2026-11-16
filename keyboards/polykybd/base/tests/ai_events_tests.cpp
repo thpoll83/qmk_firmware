@@ -251,4 +251,46 @@ TEST(AiDoneRings, NoRingWithoutABusyTurn) {
     EXPECT_EQ(r.left[0], 0);
 }
 
+// ---- the page bytes (v36) ----------------------------------------------------------
+
+TEST(AiPage, ZeroPaddedFromAnOlderHostIsValid) {
+    const uint8_t tail[AI_SET_KEYS_PAGE_LEN] = {0, 0, 0};
+    EXPECT_TRUE(ai_set_keys_page_valid(tail));
+}
+
+TEST(AiPage, ThePageMustBeBelowTheCount) {
+    const uint8_t first[] = {0, 2, 0};
+    const uint8_t last[]  = {1, 2, 0};
+    const uint8_t past[]  = {2, 2, 0};
+    const uint8_t nocnt[] = {1, 0, 0};          // a page but no count
+    EXPECT_TRUE(ai_set_keys_page_valid(first));
+    EXPECT_TRUE(ai_set_keys_page_valid(last));
+    EXPECT_FALSE(ai_set_keys_page_valid(past));
+    EXPECT_FALSE(ai_set_keys_page_valid(nocnt));
+}
+
+TEST(AiElsewhere, TheFirstValueAfterABootIsTheStart) {
+    uint8_t prev = 0, left = 0;
+    bool    seen = false;
+    ai_elsewhere_rings_update(7, &prev, &seen, &left);   // the host was already counting
+    EXPECT_EQ(left, 0);
+    ai_elsewhere_rings_update(7, &prev, &seen, &left);   // sent again on every pass
+    EXPECT_EQ(left, 0);
+    ai_elsewhere_rings_update(8, &prev, &seen, &left);   // a finish on another page
+    EXPECT_EQ(left, AI_DONE_RIPPLES);
+}
+
+TEST(AiElsewhere, ARestartedHostRingsNothing) {
+    uint8_t prev = 0, left = 0;
+    bool    seen = false;
+    ai_elsewhere_rings_update(5, &prev, &seen, &left);
+    ai_elsewhere_rings_update(0, &prev, &seen, &left);   // host restarted: counter 0
+    EXPECT_EQ(left, 0);
+    ai_elsewhere_rings_update(1, &prev, &seen, &left);   // its first finish rings
+    EXPECT_EQ(left, AI_DONE_RIPPLES);
+    left = 1;                                            // the tick ran two
+    ai_elsewhere_rings_update(1, &prev, &seen, &left);   // same value: keeps running
+    EXPECT_EQ(left, 1);
+}
+
 }  // namespace

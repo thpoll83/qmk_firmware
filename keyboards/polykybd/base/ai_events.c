@@ -96,3 +96,17 @@ void ai_done_rings_update(const uint8_t *prev, const uint8_t *now, uint8_t *left
         }
     }
 }
+
+bool ai_set_keys_page_valid(const uint8_t *tail) {
+    const uint8_t pages = tail[AI_PAGES_BYTE];
+    return pages == 0 ? tail[AI_PAGE_BYTE] == 0 : tail[AI_PAGE_BYTE] < pages;
+}
+
+void ai_elsewhere_rings_update(uint8_t seq, uint8_t *prev, bool *seen, uint8_t *left) {
+    if (!*seen) {
+        *seen = true;
+    } else if (seq != *prev) {
+        *left = seq != 0 ? AI_DONE_RIPPLES : 0u;
+    }
+    *prev = seq;
+}

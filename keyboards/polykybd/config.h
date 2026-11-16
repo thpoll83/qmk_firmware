@@ -319,7 +319,11 @@
 //  v34 cmd 47 op 2 GUIDE: the ripple walks a path of up to 4 layer keys to a target
 //      layer (Fn, then the MIDI key), on the step whose layer is active. A v33
 //      firmware NACKs op 2 (closed op range), which is the host's signal.
-#define PROTOCOL_VERSION 35
+//  v36 cmd 45 op 1 page bytes: the page shown, the page count and a counter of agents
+//      that finished on another page (base/ai_events.h). Esc shows "Next 1/2", the AI
+//      key rings for agents on another page, and AI mode's end is an op 2 event. A
+//      host before v36 zero-pads them: page count 0 keeps the v35 behaviour.
+#define PROTOCOL_VERSION 36
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2

@@ -272,25 +272,37 @@ TEST(AiPage, ThePageMustBeBelowTheCount) {
 TEST(AiElsewhere, TheFirstValueAfterABootIsTheStart) {
     uint8_t prev = 0, left = 0;
     bool    seen = false;
-    ai_elsewhere_rings_update(7, &prev, &seen, &left);   // the host was already counting
+    ai_elsewhere_rings_update(7, 1, &prev, &seen, &left);   // the host was already counting
     EXPECT_EQ(left, 0);
-    ai_elsewhere_rings_update(7, &prev, &seen, &left);   // sent again on every pass
+    ai_elsewhere_rings_update(7, 1, &prev, &seen, &left);   // sent again on every pass
     EXPECT_EQ(left, 0);
-    ai_elsewhere_rings_update(8, &prev, &seen, &left);   // a finish on another page
+    ai_elsewhere_rings_update(8, 1, &prev, &seen, &left);   // a finish on another page
     EXPECT_EQ(left, AI_DONE_RIPPLES);
 }
 
 TEST(AiElsewhere, ARestartedHostRingsNothing) {
     uint8_t prev = 0, left = 0;
     bool    seen = false;
-    ai_elsewhere_rings_update(5, &prev, &seen, &left);
-    ai_elsewhere_rings_update(0, &prev, &seen, &left);   // host restarted: counter 0
+    ai_elsewhere_rings_update(5, 1, &prev, &seen, &left);
+    ai_elsewhere_rings_update(0, 1, &prev, &seen, &left);   // host restarted: counter 0
     EXPECT_EQ(left, 0);
-    ai_elsewhere_rings_update(1, &prev, &seen, &left);   // its first finish rings
+    ai_elsewhere_rings_update(1, 1, &prev, &seen, &left);   // its first finish rings
     EXPECT_EQ(left, AI_DONE_RIPPLES);
     left = 1;                                            // the tick ran two
-    ai_elsewhere_rings_update(1, &prev, &seen, &left);   // same value: keeps running
+    ai_elsewhere_rings_update(1, 1, &prev, &seen, &left);   // same value: keeps running
     EXPECT_EQ(left, 1);
+}
+
+TEST(AiElsewhere, NoHostReportIsNotTheStart) {
+    uint8_t prev = 0, left = 0;
+    bool    seen = false;
+    ai_elsewhere_rings_update(0, 0, &prev, &seen, &left);   // before the host: default 0
+    EXPECT_FALSE(seen);
+    ai_elsewhere_rings_update(7, 2, &prev, &seen, &left);   // the first host report
+    EXPECT_EQ(left, 0);
+    ai_elsewhere_rings_update(7, 0, &prev, &seen, &left);   // keys cleared at suspend
+    ai_elsewhere_rings_update(7, 2, &prev, &seen, &left);   // same value after resume
+    EXPECT_EQ(left, 0);
 }
 
 }  // namespace

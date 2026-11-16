@@ -165,12 +165,12 @@ void ai_reset_keys(const char *why) {
     bool any = ls->ai_flags != 0;
     for (uint8_t i = 0; i < AI_NUM_KEYS; ++i) any |= ls->ai_state[i] != 0;
     if (!any && !ls->ai_mode) return;    // suspend calls this every ~17 ms
+    if (ls->ai_mode) ai_leave(why);      // first: it reads AI_FLAG_MORE_PAGES
     memset(ls->ai_state, 0, sizeof(ls->ai_state));
     for (uint8_t i = 0; i < AI_NUM_CARDS; ++i) ls->ai_slot[i] = AI_SLOT_NONE;
     ls->ai_flags = 0;
     ls->ai_page  = 0;
     ls->ai_pages = 0;   // ai_done_seq stays: the host sends the same value again
-    if (ls->ai_mode) ai_leave(why);
     s_ai_down = s_ai_pending = false;
     s_num_pending = false;
     request_disp_refresh();
@@ -680,7 +680,7 @@ void ai_attention_tick(void) {
         }
     }
     memcpy(s_prev, s->ai_state, sizeof(s_prev));
-    ai_elsewhere_rings_update(s->ai_done_seq, &s_prev_seq, &s_seq_seen, &s_else_left);
+    ai_elsewhere_rings_update(s->ai_done_seq, s->ai_pages, &s_prev_seq, &s_seq_seen, &s_else_left);
     if (tutorial_active() || !poly_render_live() || poly_focus_active() || s->fw_confirm) return;
     if (key_attention_pending()) return;   // a host request (cmd 47) has the ring
     if (s_started && timer_elapsed32(s_last) < AI_ATTENTION_PERIOD_MS) return;
@@ -693,8 +693,9 @@ void ai_attention_tick(void) {
         s_next    = (uint8_t)(i + 1u);
         return;
     }
-    // Then an agent that waits on another page: the AI key leads there.
-    if ((s->ai_flags & AI_FLAG_ESC_ATTENTION) && ai_ring_ai_key()) {
+    // Then an agent that waits on another page: the AI key leads there. A v35 host
+    // (page count 0) sets the flag too, and keeps the v35 behaviour: no AI-key ring.
+    if (s->ai_pages > 0 && (s->ai_flags & AI_FLAG_ESC_ATTENTION) && ai_ring_ai_key()) {
         s_last    = timer_read32();
         s_started = true;
         return;

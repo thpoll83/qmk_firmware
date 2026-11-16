@@ -102,7 +102,8 @@ bool ai_set_keys_page_valid(const uint8_t *tail) {
     return pages == 0 ? tail[AI_PAGE_BYTE] == 0 : tail[AI_PAGE_BYTE] < pages;
 }
 
-void ai_elsewhere_rings_update(uint8_t seq, uint8_t *prev, bool *seen, uint8_t *left) {
+void ai_elsewhere_rings_update(uint8_t seq, uint8_t pages, uint8_t *prev, bool *seen, uint8_t *left) {
+    if (pages == 0) return;
     if (!*seen) {
         *seen = true;
     } else if (seq != *prev) {

@@ -109,11 +109,13 @@ void ai_set_keys_decode(const uint8_t *payload, uint8_t *state, uint8_t *flags, 
 // below the count.
 bool ai_set_keys_page_valid(const uint8_t *tail);
 
-// The finished-elsewhere counter, both halves, each pass: `*seen` false is the first
-// value after a boot, taken as the start (an agent that finished before the keyboard
-// started does not ring). After that a NEW nonzero value rings the AI key
-// AI_DONE_RIPPLES times (`*left`); 0 is a restarted host and rings nothing.
-void ai_elsewhere_rings_update(uint8_t seq, uint8_t *prev, bool *seen, uint8_t *left);
+// The finished-elsewhere counter, both halves, each pass. `pages` 0 means no v36 host
+// report is in force (no host yet, a v35 host, keys cleared), and the call changes
+// nothing. `*seen` false is the first value of a host report after a boot, taken as the
+// start (an agent that finished before the keyboard started does not ring). After that
+// a NEW nonzero value rings the AI key AI_DONE_RIPPLES times (`*left`); 0 is a
+// restarted host and rings nothing.
+void ai_elsewhere_rings_update(uint8_t seq, uint8_t pages, uint8_t *prev, bool *seen, uint8_t *left);
 
 // Event code in the op 2 ring, beside the key indexes: AI mode ended. The host then
 // shows page 1 again, so an agent never seems gone because a later page stayed

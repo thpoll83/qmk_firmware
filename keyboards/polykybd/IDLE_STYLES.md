@@ -36,7 +36,7 @@ presets — 15 s, 30 s, 45 s, 1 min, 2 min, 5 min — read through
   minutes), and the doom screensaver's runtime (`doom_saver_max_ms()`, now a
   function: its window is what is LEFT of the suspend deadline, so it grows as the
   idle delay shrinks).
-- ⚠️ **`TURN_OFF_TIME` (10 min, displays off + suspend) is NOT scaled by it**, and
+- ⚠️ **`TURN_OFF_TIME` (20 min, displays off + suspend; the overlays come back on at the wake) is NOT scaled by it**, and
   that is deliberate — when the screensaver starts and when the panels give up are
   different questions. `state.c` `_Static_assert`s **per preset** that it still
   leaves `FADE_TRANSITION_TIME` inside that deadline: the housekeeping chain tests

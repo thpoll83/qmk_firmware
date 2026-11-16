@@ -274,6 +274,7 @@ const struct display_info disp_row_0 = { POLY_DISP_ROW_0 };
 const struct display_info disp_row_3 = { POLY_DISP_ROW_3 };
 
 
+static bool restore_suspended_overlays(poly_sync_t* local_state);
 bool display_wakeup(keyrecord_t* record);
 static void render_macro_key(uint8_t id);   // defined below, used from render_key()
 void update_displays(enum refresh_mode mode);
@@ -1265,6 +1266,9 @@ void poly_prepare_for_flash(void) {
     doom_screensaver_stop();   // self-guards: only an active attract demo
     startup_anim_stop();       // looping Eden (and a one-shot mid-flight)
     poly_sync_t* local_state = access_local_state();
+    // A flash the host starts while the board is suspended wakes the panels
+    // here, not through poly_set_awake_state(): bring the overlays back too.
+    restore_suspended_overlays(local_state);
     local_state->flags &= ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);
     local_state->flags |= STATUS_DISP_ON;
     local_state->contrast = get_active_brightness();
@@ -7482,6 +7486,7 @@ void poly_set_awake_state(poly_sync_t* local_state) {
     local_state->flags &= ~((uint8_t)DISP_IDLE);
     local_state->flags |= STATUS_DISP_ON;
     reset_idle_jitter();   // fresh, centred idle session next time
+    restore_suspended_overlays(local_state);
 }
 
 // Wake the board out of idle (or out of a suspend that left the status display off)
@@ -8183,6 +8188,38 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation){
 }
 
 // Clears overlay display flags, disables overlays and status display, sets contrast to OFF.
+// Whether poly_suspend() switched the app overlays off. The suspend clears
+// DISPLAY_OVERLAYS so the dark panels draw nothing, but the overlay images,
+// usage bits and mapping stay in RAM; the wake turns the flag back on, so a
+// game that kept the focus during the turn-off (TURN_OFF_TIME) gets its
+// overlays back without the host noticing anything. The host only re-sends
+// overlays on a focus change, and the keyboard tells it nothing on turn-off
+// or wake.
+static bool overlays_off_by_suspend = false;
+
+// The host turned the overlays off (cmd 12) while the board slept: the wake
+// must not switch them back on.
+void poly_forget_suspended_overlays(void) {
+    overlays_off_by_suspend = false;
+}
+
+// Turns the overlays back on that poly_suspend() turned off; true when it did.
+// Called from both wake paths (poly_set_awake_state(), suspend_wakeup_init_kb()).
+// It requests no refresh: the key wake splits its render across two passes on
+// purpose (display_wakeup()). The slave gets the flag through the periodic
+// diff sync (OVERLAY_SYNCED_STATE_FLAGS).
+static bool restore_suspended_overlays(poly_sync_t* local_state) {
+    if (!overlays_off_by_suspend) {
+        return false;
+    }
+    overlays_off_by_suspend = false;
+    local_state->overlay_flags = flag_on(local_state->overlay_flags, DISPLAY_OVERLAYS);
+    // Ungated, like "Wake by keypress": the rig's only way to see the restore
+    // (polykybd-ctnd station/hil_tests.py, test_overlays_back_after_suspend).
+    uprint("Wake: overlays back on\n");
+    return true;
+}
+
 void poly_suspend(void) {
     // A host-initiated sleep can land while the doom attract screensaver runs —
     // tear it down first (engine stopped, pool handed back) so the demo doesn't
@@ -8191,6 +8228,9 @@ void poly_suspend(void) {
     doom_screensaver_stop();
     startup_anim_stop();   // tear down the looping Eden idle screensaver on suspend
     poly_sync_t* local_state = access_local_state();
+    if (test_flag(local_state->overlay_flags, DISPLAY_OVERLAYS)) {
+        overlays_off_by_suspend = true;
+    }
     local_state->overlay_flags = flag_off(local_state->overlay_flags, DISPLAY_OVERLAYS);
     local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);// & ~((uint8_t)RGB_ON);
     local_state->contrast = DISP_OFF;
@@ -8317,6 +8357,9 @@ void suspend_wakeup_init_kb(void) {
     local_state->flags &= ~((uint8_t)DISP_IDLE);
     local_state->contrast = get_active_brightness();
     reset_idle_jitter();
+    if (restore_suspended_overlays(local_state)) {
+        request_disp_refresh();   // nothing else on this path repaints the keycaps
+    }
 
     //rgb_matrix_reload_from_eeprom();
 #ifdef RGB_MATRIX_ENABLE

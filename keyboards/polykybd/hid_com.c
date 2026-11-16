@@ -633,6 +633,11 @@ static void hid_cmd_12(uint8_t *data, uint8_t length, const poly_layer_t *local_
         uint8_t flags_to_clear = data[HID_DATA_IDX];
         uint8_t old_flags = local_state->overlay_flags;
         local_state->overlay_flags = flag_off(old_flags, flags_to_clear);
+        if (flags_to_clear & DISPLAY_OVERLAYS) {
+            // Also when the board is suspended: the wake must not turn back on
+            // overlays the host switched off in the meantime.
+            poly_forget_suspended_overlays();
+        }
         // Only sync + full-refresh when a synced-state bit (MIRROR /
         // DISPLAY overlays) actually TRANSITIONED set->clear. Re-clearing
         // an already-clear bit changes nothing on screen, so gating on the

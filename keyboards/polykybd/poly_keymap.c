@@ -8212,7 +8212,7 @@ static bool restore_suspended_overlays(poly_sync_t* local_state) {
     overlays_off_by_suspend = false;
     local_state->overlay_flags = flag_on(local_state->overlay_flags, DISPLAY_OVERLAYS);
     // Ungated, like "Wake by keypress": the rig's only way to see the restore
-    // (polykybd-ctnd hil_tests.py, test_overlays_back_after_suspend).
+    // (polykybd-ctnd station/hil_tests.py, test_overlays_back_after_suspend).
     uprint("Wake: overlays back on\n");
     return true;
 }

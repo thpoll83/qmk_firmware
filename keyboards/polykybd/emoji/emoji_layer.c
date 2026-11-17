@@ -660,6 +660,16 @@ const uint32_t *emj_display_text(uint16_t keycode) {
     return NULL;
 }
 
+bool emj_set_search_mode(bool on) {
+    if (!emjdict_present()) return false;
+    if (on != get_emj_search_mode()) {
+        set_emj_search_mode(on);
+        s_letters_dirty = true;   // the base layer or language may have changed
+        search_changed();
+    }
+    return true;
+}
+
 bool emj_process_keycode(uint16_t keycode, bool pressed) {
     if (keycode == KC_EMJ_MODE || keycode == KC_EMJ_S_CLEAR || keycode == KC_EMJ_S_BKSP ||
         keycode == KC_EMJ_S_SPACE) {

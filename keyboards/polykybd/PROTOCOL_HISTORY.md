@@ -572,6 +572,19 @@ reading before you change either one.
     sends them only from v36. A page not below its count, or a page without a count,
     is NACKed with the rest of the report, before anything changes.
 
+  **v37** adds op `7` **EMOJI_MODE** to cmd `49` (HOST TUTORIAL): `[3]` `0` tab mode,
+  `1` search mode, `0xFF` query. The reply's `[3]` is the mode before the request. The
+  emoji search tutorial sets search mode itself; before, its step depended on the mode
+  the user chose last, and the mode key toggles.
+  - The master remembers the first mode it overwrote in a session and restores it on
+    END and when the watchdog ends the session. A pending restore keeps the watchdog
+    running (`session_open()`), so a host that crashes still leaves the user's mode.
+  - It sets the mode as the mode key does (`emj_set_search_mode()`); the slave gets it
+    through the existing emoji search sync. Refused (NACK) without an emoji search
+    dictionary, for any other value, and while the first-run tutorial runs.
+  - A v36 or older firmware NACKs op 7 (`host tut: unknown op 7`), so the host sends
+    it only from v37 and the step otherwise asks the user to set the mode.
+
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)

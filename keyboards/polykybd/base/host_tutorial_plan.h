@@ -26,7 +26,8 @@
 #define HOST_TUT_OP_ARM       4u   // [3] count 0..HOST_TUT_MAX_CONDS, then {kind, a, b} each
 #define HOST_TUT_OP_POLL      5u   // reply [3] flags, [4] armed count, [5] matched bits, [6] layer
 #define HOST_TUT_OP_END       6u   // clear text, spotlight and conditions
-#define HOST_TUT_OP_COUNT     7u
+#define HOST_TUT_OP_EMOJI_MODE 7u  // v37: [3] HOST_TUT_EMOJI_*; reply [3] the mode before
+#define HOST_TUT_OP_COUNT     8u
 // Master -> slave only, never from the host (the master's handler NACKs it as unknown):
 // [3..6] a host_tut_state_crc() of the master's text and spotlight, little endian. The
 // slave refuses it when its own state differs, and the master then resends TEXT and
@@ -44,6 +45,13 @@
 #define HOST_TUT_TEXT_BYTES   (HOST_TUT_REPORT_BYTES - HOST_TUT_IDX_ARG - 2u)
 
 #define HOST_TUT_SPOT_FLAG_ON 0x01u
+
+// EMOJI_MODE: the emoji layer's tab or search mode (stored on the keyboard). The master
+// remembers the mode it first overwrote in a session and restores it on END and when the
+// watchdog ends the session, so a tutorial leaves the user's choice as it found it.
+#define HOST_TUT_EMOJI_TAB    0u
+#define HOST_TUT_EMOJI_SEARCH 1u
+#define HOST_TUT_EMOJI_QUERY  0xFFu
 // 80 bits: split72 has a 10 x 8 matrix, split42 8 x 6.
 #define HOST_TUT_MASK_BYTES   10u
 
@@ -109,6 +117,9 @@ void host_tut_note_layers(host_tut_conds_t *c, uint32_t layers_on);
 // The watchdog: true when `last_ms` (the last cmd 49 report) is HOST_TUT_WATCHDOG_MS or
 // more before `now_ms`. Wrap-safe.
 bool host_tut_expired(uint32_t last_ms, uint32_t now_ms);
+
+// EMOJI_MODE. *want is HOST_TUT_EMOJI_TAB, _SEARCH or _QUERY; anything else is refused.
+bool host_tut_parse_emoji_mode(const uint8_t *data, uint8_t length, uint8_t *want);
 
 // What the master still has to send the slave (anim/host_tutorial.c), sent in this order.
 #define HOST_TUT_DIRTY_END  0x01u

@@ -16,6 +16,8 @@
 #include "base/tutorial_plan.h"    // TUT_SLOT_*, TUT_BOARD_REVEAL_MS, tut_sweep_radius
 #include "base/update.h"           // request_disp_refresh
 #include "base/host_tutorial_plan.h"
+#include "emoji/emoji_layer.h"     // emj_set_search_mode: EMOJI_MODE
+#include "state.h"                 // get_emj_search_mode
 
 // ---- state, both halves (RAM only) -------------------------------------------------
 
@@ -36,6 +38,9 @@ static uint32_t        s_reveal_start;
 
 static host_tut_conds_t s_conds;
 static uint32_t         s_last_ms;      // the last cmd 49 report, for the watchdog
+// The emoji mode EMOJI_MODE first overwrote in this session, restored when it ends;
+// HOST_TUT_EMOJI_QUERY when there is nothing to restore.
+static uint8_t          s_emj_restore = HOST_TUT_EMOJI_QUERY;
 // What the slave still has to get. END first, so a TEXT or SPOTLIGHT that follows an
 // END is applied after it.
 #define DIRTY_END  HOST_TUT_DIRTY_END
@@ -60,7 +65,8 @@ static uint8_t s_pending;
 static uint8_t s_pending_reveal_slot = TUT_SLOT_NONE;
 
 static bool session_open(void) {
-    return s_text_on || s_spot_on || s_reveal_on || s_conds.count > 0u;
+    return s_text_on || s_spot_on || s_reveal_on || s_conds.count > 0u ||
+           s_emj_restore != HOST_TUT_EMOJI_QUERY;
 }
 
 static void reply(uint8_t *data, uint8_t length, bool ok) {
@@ -183,6 +189,10 @@ static void verify_slave(void) {
 
 static void end_session(void) {
     apply_end();
+    if (s_emj_restore != HOST_TUT_EMOJI_QUERY) {
+        emj_set_search_mode(s_emj_restore == HOST_TUT_EMOJI_SEARCH);
+        s_emj_restore = HOST_TUT_EMOJI_QUERY;
+    }
     memset(&s_conds, 0, sizeof s_conds);
     s_dirty = DIRTY_END;   // a TEXT or SPOTLIGHT not yet sent is moot now
     push_dirty();
@@ -196,7 +206,8 @@ void host_tutorial_hid(uint8_t *data, uint8_t length) {
     // The first-run lesson owns the keycaps and the status panels: refuse anything that
     // would draw over it. INFO, POLL and END still answer.
     const bool draws = op == HOST_TUT_OP_TEXT || op == HOST_TUT_OP_SPOTLIGHT ||
-                       op == HOST_TUT_OP_REVEAL || op == HOST_TUT_OP_ARM;
+                       op == HOST_TUT_OP_REVEAL || op == HOST_TUT_OP_ARM ||
+                       op == HOST_TUT_OP_EMOJI_MODE;
     if (draws && tutorial_active()) {
         uprintf("host tut: op %u refused, first-run tutorial active\n", (unsigned)op);
         clear_reply(data, length);
@@ -291,6 +302,21 @@ void host_tutorial_hid(uint8_t *data, uint8_t length) {
             clear_reply(data, length);
             reply(data, length, true);
             return;
+        case HOST_TUT_OP_EMOJI_MODE: {
+            uint8_t    want   = HOST_TUT_EMOJI_QUERY;
+            const bool parsed = host_tut_parse_emoji_mode(data, length, &want);
+            const uint8_t before = get_emj_search_mode() ? HOST_TUT_EMOJI_SEARCH : HOST_TUT_EMOJI_TAB;
+            bool ok = parsed;
+            if (parsed && want != HOST_TUT_EMOJI_QUERY) {
+                // Refused without an emoji dictionary: there is no search mode to show.
+                ok = emj_set_search_mode(want == HOST_TUT_EMOJI_SEARCH);
+                if (ok && s_emj_restore == HOST_TUT_EMOJI_QUERY) s_emj_restore = before;
+            }
+            clear_reply(data, length);
+            data[3] = before;
+            reply(data, length, ok);
+            return;
+        }
         default:
             uprintf("host tut: unknown op %u\n", (unsigned)op);
             clear_reply(data, length);

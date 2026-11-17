@@ -323,7 +323,7 @@
 //      that finished on another page (base/ai_events.h). Esc shows "Next 1/2", the AI
 //      key rings for agents on another page, and AI mode's end is an op 2 event. A
 //      host before v36 zero-pads them: page count 0 keeps the v35 behaviour.
-#define PROTOCOL_VERSION 36
+#define PROTOCOL_VERSION 37
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2

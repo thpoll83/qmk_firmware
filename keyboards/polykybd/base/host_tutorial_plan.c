@@ -144,3 +144,13 @@ uint32_t host_tut_state_crc(const host_tut_text_t *text, bool spot_on,
 uint8_t host_tut_sendable(uint8_t dirty, bool reveal_on) {
     return reveal_on ? (uint8_t)(dirty & (uint8_t)~HOST_TUT_DIRTY_SPOT) : dirty;
 }
+
+bool host_tut_parse_emoji_mode(const uint8_t *data, uint8_t length, uint8_t *want) {
+    if (data == NULL || want == NULL || length <= HOST_TUT_IDX_ARG) return false;
+    const uint8_t v = data[HOST_TUT_IDX_ARG];
+    if (v != HOST_TUT_EMOJI_TAB && v != HOST_TUT_EMOJI_SEARCH && v != HOST_TUT_EMOJI_QUERY) {
+        return false;
+    }
+    *want = v;
+    return true;
+}

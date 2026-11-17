@@ -261,3 +261,26 @@ TEST(HostTutReveal, Progress) {
 }
 
 }  // namespace
+
+TEST(HostTutEmojiMode, TabSearchQueryAndNothingElse) {
+    uint8_t r[HOST_TUT_REPORT_BYTES] = {'P', HOST_TUT_CMD, HOST_TUT_OP_EMOJI_MODE};
+    uint8_t want                     = 0x55;
+    for (uint8_t v : {HOST_TUT_EMOJI_TAB, HOST_TUT_EMOJI_SEARCH, HOST_TUT_EMOJI_QUERY}) {
+        r[HOST_TUT_IDX_ARG] = v;
+        EXPECT_TRUE(host_tut_parse_emoji_mode(r, sizeof r, &want));
+        EXPECT_EQ(want, v);
+    }
+    want = 0x55;
+    for (uint8_t v : {2, 3, 0x7F, 0xFE}) {
+        r[HOST_TUT_IDX_ARG] = v;
+        EXPECT_FALSE(host_tut_parse_emoji_mode(r, sizeof r, &want));
+        EXPECT_EQ(want, 0x55);   // left alone on a refusal
+    }
+    EXPECT_FALSE(host_tut_parse_emoji_mode(r, HOST_TUT_IDX_ARG, &want));   // no argument byte
+    EXPECT_FALSE(host_tut_parse_emoji_mode(nullptr, sizeof r, &want));
+}
+
+TEST(HostTutInfo, EveryOpHasABit) {
+    EXPECT_EQ(HOST_TUT_OP_COUNT, 8u);
+    EXPECT_EQ((uint8_t)((1u << HOST_TUT_OP_COUNT) - 1u), 0xFF);   // fits INFO's [3]
+}

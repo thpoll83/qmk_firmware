@@ -49,9 +49,11 @@ const uint32_t *emj_display_text(uint16_t keycode);
 // Returns true if the keycode was consumed (caller should return false).
 bool emj_process_keycode(uint16_t keycode, bool pressed);
 
-// Set tab or search mode as the mode key does (the host tutorial, cmd 49 op 7). False,
-// and nothing changes, when the keyboard has no emoji search dictionary.
-bool emj_set_search_mode(bool on);
+// Set tab or search mode as the mode key does (the host tutorial, cmd 49 op 7). `store`
+// false keeps the change in RAM (the tutorial's override), true stores it (the restore).
+// False, and nothing changes, when the keyboard has no emoji search dictionary.
+bool emj_set_search_mode(bool on, bool store);
+bool emj_dict_available(void);
 
 // Called by the slave-side split sync handler to propagate master state.
 void emj_apply_sync(uint8_t category, uint8_t page);

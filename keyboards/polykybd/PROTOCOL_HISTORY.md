@@ -579,9 +579,14 @@ reading before you change either one.
   - The master remembers the first mode it overwrote in a session and restores it on
     END and when the watchdog ends the session. A pending restore keeps the watchdog
     running (`session_open()`), so a host that crashes still leaves the user's mode.
-  - It sets the mode as the mode key does (`emj_set_search_mode()`); the slave gets it
-    through the existing emoji search sync. Refused (NACK) without an emoji search
-    dictionary, for any other value, and while the first-run tutorial runs.
+  - It sets the mode as the mode key does (`emj_set_search_mode()`), but in RAM only
+    (`set_emj_search_mode_ram()`): a reboot before the restore starts in the user's
+    stored mode. The restore stores it. The slave gets the mode through the existing
+    emoji search sync. A mode change counts as activity for the idle timer.
+  - Refused (NACK), a query too, without an emoji search dictionary, for any other
+    value, and while the first-run tutorial runs. A refusal still carries the mode
+    before in `[3]`. A restore without the dictionary (a font-pack flash removed it
+    mid-session) still sets the mode back.
   - A v36 or older firmware NACKs op 7 (`host tut: unknown op 7`), so the host sends
     it only from v37 and the step otherwise asks the user to set the mode.
 

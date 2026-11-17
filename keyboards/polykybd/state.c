@@ -628,6 +628,13 @@ void set_emj_search_mode(bool on) {
     g_emj_search_dirty = true;
 }
 
+// The mode for this boot only, not stored: the host tutorial's override (cmd 49 op 7).
+// The user's stored mode stays in EEPROM, so a reboot before the tutorial restores it
+// still starts in the user's mode. A change already pending (dirty) still saves.
+void set_emj_search_mode_ram(bool on) {
+    g_emj_search = on;
+}
+
 // Any byte but EMJ_SEARCH_MODE_ON is tab mode: 0 on an EEPROM written before the
 // field existed, 0xFF on an erased one.
 void note_emj_search_mode(uint8_t stored) {

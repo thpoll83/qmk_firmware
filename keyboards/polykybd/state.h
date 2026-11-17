@@ -969,6 +969,7 @@ void note_glyph_place(uint8_t place);
 // at boot without marking dirty.
 bool get_emj_search_mode(void);
 void set_emj_search_mode(bool on);
+void set_emj_search_mode_ram(bool on);   // not stored: the host tutorial's override
 void note_emj_search_mode(uint8_t stored);
 
 // Steps the legend size one tier (delta +1/-1), CLAMPED at small and large — the

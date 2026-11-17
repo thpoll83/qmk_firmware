@@ -190,7 +190,10 @@ static void verify_slave(void) {
 static void end_session(void) {
     apply_end();
     if (s_emj_restore != HOST_TUT_EMOJI_QUERY) {
-        emj_set_search_mode(s_emj_restore == HOST_TUT_EMOJI_SEARCH);
+        const bool search = s_emj_restore == HOST_TUT_EMOJI_SEARCH;
+        // Without the dictionary (a font-pack flash removed it mid-session) the layer
+        // cannot redraw, but the mode itself still goes back.
+        if (!emj_set_search_mode(search, true)) set_emj_search_mode(search);
         s_emj_restore = HOST_TUT_EMOJI_QUERY;
     }
     memset(&s_conds, 0, sizeof s_conds);
@@ -211,6 +214,9 @@ void host_tutorial_hid(uint8_t *data, uint8_t length) {
     if (draws && tutorial_active()) {
         uprintf("host tut: op %u refused, first-run tutorial active\n", (unsigned)op);
         clear_reply(data, length);
+        if (op == HOST_TUT_OP_EMOJI_MODE) {   // a refusal still reports the mode before
+            data[3] = get_emj_search_mode() ? HOST_TUT_EMOJI_SEARCH : HOST_TUT_EMOJI_TAB;
+        }
         reply(data, length, false);
         return;
     }
@@ -306,10 +312,12 @@ void host_tutorial_hid(uint8_t *data, uint8_t length) {
             uint8_t    want   = HOST_TUT_EMOJI_QUERY;
             const bool parsed = host_tut_parse_emoji_mode(data, length, &want);
             const uint8_t before = get_emj_search_mode() ? HOST_TUT_EMOJI_SEARCH : HOST_TUT_EMOJI_TAB;
-            bool ok = parsed;
-            if (parsed && want != HOST_TUT_EMOJI_QUERY) {
-                // Refused without an emoji dictionary: there is no search mode to show.
-                ok = emj_set_search_mode(want == HOST_TUT_EMOJI_SEARCH);
+            // Refused without an emoji search dictionary, a query too: without it the
+            // layer has no search mode.
+            bool ok = parsed && emj_dict_available();
+            if (ok && want != HOST_TUT_EMOJI_QUERY) {
+                // RAM only: a reboot before the restore starts in the user's stored mode.
+                ok = emj_set_search_mode(want == HOST_TUT_EMOJI_SEARCH, false);
                 if (ok && s_emj_restore == HOST_TUT_EMOJI_QUERY) s_emj_restore = before;
             }
             clear_reply(data, length);

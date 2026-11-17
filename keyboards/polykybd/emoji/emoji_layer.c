@@ -660,15 +660,22 @@ const uint32_t *emj_display_text(uint16_t keycode) {
     return NULL;
 }
 
-bool emj_set_search_mode(bool on) {
+bool emj_set_search_mode(bool on, bool store) {
     if (!emjdict_present()) return false;
     if (on != get_emj_search_mode()) {
-        set_emj_search_mode(on);
+        update_performed();       // a host change wakes the displays as a key press does
+        if (store) {
+            set_emj_search_mode(on);
+        } else {
+            set_emj_search_mode_ram(on);
+        }
         s_letters_dirty = true;   // the base layer or language may have changed
         search_changed();
     }
     return true;
 }
+
+bool emj_dict_available(void) { return emjdict_present(); }
 
 bool emj_process_keycode(uint16_t keycode, bool pressed) {
     if (keycode == KC_EMJ_MODE || keycode == KC_EMJ_S_CLEAR || keycode == KC_EMJ_S_BKSP ||

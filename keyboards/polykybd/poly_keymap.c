@@ -4554,13 +4554,18 @@ void tutorial_draw_board_legend(uint8_t slot) {
     if (!tutorial_matrix_of(slot, &r, &c)) return;
 
     const poly_layer_t *local_layer = get_local_layer();
+    const poly_sync_t  *local_state = get_local_state();
     const led_t   state = local_layer->led_state;
     const uint8_t mods  = local_layer->mods;
     const uint16_t keycode = display_keycode_at(local_layer, r, c);
+    // The same three inputs update_displays() decides the overlay with.
+    const bool display_overlays = test_flag(local_state->overlay_flags, DISPLAY_OVERLAYS);
+    const bool add_lang = get_highest_layer(local_layer->layer) == _ADDLANG1;
+    const bool capital_case = ((mods & MOD_MASK_SHIFT) != 0) || state.caps_lock;
 
     // The menus' bespoke keys, then the emoji tab frames and the MRU bar — the same
     // order update_displays() draws them in.
-    if (render_menu_key(keycode, state, get_local_state()->lang)) return;
+    if (render_menu_key(keycode, state, local_state->lang)) return;
     emj_draw_tab_indicator(keycode);
     emj_draw_tab_bottom(keycode);
     draw_mru_top_bar(keycode);
@@ -4570,12 +4575,39 @@ void tutorial_draw_board_legend(uint8_t slot) {
     // whose legend is static text.
     const uint32_t *text = to_static_text(keycode, state);
     if (text == NULL) {
-        render_key(keycode, state, mods);
-    } else if (r % MATRIX_ROWS_PER_SIDE == MATRIX_ROWS_PER_SIDE - 1) {
+        if (!render_key(keycode, state, mods) &&
+            (keycode & QK_UNICODEMAP_PAIR) == QK_UNICODEMAP_PAIR) {
+            const uint16_t chr = capital_case ? QK_UNICODEMAP_PAIR_GET_SHIFTED_INDEX(keycode)
+                                              : QK_UNICODEMAP_PAIR_GET_UNSHIFTED_INDEX(keycode);
+            kdisp_write_gfx_char(g_all_fonts, g_all_font_count, BUFFER_X, 23, unicode_map[chr], 0);
+        }
+    } else if (r % MATRIX_ROWS_PER_SIDE == MATRIX_ROWS_PER_SIDE - 1 &&
+               !(display_overlays && !add_lang && !tutorial_active() &&
+                 overlay_present(keycode, mods))) {
         draw_legend_cx_cy(text, 23, KDISP_CY_DEFAULT);   // thumb row: centred
     } else {
         kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, text,
                                 KDISP_CY_DEFAULT);
+    }
+
+    // ⚠️ The app overlay (or the built-in Ctrl hint), as update_displays() draws it.
+    // Without it every key the ring crossed lost its icon on the ring's frames and got
+    // it back on the next full refresh: the keys around the ring flickered between the
+    // two (hardware, 2026-11-18). Same guards: no overlay on the Intl layer or in the
+    // first-run lesson.
+    if (!add_lang && !tutorial_active()) {
+        const uint32_t *hint = NULL;
+        if (display_overlays) {
+            if (!copy_overlay_to_buffer(keycode, mods)) {
+                hint = keycode_to_disp_overlay(keycode);
+            }
+        } else {
+            hint = keycode_to_disp_overlay(keycode);
+        }
+        if (hint) {
+            kdisp_write_gfx_text_cy(g_all_fonts, g_all_font_count, BUFFER_X, 23, hint,
+                                    KDISP_CY_DEFAULT);
+        }
     }
 }
 

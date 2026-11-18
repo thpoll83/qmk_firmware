@@ -27,6 +27,7 @@ enum flash_stage_op {
     FLASH_STAGE_COMMIT = 2,  // verify staged CRC + finalize (no reboot)
     FLASH_STAGE_STATUS = 3,  // diagnostic: return fw_staging internal counters
     FLASH_STAGE_VERSIONS = 4, // read-only: the slave's per-bundle content_version (v20)
+    FLASH_STAGE_HW_UID = 5,   // read-only: the slave's flash unique ID (v37, cmd 50)
 };
 
 // Announce incoming firmware/font-pack size + expected CRC32 to slave.
@@ -128,6 +129,27 @@ typedef struct _fw_up_versions_reply_t {
 
 static_assert(sizeof(fw_up_versions_reply_t) <= RPC_S2M_BUFFER_SIZE,
               "fw_up_versions_reply_t exceeds RPC_S2M_BUFFER_SIZE -- the VERSIONS probe would silently stop answering");
+
+// The slave's flash unique ID (protocol v37, cmd 50). Same request shape as
+// STATUS. An older slave leaves the reply zeroed for an op it does not know, and
+// the CRC of all zeros with seed 0 is 0, so the reply carries a magic that a
+// zeroed buffer cannot match.
+#define FW_UP_HW_UID_MAGIC 0x55494430u   // "0DIU"
+typedef struct _fw_up_hw_uid_reply_t {
+    uint32_t crc32;      // CRC over magic + valid + uid[]
+    uint32_t magic;      // == FW_UP_HW_UID_MAGIC
+    uint8_t  valid;      // 1 = the slave read a usable ID at boot
+    uint8_t  _pad[3];
+    uint8_t  uid[8];     // POLY_HW_UID_LEN, zero when !valid
+} fw_up_hw_uid_reply_t;
+
+static_assert(sizeof(fw_up_hw_uid_reply_t) <= RPC_S2M_BUFFER_SIZE,
+              "fw_up_hw_uid_reply_t exceeds RPC_S2M_BUFFER_SIZE -- the HW_UID probe would silently stop answering");
+
+// Master side: ask the slave for its ID now (one retry). Returns true and fills
+// uid[8] only for a reply with the right magic and CRC that says valid. An older
+// slave, a link that is down and a slave without an ID all return false.
+bool fw_up_query_slave_hw_uid(uint8_t uid[8]);
 
 // Master side. The tick runs in housekeeping and re-reads the slave until it
 // answers (boot, and again after each font-pack COMMIT); a change calls

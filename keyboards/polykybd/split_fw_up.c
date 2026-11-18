@@ -9,6 +9,9 @@
 #include "base/fontpack.h"     // fontpack_slot, FW_TARGET_FONTPACK via fw_staging.h
 #include "base/fw_up_verdict.h"  // pure COMMIT-failure classification (unit-tested)
 #include "base/hand_stamp.h"     // handedness change: record here, write from the main loop
+#include "base/hw_uid.h"         // FLASH_STAGE_HW_UID (cmd 50)
+
+_Static_assert(POLY_HW_UID_LEN == sizeof(((fw_up_hw_uid_reply_t *)0)->uid), "the wire ID is POLY_HW_UID_LEN bytes");
 #include "bridge_helper.h"       // send_to_bridge
 #include "poly_keymap.h"         // poly_prepare_for_flash
 #include "split_util.h"          // is_transport_connected
@@ -125,6 +128,19 @@ static void flash_stage_versions(uint8_t in_len, const void* in_data, uint8_t ou
     for (uint8_t b = 0; b < FONTPACK_BUNDLE_COUNT; ++b) {
         reply->ver[b] = fontpack_bundle_version(b);
     }
+    reply->crc32 = crc32_1byte((const uint8_t *)reply + 4, sizeof(*reply) - 4, 0);
+    (void)in_len;
+    (void)in_data;
+}
+
+// Read-only: this half's flash unique ID (protocol v37, cmd 50). The ID was read
+// at boot (base/hw_uid.h), so this handler touches no flash.
+static void flash_stage_hw_uid(uint8_t in_len, const void* in_data, uint8_t out_len, void* out_data) {
+    if (out_len != sizeof(fw_up_hw_uid_reply_t) || !out_data) return;
+    fw_up_hw_uid_reply_t *reply = (fw_up_hw_uid_reply_t *)out_data;
+    memset(reply, 0, sizeof(*reply));
+    reply->magic = FW_UP_HW_UID_MAGIC;
+    reply->valid = poly_hw_uid(reply->uid) ? 1u : 0u;
     reply->crc32 = crc32_1byte((const uint8_t *)reply + 4, sizeof(*reply) - 4, 0);
     (void)in_len;
     (void)in_data;
@@ -418,6 +434,7 @@ void user_sync_flash_stage_handler(uint8_t in_len, const void* in_data, uint8_t 
         case FLASH_STAGE_COMMIT: flash_stage_commit(in_len, in_data, out_len, out_data); break;
         case FLASH_STAGE_STATUS: flash_stage_status(in_len, in_data, out_len, out_data); break;
         case FLASH_STAGE_VERSIONS: flash_stage_versions(in_len, in_data, out_len, out_data); break;
+        case FLASH_STAGE_HW_UID: flash_stage_hw_uid(in_len, in_data, out_len, out_data); break;
         default: break;   // unknown op — leave out_data untouched → master retries
     }
 }
@@ -491,6 +508,27 @@ static bool query_slave_versions(fw_up_versions_reply_t *reply) {
     }
     return reply->count == FONTPACK_BUNDLE_COUNT &&
            reply->crc32 == crc32_1byte((const uint8_t *)reply + 4, sizeof(*reply) - 4, 0);
+}
+
+bool fw_up_query_slave_hw_uid(uint8_t uid[8]) {
+    memset(uid, 0, 8);
+    if (!is_transport_connected()) return false;
+    fw_up_status_request_t req = { .crc32 = 0, .op = FLASH_STAGE_HW_UID, .dummy = 0 };
+    for (uint8_t attempt = 0; attempt < 2; ++attempt) {
+        fw_up_hw_uid_reply_t reply;
+        memset(&reply, 0, sizeof(reply));
+        if (!transaction_rpc_exec(USER_SYNC_FLASH_STAGE, sizeof(req), &req, sizeof(reply), &reply)) {
+            continue;
+        }
+        if (reply.magic != FW_UP_HW_UID_MAGIC ||
+            reply.crc32 != crc32_1byte((const uint8_t *)&reply + 4, sizeof(reply) - 4, 0)) {
+            continue;   // an older slave leaves the reply zeroed: no magic
+        }
+        if (reply.valid != 1u) return false;
+        memcpy(uid, reply.uid, 8);
+        return true;
+    }
+    return false;
 }
 
 void fw_up_slave_versions_tick(void) {

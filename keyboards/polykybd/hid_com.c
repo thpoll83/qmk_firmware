@@ -26,6 +26,7 @@
 #include "base/com.h"
 #include "base/overlay.h"
 #include "base/hand_stamp.h"
+#include "base/hw_uid.h"
 #include "base/glyph_place_op.h"   // cmd 30 placement op byte (protocol v26)
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "base/fontpack.h"
@@ -1879,6 +1880,31 @@ static void hid_cmd_32(uint8_t *data, uint8_t length, const poly_layer_t *local_
 }
 #endif
 
+static void hid_cmd_50(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //hardware IDs of both halves (protocol v37+)
+    // Reply "P\x32." then:
+    //   data[3]      flags: bit0 = data[4..11] valid, bit1 = data[12..19] valid
+    //   data[4..11]  this half's flash unique ID (the half the host talks to)
+    //   data[12..19] the other half's, read over the split link now
+    // An ID is 8 bytes as the flash sends them. No request payload. Always ACKs:
+    // a missing ID is a clear flag bit, so a slave that is unplugged or runs older
+    // firmware still lets the host read the master's ID.
+    (void)local_layer;
+    (void)local_state;
+    uint8_t own[POLY_HW_UID_LEN];
+    uint8_t other[POLY_HW_UID_LEN];
+    const bool own_ok   = poly_hw_uid(own);
+    const bool other_ok = fw_up_query_slave_hw_uid(other);
+    memset(data, 0, length);
+    hid_reply(data, 50, true);
+    data[3] = (uint8_t)((own_ok ? 0x01u : 0u) | (other_ok ? 0x02u : 0u));
+    _Static_assert(4 + 2 * POLY_HW_UID_LEN <= RAW_EPSIZE, "cmd 50 reply must fit one report");
+    if (length >= 4 + 2 * POLY_HW_UID_LEN) {
+        memcpy(&data[4], own, POLY_HW_UID_LEN);
+        memcpy(&data[4 + POLY_HW_UID_LEN], other, POLY_HW_UID_LEN);
+    }
+    raw_hid_send(data, length);
+}
+
 static void hid_cmd_unknown(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) {
     if (hid_fw_up_receive(data, length)) {
         return;
@@ -1954,6 +1980,7 @@ static const hid_cmd_t s_hid_cmds[] = {
 #ifdef POLY_HOST_TUTORIAL
     [49] = {hid_cmd_49, 0},   // not in the DOOM monolith: NACKed as unknown there
 #endif
+    [50] = {hid_cmd_50, 0},
 };
 
 void raw_hid_receive(uint8_t *data, uint8_t length) {

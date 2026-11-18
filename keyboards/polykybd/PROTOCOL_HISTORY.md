@@ -572,6 +572,21 @@ reading before you change either one.
     sends them only from v36. A page not below its count, or a page without a count,
     is NACKed with the rest of the report, before anything changes.
 
+  **v37** adds cmd `50`, the **hardware IDs** of both halves (`base/hw_uid.h`): the
+  64-bit unique ID of each half's QSPI flash chip (RUID command `0x4B`). The host
+  hashes them for the telemetry device count. Reply `P\x32.`, then `data[3]` flags
+  (bit 0: `data[4..11]` valid, bit 1: `data[12..19]` valid), `data[4..11]` the ID of
+  the half the host talks to, `data[12..19]` the other half's. No request payload.
+  - The ID is read once in `keyboard_setup()`, before core1 starts, with interrupts
+    off: the read takes the flash out of XIP mode. The handlers use the RAM copy.
+  - The master reads the slave's ID on each cmd 50 over `USER_SYNC_FLASH_STAGE` op `5`
+    (`FLASH_STAGE_HW_UID`, one retry). The reply carries a magic, because an older
+    slave leaves the reply zeroed and the CRC of zeros is 0.
+  - Cmd 50 always ACKs. A slave that is unplugged or runs older firmware clears flag
+    bit 1, and the host still gets the master's ID. A chip that answers all `0x00` or
+    all `0xFF` has no usable ID and clears its bit.
+  - A v36 or older firmware NACKs cmd 50 (unknown command).
+
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)
@@ -603,6 +618,7 @@ reading before you change either one.
   | 31 | `45` AI, `46` AI_CARD | AI mode: number-row states and cards, key events; op and states CLOSED |
   | 32 | `47` KEY_ATTENTION | the focus ripple on one key; op and period CLOSED |
   | 34 | `47` op 2 GUIDE | the ripple follows a path of layer keys to a target layer |
+  | 37 | `50` HW_ID | flash unique IDs of both halves; always ACKs, flag bits say which are valid |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs

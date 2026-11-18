@@ -87,6 +87,7 @@
 #include "base/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
 #include "diag/usb_stress.h"              // no-op unless -e POLYKYBD_USB_STRESS=yes
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
+#include "base/hw_uid.h"                  // flash unique ID, read once here (cmd 50)
 #include "base/status_brightness.h"      // one brightness scale for keycaps + status OLED
 #include "usb_util.h"                     // usb_vbus_state() — the suspend-time power check
 #include "diag/crash_test.h"              // POLYKYBD_CRASH_TEST: deliberate faults (no-op inlines otherwise)
@@ -8053,6 +8054,10 @@ void keyboard_pre_init_user(void) {
     poly_hand_force_stamp(false);
 #endif
     poly_hand_boot_init();
+
+    // The flash unique ID for cmd 50. A flash command, so it runs here, before
+    // core1 exists (base/hw_uid.h).
+    poly_hw_uid_boot_init();
 
     // Load the external-flash font pack and assemble g_all_fonts = resident ++
     // pack BEFORE the first render (show_splash_screen() below draws keycaps).

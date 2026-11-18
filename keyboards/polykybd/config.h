@@ -323,7 +323,10 @@
 //      that finished on another page (base/ai_events.h). Esc shows "Next 1/2", the AI
 //      key rings for agents on another page, and AI mode's end is an op 2 event. A
 //      host before v36 zero-pads them: page count 0 keeps the v35 behaviour.
-#define PROTOCOL_VERSION 36
+//  v37 cmd 50: the flash unique IDs of both halves (base/hw_uid.h), for the host's
+//      telemetry device count. The slave's ID comes over USER_SYNC_FLASH_STAGE op 5.
+//      Older firmware NACKs cmd 50; an older slave leaves its flag bit clear.
+#define PROTOCOL_VERSION 37
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2

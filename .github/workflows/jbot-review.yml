@@ -25,10 +25,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: pgup-ai/jbot-review-action@v0
+      # Pinned to the commit of tag v0 (2026-10-04). This action's action.yml
+      # still runs the image ghcr.io/pgup-ai/jbot-review:latest, so the image
+      # itself is not pinned by this SHA.
+      - uses: pgup-ai/jbot-review-action@134542a97c6088aa3f42e62dbad575908606132c # v0
         with:
           model: ${{ vars.JBOT_REVIEW_MODEL || 'google/gemini-2.5-flash' }}
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}

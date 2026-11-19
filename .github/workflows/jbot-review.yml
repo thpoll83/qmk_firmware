@@ -1,0 +1,35 @@
+name: J-Bot Code Review
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write # PR reactions use the issues API
+  checks: read
+
+concurrency:
+  group: jbot-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # GitHub gives fork PRs no secrets, so GEMINI_API_KEY would be empty there.
+    # Skip drafts and Dependabot as well.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pgup-ai/jbot-review-action@v0
+        with:
+          model: ${{ vars.JBOT_REVIEW_MODEL || 'google/gemini-2.5-flash' }}
+          gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

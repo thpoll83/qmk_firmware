@@ -33,6 +33,6 @@ jobs:
       # itself is not pinned by this SHA.
       - uses: pgup-ai/jbot-review-action@134542a97c6088aa3f42e62dbad575908606132c # v0
         with:
-          model: ${{ vars.JBOT_REVIEW_MODEL || 'google/gemini-2.5-flash' }}
+          model: ${{ vars.JBOT_REVIEW_MODEL || 'google/gemini-3.8-flash' }}
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

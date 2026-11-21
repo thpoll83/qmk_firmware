@@ -587,6 +587,26 @@ reading before you change either one.
     all `0xFF` has no usable ID and clears its bit.
   - A v36 or older firmware NACKs cmd 50 (unknown command).
 
+  **v38** adds value `6`, **MacCompose**, to `SET_UNICODE_MODE` (cmd `20`,
+  `data[2]`). It is QMK's macOS mode with F20 held instead of Option while the hex
+  digits are typed. The host's keyboard event tap reads the digits between F20 down
+  and F20 up, drops them and posts the character with
+  `CGEventKeyboardSetUnicodeString`, so Unicode works with every macOS input source.
+  QMK's macOS mode needs Unicode Hex Input selected, and since host v1.2.8 the host
+  selects the layout that matches the keyboard language.
+  - The wire values and their QMK modes are in `base/host_unicode_mode.h`; the
+    host's `InputMethod` numbers macOS `1`, QMK numbers it `0`. Value `5` is the
+    host's `InputMethod.Unknown` and stays NACKed, like `7` and up.
+  - `UNICODE_KEY_MAC` (`config.h`) is `poly_unicode_key_mac()`, which returns
+    `KC_F20` in MacCompose and `KC_LEFT_ALT` otherwise. No QMK file changes.
+  - The F20 flag is RAM only, on the master. With the VOLATILE flag clear, value `6`
+    stores plain macOS, so a keyboard taken to a Mac without the host types
+    Option+hex again. `unicode_input_mode_set_user()` clears the flag, so any
+    other mode change (another cmd 20 value, a `QK_UNICODE_MODE_*` key) ends it.
+  - A code point above U+FFFF still goes out as a UTF-16 surrogate pair (8 digits),
+    as in the macOS mode, and the host combines the pair.
+  - A v37 or older firmware NACKs value `6`, so the host sends it only from v38.
+
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)
@@ -619,6 +639,7 @@ reading before you change either one.
   | 32 | `47` KEY_ATTENTION | the focus ripple on one key; op and period CLOSED |
   | 34 | `47` op 2 GUIDE | the ripple follows a path of layer keys to a target layer |
   | 37 | `50` HW_ID | flash unique IDs of both halves; always ACKs, flag bits say which are valid |
+  | 38 | `20` SET_UNICODE_MODE | value `6` MacCompose: macOS mode with F20 held instead of Option; RAM only |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs

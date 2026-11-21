@@ -10,6 +10,12 @@
 //#define UNICODE_SELECTED_MODES UNICODE_MODE_LINUX, UNICODE_MODE_MACOS, UNICODE_MODE_WINCOMPOSE
 #define UNICODE_CYCLE_PERSIST true
 #define UNICODE_KEY_WINC      KC_RIGHT_ALT
+// QMK's macOS mode holds this key while it types the hex digits: Option, or F20 in
+// MacCompose (protocol v38, hid/hid_com.c). Only quantum/unicode/unicode.c uses it.
+#define UNICODE_KEY_MAC       poly_unicode_key_mac()
+#if !defined(__ASSEMBLER__)
+unsigned char poly_unicode_key_mac(void);
+#endif
 
 #define TAP_CODE_DELAY 4
 
@@ -326,7 +332,10 @@
 //  v37 cmd 50: the flash unique IDs of both halves (drivers/hw_uid.h), for the host's
 //      telemetry device count. The slave's ID comes over USER_SYNC_FLASH_STAGE op 5.
 //      Older firmware NACKs cmd 50; an older slave leaves its flag bit clear.
-#define PROTOCOL_VERSION 37
+//  v38 cmd 20 value 6, MacCompose: the macOS unicode mode with F20 held instead of
+//      Option, so the host types the character (base/host_unicode_mode.h). Older
+//      firmware NACKs value 6.
+#define PROTOCOL_VERSION 38
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2

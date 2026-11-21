@@ -28,6 +28,8 @@
 #include "base/hand_stamp.h"
 #include "drivers/hw_uid.h"
 #include "base/glyph_place_op.h"   // cmd 30 placement op byte (protocol v26)
+#include "base/host_unicode_mode.h"  // cmd 20 mode values, MacCompose (protocol v38)
+#include "mac_compose.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "base/fontpack.h"
 #include "base/icon_lib.h"   // cmd 42 fills (protocol v20)
@@ -224,6 +226,32 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
  * write when the byte matches, so re-asserting the SAME mode has always been
  * free. It is only the transient wrong value that this avoids storing.
  */
+_Static_assert(POLY_QMK_UNICODE_MACOS == UNICODE_MODE_MACOS, "host_unicode_mode.h is out of date");
+_Static_assert(POLY_QMK_UNICODE_LINUX == UNICODE_MODE_LINUX, "host_unicode_mode.h is out of date");
+_Static_assert(POLY_QMK_UNICODE_WINDOWS == UNICODE_MODE_WINDOWS, "host_unicode_mode.h is out of date");
+_Static_assert(POLY_QMK_UNICODE_BSD == UNICODE_MODE_BSD, "host_unicode_mode.h is out of date");
+_Static_assert(POLY_QMK_UNICODE_WINCOMPOSE == UNICODE_MODE_WINCOMPOSE, "host_unicode_mode.h is out of date");
+
+// MacCompose (protocol v38): RAM only, master only (the master types).
+static bool s_mac_compose = false;
+
+void mac_compose_set(bool on) {
+    s_mac_compose = on;
+}
+
+bool mac_compose_active(void) {
+    return s_mac_compose;
+}
+
+// UNICODE_KEY_MAC (config.h): the key QMK's macOS mode holds while it types the
+// hex digits of a code point. Option for Unicode Hex Input; F20 in MacCompose,
+// where the host reads the digits between F20 down and F20 up and posts the
+// character itself. A code point above U+FFFF still goes out as a UTF-16
+// surrogate pair (8 digits), as in the macOS mode, and the host combines it.
+unsigned char poly_unicode_key_mac(void) {
+    return s_mac_compose ? KC_F20 : KC_LEFT_ALT;
+}
+
 static void apply_unicode_mode(uint8_t mode, bool persist) {
     if (persist) {
         set_unicode_input_mode(mode);
@@ -903,37 +931,19 @@ static void hid_cmd_20(uint8_t *data, uint8_t length, const poly_layer_t *local_
     // a zero-padded report, so data[3] is 0 = persist, which is the
     // behaviour it expects.
     const bool persist = (data[HID_DATA_IDX + 1] == 0);
-    switch(data[HID_DATA_IDX]) {
-        case 0: //Linux = 0
-            apply_unicode_mode(UNICODE_MODE_LINUX, persist);
-            memset(data, 0, length);
-            hid_reply(data, 0x14, true);
-            break;
-        case 1: //Mac = 1
-            apply_unicode_mode(UNICODE_MODE_MACOS, persist);
-            memset(data, 0, length);
-            hid_reply(data, 0x14, true);
-            break;
-        case 2: //Windows = 2
-            apply_unicode_mode(UNICODE_MODE_WINDOWS, persist);
-            memset(data, 0, length);
-            hid_reply(data, 0x14, true);
-            break;
-        case 3: //WinCompose = 3
-            apply_unicode_mode(UNICODE_MODE_WINCOMPOSE, persist);
-            memset(data, 0, length);
-            hid_reply(data, 0x14, true);
-            break;
-        case 4: //BSD = 4
-            apply_unicode_mode(UNICODE_MODE_BSD, persist);
-            memset(data, 0, length);
-            hid_reply(data, 0x14, true);
-            break;
-        default:
-            memset(data, 0, length);
-            hid_reply(data, 0x14, false);
-            break;
+    // The wire values and their QMK modes are in base/host_unicode_mode.h.
+    // MacCompose (v38) applies (and stores) the plain macOS mode, then sets the
+    // RAM-only F20 flag. The order matters: applying a mode fires
+    // unicode_input_mode_set_user(), which clears the flag, so every other way
+    // of changing the mode (another cmd 20 value, a QK_UNICODE_MODE_* key) ends
+    // MacCompose.
+    const host_unicode_mode_t m = host_unicode_mode_decode(data[HID_DATA_IDX]);
+    if (m.ok) {
+        apply_unicode_mode(m.qmk_mode, persist);
+        if (m.mac_compose) mac_compose_set(true);
     }
+    memset(data, 0, length);
+    hid_reply(data, 0x14, m.ok);
     raw_hid_send(data, length);
     return;
 }

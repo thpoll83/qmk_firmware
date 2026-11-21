@@ -9,7 +9,7 @@ import sys, os
 from collections import defaultdict
 from openpyxl import load_workbook
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # lang/
 sys.path.insert(0, "/home/user/PolyKybdHost/polyhost/services")
 from lang_regions import LANG_REGION, LANG_REGION_ORDER, LANG_REGION_OVERRIDE, home_country
 

@@ -19,7 +19,7 @@
 #   - osx     chr = "Cherokee Phonetic" (Latin base + transforms = composed)
 #   - osx/win iu  = Inuktitut "Naqittaut" syllabics (cross-check vs xkb ca(ike))
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 DEST="layouts"
 mkdir -p "$DEST"
 CLDR="https://raw.githubusercontent.com/unicode-org/cldr/release-42/keyboards"

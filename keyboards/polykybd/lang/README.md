@@ -76,8 +76,8 @@ duplicate label rather than emitting a quietly wrong table, so a repeat is loud.
 ### Adding a variation: `_add_latin_variation.py`
 
 ```bash
-./_add_latin_variation.py --dry-run lang_lut.xlsx S 'Ș' s 'ș'   # report, change nothing
-./_add_latin_variation.py          lang_lut.xlsx S 'Ș' s 'ș'
+./scripts/_add_latin_variation.py --dry-run lang_lut.xlsx S 'Ș' s 'ș'   # report, change nothing
+./scripts/_add_latin_variation.py          lang_lut.xlsx S 'Ș' s 'ș'
 cd .. && ./run_cog.sh
 ```
 

@@ -27,7 +27,7 @@
 // case) in latin_sync_t.ex, so LATIN_PICK_MAX is the hard ceiling — beyond it a
 // pick cannot be represented, and latin_variation()'s `idx < LATIN_EX_VARIATIONS`
 // guard would silently start reading a truncated index instead.  The sheet-side
-// twin of this limit is MAX_SLOTS in lang/_add_latin_variation.py.
+// twin of this limit is MAX_SLOTS in lang/scripts/_add_latin_variation.py.
 //
 // Was a nibble (16).  Six bits covers the whole Latin letter+combining-mark space:
 // the widest base letter is O with 34 forms, counting the Vietnamese double-mark

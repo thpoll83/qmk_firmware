@@ -154,7 +154,7 @@ collision.
 
 ## Pitfalls
 
-- **A settings row must be INSERTED, not appended** (`lang/_insert_settings_row.py`),
+- **A settings row must be INSERTED, not appended** (`lang/scripts/_insert_settings_row.py`),
   and the row number lives in four places in `sheet2.xml` — two outside `<sheetData>`.
 - **`HIDE_KEY` (−128) is a position sentinel, not a delta.** A delta row (the held
   offsets) takes real negatives, and the firmware maps `HIDE_KEY` to 0 there.

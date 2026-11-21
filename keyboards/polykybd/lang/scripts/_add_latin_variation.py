@@ -30,7 +30,7 @@ SHEET = "xl/worksheets/sheet3.xml"
 # was 16 -- raising it to 64 for the 6-bit widening put the scan straight through
 # them again, and the first run wrote a variation into the MIN cell.  Deriving the
 # columns from FIRST_COL + MAX_SLOTS makes the collision unrepresentable instead of
-# merely further away.  Use _move_helper_columns.py if MAX_SLOTS ever grows again.
+# merely further away.  _move_helper_columns.py did that move once (deleted 2026-11; it is in git history) if MAX_SLOTS ever grows again.
 #
 # MAX_SLOTS is also the hard ceiling of the picker's stored index: latin_sync_t.ex
 # packs it in a LATIN_PICK_BITS-wide field per (letter, case), so LATIN_PICK_MAX is

@@ -167,7 +167,7 @@ that metric hid a real digit collision for a round.
   - ⚠️ **A settings row must be INSERTED, not appended** — cog collects the block by
     walking column A until the first empty cell, and the row after it is the
     `lower/upper/caps/ALT Gr` legend, so anything below that is invisible.
-    `lang/_insert_settings_row.py` renumbers the rows underneath.
+    `lang/scripts/_insert_settings_row.py` renumbers the rows underneath.
   - ⚠️ **A row number lives in FOUR places in sheet2.xml and only two are inside
     `<sheetData>`.** `<row r>` and `<c r>` are; **`<mergeCell ref>` and `<hyperlink
     ref>` sit after it**, so a renumbering pass that slices the tail of `sheetData`

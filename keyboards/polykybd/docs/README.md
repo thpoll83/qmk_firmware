@@ -77,7 +77,7 @@ Design notes and plans. Some are built, some are not.
 - [`macro-record.md`](design/macro-record.md): Design: recording a macro on the keyboard itself
 - [`overlay-flash-cache.md`](design/overlay-flash-cache.md): Design: persistent flash-backed overlay cache ("baking shortcuts to flash")
 - [`overlay-icon-library.md`](design/overlay-icon-library.md): Design: fewer reports per app switch (icon library + context coding)
-- [`split42-eden.md`](design/split42-eden.md): <!--
+- [`split42-eden.md`](design/split42-eden.md): Extending the "Eden" animation to split42 — implementation plan
 - [`tutorial-next.md`](design/tutorial-next.md): First-run tutorial — what is done, and how to continue
 
 ## debugging/
@@ -93,13 +93,13 @@ Finished plans and status logs. Kept for reference; not current.
 
 - [`doom-feasibility.md`](archive/doom-feasibility.md): Can It Run Doom? — Feasibility Study
 - [`fw-up-baseline.md`](archive/fw-up-baseline.md): PolyKybd HID fw_up — Working Baseline
-- [`split42-hardware-plan.md`](archive/split42-hardware-plan.md): > **HISTORICAL / RENAMED.** This document was written while the 42-key variant
+- [`split42-hardware-plan.md`](archive/split42-hardware-plan.md): PolyKybd split42 — New Hardware Variant Plan
 - [`split42-link-status.md`](archive/split42-link-status.md): split42 split-link status — RESTART (2026-07-15 evening)
 
 ## Where files moved (2026-11)
 
-The `keyboards/polykybd` root held 69 sources and 37 docs. Four commits on branch
-`feature/admiring-clarke-ous96b` moved them. `git log --follow <new path>` shows a
+The `keyboards/polykybd` root held 69 sources and 37 docs. The commits below, on branch
+`feature/admiring-clarke-ous96b`, moved them. `git log --follow <new path>` shows a
 file's history from before the move.
 
 | commit | what moved |

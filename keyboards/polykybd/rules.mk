@@ -64,7 +64,7 @@ endif
 # widening cast the check cannot be satisfied about without editing a
 # cross-boundary contract. Those offsets are `_Static_assert`ed 4-aligned in
 # doom_arena.h instead, which is the substance; the one such cast OUTSIDE the
-# doom tree (split_sync.c) carries a narrow pragma pointing at those asserts.
+# doom tree (split_link/split_sync.c) carries a narrow pragma pointing at those asserts.
 #
 # ⚠️ A path filter that matches NOTHING fails open: the flag simply never
 # applies and the guard looks installed while doing nothing. Verify by building
@@ -72,7 +72,7 @@ endif
 # make output.
 #
 # Casts from `void *` do not warn (GCC exempts them), so the split-link CRC store
-# in bridge_helper.c is unaffected — and is separately safe, since every caller
+# in split_link/bridge_helper.c is unaffected — and is separately safe, since every caller
 # passes a struct whose first member is a uint32_t.
 # modules/polykybd/ is ours too (polymod_crc32 / _rle / _ltr559); polymod_monocypher
 # is vendored, so it is excluded alongside the doom tree.
@@ -95,7 +95,7 @@ EXTRAFLAGS += $(if $(POLY_CAST_ALIGN_SRC),$(if $(POLY_CAST_ALIGN_SKIP),,-Wcast-a
 # operating point. Newer pico-sdk raises VREG for you when SYS_CLK_MHZ=200 —
 # the SDK vendored here predates that AND does not compile hardware_vreg at
 # all, so POLYKYBD_VREG_VSEL below drives the raise by hand (see the patch to
-# platforms/chibios/bootloaders/rp2040.c, tracked in UPSTREAM_PATCHES.md).
+# platforms/chibios/bootloaders/rp2040.c, tracked in docs/build/upstream-patches.md).
 # Without it the board would run its whole boot — including the 1000 ms
 # double-tap window — at 200 MHz on 1.10 V, i.e. out of spec.
 #
@@ -152,20 +152,20 @@ OS_DETECTION_ENABLE = yes
 # it must NOT be listed here too (a second copy in SRC causes a duplicate
 # definition at link time once the file defines symbols, e.g. the POLYKYBD_HIL
 # is_keyboard_master_impl override).
-# poly_keymap.c holds the shared keymap logic compiled for every variant
+# keymap/poly_keymap.c holds the shared keymap logic compiled for every variant
 # (split72, split42). Each variant's keymaps/default/keymap.c carries only its
 # data (keymaps[] / encoder_map[] / g_led_config).
 # base/fw_up_verdict.c is listed HERE, not in the per-variant rules.mk where the other
-# base/*.c sources live: its consumer (split_fw_up.c) is in this shared list, so a
+# base/*.c sources live: its consumer (fw_update/split_fw_up.c) is in this shared list, so a
 # variant that forgot the line would simply fail to link — exactly the split72/split42
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
 # covers emoji/emoji_layer.c and hints/os_hints.c.
-POLY_SRC := poly_keymap.c layer_names.c boot_diag.c side.c state.c state_store.c split_sync.c split_fw_up.c multicore_exec.c hid_com.c hid_fw_up.c hid_fontpack.c fill_overlay.c poly_util.c matrix_helper.c bridge_helper.c oled_helper.c keycode_helper.c mru.c lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/key_attention.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c anim/demo_mode.c base/demo_plan.c mines_mode.c base/mines_plan.c ai_mode.c base/ai_events.c base/attn_guide.c base/idle_poem_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c poly_macro.c poly_macro_record.c base/macro_decode.c base/macro_record.c ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c base/crash_record.c base/hand_stamp.c base/hw_uid.c base/core1_owner.c base/core1_owner_hw.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c slave_data.c oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
+POLY_SRC := keymap/poly_keymap.c keymap/layer_names.c system/boot_diag.c split_link/side.c system/state.c system/state_store.c split_link/split_sync.c fw_update/split_fw_up.c display/multicore_exec.c hid/hid_com.c fw_update/hid_fw_up.c hid/hid_fontpack.c display/fill_overlay.c system/poly_util.c keymap/matrix_helper.c split_link/bridge_helper.c display/oled_helper.c keymap/keycode_helper.c keymap/mru.c keymap/lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/key_attention.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c anim/demo_mode.c base/demo_plan.c modes/mines_mode.c base/mines_plan.c modes/ai_mode.c base/ai_events.c base/attn_guide.c base/idle_poem_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c keymap/poly_macro.c keymap/poly_macro_record.c base/macro_decode.c base/macro_record.c peripherals/ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c drivers/crash_record.c base/hand_stamp.c drivers/hw_uid.c base/core1_owner.c drivers/core1_owner_hw.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c split_link/slave_data.c display/oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
 SRC += $(POLY_SRC)
 
 # emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
-# poly_keymap.c / split_sync.c call into it (emj_*), and they also include layers.h.
+# keymap/poly_keymap.c / split_link/split_sync.c call into it (emj_*), and they also include layers.h.
 # Both used to live under <variant>/keymaps/default/ — layers.h resolved only through
 # QMK's keymap include path and emoji_layer.c only through that keymap's rules.mk — so
 # every keyboard-level source depended on one particular keymap, and split72:revision2
@@ -195,13 +195,13 @@ $(foreach s,$(POLY_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
 # large host->keyboard transfers that raw HID (one 64-byte report per 1 ms USB
 # frame) cannot. ON by default; `-e POLYKYBD_BULK_PIPE=no` drops the interface
 # and the parser. Prototype: measurement commands only (keyboards/polykybd/
-# BULK_PIPE.md has the assessment and the numbers). Costs two interfaces, three
+# docs/protocol/bulk-pipe.md has the assessment and the numbers). Costs two interfaces, three
 # endpoints and (CDC_IN_CAPACITY + CDC_OUT_CAPACITY) x 64 B of RAM (config.h).
 POLYKYBD_BULK_PIPE ?= yes
 ifeq ($(strip $(POLYKYBD_BULK_PIPE)), yes)
     VIRTSER_ENABLE = yes
     OPT_DEFS += -DPOLYKYBD_BULK_PIPE
-    SRC += poly_pipe.c
+    SRC += hid/poly_pipe.c
 endif
 
 # Optional main-loop timing instrumentation (OFF by default). Measures the per-
@@ -279,13 +279,13 @@ ifneq ($(strip $(POLYKYBD_FORCE_HAND)),)
     endif
 endif
 
-# "Can it run Doom?" easter egg — dev-harness build (see DOOM_FEASIBILITY.md and
+# "Can it run Doom?" easter egg — dev-harness build (see docs/archive/doom-feasibility.md and
 # doom/README.md). Opt-in only: `qmk compile ... -e POLYKYBD_DOOM=yes` compiles
 # the game-mode scaffold (overlay-pool borrow, keycap blitter, IDDQD trigger).
 # Normal builds pay zero bytes — doom_mode.h stubs every hook to an inline no-op.
 #
 # `-e POLYKYBD_DOOM_PACK=yes` builds the SHIPPING-SHAPE flavour instead
-# (doom/PACK_DESIGN.md): the firmware side of the executable-pack split —
+# (docs/design/doom-pack.md): the firmware side of the executable-pack split —
 # mode machinery + blitter + fire demo + the PlyX pack loader, with the
 # engine expected in the DOOMPACK flash slot and every doom_shim_* call
 # dispatched through the pack's export table. No engine sources, no custom
@@ -294,7 +294,7 @@ ifeq ($(strip $(POLYKYBD_DOOM_PACK)), yes)
     POLYKYBD_DOOM = yes
     OPT_DEFS += -DPOLYKYBD_DOOM_PACK
 endif
-# Runtime combos and tap dance (HID cmd 48, poly_combos.c): every build except the
+# Runtime combos and tap dance (HID cmd 48, keymap/poly_combos.c): every build except the
 # DOOM monolith, the developer build with the engine linked in. It has ~3.3 KB of RAM
 # left, the release workflow still has to link it, and nothing in the DOOM pack
 # comes from the keyboard code (build_pack.sh takes only the engine objects), so
@@ -306,7 +306,7 @@ endif
 # so the monolith got COMBO_ENABLE without the tables and failed to compile
 # keymap_introspection.c. A non-boolean value is refused by its schema instead.
 # Every keymap.c must #include "poly_combos_keymap.h" for the two stub tables
-# (VARIANTS.md).
+# (docs/build/variants.md).
 # Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`), as for MIDI below.
 ifeq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
     # monolith: no runtime combos / tap dance
@@ -314,7 +314,7 @@ else
     $(eval COMBO_ENABLE := yes)
     $(eval TAP_DANCE_ENABLE := yes)
     OPT_DEFS += -DPOLY_RUNTIME_COMBOS
-    SRC += poly_combos.c
+    SRC += keymap/poly_combos.c
     # The host tutorial (HID cmd 49, anim/host_tutorial.c): same reasoning, ~180 B of
     # RAM per half. The monolith NACKs cmd 49 as an unknown command, and the host then
     # runs a tutorial with the focus ring only.
@@ -342,7 +342,7 @@ ifeq ($(strip $(POLYKYBD_MIDI)), yes)
         MIDI_ENABLE = yes
         # The legends read the synced settings; a build without MIDI draws the
         # keycodes as plain QMK names would (nothing), and saves the buffer.
-        SRC += midi_legend.c
+        SRC += modes/midi_legend.c
     endif
 endif
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)
@@ -572,7 +572,7 @@ POLY_GIT_BRANCH := $(shell printf '%s' '$(subst ',,$(POLY_GIT_BRANCH))' | tr -cd
 OPT_DEFS += -DPOLY_GIT_BRANCH=\"$(or $(POLY_GIT_BRANCH),unknown)\"
 
 # ---------------------------------------------------------------------------
-# Deliberate crashes, for exercising base/crash_record.* on real hardware
+# Deliberate crashes, for exercising drivers/crash_record.* on real hardware
 # ---------------------------------------------------------------------------
 # `qmk compile ... -e POLYKYBD_CRASH_TEST=yes` compiles diag/crash_test.c and makes a
 # key chord (LCtrl+LShift+LAlt + a digit) fault the board on purpose. Every other
@@ -585,7 +585,7 @@ OPT_DEFS += -DPOLY_GIT_BRANCH=\"$(or $(POLY_GIT_BRANCH),unknown)\"
 # compiles the inline no-ops in diag/crash_test.h and pays nothing.
 # First-run boot intro (Eden + the tutorial): ON by default since 1.0.0; opt out with
 # `-e POLYKYBD_BOOT_INTRO=no`. It plays once per board (the EEPROM marker), and again
-# only after RESET Eden. See the note at the guard in poly_keymap.c for why the old
+# only after RESET Eden. See the note at the guard in keymap/poly_keymap.c for why the old
 # "default OFF" is lifted.
 # ⚠️ HIL images default it OFF: a rig board boots with a pending marker, nobody presses
 # a key, so the lesson would never finish and would own the displays, the brightness
@@ -601,7 +601,7 @@ endif
 
 # Tutorial TEST build: `-e POLYKYBD_TUTORIAL_TEST=yes` plays the first-run experience
 # (Eden, then the tutorial) once per FLASHED BUILD: the boot marker's "played" value is
-# keyed to the build stamp (boot_done_value() in state.c), so a new image plays, a
+# keyed to the build stamp (boot_done_value() in system/state.c), so a new image plays, a
 # finished lesson stays finished, and RESET Eden replays it. It is the same boot path
 # POLYKYBD_BOOT_INTRO gates, so it also exercises the pre-watchdog start. ⚠️ TEST BUILDS ONLY.
 ifeq ($(strip $(POLYKYBD_TUTORIAL_TEST)), yes)
@@ -620,7 +620,7 @@ endif
 # platforms/chibios/platform.mk takes PLATFORM_MK when the file exists and falls
 # back to Contrib's own platform.mk when it does NOT -- silently, so a typo here
 # would build the unpatched driver with a green build. Refuse instead.
-# Rationale and the drop-the-copy procedure: UPSTREAM_PATCHES.md ->
+# Rationale and the drop-the-copy procedure: docs/build/upstream-patches.md ->
 # "ChibiOS-Contrib RP2040 USB driver".
 PLATFORM_MK := keyboards/polykybd/chibios_overrides/platform.mk
 ifeq ($(wildcard $(PLATFORM_MK)),)

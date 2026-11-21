@@ -5,7 +5,7 @@
 // Column-native (OLED page format) glyph decoding, in one place.
 //
 // Five separate loops used to re-derive this: kdisp_write_gfx_char,
-// kdisp_draw_glyph_half_at and kdisp_draw_glyph_double_at in base/disp_array.c,
+// kdisp_draw_glyph_half_at and kdisp_draw_glyph_double_at in drivers/disp_array.c,
 // and pdraw_glyph / pdraw_glyph_half in split42/status_oled.c. They exist
 // separately because the plotter writes to a file-scope scratch buffer through
 // macros and takes no target, so the portrait status OLED could not reuse it and

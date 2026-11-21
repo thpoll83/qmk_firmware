@@ -10,7 +10,7 @@ Walks every cell of the language table (lang/lang_lut.c: base, Shift, Caps and A
 for each of the 160 layouts), expands the named glyphs, skips the display-list op
 bytes and their arguments the way bbox_walk() does, and resolves each remaining
 codepoint against the runtime font table (g_all_fonts, in the order
-base/fonts/generated/all_fonts_order.json records) with the same rule as
+fonts/generated/all_fonts_order.json records) with the same rule as
 kdisp_gfx_glyph_font(): the first font whose range holds it, skipping a 0x0 gap record.
 
 ⚠️ WHY THIS EXISTS: a codepoint no font covers took the missing-glyph fallback, which
@@ -35,18 +35,18 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 KB = os.path.dirname(HERE)
 
-COLUMNS = ("base", "shift", "caps", "altgr")   # enum variation_index, lang_lut.h
+COLUMNS = ("base", "shift", "caps", "altgr")  # enum variation_index, lang_lut.h
 
 # Display-list ops that take ARGUMENTS (base/font_lookup.c bbox_walk). Each entry is
 # (argument count, which argument positions are GLYPHS to resolve). Every other byte
 # below 0x20 is an op without arguments.
 OP_ARGS = {
-    0x0F: (1, (0,)),     # HALF  (glyph)
-    0x11: (1, (0,)),     # THIN  (glyph)
-    0x15: (2, (1,)),     # ROT   (angle, glyph)
-    0x0E: (2, ()),       # MOVE  (x, y)
-    0x12: (2, ()),       # FRAME (w, h)
-    0x13: (3, ()),       # BADGE (w, h, style)
+    0x0F: (1, (0,)),  # HALF  (glyph)
+    0x11: (1, (0,)),  # THIN  (glyph)
+    0x15: (2, (1,)),  # ROT   (angle, glyph)
+    0x0E: (2, ()),  # MOVE  (x, y)
+    0x12: (2, ()),  # FRAME (w, h)
+    0x13: (3, ()),  # BADGE (w, h, style)
 }
 
 _STR = r'U"(?:[^"\\]|\\.)*"'
@@ -57,6 +57,7 @@ class CoverageError(Exception):
 
 
 # ---- fonts ---------------------------------------------------------------------
+
 
 def parse_fonts(paths):
     """{font name: (first, last, [(w, h, xAdvance), ...]) or CoverageError} from GFX
@@ -74,8 +75,7 @@ def parse_fonts(paths):
             if not gm or len(nums) < 2:
                 continue
             first, last = int(nums[0], 0), int(nums[1], 0)
-            gs = re.search(r"GFXglyph\s+" + re.escape(gm.group(1)) +
-                           r"\s*\[\]\s*(?:PROGMEM)?\s*=\s*\{(.*?)\n\s*\};", src, re.S)
+            gs = re.search(r"GFXglyph\s+" + re.escape(gm.group(1)) + r"\s*\[\]\s*(?:PROGMEM)?\s*=\s*\{(.*?)\n\s*\};", src, re.S)
             if not gs:
                 fonts[name] = CoverageError(f"{name}: glyph table {gm.group(1)} not found in {path}")
                 continue
@@ -92,10 +92,9 @@ def parse_fonts(paths):
 
 def load_font_table(kb=KB):
     """The runtime font table, front to back, as (name, first, last, glyphs)."""
-    with open(os.path.join(kb, "base", "fonts", "generated", "all_fonts_order.json")) as f:
+    with open(os.path.join(kb, "fonts", "generated", "all_fonts_order.json")) as f:
         order = json.load(f)["order"]
-    paths = sorted(glob.glob(os.path.join(kb, "base", "fonts", "generated", "*.h")) +
-                   glob.glob(os.path.join(kb, "base", "fonts", "*.h")))
+    paths = sorted(glob.glob(os.path.join(kb, "fonts", "generated", "*.h")) + glob.glob(os.path.join(kb, "fonts", "*.h")))
     fonts = parse_fonts(paths)
     missing = [n for n in order if n not in fonts]
     if missing:
@@ -119,11 +118,11 @@ def font_for(table, cp):
 
 # ---- legends -------------------------------------------------------------------
 
+
 def decode_literal(body):
     """Codepoints of the contents of one U"..." literal (C escapes resolved)."""
     out, i = [], 0
-    simple = {"f": 12, "r": 13, "v": 11, "n": 10, "t": 9, "a": 7, "b": 8,
-              "\\": 92, '"': 34, "'": 39, "?": 63, "0": 0}
+    simple = {"f": 12, "r": 13, "v": 11, "n": 10, "t": 9, "a": 7, "b": 8, "\\": 92, '"': 34, "'": 39, "?": 63, "0": 0}
     while i < len(body):
         c = body[i]
         if c != "\\":
@@ -185,7 +184,7 @@ def drawn_codepoints(cps):
         if c < 0x20:
             n, glyph_pos = OP_ARGS.get(c, (0, ()))
             args = cps[i + 1:i + 1 + n]
-            if len(args) == n and all(args):   # bbox_walk consumes only a complete set
+            if len(args) == n and all(args):  # bbox_walk consumes only a complete set
                 out += [args[p] for p in glyph_pos]
                 i += n
         else:

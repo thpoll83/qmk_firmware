@@ -4,7 +4,7 @@
 This replaces the old create_fonts.sh.  It reads fonts/fonts.yaml (the single
 source of truth), invokes the `fontconvert` tool once per font entry, groups the
 resulting GFXfont definitions into a small set of per-category headers in
-base/fonts/generated/, and composes base/fonts/gfx_used_fonts.h with the
+fonts/generated/, and composes fonts/gfx_used_fonts.h with the
 ALL_FONTS[] lookup table.
 
 Usage:
@@ -51,13 +51,29 @@ RENDER_SETTINGS = "fontpack_render_settings.json"
 # does not affect the rendered bytes (fontconvert parses options order-free); it
 # only shapes the provenance comment fontconvert prints on the first line.
 FIELD_FLAGS = [
-    ("size", "-s"), ("pixel_size", "-p"), ("hinting", "-H"),
-    ("variant", "-v"), ("grayscale", "-g"), ("normalize", "-N"),
+    ("size", "-s"),
+    ("pixel_size", "-p"),
+    ("hinting", "-H"),
+    ("variant", "-v"),
+    ("grayscale", "-g"),
+    ("normalize", "-N"),
     ("render_height", "-r"),
-    ("yadvance", "-Y"), ("xshift", "-X"), ("max_width", "-W"), ("weight", "-w"), ("dither", "-D"), ("exposure", "-e"),
-    ("contrast", "-c"), ("gamma", "-G"), ("saturation", "-B"), ("sharpness", "-U"),
-    ("outline", "-O"), ("invert", "-I"), ("edge", "-E"),
-    ("offset", "-o"), ("neg_offset", "-n"), ("bits", "-b"),
+    ("yadvance", "-Y"),
+    ("xshift", "-X"),
+    ("max_width", "-W"),
+    ("weight", "-w"),
+    ("dither", "-D"),
+    ("exposure", "-e"),
+    ("contrast", "-c"),
+    ("gamma", "-G"),
+    ("saturation", "-B"),
+    ("sharpness", "-U"),
+    ("outline", "-O"),
+    ("invert", "-I"),
+    ("edge", "-E"),
+    ("offset", "-o"),
+    ("neg_offset", "-n"),
+    ("bits", "-b"),
 ]
 GFXFONT_RE = re.compile(r"const\s+GFXfont\s+(\w+)\s+PROGMEM", re.M)
 
@@ -90,20 +106,20 @@ def build_argv(fc: str, e: dict, sources: dict, root: Path) -> list[str]:
     argv = [fc, "-f", str(root / sources[src])]
     for field, flag in FIELD_FLAGS:
         val = e.get(field)
-        if val in (None, False):                 # absent / disabled (also 0)
+        if val in (None, False):  # absent / disabled (also 0)
             continue
-        if val is True:                          # bare boolean flag (-g/-N/-I/-E/…)
+        if val is True:  # bare boolean flag (-g/-N/-I/-E/…)
             argv.append(flag)
-        else:                                    # flag with a value
+        else:  # flag with a value
             argv += [flag, str(val)]
     argv += [str(a) for a in e.get("extra_args", [])]
     if e.get("sequence"):
-        argv += ["-S", str(e["sequence"])]       # sequence mode ignores ranges
+        argv += ["-S", str(e["sequence"])]  # sequence mode ignores ranges
     else:
         for pair in e.get("ranges", []):
             if isinstance(pair, (list, tuple)):
                 argv += [str(pair[0]), str(pair[1])]
-            else:                                 # single value: last cp, first=0x20
+            else:  # single value: last cp, first=0x20
                 argv.append(str(pair))
     return argv
 
@@ -122,9 +138,9 @@ def synth_braille(e: dict) -> str:
     seq = [int(t, 16) for t in str(e["sequence"]).replace(" ", "").split(",")]
     name = e["symbol"]
     c, r = (d - 1) / 2, d / 2
-    disc = [[(x - c) ** 2 + (y - c) ** 2 <= (r - 0.15) ** 2 + 0.5 for x in range(d)] for y in range(d)]
+    disc = [[(x - c)**2 + (y - c)**2 <= (r - 0.15)**2 + 0.5 for x in range(d)] for y in range(d)]
     cell_h = 2 * pitch + d
-    top = -(cell_h + (int(e["yadvance"]) - cell_h) // 2)      # centre the full cell
+    top = -(cell_h + (int(e["yadvance"]) - cell_h) // 2)  # centre the full cell
     xoff = int(e.get("x_offset", 6))
     xadv = pitch + d + 2 * xoff
     bitmaps, glyphs = [], []
@@ -152,9 +168,7 @@ def synth_braille(e: dict) -> str:
                 bitmaps.append(v)
         glyphs.append((off, w, h, xadv, xoff + x0, top + y0, cp))
     seq_txt = ", ".join(f"{cp:X}" for cp in seq)
-    out = [f"// synthesized by generate_fonts.py synth_braille: {d} px round dots, pitch {pitch} px",
-           "", f"/* sequence: {seq_txt} */",
-           f"const uint8_t {name}Bitmaps[] PROGMEM = {{"]
+    out = [f"// synthesized by generate_fonts.py synth_braille: {d} px round dots, pitch {pitch} px", "", f"/* sequence: {seq_txt} */", f"const uint8_t {name}Bitmaps[] PROGMEM = {{"]
     rows = [", ".join(f"0x{v:02X}" for v in bitmaps[i:i + 12]) for i in range(0, len(bitmaps), 12)]
     out += [f"  {r_}," for r_ in rows[:-1]] + [f"  {rows[-1]} }};", ""]
     out.append(f"const GFXglyph {name}Glyphs[] PROGMEM = {{")
@@ -162,11 +176,10 @@ def synth_braille(e: dict) -> str:
     for i, (off, w, h, xa, xo, yo, cp) in enumerate(glyphs):
         end = " };" if i == len(glyphs) - 1 else ","
         out.append(f"  {{ {off:5d}, {w:3d}, {h:3d}, {xa:3d}, {xo:4d}, {yo:4d} }}{end}   // seq[{i}] U+{cp:04X}")
-    out += ["", f"const GFXfont {name} PROGMEM = {{",
-            f"  (uint8_t  *){name}Bitmaps,", f"  (GFXglyph *){name}Glyphs,",
-            f"  0x{first:X}, // first", f"  0x{first + len(seq) - 1:X}, // last",
-            f"  {int(e['yadvance'])}   //height", " };", "",
-            f"// Approx. {len(bitmaps) + 7 * len(glyphs) + 7} bytes"]
+    out += [
+        "", f"const GFXfont {name} PROGMEM = {{", f"  (uint8_t  *){name}Bitmaps,", f"  (GFXglyph *){name}Glyphs,", f"  0x{first:X}, // first", f"  0x{first + len(seq) - 1:X}, // last", f"  {int(e['yadvance'])}   //height", " };", "",
+        f"// Approx. {len(bitmaps) + 7 * len(glyphs) + 7} bytes"
+    ]
     return "\n".join(out) + "\n"
 
 
@@ -205,8 +218,7 @@ def compose_category(blocks: list[str]) -> str:
 
 # Render-option fields a host can re-apply when rebuilding a glyph (the fontconvert
 # flags), plus a little provenance.  Booleans/numbers as fonts.yaml carries them.
-_SETTINGS_FIELDS = [f for f, _ in FIELD_FLAGS] + ["source", "variant", "category",
-                                                 "sequence", "seq_first"]
+_SETTINGS_FIELDS = [f for f, _ in FIELD_FLAGS] + ["source", "variant", "category", "sequence", "seq_first"]
 
 
 def render_settings(entries, symbols, order, categories, sources) -> dict:
@@ -251,12 +263,10 @@ def full_order(index: dict, symbols: list[str]) -> list[str]:
     the resident `append_fonts`. ⚠️ Those go LAST so that adding one moves no pack
     font's position — the position is the gidx every bundle stores."""
     extras = [e["symbol"] for e in index.get("pack_extra_fonts", [])]
-    return (list(index.get("prepend_fonts", [])) + list(symbols) + extras
-            + list(index.get("append_fonts", [])))
+    return (list(index.get("prepend_fonts", [])) + list(symbols) + extras + list(index.get("append_fonts", [])))
 
 
-def compose_index(index: dict, categories: dict, cat_blocks: dict,
-                  symbols: list[str], resident: set[str]) -> str:
+def compose_index(index: dict, categories: dict, cat_blocks: dict, symbols: list[str], resident: set[str]) -> str:
     """gfx_used_fonts.h: the firmware compiles only RESIDENT_FONTS[] (the
     functional minimum). The remaining fonts live in the external-flash font
     pack and are appended at runtime by fontpack_assemble() into g_all_fonts[].
@@ -264,53 +274,43 @@ def compose_index(index: dict, categories: dict, cat_blocks: dict,
     """
     lines = ["#pragma once", ""]
     for cat, meta in categories.items():
-        if cat_blocks.get(cat):                  # only include non-empty categories
+        if cat_blocks.get(cat):  # only include non-empty categories
             lines.append(f'#include "generated/{meta["output"]}"')
     lines.append("")
     for inc in index.get("extra_includes", []):
         lines.append(f'#include "{inc}"')
-    lines += ["",
-              "// Functional-minimum fonts compiled into the firmware image. The rest live",
-              "// in the external-flash font pack (base/fontpack.h) and are appended at",
-              "// runtime into g_all_fonts[]. Unreferenced pack-font data is dropped by the",
-              "// linker (--gc-sections), shrinking the image. See fonts/README.md.",
-              "const GFXfont* const RESIDENT_FONTS [] = {"]
+    lines += [
+        "", "// Functional-minimum fonts compiled into the firmware image. The rest live", "// in the external-flash font pack (base/fontpack.h) and are appended at", "// runtime into g_all_fonts[]. Unreferenced pack-font data is dropped by the",
+        "// linker (--gc-sections), shrinking the image. See fonts/README.md.", "const GFXfont* const RESIDENT_FONTS [] = {"
+    ]
     for sym in full_order(index, symbols):
         if sym in resident:
             lines.append(f"  &{sym},")
-    lines += ["};", "",
-              "#define RESIDENT_FONT_COUNT (sizeof(RESIDENT_FONTS) / sizeof(GFXfont*))", ""]
+    lines += ["};", "", "#define RESIDENT_FONT_COUNT (sizeof(RESIDENT_FONTS) / sizeof(GFXfont*))", ""]
     return "\n".join(lines)
 
 
 def main() -> None:
     here = Path(__file__).resolve().parent
-    root = here.parent                            # the keyboard directory
+    root = here.parent  # the keyboard directory
 
     ap = argparse.ArgumentParser(description="Generate PolyKybd pixel-font headers from fonts.yaml")
     ap.add_argument("--fontconvert", default=os.environ.get("FONTCONVERT", "fontconvert"))
     ap.add_argument("--config", default=str(here / "fonts.yaml"))
-    ap.add_argument("--check", action="store_true",
-                    help="diff against committed headers, write nothing, fail on drift")
-    ap.add_argument("--only", metavar="CATEGORY",
-                    help="regenerate only this category's header (skips the ALL_FONTS "
-                         "index and the stale-header cleanup, so the other category "
-                         "headers and their source fonts are left untouched)")
-    ap.add_argument("--emit-pack", metavar="PATH", default="",
-                    help="also write the binary font pack (PlyF) to PATH (the "
-                         "release artifact flashed to the keyboard). The manifest "
-                         "is always (re)written next to the generated headers.")
-    ap.add_argument("--content-version", type=int, default=0,
-                    help="content_version stamped into the emitted pack header")
-    ap.add_argument("--emit-bundles", metavar="DIR", default="",
-                    help="also write each split-pack bundle PlyF as <id>.plyf into "
-                         "DIR (the per-family release artifacts shipped to the host)")
-    ap.add_argument("--bundle-version", metavar="ID=N", action="append", default=[],
-                    help="content_version for one bundle, e.g. --bundle-version emoji=3 "
-                         "(repeatable; bundles default to 0)")
-    ap.add_argument("--no-dedupe", action="store_true",
-                    help="keep byte-identical shadowed glyphs in the bundles (skip the "
-                         "dead-weight prune of glyphs a higher-priority font overdraws)")
+    ap.add_argument("--check", action="store_true", help="diff against committed headers, write nothing, fail on drift")
+    ap.add_argument("--only", metavar="CATEGORY", help="regenerate only this category's header (skips the ALL_FONTS "
+                    "index and the stale-header cleanup, so the other category "
+                    "headers and their source fonts are left untouched)")
+    ap.add_argument("--emit-pack", metavar="PATH", default="", help="also write the binary font pack (PlyF) to PATH (the "
+                    "release artifact flashed to the keyboard). The manifest "
+                    "is always (re)written next to the generated headers.")
+    ap.add_argument("--content-version", type=int, default=0, help="content_version stamped into the emitted pack header")
+    ap.add_argument("--emit-bundles", metavar="DIR", default="", help="also write each split-pack bundle PlyF as <id>.plyf into "
+                    "DIR (the per-family release artifacts shipped to the host)")
+    ap.add_argument("--bundle-version", metavar="ID=N", action="append", default=[], help="content_version for one bundle, e.g. --bundle-version emoji=3 "
+                    "(repeatable; bundles default to 0)")
+    ap.add_argument("--no-dedupe", action="store_true", help="keep byte-identical shadowed glyphs in the bundles (skip the "
+                    "dead-weight prune of glyphs a higher-priority font overdraws)")
     ap.add_argument("-q", "--quiet", action="store_true")
     args = ap.parse_args()
 
@@ -325,26 +325,23 @@ def main() -> None:
             sys.exit(f"--only: no font entries in category {args.only!r}")
 
     log(f"Generating {len(entries)} fonts via {args.fontconvert} ...", args.quiet)
-    cat_blocks, symbols = render(args.fontconvert, entries, sources, categories,
-                                 root, args.quiet)
+    cat_blocks, symbols = render(args.fontconvert, entries, sources, categories, root, args.quiet)
 
-    gen_dir = root / "base" / "fonts" / "generated"
+    gen_dir = root / "fonts" / "generated"
     outputs: dict[Path, str] = {}
     for cat, meta in categories.items():
         if cat_blocks.get(cat):
             outputs[gen_dir / meta["output"]] = compose_category(cat_blocks[cat])
     pack_data = None
     bundles = None
-    if not args.only:                             # --only never rewrites the index
+    if not args.only:  # --only never rewrites the index
         # Resident set: prepend + index.resident_fonts + every resident category.
-        resident = (set(index.get("prepend_fonts", [])) | set(index.get("append_fonts", []))
-                    | set(index.get("resident_fonts", [])))
+        resident = (set(index.get("prepend_fonts", [])) | set(index.get("append_fonts", [])) | set(index.get("resident_fonts", [])))
         for cat, meta in categories.items():
             if meta.get("resident") and cat_blocks.get(cat):
-                resident |= set(fontpack.parse_gfx_header(
-                    compose_category(cat_blocks[cat])).keys())
+                resident |= set(fontpack.parse_gfx_header(compose_category(cat_blocks[cat])).keys())
         order = full_order(index, symbols)
-        outputs[root / "base" / "fonts" / index["output"]] = \
+        outputs[root / "fonts" / index["output"]] = \
             compose_index(index, categories, cat_blocks, symbols, resident)
         # Full priority order for the build tooling (firmware index has resident only).
         outputs[gen_dir / "all_fonts_order.json"] = \
@@ -361,9 +358,7 @@ def main() -> None:
         # shipped bundles were pruned, so the committed total_size and the
         # regenerated one could never agree and --check drifted on this file
         # forever (documented as "already stale" rather than fixed).
-        pack_data, manifest = fontpack.manifest_from_texts(
-            order, cat_texts, cfg, root / "base" / "fonts",
-            content_version=args.content_version, dedupe=not args.no_dedupe)
+        pack_data, manifest = fontpack.manifest_from_texts(order, cat_texts, cfg, root / "fonts", content_version=args.content_version, dedupe=not args.no_dedupe)
         outputs[gen_dir / PACK_MANIFEST] = fontpack.manifest_json(pack_data, manifest)
 
         # Split-pack bundles: one PlyF per family + their committed manifest + the
@@ -373,7 +368,7 @@ def main() -> None:
             parsed_all: dict = {}
             for txt in cat_texts.values():
                 parsed_all.update(fontpack.parse_gfx_header(txt))
-            parsed_all.update(fontpack.extra_pack_fonts(cfg, root / "base" / "fonts"))
+            parsed_all.update(fontpack.extra_pack_fonts(cfg, root / "fonts"))
             sym2cat = fontpack.symbol_categories_from_texts(cat_texts)
             # Empty glyphs a higher-priority font already draws identically — dead
             # weight in flash (they never render). Zero visual change; asserted.
@@ -389,8 +384,7 @@ def main() -> None:
                 if not num.isdigit():
                     sys.exit(f"--bundle-version: bad spec {spec!r} (want ID=N)")
                 bundle_vers[bid] = int(num)
-            emitted_bundles, layout = fontpack.build_bundles(
-                order, resident, parsed_all, sym2cat, cfg, content_versions=bundle_vers)
+            emitted_bundles, layout = fontpack.build_bundles(order, resident, parsed_all, sym2cat, cfg, content_versions=bundle_vers)
             bundles = emitted_bundles
             outputs[gen_dir / BUNDLES_MANIFEST] = fontpack.bundles_manifest_json(bundles, layout)
             outputs[gen_dir / BUNDLE_LAYOUT_H] = fontpack.bundle_layout_header(bundles, layout)

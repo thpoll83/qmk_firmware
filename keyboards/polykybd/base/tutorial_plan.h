@@ -1,7 +1,7 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Pure timeline / step logic for the first-run tutorial (see anim/TUTORIAL.md).
+// Pure timeline / step logic for the first-run tutorial (see docs/features/tutorial.md).
 //
 // Deliberately free of quantum.h, the display stack and EEPROM: the arithmetic here
 // (phase transitions, the fade curve, the ripple envelope, letter selection) is the

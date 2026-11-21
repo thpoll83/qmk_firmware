@@ -32,25 +32,25 @@ import sys
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FONTDIR = os.path.normpath(os.path.join(HERE, "..", "base", "fonts"))
+FONTDIR = os.path.normpath(os.path.join(HERE, "..", "fonts"))
 
 P_W, P_H = 128, 64  # split72 status OLED
 
 # ---- coordinates, kept in sync with split72/status_oled.c oled_update_buffer ----
-TOP_BASE = 15   # first text line (layer icon / hex layer / side)  [was 14]
+TOP_BASE = 15  # first text line (layer icon / hex layer / side)  [was 14]
 # Rows B..D are spaced PER PANEL so the bottom row's last pixel lands on screen row
 # 63 and the slack splits evenly -- the layout panel's descenders sit on row B
 # ("Qwerty Stag!") while the RGB panel's sit on row C ("Cyan"), so one shared set
 # cannot space both. See the matching block in split72/status_oled.c.
-LOCK_ROW_B = 29   # layout name
-LOCK_ROW_C = 48   # speed + language
-LOCK_ROW_D = 63   # brightness
-RGB_ROW_B = 30    # effect index + name
-RGB_ROW_C = 45    # colour name + hue
-RGB_ROW_D = 63    # saturation + value
+LOCK_ROW_B = 29  # layout name
+LOCK_ROW_C = 48  # speed + language
+LOCK_ROW_D = 63  # brightness
+RGB_ROW_B = 30  # effect index + name
+RGB_ROW_C = 45  # colour name + hue
+RGB_ROW_D = 63  # saturation + value
 # RGB-off re-flow: three rows on both panels instead of four, again bottomed out on 63.
-CAPS_LOCK_BASE = 43     # evens the column gaps (10/9); SPEED_BOX_H tracks it
-SIDE_MARKER_BASE = 63   # physical-side marker, bottomed out (was 56)
+CAPS_LOCK_BASE = 43  # evens the column gaps (10/9); SPEED_BOX_H tracks it
+SIDE_MARKER_BASE = 63  # physical-side marker, bottomed out (was 56)
 OFF_ROW_B = 37
 OFF_ROW_C = 63
 RGB_OFF_ROW_B = 39
@@ -75,24 +75,21 @@ def _parse_header(text, bitmaps, glyphs, fonts):
         glyphs[m.group(1)] = arr
     for m in re.finditer(r'const\s+GFXfont\s+(\w+)\s+PROGMEM\s*=\s*\{(.*?)\};', text, re.S):
         parts = [p.strip() for p in re.sub(r'//[^\n]*', '', m.group(2)).split(',')]
-        fonts[m.group(1)] = dict(bmp=re.findall(r'\w+', parts[0])[-1],
-                                 gly=re.findall(r'\w+', parts[1])[-1],
-                                 first=int(parts[2], 0), last=int(parts[3], 0))
+        fonts[m.group(1)] = dict(bmp=re.findall(r'\w+', parts[0])[-1], gly=re.findall(r'\w+', parts[1])[-1], first=int(parts[2], 0), last=int(parts[3], 0))
 
 
 def load_fonts():
     B, G, F = {}, {}, {}
-    for rel in ("util_font.h", "NotoSans_Medium_Base_8pt.h", "gfx_icons.h",
-                "nano_font.h", "generated/emoji_fonts.h"):
+    for rel in ("util_font.h", "NotoSans_Medium_Base_8pt.h", "gfx_icons.h", "nano_font.h", "generated/emoji_fonts.h"):
         _parse_header(open(os.path.join(FONTDIR, rel), encoding="utf-8").read(), B, G, F)
 
     def bundle(name):
         f = F[name]
         return f, B[f['bmp']], G[f['gly']]
 
-    disp = bundle('NotoSans_Regular_Mid_19px7b')   # top row shares _Mid_
+    disp = bundle('NotoSans_Regular_Mid_19px7b')  # top row shares _Mid_
     small = bundle('NotoSans_Regular_Small_15px7b')
-    tiny = bundle('NotoSans_Regular_Nano_10px7b')   # language index only (see status_oled.c)
+    tiny = bundle('NotoSans_Regular_Nano_10px7b')  # language index only (see status_oled.c)
     icons = None
     for _n, f in F.items():
         if f['first'] <= 0x100005 <= f['last'] and f['gly'] in G:
@@ -111,8 +108,7 @@ def load_notice_font():
     wrong-argument bug in a file that lives in another directory and that nothing in
     this repo's CI imports. Keeping the arity fixed is what stops that."""
     B, G, F = {}, {}, {}
-    _parse_header(open(os.path.join(FONTDIR, "generated", "symbol_fonts.h"),
-                       encoding="utf-8").read(), B, G, F)
+    _parse_header(open(os.path.join(FONTDIR, "generated", "symbol_fonts.h"), encoding="utf-8").read(), B, G, F)
     f = F['NotoSansSymbols2_Regular_Arrows_20pt16b']
     return f, B[f['bmp']], G[f['gly']]
 
@@ -155,7 +151,7 @@ def draw_glyph_half(setpix, font, x, y, cp):
                     sx, sy = dx * 2 + ox, dy * 2 + oy
                     if sx >= w or sy >= h:
                         continue
-                    cb = (h + 7) >> 3          # column-native, as in draw()
+                    cb = (h + 7) >> 3  # column-native, as in draw()
                     if bm[g['off'] + sx * cb + (sy >> 3)] & (1 << (sy & 7)):
                         setpix(x + dx, y + dy)
                         break
@@ -305,9 +301,7 @@ def build_fw_failed_panel(side, small, why='crc', size=492916, want=0xa1b2c3d4, 
     elif no_image:
         lines = ["Nothing was", "staged", "upload again"]
     else:
-        lines = ["%d KB" % ((size + 1023) // 1024),
-                 "want %08x" % want,
-                 "got  %08x" % got]
+        lines = ["%d KB" % ((size + 1023) // 1024), "want %08x" % want, "got  %08x" % got]
     if P_H < 64:
         lines = [lines[0], lines[2]]
     band = P_H // len(lines)
@@ -321,8 +315,7 @@ def build_fw_failed_panel(side, small, why='crc', size=492916, want=0xa1b2c3d4, 
     return pts
 
 
-def build_telemetry_panel(usb_side, small, fw="0.16.18", proto=15, hw="0x0320",
-                          uptime="1:23:45", link=None):
+def build_telemetry_panel(usb_side, small, fw="0.16.18", proto=15, hw="0x0320", uptime="1:23:45", link=None):
     """Settings -> "More" telemetry screen — mirror of oled_helper.c's
     oled_telemetry_screen(). Four lines on the 64px panel (two on a 32px one),
     each centred in its own band from its own bbox, exactly as the FW-2 confirm
@@ -414,25 +407,28 @@ def round_rect(setpix, x, y, w, h, r):
     x0, y0, x1, y1 = x, y, x + w - 1, y + h - 1
     r = max(0, min(r, (w - 1) // 2, (h - 1) // 2))
     for i in range(x0 + r, x1 - r + 1):
-        setpix(i, y0); setpix(i, y1)
+        setpix(i, y0)
+        setpix(i, y1)
     for j in range(y0 + r, y1 - r + 1):
-        setpix(x0, j); setpix(x1, j)
+        setpix(x0, j)
+        setpix(x1, j)
     cxl, cxr, cyt, cyb = x0 + r, x1 - r, y0 + r, y1 - r
     f, ddF_x, ddF_y, px, py = 1 - r, 1, -2 * r, 0, r
     while px < py:
         if f >= 0:
-            py -= 1; ddF_y += 2; f += ddF_y
-        px += 1; ddF_x += 2; f += ddF_x
-        for sx, sy in ((cxr + px, cyt - py), (cxr + py, cyt - px),
-                       (cxl - px, cyt - py), (cxl - py, cyt - px),
-                       (cxr + px, cyb + py), (cxr + py, cyb + px),
-                       (cxl - px, cyb + py), (cxl - py, cyb + px)):
+            py -= 1
+            ddF_y += 2
+            f += ddF_y
+        px += 1
+        ddF_x += 2
+        f += ddF_x
+        for sx, sy in ((cxr + px, cyt - py), (cxr + py, cyt - px), (cxl - px, cyt - py), (cxl - py, cyt - px), (cxr + px, cyb + py), (cxr + py, cyb + px), (cxl - px, cyb + py), (cxl - py, cyb + px)):
             setpix(sx, sy)
 
 
 # ---- RGB speed gauge, kept in sync with split72/status_oled.c ----
-COL_W = 17          # indicator column both panels reserve on their inner edge
-SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 0, COL_W, 44   # Num Lock top .. Caps Lock bottom
+COL_W = 17  # indicator column both panels reserve on their inner edge
+SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 0, COL_W, 44  # Num Lock top .. Caps Lock bottom
 SPEED_FILL_W = SPEED_BOX_W - 6
 SPEED_FILL_BOTTOM = SPEED_BOX_Y + SPEED_BOX_H - 4
 SPEED_FILL_H = SPEED_BOX_H - 6
@@ -447,31 +443,25 @@ def draw_speed_gauge(setpix, x, speed):
 
 
 # ---- brightness gauge, kept in sync with split72/status_oled.c ----
-SUN_BMP = [0x04, 0x00, 0x44, 0x40, 0x20, 0x80, 0x0e, 0x00, 0x1f, 0x00, 0xdf, 0x60,
-           0x1f, 0x00, 0x0e, 0x00, 0x20, 0x80, 0x44, 0x40, 0x04, 0x00]
+SUN_BMP = [0x04, 0x00, 0x44, 0x40, 0x20, 0x80, 0x0e, 0x00, 0x1f, 0x00, 0xdf, 0x60, 0x1f, 0x00, 0x0e, 0x00, 0x20, 0x80, 0x44, 0x40, 0x04, 0x00]
 SUN_W = SUN_H = 11
-GLOBE_BMP = [0x0f, 0x80, 0x38, 0xe0, 0x68, 0xb0, 0x48, 0x90, 0x90, 0x48, 0x90, 0x48,
-             0xff, 0xf8, 0x90, 0x48, 0x90, 0x48, 0x48, 0x90, 0x68, 0xb0, 0x38, 0xe0,
-             0x0f, 0x80]
+GLOBE_BMP = [0x0f, 0x80, 0x38, 0xe0, 0x68, 0xb0, 0x48, 0x90, 0x90, 0x48, 0x90, 0x48, 0xff, 0xf8, 0x90, 0x48, 0x90, 0x48, 0x48, 0x90, 0x68, 0xb0, 0x38, 0xe0, 0x0f, 0x80]
 GLOBE_W = GLOBE_H = 13
-GLOBE_BIG_BMP = [0x07,0xf0,0x00, 0x0e,0x38,0x00, 0x32,0x26,0x00, 0x24,0x12,0x00,
-                 0x44,0x11,0x00, 0xc4,0x11,0x80, 0x84,0x10,0x80, 0x84,0x10,0x80,
-                 0xff,0xff,0x80, 0x84,0x10,0x80, 0x84,0x10,0x80, 0xc4,0x11,0x80,
-                 0x44,0x11,0x00, 0x24,0x12,0x00, 0x32,0x26,0x00, 0x0e,0x38,0x00,
-                 0x07,0xf0,0x00]
+GLOBE_BIG_BMP = [
+    0x07, 0xf0, 0x00, 0x0e, 0x38, 0x00, 0x32, 0x26, 0x00, 0x24, 0x12, 0x00, 0x44, 0x11, 0x00, 0xc4, 0x11, 0x80, 0x84, 0x10, 0x80, 0x84, 0x10, 0x80, 0xff, 0xff, 0x80, 0x84, 0x10, 0x80, 0x84, 0x10, 0x80, 0xc4, 0x11, 0x80, 0x44, 0x11, 0x00, 0x24, 0x12, 0x00,
+    0x32, 0x26, 0x00, 0x0e, 0x38, 0x00, 0x07, 0xf0, 0x00
+]
 GLOBE_BIG_W = GLOBE_BIG_H = 17
-WPM_BMP = [0x1f,0x00, 0x71,0xc0, 0x43,0x40, 0xc2,0x60, 0x86,0x20, 0x8e,0x20]
+WPM_BMP = [0x1f, 0x00, 0x71, 0xc0, 0x43, 0x40, 0xc2, 0x60, 0x86, 0x20, 0x8e, 0x20]
 WPM_ICON_W, WPM_ICON_H = 11, 6
-DEGREE_BMP = [0xe0, 0xa0, 0xe0]                            # 3x3 degree sign
+DEGREE_BMP = [0xe0, 0xa0, 0xe0]  # 3x3 degree sign
 DEGREE_W = DEGREE_H = 3
-SUPER2_BMP = [0x70, 0x88, 0x10, 0x20, 0x40, 0xf8]          # 5x6 superscript 2
+SUPER2_BMP = [0x70, 0x88, 0x10, 0x20, 0x40, 0xf8]  # 5x6 superscript 2
 SUPER2_W, SUPER2_H = 5, 6
-DROPLET_BMP = [0x08, 0x00, 0x08, 0x00, 0x1c, 0x00, 0x1c, 0x00, 0x3e, 0x00,
-               0x7f, 0x00, 0x7f, 0x00, 0x7f, 0x00, 0x3e, 0x00, 0x1c, 0x00]
-DROPLET_W, DROPLET_H, DROPLET_Y = 9, 10, 53                # saturation
-SUN_SMALL_BMP = [0x08, 0x00, 0x41, 0x00, 0x1c, 0x00, 0x3e, 0x00, 0xbe, 0x80,
-                 0x3e, 0x00, 0x1c, 0x00, 0x41, 0x00, 0x08, 0x00]
-SUN_SMALL_W, SUN_SMALL_H, SUN_SMALL_Y = 9, 9, 54           # value
+DROPLET_BMP = [0x08, 0x00, 0x08, 0x00, 0x1c, 0x00, 0x1c, 0x00, 0x3e, 0x00, 0x7f, 0x00, 0x7f, 0x00, 0x7f, 0x00, 0x3e, 0x00, 0x1c, 0x00]
+DROPLET_W, DROPLET_H, DROPLET_Y = 9, 10, 53  # saturation
+SUN_SMALL_BMP = [0x08, 0x00, 0x41, 0x00, 0x1c, 0x00, 0x3e, 0x00, 0xbe, 0x80, 0x3e, 0x00, 0x1c, 0x00, 0x41, 0x00, 0x08, 0x00]
+SUN_SMALL_W, SUN_SMALL_H, SUN_SMALL_Y = 9, 9, 54  # value
 SV_ICON_GAP = 2
 
 
@@ -485,9 +475,7 @@ def hue_name(hue, sat):
     if sat < 26:
         return 'White'
     deg = hue_to_degrees(hue)
-    for limit, name in ((15, 'Red'), (45, 'Orange'), (70, 'Yellow'), (100, 'Lime'),
-                        (165, 'Green'), (195, 'Cyan'), (240, 'Azure'), (270, 'Blue'),
-                        (300, 'Violet'), (330, 'Magenta'), (345, 'Pink')):
+    for limit, name in ((15, 'Red'), (45, 'Orange'), (70, 'Yellow'), (100, 'Lime'), (165, 'Green'), (195, 'Cyan'), (240, 'Azure'), (270, 'Blue'), (300, 'Violet'), (330, 'Magenta'), (345, 'Pink')):
         if deg < limit:
             return name
     return 'Red'
@@ -495,10 +483,11 @@ def hue_name(hue, sat):
 
 def byte_to_percent(v):
     return (v * 100 + 127) // 255
+
+
 # GAUGE_* mirror the defines in split72/status_oled.c; FULL_BRIGHT mirrors config.h.
 GAUGE_SEGMENTS, GAUGE_BAR_W, GAUGE_PITCH, GAUGE_MIN_H = 10, 4, 6, 3
 FULL_BRIGHT = 50
-
 
 MAX_BRIGHT = 100  # RGB_MATRIX_MAXIMUM_BRIGHTNESS (split72/config.h)
 
@@ -525,10 +514,8 @@ def draw_brightness_bars(setpix, x, bottom_y, level):
 
 
 # Top-row role icons (16x16, MSB-first) — mirror of status_oled.c usb_/link_status_bitmap.
-USB_BMP = [0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x80, 0x00, 0xb8, 0x04, 0xb8,
-           0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0]
-LINK_BMP = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x1c, 0x7f, 0xfe, 0x7f, 0xfe, 0x00, 0x00,
-            0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+USB_BMP = [0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x80, 0x00, 0xb8, 0x04, 0xb8, 0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0]
+LINK_BMP = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x1c, 0x7f, 0xfe, 0x7f, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
 
 def s2cp(t):
@@ -579,10 +566,10 @@ def draw_lang_column(setp, tiny, globe, x, code):
 # Shown only while the pad is in use; the status screen returns when the finger
 # leaves. Coordinates here must track the PAD_* defines in the C.
 PAD_CX, PAD_CY = 64, 32
-PAD_R = 31                  # the pad rim: as large as 64 rows allow
-PAD_DOT_R = PAD_R - 4       # how far the finger dot travels
-PAD_SPAN = 896              # POLY_GEST_SPAN, the gesture layer's pad units
-PAD_RING = 405              # POLY_GEST_RING_R
+PAD_R = 31  # the pad rim: as large as 64 rows allow
+PAD_DOT_R = PAD_R - 4  # how far the finger dot travels
+PAD_SPAN = 896  # POLY_GEST_SPAN, the gesture layer's pad units
+PAD_RING = 405  # POLY_GEST_RING_R
 
 
 def pad_circle(setpix, r, dash):
@@ -591,8 +578,7 @@ def pad_circle(setpix, r, dash):
     x, y, err, n = r, 0, 1 - r, 0
     while x >= y:
         if not dash or (n % 3) == 0:
-            for px, py in ((x, y), (y, x), (-y, x), (-x, y),
-                           (-x, -y), (-y, -x), (y, -x), (x, -y)):
+            for px, py in ((x, y), (y, x), (-y, x), (-x, y), (-x, -y), (-y, -x), (y, -x), (x, -y)):
                 setpix(PAD_CX + px, PAD_CY + py)
         n += 1
         y += 1
@@ -613,7 +599,7 @@ def pad_sector(setpix, left=False, dash=False):
     for y in range(-PAD_R - 4, 1):
         for x in range(0, PAD_R + 5):
             rsq = x * x + y * y
-            if rsq < (PAD_R + 1) ** 2 or rsq > (PAD_R + 4) ** 2:
+            if rsq < (PAD_R + 1)**2 or rsq > (PAD_R + 4)**2:
                 continue
             up = -y * 1000
             if up < 554 * x or up > 1804 * x:
@@ -655,7 +641,7 @@ def build_pad_panel(small, px=448, py=448, down=True, tapping=False):
         y = (py - PAD_SPAN // 2) * PAD_DOT_R // (PAD_SPAN // 2)
         msq = x * x + y * y
         if msq > PAD_DOT_R * PAD_DOT_R:
-            m = int(msq ** 0.5)
+            m = int(msq**0.5)
             if m:
                 x = x * PAD_DOT_R // m
                 y = y * PAD_DOT_R // m
@@ -668,25 +654,26 @@ def build_pad_panel(small, px=448, py=448, down=True, tapping=False):
     return pts
 
 
-def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow'),
-                lang='en-US', wpm=0, layout='Qwerty'):
+def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow'), lang='en-US', wpm=0, layout='Qwerty'):
     """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
     (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
     rgb=None models RGB being switched off, which re-flows BOTH panels.
     Returns set of (x,y) pixels."""
     rgb_on = rgb is not None
     pts = set()
+
     def setp(px, py):
         pts.add((px, py))
+
     # Each half's indicator column sits on its INNER edge (see status_oled.c), so the
     # text origin differs per panel.
     lock_panel = (side == 'L')
-    COL_X  = 108 if lock_panel else 0
+    COL_X = 108 if lock_panel else 0
     TEXT_X = 0 if lock_panel else (20 if rgb_on else 26)
     TEXT_R = 104 if lock_panel else 127
     # top line: layer + role icon + role word
-    draw(setp, icons, TEXT_X, TOP_BASE, [0x100005])             # ICON_LAYER
-    draw(setp, disp, TEXT_X + 20, TOP_BASE, s('0'))             # hex layer
+    draw(setp, icons, TEXT_X, TOP_BASE, [0x100005])  # ICON_LAYER
+    draw(setp, disp, TEXT_X + 20, TOP_BASE, s('0'))  # hex layer
     if lock_panel:
         draw_bitmap(setp, USB_BMP, TEXT_X + 38, 0)
         draw(setp, disp, TEXT_X + 57, TOP_BASE, s('USB'))
@@ -696,8 +683,8 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
     # Lock LEDs render on the layout panel only (identical state on both halves) —
     # the RGB panel's column is the speed gauge now.
     if lock_panel:
-        draw(setp, icons, COL_X, 16, [0x100011])                # NumLock off
-        draw(setp, icons, COL_X, CAPS_LOCK_BASE, [0x100013])    # CapsLock off
+        draw(setp, icons, COL_X, 16, [0x100011])  # NumLock off
+        draw(setp, icons, COL_X, CAPS_LOCK_BASE, [0x100013])  # CapsLock off
         draw(setp, small, COL_X + 6, SIDE_MARKER_BASE, s('L'))
     else:
         draw(setp, small, COL_X + 5, SIDE_MARKER_BASE, s('R'))
@@ -726,7 +713,7 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
         draw(setp, small, TEXT_X, RGB_ROW_B, s(str(mode)))
         name_x = TEXT_X + 22
         draw(setp, small, name_x, RGB_ROW_B, s(name.rstrip('2')))
-        if name.endswith('2'):      # "Splash2" in the fixture -> "Splash" + superscript
+        if name.endswith('2'):  # "Splash2" in the fixture -> "Splash" + superscript
             hi = measure_width(small, s(name.rstrip('2')))
             draw_bitmap(setp, SUPER2_BMP, name_x + hi + 2, 18, SUPER2_W, SUPER2_H)
         draw_speed_gauge(setp, COL_X, speed)
@@ -734,12 +721,10 @@ def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 
         draw_right(setp, small, TEXT_R - 4, RGB_ROW_C, s(str(hue_to_degrees(hue))))
         draw_bitmap(setp, DEGREE_BMP, TEXT_R - 2, 34, DEGREE_W, DEGREE_H)
         draw_bitmap(setp, DROPLET_BMP, TEXT_X, DROPLET_Y, DROPLET_W, DROPLET_H)
-        draw(setp, small, TEXT_X + DROPLET_W + SV_ICON_GAP, RGB_ROW_D,
-             s('%d%%' % byte_to_percent(sat)))
+        draw(setp, small, TEXT_X + DROPLET_W + SV_ICON_GAP, RGB_ROW_D, s('%d%%' % byte_to_percent(sat)))
         vtxt = s('%d%%' % val_to_percent(val))
         vx = TEXT_R - measure_width(small, vtxt)
-        draw_bitmap(setp, SUN_SMALL_BMP, vx - SV_ICON_GAP - SUN_SMALL_W, SUN_SMALL_Y,
-                    SUN_SMALL_W, SUN_SMALL_H)
+        draw_bitmap(setp, SUN_SMALL_BMP, vx - SV_ICON_GAP - SUN_SMALL_W, SUN_SMALL_Y, SUN_SMALL_W, SUN_SMALL_H)
         draw(setp, small, vx, RGB_ROW_D, vtxt)
     return pts
 
@@ -771,11 +756,9 @@ def render_diag(pts, title, sc=8, gut=6):
             clipped += 1
         cx, cy = (gut + x) * sc, (gut + y) * sc
         d.rectangle([cx, cy, cx + sc - 1, cy + sc - 1], fill=ON if inb else RED)
-    d.rectangle([gut * sc - 2, gut * sc - 2, (gut + P_W) * sc + 1, (gut + P_H) * sc + 1],
-                outline=(120, 140, 160), width=2)
+    d.rectangle([gut * sc - 2, gut * sc - 2, (gut + P_W) * sc + 1, (gut + P_H) * sc + 1], outline=(120, 140, 160), width=2)
     d.text((4, 2), title, fill=(200, 215, 235))
-    d.text((4, ch * sc - 16), f"clipped(out-of-bounds) pixels: {clipped}",
-           fill=RED if clipped else (140, 200, 150))
+    d.text((4, ch * sc - 16), f"clipped(out-of-bounds) pixels: {clipped}", fill=RED if clipped else (140, 200, 150))
     return im, clipped
 
 
@@ -783,39 +766,31 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--diag', action='store_true', help='clipping diagnostic (gutter + red out-of-bounds)')
     ap.add_argument('-o', '--out', help='output PNG (default: /tmp/status_oled[_diag].png)')
+
     def brightness_arg(v):
         n = int(v)
         if not 0 <= n <= FULL_BRIGHT:
             raise argparse.ArgumentTypeError('brightness must be 0..%d' % FULL_BRIGHT)
         return n
 
-    ap.add_argument('-b', '--brightness', type=brightness_arg, default=FULL_BRIGHT,
-                    help='keycap brightness 0..%d shown in the gauge (default %d)' % (FULL_BRIGHT, FULL_BRIGHT))
+    ap.add_argument('-b', '--brightness', type=brightness_arg, default=FULL_BRIGHT, help='keycap brightness 0..%d shown in the gauge (default %d)' % (FULL_BRIGHT, FULL_BRIGHT))
     ap.add_argument('--lang', default='en-US', help="language code shown, e.g. mn-MN")
     ap.add_argument('--wpm', type=int, default=0, help='WPM value shown')
-    ap.add_argument('--layout', default='Qwerty',
-                    help="base-layout name on the layout panel, as oled_helper.c names it "
-                         "(Qwerty, 'Qwerty Stag!', 'Colemak DH', Neo, Workman)")
-    ap.add_argument('--rgb-off', action='store_true',
-                    help='preview the RGB-off layout (both panels re-flow to three rows)')
-    ap.add_argument('--boot', type=int, choices=range(2, 9), metavar='STEP',
-                    help='preview the boot-progress screen at splash milestone 2..8')
-    ap.add_argument('--boot-note', metavar='TEXT', default=None,
-                    help='with --boot-sub: the note line that displaces the label '
-                         '(e.g. "USB 4>2 @18")')
-    ap.add_argument('--boot-sub', metavar='N/M', default=None,
-                    help='with --boot: a sub-step inside that milestone, as "N/M" '
-                         '(e.g. 17/40 for the final render). "N" alone omits the total.')
-    ap.add_argument('--fw-notice', choices=('apply', 'restart', 'failed', 'failed-none'),
-                    help='preview a firmware notice screen instead of the status screen')
-    ap.add_argument('--telemetry', action='store_true',
-                    help='preview the settings->More telemetry screen instead of the status screen')
-    ap.add_argument('--pad', action='store_true',
-                    help='preview the trackpad view (shown while the pad is in use)')
-    ap.add_argument('--pad-xy', default='448,448',
-                    help='finger position in gesture pad units 0..%d (default the centre)' % PAD_SPAN)
+    ap.add_argument('--layout', default='Qwerty', help="base-layout name on the layout panel, as oled_helper.c names it "
+                    "(Qwerty, 'Qwerty Stag!', 'Colemak DH', Neo, Workman)")
+    ap.add_argument('--rgb-off', action='store_true', help='preview the RGB-off layout (both panels re-flow to three rows)')
+    ap.add_argument('--boot', type=int, choices=range(2, 9), metavar='STEP', help='preview the boot-progress screen at splash milestone 2..8')
+    ap.add_argument('--boot-note', metavar='TEXT', default=None, help='with --boot-sub: the note line that displaces the label '
+                    '(e.g. "USB 4>2 @18")')
+    ap.add_argument('--boot-sub', metavar='N/M', default=None, help='with --boot: a sub-step inside that milestone, as "N/M" '
+                    '(e.g. 17/40 for the final render). "N" alone omits the total.')
+    ap.add_argument('--fw-notice', choices=('apply', 'restart', 'failed', 'failed-none'), help='preview a firmware notice screen instead of the status screen')
+    ap.add_argument('--telemetry', action='store_true', help='preview the settings->More telemetry screen instead of the status screen')
+    ap.add_argument('--pad', action='store_true', help='preview the trackpad view (shown while the pad is in use)')
+    ap.add_argument('--pad-xy', default='448,448', help='finger position in gesture pad units 0..%d (default the centre)' % PAD_SPAN)
     ap.add_argument('--pad-tap', action='store_true', help='render the enlarged dot of a tap')
     ap.add_argument('--uptime', default='1:23:45', help='uptime string shown by --telemetry')
+
     def link_arg(v):
         # Validated here rather than at use: an unparsable value otherwise reached
         # the "pm, frames = link" unpack and came out as a raw traceback, and a
@@ -840,12 +815,10 @@ def main():
         # over no frames describes no device. (Zero frames alone is fine -- it is
         # spelled "idle", which the renderer above produces either way.)
         if frames == 0 and pm != 0:
-            raise argparse.ArgumentTypeError(
-                'a non-zero err_permille needs frames > 0 (the firmware reports "idle" at 0 frames)')
+            raise argparse.ArgumentTypeError('a non-zero err_permille needs frames > 0 (the firmware reports "idle" at 0 frames)')
         return (pm, frames)
 
-    ap.add_argument('--link', type=link_arg, default=(4, 1234),
-                    help='--telemetry link health as "<err_permille>,<frames>", or "idle"')
+    ap.add_argument('--link', type=link_arg, default=(4, 1234), help='--telemetry link health as "<err_permille>,<frames>", or "idle"')
     args = ap.parse_args()
 
     disp, small, icons, tiny, globe = load_fonts()
@@ -858,8 +831,7 @@ def main():
         if args.boot_sub:
             n, _, m = args.boot_sub.partition('/')
             sub, sub_total = int(n), (int(m) if m else 0)
-        L = build_boot_panel(disp, args.boot, small=small, sub=sub, sub_total=sub_total,
-                             note=args.boot_note)
+        L = build_boot_panel(disp, args.boot, small=small, sub=sub, sub_total=sub_total, note=args.boot_note)
         R = L
     elif args.fw_notice in ('failed', 'failed-none'):
         why = 'none' if args.fw_notice == 'failed-none' else 'crc'
@@ -867,19 +839,16 @@ def main():
         R = build_fw_failed_panel('R', small, why)
     elif args.fw_notice:
         arrow = load_notice_font()
-        words = {'apply':   ('Applying', 'Firmware'),
-                 'restart': ('Restart',  'Now')}[args.fw_notice]
+        words = {'apply': ('Applying', 'Firmware'), 'restart': ('Restart', 'Now')}[args.fw_notice]
         L = build_fw_notice_panel('L', disp, arrow, words[0])
         R = build_fw_notice_panel('R', disp, arrow, words[1])
     elif args.telemetry:
-        L = build_telemetry_panel(True,  small, uptime=args.uptime, link=args.link)
+        L = build_telemetry_panel(True, small, uptime=args.uptime, link=args.link)
         R = build_telemetry_panel(False, small, uptime=args.uptime, link=args.link)
     else:
         rgb = None if args.rgb_off else (128, 255, 100, 80, 5, 'Rainbow')
-        L = build_panel('L', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang,
-                        args.wpm, args.layout)
-        R = build_panel('R', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang,
-                        args.wpm, args.layout)
+        L = build_panel('L', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang, args.wpm, args.layout)
+        R = build_panel('R', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang, args.wpm, args.layout)
 
     if args.diag:
         ltitle = 'USB half   128x64  |  RED = clipped' if args.telemetry else 'LEFT (layout)  128x64  |  RED = clipped'
@@ -888,7 +857,8 @@ def main():
         Ri, rc = render_diag(R, rtitle)
         w = max(Li.width, Ri.width)
         c = Image.new('RGB', (w, Li.height + Ri.height + 12), (18, 18, 22))
-        c.paste(Li, (0, 0)); c.paste(Ri, (0, Li.height + 12))
+        c.paste(Li, (0, 0))
+        c.paste(Ri, (0, Li.height + 12))
         out = args.out or '/tmp/status_oled_diag.png'
         c.save(out)
         print(f"{out}  clipped L={lc} R={rc}")

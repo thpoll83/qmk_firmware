@@ -66,7 +66,7 @@ void emj_draw_tab_indicator(uint16_t keycode);
 // similar to above but draws a horizontal bar at the bottom of the tab
 void emj_draw_tab_bottom(uint16_t keycode);
 
-// ── Search mode (emoji/EMOJI_SEARCH.md) ─────────────────────────────────────
+// ── Search mode (docs/features/emoji-search.md) ─────────────────────────────────────
 // KC_EMJ_MODE switches the layer between the category tabs and a keyword search
 // through the emojidict bundle (base/emoji_dict.h). In search mode the emoji
 // slots type the letters of the base layer in the active language, the category

@@ -36,7 +36,7 @@
 // representable. What limits the speed is the 8-entry PIO RX FIFO, drained by a
 // thread the FIFO interrupt wakes (serial_vendor.c receive_impl): a late wake loses
 // bytes and the CRC32 plus retries recover them. 1843200 (4x the old 460800) passed
-// two extended HIL runs with 0 link faults (BULK_PIPE.md, split-link table); it cuts
+// two extended HIL runs with 0 link faults (docs/protocol/bulk-pipe.md, split-link table); it cuts
 // the firmware relay to the slave from 13 s to 3.4 s of wire time per 541 KB image.
 // `-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed for an A/B on the rig.
 #ifndef SERIAL_USART_SPEED
@@ -157,8 +157,8 @@
 // fw_staging_write_chunk: `space = FLASH_PAGE_SIZE(256) - s_buf_fill` was a
 // uint8_t and truncated to 0 whenever the page buffer was empty (chunk 0 and
 // every 256 B boundary), spinning the copy loop forever. Fixed in
-// base/fw_staging.c (space/copy widened to uint32_t). Probe left here, disabled,
-// for regression reference. See FW_UP_BASELINE.md (run 5).
+// drivers/fw_staging.c (space/copy widened to uint32_t). Probe left here, disabled,
+// for regression reference. See docs/archive/fw-up-baseline.md (run 5).
 // #define FW_UP_CHUNK_NOOP_PROBE
 
 //######################################
@@ -267,7 +267,7 @@
 //      OVERLAY_MAP_W_SHOW runs the enable step (cmd 11 with DISPLAY_OVERLAYS)
 //      after. A warm app switch is then one mapping report instead of prepare +
 //      mapping + enable. Older firmware rejects the flagged width, so the host
-//      sets them only at v21+ (PROTOCOL_HISTORY.md).
+//      sets them only at v21+ (docs/protocol/protocol-history.md).
 //  v22 cmd 43 (REBOOT) reboots both halves without writing anything persistent,
 //      for the host's boot-loop diagnostic. Older firmware NACKs it.
 //  v23 cmd 33's width byte bit 7 (OVERLAY_MAP_W_DIM) draws every pair in that report
@@ -323,7 +323,7 @@
 //      that finished on another page (base/ai_events.h). Esc shows "Next 1/2", the AI
 //      key rings for agents on another page, and AI mode's end is an op 2 event. A
 //      host before v36 zero-pads them: page count 0 keeps the v35 behaviour.
-//  v37 cmd 50: the flash unique IDs of both halves (base/hw_uid.h), for the host's
+//  v37 cmd 50: the flash unique IDs of both halves (drivers/hw_uid.h), for the host's
 //      telemetry device count. The slave's ID comes over USER_SYNC_FLASH_STAGE op 5.
 //      Older firmware NACKs cmd 50; an older slave leaves its flag bit clear.
 #define PROTOCOL_VERSION 37
@@ -407,7 +407,7 @@
 // Bulk pipe (POLYKYBD_BULK_PIPE, poly_pipe.h): the CDC data endpoints carry
 // full-size 64-byte bulk packets (QMK's default is 16, which caps the pipe at a
 // quarter of the bus rate; the #ifndef guard is a PolyKybd patch to
-// usb_descriptor.h, see UPSTREAM_PATCHES.md). CDC_OUT_CAPACITY is the number of
+// usb_descriptor.h, see docs/build/upstream-patches.md). CDC_OUT_CAPACITY is the number of
 // packets the OUT queue holds between two main-loop drains; virtser_task()
 // drains it once per iteration, so capacity x 64 B per loop iteration is the
 // host->keyboard ceiling (8 x 64 B at ~1 ms per iteration ~ 500 KB/s). RAM cost:
@@ -421,7 +421,7 @@
 // USB MIDI (rules.mk POLYKYBD_MIDI). MIDI_ADVANCED handles every QMK_MIDI_*
 // keycode the host editor offers (notes, octave, transpose, velocity, channel,
 // pedals, modulation, pitch bend). MIDI_SEND_ONLY is a PolyKybd patch to QMK
-// (UPSTREAM_PATCHES.md): the keyboard only plays, so the computer->keyboard
+// (docs/build/upstream-patches.md): the keyboard only plays, so the computer->keyboard
 // endpoint, its two jacks and the 192 B parse queue are left out. Two 64 B send
 // buffers hold 32 note events, more than ten fingers produce between USB polls.
 #ifdef MIDI_ENABLE
@@ -530,7 +530,7 @@
 // ⚠️ The wear-levelling EEPROM backing store lives at the TOP of physical flash:
 // the rp2040_flash driver places it at PICO_FLASH_SIZE_BYTES - WEAR_LEVELING_BACKING_SIZE
 // (0x7FE000..0x800000 here), i.e. INSIDE our resource region — see the flash map in
-// base/fw_staging.h, where FW_DOOMPACK_SLOT_SIZE subtracts it. It is pinned here
+// drivers/fw_staging.h, where FW_DOOMPACK_SLOT_SIZE subtracts it. It is pinned here
 // rather than inherited from the driver default so that (a) the reservation is
 // visible beside the flash size it is carved out of, and (b) changing it is a
 // deliberate act that the _Static_assert in fw_staging.c re-checks against the
@@ -539,7 +539,7 @@
 
 #define OLED_FONT_START	32
 #define OLED_FONT_END	126
-#define OLED_FONT_H "base/fonts/base_font.h"
+#define OLED_FONT_H "fonts/base_font.h"
 #define OLED_BRIGHTNESS 60
 #define OLED_DISABLE_TIMEOUT
 #define OLED_UPDATE_INTERVAL 66 //15fps

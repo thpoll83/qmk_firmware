@@ -1,13 +1,13 @@
 ---
 paths:
-  - "keyboards/polykybd/split_sync.c"
-  - "keyboards/polykybd/state.c"
-  - "keyboards/polykybd/state.h"
-  - "keyboards/polykybd/state_store.c"
+  - "keyboards/polykybd/split_link/split_sync.c"
+  - "keyboards/polykybd/system/state.c"
+  - "keyboards/polykybd/system/state.h"
+  - "keyboards/polykybd/system/state_store.c"
 ---
 # Split sync and persisted state
 
-Notes: `SPLIT_SYNC.md` · `KEYMAP_STORAGE.md` · `INVESTIGATION_HISTORY.md`.
+Notes: `docs/protocol/split-sync.md` · `docs/features/keymap-storage.md` · `docs/debugging/investigation-history.md`.
 
 - ⚠️ **Never bool-test `send_to_bridge()` — classify with `sync_succeeded()`.** Every
   return value is non-zero, give-up included, so `if(!send_to_bridge(...))` is dead

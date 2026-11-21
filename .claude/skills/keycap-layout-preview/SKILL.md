@@ -15,7 +15,7 @@ So: **model the draw path, then measure ink against ink.** Do not eyeball the PN
 and do not spend a hardware round on a placement question.
 
 `keycap_preview.py` (beside this file) is a Python **re-implementation** of
-`base/disp_array.c` and `render_key()`'s legend placement, including the parts a
+`drivers/disp_array.c` and `render_key()`'s legend placement, including the parts a
 naive renderer misses. Run everything from `keyboards/polykybd/`.
 
 ⚠️ **It is a model, so it can drift from the C** — that is not hypothetical, it is
@@ -23,7 +23,7 @@ the standing caveat on `oled_preview.py` one directory over (it models
 `xOffset`/`yOffset` but *not* the baseline-align shift, so it cannot reproduce that
 class of bug). Treat a result as evidence about **layout**, never as proof about the
 compiled firmware, and re-read the C when you touch either side: the pixel plotters
-and `KDISP_CY_DEFAULT` in `base/disp_array.c`, the legend/preview placement at the
+and `KDISP_CY_DEFAULT` in `drivers/disp_array.c`, the legend/preview placement at the
 end of `render_key()` in `poly_keymap.c`. If a preview and the hardware ever
 disagree, the hardware is right and this file has a bug — fix it here rather than
 working around it in a caller.

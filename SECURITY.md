@@ -2,7 +2,7 @@
 
 This repository is a fork of [QMK](https://github.com/qmk/qmk_firmware). The PolyKybd
 firmware is the code in `keyboards/polykybd/` and `modules/polykybd/`, plus the
-patches listed in `keyboards/polykybd/UPSTREAM_PATCHES.md`. The release and test
+patches listed in `keyboards/polykybd/docs/build/upstream-patches.md`. The release and test
 tooling is ours as well: `scripts/publish_release.py` and the workflows
 `bump-version.yml`, `cppcheck.yml`, `polykybd-unit-test.yml`, `qmk-test.yml` and
 `release.yml` in `.github/workflows/`. Everything else is upstream QMK.

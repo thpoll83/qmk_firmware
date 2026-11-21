@@ -39,7 +39,7 @@ Merging a **stable tag** (`0.33.13`) rather than `upstream/master` gives a base
 people can look up, and is what the fork does. Two consequences:
 
 - `master` may be **ahead** of the merged tag. That is fine (it is a mirror), but it
-  makes `UPSTREAM_PATCHES.md`'s `git diff master..HEAD` check approximate by exactly
+  makes `docs/build/upstream-patches.md`'s `git diff master..HEAD` check approximate by exactly
   that gap — check `git diff --stat <tag>..master -- tmk_core quantum platforms builddefs lib`
   is empty, or diff against the tag you actually merged.
 - A tag can carry a **new lint/CI rule whose fixes landed after it** (see step 7).
@@ -126,7 +126,7 @@ git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -5
    Identical output means every patch survived *and* upstream didn't restructure
    around it. Finish with a `grep` for one marker per patch (`raw_hid_pre_receive_kb`,
    `ifndef RAW_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`, `POLYKYBD_VREG_VSEL`,
-   `oled_render_dirty(true)`). Full procedure in `keyboards/polykybd/UPSTREAM_PATCHES.md`.
+   `oled_render_dirty(true)`). Full procedure in `keyboards/polykybd/docs/build/upstream-patches.md`.
 
    ⚠️ **The diff above cannot see the vendored USB driver**, because it lives under
    `keyboards/polykybd/chibios_overrides/` and no merge touches it. Its risk is the
@@ -134,7 +134,7 @@ git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -5
    Step 6's `git submodule update` has already cleared the `+` marker, so ask the
    merge commit instead: `git diff HEAD^1 HEAD -- lib/chibios-contrib` prints a
    `Subproject commit` pair when the pin moved. If it did, run the `diff -ru` in
-   `UPSTREAM_PATCHES.md` → "ChibiOS-Contrib RP2040 USB driver" and carry every
+   `docs/build/upstream-patches.md` → "ChibiOS-Contrib RP2040 USB driver" and carry every
    upstream change into the copy. Also run its `grep -n "USB_INTS_BUS_RESET" -A3 …`
    first: if the new Contrib handles the reset before SETUP, delete
    `chibios_overrides/` and the `PLATFORM_MK` block in `rules.mk` instead.
@@ -263,5 +263,5 @@ These files are modified by PolyKybd and are also touched periodically by upstre
 - **Run `mirror-master-with-upstream` first** so `origin/master` is current — it's a good checkpoint even if this skill doesn't depend on it.
 - **Do not merge upstream directly into a short-lived feature branch** — merge into `PolyKybd` first, then rebase the feature branch onto the updated `PolyKybd`.
 - If upstream has **removed a file** that PolyKybd still uses (shows as a `CONFLICT (modify/delete)`), keep the file and add a comment explaining it was removed upstream but retained for PolyKybd compatibility.
-- **Codegen files** (`lang/lang_lut.c`, `base/fonts/generated/*.h`) are never touched by upstream — any conflict there is surprising and should be flagged to the user.
+- **Codegen files** (`lang/lang_lut.c`, `fonts/generated/*.h`) are never touched by upstream — any conflict there is surprising and should be flagged to the user.
 - **Submodule update is not optional**: upstream QMK routinely bumps ChibiOS, pico-sdk, and chibios-contrib. The new pico-sdk may contain USB driver fixes. Building against the old submodule checkouts produces a binary that compiles cleanly but can have runtime failures (broken HID, USB enumeration issues). Always run `git submodule update` between merging and building.

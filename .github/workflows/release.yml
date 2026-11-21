@@ -85,7 +85,7 @@ jobs:
             echo "declaring $want: scripts/publish_release.py pins it to that commit"
             echo "(commit_for_version), so a refusal here means either the version bump has"
             echo "not merged yet, or the tag already existed somewhere else — a release never"
-            echo "moves a tag. keyboards/polykybd/RELEASES.md covers both."
+            echo "moves a tag. keyboards/polykybd/docs/build/releases.md covers both."
             exit 1
           fi
           echo "FW_VERSION $have matches tag $TAG."
@@ -120,7 +120,7 @@ jobs:
           python3 keyboards/polykybd/tools/require_fwapply_run.py --selftest
           python3 keyboards/polykybd/tools/require_fwapply_run.py
 
-      # Shipping shape is the POLYKYBD_DOOM_PACK flavour (doom/PACK_DESIGN.md):
+      # Shipping shape is the POLYKYBD_DOOM_PACK flavour (docs/design/doom-pack.md):
       # the doom easter egg's loader + trigger compile in, the engine ships as a
       # separately-flashed pack, and the overlay pool is pinned at the RAM origin.
       # build_pack.sh drives everything: the monolith build (engine objects), the
@@ -196,7 +196,7 @@ jobs:
               echo "::error::FW_SIGNING_KEY is not set, but the firmware enforces signatures"
               echo "::error::(-DFW_REQUIRE_SIGNATURE). Releasing unsigned would make every keyboard"
               echo "::error::prompt for a manual ACCEPT. Set the FW_SIGNING_KEY secret and re-run."
-              echo "::error::See keyboards/polykybd/tools/SIGNING.md."
+              echo "::error::See keyboards/polykybd/docs/fw-update/signing.md."
               exit 1
             fi
             echo "::notice::FW_SIGNING_KEY not set - skipping signing on this non-release build."
@@ -275,7 +275,7 @@ jobs:
           # rewrite handedness, so grabbing the wrong file silently flips a half.
           # Provisioning and updating are different jobs; keep them different files.
           #
-          # Board-independent: split42 and split72 share base/fw_staging.h and are
+          # Board-independent: split42 and split72 share drivers/fw_staging.h and are
           # both 8 MB, so the stamp sector is at the same offset for each. Versioned
           # like every other asset only so downloads of two releases do not collide
           # in the browser (see the note above); the bytes are identical from

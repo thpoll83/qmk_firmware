@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Game-mode state machine for the Doom easter egg. Owns the runtime handoff
-// of the overlay RAM pool (DOOM_FEASIBILITY.md "Challenge 2"): entering game
+// of the overlay RAM pool (docs/archive/doom-feasibility.md "Challenge 2"): entering game
 // mode borrows the 226,800 B `overlays[]` arena as game memory; leaving hands
 // it back blank exactly as a fresh boot / pack wipe would, and the host
 // repopulates it on its next overlay push. The MASTER half runs the real
@@ -20,23 +20,23 @@
 #include "doom_mirror.h"
 #include "doom_playpal_luma.h"
 
-#include "hid_com.h"           // poly_mark_fresh_boot (host overlay-cache reset on exit)
-#include "keycode_helper.h"    // KC_IDDQD (the armed utilities-layer menu item)
+#include "hid/hid_com.h"           // poly_mark_fresh_boot (host overlay-cache reset on exit)
+#include "keymap/keycode_helper.h"    // KC_IDDQD (the armed utilities-layer menu item)
 #include "layers.h"            // _UL (the egg menu position is utilities-layer-gated)
-#include "split_sync.h"        // sync_succeeded (mirror bridge sends)
+#include "split_link/split_sync.h"        // sync_succeeded (mirror bridge sends)
 #include "polymod_crc32.h"     // crc32_1byte (mirror message framing)
 #include "transactions.h"      // USER_SYNC_OVERLAY_MAP_DATA (mirror rides it)
 
-#include "bridge_helper.h"
-#include "side.h"               // is_left_side() (HUD column selection)
+#include "split_link/bridge_helper.h"
+#include "split_link/side.h"               // is_left_side() (HUD column selection)
 #include "base/overlay.h"
 #include "base/update.h"
-#include "base/fw_staging.h"
+#include "drivers/fw_staging.h"
 #include "polymod_core1.h"
 
 #include "doomkeys.h"           // engine key codes (doom_translate_key)
 #include "doom_weapon_icons.h"  // slave weapon-pad bitmaps (shareware sprites)
-#include "../poly_keymap.h"
+#include "keymap/poly_keymap.h"
 
 #ifdef POLYKYBD_DOOM
 
@@ -56,7 +56,7 @@ extern uint8_t __doom_shared_base__[];
 extern uint8_t __doom_shared_statics_end__[];
 extern uint8_t __doom_shared_end__[];
 #else
-// DoomPack flavour (PACK_DESIGN.md): no engine in the image, no custom
+// DoomPack flavour (docs/design/doom-pack.md): no engine in the image, no custom
 // linker script. The pool is base/overlay.c's plain array (borrowed via
 // get_overlay_pool() as always) and the engine-statics/arena split inside it
 // comes from the loaded pack's header (doom_pack_arena_off()).
@@ -454,7 +454,7 @@ static bool doom_session_start(enum doom_pack_entry entry) {
     }
     // The runtime handoff: the overlay pool becomes the game arena. The pool
     // is entirely reconstructible — the host re-sends overlays on every app
-    // switch, so nothing is lost (see DOOM_FEASIBILITY.md, Challenge 2).
+    // switch, so nothing is lost (see docs/archive/doom-feasibility.md, Challenge 2).
     s_fb = (uint8_t *)get_overlay_pool();
 #ifdef POLYKYBD_DOOM_PACK
     // Zero the whole pool, then bring up the flashed engine pack: its init

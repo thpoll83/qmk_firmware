@@ -1,18 +1,18 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "status_oled.h"
-#include "layer_names.h"
-#include "../oled_helper.h"
+#include "keymap/layer_names.h"
+#include "display/oled_helper.h"
 
 #include "split42.h"
-#include "../bridge_helper.h"
-#include "../state.h"
-#include "../side.h"
+#include "split_link/bridge_helper.h"
+#include "system/state.h"
+#include "split_link/side.h"
 #include "../base/com.h"
-#include "../base/disp_array.h"
+#include "drivers/disp_array.h"
 #include "../base/glyph_meta.h"
 #include "../base/text_helper.h"
-#include "../base/fonts/NotoSans_Medium_Base_8pt.h"
+#include "fonts/NotoSans_Medium_Base_8pt.h"
 #include "../lang/named_glyphs.h"
 #include "../config.h"                          // FULL_BRIGHT
 
@@ -32,8 +32,8 @@ extern const GFXfont NotoSans_Regular_Nano_10px7b;
 // Status-OLED chrome (layer/lock icons, arrows) lives in the resident font set,
 // which sits at the front of the runtime g_all_fonts[] table.
 #include "base/fontpack.h"
-#include "base/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
-#include "../poly_keymap.h"
+#include "drivers/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
+#include "keymap/poly_keymap.h"
 
 // Role icons (usb_status_bitmap / link_status_bitmap) are shared with split72 and
 // live in oled_helper.c.

@@ -2,7 +2,7 @@
 #
 # Edit this file, then regenerate the headers:
 #     python3 fonts/generate_fonts.py        (see fonts/README.md)
-# Do NOT hand-edit base/fonts/generated/*.h — they are produced from this file.
+# Do NOT hand-edit fonts/generated/*.h — they are produced from this file.
 #
 # The `fonts:` list is ORDERED and the order is load-bearing: list order ==
 # ALL_FONTS[] priority.  Glyph lookup scans ALL_FONTS front-to-back, so when two
@@ -54,7 +54,7 @@ sources:
   c64-keycap:          fonts/fantasy/C64Keyboard-Regular.ttf   # szabadkai/c64-keyboard-font v1.111, CC0 — printed keycap lettering
   amiga-topaz:         fonts/fantasy/Amiga-Regular.ttf
 
-# The composed index header that the firmware includes (base/fonts/<output>).
+# The composed index header that the firmware includes (fonts/<output>).
 index:
   output: gfx_used_fonts.h
   # Headers #included by the index in addition to the per-category ones. Their
@@ -164,12 +164,12 @@ bundles:
     # 348 KB, still ~2.2x its ~159 KB, so the icon library could take the tail;
     # its OFFSET is unchanged, so a deployed latinbig.plyf stays valid.
     - {id: latinbig, slot_kb: 348,  categories: [latinbig]}
-    # Overlay icon library (HID cmd 42, protocol v20; OVERLAY_ICON_LIBRARY_DESIGN.md).
+    # Overlay icon library (HID cmd 42, protocol v20; docs/design/overlay-icon-library.md).
     # kind: icons = a PlyI bundle the HOST builds from its overlay templates. It
     # carries no fonts, so this build emits no .plyf for it: the entry only
     # reserves the slot and gives it bundle id 8 in the GET_ID version block.
     - {id: icons,    slot_kb: rest, kind: icons}
-    # Emoji search dictionary (emoji/EMOJI_SEARCH.md): a data-only PlyF the host
+    # Emoji search dictionary (docs/features/emoji-search.md): a data-only PlyF the host
     # builds with emoji/emoji_dict.py. Placed inside emoji's 512 KB reserve.
     - {id: emojidict, slot_kb: 128, offset_kb: 932, kind: emojidict}
 

@@ -11,18 +11,18 @@ description: >
   tests, reshipping the symbol font-pack bundle, and handing the tester a .bin,
   the .plyf and the flash command. NOT for app shortcuts like Ctrl+C or F2 (those
   belong to the host app overlays: generate-app-overlays), full keyboard
-  languages (add-polykybd-language), or legend glyphs (LEGEND_RENDERING.md).
+  languages (add-polykybd-language), or legend glyphs (docs/display/legend-rendering.md).
 ---
 
 # Add or retouch an OS shortcut-hint icon
 
-Read [`keyboards/polykybd/HINT_ICONS.md`](../../../keyboards/polykybd/HINT_ICONS.md)
+Read [`keyboards/polykybd/docs/display/hint-icons.md`](../../../keyboards/polykybd/docs/display/hint-icons.md)
 first. It holds the style-D rules and the reason behind every icon's current shape,
 and most change requests were already decided there once.
 
 Every hint is ONE glyph of the font `PolyHintIcons` (U+100100..), drawn by
 `tools/hint_icons_stage.py`, written by `tools/hint_icons.py` to
-`base/fonts/hint_icons.h`, and shipped in the `symbol` font-pack bundle, NOT in the
+`fonts/hint_icons.h`, and shipped in the `symbol` font-pack bundle, NOT in the
 firmware image. `hints/os_hints.c` returns the `ICON_HINT_*` macro for a chord.
 
 All paths below are relative to `keyboards/polykybd/` unless they start with a repo
@@ -83,7 +83,7 @@ Pitfalls). A whole-set overview at 4×: `python3 tools/hint_icons.py --sheet /tm
 
 ```bash
 cd keyboards/polykybd
-python3 tools/hint_icons.py                # rewrite base/fonts/hint_icons.h (keeps style d)
+python3 tools/hint_icons.py                # rewrite fonts/hint_icons.h (keeps style d)
 python3 tools/hint_icons.py --macros       # only when names or slots changed:
                                            #   paste into lang/named_glyphs.h's ICON_HINT block
 python3 tools/hint_icons.py --check        # header + macro block both current
@@ -160,5 +160,5 @@ before/after sheet, test count, and the files handed over (`.bin` with sha,
   drawing.
 - **Do not hand-edit `hint_icons.h` or the `ICON_HINT_*` block**; both are generated,
   and `--check` fails on a stale one.
-- **Hardware decides.** Every accepted shape in `HINT_ICONS.md` came from a look at
+- **Hardware decides.** Every accepted shape in `docs/display/hint-icons.md` came from a look at
   a real keycap; record the new decision there when the maintainer settles one.

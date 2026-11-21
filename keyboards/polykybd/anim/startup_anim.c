@@ -9,15 +9,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include "quantum.h"                       // timer_read32/elapsed32, keymaps
-#include "base/disp_array.h"               // scratch buffer, BUFFER_X, kdisp_*
-#include "base/shift_reg.h"                // sr_shift_out_buffer_latch
-#include "side.h"                           // is_left_side()
-#include "bridge_helper.h"                  // is_usb_host_side() — for the startup trace
+#include "drivers/disp_array.h"               // scratch buffer, BUFFER_X, kdisp_*
+#include "drivers/shift_reg.h"                // sr_shift_out_buffer_latch
+#include "split_link/side.h"                           // is_left_side()
+#include "split_link/bridge_helper.h"                  // is_usb_host_side() — for the startup trace
 #include QMK_KEYBOARD_H                     // get_key_disp_bitmask, NUM_SHIFT_REGISTERS
-#include "poly_util.h"                      // poly_heavy_font(): the splash face, one copy
+#include "system/poly_util.h"                      // poly_heavy_font(): the splash face, one copy
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
-#include "../poly_keymap.h"
-#include "../multicore_exec.h"          // core1_eden_key(), core1_eden_available()
+#include "keymap/poly_keymap.h"
+#include "display/multicore_exec.h"          // core1_eden_key(), core1_eden_available()
 #include "polymod_core1.h"                 // dmb(); core1_stack_high_water_mark() (CORE1_STACK_HWM)
 
 // Cut a key's resting legend out of the idle comet field (dark silhouette). Defined
@@ -577,7 +577,7 @@ static void sa_render_frame(uint32_t el) {
 // SPI and no console, so it runs on either core: core0 renders into the scratch buffer
 // (sa_render_idle_key), core1 into its compact buffer (startup_anim_core1_job). `brow`
 // is the caller's 2x2-row cache, so the two cores never share one.
-// noinline: this frame is part of core1's measured stack budget (see IDLE_STYLES.md).
+// noinline: this frame is part of core1's measured stack budget (see docs/display/idle-styles.md).
 static __attribute__((noinline)) void sa_idle_key_compute(const sa_key_geom_t *g, uint8_t *win,
                                                           uint8_t stride, uint8_t *brow) {
     const uint8_t  tp    = (uint8_t)(s_frame_el >> 4);
@@ -692,7 +692,7 @@ static bool              s_c1_frame;              // the current frame renders o
 static bool              s_c1_off;                // core0 renders: core1 timed out or still owes jobs
 
 // Runs ON CORE1, from core1_entry(). `arg` = idx | left << 8 | slot << 9 | seq << 16. No console,
-// no IRQs, and CORE1_STACK_SIZE of stack (IDLE_STYLES.md has the measured budget).
+// no IRQs, and CORE1_STACK_SIZE of stack (docs/display/idle-styles.md has the measured budget).
 void __attribute__((noinline)) startup_anim_core1_job(uint32_t arg) {
     const uint8_t idx  = (uint8_t)(arg & 0xFFu);
     const bool    left = ((arg >> 8) & 1u) != 0;

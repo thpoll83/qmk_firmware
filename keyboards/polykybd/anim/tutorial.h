@@ -3,7 +3,7 @@
 //
 // First-run tutorial — the guided introduction that follows the Eden intro on a new
 // board. Full design, and the reasoning behind the parts that are not obvious, in
-// anim/TUTORIAL.md.
+// docs/features/tutorial.md.
 //
 // split72 only (the ripple works in startup_anim_geom.h's board space); split42 gets
 // no-op stubs, exactly as the Eden animation does.

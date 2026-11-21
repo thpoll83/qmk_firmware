@@ -15,7 +15,7 @@ RGB_MATRIX_DRIVER = ws2812
 
 #source files
 QUANTUM_LIB_SRC += spi_master.c
-SRC += status_oled.c status_idle.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
+SRC += status_oled.c display/status_idle.c base/update.c drivers/e2prom.c base/com.c base/text_helper.c drivers/helpers.c drivers/disp_array.c drivers/shift_reg.c drivers/spi_helper.c base/overlay.c lang/lang_lut.c drivers/fw_staging.c base/fontpack.c
 
 # Build Options
 WS2812_DRIVER = vendor
@@ -44,13 +44,13 @@ endif
 # ABSOLUTE + our gesture layer is the DEFAULT, and the flavour every hardware
 # round was run against. Absolute mode implies the gesture layer: the stock one
 # cannot place its zones in the pad's physical frame, so the two are one switch.
-# See keyboards/polykybd/cirque_gestures.c and keyboards/polykybd/TRACKPAD.md.
+# See keyboards/polykybd/peripherals/cirque_gestures.c and keyboards/polykybd/docs/features/trackpad.md.
 ifneq ($(strip $(POLYKYBD_CIRQUE_RELATIVE)), yes)
     OPT_DEFS += -DPOLYKYBD_CIRQUE_ABSOLUTE
     OPT_DEFS += -DPOLYKYBD_CIRQUE_GESTURES
     # Only the absolute flavour references these, so the relative build carries
     # no dead objects rather than relying on the linker to drop them.
-    SRC += cirque_gestures.c base/cirque_gesture_fsm.c
+    SRC += peripherals/cirque_gestures.c base/cirque_gesture_fsm.c
 endif
 # -e POLYKYBD_CIRQUE_TRACE=yes puts a live pad readout on the status OLED of the
 # half holding the pad, so the window and z numbers can be read off the keyboard
@@ -73,7 +73,7 @@ endif
 # The driver itself is the polykybd/polymod_ltr559 community module (listed in
 # keyboard.json) — listing it is what compiles and auto-hooks it, so there is no
 # SRC line and no enable define here. COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE is
-# defined by the build for us, and is what poly_keymap.c gates its consumer code on.
+# defined by the build for us, and is what keymap/poly_keymap.c gates its consumer code on.
 OPT_DEFS += -DPOLYKYBD_LTR559_DRIVE
 
 #Allow raw hid communication (for bi-directional data transfer)

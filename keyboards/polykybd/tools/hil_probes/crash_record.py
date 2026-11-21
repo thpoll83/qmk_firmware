@@ -20,7 +20,7 @@ NEEDS_CONSOLE = False
 POLY_CHANNEL = 0x50
 CMD_CRASH_RECORD = 0x27
 
-# poly_crash_record_t, little-endian (base/crash_record.h; PolyKybdHost
+# poly_crash_record_t, little-endian (drivers/crash_record.h; PolyKybdHost
 # polyhost/services/crash_report.py RECORD_STRUCT).
 RECORD = struct.Struct("<IBBBBIIIIIIHH8sI")
 MAGIC = 0xC4A5C0DE
@@ -30,7 +30,7 @@ KINDS = {0: "none", 1: "hardfault", 2: "unhandled", 3: "watchdog", 4: "halt"}
 def _decode_boot_arg(arg):
     hi, lo = arg >> 8, arg & 0xFF
     if hi == 0:
-        return f"step {lo} (milestone)"   # splash_progress()'s bare step stamp
+        return f"step {lo} (milestone)"  # splash_progress()'s bare step stamp
     step, core1 = hi & 0x0F, (hi >> 4) & 1
     if 0x80 <= lo <= 0xBF:
         return (f"step {step}, sub-step paint in flight: core1_entered={core1}, "
@@ -58,16 +58,17 @@ def _read(raw, which, log):
     if not flags & 1:
         log(f"half {which}: no record (flags 0x{flags:02X})")
         return True
-    (magic, kind, core, n, reason, pc, lr, sp, xpsr, icsr, up, phase, arg,
-     fw, _crc) = RECORD.unpack(reply[4:4 + RECORD.size])
+    (magic, kind, core, n, reason, pc, lr, sp, xpsr, icsr, up, phase, arg, fw, _crc) = RECORD.unpack(reply[4:4 + RECORD.size])
     if magic != MAGIC:
         log(f"half {which}: bad magic 0x{magic:08X}")
         return False
     fw_s = fw.split(b"\x00", 1)[0].decode("ascii", "replace")
-    log(f"half {which}: {'FRESH' if flags & 2 else 'archived'} kind={KINDS.get(kind, kind)} "
+    log(
+        f"half {which}: {'FRESH' if flags & 2 else 'archived'} kind={KINDS.get(kind, kind)} "
         f"core={core} n={n} reason=0x{reason:02X} pc=0x{pc:08X} lr=0x{lr:08X} "
         f"sp=0x{sp:08X} xpsr=0x{xpsr:08X} icsr=0x{icsr:08X} up={up}ms "
-        f"phase={phase}:0x{arg:04X} fw={fw_s}")
+        f"phase={phase}:0x{arg:04X} fw={fw_s}"
+    )
     if phase == 1:
         log(f"half {which}: boot breadcrumb -> {_decode_boot_arg(arg)}")
     return True

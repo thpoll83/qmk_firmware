@@ -13,7 +13,7 @@
 //     halves of the monolith's --wrap set).
 //
 // The engine objects themselves are the UNMODIFIED .o files of a monolithic
-// POLYKYBD_DOOM build, re-linked at the pack address (PACK_DESIGN.md §7).
+// POLYKYBD_DOOM build, re-linked at the pack address (docs/design/doom-pack.md §7).
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>

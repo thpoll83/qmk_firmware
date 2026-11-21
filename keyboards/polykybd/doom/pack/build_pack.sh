@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# DoomPack build driver (doom/PACK_DESIGN.md §7).
+# DoomPack build driver (docs/design/doom-pack.md §7).
 #
 # Re-links the UNMODIFIED engine objects of a monolithic POLYKYBD_DOOM build
 # at the DOOMPACK slot address, pairs the pack's RAM with the exact
@@ -71,7 +71,7 @@ cp "$BUILD/polykybd_split72_default.uf2" "$STASH/monolith.uf2"
 
 # The pack payload: every engine object + the platform shim + the printf and
 # pico_sync objects the monolith links them against (providers verified from
-# the .map — see PACK_DESIGN.md §3).
+# the .map — see docs/design/doom-pack.md §3).
 find "$OBJ/doom/engine" -name '*.o' -exec cp {} "$STASH/obj/" \;
 cp "$OBJ/doom/qmk_shim.o" "$STASH/obj/"
 cp "$OBJ/printf.o" "$STASH/obj/qmk_printf.o"
@@ -136,7 +136,7 @@ ARCH="-mcpu=cortex-m0plus -mthumb -Os -ffunction-sections -fdata-sections"
 # flash). Hardcoding 0x40000 is how a pack the firmware would refuse — or worse, one
 # that reaches the EEPROM and erases the user's keymap — gets built.
 EEPROM_RESERVE=$(sed -n 's/^#define FW_EEPROM_RESERVE_SIZE[[:space:]]*\(0x[0-9A-Fa-f]*\)UL.*/\1/p' \
-                 "$REPO/keyboards/polykybd/base/fw_staging.h")
+                 "$REPO/keyboards/polykybd/drivers/fw_staging.h")
 [[ -n "$EEPROM_RESERVE" ]] || { echo "build_pack: cannot read FW_EEPROM_RESERVE_SIZE from fw_staging.h" >&2; exit 1; }
 PACK_LEN=$(( 0x40000 - EEPROM_RESERVE ))
 printf '   pack slot %d B (0x%X) after the %d B EEPROM reservation\n' "$PACK_LEN" "$PACK_LEN" "$((EEPROM_RESERVE))"

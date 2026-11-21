@@ -43,11 +43,11 @@ import oled_preview  # noqa: E402
 from gfx_font import BUFFER_X, OLED_H, OLED_W  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
-PANEL_H, PANEL_W = OLED_H, OLED_W          # SCREEN_HEIGHT, SCREEN_WIDTH: 40, 72
+PANEL_H, PANEL_W = OLED_H, OLED_W  # SCREEN_HEIGHT, SCREEN_WIDTH: 40, 72
 BASELINE = 23
-DOWN2, UP2, RIGHT2 = 0x05, 0x0C, 0x06       # \x05, \f, \x06 display-list moves
+DOWN2, UP2, RIGHT2 = 0x05, 0x0C, 0x06  # \x05, \f, \x06 display-list moves
 
-RENDERER = oled_preview.load_renderer(str(_PK / 'base' / 'fonts'))
+RENDERER = oled_preview.load_renderer(str(_PK / 'fonts'))
 
 
 def slot_lift(cp: int) -> int:
@@ -124,7 +124,7 @@ def render(cp: int) -> tuple[Image.Image, int, bool]:
             lost[0] += 1
 
     saved = oled_preview.OVERSHOOT
-    oled_preview.OVERSHOOT = 200            # count every ink pixel, not only the slack
+    oled_preview.OVERSHOOT = 200  # count every ink pixel, not only the slack
     try:
         RENDERER.draw(plot, seq, BUFFER_X, BASELINE)
     finally:
@@ -160,11 +160,9 @@ def sheet(title: str, cps: list[int], path: Path, per_page: int, cols: int = 10,
         for i, cp in enumerate(page):
             img, lost, missing = render(cp)
             x0, y0 = 10 + (i % cols) * cell_w, y + (i // cols) * cell_h
-            out.paste(img.convert('RGB').resize((PANEL_W * sc, PANEL_H * sc), Image.NEAREST),
-                      (x0 + 2 * sc, y0 + 2 * sc))
+            out.paste(img.convert('RGB').resize((PANEL_W * sc, PANEL_H * sc), Image.NEAREST), (x0 + 2 * sc, y0 + 2 * sc))
             label = 'Glyph missing!' if missing else (f'U+{cp:04X} cut {lost}' if lost else f'U+{cp:04X}')
-            d.text((x0 + 4, y0 + PANEL_H * sc + 3), label,
-                   fill=(255, 140, 140) if (lost or missing) else (170, 170, 170), font=small)
+            d.text((x0 + 4, y0 + PANEL_H * sc + 3), label, fill=(255, 140, 140) if (lost or missing) else (170, 170, 170), font=small)
         y += rows * cell_h
     out.save(path)
     return path

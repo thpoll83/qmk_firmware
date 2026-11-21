@@ -52,9 +52,9 @@ WORKFLOW_PATH_POSIX = ".github/workflows/" + WORKFLOW
 # release.yml is here and bump-version.yml is not: one controls whether this
 # gate runs and on which sha, the other only picks a version number.
 SELF_PATHS = (
-    WORKFLOW_PATH_POSIX,                                  # the policy
-    "keyboards/polykybd/tools/require_fwapply_run.py",    # the gate
-    ".github/workflows/release.yml",                      # what invokes it
+    WORKFLOW_PATH_POSIX,  # the policy
+    "keyboards/polykybd/tools/require_fwapply_run.py",  # the gate
+    ".github/workflows/release.yml",  # what invokes it
 )
 JOB_ID = "fwapply-test"
 # Fallback only. The real name is DERIVED from the workflow (see job_name): a
@@ -75,8 +75,7 @@ VERSION_MACRO = "FW_VERSION"
 VERSION_MACROS = ("FW_VERSION", "PROTOCOL_VERSION")
 # `+/-` stripped by the caller; leading whitespace allowed, nothing else before
 # the directive and nothing but the macro name after it.
-VERSION_DEFINE_RE = re.compile(
-    r"^\s*#\s*define\s+(?:" + "|".join(VERSION_MACROS) + r")\b")
+VERSION_DEFINE_RE = re.compile(r"^\s*#\s*define\s+(?:" + "|".join(VERSION_MACROS) + r")\b")
 MAX_ANCESTORS = 12
 # GitHub's compare API returns at most this many files, silently truncated. A
 # truncated list cannot prove "nothing else changed", so it is refused rather
@@ -127,11 +126,7 @@ def job_name(workflow_text=None):
 
 
 def api(path, token):
-    req = urllib.request.Request(
-        f"{API}{path}",
-        headers={"Authorization": f"Bearer {token}",
-                 "Accept": "application/vnd.github+json",
-                 "User-Agent": "polykybd-release-gate"})
+    req = urllib.request.Request(f"{API}{path}", headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "User-Agent": "polykybd-release-gate"})
     with urllib.request.urlopen(req, timeout=30) as fh:
         return json.load(fh)
 
@@ -399,8 +394,7 @@ def main():
         conclusive, why = compare_is_conclusive(compare)
         if not conclusive:
             print(f"::error::cannot prove {candidate[:8]}...{sha[:8]} is only the "
-                  f"version bump: {why}. Refusing rather than assuming.",
-                  file=sys.stderr)
+                  f"version bump: {why}. Refusing rather than assuming.", file=sys.stderr)
             return 1
         files = compare.get("files", [])
         if only_a_version_bump(files):
@@ -417,21 +411,23 @@ def main():
                   f"the delta to {sha[:8]} is the {VERSION_MACRO} bump plus files the "
                   f"build and the rig never read")
             return 0
-        blocking = sorted(f.get("filename", "?") for f in files
-                          if path_reaches_the_image(f.get("filename", ""), patterns))
+        blocking = sorted(f.get("filename", "?") for f in files if path_reaches_the_image(f.get("filename", ""), patterns))
         changed = ", ".join(blocking[:8]) or "(none)"
         print(f"::error::the newest apply-verified commit is {candidate[:8]}, but "
               f"{sha[:8]} differs from it by more than the version bump ({changed}). "
               f"That run does not cover this firmware.", file=sys.stderr)
         return 1
 
-    print(f"::error::no green '{want_job}' run covers {sha[:8]} or its "
-          f"{len(checked)} most recent ancestors — refusing to publish an image "
-          f"whose HID firmware-update path has never been exercised on hardware. "
-          f"Checked: {'; '.join(checked)}. "
-          f"Fix: run the Build and HIL Test workflow on this commit with "
-          f"tier=fwapply (Actions -> Build and HIL Test -> Run workflow), wait for "
-          f"it to go green, then re-run this job.", file=sys.stderr)
+    print(
+        f"::error::no green '{want_job}' run covers {sha[:8]} or its "
+        f"{len(checked)} most recent ancestors — refusing to publish an image "
+        f"whose HID firmware-update path has never been exercised on hardware. "
+        f"Checked: {'; '.join(checked)}. "
+        f"Fix: run the Build and HIL Test workflow on this commit with "
+        f"tier=fwapply (Actions -> Build and HIL Test -> Run workflow), wait for "
+        f"it to go green, then re-run this job.",
+        file=sys.stderr
+    )
     return 1
 
 
@@ -449,74 +445,56 @@ def selftest():
     cases = [
         # (name, files, expected)
         ("identical commits", [], True),
-        ("pure version bump",
-         [patch("@@", "-#define FW_VERSION \"0.16.23\"", "+#define FW_VERSION \"0.16.24\"")],
-         True),
+        ("pure version bump", [patch("@@", "-#define FW_VERSION \"0.16.23\"", "+#define FW_VERSION \"0.16.24\"")], True),
         # The +++/--- header lines name the file, not a change; they must not be
         # mistaken for content and must not fail the version check.
-        ("bump with a diff header",
-         [patch("--- a/x", "+++ b/x", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"")],
-         True),
+        ("bump with a diff header", [patch("--- a/x", "+++ b/x", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"")], True),
         # bump:protocol changes ONLY this line — FW_VERSION is rewritten to the
         # same value and never appears in the diff. Accepting just FW_VERSION
         # would refuse a well-covered protocol release at publish time.
         # ⚠️ A line that merely MENTIONS the macro is not the bump. config.h
         # has such lines, so a substring test would wave through a real code
         # edit that happens to sit beside one.
-        ("a real edit that only references the macro",
-         [patch("@@", "-  build_id(FW_VERSION, 1);", "+  build_id(FW_VERSION, 2);")],
-         False),
-        ("a #define of something else that references the macro",
-         [patch("@@", "-#define BANNER \"fw \" FW_VERSION", "+#define BANNER \"v\" FW_VERSION")],
-         False),
+        ("a real edit that only references the macro", [patch("@@", "-  build_id(FW_VERSION, 1);", "+  build_id(FW_VERSION, 2);")], False),
+        ("a #define of something else that references the macro", [patch("@@", "-#define BANNER \"fw \" FW_VERSION", "+#define BANNER \"v\" FW_VERSION")], False),
         # ⚠️ Word boundary: a DIFFERENT macro that merely starts with the same
         # name is not the bump. Without \\b in the regex this passes.
-        ("a different macro sharing the prefix",
-         [patch("@@", "-#define FW_VERSION_MAJOR 0", "+#define FW_VERSION_MAJOR 1")],
-         False),
+        ("a different macro sharing the prefix", [patch("@@", "-#define FW_VERSION_MAJOR 0", "+#define FW_VERSION_MAJOR 1")], False),
         # ⚠️ The filename check is what rejects this — the LINE is a perfectly
         # well-formed version define, so the regex alone cannot. Before this
         # fixture existed, deleting the filename check escaped the whole sweep.
-        ("a real version define in a DIFFERENT file",
-         [{"filename": "keyboards/polykybd/base/fw_staging.c",
-           "patch": "@@\n-#define FW_VERSION \"a\"\n+#define FW_VERSION \"b\""}],
-         False),
-        ("indented / spaced directive is still the bump",
-         [patch("@@", "-  #  define FW_VERSION \"a\"", "+  #  define FW_VERSION \"b\"")],
-         True),
-        ("protocol-only bump (bump:protocol)",
-         [patch("@@", "-#define PROTOCOL_VERSION 15", "+#define PROTOCOL_VERSION 16")],
-         True),
-        ("both version macros bumped",
-         [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"",
-                "-#define PROTOCOL_VERSION 15", "+#define PROTOCOL_VERSION 16")],
-         True),
-        ("protocol bump PLUS a real edit in the same file",
-         [patch("@@", "-#define PROTOCOL_VERSION 15", "+#define PROTOCOL_VERSION 16",
-                "-#define SOMETHING 1", "+#define SOMETHING 2")],
-         False),
-        ("version bump PLUS a real edit in the same file",
-         [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"",
-                "-#define SOMETHING 1", "+#define SOMETHING 2")],
-         False),
-        ("a second file changed",
-         [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\""),
-          {"filename": "keyboards/polykybd/poly_keymap.c", "patch": "@@\n+x"}],
-         False),
-        ("only another file changed",
-         [{"filename": "keyboards/polykybd/base/fw_staging.c", "patch": "@@\n+x"}], False),
+        ("a real version define in a DIFFERENT file", [{
+            "filename": "keyboards/polykybd/drivers/fw_staging.c",
+            "patch": "@@\n-#define FW_VERSION \"a\"\n+#define FW_VERSION \"b\""
+        }], False),
+        ("indented / spaced directive is still the bump", [patch("@@", "-  #  define FW_VERSION \"a\"", "+  #  define FW_VERSION \"b\"")], True),
+        ("protocol-only bump (bump:protocol)", [patch("@@", "-#define PROTOCOL_VERSION 15", "+#define PROTOCOL_VERSION 16")], True),
+        ("both version macros bumped", [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"", "-#define PROTOCOL_VERSION 15", "+#define PROTOCOL_VERSION 16")], True),
+        ("protocol bump PLUS a real edit in the same file", [patch("@@", "-#define PROTOCOL_VERSION 15", "+#define PROTOCOL_VERSION 16", "-#define SOMETHING 1", "+#define SOMETHING 2")], False),
+        ("version bump PLUS a real edit in the same file", [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"", "-#define SOMETHING 1", "+#define SOMETHING 2")], False),
+        ("a second file changed", [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\""), {
+            "filename": "keyboards/polykybd/keymap/poly_keymap.c",
+            "patch": "@@\n+x"
+        }], False),
+        ("only another file changed", [{
+            "filename": "keyboards/polykybd/drivers/fw_staging.c",
+            "patch": "@@\n+x"
+        }], False),
         # ⚠️ A DIFFERENT file whose changed lines all mention the macro. Not
         # hypothetical - hid_com.c builds the GET_ID string out of FW_VERSION -
         # and without this case the filename check can be DELETED and every
         # other fixture still passes, because the per-line check happens to
         # reject them for the other reason. Found by mutation-testing this
         # selftest, which is the whole argument for doing that.
-        ("another file whose lines all mention the macro",
-         [{"filename": "keyboards/polykybd/hid_com.c",
-           "patch": "@@\n-  x(FW_VERSION);\n+  y(FW_VERSION);"}], False),
+        ("another file whose lines all mention the macro", [{
+            "filename": "keyboards/polykybd/hid/hid_com.c",
+            "patch": "@@\n-  x(FW_VERSION);\n+  y(FW_VERSION);"
+        }], False),
         # No patch = a rename or mode change; there is nothing to inspect, so it
         # must be refused rather than assumed benign.
-        ("version file with no patch body", [{"filename": VERSION_FILE}], False),
+        ("version file with no patch body", [{
+            "filename": VERSION_FILE
+        }], False),
     ]
     ok = True
     for name, files, want in cases:
@@ -527,17 +505,33 @@ def selftest():
 
     bump = [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"")]
     compare_cases = [
-        ("an ordinary one-commit bump", {"files": bump, "ahead_by": 1}, True),
-        ("identical commits", {"files": [], "ahead_by": 0}, True),
+        ("an ordinary one-commit bump", {
+            "files": bump,
+            "ahead_by": 1
+        }, True),
+        ("identical commits", {
+            "files": [],
+            "ahead_by": 0
+        }, True),
         # ⚠️ GitHub truncates `files` at 300. A truncated list cannot prove
         # "and nothing else changed", which is the only thing this gate asserts.
-        ("a file list at GitHub's cap (may be truncated)",
-         {"files": [{"filename": VERSION_FILE, "patch": "@@"}] * COMPARE_FILE_CAP,
-          "ahead_by": 1}, False),
-        ("more commits than an auto-bump can be",
-         {"files": bump, "ahead_by": 40}, False),
-        ("no file list at all", {"ahead_by": 1}, False),
-        ("no ahead_by at all", {"files": bump}, False),
+        ("a file list at GitHub's cap (may be truncated)", {
+            "files": [{
+                "filename": VERSION_FILE,
+                "patch": "@@"
+            }] * COMPARE_FILE_CAP,
+            "ahead_by": 1
+        }, False),
+        ("more commits than an auto-bump can be", {
+            "files": bump,
+            "ahead_by": 40
+        }, False),
+        ("no file list at all", {
+            "ahead_by": 1
+        }, False),
+        ("no ahead_by at all", {
+            "files": bump
+        }, False),
     ]
     for name, compare, want in compare_cases:
         got, _ = compare_is_conclusive(compare)
@@ -551,11 +545,8 @@ def selftest():
     def span_ok(first, last, capacity):
         span = (last - first) & 0xFFFFFFFF
         return capacity != 0 and span <= capacity - 1
-    span_cases = [("normal", (0x41, 0x5A, 8751), True),
-                  ("uint32 wrap first=0 last=0xFFFFFFFF", (0, 0xFFFFFFFF, 8751), False),
-                  ("exactly fits", (0, 8750, 8751), True),
-                  ("one past", (0, 8751, 8751), False),
-                  ("zero capacity", (0, 0, 0), False)]
+
+    span_cases = [("normal", (0x41, 0x5A, 8751), True), ("uint32 wrap first=0 last=0xFFFFFFFF", (0, 0xFFFFFFFF, 8751), False), ("exactly fits", (0, 8750, 8751), True), ("one past", (0, 8751, 8751), False), ("zero capacity", (0, 0, 0), False)]
     for name, (a, b, cap), want in span_cases:
         if span_ok(a, b, cap) != want:
             print(f"selftest FAIL: span_ok({name}) = {not want}, want {want}")
@@ -564,13 +555,23 @@ def selftest():
     green = {"name": JOB_NAME, "conclusion": "success"}
     job_cases = [
         ("a green apply job", [(1, [green])], 1),
-        ("apply job failed", [(1, [{"name": JOB_NAME, "conclusion": "failure"}])], None),
-        ("apply job absent (run predates the tier)",
-         [(1, [{"name": "HIL test (split72)", "conclusion": "success"}])], None),
-        ("green in a later run of the same commit",
-         [(1, [{"name": JOB_NAME, "conclusion": "failure"}]), (2, [green])], 2),
+        ("apply job failed", [(1, [{
+            "name": JOB_NAME,
+            "conclusion": "failure"
+        }])], None),
+        ("apply job absent (run predates the tier)", [(1, [{
+            "name": "HIL test (split72)",
+            "conclusion": "success"
+        }])], None),
+        ("green in a later run of the same commit", [(1, [{
+            "name": JOB_NAME,
+            "conclusion": "failure"
+        }]), (2, [green])], 2),
         ("no runs at all", [], None),
-        ("apply job still running", [(1, [{"name": JOB_NAME, "conclusion": None}])], None),
+        ("apply job still running", [(1, [{
+            "name": JOB_NAME,
+            "conclusion": None
+        }])], None),
     ]
     for name, pairs, want in job_cases:
         got = covered_by(pairs)
@@ -579,19 +580,13 @@ def selftest():
             ok = False
 
     name_cases = [
-        ("reads the job's own name",
-         "jobs:\n  fwapply-test:\n    name: Firmware apply round-trip (split72)\n",
-         "Firmware apply round-trip (split72)"),
-        ("quoted name",
-         "  fwapply-test:\n    name: 'Apply (split72)'\n", "Apply (split72)"),
+        ("reads the job's own name", "jobs:\n  fwapply-test:\n    name: Firmware apply round-trip (split72)\n", "Firmware apply round-trip (split72)"),
+        ("quoted name", "  fwapply-test:\n    name: 'Apply (split72)'\n", "Apply (split72)"),
         # ⚠️ Must NOT bleed into the NEXT job's name when ours declares none —
         # that would silently match a different job and report coverage that
         # does not exist.
-        ("no name on our job -> the constant, not the next job's",
-         "  fwapply-test:\n    needs: [build]\n  other-job:\n    name: Something Else\n",
-         JOB_NAME),
-        ("job absent entirely -> the constant",
-         "  hil-test:\n    name: HIL test (split72)\n", JOB_NAME),
+        ("no name on our job -> the constant, not the next job's", "  fwapply-test:\n    needs: [build]\n  other-job:\n    name: Something Else\n", JOB_NAME),
+        ("job absent entirely -> the constant", "  hil-test:\n    name: HIL test (split72)\n", JOB_NAME),
     ]
     for name, text, want in name_cases:
         got = job_name(text)
@@ -623,17 +618,16 @@ def selftest():
               "      - '.github/workflows/qmk-test.yml'\n"
               "  workflow_dispatch:\n")
     pats = build_path_filter(sample)
-    if pats != ["**", "!**.md", "!scripts/**", "!.claude/**",
-                "!.github/workflows/**", ".github/workflows/qmk-test.yml"]:
+    if pats != ["**", "!**.md", "!scripts/**", "!.claude/**", "!.github/workflows/**", ".github/workflows/qmk-test.yml"]:
         print(f"selftest FAIL: build_path_filter parsed {pats!r}")
         ok = False
 
     reach_cases = [
         # (path, reaches the image?)
-        ("keyboards/polykybd/poly_keymap.c", True),
+        ("keyboards/polykybd/keymap/poly_keymap.c", True),
         ("keyboards/polykybd/config.h", True),
         ("CLAUDE.md", False),
-        ("keyboards/polykybd/CI_CHECKS.md", False),
+        ("keyboards/polykybd/docs/build/ci-checks.md", False),
         (".claude/skills/audit-derived-verdict/SKILL.md", False),
         ("scripts/publish_release.py", False),
         (".github/workflows/release.yml", False),
@@ -659,7 +653,7 @@ def selftest():
     if path_reaches_the_image("README.md", star):
         print("selftest FAIL: '!*.md' did not exclude a top-level .md")
         ok = False
-    if not path_reaches_the_image("keyboards/polykybd/CI_CHECKS.md", star):
+    if not path_reaches_the_image("keyboards/polykybd/docs/build/ci-checks.md", star):
         print("selftest FAIL: '!*.md' crossed a separator and excluded a nested .md")
         ok = False
 
@@ -684,59 +678,72 @@ def selftest():
         ("bump alone", [bump], True),
         # The exact shape that refused PolyKybd-fw-v0.27.1: a docs+skill merge
         # sitting between the covered run and the release commit.
-        ("bump plus docs and a skill",
-         [bump,
-          {"filename": "CLAUDE.md"},
-          {"filename": "keyboards/polykybd/CI_CHECKS.md"},
-          {"filename": "keyboards/polykybd/SPLIT_SYNC.md"},
-          {"filename": ".claude/skills/audit-derived-verdict/SKILL.md"}],
-         True),
-        ("docs only, no bump", [{"filename": "README.md"}], True),
-        ("one real source file among the docs",
-         [bump, {"filename": "CLAUDE.md"},
-          {"filename": "keyboards/polykybd/poly_keymap.c", "patch": "@@\n+x"}],
-         False),
+        (
+            "bump plus docs and a skill",
+            [bump, {
+                "filename": "CLAUDE.md"
+            }, {
+                "filename": "keyboards/polykybd/docs/build/ci-checks.md"
+            }, {
+                "filename": "keyboards/polykybd/docs/protocol/split-sync.md"
+            }, {
+                "filename": ".claude/skills/audit-derived-verdict/SKILL.md"
+            }], True
+        ),
+        ("docs only, no bump", [{
+            "filename": "README.md"
+        }], True),
+        ("one real source file among the docs", [bump, {
+            "filename": "CLAUDE.md"
+        }, {
+            "filename": "keyboards/polykybd/keymap/poly_keymap.c",
+            "patch": "@@\n+x"
+        }], False),
         # ⚠️ A rename OUT of a build path removes a build input. The new name
         # being harmless proves nothing; without the previous_filename check
         # this passes.
-        ("a .c renamed to a .md",
-         [{"filename": "docs/old_driver.md",
-           "previous_filename": "keyboards/polykybd/base/fw_staging.c"}],
-         False),
-        ("a .md renamed to another .md",
-         [{"filename": "docs/b.md", "previous_filename": "docs/a.md"}], True),
+        ("a .c renamed to a .md", [{
+            "filename": "docs/old_driver.md",
+            "previous_filename": "keyboards/polykybd/drivers/fw_staging.c"
+        }], False),
+        ("a .md renamed to another .md", [{
+            "filename": "docs/b.md",
+            "previous_filename": "docs/a.md"
+        }], True),
         # A config.h edit is never waved through by the path rule — config.h
         # reaches the image, so it still has to BE the bump.
-        ("a real config.h edit beside harmless docs",
-         [{"filename": "CLAUDE.md"},
-          patch("@@", "-#define SOMETHING 1", "+#define SOMETHING 2")],
-         False),
-        ("a file entry with no filename", [{"patch": "@@\n+x"}], False),
+        ("a real config.h edit beside harmless docs", [{
+            "filename": "CLAUDE.md"
+        }, patch("@@", "-#define SOMETHING 1", "+#define SOMETHING 2")], False),
+        ("a file entry with no filename", [{
+            "patch": "@@\n+x"
+        }], False),
         # ⚠️ The delta must not be able to write the policy it is judged by.
         # release.yml checks out the RELEASED commit, so one commit could drop
         # the qmk-test.yml re-include, add `!keyboards/**`, and edit the
         # firmware — every file then reading as harmless. Reproduced on #300
         # before the fix; these pin both halves of it.
-        ("the path filter itself changed",
-         [{"filename": WORKFLOW_PATH_POSIX, "patch": "@@\n+      - '!keyboards/**'"}],
-         False),
-        ("this gate's own source changed",
-         [{"filename": "keyboards/polykybd/tools/require_fwapply_run.py",
-           "patch": "@@\n+    return True"}],
-         False),
+        ("the path filter itself changed", [{
+            "filename": WORKFLOW_PATH_POSIX,
+            "patch": "@@\n+      - '!keyboards/**'"
+        }], False),
+        ("this gate's own source changed", [{
+            "filename": "keyboards/polykybd/tools/require_fwapply_run.py",
+            "patch": "@@\n+    return True"
+        }], False),
         # ⚠️ release.yml invokes this gate and supplies its SHA. The filter calls
         # it harmless (it is not a build input), so only SELF_PATHS refuses it.
         # This does NOT defend against the gate being deleted from that workflow
         # — nothing running inside it could — it stops a delta that weakened the
         # release path from being auto-cleared on the way past.
-        ("the release workflow changed",
-         [{"filename": ".github/workflows/release.yml",
-           "patch": "@@\n-          python3 keyboards/polykybd/tools/require_fwapply_run.py"}],
-         False),
-        ("the filter renamed out of the way",
-         [{"filename": "docs/old-workflow.md",
-           "previous_filename": WORKFLOW_PATH_POSIX}],
-         False),
+        ("the release workflow changed", [{
+            "filename": ".github/workflows/release.yml",
+            "patch": "@@\n-          python3 keyboards/polykybd/tools/require_fwapply_run.py"
+        }], False),
+        ("the filter renamed out of the way", [{
+            "filename": "docs/old-workflow.md",
+            "previous_filename": WORKFLOW_PATH_POSIX
+        }], False),
     ]
 
     # ⚠️ And with a filter that says those files are harmless — the exact shape
@@ -744,8 +751,14 @@ def selftest():
     # merely agree with it.
     hostile = ["**", "!**.md", "!.github/workflows/**", "!keyboards/**"]
     attack = [
-        {"filename": WORKFLOW_PATH_POSIX, "patch": "@@\n+      - '!keyboards/**'"},
-        {"filename": "keyboards/polykybd/base/fw_staging.c", "patch": "@@\n+bad"},
+        {
+            "filename": WORKFLOW_PATH_POSIX,
+            "patch": "@@\n+      - '!keyboards/**'"
+        },
+        {
+            "filename": "keyboards/polykybd/drivers/fw_staging.c",
+            "patch": "@@\n+bad"
+        },
     ]
     if delta_is_provably_harmless(attack, hostile):
         print("selftest FAIL: a delta that rewrites the filter judged itself harmless")
@@ -755,8 +768,7 @@ def selftest():
     # too. With the ordinary filter this case passes for the wrong reason — the
     # old path reaches the image on its own — and a rule that only looked at the
     # new name survived the mutation sweep because of it.
-    renamed_away = [{"filename": "docs/gone.md",
-                     "previous_filename": WORKFLOW_PATH_POSIX}]
+    renamed_away = [{"filename": "docs/gone.md", "previous_filename": WORKFLOW_PATH_POSIX}]
     if path_reaches_the_image(WORKFLOW_PATH_POSIX, hostile):
         print("selftest FAIL: the hostile fixture no longer isolates the rename rule")
         ok = False

@@ -94,6 +94,6 @@ proxy-authorized, so a plain fetch ends in `Could not access submodule
   before believing anything (2026-08-11).
 - **`master` is a mirror, so it is fine for it to be AHEAD of what PolyKybd merged.**
   Mirroring to the upstream tip while PolyKybd merges a stable tag is the normal
-  case — but it makes `UPSTREAM_PATCHES.md`'s `git diff master..HEAD` check
+  case — but it makes `docs/build/upstream-patches.md`'s `git diff master..HEAD` check
   approximate by exactly that gap. See the note at the top of that file.
 - `git fetch upstream` (step 1) already fetches `upstream/master` — no separate fetch needed in later steps.

@@ -40,7 +40,7 @@ macro the sheet lacks, and those macros are used in real legends, so
 their glyphs were dropped from `IconsFont`).
 
 **Add the row to the sheet, not the macro to the header.** A name here is only
-useful if `base/fonts/gfx_icons.h` actually has a glyph at that codepoint — that
+useful if `fonts/gfx_icons.h` actually has a glyph at that codepoint — that
 file is hand-maintained and is the other half of the contract. Keep the rows in
 ascending codepoint order; column F shows the gap to the previous row, which makes
 a missing or duplicated codepoint visible at a glance.
@@ -76,8 +76,8 @@ duplicate label rather than emitting a quietly wrong table, so a repeat is loud.
 ### Adding a variation: `_add_latin_variation.py`
 
 ```bash
-./_add_latin_variation.py --dry-run lang_lut.xlsx S 'Ș' s 'ș'   # report, change nothing
-./_add_latin_variation.py          lang_lut.xlsx S 'Ș' s 'ș'
+./scripts/_add_latin_variation.py --dry-run lang_lut.xlsx S 'Ș' s 'ș'   # report, change nothing
+./scripts/_add_latin_variation.py          lang_lut.xlsx S 'Ș' s 'ș'
 cd .. && ./run_cog.sh
 ```
 
@@ -102,5 +102,5 @@ slots, because `KC_LAT0..KC_LAT9` are the picker keys — a full row (`A I O U`,
 cases) has no room, which is what currently keeps Vietnamese `Ơ ơ Ư ư` and pinyin
 `ǖ ǘ ǚ ǜ` out. And the glyph must exist in a **resident** font or the keycap draws
 nothing without a font pack; check with `PolyKybdHost/tools/gfx_font.py` against
-`base/fonts` before adding (Latin-1 Sup / Ext-A / Ext-B are all covered by the
+`fonts` before adding (Latin-1 Sup / Ext-A / Ext-B are all covered by the
 `latin` category, which is `resident: true`).

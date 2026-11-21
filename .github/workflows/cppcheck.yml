@@ -21,6 +21,11 @@
 # problem in CLAUDE.md. cppcheck scoped to keyboards/polykybd is the
 # proportionate version. The host repo does run CodeQL, where Python needs no
 # build and the tree is entirely ours.
+#
+# `-I keyboards/polykybd` is the include path the compiler uses. Sources in
+# subfolders include "config.h" and "system/state.h" from the keyboard root;
+# without it cppcheck misses config.h, USE_CORE1 is undefined and the
+# `#error "... requires USE_CORE1"` guards fire.
 name: cppcheck (polykybd)
 
 on:
@@ -53,8 +58,9 @@ jobs:
             --suppressions-list=keyboards/polykybd/.cppcheck-suppressions \
             --error-exitcode=2 \
             -DFW_REQUIRE_SIGNATURE -DKEYBOARD_polykybd_split72 \
+            -I keyboards/polykybd \
             -i keyboards/polykybd/doom \
-            -i keyboards/polykybd/base/fonts \
+            -i keyboards/polykybd/fonts \
             -i modules/polykybd/polymod_monocypher/monocypher.c \
             -i modules/polykybd/polymod_monocypher/monocypher-ed25519.c \
             -i keyboards/polykybd/base/tests \

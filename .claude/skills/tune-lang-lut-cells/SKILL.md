@@ -128,7 +128,7 @@ The number in the cell is not the number on the keycap.
   a second `op.Lang` on it.
 
 ⚠️ Two renderer traps:
-- `op.load_renderer(base/fonts)` — plain `Renderer(load_all_fonts(d))` omits the
+- `op.load_renderer(fonts)` — plain `Renderer(load_all_fonts(d))` omits the
   standalone mid face, so `HINT_MID` silently renders full size.
 - `R.draw(setpix, cps, x, y)` takes **buffer** coordinates and `plot` subtracts
   `BUFFER_X` (28). Drawing at `x=2` puts everything off the viewport and you get a
@@ -154,7 +154,7 @@ collision.
 
 ## Pitfalls
 
-- **A settings row must be INSERTED, not appended** (`lang/_insert_settings_row.py`),
+- **A settings row must be INSERTED, not appended** (`lang/scripts/_insert_settings_row.py`),
   and the row number lives in four places in `sheet2.xml` — two outside `<sheetData>`.
 - **`HIDE_KEY` (−128) is a position sentinel, not a delta.** A delta row (the held
   offsets) takes real negatives, and the firmware maps `HIDE_KEY` to 0 there.

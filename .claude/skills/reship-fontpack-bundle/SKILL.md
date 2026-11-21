@@ -13,7 +13,7 @@ contract) and the host (`PolyKybdHost/polyhost/res/fontpack/<id>.plyf` +
 this skill is the recipe, and `reship_bundles.py` (beside this file) is the actuator.
 
 **Key fact that makes this cheap:** bundles derive **deterministically from the
-committed category headers** (`base/fonts/generated/*.h`). `fontconvert` only
+committed category headers** (`fonts/generated/*.h`). `fontconvert` only
 *regenerates those headers* from the TTFs. So for any reship where the headers are
 already committed — a dedupe bump, a version-only resync, copying a
 firmware-side render change to the host — you do **not** need the pinned
@@ -75,8 +75,8 @@ Repos (auto-discovered; override with `--qmk` / `--host`):
    # cross-repo shared manifests must stay byte-identical
    cd ../qmk_firmware/keyboards/polykybd
    cmp fonts/noto-fonts.yaml ../../../PolyKybdHost/polyhost/res/fonts/noto-fonts.yaml
-   cmp base/fonts/generated/fontpack_render_settings.json ../../../PolyKybdHost/polyhost/res/fontpack/fontpack_render_settings.json
-   cmp base/fonts/generated/lang_flags.json ../../../PolyKybdHost/polyhost/res/fontpack/lang_flags.json
+   cmp fonts/generated/fontpack_render_settings.json ../../../PolyKybdHost/polyhost/res/fontpack/fontpack_render_settings.json
+   cmp fonts/generated/lang_flags.json ../../../PolyKybdHost/polyhost/res/fontpack/lang_flags.json
    # sanity: a re-run of --check should now report every bundle "identical"
    cd ../.. && python3 .claude/skills/reship-fontpack-bundle/reship_bundles.py --check
    ```

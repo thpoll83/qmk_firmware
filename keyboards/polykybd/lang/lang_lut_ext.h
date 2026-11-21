@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "../state.h"      // LATIN_PICK_MAX — the ceiling the assert below checks
+#include "system/state.h"      // LATIN_PICK_MAX — the ceiling the assert below checks
 
 // Variation slots per (letter, case).  Rows 0..25 are UPPERCASE A..Z, rows
 // 26..51 lowercase a..z; a row is padded with NULL past its real variations.
@@ -27,7 +27,7 @@
 // case) in latin_sync_t.ex, so LATIN_PICK_MAX is the hard ceiling — beyond it a
 // pick cannot be represented, and latin_variation()'s `idx < LATIN_EX_VARIATIONS`
 // guard would silently start reading a truncated index instead.  The sheet-side
-// twin of this limit is MAX_SLOTS in lang/_add_latin_variation.py.
+// twin of this limit is MAX_SLOTS in lang/scripts/_add_latin_variation.py.
 //
 // Was a nibble (16).  Six bits covers the whole Latin letter+combining-mark space:
 // the widest base letter is O with 34 forms, counting the Vietnamese double-mark

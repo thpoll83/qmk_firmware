@@ -6,7 +6,7 @@ paths:
 ---
 # Regenerating fonts
 
-Notes: `fonts/README.md` · `FONT_PACK.md`. The `reship-fontpack-bundle` skill handles a
+Notes: `fonts/README.md` · `docs/display/font-pack.md`. The `reship-fontpack-bundle` skill handles a
 reship without `fontconvert`.
 
 - ⚠️ **Three artifacts are mirrored BYTE-IDENTICALLY into the host repo** —

@@ -80,7 +80,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Two flavours, selected by the rules.mk switches of the same name.
 //
 // ABSOLUTE (DEFAULT): every sample carries x, y and z, so
-// keyboards/polykybd/cirque_gestures.c takes the report function over and decides
+// keyboards/polykybd/peripherals/cirque_gestures.c takes the report function over and decides
 // tap, right click and scroll itself, with its own z threshold and with the zones
 // placed in the pad's PHYSICAL frame. The stock absolute gestures are NOT used --
 // measured on hardware, circular scroll never fires, because it sizes its outer

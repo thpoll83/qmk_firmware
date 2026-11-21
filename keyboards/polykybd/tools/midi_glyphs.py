@@ -22,7 +22,7 @@ Sources:
 
 The glyphs are appended to IconsFont between the BEGIN/END markers, so the font's
 `last` moves and nothing else does: no pack index shifts and no bundle is reshipped
-(FONT_PACK.md). The macros go to lang/named_glyphs.h, outside the cog block, which
+(docs/display/font-pack.md). The macros go to lang/named_glyphs.h, outside the cog block, which
 is what tools/check_icon_slots.py cross-checks.
 """
 import argparse
@@ -35,7 +35,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KB = os.path.dirname(HERE)
-ICONS_H = os.path.join(KB, "base", "fonts", "gfx_icons.h")
+ICONS_H = os.path.join(KB, "fonts", "gfx_icons.h")
 NAMES_H = os.path.join(KB, "lang", "named_glyphs.h")
 FREESERIF = "/usr/share/fonts/truetype/freefont/FreeSerif.ttf"
 FREESERIF_BI = "/usr/share/fonts/truetype/freefont/FreeSerifBoldItalic.ttf"

@@ -17,7 +17,7 @@ a large **pack** in external flash (4–8 MB) flashed over HID. `g_all_fonts =
 resident ++ pack`. A glyph that lives only in the pack shows as tofu when no pack
 is present. This skill moves a glyph into the resident set.
 
-See `keyboards/polykybd/FONT_PACK.md` (resident fonts + external-flash pack) for the
+See `keyboards/polykybd/docs/display/font-pack.md` (resident fonts + external-flash pack) for the
 architecture; this is the operational recipe.
 
 ## Steps
@@ -25,7 +25,7 @@ architecture; this is the operational recipe.
 1. **Find the glyph's codepoint and font.** Grep the keycode→glyph mapping
    (`keycode_helper.c`, `lang/named_glyphs.h`) for the key, then find which
    `fonts.yaml` entry's `ranges` covers that codepoint and its generated symbol
-   name (in `base/fonts/generated/*.h`, e.g. `NotoEmoji_Medium_Settings_20pt16b`).
+   name (in `fonts/generated/*.h`, e.g. `NotoEmoji_Medium_Settings_20pt16b`).
    ```bash
    cd keyboards/polykybd
    grep -n "<KEY>" keycode_helper.c           # e.g. TO(_EMJ) -> PRIVATE_EMOJI_1F600
@@ -56,7 +56,7 @@ architecture; this is the operational recipe.
    fontconvert path in a provenance comment):
    ```bash
    cd fonts && FONTCONVERT=/tmp/fontconvert_pinned python3 generate_fonts.py && cd ..
-   git diff --stat -- base/fonts/
+   git diff --stat -- fonts/
    ```
    **Expect ONLY**: `gfx_used_fonts.h` (+resident line), `fontpack.manifest.json`
    (font_count drops), `all_fonts_order.json`, and — if you added a new entry — its

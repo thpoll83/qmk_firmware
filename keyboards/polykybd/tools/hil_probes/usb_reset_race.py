@@ -27,7 +27,7 @@ Run it with::
 
 ⚠️ ``tier: debug`` builds the NORMAL HIL images. Cherry-pick 31158ea (sets
 ``POLYKYBD_USB_STRESS ?= yes`` for HIL builds) in a temporary commit first, see
-UPSTREAM_PATCHES.md; without it the probe stops after round 1.
+docs/build/upstream-patches.md; without it the probe stops after round 1.
 """
 import os
 import re
@@ -36,18 +36,20 @@ import time
 
 from station.console_log import TAP
 from station.hil_tests import (
-    _crash_record_body, _wait_for_reboot, classify_boot_round,
+    _crash_record_body,
+    _wait_for_reboot,
+    classify_boot_round,
     CRASH_HID_FLAG_PRESENT,
 )
 
 NAME = "probe: USB bus-reset/SETUP race under masked-IRQ stress"
 NEEDS_CONSOLE = True
-MIN_PROTOCOL = 22            # cmd 43 (REBOOT)
+MIN_PROTOCOL = 22  # cmd 43 (REBOOT)
 
 POLY_CHANNEL = 0x50
 CMD_REBOOT = 43
 ROUNDS = int(os.environ.get("USB_RACE_ROUNDS", "15"))
-RETURN_S = 90.0              # a host that gives up + the firmware's 15 s self-heal
+RETURN_S = 90.0  # a host that gives up + the firmware's 15 s self-heal
 DIAG_WAIT_S = 30.0
 SLAVE_WAIT_S = 8.0
 # EP0 STALLs a healthy boot arms on this rig: the Pi's Linux asks for the
@@ -61,19 +63,16 @@ DIAG_RE = re.compile(r"usbdiag: (up=\d+.*)$")
 EV_RE = re.compile(r"usbev: (i=\d+.*)$")
 EV_KV = re.compile(r"(\w+)=([0-9a-fA-F>/]+)")
 INTS_SETUP, INTS_RESET, INTS_BUFF = 0x10000, 0x1000, 0x10
-EP0_STATE = {0: "STP_WAITING", 9: "IN_TX", 10: "IN_WAITING_TX0", 11: "IN_SENDING_STS",
-             20: "OUT_WAITING_STS", 21: "OUT_RX", 6: "ERROR"}
+EP0_STATE = {0: "STP_WAITING", 9: "IN_TX", 10: "IN_WAITING_TX0", 11: "IN_SENDING_STS", 20: "OUT_WAITING_STS", 21: "OUT_RX", 6: "ERROR"}
 KV_RE = re.compile(r"(\w+)=(\d+)")
 # Kernel lines that mean an enumeration step failed or was retried.
-KERNEL_BAD = re.compile(
-    r"device descriptor read|unable to enumerate|not accepting address|"
-    r"can't set config|Cannot enable|device not responding|error -(32|71|110|62)",
-    re.IGNORECASE)
+KERNEL_BAD = re.compile(r"device descriptor read|unable to enumerate|not accepting address|"
+                        r"can't set config|Cannot enable|device not responding|error -(32|71|110|62)", re.IGNORECASE)
 KERNEL_NEW = re.compile(r"new (full|low|high)-speed USB device", re.IGNORECASE)
 KERNEL_TS = re.compile(r"^\[\s*(\d+\.\d+)\]\s*(.*)$")
 
-
 # --- kernel log -------------------------------------------------------------
+
 
 def _uptime() -> float:
     with open("/proc/uptime") as f:
@@ -119,6 +118,7 @@ def _kernel_since(t0: float):
 
 # --- firmware diag ----------------------------------------------------------
 
+
 def _diag_lines(mark):
     out = []
     for line in TAP.since(mark):
@@ -140,9 +140,16 @@ def _events(mark):
             b, a = kv["st"].split(">")
             rq0, rq1 = kv["rq"].split("/")
             evs[int(kv["i"])] = {
-                "t": int(kv["t"]), "ints": int(kv["ints"], 16), "buf": int(kv["buf"], 16),
-                "before": int(b), "after": int(a), "bmrt": int(rq0, 16), "breq": int(rq1, 16),
-                "v": int(kv["v"], 16), "l": int(kv["l"]), "stalls": int(kv["stalls"]),
+                "t": int(kv["t"]),
+                "ints": int(kv["ints"], 16),
+                "buf": int(kv["buf"], 16),
+                "before": int(b),
+                "after": int(a),
+                "bmrt": int(rq0, 16),
+                "breq": int(rq1, 16),
+                "v": int(kv["v"], 16),
+                "l": int(kv["l"]),
+                "stalls": int(kv["stalls"]),
                 "addr": int(kv["addr"]),
             }
         except (KeyError, ValueError):
@@ -151,10 +158,8 @@ def _events(mark):
 
 
 def _ev_text(e, t0):
-    flags = "+".join(n for bit, n in ((INTS_RESET, "RESET"), (INTS_SETUP, "SETUP"),
-                                      (INTS_BUFF, "BUFF")) if e["ints"] & bit)
-    rq = (f" req={e['bmrt']:02x}/{e['breq']:02x} v={e['v']:04x} l={e['l']}"
-          if e["ints"] & INTS_SETUP else "")
+    flags = "+".join(n for bit, n in ((INTS_RESET, "RESET"), (INTS_SETUP, "SETUP"), (INTS_BUFF, "BUFF")) if e["ints"] & bit)
+    rq = (f" req={e['bmrt']:02x}/{e['breq']:02x} v={e['v']:04x} l={e['l']}" if e["ints"] & INTS_SETUP else "")
     ep0 = f" ep0buf={e['buf'] & 3:#x}" if e["ints"] & INTS_BUFF else ""
     return (f"+{(e['t'] - t0) / 1000:8.1f} ms {flags:<17}{rq}{ep0} "
             f"ep0 {EP0_STATE.get(e['before'], e['before'])}->{EP0_STATE.get(e['after'], e['after'])} "
@@ -206,6 +211,7 @@ def _final_diag(mark, log):
 
 # --- the probe --------------------------------------------------------------
 
+
 def probe(raw, log):
     src, _, why = _kernel_lines()
     if src:
@@ -213,10 +219,7 @@ def probe(raw, log):
     else:
         log(f"kernel log NOT readable on this rig ({why}); judging on firmware counters only")
 
-    totals = {"no_diag": 0, "both": 0, "rounds_with_both": 0, "kernel_bad": 0, "reconnects": 0,
-              "ep0_stalls": 0, "ep0_stalls_over_baseline": 0, "resets": 0,
-              "extra_attach": 0, "crashes": 0,
-              "race_clean": 0, "race_broken": 0, "race_unknown": 0}
+    totals = {"no_diag": 0, "both": 0, "rounds_with_both": 0, "kernel_bad": 0, "reconnects": 0, "ep0_stalls": 0, "ep0_stalls_over_baseline": 0, "resets": 0, "extra_attach": 0, "crashes": 0, "race_clean": 0, "race_broken": 0, "race_unknown": 0}
     reset_first = None
     boot_times = []
     for n in range(1, ROUNDS + 1):
@@ -231,7 +234,7 @@ def probe(raw, log):
         dt = time.monotonic() - t0
         if state in ("no-reply", "not-rebooted"):
             log(f"  round {n}: master {state} after {dt:.1f} s -- stopping")
-            totals["kernel_bad"] += 1      # count it as a failed enumeration
+            totals["kernel_bad"] += 1  # count it as a failed enumeration
             break
         boot_times.append(dt)
 
@@ -297,11 +300,13 @@ def probe(raw, log):
                     if r is e:
                         mark_txt = f"   <-- RESET+SETUP in one pass: {verdict}"
                 log(f"      {_ev_text(e, t0e)}{mark_txt}")
-        log(f"  round {n}: back in {dt:.1f} s ({state}); start_delay={d.get('start_delay')}ms usbdiag "
+        log(
+            f"  round {n}: back in {dt:.1f} s ({state}); start_delay={d.get('start_delay')}ms usbdiag "
             f"resets={d.get('resets')} setups={d.get('setups')} both={both} "
             f"ep0_stalls={d.get('ep0_stalls')} first_reset={d.get('first_reset')}ms "
             f"last_reset={d.get('last_reset')}ms windows={d.get('windows')} "
-            f"masked={d.get('masked_ms')}ms reconnects={d.get('reconnects')}{kern_txt}")
+            f"masked={d.get('masked_ms')}ms reconnects={d.get('reconnects')}{kern_txt}"
+        )
 
     log(f"driver: reset_first={reset_first} "
         f"({'fixed order: BUS_RESET before SETUP' if reset_first == 1 else 'Contrib order: SETUP before BUS_RESET' if reset_first == 0 else 'unknown'})")
@@ -317,6 +322,5 @@ def probe(raw, log):
     failed = totals["kernel_bad"] or totals["reconnects"] or totals["extra_attach"] \
         or totals["race_broken"] or totals["crashes"] or totals["ep0_stalls_over_baseline"] \
         or totals["no_diag"]
-    log("RESULT: " + ("enumeration FAILED under the race" if failed
-                      else "enumeration survived every race"))
+    log("RESULT: " + ("enumeration FAILED under the race" if failed else "enumeration survived every race"))
     return not failed

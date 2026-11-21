@@ -1,0 +1,247 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+#pragma once
+
+#include "fonts/gfxfont.h"
+// The pure lookup + measurement half (kdisp_gfx_glyph / kdisp_gfx_glyph_font /
+// kdisp_gfx_text_bbox_in) lives in font_lookup.h so it links on the host without
+// the SPI/display plumbing; re-exported here so consumers are unchanged (the same
+// pattern as split_sync.h re-exporting base/sync_ack.h).
+#include "base/font_lookup.h"
+
+#include <stdint.h>
+#include <stdbool.h>
+
+// The VISIBLE window of one keycap OLED, and where it sits in the scratch buffer.
+#define SCREEN_WIDTH 72
+#define SCREEN_HEIGHT 40
+#define BUFFER_X 28
+
+// The scratch buffer itself — 128x64 px (8 SSD1306 pages of 8 rows), deliberately
+// LARGER than the window, which occupies columns BUFFER_X..BUFFER_X+71 of pages
+// 0..4. kdisp_send_window() streams that window and nothing else, so ink written
+// into the surrounding slack is addressable, harmless and simply never shown.
+//
+// ⚠️ The slack is NOT symmetric: 28 px west, 28 px east, 24 px south and NOTHING
+// north, because row 0 is the first row of storage. That is why the idle styles'
+// off-window travel (legend_plan_idle_travel) may hang a legend off the bottom,
+// left and right edges but never off the top — a negative y is not a cheaper
+// clip, it is outside the array, and it also drops the glyph out of the two
+// in-buffer draw paths in disp_array.c onto the per-pixel clipped one.
+#define BUFFER_BYTE_VIS_WIDTH SCREEN_WIDTH
+#define BUFFER_BYTE_VIS_HEIGHT 5
+#define BUFFER_BYTE_WIDTH 128
+#define BUFFER_BYTE_HEIGHT 8
+#define BUFFER_PIXEL_WIDTH BUFFER_BYTE_WIDTH
+#define BUFFER_PIXEL_HEIGHT (BUFFER_BYTE_HEIGHT * 8)
+
+#define BUFFER_SLACK_N 0
+#define BUFFER_SLACK_S (BUFFER_PIXEL_HEIGHT - SCREEN_HEIGHT)
+#define BUFFER_SLACK_W BUFFER_X
+#define BUFFER_SLACK_E (BUFFER_PIXEL_WIDTH - BUFFER_X - SCREEN_WIDTH)
+
+// Courtyard radius (Chebyshev) for the glyph-mask dilation behind a glyph.
+// `cy_radius` 0 disables the courtyard clear; KDISP_CY_DEFAULT is the standard
+// margin used behind overlay glyphs. The lang-layer flags use a smaller radius.
+#define KDISP_CY_DEFAULT 3
+
+int8_t kdisp_write_gfx_char(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c, int8_t cy_radius);
+
+// Sets a global pixel offset added to every subsequent gfx-char/text draw, used by
+// the idle "jitter" anti-burn-in relocation redraw. Pass 0,0 to disable.
+void kdisp_set_draw_offset(int8_t ox, int8_t oy);
+
+// When true, subsequent gfx-char/text draws CLEAR their glyph pixels instead of
+// setting them (erase mode). Used to cut a legend out of the Eden idle comet field.
+// Remember to restore it to false after the draw.
+void kdisp_set_gfx_erase(bool erase);
+
+// When set, the glyph plotter lights only every other buffer row — a scanline
+// half-brightness look used by the Eden idle screensaver's lit legend. Restore
+// with (false, 0) after the draw.
+//
+// The gate is on ABSOLUTE buffer y, so `phase` (0..1) picks WHICH panel rows the
+// stripes land on. An anti-burn-in caller must roll it: at a fixed phase the same
+// physical rows light forever, and the draw offset cannot spread that (it moves
+// the glyph past a stationary pattern, not the pattern). Pass 0 only where the
+// draw is transient — a boot splash — or where a stable pattern is the point.
+void kdisp_set_gfx_scanline(bool scanline, uint8_t phase);
+
+// Coarser 2-on/2-off scanline band (vs the 1-on/1-off of kdisp_set_gfx_scanline).
+// Reads as a cleaner intentional dim on large glyphs (the boot-splash logo), where
+// the fine scanline looks like flicker. `phase` is 0..3 here — four band
+// alignments rather than two. Restore with (false, 0) after the draw.
+void kdisp_set_gfx_scanline2(bool scanline, uint8_t phase);
+
+// kdisp_gfx_glyph / kdisp_gfx_glyph_font (glyph lookup, NULL when uncovered, gap
+// glyphs skipped) are declared in font_lookup.h, included above.
+
+// Composite a glyph downsampled 2x (2x2-OR) with its top-left at buffer coords
+// (x,y) — no baseline align, (x,y) is the literal top-left. OR-combining each 2x2
+// source block keeps thin strokes visible at half size (plain decimation drops
+// them). Used to overlay a small secondary icon inside another glyph (the
+// Win+Ctrl+Shift+B reload 🗘 drawn into the monitor's screen cavity).
+void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c);
+
+// Same 2x downsample, but sampling ONE pixel per 2x2 block (decimation) instead
+// of OR-ing all four. The two are complementary and neither is better in
+// general — pick per glyph:
+//   _half_at (OR)   thickens strokes, so a thin line survives; but it CLOSES thin
+//                   gaps, which turns a glyph whose meaning is in its negative
+//                   space into a blob (the Windows logo becomes a solid square,
+//                   the Ctrl helm's spokes fill in).
+//   _thin_at (this) keeps gaps, so structured icons stay readable; but a 1px
+//                   stroke on an odd row/column is dropped entirely (measured:
+//                   the alt symbol keeps 54% of its lit pixels, the worst of the
+//                   set, which is why the mod-tap badge draws Ctrl and the OS
+//                   logos through here and Alt through _half_at).
+void kdisp_draw_glyph_thin_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c);
+
+// Rotate a glyph counter-clockwise by `step` * 15 degrees, halve it, and plot it at
+// the literal (x, y). Same contract as kdisp_draw_glyph_half_at (no baseline align,
+// no advance); `step` is 1..24. Exists because the font pack contains NO diagonal
+// arrow and no filled triangle at all — every arrowhead in it points along an axis —
+// so a pointer/cursor can only be had by turning one.
+void kdisp_draw_glyph_rot_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, uint8_t step);
+
+// The mirror of the above: composite a glyph scaled 2x (nearest, each source
+// pixel becomes a 2x2 block) with its top-left at buffer coords (x,y) — again no
+// baseline align, (x,y) is the literal top-left. The keycap fonts top out at the
+// 27px _Base_ face, so this is the only way to fill a 72x40 panel with a single
+// character; used for the unsigned-firmware A/R confirmation prompt.
+void kdisp_draw_glyph_double_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t c);
+
+void kdisp_write_gfx_text(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text);
+
+void kdisp_write_gfx_text_cy(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, const uint32_t *text, int8_t cy_radius);
+
+// Measure the horizontal pixel bounding box of `text` (relative to the draw
+// origin x) without drawing — mirrors the cursor advance of kdisp_write_gfx_text.
+// *out_min / *out_max receive the leftmost / rightmost lit pixel offset, so a
+// caller can place adjacent text clear of it (e.g. a shift-preview next to a wide
+// base glyph).  Both are 0 for empty/blank text.
+void kdisp_gfx_text_bounds(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text, int8_t *out_min, int8_t *out_max);
+
+// Full pixel bounding box of `text` relative to the draw origin (x from the origin
+// x, y from the baseline), mirroring every cursor rule — and the per-glyph vertical
+// shift — of kdisp_write_gfx_text_cy. Lets a caller clamp a draw offset so the
+// glyph stays fully on-screen (idle anti-burn-in jitter). All four are 0 for blank text.
+// A wrapper over font_lookup.h's kdisp_gfx_text_bbox_in binding the firmware's
+// resident HINT_MID face (the same s_mid_font the draw uses).
+void kdisp_gfx_text_bbox(const GFXfont *const *fonts, uint8_t num_fonts, const uint32_t *text,
+                         int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax);
+
+// The ABSOLUTE-buffer sibling, binding the same mid face: the box this display list
+// would ink if drawn at (origin_x, origin_y). Resolves MOVE and measures the
+// composite ops, which the relative form cannot — see font_lookup.h.
+void kdisp_gfx_text_bbox_abs(const GFXfont *const *fonts, uint8_t num_fonts, int8_t origin_x, int8_t origin_y,
+                             const uint32_t *text,
+                             int8_t *out_xmin, int8_t *out_xmax, int8_t *out_ymin, int8_t *out_ymax);
+
+// Vertical (rotated -90°, bottom-to-top) single-font text, centred in the visible
+// height with its baseline along x = col_x.  `selected` draws it as dark text on
+// a filled bar (else lit text on the dark background).  Used by the lang layer.
+void kdisp_write_gfx_vtext(const GFXfont *font, int8_t col_x, const uint32_t *text, bool selected);
+
+void kdisp_write_base_char(int8_t x, int8_t y, char c);
+
+void kdisp_draw_bitmap(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height);
+// Like kdisp_draw_bitmap, but draws only every other row and every other column of
+// the bitmap (25% of its pixels), counted from the bitmap's own origin. Used for a
+// dimmed overlay icon (cmd 33, v23); a 1-bit panel has no grey, so less ink is dim.
+void kdisp_draw_bitmap_dimmed(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height);
+
+// Clear a dilated "courtyard" behind artwork about to be drawn. ⚠️ The two variants
+// differ ONLY in how they read the source bits — pick the one matching the draw call
+// you pair it with (a mismatch silently dilates a garbage mask; see disp_array.c):
+//   _courtyard()          column-native page-format, pairs with kdisp_write_gfx_char
+//   _rowmajor_courtyard() row-major MSB-first,       pairs with kdisp_draw_bitmap
+void kdisp_clear_bitmap_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height, int8_t radius);
+void kdisp_clear_rowmajor_courtyard(int8_t x, int8_t y, const uint8_t pgm_bmp[], int8_t bmp_width, int8_t bmp_height, int8_t radius);
+
+void kdisp_set_buffer(uint8_t vertical_pixel_row_of_8_pixels);
+
+void kdisp_send_buffer(void);
+
+void kdisp_send_window(void);
+
+// Dirty-window send: mark which panel the NEXT kdisp_send_window() draws, so it can
+// stream only the changed sub-rectangle (union of this panel's previously-sent box
+// and the new content). The awake per-keycap render loop calls this right after
+// selecting the keycap; the tracking is consumed by that one send. Idle / Eden /
+// DOOM sends don't call it and so stream the whole window.
+void kdisp_track_panel(uint8_t idx);
+
+// Force every panel's remembered window to "full" so the next tracked send to each
+// erases the whole visible window. Call on boot and on any mode->awake transition
+// (idle / Eden / DOOM exit), where an untracked path drew the panels.
+void kdisp_invalidate_all_windows(void);
+
+void kdisp_invert(bool invert);
+
+void kdisp_scroll(bool activate);
+
+void kdisp_scroll_modeh(bool left, uint8_t horizontal_speed_0to7);
+void kdisp_scroll_modehv(bool left, uint8_t horizontal_speed_0to7, uint8_t vertical_offset_0to63);
+void kdisp_scroll_vlines(uint8_t lines_0to63);
+
+void kdisp_set_contrast(uint8_t contrast);
+
+void kdisp_enable(bool enable);
+
+void kdisp_hw_setup(void);
+
+void kdisp_init(const int8_t num_shift_regs);
+
+void kdisp_setup(bool turn_on);
+
+uint8_t* get_scratch_buffer(void);
+
+int16_t get_scratch_buffer_size(void);
+
+void kdisp_fill_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height);
+// The same rectangle, cleared to black (buffer coordinates, like kdisp_fill_rect).
+void kdisp_clear_rect(int8_t x_start, int8_t y_start, int8_t width, int8_t height);
+// Shrink the keycap window's contents to half size about its centre (2x2 OR).
+void kdisp_zoom_half_window(void);
+// True when the keycap window of the scratch buffer has no pixel set.
+bool kdisp_window_is_blank(void);
+
+void kdisp_draw_round_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r);
+// The lock-badge shape: solid when `border` is 0, otherwise a ring that thick.
+// Both states come from one scanline fill, so they share a silhouette exactly.
+void kdisp_draw_badge_rect(int8_t x, int8_t y, int8_t width, int8_t height, int8_t r, int8_t border);
+
+// Corner radius of a lock-indicator badge (HINT_BADGE, \x13). Measured, not chosen:
+// the baked ICON_CAPSLOCK_* / ICON_NUMLOCK_* glyphs inset their corners 2,1,0 px,
+// which is exactly a radius-2 arc — so a drawn badge at this radius is
+// indistinguishable from them. HINT_FRAME (\x12) keeps its own rounder radius for
+// the run-dialog hint.
+#define KDISP_BADGE_RADIUS 2
+#define KDISP_BADGE_BORDER 2   // the released badge's stroke, matching those glyphs
+
+// Shared tab chrome for the emoji and language selection layers: the selected-tab
+// frame (3px north/east/west border, open at the bottom, with chamfered top
+// corners) and the non-selected-tab bottom underline. Drawn page-wise straight
+// into the keycap buffer (see disp_array.c). The keycode-range gating stays in
+// each layer (the ranges differ); only the drawing is shared here.
+void kdisp_draw_tab_frame(void);
+void kdisp_draw_tab_underline(void);
+
+// Legend for a picker's page key: the arrow glyph, then "page/pages" (1-based) in
+// the HINT_MID face, e.g. "▶ 3/9". Measured for every label up to 19 pages (split42's
+// Latin tab): the widest is "14/14", which keeps 2 px clear of both keycap edges. Returns "" when pages <= 1,
+// so a one-page tab shows no page control. The pointer is valid until the next call.
+const uint32_t *kdisp_page_key_legend(uint32_t arrow, uint8_t page, uint8_t pages);
+
+// Saturating narrow to int8_t. Buffer coordinates, the jitter offset and the
+// per-layout legend offsets are all int8_t, and their sum can leave the range —
+// where a silent wrap draws the art at a WRONG place instead of letting the panel
+// clamp pin it at the edge. Shared rather than duplicated because poly_keymap.c's
+// AltGr-held placement adds two of those offsets together (ps-AF's letter H offset
+// is already 65, leaving +34 before 28+H+held wraps).
+static inline int8_t kdisp_sat8(int16_t v) {
+    return (int8_t)((v < -128) ? -128 : ((v > 127) ? 127 : v));
+}
+

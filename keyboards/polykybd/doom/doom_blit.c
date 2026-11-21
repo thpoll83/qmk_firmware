@@ -4,7 +4,7 @@
 // Keycap blitter: carve the 320x200 8bpp framebuffer into 72x40 keycap tiles,
 // ordered-dither to 1bpp and push each tile over the existing shift-register +
 // SPI path. Bayer (not Floyd–Steinberg): O(1) per pixel, no error propagation
-// across frames, so animated frames don't "crawl" (DOOM_FEASIBILITY.md,
+// across frames, so animated frames don't "crawl" (docs/archive/doom-feasibility.md,
 // Challenge 1).
 //
 // Every tile is composed into the visible 72x40 window (cleared scratch, drawn
@@ -19,11 +19,11 @@
 #include "doom_arena.h"       // compose scratch carve
 #include "doom_playpal_luma.h" // ESC-hint STCFN threshold (256 B, per-TU const)
 
-#include "side.h"            // is_left_side() (bottom-row viewport mapping)
-#include "bridge_helper.h"   // is_usb_host_side() (slave-left viewport shift)
-#include "base/disp_array.h"
+#include "split_link/side.h"            // is_left_side() (bottom-row viewport mapping)
+#include "split_link/bridge_helper.h"   // is_usb_host_side() (slave-left viewport shift)
+#include "drivers/disp_array.h"
 #include "base/fontpack.h"   // g_all_fonts (HUD text keys)
-#include "base/shift_reg.h"
+#include "drivers/shift_reg.h"
 
 #include <string.h>
 
@@ -323,7 +323,7 @@ static bool select_display_raw(uint8_t row, uint8_t disp_col) {
 }
 
 // 10 px label font for the stat keys — defined by poly_keymap.c's inclusion
-// of base/fonts/util_font.h (external linkage; including the data header a
+// of fonts/util_font.h (external linkage; including the data header a
 // second time would duplicate the arrays).
 extern const GFXfont NotoSans_Regular_Mid_19px7b;
 static const GFXfont *const hud_label_fonts[] = {&NotoSans_Regular_Mid_19px7b};

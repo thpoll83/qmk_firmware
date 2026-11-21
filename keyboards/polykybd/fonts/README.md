@@ -8,8 +8,8 @@ This replaces the old `create_fonts.sh` (now a thin wrapper that just calls the
 generator).
 
 ```
-fonts.yaml ──► generate_fonts.py ──► base/fonts/generated/<category>_fonts.h
-                    │ (runs fontconvert N times)        base/fonts/gfx_used_fonts.h
+fonts.yaml ──► generate_fonts.py ──► fonts/generated/<category>_fonts.h
+                    │ (runs fontconvert N times)        fonts/gfx_used_fonts.h
                     ▼
               fontconvert
 ```
@@ -38,9 +38,9 @@ Outputs (overwritten in place):
 
 | File | Contents |
 |------|----------|
-| `base/fonts/generated/<cat>_fonts.h` | one header per category, holding that category's `GFXfont` definitions |
-| `base/fonts/gfx_used_fonts.h` | `#include`s the category headers + builds the `ALL_FONTS[]` lookup table |
-| `base/fonts/generated/fontpack.manifest.json` | structural manifest of the external-flash font pack (committed; the pack ABI contract — see below) |
+| `fonts/generated/<cat>_fonts.h` | one header per category, holding that category's `GFXfont` definitions |
+| `fonts/gfx_used_fonts.h` | `#include`s the category headers + builds the `ALL_FONTS[]` lookup table |
+| `fonts/generated/fontpack.manifest.json` | structural manifest of the external-flash font pack (committed; the pack ABI contract — see below) |
 
 The generator deletes any stale `generated/*.h` that the config no longer
 produces, so the directory always reflects `fonts.yaml`.
@@ -179,7 +179,7 @@ at size 17 for √ ∛ ∫ ↕ ↨ ⇕ ⇶):
 Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from the [`AdafruitGFX/`](../../../../Adafruit-GFX-Library/CLAUDE.md) repo. Generation is **config-driven** via `keyboards/polykybd/fonts/` — full docs in [`fonts/README.md`](README.md).
 
 - **`fonts/fonts.yaml`** — single source of truth: an ordered list of font entries (font file, size, variant, codepoint ranges, weight, bits, …) grouped into categories with shared defaults. The list order **is** the `ALL_FONTS[]` priority (front-to-back lookup; first match wins on overlapping ranges) — categories only decide which header a font lands in.
-- **`fonts/generate_fonts.py`** — reads the YAML, runs `fontconvert` per entry, writes one header per category to `base/fonts/generated/`, and composes `base/fonts/gfx_used_fonts.h` (the `ALL_FONTS[]` table, with `IconsFont` prepended). `--check` flags stale headers for CI. Needs PyYAML + `fontconvert` on PATH (or `$FONTCONVERT`). It also emits **`base/fonts/generated/fontpack_render_settings.json`** — a `global ALL_FONTS index → fonts.yaml render options` map (the `RENDER_SETTINGS` output, via `render_settings()`; sequence-mode entries also get `composite` + `seq_first` derived from their `-C`/`-F` extra_args, so the host editor can rebuild matra/combining-mark glyphs without guessing). This is mirrored byte-identically in the host at `PolyKybdHost/polyhost/res/fontpack/fontpack_render_settings.json`, where the font-pack **edit** dialog reads it to pre-fill the controls a glyph was generated with (the `.plyf` itself carries no render options). Keep both in sync (`cmp`); `--check` enforces it stays consistent with the headers.
+- **`fonts/generate_fonts.py`** — reads the YAML, runs `fontconvert` per entry, writes one header per category to `fonts/generated/`, and composes `fonts/gfx_used_fonts.h` (the `ALL_FONTS[]` table, with `IconsFont` prepended). `--check` flags stale headers for CI. Needs PyYAML + `fontconvert` on PATH (or `$FONTCONVERT`). It also emits **`fonts/generated/fontpack_render_settings.json`** — a `global ALL_FONTS index → fonts.yaml render options` map (the `RENDER_SETTINGS` output, via `render_settings()`; sequence-mode entries also get `composite` + `seq_first` derived from their `-C`/`-F` extra_args, so the host editor can rebuild matra/combining-mark glyphs without guessing). This is mirrored byte-identically in the host at `PolyKybdHost/polyhost/res/fontpack/fontpack_render_settings.json`, where the font-pack **edit** dialog reads it to pre-fill the controls a glyph was generated with (the `.plyf` itself carries no render options). Keep both in sync (`cmp`); `--check` enforces it stays consistent with the headers.
 - **`fonts/dl-fonts.sh`** — downloads the Noto source fonts first. The font list
   (url + dest) lives in **`fonts/noto-fonts.yaml`** (single source of truth); the
   script just parses it (PyYAML) and fetches each entry. ⚠️ `noto-fonts.yaml` is
@@ -187,7 +187,7 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   `PolyKybdHost/polyhost/res/fonts/noto-fonts.yaml` (its "Download Noto…" button in
   the font-pack extend dialog reads the same catalog) — keep both in sync (`cmp`).
 - `create_fonts.sh` is now a thin deprecated wrapper that forwards to `generate_fonts.py`.
-- **`fonts/gen-lang-fonts.sh`** — generates `base/fonts/flag_fonts.h` for the language-selection layer (`_LL`): country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically. (The `_Tiny_` lang-code label font moved to `fonts/gen-status-fonts.sh` — see "Standalone UI text fonts" below.) These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `poly_keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes. It also emits **`base/fonts/generated/lang_flags.json`** — the flag font's render record (source NotoColorEmoji, the `-s20 -g -r54 -W72 -O1 -Dfs -e-0.10` options, `seq_first` 0xE000, and the per-flag regional-indicator `sequence`). The flag font isn't in `fonts.yaml`, so `generate_fonts.py` emits no render record for it; this sidecar lets the host font-pack **editor** rebuild a single flag (sequence mode). ⚠️ Mirrored **byte-identically** in `PolyKybdHost/polyhost/res/fontpack/lang_flags.json` — keep both in sync (`cmp`).
+- **`fonts/gen-lang-fonts.sh`** — generates `fonts/flag_fonts.h` for the language-selection layer (`_LL`): country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically. (The `_Tiny_` lang-code label font moved to `fonts/gen-status-fonts.sh` — see "Standalone UI text fonts" below.) These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `poly_keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes. It also emits **`fonts/generated/lang_flags.json`** — the flag font's render record (source NotoColorEmoji, the `-s20 -g -r54 -W72 -O1 -Dfs -e-0.10` options, `seq_first` 0xE000, and the per-flag regional-indicator `sequence`). The flag font isn't in `fonts.yaml`, so `generate_fonts.py` emits no render record for it; this sidecar lets the host font-pack **editor** rebuild a single flag (sequence mode). ⚠️ Mirrored **byte-identically** in `PolyKybdHost/polyhost/res/fontpack/lang_flags.json` — keep both in sync (`cmp`).
 - **The keycap `latin` category is built grid-fitted (`hinting: auto` in
   `fonts.yaml` → `fontconvert -Hauto`).** Same reason as the status fonts: NotoSans
   ships no hinting bytecode, so without it the ASCII/Cyrillic/Greek keycap legends
@@ -308,7 +308,7 @@ See [`Adafruit-GFX-Library/CLAUDE.md`](../../../../Adafruit-GFX-Library/CLAUDE.m
 
 - **The font pack — the resident set, the eight `PlyF` bundles, the slot layout,
   the HID flash transport and the reship procedure — is
-  [`keyboards/polykybd/FONT_PACK.md`](../FONT_PACK.md).**
+  [`keyboards/polykybd/docs/display/font-pack.md`](../docs/display/font-pack.md).**
   `fontpack_assemble()` builds `g_all_fonts = resident ++ pack` at boot; with no
   pack, only the resident set is present, so the keyboard always renders ASCII.
   Five rules that reach outside that file:
@@ -319,7 +319,7 @@ See [`Adafruit-GFX-Library/CLAUDE.md`](../../../../Adafruit-GFX-Library/CLAUDE.m
     the bigger legend tiers are RELOCATED into private PUA instead.
   - ⚠️ **Adding a whole new resident FONT shifts every pack font's gidx and forces a
     full-pack reship.** For one or two glyphs, extend the resident `IconsFont`
-    instead (`base/fonts/gfx_icons.h`) — that shifts nothing and ships with the
+    instead (`fonts/gfx_icons.h`) — that shifts nothing and ships with the
     firmware. Better still, use a pack glyph or a base-font character.
   - ⚠️ **Never do heavy work in a split-transaction handler.** The slave's font-pack
     COMMIT runs inside a ~20 ms RPC callback; re-CRCing the whole ~459 KB pack there
@@ -349,7 +349,7 @@ category and composes `gfx_used_fonts.h`; `--check` flags stale headers. Full do
 [`keyboards/polykybd/fonts/README.md`](README.md).
 
 - ⚠️ **Several artifacts are mirrored BYTE-IDENTICALLY into the host repo** —
-  `fonts/noto-fonts.yaml`, `base/fonts/generated/fontpack_render_settings.json` and
+  `fonts/noto-fonts.yaml`, `fonts/generated/fontpack_render_settings.json` and
   `lang_flags.json`. Keep them in sync (`cmp`); the host editor silently pre-fills the
   wrong controls otherwise.
 - **Byte-reproducible output requires the pinned `fontconvert` build** (FreeType 2.13.3 /
@@ -380,11 +380,11 @@ category and composes `gfx_used_fonts.h`; `--check` flags stale headers. Full do
   which is still a visible defect — so a gap fails the PR rather than shipping.
 
 The font pack itself — the eight `PlyF` bundles, the slot layout and the HID transport —
-is [`keyboards/polykybd/FONT_PACK.md`](../FONT_PACK.md). ⚠️ **`g_all_fonts`
+is [`keyboards/polykybd/docs/display/font-pack.md`](../docs/display/font-pack.md). ⚠️ **`g_all_fonts`
 is scanned FRONT TO BACK and resident is always in front**, so adding a whole new
 resident FONT shifts every pack font's gidx and forces a full-pack reship; extend the
 resident `IconsFont` instead. It lives in plane-16 PUA (U+100000..), where no icon can
-shadow a real character; it left the C1 band after that filled up (`FONT_PACK.md`).
+shadow a real character; it left the C1 band after that filled up (`docs/display/font-pack.md`).
 `fonts.yaml` `append_fonts` orders a resident font LAST so no pack font moves. ⚠️ **Never do heavy work in a split-transaction handler** —
 re-CRCing the whole pack inside a ~20 ms RPC callback made the master report a perfect
 flash as a CRC failure. ⚠️ **Because FONTPACK writes IN PLACE, a slot is valid as soon as

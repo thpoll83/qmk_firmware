@@ -30,7 +30,7 @@ bool multicore_launch_core1_with_stack_bounded(void (*entry)(void), uint32_t *st
 void core1_entry(void);
 
 // core1's own stack (the RLE/ROI service and the Eden idle keycap job). 512, up from
-// 384, for the Eden job: its measured worst path is 300 B (IDLE_STYLES.md), and a fault
+// 384, for the Eden job: its measured worst path is 300 B (docs/display/idle-styles.md), and a fault
 // taken at that depth adds the 32 B exception frame and the ~64 B crash handler, which
 // 384 could not hold. The service itself peaks at ~164 B (readme "Diagnostics").
 #ifndef CORE1_STACK_SIZE

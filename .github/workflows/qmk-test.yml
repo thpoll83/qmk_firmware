@@ -147,7 +147,7 @@ jobs:
 
       # Shipping shape: POLYKYBD_DOOM_PACK compiles the doom easter egg's loader,
       # call tables and trigger (the engine ships separately as the flash pack —
-      # doom/PACK_DESIGN.md) and pins the overlay pool at the RAM origin. The
+      # docs/design/doom-pack.md) and pins the overlay pool at the RAM origin. The
       # release build carries the same flag, so HIL tests exactly what ships.
       # split42 stays plain (no doom port).
       - name: Build split72 (primary)

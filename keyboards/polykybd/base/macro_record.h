@@ -18,7 +18,7 @@
 //
 // The output is QMK's own send-string encoding (see macro_decode.h), unchanged, so a
 // recorded body is still playable by dynamic_keymap_macro_send(). Design notes and the
-// decisions behind the gesture live in ../MACRO_RECORD_DESIGN.md.
+// decisions behind the gesture live in ../docs/design/macro-record.md.
 
 // ---------------------------------------------------------------------------
 // Encoder

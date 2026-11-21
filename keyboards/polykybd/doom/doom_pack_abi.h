@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // DoomPack ABI — the contract between the shipping firmware and the
-// executable engine pack flashed at FW_DOOMPACK_SLOT_OFF (see PACK_DESIGN.md;
+// executable engine pack flashed at FW_DOOMPACK_SLOT_OFF (see docs/design/doom-pack.md;
 // feasibility study "Option 2"). Compiled into BOTH sides: the firmware's
 // loader/dispatch (doom_mode.c under POLYKYBD_DOOM_PACK) and the pack's init
 // (pack build of qmk_shim.c). Everything here is versioned:
@@ -16,7 +16,7 @@
 //    table smaller than the fields it needs, so APPENDING fields is
 //    compatible without an ABI bump. Reordering/retyping is not.
 //
-// RAM model (PACK_DESIGN.md §4): the pack's .data/.bss are linked at the
+// RAM model (docs/design/doom-pack.md §4): the pack's .data/.bss are linked at the
 // borrowed overlay pool's address of the EXACT firmware build it ships with
 // (extracted from the .elf at pack-build time, recorded in ram_base/ram_size)
 // — the loader compares them against the live pool and refuses a mismatched
@@ -68,7 +68,7 @@ typedef struct {
 #define DOOM_PACK_HDR_SIZE 64u
 _Static_assert(sizeof(doom_pack_hdr_t) == DOOM_PACK_HDR_SIZE, "PlyX header layout");
 
-// Firmware services the pack imports (PACK_DESIGN.md §3). Kept deliberately
+// Firmware services the pack imports (docs/design/doom-pack.md §3). Kept deliberately
 // tiny: libc/libgcc are linked INTO the pack, pico_sync/time_us_64 are
 // hardware-only, and the mirror mailbox is shared arena memory — so only the
 // arena carve, the input ring and the core0 console byte sink cross here.

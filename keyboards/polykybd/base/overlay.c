@@ -1,7 +1,7 @@
 #include "overlay.h"
 #include "config.h" //for all constants
 
-#include "disp_array.h"
+#include "drivers/disp_array.h"
 #include "polymod_rle.h"
 #include "map_codec.h"
 
@@ -32,7 +32,7 @@ static volatile uint8_t display_dim_bits[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8
 // exclusive, and the block is exactly pool-sized. NOT zeroed by crt0: the
 // usage bits above gate every read, and reset/refill paths memset it.
 // (The DoomPack flavour keeps the plain array below: the flashed pack links
-// its statics AT the array's measured address instead — doom/PACK_DESIGN.md.)
+// its statics AT the array's measured address instead — docs/design/doom-pack.md.)
 extern uint8_t __doom_shared_base__[];
 #define overlay_pool ((uint8_t (*)[72*40/8])__doom_shared_base__)
 #define OVERLAY_POOL_SIZE (NUM_OVERLAY_SLOTS*(72*40/8))

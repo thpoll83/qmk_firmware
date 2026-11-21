@@ -10,7 +10,7 @@
 // Icons the host's overlay templates share live in the font-pack region (bundle
 // id 8, the tail slot of layout v2). Instead of uploading an icon's bitmap, the
 // host sends a (pool slot, icon id) pair and each half draws the icon into that
-// pool slot from its own flash. Design: OVERLAY_ICON_LIBRARY_DESIGN.md.
+// pool slot from its own flash. Design: docs/design/overlay-icon-library.md.
 //
 // FILE FORMAT
 //   The byte layout is a PlyF pack (base/fontpack.h): the 32-byte header, then

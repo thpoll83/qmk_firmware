@@ -22,11 +22,11 @@ WS2812_DRIVER = vendor
 # over the RGB_MATRIX_* effect enums to name effects, which now exist again with
 # RGB re-enabled above).
 QUANTUM_LIB_SRC += spi_master.c
-SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
+SRC += status_oled.c base/update.c drivers/e2prom.c base/com.c base/text_helper.c drivers/helpers.c drivers/disp_array.c drivers/shift_reg.c drivers/spi_helper.c base/overlay.c lang/lang_lut.c drivers/fw_staging.c base/fontpack.c
 
 # Pointing device: REMOVED — no trackpad exists on split42; it was only ever a
 # split-link workaround. The real requirement is the shmem RPC-guard pad below
-# (SPLIT42_LINK_STATUS.md rows 20-24 and split42/config.h).
+# (docs/archive/split42-link-status.md rows 20-24 and split42/config.h).
 
 # LTR-559 light+proximity sensor — RE-ENABLED. Shares the I2C0
 # bus (addr 0x23), which isn't broken out on split42, so its probe fails and the
@@ -52,17 +52,17 @@ DYNAMIC_KEYMAP_ENABLE = yes
 
 # Shmem RPC-guard pad: a pointing-sized dummy member at the pointing member's
 # position in split_shared_memory_t (quantum/split_common/transport.h, tracked
-# in UPSTREAM_PATCHES.md). Empirically REQUIRED for split42's split link to
+# in docs/build/upstream-patches.md). Empirically REQUIRED for split42's split link to
 # establish — the on-hardware discriminator matrix showed this 8-byte layout
 # shift in front of the RPC buffers is the whole of what the old
-# SPLIT_POINTING_ENABLE workaround provided (SPLIT42_LINK_STATUS.md rows 20-24).
+# SPLIT_POINTING_ENABLE workaround provided (docs/archive/split42-link-status.md rows 20-24).
 # The latent writer it guards against is still being hunted; do not remove
 # without re-running the row-24 test.
 OPT_DEFS += -DPOLY_SPLIT_SHMEM_RPC_GUARD
 
 # Emoji / language picker page size: split42's right half is 3 rows x 6 = 18 slots
 # (shared-code default is 38). Board geometry, so it lives here rather than in a
-# keymap's rules.mk — poly_keymap.c / emoji_layer.c are compiled at the keyboard level
+# keymap's rules.mk — keymap/poly_keymap.c / emoji_layer.c are compiled at the keyboard level
 # and never see a keymap's config.h.
 OPT_DEFS += -DEMJ_SLOTS_PER_PAGE=18
 OPT_DEFS += -DLANG_SLOTS_PER_PAGE=18

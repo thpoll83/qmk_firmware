@@ -8,7 +8,7 @@
 // sector; the wear-levelling area is one 8 KB masked erase). If the host resets
 // the bus and sends its next SETUP inside one such window, the USB ISR sees both
 // flags in a single pass, and the ORDER it handles them in decides whether
-// enumeration survives. See UPSTREAM_PATCHES.md -> "ChibiOS-Contrib RP2040 USB
+// enumeration survives. See docs/build/upstream-patches.md -> "ChibiOS-Contrib RP2040 USB
 // driver" and tools/hil_probes/usb_reset_race.py.
 //
 // The windows are a busy-wait with interrupts disabled, NOT a real erase: the

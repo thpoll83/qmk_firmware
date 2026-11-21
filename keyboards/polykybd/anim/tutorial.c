@@ -1,9 +1,9 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
-// First-run tutorial renderer — see anim/tutorial.h and anim/TUTORIAL.md.
+// First-run tutorial renderer — see anim/tutorial.h and docs/features/tutorial.md.
 #include "tutorial.h"
 #include "focus_ring.h"
-#include "keycode_helper.h"   // LAYER_ONESHOT / LAYER_SWITCH — the notation screen names the real marks
+#include "keymap/keycode_helper.h"   // LAYER_ONESHOT / LAYER_SWITCH — the notation screen names the real marks
 #include "lang/named_glyphs.h" // ICON_SHIFT — the status line names the key by its own glyph
 
 #if defined(KEYBOARD_polykybd_split72)
@@ -11,16 +11,16 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "quantum.h"
-#include "base/disp_array.h"
-#include "base/shift_reg.h"
+#include "drivers/disp_array.h"
+#include "drivers/shift_reg.h"
 #include "base/tutorial_plan.h"
-#include "side.h"
-#include "bridge_helper.h"          // is_usb_host_side()
+#include "split_link/side.h"
+#include "split_link/bridge_helper.h"          // is_usb_host_side()
 #include QMK_KEYBOARD_H             // get_key_disp_bitmask, NUM_SHIFT_REGISTERS
 #include "startup_anim.h"           // sa_geom_t / startup_anim_key_geom
 
 #include "base/fontpack.h"   // g_all_fonts / g_all_font_count
-#include "state.h"           // get_local_state()->contrast, for the pulse's full level
+#include "system/state.h"           // get_local_state()->contrast, for the pulse's full level
 
 // The letter is drawn in the NORMAL keycap face, one tier larger — the same relocated
 // `latinbig` glyphs the legend-size feature uses (M = 0xF0000, see glyph_size_base[] in

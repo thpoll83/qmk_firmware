@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Report which resident IconsFont codepoints are taken, free, or mis-named.
 
-`base/fonts/gfx_icons.h` is hand-maintained and is the only authority on which
+`fonts/gfx_icons.h` is hand-maintained and is the only authority on which
 icon slots hold a glyph. The named_glyphs sheet cannot answer that — its "Distance
 Helper" column measures the sheet against ITSELF, so a codepoint that is taken in
 the font but absent from the sheet reads as free space.
@@ -20,15 +20,15 @@ Exit 1 if anything is inconsistent, so it can gate a commit.
 import re, sys, os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-KB   = os.path.dirname(HERE)
-ICONS = os.path.join(KB, "base", "fonts", "gfx_icons.h")
+KB = os.path.dirname(HERE)
+ICONS = os.path.join(KB, "fonts", "gfx_icons.h")
 # The OS hint icons continue the plane-16 range in a font-PACK font of their own
 # (tools/hint_icons.py). It shares the macro namespace and the slot space, so the
 # check reads both: one range, and the two fonts must not overlap.
-HINTS = os.path.join(KB, "base", "fonts", "hint_icons.h")
+HINTS = os.path.join(KB, "fonts", "hint_icons.h")
 NAMES = os.path.join(KB, "lang", "named_glyphs.h")
 
-PUA_FIRST, PUA_LAST = 0x100000, 0x10FFFD   # Supplementary Private Use Area-B
+PUA_FIRST, PUA_LAST = 0x100000, 0x10FFFD  # Supplementary Private Use Area-B
 
 
 def icons_font(path=ICONS, sym="Icons"):
@@ -43,7 +43,7 @@ def icons_font(path=ICONS, sym="Icons"):
         if not f:
             continue
         w, h = int(f.group(2)), int(f.group(3))
-        if w and h:                       # w==h==0 is a deliberate gap
+        if w and h:  # w==h==0 is a deliberate gap
             glyphs[cp] = (w, h)
         cp += 1
     return first, last, glyphs

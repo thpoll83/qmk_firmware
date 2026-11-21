@@ -13,7 +13,7 @@ source. The firmware never composes characters and needs no IME.
 Repos (siblings): `qmk_firmware/` (firmware + LUT), `PolyKybdHost/` (host +
 `tools/oled_preview.py`), `polykybd-ctnd/` (HIL rig). All PolyKybd lang files live
 under `qmk_firmware/keyboards/polykybd/` (called **PK/** below).
-Authoritative deep-dive: `PK/lang/FUTURE_LANGUAGES.md` (read it first).
+Authoritative deep-dive: `PK/docs/lang/future-languages.md` (read it first).
 
 ## 0. Toolchain (once per container)
 
@@ -70,7 +70,7 @@ Rule of thumb: **identical keymap → fold; different keymap → its own column.
 ## 3. Write the column generator
 
 Add `PK/lang/_gen_<batch>_cols.py` modelled on the existing ones
-(`_gen_euam_cols.py`, `_gen_world_cols.py`). Each language = `{row: [VAR_SMALL,
+(`lang/scripts/_gen_euam_cols.py`, `lang/scripts/_gen_world_cols.py`). Each language = `{row: [VAR_SMALL,
 VAR_SHIFT, VAR_CAPS, VAR_ALTGR]}`; rows 2–55 = keys (`KC_A`=2 … `KC_Z`=27,
 `KC_1..0`=28..37, plus the punctuation rows), rows 56–64 = settings
 (letter/num/sym h/v offsets, then `{letter|num|sym.altgrhalf}` at rows **62–64**). Cell =
@@ -89,7 +89,7 @@ subordinate. Only the `letter` row is set today. A blank cell
 means full size, so a new language is safe either way. It is a *layout* judgement,
 not a glyph measurement: AltGr ink height is the same on Latin and Arabic (median
 21 vs 20 px), which is exactly why this is data and not a threshold in the C.
-`lang/_insert_settings_row.py` is what adds a settings row in the first place —
+`lang/scripts/_insert_settings_row.py` is what adds a settings row in the first place —
 they must stay contiguous from 56, so a new one is INSERTED, not appended.
 
 ### Cell semantics (cog `make_key`)
@@ -170,8 +170,8 @@ surgically and **always regenerate from a clean base**, not in place:
 cd PK/lang
 cp -f /tmp/clean_lang_lut.xlsx lang_lut.xlsx              # the committed pre-batch xlsx
 /tmp/pkvenv/bin/python _gen_<batch>_cols.py               # -> /tmp/<batch>_{cols,named}.json
-/tmp/pkvenv/bin/python _patch_named_glyphs.py lang_lut.xlsx /tmp/<batch>_named.json
-/tmp/pkvenv/bin/python _patch_xlsx.py lang_lut.xlsx /tmp/<batch>_cols.json <comma,sep,order>
+/tmp/pkvenv/bin/python scripts/_patch_named_glyphs.py lang_lut.xlsx /tmp/<batch>_named.json
+/tmp/pkvenv/bin/python scripts/_patch_xlsx.py lang_lut.xlsx /tmp/<batch>_cols.json <comma,sep,order>
 ```
 To *modify* already-appended columns, restore the clean base + re-append with the
 fixed generator (don't try to edit existing cells). Verify integrity: reopen
@@ -208,7 +208,7 @@ If only cell *values* changed (not the language list/order), `keycode_helper.h`,
   `_gen_region_tables.py` (mirrors the host `lang_regions.py` country→continent
   map; sort country-asc, enum-tie). Geographic outliers (Hawaiian→Oceania) need a
   `LANG_REGION_OVERRIDE` entry.
-- **Flags** (`base/fonts/flag_fonts.h`): `FONTCONVERT=/tmp/fontconvert_pinned
+- **Flags** (`fonts/flag_fonts.h`): `FONTCONVERT=/tmp/fontconvert_pinned
   PYTHON=/tmp/pkvenv/bin/python bash fonts/gen-lang-fonts.sh`. Existing flags stay
   byte-identical; new ones append. (`lang_label_font.h` shouldn't change — revert
   if only its path comment did.)
@@ -269,7 +269,7 @@ GET_LANG_LIST packets of 15; run the host test suite.
 ## 10. Commit (per-repo branch rules)
 
 Commit firmware (qmk), host (PolyKybdHost), and rig (polykybd-ctnd) separately on
-their branches. Document the batch in `PK/lang/FUTURE_LANGUAGES.md` (a STATUS
+their branches. Document the batch in `PK/docs/lang/future-languages.md` (a STATUS
 section) and bump the `NUM_LANG`/packet note in the top `CLAUDE.md`. Don't push
 unless asked.
 

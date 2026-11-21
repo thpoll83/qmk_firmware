@@ -70,7 +70,7 @@ interpreter — and counting pixels outside the 72x40 window. Require **0**.
   whole column-byte into the SSD1306 page memory at once. `cb = (h + 7) >> 3`
   page-bytes per column; index `bitmap[bitmapOffset + xx*cb + (yy>>3)]`, bit
   `1 << (yy & 7)` (**LSB = top of the page**); a glyph is `width * cb` whole bytes.
-  Canonical types are `PolyColGfx`/`PolyColGlyph` (`base/fonts/gfxfont.h`) with
+  Canonical types are `PolyColGfx`/`PolyColGlyph` (`fonts/gfxfont.h`) with
   `GFXfont`/`GFXglyph` kept as compat aliases. ⚠️ **NOT** the classic Adafruit
   row-major layout (`bit = yy*w + xx`, MSB-first) — a row-major reader (or an
   un-transposed header, see below) produces garbage that *looks* like dithering
@@ -95,7 +95,7 @@ interpreter — and counting pixels outside the 72x40 window. Require **0**.
     `kdisp_clear_bitmap_courtyard` (column-native) / `kdisp_clear_rowmajor_courtyard`
     (row-major) — named by layout, deliberately not a `bool` parameter, so the
     pairing is visible at the call site.
-  - ⚠️ **`base/fonts/gfx_icons.h` (IconsFont + a NULL-bitmap HelperFont) is
+  - ⚠️ **`fonts/gfx_icons.h` (IconsFont + a NULL-bitmap HelperFont) is
     hand-maintained and lives OUTSIDE `fonts.yaml`/`generated/`, so bulk font-header
     tooling silently skips it.** Any glyph-format change (the column transpose, a
     future re-pack) MUST include it explicitly — missing it leaves every resident
@@ -270,7 +270,7 @@ interpreter — and counting pixels outside the 72x40 window. Require **0**.
   `gfx_font` loader + `oled_to_rgb`) — it parses the generated headers correctly and
   renders the real 72×40 OLED look. A hand-rolled renderer cost two wrong "flag
   offset" guesses this session before the real cause (the baseline-align above) was
-  found. `gfx_font.load_all_fonts(base/fonts)` includes `flag_fonts.h`, so it can
+  found. `gfx_font.load_all_fonts(fonts)` includes `flag_fonts.h`, so it can
   render pack/flag glyphs too. **Caveat:** the preview models glyph `xOffset/yOffset`
   but NOT the `kdisp` baseline-align shift, so it won't reproduce that bug — reason
   about `fonts[0]` separately.
@@ -758,7 +758,7 @@ like the glyph script:
 
 ---
 
-## Brightness keys — one icon family (`keycode_helper.c`, `base/fonts/gfx_icons.h`)
+## Brightness keys — one icon family (`keycode_helper.c`, `fonts/gfx_icons.h`)
 
 The eight brightness keycodes now draw **one resident IconsFont glyph each**, all
 built on the sun the status OLED already uses for brightness: `KC_DMIN` / `KC_D1Q` /

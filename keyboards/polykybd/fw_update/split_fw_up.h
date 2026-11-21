@@ -4,7 +4,7 @@
 
 #include "split_link/split_sync.h"
 #include "drivers/fw_staging.h"
-#include "base/fonts/generated/fontpack_layout.h"   // FONTPACK_BUNDLE_COUNT
+#include "fonts/generated/fontpack_layout.h"   // FONTPACK_BUNDLE_COUNT
 
 #include <stdint.h>
 

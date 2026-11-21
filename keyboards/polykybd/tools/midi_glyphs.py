@@ -35,7 +35,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KB = os.path.dirname(HERE)
-ICONS_H = os.path.join(KB, "base", "fonts", "gfx_icons.h")
+ICONS_H = os.path.join(KB, "fonts", "gfx_icons.h")
 NAMES_H = os.path.join(KB, "lang", "named_glyphs.h")
 FREESERIF = "/usr/share/fonts/truetype/freefont/FreeSerif.ttf"
 FREESERIF_BI = "/usr/share/fonts/truetype/freefont/FreeSerifBoldItalic.ttf"

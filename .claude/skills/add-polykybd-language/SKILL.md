@@ -208,7 +208,7 @@ If only cell *values* changed (not the language list/order), `keycode_helper.h`,
   `_gen_region_tables.py` (mirrors the host `lang_regions.py` country→continent
   map; sort country-asc, enum-tie). Geographic outliers (Hawaiian→Oceania) need a
   `LANG_REGION_OVERRIDE` entry.
-- **Flags** (`base/fonts/flag_fonts.h`): `FONTCONVERT=/tmp/fontconvert_pinned
+- **Flags** (`fonts/flag_fonts.h`): `FONTCONVERT=/tmp/fontconvert_pinned
   PYTHON=/tmp/pkvenv/bin/python bash fonts/gen-lang-fonts.sh`. Existing flags stay
   byte-identical; new ones append. (`lang_label_font.h` shouldn't change — revert
   if only its path comment did.)

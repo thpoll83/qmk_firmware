@@ -8,7 +8,7 @@ region, so the firmware shrinks and fonts update independently over HID. A small
 stays compiled into the firmware so the keyboard works with no pack present.
 
 This module is the build-side counterpart of base/fontpack.h. It:
-  * parses the committed base/fonts/generated/*.h GFXfont headers (no fontconvert
+  * parses the committed fonts/generated/*.h GFXfont headers (no fontconvert
     or TTF sources needed — works straight off a checkout),
   * serializes the pack subset into a position-independent "PlyF" binary,
   * validates / dumps a pack binary (the offline validator), and
@@ -880,7 +880,7 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     here = Path(__file__).resolve().parent
-    default_fonts_dir = here.parent / "base" / "fonts"
+    default_fonts_dir = here.parent / "fonts"
 
     b = sub.add_parser("build", help="build a pack from the committed headers")
     b.add_argument("--fonts-dir", default=str(default_fonts_dir))

@@ -128,7 +128,7 @@ The number in the cell is not the number on the keycap.
   a second `op.Lang` on it.
 
 ⚠️ Two renderer traps:
-- `op.load_renderer(base/fonts)` — plain `Renderer(load_all_fonts(d))` omits the
+- `op.load_renderer(fonts)` — plain `Renderer(load_all_fonts(d))` omits the
   standalone mid face, so `HINT_MID` silently renders full size.
 - `R.draw(setpix, cps, x, y)` takes **buffer** coordinates and `plot` subtracts
   `BUFFER_X` (28). Drawing at `x=2` puts everything off the viewport and you get a

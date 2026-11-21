@@ -32,7 +32,7 @@ import sys
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FONTDIR = os.path.normpath(os.path.join(HERE, "..", "base", "fonts"))
+FONTDIR = os.path.normpath(os.path.join(HERE, "..", "fonts"))
 
 P_W, P_H = 128, 64  # split72 status OLED
 

@@ -54,7 +54,7 @@ jobs:
             --error-exitcode=2 \
             -DFW_REQUIRE_SIGNATURE -DKEYBOARD_polykybd_split72 \
             -i keyboards/polykybd/doom \
-            -i keyboards/polykybd/base/fonts \
+            -i keyboards/polykybd/fonts \
             -i modules/polykybd/polymod_monocypher/monocypher.c \
             -i modules/polykybd/polymod_monocypher/monocypher-ed25519.c \
             -i keyboards/polykybd/base/tests \

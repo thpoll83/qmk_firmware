@@ -2,10 +2,10 @@
 # Generate the three standalone UI text fonts — the ones that render the status
 # OLED, the firmware-update screens and the language-code labels:
 #
-#   base/fonts/NotoSans_Medium_Base_8pt.h     _Small_ 15 px  status OLED body rows
-#   base/fonts/util_font.h                    _Mid_   19 px  status OLED TOP row,
+#   fonts/NotoSans_Medium_Base_8pt.h     _Small_ 15 px  status OLED body rows
+#   fonts/util_font.h                    _Mid_   19 px  status OLED TOP row,
 #                                                            fw-update / utility text
-#   base/fonts/nano_font.h                    _Nano_  10 px  language codes +
+#   fonts/nano_font.h                    _Nano_  10 px  language codes +
 #                                                            split42 layout name
 #
 # These are NOT in fonts.yaml / ALL_FONTS — each is used through a dedicated
@@ -75,11 +75,11 @@ emit() {
     echo "wrote $out"
 }
 
-emit base/fonts/NotoSans_Medium_Base_8pt.h \
+emit fonts/NotoSans_Medium_Base_8pt.h \
      "Status-OLED body font (NotoSans Semibold 15 px, grid-fitted) — the rows that carry the numbers." \
      -p15 -w600 -Hauto -v_Small_
 
-emit base/fonts/util_font.h \
+emit fonts/util_font.h \
      "Mid utility-label font (NotoSans Medium 19 px, grid-fitted) — status-OLED top row, fw-update screens, misc utility-key text." \
      -p19 -w500 -Hauto -v_Mid_
 
@@ -90,6 +90,6 @@ emit base/fonts/util_font.h \
 # ("Qwrty" ran its w and r together). Render at the real size instead. 10 px is
 # the largest that still fits the column -- the widest short name, "Wkmn", is
 # 30 px here and 33 px at the _Tiny_ 11 px size, i.e. 1 px past the panel.
-emit base/fonts/nano_font.h \
+emit fonts/nano_font.h \
      "Nano label font (NotoSans Medium 10 px, grid-fitted) — language codes + the split42 layout name." \
      -p10 -w500 -Hauto -v_Nano_

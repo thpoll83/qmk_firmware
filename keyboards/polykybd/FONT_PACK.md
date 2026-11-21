@@ -29,7 +29,7 @@ a large **pack** (`PlyF`) that lives in the **4–8 MB resource region** and is
 flashed over HID separately. `fontpack_assemble()` builds `g_all_fonts = resident
 ++ pack` at boot; with no pack, only the resident set is present. Files:
 `base/fontpack.c/.h` (C loader), `fonts/fontpack.py` (build-side serializer),
-`base/fonts/generated/fontpack.manifest.json` (committed pack ABI contract),
+`fonts/generated/fontpack.manifest.json` (committed pack ABI contract),
 `hid_fontpack.c` + `PolyKybdHost/polyhost/device/hid_fontpack.py` (HID transport),
 `polyhost/cli/polyctl.py` (`fontpack status|sync|flash <id>|wipe [id]` — per-bundle
 since the split-pack change; `status` shows device-vs-shipped versions, `sync`
@@ -113,7 +113,7 @@ flashes all stale bundles, `flash <id>` force-flashes one).
       fontpack.all_fonts_order(fonts_dir)`, `resident =
       fontpack.resident_symbols(cfg, fonts_dir)`, `parsed = {}` then
       `parsed.update(fontpack.parse_gfx_header(h.read_text()))` for every
-      `base/fonts/generated/*.h` + `parsed.update(fontpack.extra_pack_fonts(cfg,
+      `fonts/generated/*.h` + `parsed.update(fontpack.extra_pack_fonts(cfg,
       fonts_dir))`, `sym2cat = fontpack.symbol_categories_from_tree(fonts_dir, cfg)`,
       `fontpack.prune_shadowed_glyphs(order, resident, parsed)` (mirror the build!),
       `fontpack.build_bundles(order, resident, parsed, sym2cat, cfg,
@@ -162,7 +162,7 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   (screenshot/calc/my-computer/paste), EmjLayer, plus the always-resident Arrows.
 - **The OS shortcut-hint icons are a PACK font, not resident** (2026-10).
   `tools/hint_icons.py` writes them as their own GFXfont, `PolyHintIcons`, in
-  `base/fonts/hint_icons.h` (U+100100.., a block of its own: `IconsFont` runs
+  `fonts/hint_icons.h` (U+100100.., a block of its own: `IconsFont` runs
   U+100000..U+100025 and can grow by 218 icons before reaching it; yAdvance 40 like
   `IconsFont`, so the baseline alignment against `fonts[0]` moves nothing). `fonts.yaml` lists it under `index.pack_extra_fonts`
   AFTER the flags and in the `symbol` bundle's `pack_extra`, so it gets the next
@@ -176,7 +176,7 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   on a macro that points between them, and reports how many slots `IconsFont` has left. The design
   rules and the reason for each icon's shape are [`HINT_ICONS.md`](HINT_ICONS.md).
 - **A single bigger/custom glyph → inject it into the resident IconsFont
-  (`base/fonts/gfx_icons.h`), NOT a new resident font.** `IconsFont` is `g_all_fonts[0]`
+  (`fonts/gfx_icons.h`), NOT a new resident font.** `IconsFont` is `g_all_fonts[0]`
   (prepended), so *extending it with another glyph* (append bitmap bytes + a `GFXglyph`
   record, bump the font's `last`) shifts **no pack index** and needs no reship — it
   ships with the firmware — the OS logos, mouse buttons and lock-key glyphs are

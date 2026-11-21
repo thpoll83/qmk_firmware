@@ -11,7 +11,7 @@
 #include "shift_reg.h"
 #include "spi_master.h"
 
-#include "base/fonts/base_font.h"
+#include "fonts/base_font.h"
 #include "base/com.h"
 
 // HINT_MID (\x16) draws the REST of the string from this standalone UI face

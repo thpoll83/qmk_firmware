@@ -5,7 +5,7 @@ exactly as the firmware draws it (per-glyph bitmap, baseline-aligned to yAdvance
 
 Usage:  preview_block.py <base_hex> <count> [header_path] [out_png]
         preview_block.py 0xEA40 26
-        preview_block.py 0xEA40 36 base/fonts/generated/gscript_fonts.h /tmp/gs.png
+        preview_block.py 0xEA40 36 fonts/generated/gscript_fonts.h /tmp/gs.png
 
 Requires the PolyKybdHost repo checked out as a sibling (for tools/gfx_font.py)
 and Pillow. Prints how many glyphs rendered; writes a labelled contact sheet.

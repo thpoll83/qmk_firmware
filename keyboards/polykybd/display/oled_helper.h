@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "base/fonts/gfxfont.h"
+#include "fonts/gfxfont.h"
 
 /* Utility: encode a value as digit glyphs into a char32 (UTF-32) buffer.
    ⚠️ `buffer` is written as uint32_t codepoints, so every caller must pass a

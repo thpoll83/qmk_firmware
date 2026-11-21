@@ -2325,7 +2325,7 @@
 // de-facto reference is the OEM legend on the physical Menu/Application key -- a menu
 // with a pointer on it, which is exactly what this draws.
 //
-// ⚠️ ONE baked glyph (IconsFont, base/fonts/gfx_icons.h), not a display list. It was
+// ⚠️ ONE baked glyph (IconsFont, fonts/gfx_icons.h), not a display list. It was
 // built from ops for rounds 34-35: three square BADGEs, a 1px frame and a ROTATED U+27A4
 // at one third scale, because the pack has no cursor glyph. Round 41 asked for a real
 // mouse pointer cut out of the bars by a dark halo, which no op can draw, so the design
@@ -2393,7 +2393,7 @@
 #define ICON_HOLD_UP                	U"\x100002"
 #define ICON_HOLD_DOWN              	U"\x100003"
 
-// Brightness keys — one resident IconsFont glyph each (base/fonts/gfx_icons.h).
+// Brightness keys — one resident IconsFont glyph each (fonts/gfx_icons.h).
 // The status OLED already says "brightness" with a sun, so the keycaps use the
 // same sun and grow its RAYS with the level; a staircase beside it states the
 // level outright, drawn with the status OLED's own rule that an unlit bar keeps a
@@ -2424,7 +2424,7 @@
 
 // ---- OS shortcut-hint icons (hints/os_hints.c), drawn by tools/hint_icons.py ----
 // One 34x34 glyph per hint; the style (A..E) is whichever tools/hint_icons.py
-// last wrote into base/fonts/hint_icons.h (the PolyHintIcons pack font). Each glyph carries its keycap placement (xOffset
+// last wrote into fonts/hint_icons.h (the PolyHintIcons pack font). Each glyph carries its keycap placement (xOffset
 // 36, top row 3 for a cursor at y 23), so a hint is the bare glyph with no
 // leading spaces. Slots and order are generated: paste the output of
 // `python3 tools/hint_icons.py --macros` here whenever an icon is added or retired.

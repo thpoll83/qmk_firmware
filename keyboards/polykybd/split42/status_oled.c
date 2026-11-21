@@ -12,7 +12,7 @@
 #include "drivers/disp_array.h"
 #include "../base/glyph_meta.h"
 #include "../base/text_helper.h"
-#include "../base/fonts/NotoSans_Medium_Base_8pt.h"
+#include "fonts/NotoSans_Medium_Base_8pt.h"
 #include "../lang/named_glyphs.h"
 #include "../config.h"                          // FULL_BRIGHT
 

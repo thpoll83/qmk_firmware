@@ -7,7 +7,7 @@ bottom-right corner for a modifier (+ - x arrows i refresh clock record).
 Icons are AUTHORED on a 28 grid and drawn at 34 (ScaledDraw): coordinates
 scale, strokes and thin bars keep their authored 2 px.
 
-The glyphs form their own GFXfont, PolyHintIcons, in base/fonts/hint_icons.h at
+The glyphs form their own GFXfont, PolyHintIcons, in fonts/hint_icons.h at
 U+100100.., a block of their own in plane-16 private use. The resident IconsFont
 starts at U+100000, so it can grow by up to 256 icons before reaching it. It is NOT compiled into the firmware: fonts.yaml lists it under
 index.pack_extra_fonts and in the `symbol` bundle, so it ships in symbol.plyf and
@@ -632,8 +632,8 @@ def render(name):
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KB = os.path.dirname(HERE)
-HEADER = os.path.join(KB, "base", "fonts", "gfx_icons.h")       # resident IconsFont
-HINT_HEADER = os.path.join(KB, "base", "fonts", "hint_icons.h")  # the pack font
+HEADER = os.path.join(KB, "fonts", "gfx_icons.h")       # resident IconsFont
+HINT_HEADER = os.path.join(KB, "fonts", "hint_icons.h")  # the pack font
 SYMBOL = "PolyHintIcons"
 Y_ADVANCE = 40           # IconsFont's: glyphs are baseline-aligned against fonts[0]
 

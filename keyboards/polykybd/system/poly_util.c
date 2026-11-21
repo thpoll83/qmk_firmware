@@ -11,7 +11,7 @@
 #include "drivers/disp_array.h"
 #include "drivers/shift_reg.h"
 #include "drivers/helpers.h"
-#include "base/fonts/FreeSansBold24pt7b.h"
+#include "fonts/FreeSansBold24pt7b.h"
 
 #include <print.h>
 #include <transactions.h>

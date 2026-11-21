@@ -22,7 +22,7 @@ and most change requests were already decided there once.
 
 Every hint is ONE glyph of the font `PolyHintIcons` (U+100100..), drawn by
 `tools/hint_icons_stage.py`, written by `tools/hint_icons.py` to
-`base/fonts/hint_icons.h`, and shipped in the `symbol` font-pack bundle, NOT in the
+`fonts/hint_icons.h`, and shipped in the `symbol` font-pack bundle, NOT in the
 firmware image. `hints/os_hints.c` returns the `ICON_HINT_*` macro for a chord.
 
 All paths below are relative to `keyboards/polykybd/` unless they start with a repo
@@ -83,7 +83,7 @@ Pitfalls). A whole-set overview at 4×: `python3 tools/hint_icons.py --sheet /tm
 
 ```bash
 cd keyboards/polykybd
-python3 tools/hint_icons.py                # rewrite base/fonts/hint_icons.h (keeps style d)
+python3 tools/hint_icons.py                # rewrite fonts/hint_icons.h (keeps style d)
 python3 tools/hint_icons.py --macros       # only when names or slots changed:
                                            #   paste into lang/named_glyphs.h's ICON_HINT block
 python3 tools/hint_icons.py --check        # header + macro block both current

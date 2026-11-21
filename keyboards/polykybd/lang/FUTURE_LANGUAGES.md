@@ -402,9 +402,9 @@ want the popular option.
    needs a country flag. Add its ISO-3166-1 alpha-2 code to `COUNTRIES=()` in
    `fonts/gen-lang-fonts.sh` **in the exact same order as `enum lang_layer`**
    (since 2026-10 the script emits ONE glyph per country and
-   `base/fonts/generated/lang_flag_glyph.h` maps each `LANG_*` to it, so a
+   `fonts/generated/lang_flag_glyph.h` maps each `LANG_*` to it, so a
    language whose country already has a flag adds no glyph; `poly_keymap.c`
-   asserts the table has `NUM_LANG` entries), then regenerate `base/fonts/flag_fonts.h` with the pinned
+   asserts the table has `NUM_LANG` entries), then regenerate `fonts/flag_fonts.h` with the pinned
    fontconvert + NotoColorEmoji (`-F` sequence option). Caveat: languages that
    share a country (e.g. Serbian Cyrillic & Serbian Latin both = RS → 🇷🇸) get
    the **same** flag and "sr" label, so they are indistinguishable on the

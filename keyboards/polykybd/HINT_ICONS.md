@@ -15,7 +15,7 @@ them instead of from the pixels. The mechanics (font, slots, pack) are in
 | The drawings (style D, the one that ships) | `tools/hint_icons_stage.py` |
 | Slot order, retired set, header writer | `tools/hint_icons.py` (`ICONS`, `RETIRED`) |
 | Four other styles, same slots | `tools/hint_icons.py` (a), `_solid` (b), `_bold` (c), `_retro` (e) |
-| The generated font `PolyHintIcons` | `base/fonts/hint_icons.h`, U+100100.. |
+| The generated font `PolyHintIcons` | `fonts/hint_icons.h`, U+100100.. |
 | The `ICON_HINT_*` names | `lang/named_glyphs.h`, pasted from `hint_icons.py --macros` |
 | Which chord shows which icon | `hints/os_hints.c` |
 | The pin on that mapping | `hints/tests/os_hints_tests.cpp` (`kExpected`) |

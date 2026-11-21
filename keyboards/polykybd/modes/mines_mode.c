@@ -13,7 +13,7 @@
 #include "base/com.h"              // DISP_IDLE
 #include "drivers/disp_array.h"
 #include "base/font_lookup.h"      // kdisp_gfx_glyph_font
-// Defined in base/fonts/util_font.h, which carries the data and is included once
+// Defined in fonts/util_font.h, which carries the data and is included once
 // (poly_keymap.c).
 extern const GFXfont NotoSans_Regular_Mid_19px7b;
 #include "system/state.h"

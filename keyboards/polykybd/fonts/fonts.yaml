@@ -2,7 +2,7 @@
 #
 # Edit this file, then regenerate the headers:
 #     python3 fonts/generate_fonts.py        (see fonts/README.md)
-# Do NOT hand-edit base/fonts/generated/*.h — they are produced from this file.
+# Do NOT hand-edit fonts/generated/*.h — they are produced from this file.
 #
 # The `fonts:` list is ORDERED and the order is load-bearing: list order ==
 # ALL_FONTS[] priority.  Glyph lookup scans ALL_FONTS front-to-back, so when two
@@ -54,7 +54,7 @@ sources:
   c64-keycap:          fonts/fantasy/C64Keyboard-Regular.ttf   # szabadkai/c64-keyboard-font v1.111, CC0 — printed keycap lettering
   amiga-topaz:         fonts/fantasy/Amiga-Regular.ttf
 
-# The composed index header that the firmware includes (base/fonts/<output>).
+# The composed index header that the firmware includes (fonts/<output>).
 index:
   output: gfx_used_fonts.h
   # Headers #included by the index in addition to the per-category ones. Their

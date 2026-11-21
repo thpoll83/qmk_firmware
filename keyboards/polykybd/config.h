@@ -539,7 +539,7 @@
 
 #define OLED_FONT_START	32
 #define OLED_FONT_END	126
-#define OLED_FONT_H "base/fonts/base_font.h"
+#define OLED_FONT_H "fonts/base_font.h"
 #define OLED_BRIGHTNESS 60
 #define OLED_DISABLE_TIMEOUT
 #define OLED_UPDATE_INTERVAL 66 //15fps

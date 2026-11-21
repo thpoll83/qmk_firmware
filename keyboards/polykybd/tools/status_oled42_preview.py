@@ -33,7 +33,7 @@ import sys
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FONTDIR = os.path.normpath(os.path.join(HERE, "..", "base", "fonts"))
+FONTDIR = os.path.normpath(os.path.join(HERE, "..", "fonts"))
 
 P_W, P_H = 32, 128            # logical portrait (= physical 128x32 rotated 90°)
 FULL_BRIGHT = 50             # config.h

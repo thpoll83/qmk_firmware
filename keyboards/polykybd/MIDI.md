@@ -12,7 +12,7 @@ into a small piano with live note names on the keycaps. It is reached with `TO(_
 | send-only interface | QMK core patch, `UPSTREAM_PATCHES.md` → `MIDI_SEND_ONLY` |
 | layer | `layers.h` (`_ML` = stored layer 8), both keymaps, `layer_names.c` ("MIDI") |
 | legends | `midi_legend.c` (pure, unit-tested: `make test:polykybd_midi_legend`) |
-| symbols | `tools/midi_glyphs.py` → `base/fonts/gfx_icons.h` U+100029..U+100049 and the `ICON_MIDI_*` macros in `lang/named_glyphs.h` |
+| symbols | `tools/midi_glyphs.py` → `fonts/gfx_icons.h` U+100029..U+100049 and the `ICON_MIDI_*` macros in `lang/named_glyphs.h` |
 | sync | `poly_sync_t.midi_cfg`, packed by `midi_cfg_pack()` |
 
 - **MIDI is off in the DOOM monolith** (`POLYKYBD_DOOM=yes` without `POLYKYBD_DOOM_PACK`).

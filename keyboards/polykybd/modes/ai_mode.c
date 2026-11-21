@@ -31,7 +31,7 @@
 #    include <lib/lib8tion/lib8tion.h>   // sin8
 #endif
 
-// Defined in base/fonts/util_font.h, which carries the data and is included once
+// Defined in fonts/util_font.h, which carries the data and is included once
 // (poly_keymap.c). ASCII, resident.
 extern const GFXfont NotoSans_Regular_Mid_19px7b;
 

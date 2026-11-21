@@ -31,7 +31,7 @@
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "base/fontpack.h"
 #include "base/icon_lib.h"   // cmd 42 fills (protocol v20)
-#include "base/fonts/generated/fontpack_layout.h"  // FONTPACK_BUNDLE_COUNT, for the GET_ID size assert
+#include "fonts/generated/fontpack_layout.h"  // FONTPACK_BUNDLE_COUNT, for the GET_ID size assert
 #include "base/update.h"
 #include "system/poly_util.h"
 

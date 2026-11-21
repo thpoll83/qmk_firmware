@@ -10,7 +10,7 @@ Walks every cell of the language table (lang/lang_lut.c: base, Shift, Caps and A
 for each of the 160 layouts), expands the named glyphs, skips the display-list op
 bytes and their arguments the way bbox_walk() does, and resolves each remaining
 codepoint against the runtime font table (g_all_fonts, in the order
-base/fonts/generated/all_fonts_order.json records) with the same rule as
+fonts/generated/all_fonts_order.json records) with the same rule as
 kdisp_gfx_glyph_font(): the first font whose range holds it, skipping a 0x0 gap record.
 
 ⚠️ WHY THIS EXISTS: a codepoint no font covers took the missing-glyph fallback, which
@@ -92,10 +92,10 @@ def parse_fonts(paths):
 
 def load_font_table(kb=KB):
     """The runtime font table, front to back, as (name, first, last, glyphs)."""
-    with open(os.path.join(kb, "base", "fonts", "generated", "all_fonts_order.json")) as f:
+    with open(os.path.join(kb, "fonts", "generated", "all_fonts_order.json")) as f:
         order = json.load(f)["order"]
-    paths = sorted(glob.glob(os.path.join(kb, "base", "fonts", "generated", "*.h")) +
-                   glob.glob(os.path.join(kb, "base", "fonts", "*.h")))
+    paths = sorted(glob.glob(os.path.join(kb, "fonts", "generated", "*.h")) +
+                   glob.glob(os.path.join(kb, "fonts", "*.h")))
     fonts = parse_fonts(paths)
     missing = [n for n in order if n not in fonts]
     if missing:

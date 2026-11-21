@@ -41,7 +41,7 @@ extern const GFXfont NotoSansSymbols2_Regular_Arrows_20pt16b;
 // Defined in <variant>/status_oled.c's translation unit — extern here for the
 // same reason (its PROGMEM tables must not be duplicated at link time).
 extern const GFXfont NotoSans_Regular_Small_15px7b;
-// ⚠️ EXTERN, not #include "base/fonts/gfx_icons.h". The font headers DEFINE their
+// ⚠️ EXTERN, not #include "fonts/gfx_icons.h". The font headers DEFINE their
 // tables (no extern, no guard against a second TU), so a second include is a link
 // error on IconsBitmaps/IconsGlyphs/HelperGlyphs. Every other font here is reached
 // the same way.

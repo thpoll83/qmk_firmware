@@ -171,8 +171,8 @@ re-derive the bundle manifest from the committed headers:
 ```bash
 git diff --stat base/          # expect gscript_fonts.h, all_fonts_order.json,
                                # fontpack_render_settings.json + the two manifests
-git checkout -- base/fonts/generated/<every drifted header> \
-               base/fonts/generated/fontpack_bundles.manifest.json
+git checkout -- fonts/generated/<every drifted header> \
+               fonts/generated/fontpack_bundles.manifest.json
 cd ../.. && python3 .claude/skills/reship-fontpack-bundle/reship_bundles.py --check
 #   -> only `fantasy` should read DIFFERS; then
 python3 .claude/skills/reship-fontpack-bundle/reship_bundles.py --apply fantasy=<N+1>

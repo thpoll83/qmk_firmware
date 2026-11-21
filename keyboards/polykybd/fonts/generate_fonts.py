@@ -4,7 +4,7 @@
 This replaces the old create_fonts.sh.  It reads fonts/fonts.yaml (the single
 source of truth), invokes the `fontconvert` tool once per font entry, groups the
 resulting GFXfont definitions into a small set of per-category headers in
-base/fonts/generated/, and composes base/fonts/gfx_used_fonts.h with the
+fonts/generated/, and composes fonts/gfx_used_fonts.h with the
 ALL_FONTS[] lookup table.
 
 Usage:
@@ -328,7 +328,7 @@ def main() -> None:
     cat_blocks, symbols = render(args.fontconvert, entries, sources, categories,
                                  root, args.quiet)
 
-    gen_dir = root / "base" / "fonts" / "generated"
+    gen_dir = root / "fonts" / "generated"
     outputs: dict[Path, str] = {}
     for cat, meta in categories.items():
         if cat_blocks.get(cat):
@@ -344,7 +344,7 @@ def main() -> None:
                 resident |= set(fontpack.parse_gfx_header(
                     compose_category(cat_blocks[cat])).keys())
         order = full_order(index, symbols)
-        outputs[root / "base" / "fonts" / index["output"]] = \
+        outputs[root / "fonts" / index["output"]] = \
             compose_index(index, categories, cat_blocks, symbols, resident)
         # Full priority order for the build tooling (firmware index has resident only).
         outputs[gen_dir / "all_fonts_order.json"] = \
@@ -362,7 +362,7 @@ def main() -> None:
         # regenerated one could never agree and --check drifted on this file
         # forever (documented as "already stale" rather than fixed).
         pack_data, manifest = fontpack.manifest_from_texts(
-            order, cat_texts, cfg, root / "base" / "fonts",
+            order, cat_texts, cfg, root / "fonts",
             content_version=args.content_version, dedupe=not args.no_dedupe)
         outputs[gen_dir / PACK_MANIFEST] = fontpack.manifest_json(pack_data, manifest)
 
@@ -373,7 +373,7 @@ def main() -> None:
             parsed_all: dict = {}
             for txt in cat_texts.values():
                 parsed_all.update(fontpack.parse_gfx_header(txt))
-            parsed_all.update(fontpack.extra_pack_fonts(cfg, root / "base" / "fonts"))
+            parsed_all.update(fontpack.extra_pack_fonts(cfg, root / "fonts"))
             sym2cat = fontpack.symbol_categories_from_texts(cat_texts)
             # Empty glyphs a higher-priority font already draws identically — dead
             # weight in flash (they never render). Zero visual change; asserted.

@@ -122,7 +122,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="tutorial_names.png")
     args = ap.parse_args()
-    R = op.load_renderer(os.path.join(KB, "base", "fonts"))
+    R = op.load_renderer(os.path.join(KB, "fonts"))
     op.OVERSHOOT = 24
     strips = load_strips()
 
@@ -156,7 +156,7 @@ def main():
     # The two closing screens (TUT_LANG_MORE, TUT_LANG_MORE2): the number on the left
     # half, the word on the right, both on the middle row, in the heavy splash face.
     import gfx_font  # noqa: E402  (the host tool's own GFX header parser)
-    heavy = gfx_font.load_ui_font(os.path.join(KB, "base", "fonts"), "FreeSansBold24pt7b.h",
+    heavy = gfx_font.load_ui_font(os.path.join(KB, "fonts"), "FreeSansBold24pt7b.h",
                                   "FreeSansBold24pt7b")
     n_lang, n_scripts = enum_counts()
     for k, (num, word) in enumerate(((n_lang, MORE_WORDS[0]), (n_scripts, MORE_WORDS[1]))):

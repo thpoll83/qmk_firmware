@@ -263,5 +263,5 @@ These files are modified by PolyKybd and are also touched periodically by upstre
 - **Run `mirror-master-with-upstream` first** so `origin/master` is current — it's a good checkpoint even if this skill doesn't depend on it.
 - **Do not merge upstream directly into a short-lived feature branch** — merge into `PolyKybd` first, then rebase the feature branch onto the updated `PolyKybd`.
 - If upstream has **removed a file** that PolyKybd still uses (shows as a `CONFLICT (modify/delete)`), keep the file and add a comment explaining it was removed upstream but retained for PolyKybd compatibility.
-- **Codegen files** (`lang/lang_lut.c`, `base/fonts/generated/*.h`) are never touched by upstream — any conflict there is surprising and should be flagged to the user.
+- **Codegen files** (`lang/lang_lut.c`, `fonts/generated/*.h`) are never touched by upstream — any conflict there is surprising and should be flagged to the user.
 - **Submodule update is not optional**: upstream QMK routinely bumps ChibiOS, pico-sdk, and chibios-contrib. The new pico-sdk may contain USB driver fixes. Building against the old submodule checkouts produces a binary that compiles cleanly but can have runtime failures (broken HID, USB enumeration issues). Always run `git submodule update` between merging and building.

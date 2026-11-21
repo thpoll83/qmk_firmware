@@ -2,7 +2,7 @@
 # Generate the two standalone font headers used by the language-selection layer
 # (_LL):
 #
-#   base/fonts/flag_fonts.h        country flags (NotoColorEmoji, 28 px)
+#   fonts/flag_fonts.h        country flags (NotoColorEmoji, 28 px)
 #   (the tiny language-code label font moved to fonts/gen-status-fonts.sh)
 #
 # Both are used via dedicated single-font arrays in the keymap (see
@@ -33,7 +33,7 @@ cd "$(dirname "$0")/.."                       # -> the keyboard directory
 FONTCONVERT="${FONTCONVERT:-fontconvert}"
 EMOJI="fonts/Noto_CEmoji/NotoColorEmoji-Regular.ttf"
 SANS="fonts/noto-sans/NotoSans-Regular.ttf"
-FLAG_OUT="base/fonts/flag_fonts.h"
+FLAG_OUT="fonts/flag_fonts.h"
 FLAG_BASE="0xE000"                            # keep in sync with FLAG_CP_BASE in the keymap
 
 # ISO 3166-1 alpha-2 country code per language, in enum lang_layer order.
@@ -114,7 +114,7 @@ echo "wrote $FLAG_OUT ($(grep -c '// seq\[' "$FLAG_OUT") flags)"
 # Which glyph each language draws, in enum lang_layer order. poly_keymap.c asserts
 # the table has NUM_LANG entries, so a language list that moved without a re-run
 # fails to compile instead of drawing a neighbour's flag.
-INDEX_OUT="base/fonts/generated/lang_flag_glyph.h"
+INDEX_OUT="fonts/generated/lang_flag_glyph.h"
 {
     echo "// Copyright 2026 thpoll83"
     echo "// SPDX-License-Identifier: GPL-2.0-or-later"
@@ -139,12 +139,12 @@ echo "wrote $INDEX_OUT"
 # this the host can't rebuild a flag (sequence mode + the per-flag regional-
 # indicator pair).  Mirrors the fontconvert flags above + the seq.  ⚠ Mirrored
 # byte-identically in PolyKybdHost/polyhost/res/fontpack/lang_flags.json (cmp).
-FLAGS_JSON="base/fonts/generated/lang_flags.json"
+FLAGS_JSON="fonts/generated/lang_flags.json"
 SEQ="$seq" FLAG_BASE="$FLAG_BASE" "${PYTHON:-python3}" - "$FLAGS_JSON" <<'PY'
 import json, os, sys
 seq = os.environ["SEQ"]
 rec = {
-  "_comment": "Render settings for the language-layer country flag font (base/fonts/flag_fonts.h, gen-lang-fonts.sh). Mirrored byte-identically in PolyKybdHost/polyhost/res/fontpack/lang_flags.json — keep both in sync (cmp). Lets the host font-pack editor rebuild a single flag: sequence-mode, source NotoColorEmoji, group = cp - seq_first.",
+  "_comment": "Render settings for the language-layer country flag font (fonts/flag_fonts.h, gen-lang-fonts.sh). Mirrored byte-identically in PolyKybdHost/polyhost/res/fontpack/lang_flags.json — keep both in sync (cmp). Lets the host font-pack editor rebuild a single flag: sequence-mode, source NotoColorEmoji, group = cp - seq_first.",
   "seq_first": int(os.environ["FLAG_BASE"], 16),
   "count": len([g for g in seq.split(",") if g.strip()]),
   "source": "Noto_CEmoji/NotoColorEmoji-Regular.ttf",

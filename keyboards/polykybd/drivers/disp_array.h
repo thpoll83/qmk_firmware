@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "base/fonts/gfxfont.h"
+#include "fonts/gfxfont.h"
 // The pure lookup + measurement half (kdisp_gfx_glyph / kdisp_gfx_glyph_font /
 // kdisp_gfx_text_bbox_in) lives in font_lookup.h so it links on the host without
 // the SPI/display plumbing; re-exported here so consumers are unchanged (the same

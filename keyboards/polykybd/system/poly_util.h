@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "base/fonts/gfxfont.h"
+#include "fonts/gfxfont.h"
 
 #include <stdint.h>
 

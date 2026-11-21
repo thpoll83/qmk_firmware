@@ -60,7 +60,7 @@
 #include "drivers/spi_helper.h"
 #include "drivers/shift_reg.h"
 #include "base/text_helper.h"
-#include "base/fonts/gfx_used_fonts.h"
+#include "fonts/gfx_used_fonts.h"
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
 #include "modes/midi_legend.h"                 // QK_MIDI_* legends from the synced MIDI settings
 #include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
@@ -69,8 +69,8 @@
 // Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+glyph)
 // now ship in the external-flash font pack, resolved via g_all_fonts — they are
 // NOT compiled in. The tiny label font stays resident (no-pack fallback label).
-#include "base/fonts/nano_font.h"          // 10px label font under the flags
-#include "base/fonts/util_font.h"         // mid (10px) utility-label font
+#include "fonts/nano_font.h"          // 10px label font under the flags
+#include "fonts/util_font.h"         // mid (10px) utility-label font
 #include "polymod_core1.h"
 #include "anim/tutorial.h"
 #include "anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
@@ -3861,8 +3861,8 @@ static void render_macro_key(uint8_t id) {
 // One flag glyph per COUNTRY (fonts/gen-lang-fonts.sh): the six Indian languages,
 // the four US ones and so on share theirs, so a language's glyph is looked up rather
 // than being its enum index.
-#include "base/fonts/generated/lang_flag_glyph.h"
-#include "base/fonts/generated/fontpack_layout.h"
+#include "fonts/generated/lang_flag_glyph.h"
+#include "fonts/generated/fontpack_layout.h"
 _Static_assert(sizeof(LANG_FLAG_GLYPH) == NUM_LANG,
                "lang_flag_glyph.h is stale: re-run fonts/gen-lang-fonts.sh");
 

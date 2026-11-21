@@ -9,7 +9,7 @@
 #include "../base/com.h"
 #include "drivers/disp_array.h"
 #include "../base/text_helper.h"
-#include "../base/fonts/NotoSans_Medium_Base_8pt.h"
+#include "fonts/NotoSans_Medium_Base_8pt.h"
 // _Mid_ (19px) utility font: defined in util_font.h, whose definitions are owned by
 // poly_keymap.c's translation unit. Reference it via extern here rather than
 // re-including the header (which would duplicate its PROGMEM tables at link time).

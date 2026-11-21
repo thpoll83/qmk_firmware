@@ -1483,7 +1483,7 @@ small face, straight out of its band. So `tutorial_line_icon()` returns the code
 correct baselines, and the text+icon measured and centred as one unit so "SHIFT" does not
 stay centred with the glyph hanging off the edge.
 
-⚠️ `#include "base/fonts/gfx_icons.h"` is **not** how to reach `IconsFont` from a second
+⚠️ `#include "fonts/gfx_icons.h"` is **not** how to reach `IconsFont` from a second
 translation unit — the font headers *define* their tables with no extern and no guard, so
 a second include is a link error on `IconsBitmaps`/`IconsGlyphs`/`HelperGlyphs`. An
 `extern const GFXfont IconsFont;` is how every other font in `oled_helper.c` is reached.
@@ -2122,7 +2122,7 @@ Hardware feedback:
   and a mouse pointer, the pointer cut out of the lower two bars by a 1 px dark halo.
   No display-list op can cut a halo, so it is ONE baked 31x24 glyph, and since
   IconsFont was full it opened a new resident range, `IconsPuaFont` at U+100000
-  (`base/fonts/gfx_icons.h`, `FONT_PACK.md`). All eight bundles stay byte-identical.
+  (`fonts/gfx_icons.h`, `FONT_PACK.md`). All eight bundles stay byte-identical.
   Not a tutorial change, found in this round.
 
 ## Round 43 — a smaller picker key, a hold icon that presses itself, the stock rainbow

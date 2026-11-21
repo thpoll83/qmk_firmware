@@ -5,7 +5,7 @@
 // matching and watchdog are base/host_tutorial_plan.h, which documents the wire format.
 //
 // The state is RAM only, on both halves. The slave learns it the way the rules say host
-// state reaches it (SPLIT_SYNC.md → "Host state goes to the slave as the report"): the
+// state reaches it (docs/protocol/split-sync.md → "Host state goes to the slave as the report"): the
 // master forwards the TEXT, SPOTLIGHT, REVEAL and END reports on
 // USER_SYNC_DYNAMIC_KEYMAP_DATA, and both halves apply the same bytes. A forwarded report
 // is sent once, so the master resends the last TEXT and SPOTLIGHT state, and an END,

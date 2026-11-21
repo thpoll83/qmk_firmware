@@ -26,7 +26,7 @@ SRC += status_oled.c base/update.c drivers/e2prom.c base/com.c base/text_helper.
 
 # Pointing device: REMOVED — no trackpad exists on split42; it was only ever a
 # split-link workaround. The real requirement is the shmem RPC-guard pad below
-# (SPLIT42_LINK_STATUS.md rows 20-24 and split42/config.h).
+# (docs/archive/split42-link-status.md rows 20-24 and split42/config.h).
 
 # LTR-559 light+proximity sensor — RE-ENABLED. Shares the I2C0
 # bus (addr 0x23), which isn't broken out on split42, so its probe fails and the
@@ -52,10 +52,10 @@ DYNAMIC_KEYMAP_ENABLE = yes
 
 # Shmem RPC-guard pad: a pointing-sized dummy member at the pointing member's
 # position in split_shared_memory_t (quantum/split_common/transport.h, tracked
-# in UPSTREAM_PATCHES.md). Empirically REQUIRED for split42's split link to
+# in docs/build/upstream-patches.md). Empirically REQUIRED for split42's split link to
 # establish — the on-hardware discriminator matrix showed this 8-byte layout
 # shift in front of the RPC buffers is the whole of what the old
-# SPLIT_POINTING_ENABLE workaround provided (SPLIT42_LINK_STATUS.md rows 20-24).
+# SPLIT_POINTING_ENABLE workaround provided (docs/archive/split42-link-status.md rows 20-24).
 # The latent writer it guards against is still being hunted; do not remove
 # without re-running the row-24 test.
 OPT_DEFS += -DPOLY_SPLIT_SHMEM_RPC_GUARD

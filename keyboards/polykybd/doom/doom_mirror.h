@@ -1,7 +1,7 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Slave lockstep mirror — shared data model (DOOM_FEASIBILITY.md "split-UART
+// Slave lockstep mirror — shared data model (docs/archive/doom-feasibility.md "split-UART
 // lockstep"; the transport the upstream piconet.c I2C layer is replaced by).
 //
 // One-way, master-sim-authoritative: the master's game stays a completely

@@ -1,6 +1,6 @@
 # Doom easter egg — it runs
 
-Implementation of the plan in [`../DOOM_FEASIBILITY.md`](../DOOM_FEASIBILITY.md).
+Implementation of the plan in [`../docs/archive/doom-feasibility.md`](../docs/archive/doom-feasibility.md).
 This directory is the `#ifdef POLYKYBD_DOOM` **dev harness** (the study's
 "Option 1"); the executable-flash-pack ship path comes later, re-linking the
 same objects at `0x10600000`.
@@ -109,10 +109,10 @@ keyboards/polykybd/doom/pack/build_pack.sh --version N
 Without either flag nothing here is compiled and every hook in
 `poly_keymap.c` / `hid_com.c` collapses to an inline no-op (zero bytes).
 The two flavours and the pack build are documented in
-[`PACK_DESIGN.md`](PACK_DESIGN.md). **RAM pairing**: the pack's engine
+[`docs/design/doom-pack.md`](../docs/design/doom-pack.md). **RAM pairing**: the pack's engine
 statics are linked at the firmware's overlay-pool address, which the pack
 flavour **pins at the RAM origin** (`ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld`,
-PACK_DESIGN.md §4a) — so an installed `.plyx` keeps working across firmware
+docs/design/doom-pack.md §4a) — so an installed `.plyx` keeps working across firmware
 rebuilds. Re-ship the pack only when the engine/ABI/arena layout changes;
 a genuinely stale pack is refused safely (`stale pack, refuse` on the
 console, egg falls back to the fire demo).
@@ -386,7 +386,7 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
   — the DoomPack chain (pack-flavour firmware + .plyx + WHX) confirmed on
   hardware. Three follow-ups in v45: (1) the pack flavour pins the overlay
   pool at the RAM origin (ld/RP2040_FLASH_TIMECRIT_DOOMPACK.ld → packs now
-  survive firmware rebuilds; PACK_DESIGN.md §4a); (2) viewport contrast
+  survive firmware rebuilds; docs/design/doom-pack.md §4a); (2) viewport contrast
   1.25× → 1.125× ("not bad, but now a bit too dark — half way"); (3) the
   egg is gated further: typing IDDQD now only ARMS it (nothing visible
   happens, no keystrokes swallowed) — a previously-blank key on the
@@ -396,7 +396,7 @@ frozen); the slave half runs the control pad, and — with its own WHX flashed
   power-off; the legend shows on the master half (the slave's mirrored key
   works but stays blank).
 - **Round 43 → v44 + doom_pack_v1.plyx (2026-07-05, UNTESTED): the DoomPack.**
-  First hardware round of the executable-pack split (PACK_DESIGN.md, P1–P4
+  First hardware round of the executable-pack split (docs/design/doom-pack.md, P1–P4
   all compile-verified): v44 is the `POLYKYBD_DOOM_PACK=yes` firmware
   (**398,612 B** — 205 KB smaller than the monolith; loader + mode machinery
   only, engine expected in flash) and `doom_pack_v1.plyx` is the engine pack

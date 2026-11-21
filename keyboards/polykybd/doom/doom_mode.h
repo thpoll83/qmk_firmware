@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // PolyKybd "Can it run Doom?" easter egg — game-mode infrastructure.
-// See ../DOOM_FEASIBILITY.md for the full study and ./README.md for the state
+// See ../docs/archive/doom-feasibility.md for the full study and ./README.md for the state
 // of the port. Compiled only with POLYKYBD_DOOM (dev-harness builds:
 // `qmk compile ... -e POLYKYBD_DOOM=yes`); the inline stubs below keep every
 // call site free of #ifdefs and cost zero bytes in normal builds.
@@ -98,7 +98,7 @@ bool doom_hid_frozen(uint8_t cmd);
 // menu navigation, automap, weapon slots.
 bool doom_key_is_control(uint16_t keycode);
 
-// Arena layout inside the borrowed overlay pool (see DOOM_FEASIBILITY.md,
+// Arena layout inside the borrowed overlay pool (see docs/archive/doom-feasibility.md,
 // "Game-mode RAM budget"). Valid only while game mode is active — the shim's
 // I_ZoneBase hands the zone region to the engine's Z_Init.
 uint8_t *doom_arena_framebuffer(void);   // 320x200 8bpp frame, DOOM_FB_SIZE bytes
@@ -244,7 +244,7 @@ static inline bool doom_rgb_indicators(void) { return true; }
 #endif
 
 #ifdef POLYKYBD_DOOM_PACK
-// ── DoomPack dispatch (doom/PACK_DESIGN.md §3) ──────────────────────────────
+// ── DoomPack dispatch (docs/design/doom-pack.md §3) ──────────────────────────────
 // In the shipping-shape flavour the engine lives in the flashed PlyX pack;
 // every doom_shim_* call above becomes a call through the pack's export
 // table. doom_pack() NEVER returns NULL — before a pack is loaded (or after

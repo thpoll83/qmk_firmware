@@ -9,7 +9,7 @@
 //  * the pd_* renderer interface (pd_render.cpp port — the video backend that
 //    will feed doom_blit);
 //  * the piconet_* lockstep transport (implemented over split-UART
-//    USER_SYNC_DOOM_TIC transactions per DOOM_FEASIBILITY.md) — a single-player
+//    USER_SYNC_DOOM_TIC transactions per docs/archive/doom-feasibility.md) — a single-player
 //    stub lives below until then;
 //  * input pumping into D_PostEvent (wired from doom_process_record).
 #include "doomtype.h"

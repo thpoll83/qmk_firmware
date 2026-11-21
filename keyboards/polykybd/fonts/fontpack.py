@@ -643,7 +643,7 @@ def build_bundles(order: list[str], resident: set[str], parsed: dict[str, Parsed
             sym2bi[s] = i
 
     # A `kind: icons` entry reserves a slot for the host-built PlyI icon bundle
-    # (OVERLAY_ICON_LIBRARY_DESIGN.md), and `kind: emojidict` one for the emoji
+    # (docs/design/overlay-icon-library.md), and `kind: emojidict` one for the emoji
     # search dictionary (emoji/emoji_dict.py): neither has fonts or a .plyf here.
     font_idx = [i for i, e in enumerate(lst) if e.get("kind", "fonts") == "fonts"]
     for i, e in enumerate(lst):

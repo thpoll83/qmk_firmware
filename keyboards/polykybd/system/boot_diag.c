@@ -533,7 +533,7 @@ void boot_substep(uint8_t sub, uint8_t sub_total) {
 //
 // The guard used to cover the final render only. Round 34 of the tutorial caught a
 // master wedged at "63%, 4 / 4" — fw_staging_init() had returned, splash_progress(6)
-// never repainted — i.e. in the same 63% -> 75% gap CRASH_DIAGNOSTICS.md names, and
+// never repainted — i.e. in the same 63% -> 75% gap docs/debugging/crash-diagnostics.md names, and
 // with no watchdog there, no reset and no record: `polyctl crash show` had nothing to
 // read. So it is armed at step 5 (core1 up, the gap boot hangs keep landing in) and fed
 // at every milestone, sub-step and render key after it. A wedge there becomes ONE

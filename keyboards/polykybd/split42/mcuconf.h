@@ -55,7 +55,7 @@
  * address (captured: pc=0x13AE165E, IPSR=I2C0, USB handler open) and the boot hung
  * until the watchdog, about 1 boot in 3 under a reboot loop. At 3: 0 hangs in 845.
  * SPI completes through a DMA IRQ at RP_IRQ_SPIx_PRIORITY, the same shape. Do not
- * raise them back. CRASH_DIAGNOSTICS.md, "Boot hang: an IRQ nested into USB".
+ * raise them back. docs/debugging/crash-diagnostics.md, "Boot hang: an IRQ nested into USB".
  */
 #define RP_IRQ_SPI0_PRIORITY                3
 #define RP_IRQ_SPI1_PRIORITY                3

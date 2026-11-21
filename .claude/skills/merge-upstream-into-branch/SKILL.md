@@ -39,7 +39,7 @@ Merging a **stable tag** (`0.33.13`) rather than `upstream/master` gives a base
 people can look up, and is what the fork does. Two consequences:
 
 - `master` may be **ahead** of the merged tag. That is fine (it is a mirror), but it
-  makes `UPSTREAM_PATCHES.md`'s `git diff master..HEAD` check approximate by exactly
+  makes `docs/build/upstream-patches.md`'s `git diff master..HEAD` check approximate by exactly
   that gap — check `git diff --stat <tag>..master -- tmk_core quantum platforms builddefs lib`
   is empty, or diff against the tag you actually merged.
 - A tag can carry a **new lint/CI rule whose fixes landed after it** (see step 7).
@@ -126,7 +126,7 @@ git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -5
    Identical output means every patch survived *and* upstream didn't restructure
    around it. Finish with a `grep` for one marker per patch (`raw_hid_pre_receive_kb`,
    `ifndef RAW_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`, `POLYKYBD_VREG_VSEL`,
-   `oled_render_dirty(true)`). Full procedure in `keyboards/polykybd/UPSTREAM_PATCHES.md`.
+   `oled_render_dirty(true)`). Full procedure in `keyboards/polykybd/docs/build/upstream-patches.md`.
 
    ⚠️ **The diff above cannot see the vendored USB driver**, because it lives under
    `keyboards/polykybd/chibios_overrides/` and no merge touches it. Its risk is the
@@ -134,7 +134,7 @@ git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -5
    Step 6's `git submodule update` has already cleared the `+` marker, so ask the
    merge commit instead: `git diff HEAD^1 HEAD -- lib/chibios-contrib` prints a
    `Subproject commit` pair when the pin moved. If it did, run the `diff -ru` in
-   `UPSTREAM_PATCHES.md` → "ChibiOS-Contrib RP2040 USB driver" and carry every
+   `docs/build/upstream-patches.md` → "ChibiOS-Contrib RP2040 USB driver" and carry every
    upstream change into the copy. Also run its `grep -n "USB_INTS_BUS_RESET" -A3 …`
    first: if the new Contrib handles the reset before SETUP, delete
    `chibios_overrides/` and the `PLATFORM_MK` block in `rules.mk` instead.

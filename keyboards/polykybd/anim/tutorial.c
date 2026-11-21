@@ -1,6 +1,6 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
-// First-run tutorial renderer — see anim/tutorial.h and anim/TUTORIAL.md.
+// First-run tutorial renderer — see anim/tutorial.h and docs/features/tutorial.md.
 #include "tutorial.h"
 #include "focus_ring.h"
 #include "keymap/keycode_helper.h"   // LAYER_ONESHOT / LAYER_SWITCH — the notation screen names the real marks

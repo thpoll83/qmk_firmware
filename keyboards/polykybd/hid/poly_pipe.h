@@ -12,7 +12,7 @@
 //
 // Raw HID stays the control channel. The pipe carries framed payloads: the
 // measurement commands (throughput, integrity) and, since pipe protocol 2, the
-// firmware-update chunks. BULK_PIPE.md has the assessment, the measurements and
+// firmware-update chunks. docs/protocol/bulk-pipe.md has the assessment, the measurements and
 // the firmware-update flow.
 //
 // Frame (both directions):

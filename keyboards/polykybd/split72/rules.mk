@@ -44,7 +44,7 @@ endif
 # ABSOLUTE + our gesture layer is the DEFAULT, and the flavour every hardware
 # round was run against. Absolute mode implies the gesture layer: the stock one
 # cannot place its zones in the pad's physical frame, so the two are one switch.
-# See keyboards/polykybd/peripherals/cirque_gestures.c and keyboards/polykybd/TRACKPAD.md.
+# See keyboards/polykybd/peripherals/cirque_gestures.c and keyboards/polykybd/docs/features/trackpad.md.
 ifneq ($(strip $(POLYKYBD_CIRQUE_RELATIVE)), yes)
     OPT_DEFS += -DPOLYKYBD_CIRQUE_ABSOLUTE
     OPT_DEFS += -DPOLYKYBD_CIRQUE_GESTURES

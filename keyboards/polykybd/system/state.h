@@ -295,7 +295,7 @@ typedef struct _poly_sync_t {
     // half, so it is TOLD what is being asked for rather than deriving it (two
     // independent draws would disagree). The ripple seq is a nonce — any change starts
     // one ripple, timed from RECEIPT, because the two MCUs share no time base.
-    // See anim/tutorial.h (TUTORIAL_SYNC_BYTES) and anim/TUTORIAL.md.
+    // See anim/tutorial.h (TUTORIAL_SYNC_BYTES) and docs/features/tutorial.md.
     uint8_t  tut[6];
     // Showroom demo mode: {flags (DEMO_SYNC_ACTIVE), playlist segment}. The master runs
     // the playlist; the slave times each segment from its own receipt of the index and
@@ -618,7 +618,7 @@ typedef struct _poly_eeconf_t {
     // is needed because a Flow Tap term of 0 (off) is a real choice.
     uint8_t  tapping_term;
     uint8_t  flow_tap_term;
-    // Emoji layer search mode (emoji/EMOJI_SEARCH.md): EMJ_SEARCH_MODE_ON when the
+    // Emoji layer search mode (docs/features/emoji-search.md): EMJ_SEARCH_MODE_ON when the
     // layer comes up in search mode. Appended at the tail. No sentinel is needed: an
     // EEPROM written before this field reads 0 here, which is tab mode, as before.
     // The datablock version stays 159 (EECONFIG_USER_DATA_VERSION in the keymap

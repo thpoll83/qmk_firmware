@@ -201,7 +201,7 @@ static void flash_stage_begin(uint8_t in_len, const void* in_data, uint8_t out_l
             fw_staging_set_fontpack_slot(FW_DOOMWAD_SLOT_OFF, FW_DOOMWAD_SLOT_SIZE);
         } else if (msg->target == FW_TARGET_DOOMPACK) {
             // The executable engine pack slot is fixed (top 248 KB, below the EEPROM —
-            // doom/PACK_DESIGN.md; the slave's drone runs the same pack).
+            // docs/design/doom-pack.md; the slave's drone runs the same pack).
             fw_staging_set_fontpack_slot(FW_DOOMPACK_SLOT_OFF, FW_DOOMPACK_SLOT_SIZE);
         }
         s_begun_size   = msg->image_size;
@@ -277,7 +277,7 @@ static void flash_stage_chunk(uint8_t in_len, const void* in_data, uint8_t out_l
         //   chunks ACK now    -> the wedge is inside fw_staging_write_chunk
         //   chunks still fail  -> the FW_UP_CHUNK transaction dispatch itself
         //                         wedges (or the slave isn't running this build)
-        // See config.h FW_UP_CHUNK_NOOP_PROBE / FW_UP_BASELINE.md (run 4).
+        // See config.h FW_UP_CHUNK_NOOP_PROBE / docs/archive/fw-up-baseline.md (run 4).
         bool ok = true;
 #else
         bool ok = fw_staging_write_chunk(msg->offset, msg->data, (uint8_t)msg->len);

@@ -9,7 +9,7 @@
 //
 // ⚠️ IT COSTS NOTHING WHEN IDLE. Both hooks below start with poly_focus_active(), so a
 // keyboard with no ripple running pays one boolean test per keycap render and nothing
-// else. The per-frame cost measured in the design note (TUTORIAL.md §15) — 6 keys in the
+// else. The per-frame cost measured in the design note (docs/features/tutorial.md §15) — 6 keys in the
 // band on average, 15 at worst — is only ever paid while a ripple is live.
 #pragma once
 #include <stdbool.h>

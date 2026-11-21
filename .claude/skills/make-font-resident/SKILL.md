@@ -17,7 +17,7 @@ a large **pack** in external flash (4–8 MB) flashed over HID. `g_all_fonts =
 resident ++ pack`. A glyph that lives only in the pack shows as tofu when no pack
 is present. This skill moves a glyph into the resident set.
 
-See `keyboards/polykybd/FONT_PACK.md` (resident fonts + external-flash pack) for the
+See `keyboards/polykybd/docs/display/font-pack.md` (resident fonts + external-flash pack) for the
 architecture; this is the operational recipe.
 
 ## Steps

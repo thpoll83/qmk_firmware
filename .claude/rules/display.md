@@ -6,7 +6,7 @@ paths:
 ---
 # Drawing on the per-keycap OLEDs
 
-Notes: `LEGEND_RENDERING.md` · `LEGEND_LAYOUT.md` · `DISPLAY_PIPELINE.md`. The
+Notes: `docs/display/legend-rendering.md` · `docs/display/legend-layout.md` · `docs/display/display-pipeline.md`. The
 `keycap-layout-preview` skill measures a placement instead of flashing a build.
 
 - ⚠️ **Adding a display-list op is TWO walkers — THREE counting the host.** Draw and

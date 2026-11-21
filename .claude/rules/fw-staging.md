@@ -6,7 +6,7 @@ paths:
 ---
 # The firmware applier
 
-Notes: `FW_STAGING.md`.
+Notes: `docs/fw-update/fw-staging.md`.
 
 - ⚠️ **The page buffer must be `uint32_t`.** A `uint8_t` one word-copied through a cast
   has alignment 1; an unaligned `STMIA` HardFaults the M0+ inside a function that never

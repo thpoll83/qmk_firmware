@@ -195,7 +195,7 @@ void core1_entry(void) {
             case CORE1_CMD_EDEN_KEY:
                 // One Eden idle keycap (anim/startup_anim.c). The argument follows the
                 // command in the FIFO; the job publishes its own completion. Its stack
-                // path is measured: IDLE_STYLES.md, "The idle loop on core1".
+                // path is measured: docs/display/idle-styles.md, "The idle loop on core1".
                 {
                     // The argument is pushed in the same interrupts-off section as
                     // the command (core1_eden_key), so no PARK can sit between them.
@@ -391,7 +391,7 @@ void core1_resume(void) {
 
 // ---- core1 during an EEPROM write ---------------------------------------------
 // Strong overrides of the weak hooks in platforms/chibios/drivers/wear_leveling/
-// wear_leveling_rp2040_flash.c (UPSTREAM_PATCHES.md), so EVERY EEPROM write is
+// wear_leveling_rp2040_flash.c (docs/build/upstream-patches.md), so EVERY EEPROM write is
 // covered, on both halves and from any thread: the suspend flush, HID keymap and
 // macro edits, the slave's keymap writes on its split thread, KC_STORE_EE, RGB keys.
 //

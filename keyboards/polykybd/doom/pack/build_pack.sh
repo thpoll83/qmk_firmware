@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# DoomPack build driver (doom/PACK_DESIGN.md §7).
+# DoomPack build driver (docs/design/doom-pack.md §7).
 #
 # Re-links the UNMODIFIED engine objects of a monolithic POLYKYBD_DOOM build
 # at the DOOMPACK slot address, pairs the pack's RAM with the exact
@@ -71,7 +71,7 @@ cp "$BUILD/polykybd_split72_default.uf2" "$STASH/monolith.uf2"
 
 # The pack payload: every engine object + the platform shim + the printf and
 # pico_sync objects the monolith links them against (providers verified from
-# the .map — see PACK_DESIGN.md §3).
+# the .map — see docs/design/doom-pack.md §3).
 find "$OBJ/doom/engine" -name '*.o' -exec cp {} "$STASH/obj/" \;
 cp "$OBJ/doom/qmk_shim.o" "$STASH/obj/"
 cp "$OBJ/printf.o" "$STASH/obj/qmk_printf.o"

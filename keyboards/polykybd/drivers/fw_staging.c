@@ -823,7 +823,7 @@ bool fw_staging_write_chunk(uint32_t offset, const uint8_t *data, uint8_t len) {
     // Accumulate a running CRC over the image bytes as they arrive so
     // fw_staging_finalize() can verify in O(1) instead of re-scanning 244 KB of
     // staged flash — that scan overflowed the split-transaction window and made
-    // the master mis-report COMMIT as "CRC mismatch" (see FW_UP_BASELINE.md run 6).
+    // the master mis-report COMMIT as "CRC mismatch" (see docs/archive/fw-up-baseline.md run 6).
     s_staged_crc = crc32_1byte(data, len, s_staged_crc);
 
     const uint8_t *src       = data;
@@ -981,7 +981,7 @@ static bool fw_staging_finalize_impl(bool defer_fontpack_reload) {
         // O(1) header sanity only — magic + size (the transport CRC above
         // already proves byte-identity with the host's image; the full
         // image-CRC + ram_base pairing checks are the loader's job at game
-        // entry, doom/PACK_DESIGN.md §2). Keeping this O(1) matters on the
+        // entry, docs/design/doom-pack.md §2). Keeping this O(1) matters on the
         // slave: finalize runs inside the split-transaction window.
         const uint8_t  *p   = (const uint8_t *)(XIP_BASE + FW_RESOURCE_OFFSET + s_fontpack_slot_off);
         const uint32_t *hdr = (const uint32_t *)(const void *)p;

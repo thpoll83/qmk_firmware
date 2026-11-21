@@ -308,7 +308,7 @@ See [`Adafruit-GFX-Library/CLAUDE.md`](../../../../Adafruit-GFX-Library/CLAUDE.m
 
 - **The font pack — the resident set, the eight `PlyF` bundles, the slot layout,
   the HID flash transport and the reship procedure — is
-  [`keyboards/polykybd/FONT_PACK.md`](../FONT_PACK.md).**
+  [`keyboards/polykybd/docs/display/font-pack.md`](../docs/display/font-pack.md).**
   `fontpack_assemble()` builds `g_all_fonts = resident ++ pack` at boot; with no
   pack, only the resident set is present, so the keyboard always renders ASCII.
   Five rules that reach outside that file:
@@ -380,11 +380,11 @@ category and composes `gfx_used_fonts.h`; `--check` flags stale headers. Full do
   which is still a visible defect — so a gap fails the PR rather than shipping.
 
 The font pack itself — the eight `PlyF` bundles, the slot layout and the HID transport —
-is [`keyboards/polykybd/FONT_PACK.md`](../FONT_PACK.md). ⚠️ **`g_all_fonts`
+is [`keyboards/polykybd/docs/display/font-pack.md`](../docs/display/font-pack.md). ⚠️ **`g_all_fonts`
 is scanned FRONT TO BACK and resident is always in front**, so adding a whole new
 resident FONT shifts every pack font's gidx and forces a full-pack reship; extend the
 resident `IconsFont` instead. It lives in plane-16 PUA (U+100000..), where no icon can
-shadow a real character; it left the C1 band after that filled up (`FONT_PACK.md`).
+shadow a real character; it left the C1 band after that filled up (`docs/display/font-pack.md`).
 `fonts.yaml` `append_fonts` orders a resident font LAST so no pack font moves. ⚠️ **Never do heavy work in a split-transaction handler** —
 re-CRCing the whole pack inside a ~20 ms RPC callback made the master report a perfect
 flash as a CRC failure. ⚠️ **Because FONTPACK writes IN PLACE, a slot is valid as soon as

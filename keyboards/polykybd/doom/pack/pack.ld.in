@@ -1,4 +1,4 @@
-/* DoomPack standalone link script TEMPLATE (doom/PACK_DESIGN.md §7).
+/* DoomPack standalone link script TEMPLATE (docs/design/doom-pack.md §7).
  * build_pack.sh substitutes:
  *   @RAM_BASE@ - the borrowed overlay pool's address, extracted from the
  *                exact POLYKYBD_DOOM_PACK firmware .elf this pack ships with

@@ -203,7 +203,7 @@ bool fw_staging_apply_breadcrumb(uint32_t *last_sector, bool *completed, uint32_
 // resource slot (the engine's XIP TINY_WAD_ADDR) and finalize just validates
 // the "IWHX" magic; the data is only ever read after game mode boots its
 // engine. DOOMPACK writes the executable engine pack ("PlyX", see
-// doom/PACK_DESIGN.md) in place at the top of the resource region; finalize
+// docs/design/doom-pack.md) in place at the top of the resource region; finalize
 // does the O(1) header sanity checks (magic/ABI/size) — the full image CRC is
 // the loader's job at game entry, where a bad pack safely degrades to the
 // fire demo. The streaming / paging / deferred-erase / slave-bridge machinery

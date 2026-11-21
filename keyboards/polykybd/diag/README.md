@@ -9,8 +9,8 @@ has no no-op: its one caller in `slave_data.c` sits inside
 
 | File | Build flag | What it does | Driven by |
 |---|---|---|---|
-| `crash_test.{c,h}` | `-e POLYKYBD_CRASH_TEST=yes` | Ctrl+Shift+Alt + a digit faults the board on purpose, to prove the crash record end to end | by hand; [`CRASH_DIAGNOSTICS.md`](../CRASH_DIAGNOSTICS.md) |
-| `usb_stress.{c,h}` | `-e POLYKYBD_USB_STRESS=yes` | masks interrupts in erase-sized windows during enumeration and prints the USB ISR's `usbdiag:` counters | [`usb_reset_race.py`](../tools/hil_probes/usb_reset_race.py); [`UPSTREAM_PATCHES.md`](../UPSTREAM_PATCHES.md) |
+| `crash_test.{c,h}` | `-e POLYKYBD_CRASH_TEST=yes` | Ctrl+Shift+Alt + a digit faults the board on purpose, to prove the crash record end to end | by hand; [`docs/debugging/crash-diagnostics.md`](../docs/debugging/crash-diagnostics.md) |
+| `usb_stress.{c,h}` | `-e POLYKYBD_USB_STRESS=yes` | masks interrupts in erase-sized windows during enumeration and prints the USB ISR's `usbdiag:` counters | [`usb_reset_race.py`](../tools/hil_probes/usb_reset_race.py); [`docs/build/upstream-patches.md`](../docs/build/upstream-patches.md) |
 
 Where the neighbouring kinds of code live:
 

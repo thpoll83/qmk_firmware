@@ -1,0 +1,340 @@
+# Upstream Patches
+
+Files outside `keyboards/polykybd/` that the PolyKybd build depends
+on. Re-apply these whenever upstream QMK master is merged into PolyKybd
+and the patched file shows up as a merge conflict (or silently overwritten).
+
+To check the current state at any time:
+
+```sh
+git diff master..HEAD -- tmk_core quantum platforms builddefs lib
+```
+
+⚠️ That command is only exact while `master` **is** the upstream point PolyKybd
+was merged from. Merge a *stable tag* while `master` tracks the upstream tip (as
+in the 0.33.13 merge, where master sat 7 commits ahead) and the diff also carries
+those extra commits, reversed. Check the gap is empty first —
+`git diff --stat <merged-tag>..master -- tmk_core quantum platforms builddefs lib`
+— or just diff against the tag you actually merged.
+
+**To PROVE the patches survived a merge, diff the diffs — don't read them.**
+Capture the patch set before merging and again after; identical output means every
+patch survived *and* upstream didn't restructure the code around it, which reading
+the diff by eye cannot tell you:
+
+```sh
+git diff <old-merge-base>..HEAD -- tmk_core quantum platforms builddefs drivers > /tmp/before.diff
+git merge <tag>
+git diff <tag>..HEAD             -- tmk_core quantum platforms builddefs drivers > /tmp/after.diff
+diff /tmp/before.diff /tmp/after.diff && echo "all patches intact, context unchanged"
+```
+
+A clean merge is **not** evidence on its own: git resolves these files without a
+conflict whenever upstream didn't touch the same hunks, so "no conflicts" and
+"patch silently dropped" look identical from the merge output. Confirm separately
+that upstream left the files alone —
+`git diff --stat <old-base>..<tag> -- <the five files>` (empty in the 0.33.13
+merge, 2026-08-11) — and finish with a `grep` for one marker per patch
+(`raw_hid_pre_receive_kb`, `ifndef RAW_EPSIZE`, `ifndef CDC_EPSIZE`, `POLY_SPLIT_SHMEM_RPC_GUARD`,
+`POLYKYBD_VREG_VSEL`, `oled_render_dirty(true)`, `wear_leveling_rp2040_flash_quiesce`,
+`MIDI_SEND_ONLY`, `midi_set_channel`).
+
+## `MIDI_SEND_ONLY`: a USB MIDI interface without the receive path (8 files)
+
+Added 2026-11-11 with the MIDI layer. QMK's MIDI always declares both directions.
+The keyboard only plays, so `keyboards/polykybd/config.h` defines `MIDI_SEND_ONLY`
+and these guards drop everything that carries MIDI from the computer to the
+keyboard. Without the define every file compiles exactly as upstream's.
+
+| file | change |
+|---|---|
+| `tmk_core/protocol/usb_descriptor.h` | no `MIDI_In_Jack_Emb`, `MIDI_Out_Jack_Ext`, OUT endpoint descriptors in the struct; no `MIDI_STREAM_OUT_EPNUM` |
+| `tmk_core/protocol/usb_descriptor.c` | the same three blocks left out; the streaming interface declares 1 endpoint |
+| `tmk_core/protocol/chibios/usb_endpoints.h` / `.c` | no `USB_ENDPOINT_OUT_MIDI` |
+| `tmk_core/protocol/chibios/usb_main.c` | `recv_midi_packet()` returns false |
+| `tmk_core/protocol/lufa/lufa.c` | no OUT endpoint setup; `recv_midi_packet()` returns false. **Not compiled here** (no AVR toolchain) |
+| `quantum/midi/midi_device.h` | `MIDI_INPUT_QUEUE_LENGTH` gets an `#ifndef`, and defaults to 1 under `MIDI_SEND_ONLY` |
+| `quantum/midi/qmk_midi.c` | the receive poll and its two callbacks are not registered (or compiled) |
+
+What remains is one external IN jack (0x02) feeding the embedded OUT jack (0x03),
+carried by the IN endpoint. That is a valid USB-MIDI 1.0 topology.
+
+Measured on split72 (local gcc 13.2, `tools/ram_report.py`): RAM headroom 9052 B
+without MIDI, 7868 B with QMK's default MIDI, 8604 B with `MIDI_SEND_ONLY` and
+`MIDI_STREAM_IN_CAPACITY 2`. MIDI costs 448 B instead of 1184 B. The decoded
+configuration descriptor walks exactly to its `wTotalLength` and the MIDI
+streaming header's length (36 B) equals the sum of its parts.
+
+This patch was written to be offered upstream: it is opt-in, it changes nothing
+without the define, and it covers LUFA too.
+
+## quantum/process_keycode/process_midi.c: a channel change releases what sounds
+
+Added 2026-11-11 with the MIDI layer (found in review of qmk#427). QMK sends a note-off
+and a pedal release on the channel that is current at RELEASE, so a note or a pedal
+held while CHAN+/CHAN-/MI_CHx changes the channel was never released on the channel
+it started on: a hung note in the DAW. The MIDI layer puts the channel keys next to the
+piano, which makes that easy to hit.
+
+`midi_set_channel()` replaces the three direct writes to `midi_config.channel`. When the
+channel really changes, it sends a note-off on the OLD channel for every held tone
+(`tone_status`), marks them released so the key release sends nothing, and releases
+sustain, portamento, sostenuto, soft and legato (CC 64–68), centres the pitch bend and zeroes the mod
+wheel (CC 1, and the modulation ramp) there too. No RAM; a candidate for upstream.
+
+## tmk_core/protocol/usb_descriptor.h
+
+Wrap `RAW_EPSIZE` default in an `#ifndef` so per-keyboard `config.h` can
+override it. Required for the 64-byte Raw HID endpoint used by both PolyKybd
+variants.
+
+```diff
+-#define RAW_EPSIZE 32
++#ifndef RAW_EPSIZE
++#    define RAW_EPSIZE 32
++#endif
+```
+
+The same guard around `CDC_EPSIZE` (2026-10-18, bulk pipe): QMK's virtual-serial
+data endpoints default to 16-byte packets, which caps a bulk transfer at a quarter
+of the full-speed rate. `keyboards/polykybd/config.h` sets 64 under
+`POLYKYBD_BULK_PIPE` (see `docs/protocol/bulk-pipe.md`).
+
+```diff
+-#define CDC_EPSIZE 16
++#ifndef CDC_EPSIZE
++#    define CDC_EPSIZE 16
++#endif
+```
+
+Originally introduced before this tracker existed. Single hunk around the
+endpoint-size block (`#define KEYBOARD_EPSIZE 8` … `#define DIGITIZER_EPSIZE 8`).
+
+⚠️ **The nested `#define` must be indented `#    define` (space after `#`), not
+`    #define` (space before `#`)** — that's `qmk format-c`'s (clang-format)
+required style for a preprocessor directive nested inside `#ifndef`/`#endif`.
+The file carried the wrong indent for a long time undetected, because the
+`lint` CI job only reformats and diffs files that are *in the current PR's
+diff* — this file wasn't touched again until the 2026-09-25 upstream merge
+touched the neighbouring line, which is when `lint` finally caught it. Run
+`qmk format-c --core-only tmk_core/protocol/usb_descriptor.h` after any
+hand-edit to this hunk.
+
+## tmk_core/protocol/chibios/usb_main.c
+
+Two changes to `raw_hid_task` for backpressure during overlay transfers:
+
+1. Add a weak `bool raw_hid_pre_receive_kb(void)` hook so PolyKybd can refuse
+   to pull a packet off the OUT queue while core1 is still chewing on the
+   previous one. The packet stays queued (RAW_OUT_CAPACITY=4) and
+   `matrix_task` gets to run instead of starving in the busy-wait inside
+   `core1_decompress_fragment` / `core1_update_roi`.
+2. Replace `while (receive_report(...))` with `if (receive_report(...))` —
+   handle at most one packet per main-loop pass so matrix scan always gets a
+   turn between two raw HID receives, even when the OUT queue is full.
+
+The strong override of `raw_hid_pre_receive_kb` lives in
+`keyboards/polykybd/display/multicore_exec.c` and calls `core1_is_busy()`.
+
+If a future QMK upstream changes the signature or semantics of `raw_hid_task`,
+re-apply by hand: keep the weak hook, keep the `if`-not-`while`.
+
+## platforms/chibios/drivers/wear_leveling/wear_leveling_rp2040_flash.c
+
+Two weak hooks around every flash write of the EEPROM backing store, so core1 is
+off the flash bus during it:
+
+1. `wear_leveling_rp2040_flash_quiesce()`, called right after
+   `save_and_disable_interrupts()` in `backing_store_erase()` and
+   `backing_store_write_bulk()`.
+2. `wear_leveling_rp2040_flash_resume()`, called right after `restore_interrupts()`
+   in the same two functions.
+
+Upstream masks only core0's interrupts. A core1 fetching from XIP while the write has
+the QSPI out of XIP mode never completes the fetch: core1 stops for good, or the bus
+stalls and the half resets by watchdog (field 2026-10-12). The strong overrides live in
+`keyboards/polykybd/display/multicore_exec.c`: the quiesce hook sends core1 a PARK word and
+waits for core1 to acknowledge it from its RAM wait loop, which it does once its
+earlier work (Eden keycap jobs, RLE fragments) is done. Without an acknowledgement it
+forces core1 off and drops its lost work before interrupts return; the resume hook
+relaunches it.
+
+If upstream restructures these functions, keep the quiesce call inside the
+interrupts-off window, immediately before the flash operation: outside it, a thread
+could hand core1 new work between the check and the write. Marker for the post-merge
+grep: `wear_leveling_rp2040_flash_quiesce`.
+
+## drivers/oled/oled_driver.c
+
+Defer the status-OLED `DISPLAY_ON` until the framebuffer has been pushed, so
+the boot no longer flashes the panel's random power-on GDDRAM before the splash
+appears (the SSD1306 status OLED is on I2C @ 400 kHz).
+
+Two hunks in `oled_init()`:
+
+1. Drop `DISPLAY_ON` from the `display_setup2[]` init command list so the panel
+   stays physically OFF after the init commands:
+
+   ```diff
+   -    static const uint8_t PROGMEM display_setup2[] = {…, DEACTIVATE_SCROLL, DISPLAY_ON};
+   +    static const uint8_t PROGMEM display_setup2[] = {…, DEACTIVATE_SCROLL};
+   ```
+
+2. At the tail of `oled_init()`, after `oled_clear()`, flush the cleared
+   (all-black) buffer to GDDRAM with the panel still off, then enable it:
+
+   ```diff
+        oled_clear();
+        oled_initialized = true;
+   -    oled_active      = true;
+        oled_scrolling   = false;
+   +    oled_active = true;          // suppress oled_render_dirty()'s internal oled_on()
+   +    oled_render_dirty(true);     // flush all-black GDDRAM while the panel is off
+   +    oled_active = false;         // make the next oled_on() actually emit DISPLAY_ON
+   +    oled_on();                   // light the panel — GDDRAM already black
+        return true;
+   ```
+
+`oled_render_dirty()` calls `oled_on()` at its top when there is dirty data;
+holding `oled_active = true` across the flush makes that a no-op, so exactly one
+`DISPLAY_ON` is emitted (by the final `oled_on()`) after GDDRAM is clean.
+
+If upstream restructures `oled_init()` / the init command list, re-apply by
+hand: no `DISPLAY_ON` in the command list; flush-then-enable at the tail. End
+state is unchanged (`oled_active == true`, panel on).
+
+## quantum/split_common/transport.h
+
+`POLY_SPLIT_SHMEM_RPC_GUARD`: when defined (split42 `rules.mk`) and
+`SPLIT_POINTING_ENABLE` is not, insert `split_slave_pointing_pad_t
+poly_pointing_pad` — a byte-identical stand-in for the pointing sync member —
+at the pointing member's position in `split_shared_memory_t`, immediately
+before `rpc_info`/`rpc_m2s_buffer`/`rpc_s2m_buffer`. Empirically required for
+split42's split link to establish (see
+`keyboards/polykybd/docs/archive/split42-link-status.md`, rows 20–24: the pad alone
+revives the link that the whole pointing subsystem was previously carried to
+fix). Guards against a suspected latent out-of-bounds write into the RPC
+region; remove once that writer is found and fixed. split72 (real
+`SPLIT_POINTING_ENABLE`) is unaffected.
+
+```diff
+ #if defined(POINTING_DEVICE_ENABLE) && defined(SPLIT_POINTING_ENABLE)
+     split_slave_pointing_sync_t pointing;
++#elif defined(POLY_SPLIT_SHMEM_RPC_GUARD)
++    split_slave_pointing_pad_t poly_pointing_pad;
+ #endif
+```
+
+## platforms/chibios/bootloaders/rp2040.c
+
+`POLYKYBD_VREG_VSEL`: when defined (by `POLYKYBD_SYS_CLK=200`, the default since
+0.11.0 — see
+`keyboards/polykybd/rules.mk`), raise the core-voltage select at the top of
+`__late_init()` — **before** the `clocks_init()` call already there.
+
+That `clocks_init()` is the first point in the boot where the compile-time
+`SYS_CLK_KHZ` is applied, and the double-tap window immediately after it
+busy-waits for a full second, so this is the only place the voltage can be
+raised without running the longest stretch of the boot out of spec. There is
+no QMK hook early enough: `__late_init` runs before `main()`, hence before
+`halInit()` and every `early_hardware_init_*` hook. The one earlier hook,
+`__early_init()`, lives in ChibiOS's `board.c` (a pinned submodule, worse to
+patch), and overriding the board dir wholesale would also detach the
+`configs/` include path QMK adds for the stock board.
+
+The raise is guarded, so a build with `-e POLYKYBD_SYS_CLK=125` compiles to
+byte-identical code (verified by disassembly: stock `__late_init` still
+branches straight to `clocks_init`). The vendored pico-sdk predates the SDK's
+own automatic VREG raise for `SYS_CLK_MHZ=200` and does not compile
+`hardware_vreg` at all, which is why this is a register write rather than a
+`vreg_set_voltage()` call.
+
+```diff
+ void __late_init(void) {
++#if defined(POLYKYBD_VREG_VSEL)
++    hw_write_masked(&vreg_and_chip_reset_hw->vreg, ...VSEL...);
++    /* spin — the timer is not ticking yet */
++#endif
+     clocks_init();
+```
+
+## ChibiOS-Contrib RP2040 USB driver (vendored, `chibios_overrides/`)
+
+**Not a patch to a tracked file — a COPY.** `lib/chibios-contrib` is a pinned
+submodule of `qmk/ChibiOS-Contrib`, so it cannot carry a local change. Instead
+`keyboards/polykybd/chibios_overrides/` holds:
+
+- `platform.mk` — Contrib's `os/hal/ports/RP/RP2040/platform.mk` with ONE line
+  changed: the USBDv1 `driver.mk` include points at the copy below.
+  `keyboards/polykybd/rules.mk` selects it with `PLATFORM_MK`, and **fails the
+  build if the file is missing**, because `platforms/chibios/platform.mk` would
+  otherwise fall back to Contrib's own file with no message.
+- `USBDv1/` — Contrib's `os/hal/ports/RP/LLD/USBDv1` at `5a9ad82b` (the submodule
+  pin when copied), plus the one fix and the opt-in diagnostics below.
+
+**The fix:** the USB ISR handles `USB_INTS_BUS_RESET` **before**
+`USB_INTS_SETUP_REQ` — ChibiOS trunk r17878 (`29391bf57`, "Fix RP USB reset
+sequencing"), which Contrib's copy never received. With both flags pending in one
+pass, the old order armed the SETUP reply and then `_usb_reset()` rewound the EP0
+state machine to `USB_EP0_STP_WAITING` under it; the IN stage then completed in
+the wrong state and `_usb_ep0in()` STALLed EP0, so the host saw a failed
+enumeration step. Both flags are pending together only when the interrupt is
+blocked across a reset AND the SETUP after it (≥ ~10–20 ms): a flash erase does
+exactly that (BY25Q64ES tSE 35 ms typ / 300 ms max per 4 KB sector; the 8 KB
+wear-levelling erase is one masked call). The realistic trigger is the boot after
+a `KEYMAP_LAYERS_FL_MERGED` bump — QMK connects the pull-up in
+`protocol_pre_init()`, before `keyboard_init()`, so the host enumerates while
+post_init rewrites the keymap.
+
+**Diagnostics (`-DPOLYKYBD_USB_RACE_DIAG`, set by `-e POLYKYBD_USB_STRESS=yes`):**
+`poly_usb_diag.h` counters in the ISR, read by `diag/usb_stress.c`, which also
+masks interrupts in erase-sized windows during enumeration. The rig drives it
+with `tools/hil_probes/usb_reset_race.py`. A normal build contains none of it.
+
+⚠️ **`tier: debug` builds the NORMAL HIL images**, and `qmk-test.yml` has no input
+for extra build flags, so the probe on its own finds no `usbdiag:` line and stops
+after round 1. The recorded runs used temporary `rules.mk` commits on the branch:
+31158ea sets `POLYKYBD_USB_STRESS ?= yes` for HIL builds (cherry-pick it to repeat
+the run), ff3dbd2 added `POLYKYBD_USB_LEGACY_RESET_ORDER ?= yes` for the A side and
+bf8fde8 removed it for the B side, and 527bab7 removed the rest.
+
+**Verification (2026-10-03):**
+
+- With the copy in place and no edits, `split72:default` linked to a
+  byte-identical image. With the fix, the image is the same size and exactly one
+  function differs: `Vector54` (USBCTRL), whose BUS_RESET test now precedes the
+  SETUP test.
+- Rig A/B, 15 reboots each, same randomised stress, `usb_reset_race` probe:
+  Contrib's order (run 37124742288) put a reset and a SETUP in one pass in 9
+  rounds (10 passes) and **all 10** answered GET_DESCRIPTOR(device, 64) with an
+  EP0 STALL; one of them reached the host as `usb 1-1.4: device descriptor
+  read/all, error -32` plus a re-attach, and Linux retried the other nine
+  without a log line. The fixed order (run 37124759633) hit the same case in 8
+  rounds and answered **all 8** normally (`IN_TX -> OUT_WAITING_STS ->
+  STP_WAITING`), 0 kernel errors.
+- ⚠️ **The Linux kernel log hides most of it.** `usb_get_descriptor()` retries a
+  STALLed request silently, so 9 of 10 broken transfers left no trace in
+  `dmesg`. The device-side STALL count (6 per boot is normal here: three
+  refused DEVICE_QUALIFIER requests; 8 = one broken transfer) is the reliable
+  signal.
+
+**When Contrib or QMK picks the fix up** (check
+`grep -n "USB_INTS_BUS_RESET" -A3 lib/chibios-contrib/os/hal/ports/RP/LLD/USBDv1/hal_usb_lld.c`
+— the reset branch must come first): delete `chibios_overrides/` and the
+`PLATFORM_MK` block in `rules.mk`. Until then, **after every submodule bump, diff
+the copy against the new Contrib file** and carry any upstream change across —
+the copy does not follow the submodule on its own:
+
+```sh
+diff -ru lib/chibios-contrib/os/hal/ports/RP/LLD/USBDv1 \
+         keyboards/polykybd/chibios_overrides/USBDv1
+diff lib/chibios-contrib/os/hal/ports/RP/RP2040/platform.mk \
+     keyboards/polykybd/chibios_overrides/platform.mk
+```
+
+Expected differences, and nothing else: `hal_usb_lld.c` carries the reordered
+reset/SETUP block plus the `POLYKYBD_USB_RACE_DIAG` hunks; `driver.mk` differs
+only in the `$(POLY_CHIBIOS_OVERRIDES)` paths; `poly_usb_diag.h` exists only in
+the copy. `hal_usb_lld.h` and `rp2040_usb.h` **must** be identical -- the include
+path resolves to the copy, so a stale header would compile against new Contrib
+code without an error.

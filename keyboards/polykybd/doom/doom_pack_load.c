@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // DoomPack loader — the firmware half of the executable-pack split
-// (doom/PACK_DESIGN.md; compiled only under POLYKYBD_DOOM_PACK). Validates
+// (docs/design/doom-pack.md; compiled only under POLYKYBD_DOOM_PACK). Validates
 // the PlyX pack flashed at FW_DOOMPACK_SLOT_OFF and dispatches every
 // doom_shim_* call through its export table. Refusal is always safe: the
 // stub table below answers every call with a no-op, and doom_mode.c then
@@ -244,7 +244,7 @@ bool doom_pack_confirm_take_accepted(void) {
 
 // Validate the flashed pack against THIS build's pool and call its init.
 // `pool`/`pool_size` are the live borrowed pool — the pack must have been
-// linked against exactly this address range (PACK_DESIGN.md §4). Every
+// linked against exactly this address range (docs/design/doom-pack.md §4). Every
 // refusal prints its reason once per attempt; the caller falls back to the
 // fire demo.
 bool doom_pack_load(uint8_t *pool, uint32_t pool_size, enum doom_pack_entry entry) {

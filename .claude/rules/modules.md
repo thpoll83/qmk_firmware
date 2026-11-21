@@ -6,7 +6,7 @@ paths:
 ---
 # QMK community modules
 
-Notes: `keyboards/polykybd/COMMUNITY_MODULES.md`; the `extract-qmk-module` skill drives
+Notes: `keyboards/polykybd/docs/build/community-modules.md`; the `extract-qmk-module` skill drives
 a conversion.
 
 - **Listing a module in `keyboard.json` IS the enable** — the build defines

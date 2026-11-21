@@ -180,7 +180,7 @@ and **no timing number from that window should be trusted**.
 A plain overlay burst came out **render-bound**: render 166.4 ms of 261.25 ms
 (64%) against bridge 12.17 ms (4.7%). By the attribution rule above, that argues
 *against* a keyboard-side resource pack being the fix. See
-[`../OVERLAY_FLASH_CACHE_DESIGN.md`](../OVERLAY_FLASH_CACHE_DESIGN.md) §6 for the
+[`../docs/design/overlay-flash-cache.md`](../docs/design/overlay-flash-cache.md) §6 for the
 full table, the caveats that stop it settling the question (synthetic 8-keycode
 blank-overlay workload, no reconnect in the loop) and what still needs measuring.
 

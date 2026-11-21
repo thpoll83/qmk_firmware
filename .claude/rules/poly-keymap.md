@@ -5,7 +5,7 @@ paths:
 ---
 # Editing the shared keymap / keycode legends
 
-Notes: `KEYCODE_HANDLING.md` · `DISPLAY_PIPELINE.md` · `KEYMAP_STORAGE.md`.
+Notes: `docs/features/keycode-handling.md` · `docs/display/display-pipeline.md` · `docs/features/keymap-storage.md`.
 
 - ⚠️ **Handle and SWALLOW a custom keycode in `process_record_user()`.** On an `OSL()`
   layer a release-edge action fires up to THREE times (one tap stepped the legend size

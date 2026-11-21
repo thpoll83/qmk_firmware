@@ -511,7 +511,7 @@ void ai_rgb_paint(void) {
 // ---- HID --------------------------------------------------------------------------
 
 void ai_hid_cmd(uint8_t *data, uint8_t length) {
-    // data[2] op: 0 QUERY, 1 SET_KEYS, 2 READ_EVENTS. PROTOCOL_HISTORY.md, v31.
+    // data[2] op: 0 QUERY, 1 SET_KEYS, 2 READ_EVENTS. docs/protocol/protocol-history.md, v31.
     const uint8_t op = length > 2 ? data[2] : 0xFFu;
     poly_sync_t  *ls = access_local_state();
     if (op == 0) {

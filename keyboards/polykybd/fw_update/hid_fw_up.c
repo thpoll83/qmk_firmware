@@ -119,7 +119,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             //   small OK, large OK   -> transport fine -> the FW_UP_CHUNK txn itself is the culprit
             //   small OK, large FAIL -> large-M2S transport broken in post-erase fw_up state
             //   small FAIL           -> slave already hung post-erase, before any chunk
-            // See FW_UP_BASELINE.md (run 3).
+            // See docs/archive/fw-up-baseline.md (run 3).
             if (offset == 0) {
                 fw_up_log_slave_status("pre-chunk", NULL);
                 uint8_t              big_req[64];
@@ -230,7 +230,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
             // staged image to flash offset 0 while keeping the live vector table
             // intact until last — app body first with IRQs toggled per sector, then
             // sector 0 with VTOR relocated to RAM — so the brick the naive
-            // erase-from-zero caused (FW_UP_BASELINE.md "Phase 2 — run 2") can't
+            // erase-from-zero caused (docs/archive/fw-up-baseline.md "Phase 2 — run 2") can't
             // recur.  Failure is still master-only and BOOTSEL/UF2-recoverable.
             bool ok = fw_staging_has_valid_staged_image();
             memset(data, 0, length);
@@ -251,7 +251,7 @@ bool hid_fw_up_receive(uint8_t *data, uint8_t length) {
                 // finally updates the slave's firmware: it staged + committed the
                 // image but, before this, was never told to apply it.  (The slave
                 // obeys this only once it already runs firmware that has the apply
-                // handler — see FW_UP_BASELINE.md for the OLD→NEW bootstrap note.)
+                // handler — see docs/archive/fw-up-baseline.md for the OLD→NEW bootstrap note.)
                 poly_reset_sync_t apply_msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
                                                 .action = RESET_ACTION_APPLY };
                 // Hardened handoff (field 2026-06-22): see fw_up_send_slave_reset().

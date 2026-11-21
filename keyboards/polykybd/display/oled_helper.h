@@ -31,7 +31,7 @@ void oled_fw_update_screen(void);
    words behind the big A/R keycaps, so the board says WHY it went modal and not
    just which key does what. Driven by the synced poly_sync_t.fw_confirm. */
 void oled_fw_confirm_screen(void);
-// First-run tutorial prose (two centred lines). See anim/TUTORIAL.md.
+// First-run tutorial prose (two centred lines). See docs/features/tutorial.md.
 void oled_tutorial_screen(void);
 /* "⭯Applying / Firmware⭯" notice (resident circular refresh arrow U+2B6F) drawn +
    fully flushed on both halves the moment a staged firmware image is applied, right
@@ -89,6 +89,6 @@ void oled_telemetry_screen(void);
 /* On-keyboard macro recording: which slot is armed, how much of the staging buffer
    is spent, and how to stop. Driven by the synced poly_sync_t.rec_state, so BOTH
    halves show it -- the panel is the only indicator the gesture has (see
-   MACRO_RECORD_DESIGN.md section 2.4). */
+   docs/design/macro-record.md section 2.4). */
 void oled_macro_rec_screen(void);
 bool oled_task_user(void);

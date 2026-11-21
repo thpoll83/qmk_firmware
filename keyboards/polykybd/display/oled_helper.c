@@ -679,7 +679,7 @@ void oled_telemetry_screen(void) {
     oled_present_now();
 }
 
-// On-keyboard macro recording (MACRO_RECORD_DESIGN.md section 4). The status OLED is
+// On-keyboard macro recording (docs/design/macro-record.md section 4). The status OLED is
 // the ONLY indicator the gesture has -- split42 has no RGB matrix, and the keycaps are
 // busy showing what the user is typing -- so it has to say where the gesture is, what
 // it is aimed at, and how to get out of it.

@@ -36,7 +36,7 @@
 // representable. What limits the speed is the 8-entry PIO RX FIFO, drained by a
 // thread the FIFO interrupt wakes (serial_vendor.c receive_impl): a late wake loses
 // bytes and the CRC32 plus retries recover them. 1843200 (4x the old 460800) passed
-// two extended HIL runs with 0 link faults (BULK_PIPE.md, split-link table); it cuts
+// two extended HIL runs with 0 link faults (docs/protocol/bulk-pipe.md, split-link table); it cuts
 // the firmware relay to the slave from 13 s to 3.4 s of wire time per 541 KB image.
 // `-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed for an A/B on the rig.
 #ifndef SERIAL_USART_SPEED
@@ -158,7 +158,7 @@
 // uint8_t and truncated to 0 whenever the page buffer was empty (chunk 0 and
 // every 256 B boundary), spinning the copy loop forever. Fixed in
 // drivers/fw_staging.c (space/copy widened to uint32_t). Probe left here, disabled,
-// for regression reference. See FW_UP_BASELINE.md (run 5).
+// for regression reference. See docs/archive/fw-up-baseline.md (run 5).
 // #define FW_UP_CHUNK_NOOP_PROBE
 
 //######################################
@@ -267,7 +267,7 @@
 //      OVERLAY_MAP_W_SHOW runs the enable step (cmd 11 with DISPLAY_OVERLAYS)
 //      after. A warm app switch is then one mapping report instead of prepare +
 //      mapping + enable. Older firmware rejects the flagged width, so the host
-//      sets them only at v21+ (PROTOCOL_HISTORY.md).
+//      sets them only at v21+ (docs/protocol/protocol-history.md).
 //  v22 cmd 43 (REBOOT) reboots both halves without writing anything persistent,
 //      for the host's boot-loop diagnostic. Older firmware NACKs it.
 //  v23 cmd 33's width byte bit 7 (OVERLAY_MAP_W_DIM) draws every pair in that report
@@ -407,7 +407,7 @@
 // Bulk pipe (POLYKYBD_BULK_PIPE, poly_pipe.h): the CDC data endpoints carry
 // full-size 64-byte bulk packets (QMK's default is 16, which caps the pipe at a
 // quarter of the bus rate; the #ifndef guard is a PolyKybd patch to
-// usb_descriptor.h, see UPSTREAM_PATCHES.md). CDC_OUT_CAPACITY is the number of
+// usb_descriptor.h, see docs/build/upstream-patches.md). CDC_OUT_CAPACITY is the number of
 // packets the OUT queue holds between two main-loop drains; virtser_task()
 // drains it once per iteration, so capacity x 64 B per loop iteration is the
 // host->keyboard ceiling (8 x 64 B at ~1 ms per iteration ~ 500 KB/s). RAM cost:
@@ -421,7 +421,7 @@
 // USB MIDI (rules.mk POLYKYBD_MIDI). MIDI_ADVANCED handles every QMK_MIDI_*
 // keycode the host editor offers (notes, octave, transpose, velocity, channel,
 // pedals, modulation, pitch bend). MIDI_SEND_ONLY is a PolyKybd patch to QMK
-// (UPSTREAM_PATCHES.md): the keyboard only plays, so the computer->keyboard
+// (docs/build/upstream-patches.md): the keyboard only plays, so the computer->keyboard
 // endpoint, its two jacks and the 192 B parse queue are left out. Two 64 B send
 // buffers hold 32 note events, more than ten fingers produce between USB polls.
 #ifdef MIDI_ENABLE

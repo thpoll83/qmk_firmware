@@ -577,7 +577,7 @@ static void sa_render_frame(uint32_t el) {
 // SPI and no console, so it runs on either core: core0 renders into the scratch buffer
 // (sa_render_idle_key), core1 into its compact buffer (startup_anim_core1_job). `brow`
 // is the caller's 2x2-row cache, so the two cores never share one.
-// noinline: this frame is part of core1's measured stack budget (see IDLE_STYLES.md).
+// noinline: this frame is part of core1's measured stack budget (see docs/display/idle-styles.md).
 static __attribute__((noinline)) void sa_idle_key_compute(const sa_key_geom_t *g, uint8_t *win,
                                                           uint8_t stride, uint8_t *brow) {
     const uint8_t  tp    = (uint8_t)(s_frame_el >> 4);
@@ -692,7 +692,7 @@ static bool              s_c1_frame;              // the current frame renders o
 static bool              s_c1_off;                // core0 renders: core1 timed out or still owes jobs
 
 // Runs ON CORE1, from core1_entry(). `arg` = idx | left << 8 | slot << 9 | seq << 16. No console,
-// no IRQs, and CORE1_STACK_SIZE of stack (IDLE_STYLES.md has the measured budget).
+// no IRQs, and CORE1_STACK_SIZE of stack (docs/display/idle-styles.md has the measured budget).
 void __attribute__((noinline)) startup_anim_core1_job(uint32_t arg) {
     const uint8_t idx  = (uint8_t)(arg & 0xFFu);
     const bool    left = ((arg >> 8) & 1u) != 0;

@@ -1181,7 +1181,7 @@ void sync_and_refresh_displays(void) {
 static bool s_picker_latched = false;
 
 // Drop the picker's Ctrl latch, if WE hold it. Gated on ownership, never on the key:
-// releasing a Ctrl the user is really holding would leave it stuck (INTL_LAYER.md).
+// releasing a Ctrl the user is really holding would leave it stuck (docs/features/intl-layer.md).
 static void picker_latch_release(void) {
     if (s_picker_latched) {
         unregister_mods(MOD_MASK_CTRL);
@@ -6564,7 +6564,7 @@ static bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record) {
             if (!act) break;
             // RESET Eden: clear the boot marker, then play Eden AND the tutorial now.
             //
-            // ⚠️ TUTORIAL.md §3 asks for "clear the marker, replay only the animation" as
+            // ⚠️ docs/features/tutorial.md §3 asks for "clear the marker, replay only the animation" as
             // the shipping behaviour, with the tutorial waiting for the next boot. That
             // was tried with a Shift modifier for the run-now path, and SHIFT CANNOT BE
             // HELD HERE: KC_EDEN lives on _SL, whose two Shift positions are
@@ -7813,7 +7813,7 @@ void keyboard_post_init_user(void) {
     // macro region -- a few kB of wear-levelled EEPROM -- inside post_init. USB is
     // already connected by then (protocol_pre_init() runs before keyboard_init()), so
     // the host is enumerating while this writes; a wear-levelling erase here masks
-    // the USB interrupt for tens of ms (UPSTREAM_PATCHES.md -> "ChibiOS-Contrib RP2040
+    // the USB interrupt for tens of ms (docs/build/upstream-patches.md -> "ChibiOS-Contrib RP2040
     // USB driver"). No console is attached yet either: the one-shot uprintf below is
     // usually lost, so a board that spends a long time here (or never leaves) looks
     // simply dead.

@@ -541,7 +541,7 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                 case id_custom_save: //handle the same way
                 case 'P':
                     if (command_data[0] == 49) {
-                        // Cmd 49 (host tutorial), forwarded whole: SPLIT_SYNC.md ->
+                        // Cmd 49 (host tutorial), forwarded whole: docs/protocol/split-sync.md ->
                         // "Host state goes to the slave as the report". Staged here,
                         // applied by host_tutorial_tick() on the main loop.
                         refused = !host_tutorial_slave_receive(data->commands,

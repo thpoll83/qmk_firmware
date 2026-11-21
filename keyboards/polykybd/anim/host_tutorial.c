@@ -48,7 +48,7 @@ static uint32_t s_resend_at;
 #define RESEND_MS 250u
 
 // ---- slave only: what the split thread left for housekeeping ------------------------
-// The handler runs on the slave's split-protocol thread (SPLIT_SYNC.md). It writes the
+// The handler runs on the slave's split-protocol thread (docs/protocol/split-sync.md). It writes the
 // parsed state straight into s_text / s_mask / s_spot_on inside chSysLock() (a copy, no
 // bus), and leaves the rest for host_tutorial_tick() on the main loop: the keycap redraw
 // and the reveal's focus ring. The status screen copies the text out under the same lock
@@ -155,7 +155,7 @@ static void push_dirty(void) {
 }
 
 // A slave that restarted while the link never read as down has lost its copy, and no
-// link edge tells the master (CRASH_DIAGNOSTICS.md, trigger 7: 200 errors must pile up
+// link edge tells the master (docs/debugging/crash-diagnostics.md, trigger 7: 200 errors must pile up
 // first). Every HOST_TUT_VERIFY_MS, while text or a spotlight is on, no reveal runs and
 // nothing is pending, ask the slave whether it holds the same state; a refusal queues
 // TEXT and SPOTLIGHT again. A match resends nothing, so the slave does not redraw.
@@ -401,7 +401,7 @@ void host_tutorial_tick(void) {
             }
         }
         // After the split link comes back the slave may have restarted and lost its
-        // copy: send the current state again (SPLIT_SYNC.md).
+        // copy: send the current state again (docs/protocol/split-sync.md).
         const bool link_up = is_transport_connected();
         if (link_up && !s_link_up && (s_text_on || s_spot_on)) {
             s_dirty |= (uint8_t)((s_text_on ? DIRTY_TEXT : 0u) | DIRTY_SPOT);

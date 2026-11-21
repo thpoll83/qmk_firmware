@@ -60,7 +60,7 @@ bool hid_fontpack_receive(uint8_t *data, uint8_t length) {
 
             // The pseudo bundles FONTPACK_BUNDLE_DOOMWAD / _DOOMPACK select the
             // doom targets (the WHX slot / the executable engine pack slot in
-            // the upper resource region — doom/PACK_DESIGN.md) — same
+            // the upper resource region — docs/design/doom-pack.md) — same
             // transport, different fixed slot + finalize.
             bool    is_doomwad  = (bundle == FONTPACK_BUNDLE_DOOMWAD);
             bool    is_doompack = (bundle == FONTPACK_BUNDLE_DOOMPACK);

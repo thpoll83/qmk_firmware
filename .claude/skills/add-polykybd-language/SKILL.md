@@ -13,7 +13,7 @@ source. The firmware never composes characters and needs no IME.
 Repos (siblings): `qmk_firmware/` (firmware + LUT), `PolyKybdHost/` (host +
 `tools/oled_preview.py`), `polykybd-ctnd/` (HIL rig). All PolyKybd lang files live
 under `qmk_firmware/keyboards/polykybd/` (called **PK/** below).
-Authoritative deep-dive: `PK/lang/FUTURE_LANGUAGES.md` (read it first).
+Authoritative deep-dive: `PK/docs/lang/future-languages.md` (read it first).
 
 ## 0. Toolchain (once per container)
 
@@ -269,7 +269,7 @@ GET_LANG_LIST packets of 15; run the host test suite.
 ## 10. Commit (per-repo branch rules)
 
 Commit firmware (qmk), host (PolyKybdHost), and rig (polykybd-ctnd) separately on
-their branches. Document the batch in `PK/lang/FUTURE_LANGUAGES.md` (a STATUS
+their branches. Document the batch in `PK/docs/lang/future-languages.md` (a STATUS
 section) and bump the `NUM_LANG`/packet note in the top `CLAUDE.md`. Don't push
 unless asked.
 

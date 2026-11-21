@@ -7,7 +7,7 @@
  * CONSTANT: the engine pack (doom/pack/) links its statics at the pool
  * address, so with the pool pinned, a flashed .plyx keeps working across
  * firmware rebuilds — only ABI/feature changes ever require a new pack
- * (doom/PACK_DESIGN.md §4a). The loader still verifies hdr.ram_base against
+ * (docs/design/doom-pack.md §4a). The loader still verifies hdr.ram_base against
  * the live pool as belt-and-braces.
  *
  * The pool block is NOLOAD and OUTSIDE __bss_base__..__bss_end__, so crt0

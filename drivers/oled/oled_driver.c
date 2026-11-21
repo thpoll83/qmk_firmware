@@ -349,7 +349,7 @@ bool oled_init(oled_rotation_t rotation) {
     // GDDRAM holds random data at power-on; turning the display on before the
     // framebuffer has been pushed makes the boot flash a screenful of RAM noise.
     // We keep the panel off, clear GDDRAM below, then enable it. See
-    // keyboards/polykybd/UPSTREAM_PATCHES.md.
+    // keyboards/polykybd/docs/build/upstream-patches.md.
     static const uint8_t PROGMEM display_setup2[] = {I2C_CMD, COM_PINS, OLED_COM_PINS, CONTRAST, OLED_BRIGHTNESS, PRE_CHARGE_PERIOD, OLED_PRE_CHARGE_PERIOD, VCOM_DETECT, OLED_VCOM_DETECT, DISPLAY_ALL_ON_RESUME, NORMAL_DISPLAY, DEACTIVATE_SCROLL};
     if (!oled_send_cmd_P(display_setup2, ARRAY_SIZE(display_setup2))) {
         print("display_setup2 failed\n");
@@ -366,7 +366,7 @@ bool oled_init(oled_rotation_t rotation) {
     oled_clear();
     oled_initialized = true;
     oled_scrolling   = false;
-    // PolyKybd deviation (see UPSTREAM_PATCHES.md): the DISPLAY_ON in the init
+    // PolyKybd deviation (see docs/build/upstream-patches.md): the DISPLAY_ON in the init
     // command list above was removed so the panel is still physically OFF here.
     // Push the just-cleared (all-black) framebuffer to GDDRAM, THEN switch the
     // panel on, so the first thing the eye sees is black -> boot splash rather

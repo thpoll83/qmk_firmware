@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate key_lut columns + named-glyph additions for the 2026-06 "world"
 batch — the Oceania/Africa candidates from CLAUDE.md plus the per-tab
-computer-user picks (see lang/FUTURE_LANGUAGES.md):
+computer-user picks (see docs/lang/future-languages.md):
 
   en-AU en-NZ mi-NZ sm-WS fj-FJ tl-PH hw-US en-ZA af-ZA ar-EG sw-KE am-ET
   yo-NG en-NG ar-MA ar-IQ ku-IQ ms-MY uz-UZ en-CA es-AR en-PG ty-PF

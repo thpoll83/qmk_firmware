@@ -11,12 +11,12 @@ description: >
   tests, reshipping the symbol font-pack bundle, and handing the tester a .bin,
   the .plyf and the flash command. NOT for app shortcuts like Ctrl+C or F2 (those
   belong to the host app overlays: generate-app-overlays), full keyboard
-  languages (add-polykybd-language), or legend glyphs (LEGEND_RENDERING.md).
+  languages (add-polykybd-language), or legend glyphs (docs/display/legend-rendering.md).
 ---
 
 # Add or retouch an OS shortcut-hint icon
 
-Read [`keyboards/polykybd/HINT_ICONS.md`](../../../keyboards/polykybd/HINT_ICONS.md)
+Read [`keyboards/polykybd/docs/display/hint-icons.md`](../../../keyboards/polykybd/docs/display/hint-icons.md)
 first. It holds the style-D rules and the reason behind every icon's current shape,
 and most change requests were already decided there once.
 
@@ -160,5 +160,5 @@ before/after sheet, test count, and the files handed over (`.bin` with sha,
   drawing.
 - **Do not hand-edit `hint_icons.h` or the `ICON_HINT_*` block**; both are generated,
   and `--check` fails on a stale one.
-- **Hardware decides.** Every accepted shape in `HINT_ICONS.md` came from a look at
+- **Hardware decides.** Every accepted shape in `docs/display/hint-icons.md` came from a look at
   a real keycap; record the new decision there when the maintainer settles one.

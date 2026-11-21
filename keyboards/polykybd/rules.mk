@@ -95,7 +95,7 @@ EXTRAFLAGS += $(if $(POLY_CAST_ALIGN_SRC),$(if $(POLY_CAST_ALIGN_SKIP),,-Wcast-a
 # operating point. Newer pico-sdk raises VREG for you when SYS_CLK_MHZ=200 —
 # the SDK vendored here predates that AND does not compile hardware_vreg at
 # all, so POLYKYBD_VREG_VSEL below drives the raise by hand (see the patch to
-# platforms/chibios/bootloaders/rp2040.c, tracked in UPSTREAM_PATCHES.md).
+# platforms/chibios/bootloaders/rp2040.c, tracked in docs/build/upstream-patches.md).
 # Without it the board would run its whole boot — including the 1000 ms
 # double-tap window — at 200 MHz on 1.10 V, i.e. out of spec.
 #
@@ -195,7 +195,7 @@ $(foreach s,$(POLY_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
 # large host->keyboard transfers that raw HID (one 64-byte report per 1 ms USB
 # frame) cannot. ON by default; `-e POLYKYBD_BULK_PIPE=no` drops the interface
 # and the parser. Prototype: measurement commands only (keyboards/polykybd/
-# BULK_PIPE.md has the assessment and the numbers). Costs two interfaces, three
+# docs/protocol/bulk-pipe.md has the assessment and the numbers). Costs two interfaces, three
 # endpoints and (CDC_IN_CAPACITY + CDC_OUT_CAPACITY) x 64 B of RAM (config.h).
 POLYKYBD_BULK_PIPE ?= yes
 ifeq ($(strip $(POLYKYBD_BULK_PIPE)), yes)
@@ -279,13 +279,13 @@ ifneq ($(strip $(POLYKYBD_FORCE_HAND)),)
     endif
 endif
 
-# "Can it run Doom?" easter egg — dev-harness build (see DOOM_FEASIBILITY.md and
+# "Can it run Doom?" easter egg — dev-harness build (see docs/archive/doom-feasibility.md and
 # doom/README.md). Opt-in only: `qmk compile ... -e POLYKYBD_DOOM=yes` compiles
 # the game-mode scaffold (overlay-pool borrow, keycap blitter, IDDQD trigger).
 # Normal builds pay zero bytes — doom_mode.h stubs every hook to an inline no-op.
 #
 # `-e POLYKYBD_DOOM_PACK=yes` builds the SHIPPING-SHAPE flavour instead
-# (doom/PACK_DESIGN.md): the firmware side of the executable-pack split —
+# (docs/design/doom-pack.md): the firmware side of the executable-pack split —
 # mode machinery + blitter + fire demo + the PlyX pack loader, with the
 # engine expected in the DOOMPACK flash slot and every doom_shim_* call
 # dispatched through the pack's export table. No engine sources, no custom
@@ -306,7 +306,7 @@ endif
 # so the monolith got COMBO_ENABLE without the tables and failed to compile
 # keymap_introspection.c. A non-boolean value is refused by its schema instead.
 # Every keymap.c must #include "poly_combos_keymap.h" for the two stub tables
-# (VARIANTS.md).
+# (docs/build/variants.md).
 # Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`), as for MIDI below.
 ifeq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
     # monolith: no runtime combos / tap dance
@@ -620,7 +620,7 @@ endif
 # platforms/chibios/platform.mk takes PLATFORM_MK when the file exists and falls
 # back to Contrib's own platform.mk when it does NOT -- silently, so a typo here
 # would build the unpatched driver with a green build. Refuse instead.
-# Rationale and the drop-the-copy procedure: UPSTREAM_PATCHES.md ->
+# Rationale and the drop-the-copy procedure: docs/build/upstream-patches.md ->
 # "ChibiOS-Contrib RP2040 USB driver".
 PLATFORM_MK := keyboards/polykybd/chibios_overrides/platform.mk
 ifeq ($(wildcard $(PLATFORM_MK)),)

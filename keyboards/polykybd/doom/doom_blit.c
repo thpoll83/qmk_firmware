@@ -4,7 +4,7 @@
 // Keycap blitter: carve the 320x200 8bpp framebuffer into 72x40 keycap tiles,
 // ordered-dither to 1bpp and push each tile over the existing shift-register +
 // SPI path. Bayer (not Floyd–Steinberg): O(1) per pixel, no error propagation
-// across frames, so animated frames don't "crawl" (DOOM_FEASIBILITY.md,
+// across frames, so animated frames don't "crawl" (docs/archive/doom-feasibility.md,
 // Challenge 1).
 //
 // Every tile is composed into the visible 72x40 window (cleared scratch, drawn

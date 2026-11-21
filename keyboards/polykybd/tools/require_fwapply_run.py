@@ -633,7 +633,7 @@ def selftest():
         ("keyboards/polykybd/keymap/poly_keymap.c", True),
         ("keyboards/polykybd/config.h", True),
         ("CLAUDE.md", False),
-        ("keyboards/polykybd/CI_CHECKS.md", False),
+        ("keyboards/polykybd/docs/build/ci-checks.md", False),
         (".claude/skills/audit-derived-verdict/SKILL.md", False),
         ("scripts/publish_release.py", False),
         (".github/workflows/release.yml", False),
@@ -659,7 +659,7 @@ def selftest():
     if path_reaches_the_image("README.md", star):
         print("selftest FAIL: '!*.md' did not exclude a top-level .md")
         ok = False
-    if not path_reaches_the_image("keyboards/polykybd/CI_CHECKS.md", star):
+    if not path_reaches_the_image("keyboards/polykybd/docs/build/ci-checks.md", star):
         print("selftest FAIL: '!*.md' crossed a separator and excluded a nested .md")
         ok = False
 
@@ -687,8 +687,8 @@ def selftest():
         ("bump plus docs and a skill",
          [bump,
           {"filename": "CLAUDE.md"},
-          {"filename": "keyboards/polykybd/CI_CHECKS.md"},
-          {"filename": "keyboards/polykybd/SPLIT_SYNC.md"},
+          {"filename": "keyboards/polykybd/docs/build/ci-checks.md"},
+          {"filename": "keyboards/polykybd/docs/protocol/split-sync.md"},
           {"filename": ".claude/skills/audit-derived-verdict/SKILL.md"}],
          True),
         ("docs only, no bump", [{"filename": "README.md"}], True),

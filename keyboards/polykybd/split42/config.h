@@ -86,7 +86,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /* Pointing device: REMOVED — split42 has no trackpad, and the subsystem was
    only ever enabled as a split-link workaround. The on-hardware discriminator
-   matrix (SPLIT42_LINK_STATUS.md rows 20-24, link-cable orientation controlled)
+   matrix (docs/archive/split42-link-status.md rows 20-24, link-cable orientation controlled)
    showed the link needs only the 8-byte shmem pad the pointing member happened
    to provide — see POLY_SPLIT_SHMEM_RPC_GUARD in rules.mk — not the pointing
    feature, its transactions, or its per-cycle pull. */

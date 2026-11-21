@@ -7,7 +7,7 @@ paths:
 ---
 # Split sync and persisted state
 
-Notes: `SPLIT_SYNC.md` · `KEYMAP_STORAGE.md` · `INVESTIGATION_HISTORY.md`.
+Notes: `docs/protocol/split-sync.md` · `docs/features/keymap-storage.md` · `docs/debugging/investigation-history.md`.
 
 - ⚠️ **Never bool-test `send_to_bridge()` — classify with `sync_succeeded()`.** Every
   return value is non-zero, give-up included, so `if(!send_to_bridge(...))` is dead

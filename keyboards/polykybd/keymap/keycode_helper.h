@@ -49,7 +49,7 @@ static inline uint16_t poly_mt_tap(uint16_t kc) {
 // than the icon reads as a mistake rather than as a style — the text face's '!' is h=20
 // against the icon's h=16.
 //
-// ⚠️ They are RESIDENT (IconsFont, plane-16 PUA, see FONT_PACK.md), not pack glyphs.
+// ⚠️ They are RESIDENT (IconsFont, plane-16 PUA, see docs/display/font-pack.md), not pack glyphs.
 // U+26A1 ⚡ does exist in the symbol bundle at h=29 — half-size would land near 15,
 // close enough — but a core layer key must not go blank on a keyboard whose font pack
 // was never flashed.
@@ -161,7 +161,7 @@ enum my_keycodes {
     // for the same no-renumbering reason as KC_DAUTO/KC_IDDQD/KC_LAT*.
     KC_GLYPH_SIZE_DOWN,
     KC_GLYPH_SIZE_UP,
-    // Emoji layer search mode (emoji/EMOJI_SEARCH.md). KC_EMJ_MODE switches the
+    // Emoji layer search mode (docs/features/emoji-search.md). KC_EMJ_MODE switches the
     // layer between category tabs and keyword search; KC_EMJ_S_CLEAR clears the
     // query; KC_EMJ_S_BKSP and KC_EMJ_S_SPACE are Backspace and Space in the query.
     // All three are blank and inert in tab mode. Appended for the same

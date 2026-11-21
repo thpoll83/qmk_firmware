@@ -5,7 +5,7 @@ paths:
 ---
 # Editing the HID dispatcher
 
-Notes: `PROTOCOL_HISTORY.md`. The `add-gated-hid-command` skill drives a new command
+Notes: `docs/protocol/protocol-history.md`. The `add-gated-hid-command` skill drives a new command
 end to end (firmware + host + tests + docs + bump label).
 
 - **Increase `FW_VERSION` + `PROTOCOL_VERSION` and the host's `__protocol__` together.**

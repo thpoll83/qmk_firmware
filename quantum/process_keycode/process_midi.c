@@ -67,7 +67,7 @@ void midi_init(void) {
 
 // A channel change must not strand what is sounding on the old channel: a note-off or
 // a pedal release is sent on the CURRENT channel, so a key held across the change
-// would hang (PolyKybd patch, UPSTREAM_PATCHES.md). Release every held note, the three
+// would hang (PolyKybd patch, docs/build/upstream-patches.md). Release every held note, the three
 // pedals, the pitch bend and the mod wheel on the old channel first; the held keys then
 // release nothing there.
 static void midi_set_channel(uint8_t channel) {

@@ -25,7 +25,7 @@ code → the pseudo-code "nh" must be appended to PRIVATE_LANGS in the frozen
 iso_lang_country.py (all 3 repos) before re-cogging hid_com.c. Every other code
 here is standard ISO 639-1 / 3166-1 (no frozen-table change).
 
-⚠ NULL-base trap (see FUTURE_LANGUAGES.md world-batch post-fixes): a key with a
+⚠ NULL-base trap (see docs/lang/future-languages.md world-batch post-fixes): a key with a
 NULL VAR_SMALL makes translate_keycode fall back to en-US *entirely* for that
 key, so its VAR_SHIFT/VAR_ALTGR is never shown. Every override key below carries
 an explicit base.

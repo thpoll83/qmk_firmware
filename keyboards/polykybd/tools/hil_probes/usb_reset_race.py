@@ -27,7 +27,7 @@ Run it with::
 
 ⚠️ ``tier: debug`` builds the NORMAL HIL images. Cherry-pick 31158ea (sets
 ``POLYKYBD_USB_STRESS ?= yes`` for HIL builds) in a temporary commit first, see
-UPSTREAM_PATCHES.md; without it the probe stops after round 1.
+docs/build/upstream-patches.md; without it the probe stops after round 1.
 """
 import os
 import re

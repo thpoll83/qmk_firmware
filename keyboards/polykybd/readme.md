@@ -8,6 +8,9 @@ Hardware info at https://github.com/thpoll83/PolyKybd
 Keyboard Maintainer: thpoll83
 Hardware Supported: RP2040
 
+The firmware docs are in [`docs/`](docs/README.md): one index, with a record of
+where each file moved in 2026-11.
+
 # Build Notes
 
 ## Keyboard Variants
@@ -15,7 +18,7 @@ Hardware Supported: RP2040
 - `split72` is the current hardware (HW rev2 and up) iteration of `wave` with slight differences. Only `split72` is actively developed.
 - `split42` is the 42-key (CRKBD-footprint) variant. **It was previously named `corne42` and was renamed to `split42` in 2026-06** — same hardware, same `LAYOUT_crkbd` footprint, same USB PID. If you have an older checkout or external reference to `polykybd/corne42`, use `polykybd/split42` instead.
 
-> **Shared keymap logic** — both variants compile the same `poly_keymap.c` at the
+> **Shared keymap logic** — both variants compile the same `keymap/poly_keymap.c` at the
 > keyboard level (rendering, HID/overlay handling, language selection, idle/suspend,
 > split sync, firmware-update state machine). Each variant's
 > `keymaps/default/keymap.c` carries only its data (`keymaps[]`, `encoder_map[]`,

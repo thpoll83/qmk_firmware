@@ -15,7 +15,7 @@
 // timers. Same split as base/fw_up_verdict.c beside split_fw_up.c, and for the same
 // reason: the part with a bug future is the part that has to be reachable from a test.
 //
-// The gesture and the decisions behind it are in MACRO_RECORD_DESIGN.md.
+// The gesture and the decisions behind it are in docs/design/macro-record.md.
 
 // The staging buffer. Nothing reaches EEPROM until the recording stops: a write per
 // keystroke is a wear-levelling journal append, and the consolidation erase it

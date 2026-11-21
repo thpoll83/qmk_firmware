@@ -111,7 +111,7 @@ grep -n "<sync field>" keyboards/polykybd/system/state.h keyboards/polykybd/keym
   and pin it with a test. Fail-closed is the only acceptable direction for a
   security gate.
 - ⚠️ A new 4-byte member in `poly_sync_t` goes **directly after `crc32`** — see
-  `SPLIT_SYNC.md`; the split CRC covers every byte from offset 4, so a `uint32_t`
+  `docs/protocol/split-sync.md`; the split CRC covers every byte from offset 4, so a `uint32_t`
   dropped into the `uint8_t` run puts alignment padding inside the checksummed
   range. And `state.h`'s `static_assert` against `RPC_M2S_BUFFER_SIZE` must still
   hold.

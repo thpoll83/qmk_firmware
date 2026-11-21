@@ -22,7 +22,7 @@ Sources:
 
 The glyphs are appended to IconsFont between the BEGIN/END markers, so the font's
 `last` moves and nothing else does: no pack index shifts and no bundle is reshipped
-(FONT_PACK.md). The macros go to lang/named_glyphs.h, outside the cog block, which
+(docs/display/font-pack.md). The macros go to lang/named_glyphs.h, outside the cog block, which
 is what tools/check_icon_slots.py cross-checks.
 """
 import argparse

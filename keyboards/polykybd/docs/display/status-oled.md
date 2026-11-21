@@ -1,0 +1,411 @@
+# The status OLED (128x64 split72 / 128x32 split42)
+
+The second display on each half: the QMK `ssd1306` driver over I2C, the screen
+composers, the flicker fix, the telemetry screen and split42's software-rotated
+portrait layout. Moved out of `CLAUDE.md` on 2026-09-10: ~14 KB read while you are
+in `oled_helper.c` or a variant's `status_oled.c`.
+
+⚠️ **This is a DIFFERENT BUS from the per-keycap displays.** The status panel is
+I2C on `I2CD0` (GP0/GP1) at 400 kHz; the keycaps are SPI SSD1306s driven by
+`disp_array.c`. Don't conflate them — they share only the 1024-byte scratch buffer
+everything is composed into.
+
+**Layout work: MEASURE the pixel bands, don't eyeball the render.** `--diag` only
+catches pixels off the panel; it says nothing about rows colliding or slack pooling
+at the bottom. The `status-oled-layout` skill wraps the whole
+instrument -> bands -> place -> render -> build loop.
+
+---
+
+## Status OLED (128×64 split72 / 128×32 split42, SSD1306 over **I2C**)
+The status OLED is the QMK `ssd1306` driver (`OLED_DRIVER = ssd1306`, no
+`OLED_TRANSPORT` → QMK defaults to **I2C**) on `I2CD0` (GP0/GP1) at **400 kHz**
+(`config.h`). ⚠️ It is a **different bus** from the per-keycap displays (those are
+the SPI SSD1306s driven by `disp_array.c`) — don't conflate them. Each half drives
+its **own** status OLED locally. Rendering lives in `oled_helper.c` (`oled_task_user`
+dispatch) + `<variant>/status_oled.c` (`oled_update_buffer*` composers): everything
+is composed into the 1024-byte kdisp scratch buffer (`get_scratch_buffer()`,
+`128×8`, cleared by `kdisp_set_buffer(0)`) then blitted to the QMK framebuffer with
+`oled_write_raw`.
+
+**The "updates in multiple passes" flicker (2026-07):** QMK's driver splits the
+frame into **16 blocks** and `oled_render()` flushes only `OLED_UPDATE_PROCESS_LIMIT`
+(default **1**) block per call. `oled_render()` runs every main-loop iteration, so a
+static screen normally paints fast — but two things made a full repaint dribble out
+band-by-band:
+- Each screen composer used to call **`oled_clear()`** before `oled_write_raw`, which
+  marks **all 16 blocks dirty every 66 ms tick** even when only a digit moved.
+  `oled_write_raw` already diffs byte-for-byte and dirties only changed blocks, so the
+  `oled_clear()` was **dropped** from `oled_status_screen()` and `oled_fw_update_screen()`
+  — a static screen now costs nothing on the bus and an incremental change touches 1–2
+  blocks. (The scratch is a full-frame black background, so no stale pixels result.)
+- When the main loop is **saturated** (a firmware/font-pack flash streaming HID chunks
+  + driving the deferred sector erase, or a boot-time busy window), the 1-block-per-call
+  flush can't finish a full-screen transition before the loop starves it — the classic
+  symptom was the **status→"Firmware Update" screen transition tearing**, bottom rows
+  still showing the old status. Fix: both `oled_status_screen()` and
+  `oled_fw_update_screen()` end with **`oled_render_dirty(true)`** to push all changed
+  blocks in **one** synchronous pass. It is a **no-op when nothing changed** (early-returns
+  on `!oled_dirty`), so it only pays the ~26 ms full-frame I2C cost on an actual full
+  swap, never per idle tick. ⚠️ Don't reintroduce a per-frame `oled_clear()` — it defeats
+  the diffing and makes `oled_render_dirty(true)` re-push the whole frame every tick.
+- The other `oled_clear()` (`poly_keymap.c` `oled_init_user`) is harmless: QMK calls
+  `oled_init_user` at the **top** of `oled_init`, before `oled_initialized = true`, so
+  the `oled_off/render/on` around it are early-return no-ops (it only touches RAM).
+- The DOOM status path uses diff-based `oled_write_raw` (no `oled_clear`) and
+  hardware scroll; it can still dribble on a busy transition but is non-critical, so
+  it was left as-is.
+
+**Boot noise (deferred `DISPLAY_ON`)** — the SSD1306 powers up with random GDDRAM, and
+stock `oled_init()` sent `DISPLAY_ON` before any content was flushed, so boot flashed
+RAM noise before the splash. Patched in QMK core (`drivers/oled/oled_driver.c`, tracked
+in `docs/build/upstream-patches.md`): the panel stays off through init, an all-black GDDRAM is
+flushed, **then** `DISPLAY_ON` — boot shows black → splash.
+
+**Speed levers:** `OLED_UPDATE_PROCESS_LIMIT` is now **2** (`config.h`, was QMK's 1) —
+split72's animated idle screen dirties all 16 blocks every frame and could not keep up
+at one block a pass. It was 4 for a while; with Eden on core1 and the panel at 75 ms,
+the ~6 ms chunks held Eden's core0 work back visibly on hardware, and ~3 ms chunks did
+not. Still unpulled: I2C Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`, above
+SSD1306 spec, and the bus may be shared — A/B on real hardware).
+
+### A failed I2C write: what it prints (`oled_i2c.c`, `base/oled_i2c_diag.c`)
+
+Stock QMK prints `oled_render offset command failed` (or `… data failed`) when a
+write does not land, drops the rest of that frame, and repaints it on the next one.
+That line says neither why the write failed nor whether the panel came back. A field
+report (2026-10-02, firmware 1.5.0) showed one such line in ~7300 idle-screen frames
+and could not be taken further.
+
+`oled_i2c.c` overrides the driver's **weak** `oled_send_cmd()` / `oled_send_data()`,
+so no upstream file is patched. A failed write is retried once, and
+`base/oled_i2c_diag.c` (pure, `make test:polykybd_oled_i2c_diag`) prints:
+
+```
+oled_i2c: cmd write failed #1 (nack, flags=0x00, sda=1 scl=1, len=7, 66 ms after the last good write) - retry ok
+oled_i2c: status display not responding: 3 data writes in a row failed after a retry
+oled_i2c: status display responding again after 4 failed data write(s)
+oled_i2c: 7 more failed write(s) not printed in the last 10 s (10 since boot)
+```
+
+How to read a detail line:
+
+- **`nack`**: the panel did not acknowledge (reset, brown-out, contact). The RP2040
+  LLD raises no ChibiOS flag for a NACK; the transfer aborts with an empty mask.
+- **`timeout`**: the transfer did not finish within `OLED_I2C_TIMEOUT` (100 ms),
+  usually SCL held low.
+- **`arb_lost`**: the controller read a level on SDA it did not drive (noise, or
+  a second driver on the bus).
+- **`sda=0` or `scl=0`**: something holds that line low after the failure. A retry
+  cannot fix that.
+- **`retry ok`**: a transient. Only a write that fails both tries counts toward the
+  stuck streak.
+
+Detail lines are capped at 3 per 10 s. After 3 writes of one kind (cmd or data) in
+a row fail even after the retry, that kind counts as stuck and is no longer retried.
+A timeout costs 100 ms of the loop that scans the matrix, and retrying a dead panel
+only doubles it. ⚠️ The streak is per kind because `oled_render()` sends a command
+and then the data for every block: with one shared streak, a panel that ACKs
+commands and fails data had each good command reset the count, so the stuck state
+never engaged.
+A stock `oled_render … failed` line still follows each write that was lost.
+
+- ⚠️ **Only the half whose console reaches the host is visible.** A failure on the
+  slave half's status OLED is counted there and printed nowhere.
+- ⚠️ **The host's problem scan matches these lines by their wording**
+  (`PolyKybdHost/polyhost/services/problem_scan.py`, patterns `oled_i2c*`). Change
+  a line, change the pattern.
+
+## Brightness: ONE scale with the keycaps (`base/status_brightness.h`)
+
+The status panel used to sit at a fixed `OLED_BRIGHTNESS` (60) while the per-keycap
+panels ran on `poly_sync_t.contrast` (1..`FULL_BRIGHT`, written as `contrast - 1`).
+So `KC_DMIN`, the host slider (cmd 13) and the LTR-559 auto value all dimmed the
+keycaps while the status OLED kept blaring, and nothing on the keyboard or in the
+host could turn it down.
+
+`poly_status_brightness()` now maps the keycap scale onto this panel's register:
+`FULL_BRIGHT` lands exactly on `OLED_BRIGHTNESS`, so the top of the scale looks the
+way it always has, and every level below it tracks the keycaps. `POLY_STATUS_MIN_BRIGHT`
+is the FLOOR of the mapped range, not a clamp applied after it — the two panels differ
+in size and multiplex ratio, so the bottom of the keycap scale is not guaranteed to be
+readable as thin text on 128×64. Raising it rescales the map without moving the
+`FULL_BRIGHT` end. Unit-tested (`make test:polykybd_status_brightness`).
+
+- ⚠️ **Feed the map the SYNCED `local_state->contrast`, NEVER
+  `get_active_brightness()`.** `status_oled_level()` in `poly_keymap.c` is the one
+  place that decides, and contrast is the one brightness value the split sync
+  actually carries, so both halves land on the same number by construction.
+  Driving it from `get_active_brightness()` was the first attempt and it left the
+  **slave's panel stuck at full** — see the note below.
+- The pulse idle style does cycle contrast 0..49, but with `DISP_IDLE` **set**
+  throughout (Eden likewise), so the idle branch returns `POLY_STATUS_IDLE_BRIGHT`
+  and the cycling value is never mapped. There is no strobe to guard against.
+- **The panel now fades WITH the keycaps** over `FADE_TRANSITION_TIME` instead of
+  holding full until the pulse begins — identically on both halves, since both are
+  reading the same synced number.
+- **No new synced field, EEPROM byte or HID command.** Cmd 13 and the `KC_D*` keys
+  already carry the value, so the brightness sun gauge drawn ON this panel now
+  describes the panel it is drawn on.
+- `keyboard_post_init_user()` sets it at boot: QMK's `oled_init()` programs the
+  contrast register to `OLED_BRIGHTNESS` unconditionally, so a board with a stored
+  brightness of 2 would otherwise come up at full until the first contrast change.
+
+⚠️ **The "dim for no reason, but only sometimes" bug (fixed 2026-09-16).** Idle ENTRY
+called `oled_set_brightness(0)` and nothing restored it on idle EXIT. The only code
+that raised the panel again was the `STATUS_DISP_ON` branch, and the idle block in
+housekeeping sets `STATUS_DISP_ON` on **every pass** — so that flag never flips across
+an idle→wake cycle, and the panel stayed at contrast register 0 until the status
+display was toggled or the board rebooted. Register 0 on an SSD1306 is "barely
+visible", **not off**, which is why it read as a brightness fault rather than a dead
+panel. A *longer* absence hid it: `poly_suspend()` does clear `STATUS_DISP_ON`, so the
+resume path restored 60. **The lesson generalises — a flag that a periodic task
+re-asserts every pass can never be used as a change EDGE.** The restore is now keyed
+off `contrast_changed || idle_changed`.
+
+⚠️ **`g_user_brightness` is MASTER-side policy; on the slave it is a best-effort
+shadow.** `split_sync.c` updates it from the incoming sync on an EDGE
+(`incoming->contrast != current->contrast`) that is **skipped** whenever the same
+sync carries `DISP_IDLE` or `IDLE_TRANSITION` — and `copy_local_state()` advances
+`current->contrast` on that very sync, so a skipped change can never be noticed
+again. Unlike the periodic state syncs, **the diff is not a retry queue for it**:
+one miss is permanent, and the slave keeps the `FULL_BRIGHT` its static
+initialiser gave it. That is why the status panel reads the synced contrast
+instead. Anything else the slave needs to track about brightness faces the same
+trap — derive it from synced state, not from a shadow updated on an edge.
+
+⚠️ **Idle is a dim contrast register, NOT `oled_off()`** (`POLY_STATUS_IDLE_BRIGHT`,
+0). During `DISP_IDLE`, `oled_task_user()` hands split72's panel to
+the idle screen (`status_idle.c`, below) and blanks split42's; switching the panel off would stop
+the animation, which is the idle look this board is supposed to have.
+Register 0 is the SSD1306's floor. Lowering the VCOMH deselect level (`0xDB`) or the
+pre-charge period (`0xD9`) on top of it dims the panel further but made it flicker on
+hardware, with occasional brighter strips, so the idle screen dims by content instead:
+its letters are drawn as a 1 px outline, dark inside, and its bands on every other row,
+and the dark band rows are never computed.
+
+**The scrolling Poly/Kybd logos are GONE** (two 1 KB bitmaps on split72, all-zero
+512 B placeholders on split42, `oled_draw_poly/kybd()`, `oled_render_logos()`). Their
+one other caller, `oled_init_user()`, runs before the driver is initialised, so the
+boot "logo" only ever filled RAM — nobody saw it. The DOOM attract logo is separate
+(`DOOM_LOGO_OLED`) and keeps its hardware scroll.
+
+### The idle screen (split72, `status_idle.c`)
+
+Demoscene plasma bands with "Poly" / "Kybd". The background is a sum of four sines of
+Eden's table (one fed by `startup_anim_dist()` from the field centre) drawn as CONTOUR
+BANDS: on a 1-bit panel a dithered plasma reads as grey noise, while its contours are
+native. Both panels are one field, the right continuing the left after the 40 px gap.
+"Poly" (left) and "Kybd" (right), in FreeSansBold24pt7b (`poly_heavy_font()`, Eden's
+keycap-letter face), are ONE LINE across both panels, typed and edited away with an
+underscore cursor: the cursor blinks under the P's place, "Poly Kybd" is typed (300 ms
+a key; the gap between the words is TWO cursor stops — after the y, then inside the
+physical gap — so it does not leap the gap in one key) and the last key takes the
+cursor away; the text stands 5 s; the cursor returns on the d, walks back to the P, and Del
+removes a character at a time while the REST OF THE LINE MOVES LEFT to close up, so
+"Kybd" slides across the physical gap into the left panel. Then a POEM: one of five
+short original poems (`base/idle_poem_plan.c`, the texts, timeline and pick, pure and
+tested by `make test:polykybd_idle_poem_plan`) is typed in NotoSans_Regular_Base_14pt7b
+(~10 letters a panel) as one line across both panels, 150 ms a key and a blinking 1.2 s
+wait after each line break. Once the line reaches the right panel's edge each key pushes
+the whole line left, so text leaves on the left like a typewriter's. The poem stands 4 s,
+Backspace deletes it from the end at 75 ms a character (the start slides back in from
+the left), the empty cursor blinks 1.2 s, then a 3 s gap and over. The cycle has one
+fixed length, set by the longest poem. Each half lays out the whole line in field
+columns for that reason.
+- **The poem is picked at random each cycle, never the one just typed, and both halves
+  must pick the same one with no sync field of its own.** `idle_poem_pick(seed, cycle)`
+  is a pure function; the cycle comes from the shared cycle clock and the seed is the
+  last letter key typed (`poly_last_t.latin_kc`), which the master already syncs. ⚠️ A
+  per-half count of idle sessions was tried first and drifts for good once one half
+  reboots alone. The remaining gap: a slave rebooted alone reads 0 until the next letter.
+- **The poem's outline is 1 px OUTSIDE its glyphs** (the glyph grown by 1 px in all
+  eight directions, minus the glyph), so the whole glyph is the dark inside: at 14 pt
+  most strokes are 2 px, and an inside outline of a 2 px stroke is the stroke. The ring
+  goes around the outline, so the column window is 7 wide (`SI_REACH`).
+- **The bands' scanline parity swaps every cycle** (`si_band_parity()`): even rows on
+  one cycle, odd on the next, so both age alike on a panel that idles for hours.
+ The plasma runs on a
+5/32-speed clock. Words are centred horizontally on their panels and vertically on the
+letter BODY (tallest top to baseline) — centring the whole ink box, descender included,
+put them visibly high. The place AFTER the d is never used: "Kybd" centred leaves no
+room for an underscore there. Letters (and the cursor) are drawn as a 1 px
+outline (the ink minus the ink shrunk by 1 px), dark inside, the bands on every other row
+(the poem's letters: see above), inside a 2 px black ring (a radius-2 disc dilation on 64-bit column words). Nothing is stored:
+every frame comes from the font's column bytes in flash and Eden's tables.
+
+- ⚠️ **ONLY the 2 px ring is black — no gap closing.** Closing letter gaps too (any
+  pixel with ink within N px on both sides) was tried to stop a band reading as a dash
+  between K and y; it painted solid black wedges between the letters instead, which
+  read as a shadow. The bands showing through gaps and counters is the intended look.
+- ⚠️ **Centred means the letters light the SAME pixels every cycle** (~60 % of the
+  time for the held-letter pixels). The bands and the 5 s gap relieve it; a small
+  per-cycle offset is the lever if burn-in shows.
+- ⚠️ **It redraws every frame, and a redraw switches the SSD1306 back ON** — so the
+  branch honours `STATUS_DISP_ON` itself, as the tutorial branch does, or the panel
+  stays lit through the suspend.
+- ⚠️ **Frame pacing has three rules, and the third protects the keycaps.**
+  1. A frame is composed only when the previous one is fully sent (`oled_dirty == 0`,
+     the driver's global). Composing over a half-sent frame tore it.
+  2. At most one frame per `SI_FRAME_MS` (150 ms), or per `SI_FRAME_FAST_MS` (75 ms)
+     while Eden computes its keycaps on core1 (`startup_anim_idle_on_core1()`). Both
+     divide the 150 ms cursor step and the 300 ms keystroke, so the typing stays even.
+     The fast rate applies only there: on the core0 fallback the two take turns (rule
+     3), and the other idle styles were never measured at it. 50 ms was tried first:
+     the panel was smooth, but Eden visibly slowed on hardware, because each status
+     frame still holds core0 ~31 ms and Eden's legend cut and SPI push wait behind it.
+  3. **On Eden's core0 fallback path, the panel and the Eden idle loop take turns.**
+     Each frame costs the main loop ~23 ms of blocking I2C (~3 ms per pass at
+     `OLED_UPDATE_PROCESS_LIMIT` 2), and Eden then renders the keycaps in 3 ms slices on
+     that same loop. Interleaved, every slice waited behind a pass of I2C. So no frame
+     is composed while Eden is mid-frame (`startup_anim_frame_busy()`), and
+     `eden_idle_tick()` starts no keycap frame while ours is still going out
+     (`status_idle_holds_bus()`, capped at 100 ms so a stuck bus cannot freeze the
+     keycaps). Normally core1 computes Eden's keycaps (`docs/display/idle-styles.md`), core0's share
+     is small, and neither rule applies: `startup_anim_frame_busy()` is false and the
+     hold is skipped while `startup_anim_idle_on_core1()`.
+
+  Because of rule 3 the frames are composed from `status_idle_task()`, called every
+  main-loop pass from housekeeping just before `eden_idle_tick()`, not from
+  `oled_task_user()`, which runs only every 66 ms and would rarely land in Eden's gap
+  between frames. `oled_task_user()` only hands the panel over (`status_idle_screen()`
+  in the idle branch) and takes it back (`status_idle_release()` at the top of every
+  pass), so the task never draws over another screen. Motion is a function of time,
+  so pacing lowers the frame rate, never the speed. `oled_render_dirty(true)` would
+  block the matrix ~26 ms per frame instead. The console prints
+  `Status idle: N frames/60s, worst compose Nms` once a minute of an idle session
+  (every 5 s until 2026-10-09). The count starts with each session, so a session
+  shorter than a minute leaves no such line. Eden's idle line, on the same cadence, now ends in
+  `N frames` since the last report — its `frame Nms` sums render time only, so it
+  cannot show time lost to other main-loop work.
+
+**Settings → "More" shows TELEMETRY instead of the status screen** (`oled_helper.c`
+`oled_telemetry_screen()`, dispatched from `oled_task_user` on the synced
+`poly_sync_t.settings_more`). Four lines on the 64 px panel, two on the 32 px one:
+`FW <version>` · `P<protocol> HW <device_ver>` · `<USB|LNK> up <h:mm:ss>` ·
+`Lnk <err>% <frames>`. Shared across both variants and landscape on split42 too,
+matching the flash / confirm / apply screens there.
+
+- **The identity fields are the ones `GET_ID` reports** (`FW_VERSION`,
+  `PROTOCOL_VERSION`, `DEVICE_VER` — the same macros `hid_com.c` builds its string
+  from), so the panel and the host's view of the board cannot disagree.
+- ⚠️ **The link line reads `Lnk n/a` on the non-USB half, NOT `0.0%`.** The counters
+  live in `bridge_helper.c` and only the master calls `send_to_bridge()`, so the
+  slave's are zero because it never initiates — rendering that as a perfect link
+  would be a flattering lie on exactly the panel someone reads to judge the wire.
+  `poly_get_link_stats()` / `poly_link_err_permille()` expose them; the percentage is
+  computed by the same expression as the periodic console line, so the two can never
+  diverge. This puts the split-link health somewhere you can actually see it — until
+  now it existed only in a line emitted every 200 frames on a console nobody has open.
+- ⚠️ **Both link fields are COMPACTED, and the default fixture is what hides why.**
+  `ls_attempts` climbs for as long as the board is up (millions within hours), so
+  spelled out in full the line measures **135 px against a 127 px budget** — while the
+  `1234tx` of a fresh boot fits comfortably. The count is abbreviated `k`/`M` and the
+  rate drops its decimal at/above 10 %, which puts the widest reachable form at
+  122 px. Checked with `tools/status_oled_preview.py --telemetry --diag` at the worst
+  case (`--link 1000,4294967295 --uptime "999d 23h"`), not at the default.
+- `tools/status_oled_preview.py --telemetry` renders it (both halves, `--diag` for the
+  clipping check) — the same mirror-the-C treatment `build_fw_confirm_panel` gets.
+  - ⚠️ **Mirror the C's GUARDS, not just its formatting — a preview's INPUT DOMAIN can
+    be wider than the device's reachable state space.** `oled_telemetry_screen()` tests
+    `ls.attempts == 0U` and prints `Lnk idle` **before** it computes a rate (and
+    `poly_link_err_permille()` returns 0 at zero attempts anyway), so a percentage over
+    zero frames is a reading no keyboard can display. The preview mirrored only the
+    `link is None` case, so `--link 0,0` rendered `Lnk 0.0% 0` and `--link 250,0`
+    rendered `Lnk 25.0% 0` — the preview depicting the impossible, which is the
+    direction it exists to catch. This is the **sibling** of the "A PREVIEW THAT MIRRORS
+    THE IMPLEMENTATION AGREES BY CONSTRUCTION" note below, not the same thing: there the
+    preview and the C are wrong identically; here the preview can render a state the C
+    cannot reach.
+  - **Fix the RENDERER, not just the argparse validator** — these panel builders are a
+    LIBRARY surface, not only a CLI. `status-oled-layout`'s `measure_bands.py` does
+    `import status_oled_preview as P` and calls `P.build_panel(...)` directly, so a
+    guard living in `link_arg()` is simply absent for an importing caller.
+    `build_telemetry_panel()` has no such caller *yet* — it is reached only from the
+    tool's own `main()` — which is exactly why the guard has to go in the renderer
+    now rather than after one appears. The validator is the second half (it refuses a
+    non-zero rate over zero frames, an input describing no device), not the first.
+    Check it by rendering: `--link 0,0` and `--link idle` must produce
+    **byte-identical** PNGs.
+    - ⚠️ This bullet previously asserted that the skill imports `build_telemetry_panel()`
+      itself. It does not — one `grep` settles it — and a note about verifying claims is
+      the worst place to leave an unverified one. Caught by Greptile on #262, which is
+      the cross-file consistency check an LLM reviewer is genuinely good at and a linter
+      cannot do at all.
+
+**split42: PORTRAIT status OLED (2026-07).** The split42 panel is 128×32 physical
+but **mounted rotated 90°**, so the user reads it as **32 wide × 128 tall**. The poly
+pipeline blits a **raw page-format buffer** via `oled_write_raw`, which **bypasses
+QMK's `OLED_ROTATION`** — setting `OLED_ROTATION_90` does nothing here. So
+`split42/status_oled.c` `oled_update_buffer()` composes the whole screen in a
+**logical 32×128 portrait space** and **software-rotates** each lit pixel into the
+128×32 scratch page buffer via a `pset()` mapping `(lx,ly) → (px=ly, py=31−lx)`
+(page offset `(py>>3)*128 + px`; `kdisp_set_buffer(0)` clears the full 1024 B first).
+It carries **self-contained portrait primitives** (`pdraw_glyph/_text/_text_center/
+_glyph_half/_text_center_half/_bitmap`) that reuse `kdisp_gfx_glyph_font()` for the
+lookup but plot through `pset` (the shared `kdisp_write_gfx_*` draw landscape into the
+128-wide buffer, unusable for portrait). Orientation is the **single compile switch
+`POLY42_STATUS_ROT_CW`** — flip it if the panel reads mirrored/upside-down (nothing
+else changes; everything composes in logical space). The flash/update + boot-logo
+screens are still landscape (deferred). Preview + clip check:
+`tools/status_oled42_preview.py` (`--diag`) mirrors the C coordinate-for-coordinate.
+
+**Layout work: MEASURE the pixel bands, don't eyeball the render** (2026-07-29).
+`--diag` only catches pixels off the *panel*; it says nothing about rows colliding
+or slack pooling at the bottom. Both previews are importable, so wrap their draw
+helpers to tag which pixels each call produced, then reduce to contiguous lit-row
+bands and the gaps between them — the **`status-oled-layout` skill** wraps this
+whole loop (instrument → bands → place → render → build). What it caught that the
+eye did not: the layout name's descenders **overlapping the row below by 2px**
+(`Qwerty Stag!` descends to baseline+4 across x7..90 — a *wide* tail, not a narrow
+one, so the row below cannot dodge it), and the RGB panel's colour/S+V rows
+touching at a **0px** gap, while 4 rows sat unused under the bottom row.
+- **Space each panel independently; do NOT share one set of row baselines.** The
+  two panels have opposite shapes — the layout panel's descenders are on row B,
+  the RGB panel's on row C — so a shared set is over-constrained: a brute force
+  over all (rowB, rowC) pairs maxed out at a **1px** minimum gap with a lopsided
+  7px elsewhere, vs **3/2/2** and **3/3/3** when split. The halves sit ~20cm apart,
+  so the 1–3px row offset between them does not read as misalignment.
+- **Pin the bottom row so its last pixel lands on the final screen row** (63 on
+  split72), and give the side marker that same baseline — it then sits level with
+  the last content row instead of floating. Derive each row's extent from its own
+  content: text is `base-10..base` (`+4` with descenders), the 13px globe is
+  `base-12..base`, a full brightness gauge is `base-12..base` and 98px wide, so the
+  meter can only ever hold a row alone.
+- **Check the worst case, not the default fixture**: longest layout name
+  (`Qwerty Stag!`, 95px), a fully-lit gauge, and a 3-digit WPM. And when moving a
+  readout between panels, confirm the value is actually available there —
+  `get_current_wpm()` reads correctly on both halves only because `config.h` sets
+  **`SPLIT_WPM_ENABLE`** (the master syncs it); without that it renders 0 on the
+  non-master half.
+
+- ⚠️ **Read glyph `xOffset`/`yOffset` through `int8_t`** in the portrait draw
+  helpers: `pgm_read_byte()` returns `uint8_t` and **zero-extends** the Adafruit-GFX
+  signed offsets, so `int yo = pgm_read_byte(&g->yOffset)` turns a text glyph's
+  `yOffset −8` into `248` and the glyph plots off-screen (silently clipped by
+  `pset`). Every text glyph has a negative `yOffset` (above baseline) and the icons
+  −15/−16, so this blanks **all** text + icons while bitmaps/globe/bars still draw.
+  Cast: `int xo = (int8_t)pgm_read_byte(&g->xOffset)` — the pattern `disp_array.c`
+  uses. ⚠️ The Python preview parses signed decimals directly, so it does **not**
+  reproduce this bug — it validates the *layout*, not the compiled C sign-handling
+  (this shipped once, PR #149, caught in review).
+- ⚠️ **Font-header DOUBLE-DEFINITION trap** (cost a full link cycle): `util_font.h`
+  (`NotoSans_Regular_Mid_19px7b`) and `nano_font.h`
+  (`NotoSans_Regular_Nano_10px7b`) **define** the font *data* (non-`static`) and are
+  **already compiled into `poly_keymap.c`**. `#include`ing them in `status_oled.c` too
+  gives a `multiple definition of …` **link** error (compiles fine). **Declare them
+  `extern const GFXfont X;`** instead — the pattern `oled_helper.c` already uses.
+  (`NotoSans_Medium_Base_8pt.h` is only included here, so that
+  `#include` is safe.)
+- **32 px width budget:** at 32 px only ~5 chars fit, and the layout name is the
+  tightest thing on the panel. ⚠️ **Do NOT half-scale a bigger font to get there** —
+  a 2×2-OR downsample ORs pixel pairs together, which thickens every stem back to
+  ~2 px and closes the counters that grid-fitting just opened (`Qwrty` ran its `w`
+  and `r` together); the decimation ("thin") downsample instead breaks strokes.
+  Render a real small face at native size: the layout name uses the dedicated
+  **`_Nano_` 10 px** (`nano_font.h`), the largest that fits — its widest short name
+  `Wkmn` is 30 px, versus 33 px (1 px past the panel) at the `_Tiny_` 11 px size.
+  `LAYOUT_NAME_BASE` in `split42/status_oled.c` places it by cap height. split42 uses **short**
+  layout names via `layout_name_short()` in `status_oled.c` (`Qwrty/Stag!/ColDH/Neo/
+  Wkmn/Unkn`); split72 keeps the full names in the shared `oled_helper.c` array — keep
+  the two in sync when layouts change.

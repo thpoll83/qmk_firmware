@@ -674,6 +674,6 @@ new ISO codes append at the next free slot; private pseudo-codes with no ISO
   three (verify with `cmp`); a mismatch silently decodes wrong languages on the
   host/rig. Adding a standard ISO language needs no table change (the code is
   already present); only a new private pseudo-code requires appending an entry.
-- Re-run `cog -r hid_com.c` after any change to the list or the table (needs
+- Re-run `cog -r hid/hid_com.c` (from `keyboards/polykybd/`) after any change to the list or the table (needs
   `cogapp` + `openpyxl`).
 

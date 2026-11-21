@@ -12,10 +12,6 @@ Project progress and hardware info:
 * Hardware & build log: [github.com/thpoll83/PolyKybd](https://github.com/thpoll83/PolyKybd)
 * Support the project: [ko-fi.com/polykb](https://ko-fi.com/polykb)
 
-## AI-assisted development
-
-Since mid-2026, the PolyKybd code in this fork is written with AI assistance, mainly with Claude Code. CI and AI review bots check most pull requests, but not every change, and AI-written code can contain mistakes that these checks do not find. Please report problems as GitHub issues.
-
 ## What is PolyKybd?
 
 PolyKybd runs on a **Raspberry Pi RP2040** with 8 MB of external QSPI flash. It is a
@@ -66,3 +62,9 @@ and maintained by Jack Humbert of OLKB with contributions from the community and
 [Hasu](https://github.com/tmk). All upstream QMK keyboards and features remain in this
 tree; only `keyboards/polykybd/` and a handful of supporting build hooks are
 PolyKybd-specific.
+
+## AI-assisted development
+
+PolyKybd started as a project that I coded entirely by hand, apart from the libraries it uses. The code base has grown too large for one person to write alone. Since mid-2026 I use AI tools to write the PolyKybd code in this fork, so that I can move faster towards the vision of the project.
+
+I decide on every change. I review the changes, test them myself on real keyboards, and write the summaries based on the results. AI-written code can still contain mistakes. Please report problems as GitHub issues. For security problems, see [SECURITY.md](SECURITY.md).

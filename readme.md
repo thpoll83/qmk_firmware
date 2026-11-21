@@ -12,6 +12,10 @@ Project progress and hardware info:
 * Hardware & build log: [github.com/thpoll83/PolyKybd](https://github.com/thpoll83/PolyKybd)
 * Support the project: [ko-fi.com/polykb](https://ko-fi.com/polykb)
 
+## AI-assisted development
+
+Since mid-2026, the PolyKybd code in this fork is written with AI assistance, mainly with Claude Code. CI and AI review bots check each change, but AI-written code can contain mistakes that these checks do not find. Please report problems as GitHub issues.
+
 ## What is PolyKybd?
 
 PolyKybd runs on a **Raspberry Pi RP2040** with 8 MB of external QSPI flash. It is a

@@ -610,7 +610,7 @@ in either shape, so "not failed" is never "passed".
     a new file does not have — the check that replaces it is **whether the same
     objection reproduces on a neighbouring committed file**. It does: the aligned
     `#define SYNC_ACK_SIG    0b…` block is flagged identically in
-    `origin/PolyKybd:keyboards/polykybd/split_sync.h`, which CI has been passing for
+    `origin/PolyKybd:keyboards/polykybd/split_link/split_sync.h`, which CI has been passing for
     months.
   - `qmk format-text` itself cannot be run in the container — it needs **`dos2unix`,
     which is not installed** (`FileNotFoundError: 'dos2unix'`). Its whole job is line

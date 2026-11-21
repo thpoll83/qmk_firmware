@@ -275,7 +275,7 @@ jobs:
           # rewrite handedness, so grabbing the wrong file silently flips a half.
           # Provisioning and updating are different jobs; keep them different files.
           #
-          # Board-independent: split42 and split72 share base/fw_staging.h and are
+          # Board-independent: split42 and split72 share drivers/fw_staging.h and are
           # both 8 MB, so the stamp sector is at the same offset for each. Versioned
           # like every other asset only so downloads of two releases do not collide
           # in the browser (see the note above); the bytes are identical from

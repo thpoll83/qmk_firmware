@@ -6,10 +6,10 @@
 #if defined(KEYBOARD_polykybd_split72)
 
 #include "quantum.h"
-#include "base/disp_array.h"
-#include "base/shift_reg.h"
+#include "drivers/disp_array.h"
+#include "drivers/shift_reg.h"
 #include "base/tutorial_plan.h"     // TUT_SLOT()
-#include "side.h"
+#include "split_link/side.h"
 #include QMK_KEYBOARD_H             // get_key_disp_bitmask
 #include "startup_anim.h"           // startup_anim_key_geom
 #include "tutorial.h"               // tutorial_sparkle_live()

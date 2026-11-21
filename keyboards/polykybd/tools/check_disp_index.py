@@ -254,7 +254,7 @@ def check_callers(verbose):
     panel through key_display_index(), and cannot tell you the argument is right. The
     walk above is what does that.
     """
-    path = os.path.join(KB, "poly_keymap.c")
+    path = os.path.join(KB, "keymap", "poly_keymap.c")
     with open(path, encoding="utf-8") as f:
         src = f.read()
     bad = 0

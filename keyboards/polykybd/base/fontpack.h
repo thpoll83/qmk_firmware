@@ -38,7 +38,7 @@
 //       .first/.last/.yAdvance copied straight across
 //   The per-glyph GFXglyph.bitmapOffset stays relative to that font's own
 //   bitmap blob (exactly as Adafruit-GFX already uses it), so the renderer in
-//   base/disp_array.c works unchanged once the GFXfont is assembled.
+//   drivers/disp_array.c works unchanged once the GFXfont is assembled.
 
 #define FONTPACK_MAGIC0 'P'
 #define FONTPACK_MAGIC1 'l'
@@ -90,7 +90,7 @@ _Static_assert(sizeof(GFXglyph) == 8, "GFXglyph must be 8 bytes for direct pack 
 //
 // The rendered font table is assembled at boot as:
 //     g_all_fonts = RESIDENT_FONTS[]  ++  <pack fonts resolved from flash>
-// and the renderer (base/disp_array.c) uses g_all_fonts / g_all_font_count in
+// and the renderer (drivers/disp_array.c) uses g_all_fonts / g_all_font_count in
 // place of the old static ALL_FONTS[]. Resident-first is safe because no
 // resident font and pack font ever render the same codepoint (build-time
 // invariant; the resident set is the functional minimum — see fonts/README.md).

@@ -1970,7 +1970,7 @@
 #define ICON_OS_KDE                 	U"\x10001E"
 // ---- Hint display-list building blocks --------------------------------------
 // A shortcut-hint string is a mini display list interpreted by
-// kdisp_write_gfx_text_cy() (base/disp_array.c). These macros name the control
+// kdisp_write_gfx_text_cy() (drivers/disp_array.c). These macros name the control
 // ops and the fixed buffer positions so the hint cases read without raw hex.
 // HINT_MOVE/HINT_FRAME take a packed position macro (two bytes = x,y or w,h).
 // Keep the op bytes in sync with the \x0E–\x12 cases in kdisp_write_gfx_text_cy().

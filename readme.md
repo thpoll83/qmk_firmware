@@ -24,7 +24,7 @@ over a custom 64-byte HID report protocol.
 ### Variants
 
 Two hardware variants share one firmware (the shared logic lives in
-`keyboards/polykybd/poly_keymap.c`):
+`keyboards/polykybd/keymap/poly_keymap.c`):
 
 * **`split72`** — 72-key, RGB matrix, Cirque trackpad, 128×64 status OLED (actively developed).
 * **`split42`** — 42-key CRKBD-footprint variant (formerly `corne42`, renamed 2026-06).

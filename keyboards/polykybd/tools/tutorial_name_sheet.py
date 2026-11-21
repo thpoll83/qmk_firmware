@@ -64,7 +64,7 @@ def enum_counts():
     body = lang[lang.rfind("enum", 0, lang.index("NUM_LANG };")):lang.index("NUM_LANG };")]
     body = re.sub(r"//.*|/\*.*?\*/", "", body, flags=re.S)
     n_lang = len(re.findall(r"\bLANG_[A-Z0-9_]+\b", body))
-    st = open(os.path.join(KB, "state.h"), encoding="utf-8").read()
+    st = open(os.path.join(KB, "system", "state.h"), encoding="utf-8").read()
     enum = st[st.index("enum poly_glyph_script"):st.index("GLYPH_SCRIPT_COUNT")]
     n_scripts = len(re.findall(r"\bGLYPH_[A-Z0-9_]+\s*=", enum)) - 1   # minus GLYPH_STD
     return n_lang, n_scripts

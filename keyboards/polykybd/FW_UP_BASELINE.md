@@ -145,7 +145,7 @@ Modified:
 - `bridge_helper.c` — fw_up TID names + `reply.ack` reset between retries.
 - `hid_com.c` — fall-through dispatch into `hid_fw_up_receive()`.
 - `rules.mk` / `split72/rules.mk` — added `hid_fw_up.c`,
-  `split_fw_up.c`, `base/fw_staging.c`.
+  `split_fw_up.c`, `drivers/fw_staging.c`.
 - `split72/keymaps/default/keymap.c` — 5 `transaction_register_rpc()`
   calls, `fw_staging_init()`, `fw_staging_process_deferred()` and
   `fw_staging_commit_pending()` in `housekeeping_task_user`, and
@@ -265,7 +265,7 @@ build-time activation we couldn't verify locally) or it had the
 opposite effect of what was intended.
 
 ### What was added in its place
-Two new diagnostic counters in `base/fw_staging.c`, surfaced through
+Two new diagnostic counters in `drivers/fw_staging.c`, surfaced through
 the existing `USER_SYNC_FW_UP_STATUS` RPC:
 
 | Field | Meaning |
@@ -411,7 +411,7 @@ Vector80/NMI restart window — so a lock at the first flush both confirms the
 mechanism and motivates the cooperative-park redesign.
 
 ### What's in tree as of this commit
-- `base/fw_staging.c`: `fw_staging_process_deferred()` restarts core1 at
+- `drivers/fw_staging.c`: `fw_staging_process_deferred()` restarts core1 at
   erase-complete (diagnostic probe; see inline comment dated 2026-05-29).
 - No other changes; erase/chunk/flush logic otherwise unchanged from `a37fb58a`.
 
@@ -471,7 +471,7 @@ and read-only). Decision tree for the next run:
 
 ### What's in tree as of this commit
 - `hid_fw_up.c`: offset-0 bracket probe (small + 64 B-M2S status reads).
-- `base/fw_staging.c`: run-2 core1-restart probe still present (harmless now that
+- `drivers/fw_staging.c`: run-2 core1-restart probe still present (harmless now that
   core1 is exonerated; left in so run-4 conditions match run-3).
 
 ## 2026-05-30 (run 4) — bracket probe lands on Row 1: the FW_UP_CHUNK txn itself
@@ -566,7 +566,7 @@ herrings**.
   reach chunk 0 — and immediately hit the overflow loop.
 
 ### Fix (this commit)
-- `base/fw_staging.c`: widen `space`/`copy` to `uint32_t` (with a comment).
+- `drivers/fw_staging.c`: widen `space`/`copy` to `uint32_t` (with a comment).
 - `config.h`: `FW_UP_CHUNK_NOOP_PROBE` disabled so the real write runs again.
 - Builds clean (`split72:default` → `.uf2`, exit 0).
 
@@ -900,7 +900,7 @@ intermittently wedges early boot until a power cycle (the replug).
   (programs `PSM_WDSEL` to reset everything except ROSC/XOSC, then triggers the
   watchdog — a clean full-chip reset ≈ power cycle).  Fixes the QK_REBOOT keycode hang
   for the whole keyboard.
-- `base/fw_staging.c` `do_apply`: replaced `NVIC_SystemReset()` with the **inlined**
+- `drivers/fw_staging.c` `do_apply`: replaced `NVIC_SystemReset()` with the **inlined**
   equivalent (PSM_WDSEL + WATCHDOG_SCRATCH4=0 + WATCHDOG_CTRL TRIGGER register writes)
   so the apply window keeps invariant (1) "no flash-resident calls".  ELF-audited: still
   zero `bl 0x10xxxxxx` inside do_apply; it now references 0x40058000/0x40010008.
@@ -918,7 +918,7 @@ Folded into the both-halves-reboot change (below).  The spammy sites are now wra
 `#ifdef FW_UP_VERBOSE` (default OFF):
 - `hid_fw_up.c` per-chunk `FW_UP_CHUNK: offset=%lu` and `slave_ack=… master_write_ok=…`
   (the ~4458× lines) plus the offset-0 `pre-chunk` / `64B-M2S status xfer` bracket probe.
-- `base/fw_staging.c` per-sector `erased sector N/63` (63×).
+- `drivers/fw_staging.c` per-sector `erased sector N/63` (63×).
 Kept unconditional (the milestones): the BEGIN/new-image line, COMMIT result, APPLY
 result, GET_VERSION, the `begin-ready` snapshot, the once-per-burst `chunk-fail` dump.
 Build with `-DFW_UP_VERBOSE` (e.g. `-e EXTRAFLAGS=-DFW_UP_VERBOSE`) to restore the full
@@ -936,7 +936,7 @@ fold it into the next substantive edit.  Specifically:
 - **`hid_fw_up.c` slave-status dumps**: keep at most the one `begin-ready` snapshot; drop
   the periodic `begin-pending` (every 16 polls) and the `chunk-fail` dump, or gate them
   behind a new `FW_UP_VERBOSE` macro (default off).
-- **`base/fw_staging.c`**: the per-sector `fw_staging_process_deferred: erased sector
+- **`drivers/fw_staging.c`**: the per-sector `fw_staging_process_deferred: erased sector
   N/63` uprintf fires 63×; reduce to a single "erase complete (N sectors)" line (the
   "complete" one already exists) or gate behind `FW_UP_VERBOSE`.
 - **Keep** (these are the useful milestones): one BEGIN line, COMMIT result

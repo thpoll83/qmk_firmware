@@ -14,9 +14,9 @@
 #include "doom_pack_abi.h"
 #include "doom_pack_gate.h" // the unsigned/invalid x interactive/automatic decision
 
-#include "base/fw_staging.h"
-#include "bridge_helper.h"   // is_usb_host_side()
-#include "state.h"           // get_local_state() -> the synced doom_pack_auth
+#include "drivers/fw_staging.h"
+#include "split_link/bridge_helper.h"   // is_usb_host_side()
+#include "system/state.h"           // get_local_state() -> the synced doom_pack_auth
 #include "polymod_crc32.h"
 
 #include <string.h>

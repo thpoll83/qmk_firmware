@@ -7,8 +7,8 @@
 #include "raw_hid.h"
 #include "print.h"
 #include "transactions.h"          // USER_SYNC_DYNAMIC_KEYMAP_DATA
-#include "bridge_helper.h"         // send_to_bridge
-#include "split_sync.h"            // dynamic_keymap_sync_t, sync_succeeded
+#include "split_link/bridge_helper.h"         // send_to_bridge
+#include "split_link/split_sync.h"            // dynamic_keymap_sync_t, sync_succeeded
 #include "split_util.h"             // is_transport_connected: resend after the link returns
 #include "focus_ring.h"            // poly_slot_of, poly_focus_start_sweep
 #include "startup_anim.h"          // startup_anim_key_geom

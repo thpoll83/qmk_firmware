@@ -478,7 +478,7 @@ def selftest():
         # well-formed version define, so the regex alone cannot. Before this
         # fixture existed, deleting the filename check escaped the whole sweep.
         ("a real version define in a DIFFERENT file",
-         [{"filename": "keyboards/polykybd/base/fw_staging.c",
+         [{"filename": "keyboards/polykybd/drivers/fw_staging.c",
            "patch": "@@\n-#define FW_VERSION \"a\"\n+#define FW_VERSION \"b\""}],
          False),
         ("indented / spaced directive is still the bump",
@@ -501,10 +501,10 @@ def selftest():
          False),
         ("a second file changed",
          [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\""),
-          {"filename": "keyboards/polykybd/poly_keymap.c", "patch": "@@\n+x"}],
+          {"filename": "keyboards/polykybd/keymap/poly_keymap.c", "patch": "@@\n+x"}],
          False),
         ("only another file changed",
-         [{"filename": "keyboards/polykybd/base/fw_staging.c", "patch": "@@\n+x"}], False),
+         [{"filename": "keyboards/polykybd/drivers/fw_staging.c", "patch": "@@\n+x"}], False),
         # ⚠️ A DIFFERENT file whose changed lines all mention the macro. Not
         # hypothetical - hid_com.c builds the GET_ID string out of FW_VERSION -
         # and without this case the filename check can be DELETED and every
@@ -512,7 +512,7 @@ def selftest():
         # reject them for the other reason. Found by mutation-testing this
         # selftest, which is the whole argument for doing that.
         ("another file whose lines all mention the macro",
-         [{"filename": "keyboards/polykybd/hid_com.c",
+         [{"filename": "keyboards/polykybd/hid/hid_com.c",
            "patch": "@@\n-  x(FW_VERSION);\n+  y(FW_VERSION);"}], False),
         # No patch = a rename or mode change; there is nothing to inspect, so it
         # must be refused rather than assumed benign.
@@ -630,7 +630,7 @@ def selftest():
 
     reach_cases = [
         # (path, reaches the image?)
-        ("keyboards/polykybd/poly_keymap.c", True),
+        ("keyboards/polykybd/keymap/poly_keymap.c", True),
         ("keyboards/polykybd/config.h", True),
         ("CLAUDE.md", False),
         ("keyboards/polykybd/CI_CHECKS.md", False),
@@ -694,14 +694,14 @@ def selftest():
         ("docs only, no bump", [{"filename": "README.md"}], True),
         ("one real source file among the docs",
          [bump, {"filename": "CLAUDE.md"},
-          {"filename": "keyboards/polykybd/poly_keymap.c", "patch": "@@\n+x"}],
+          {"filename": "keyboards/polykybd/keymap/poly_keymap.c", "patch": "@@\n+x"}],
          False),
         # ⚠️ A rename OUT of a build path removes a build input. The new name
         # being harmless proves nothing; without the previous_filename check
         # this passes.
         ("a .c renamed to a .md",
          [{"filename": "docs/old_driver.md",
-           "previous_filename": "keyboards/polykybd/base/fw_staging.c"}],
+           "previous_filename": "keyboards/polykybd/drivers/fw_staging.c"}],
          False),
         ("a .md renamed to another .md",
          [{"filename": "docs/b.md", "previous_filename": "docs/a.md"}], True),
@@ -745,7 +745,7 @@ def selftest():
     hostile = ["**", "!**.md", "!.github/workflows/**", "!keyboards/**"]
     attack = [
         {"filename": WORKFLOW_PATH_POSIX, "patch": "@@\n+      - '!keyboards/**'"},
-        {"filename": "keyboards/polykybd/base/fw_staging.c", "patch": "@@\n+bad"},
+        {"filename": "keyboards/polykybd/drivers/fw_staging.c", "patch": "@@\n+bad"},
     ]
     if delta_is_provably_harmless(attack, hostile):
         print("selftest FAIL: a delta that rewrites the filter judged itself harmless")

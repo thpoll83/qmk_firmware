@@ -151,7 +151,7 @@ A per-app set stored like a font-pack bundle:
 **The 8 MB is fully partitioned today — there is NO free resource region.** An overlay
 cache needs a flash home; finding it is the gating design question, not the transport.
 
-### 4.1 The map (`base/fw_staging.h` — authoritative)
+### 4.1 The map (`drivers/fw_staging.h` — authoritative)
 | Range | Size | Contents | `#define` |
 |-------|------|----------|-----------|
 | `0x000000–0x200000` | 2 MB | Running firmware (linker `flash1` XIP) | — |
@@ -307,7 +307,7 @@ against `send_overlays_mru`. The harness now exists; only the workload is missin
 ## 8. Reference — files & symbols to start from
 | Area | Where |
 |------|-------|
-| Flash map / staging / slots | `base/fw_staging.h` (`FW_RESOURCE_OFFSET`, `FW_STAGING_OFFSET`, `FW_UP_MAX_SIZE`, DOOM slot defines), `base/fw_staging.c` |
+| Flash map / staging / slots | `drivers/fw_staging.h` (`FW_RESOURCE_OFFSET`, `FW_STAGING_OFFSET`, `FW_UP_MAX_SIZE`, DOOM slot defines), `drivers/fw_staging.c` |
 | Font-pack pattern to mirror | `base/fontpack.h/.c` (`PlyF` header, `fontpack_load/assemble`, `content_version`), `fonts/fontpack.py`, `base/fonts/generated/fontpack_layout.h` |
 | Font-pack HID transport | `hid_fontpack.c` (BEGIN/CHUNK/COMMIT `0x50`–`0x52`), host `polyhost/device/hid_fontpack.py`, `PolyCore._fontpack_autocheck_job`, `hid_fontpack.decide_stale_bundles` |
 | Overlay RAM + wire | `base/overlay.c` (`overlays[]`, `overlay_map[]`, `use_overlay[]`), `hid_com.c` cases `10/11/12/16/17/18/19/21`, `base/com.h` (`OVERLAY_*_FLAGS`) |

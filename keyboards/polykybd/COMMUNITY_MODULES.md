@@ -125,7 +125,7 @@ driver), each extracted the same way. The mechanics are not obvious from the QMK
   (vendored Monocypher Ed25519), `base/multicore/` (RP2040 core1 launch + FIFO),
   `os_actions.c` (per-OS chord table — the best *community* candidate, since
   `qmk_module.json` `keycodes` is built for exactly that), and with a decoupling pass
-  the idle-timestamp half of `base/update.c` and `base/fw_staging.c`. **Not**
+  the idle-timestamp half of `base/update.c` and `drivers/fw_staging.c`. **Not**
   `poly_keymap.c` / `hid_com.c` / the overlay + display stack — that is the product.
   The `extract-qmk-module` skill drives the whole conversion.
 

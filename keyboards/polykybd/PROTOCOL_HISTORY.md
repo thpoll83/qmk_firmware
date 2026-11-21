@@ -572,7 +572,7 @@ reading before you change either one.
     sends them only from v36. A page not below its count, or a page without a count,
     is NACKed with the rest of the report, before anything changes.
 
-  **v37** adds cmd `50`, the **hardware IDs** of both halves (`base/hw_uid.h`): the
+  **v37** adds cmd `50`, the **hardware IDs** of both halves (`drivers/hw_uid.h`): the
   64-bit unique ID of each half's QSPI flash chip (RUID command `0x4B`). The host
   hashes them for the telemetry device count. Reply `P\x32.`, then `data[3]` flags
   (bit 0: `data[4..11]` valid, bit 1: `data[12..19]` valid), `data[4..11]` the ID of

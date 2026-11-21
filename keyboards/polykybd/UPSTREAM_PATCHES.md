@@ -134,7 +134,7 @@ Two changes to `raw_hid_task` for backpressure during overlay transfers:
    turn between two raw HID receives, even when the OUT queue is full.
 
 The strong override of `raw_hid_pre_receive_kb` lives in
-`keyboards/polykybd/multicore_exec.c` and calls `core1_is_busy()`.
+`keyboards/polykybd/display/multicore_exec.c` and calls `core1_is_busy()`.
 
 If a future QMK upstream changes the signature or semantics of `raw_hid_task`,
 re-apply by hand: keep the weak hook, keep the `if`-not-`while`.
@@ -153,7 +153,7 @@ off the flash bus during it:
 Upstream masks only core0's interrupts. A core1 fetching from XIP while the write has
 the QSPI out of XIP mode never completes the fetch: core1 stops for good, or the bus
 stalls and the half resets by watchdog (field 2026-10-12). The strong overrides live in
-`keyboards/polykybd/multicore_exec.c`: the quiesce hook sends core1 a PARK word and
+`keyboards/polykybd/display/multicore_exec.c`: the quiesce hook sends core1 a PARK word and
 waits for core1 to acknowledge it from its RAM wait loop, which it does once its
 earlier work (Eden keycap jobs, RLE fragments) is done. Without an acknowledgement it
 forces core1 off and drops its lost work before interrupts return; the resume hook

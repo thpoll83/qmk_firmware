@@ -6,7 +6,7 @@
 #include "quantum.h"
 #include "raw_hid.h"
 #include "print.h"
-#include "state.h"
+#include "system/state.h"
 #include "focus_ring.h"          // poly_focus_start, poly_focus_active, poly_slot_of
 #include "tutorial.h"            // tutorial_active
 #include "menu_cascade.h"        // poly_render_live

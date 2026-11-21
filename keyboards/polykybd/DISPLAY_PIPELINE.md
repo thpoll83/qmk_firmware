@@ -8,14 +8,14 @@ and relative links were adjusted to suit a standalone file.
 2. On key event, `split72.c` selects the keycap via shift-register bitmask and calls `kdisp_invert()` for instant visual feedback
 3. Active window change → host sends new overlay set → firmware swaps all 72 keycap images
 
-**Per-keycap rendering gotchas (`base/disp_array.c`)** — learned the hard way:
+**Per-keycap rendering gotchas (`drivers/disp_array.c`)** — learned the hard way:
 - **How a legend is actually DRAWN — glyph resolution and the baseline align, the
   column-native bitmap layout, the plotter modes, the courtyard, the whole `HINT_*`
   display-list vocabulary, the three size tiers and the bbox walker — is
   [`keyboards/polykybd/LEGEND_RENDERING.md`](LEGEND_RENDERING.md).**
   Its sibling `LEGEND_LAYOUT.md` covers where the elements GO; that one is
   placement, this one is the drawing primitives. Read it before touching
-  `base/disp_array.c`, `base/font_lookup.c`, `base/legend_plan.c` or
+  `drivers/disp_array.c`, `base/font_lookup.c`, `base/legend_plan.c` or
   `keycode_helper.c`. Four rules from it apply even if you never open it:
   - ⚠️ **Adding an op is TWO walkers, not one — THREE counting the host.** The draw
     dispatch (`disp_array.c`) and the measurement (`font_lookup.c`) must clear the

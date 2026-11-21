@@ -297,9 +297,9 @@ OLED_DRIVER = ssd1306
 # Source files — status_oled.c resolves to split42/status_oled.c via QMK search order
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c \
-       base/update.c base/e2prom.c base/rle.c base/com.c base/crc32.c \
-       base/text_helper.c base/helpers.c base/disp_array.c \
-       base/shift_reg.c base/spi_helper.c base/overlay.c \
+       base/update.c drivers/e2prom.c base/rle.c base/com.c base/crc32.c \
+       base/text_helper.c drivers/helpers.c drivers/disp_array.c \
+       drivers/shift_reg.c drivers/spi_helper.c base/overlay.c \
        base/multicore/core1.c lang/lang_lut.c
 
 DEFAULT_FOLDER = polykybd/split42
@@ -488,7 +488,7 @@ split42/keymaps/default/keymap.c
 
 ### MODIFIED files (3)
 ```
-polykybd/split_sync.c       — line 18: replace #include with forward declaration of invert_display()
+polykybd/split_link/split_sync.c       — line 18: replace #include with forward declaration of invert_display()
 polykybd/config.h           — move OLED_DISPLAY_128X64 + all ENABLE_RGB_MATRIX_* to split72/config.h
 polykybd/split72/config.h   — add OLED_DISPLAY_128X64 + all ENABLE_RGB_MATRIX_* blocks moved from above
 ```

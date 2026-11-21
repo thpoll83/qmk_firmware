@@ -6,20 +6,20 @@
 #include QMK_KEYBOARD_H            // invert_display / key_has_display / MATRIX_ROWS_PER_SIDE
 #include "base/demo_plan.h"
 #include "base/update.h"           // update_performed / backdate_last_update / request_disp_refresh
-#include "bridge_helper.h"         // is_usb_host_side()
-#include "side.h"                  // is_left_side()
-#include "state.h"
+#include "split_link/bridge_helper.h"         // is_usb_host_side()
+#include "split_link/side.h"                  // is_left_side()
+#include "system/state.h"
 #include "layers.h"
-#include "keycode_helper.h"        // KC_LANG
+#include "keymap/keycode_helper.h"        // KC_LANG
 #include "lang/lang_lut.h"         // LANG_*
-#include "lang_layer.h"            // lang_select_region / lang_pack_state / lang_apply_sync
+#include "keymap/lang_layer.h"            // lang_select_region / lang_pack_state / lang_apply_sync
 #include "emoji/emoji_layer.h"     // emj_apply_sync / EMJ_NUM_CATS_VISIBLE
-#include "poly_keymap.h"           // poly_fw_screen / poly_wake_from_idle / poly_preview_renderable
-#include "poly_macro.h"
-#include "poly_macro_record.h"
+#include "keymap/poly_keymap.h"           // poly_fw_screen / poly_wake_from_idle / poly_preview_renderable
+#include "keymap/poly_macro.h"
+#include "keymap/poly_macro_record.h"
 #include "anim/tutorial.h"
 #include "anim/startup_anim.h"
-#include "base/fw_staging.h"
+#include "drivers/fw_staging.h"
 #include "doom/doom_mode.h"
 
 _Static_assert(sizeof(((poly_sync_t *)0)->demo) == DEMO_SYNC_BYTES,

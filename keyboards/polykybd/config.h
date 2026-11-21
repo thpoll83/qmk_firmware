@@ -157,7 +157,7 @@
 // fw_staging_write_chunk: `space = FLASH_PAGE_SIZE(256) - s_buf_fill` was a
 // uint8_t and truncated to 0 whenever the page buffer was empty (chunk 0 and
 // every 256 B boundary), spinning the copy loop forever. Fixed in
-// base/fw_staging.c (space/copy widened to uint32_t). Probe left here, disabled,
+// drivers/fw_staging.c (space/copy widened to uint32_t). Probe left here, disabled,
 // for regression reference. See FW_UP_BASELINE.md (run 5).
 // #define FW_UP_CHUNK_NOOP_PROBE
 
@@ -323,7 +323,7 @@
 //      that finished on another page (base/ai_events.h). Esc shows "Next 1/2", the AI
 //      key rings for agents on another page, and AI mode's end is an op 2 event. A
 //      host before v36 zero-pads them: page count 0 keeps the v35 behaviour.
-//  v37 cmd 50: the flash unique IDs of both halves (base/hw_uid.h), for the host's
+//  v37 cmd 50: the flash unique IDs of both halves (drivers/hw_uid.h), for the host's
 //      telemetry device count. The slave's ID comes over USER_SYNC_FLASH_STAGE op 5.
 //      Older firmware NACKs cmd 50; an older slave leaves its flag bit clear.
 #define PROTOCOL_VERSION 37
@@ -530,7 +530,7 @@
 // ⚠️ The wear-levelling EEPROM backing store lives at the TOP of physical flash:
 // the rp2040_flash driver places it at PICO_FLASH_SIZE_BYTES - WEAR_LEVELING_BACKING_SIZE
 // (0x7FE000..0x800000 here), i.e. INSIDE our resource region — see the flash map in
-// base/fw_staging.h, where FW_DOOMPACK_SLOT_SIZE subtracts it. It is pinned here
+// drivers/fw_staging.h, where FW_DOOMPACK_SLOT_SIZE subtracts it. It is pinned here
 // rather than inherited from the driver default so that (a) the reservation is
 // visible beside the flash size it is carved out of, and (b) changing it is a
 // deliberate act that the _Static_assert in fw_staging.c re-checks against the

@@ -8,9 +8,9 @@
 #include "quantum.h"
 #include "split_util.h"   // is_keyboard_master()
 #include "print.h"
-#include "base/crash_record.h"
-#include "multicore_exec.h"
-#include "slave_data.h"
+#include "drivers/crash_record.h"
+#include "display/multicore_exec.h"
+#include "split_link/slave_data.h"
 
 // The chord: Ctrl AND Shift AND Alt held, then a digit. Tested per FAMILY --
 // MOD_MASK_CTRL covers left and right, so `(mods & (CTRL|SHIFT|ALT)) == that`

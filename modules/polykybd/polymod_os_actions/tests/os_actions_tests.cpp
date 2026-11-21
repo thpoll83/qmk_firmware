@@ -16,7 +16,7 @@
 extern "C" {
 #include "polymod_os_actions.h"
 #include "os_actions_test_shim.h"
-#include "poly_os.h"
+#include "keymap/poly_os.h"
 }
 
 #include <vector>

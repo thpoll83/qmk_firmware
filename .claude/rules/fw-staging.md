@@ -1,7 +1,7 @@
 ---
 paths:
-  - "keyboards/polykybd/base/fw_staging.c"
-  - "keyboards/polykybd/base/fw_staging.h"
+  - "keyboards/polykybd/drivers/fw_staging.c"
+  - "keyboards/polykybd/drivers/fw_staging.h"
   - "keyboards/polykybd/base/fw_up_verdict.c"
 ---
 # The firmware applier

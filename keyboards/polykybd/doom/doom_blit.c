@@ -19,11 +19,11 @@
 #include "doom_arena.h"       // compose scratch carve
 #include "doom_playpal_luma.h" // ESC-hint STCFN threshold (256 B, per-TU const)
 
-#include "side.h"            // is_left_side() (bottom-row viewport mapping)
-#include "bridge_helper.h"   // is_usb_host_side() (slave-left viewport shift)
-#include "base/disp_array.h"
+#include "split_link/side.h"            // is_left_side() (bottom-row viewport mapping)
+#include "split_link/bridge_helper.h"   // is_usb_host_side() (slave-left viewport shift)
+#include "drivers/disp_array.h"
 #include "base/fontpack.h"   // g_all_fonts (HUD text keys)
-#include "base/shift_reg.h"
+#include "drivers/shift_reg.h"
 
 #include <string.h>
 

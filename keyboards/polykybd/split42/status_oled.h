@@ -2,6 +2,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-#include "../oled_helper.h"
+#include "display/oled_helper.h"
 
 void oled_update_buffer(void);

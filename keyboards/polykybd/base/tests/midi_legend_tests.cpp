@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 extern "C" {
-#include "midi_legend.h"
+#include "modes/midi_legend.h"
 #include "lang/named_glyphs.h"
 #include "quantum_keycodes.h"
 }

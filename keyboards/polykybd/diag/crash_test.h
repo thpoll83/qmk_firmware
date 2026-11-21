@@ -1,7 +1,7 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Deliberate crashes, for exercising the crash record (base/crash_record.h) on
+// Deliberate crashes, for exercising the crash record (drivers/crash_record.h) on
 // real hardware. TEST BUILDS ONLY -- `qmk compile ... -e POLYKYBD_CRASH_TEST=yes`.
 // A normal build compiles the inline no-ops below and pays nothing.
 //

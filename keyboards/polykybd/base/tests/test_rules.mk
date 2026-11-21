@@ -111,7 +111,7 @@ polykybd_idle_update_INC := \
 # HID cmd 35 wire encoder links without quantum. The keyboards/polykybd include
 # path is what resolves those two.
 polykybd_layer_names_SRC := \
-	keyboards/polykybd/layer_names.c \
+	keyboards/polykybd/keymap/layer_names.c \
 	$(POLY_BASE_PATH)/tests/layer_names_tests.cpp
 
 polykybd_layer_names_INC := \
@@ -121,7 +121,7 @@ polykybd_layer_names_INC := \
 # midi_legend.c is pure: it reads only the packed settings word it is given, so it
 # links without quantum. quantum_keycodes.h needs the sequencer include path.
 polykybd_midi_legend_SRC := \
-	keyboards/polykybd/midi_legend.c \
+	keyboards/polykybd/modes/midi_legend.c \
 	$(POLY_BASE_PATH)/tests/midi_legend_tests.cpp
 
 polykybd_midi_legend_INC := \

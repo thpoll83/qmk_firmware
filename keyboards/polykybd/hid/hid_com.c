@@ -1,0 +1,2031 @@
+// Copyright 2025 thpoll83
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+#include "hid_com.h"
+#include "fw_update/hid_fw_up.h"
+#include "keymap/poly_macro.h"
+#include "hid_fontpack.h"
+#include "fw_update/split_fw_up.h"
+#include "drivers/fw_staging.h"
+
+#include QMK_KEYBOARD_H
+#include "quantum.h"
+
+#include "raw_hid.h"
+
+#include "system/state.h"
+#include "anim/startup_anim.h"
+#include "split_link/side.h"
+#include "profiling/loop_profile.h"
+#include "config.h"
+#include "split_link/split_sync.h"
+#include "split_link/bridge_helper.h"
+#include "keymap/matrix_helper.h"
+#include "display/fill_overlay.h"
+#include "lang/lang_lut.h"
+#include "base/com.h"
+#include "base/overlay.h"
+#include "base/hand_stamp.h"
+#include "drivers/hw_uid.h"
+#include "base/glyph_place_op.h"   // cmd 30 placement op byte (protocol v26)
+#include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
+#include "base/fontpack.h"
+#include "base/icon_lib.h"   // cmd 42 fills (protocol v20)
+#include "base/fonts/generated/fontpack_layout.h"  // FONTPACK_BUNDLE_COUNT, for the GET_ID size assert
+#include "base/update.h"
+#include "system/poly_util.h"
+
+#include <print.h>
+#include "hal.h"
+#ifndef USB_DRIVER
+#    define USB_DRIVER USBD1   // usb_main.h's default; that header fails -Werror here
+#endif
+#include "usb_descriptor.h"  // RAW_IN_EPNUM
+#include <transactions.h>
+#include <dynamic_keymap.h>
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include "keymap/poly_keymap.h"
+#include "keymap/layer_names.h"
+#include "drivers/crash_record.h"
+#include "display/multicore_exec.h"   // core1_stall_report
+#include "keymap/poly_combos.h"      // cmd 48 runtime combos / tap dance (v33)
+#include "system/boot_diag.h"        // boot_banner_on_host_probe
+#include "peripherals/ltr559_policy.h"    // poly_ltr559_drives_brightness
+#include "modes/ai_mode.h"          // cmd 45 / 46 (protocol v31)
+#include "anim/key_attention.h"   // cmd 47 (protocol v32)
+#include "anim/host_tutorial.h"   // cmd 49 (protocol v35)
+
+
+/*[[[cog
+import cog
+import os
+from textwrap import wrap
+from openpyxl import load_workbook
+# Shared cog constant for all language-list report generators below (mirrors the
+# C RAW_EPSIZE macro = raw HID report size). Defined here, in the first cog block,
+# so the per-command blocks chunk payloads against one value instead of each
+# redefining it.
+RAW_EPSIZE = 64
+wb = load_workbook(filename = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(cog.inFile))), "lang", "lang_lut.xlsx"))
+sheet = wb['key_lut']
+
+languages = []
+lang_index = 0
+lang_key = sheet["B1"].value
+while lang_key:
+    lang_key = lang_key.replace("-", "")
+    languages.append(lang_key)
+    lang_index = lang_index + 1
+    lang_key = sheet.cell(row = 1, column = 2 + lang_index*4).value
+]]]*/
+//[[[end]]]
+
+void invert_display(uint8_t r, uint8_t c, bool state);
+bool key_has_display(uint8_t r, uint8_t c);
+// Defined in the shared keyboard-level poly_keymap.c; declared here so the
+// shared HID dispatcher can drive the display-off command (case 24).
+
+// Set on boot; cleared after the first GET_ID exchange so the host can detect
+// a firmware restart even when it never lost the USB connection.
+static bool s_fresh_boot = true;
+
+void poly_mark_fresh_boot(void) {
+    s_fresh_boot = true;
+}
+
+
+// Notifies RGB/LED matrix of key event for animation effects based on key press state.
+void switch_events_poly(uint8_t row, uint8_t col, bool pressed) {
+#if defined(LED_MATRIX_ENABLE)
+    led_matrix_handle_key_event(row, col, pressed);
+#endif
+#if defined(RGB_MATRIX_ENABLE)
+    rgb_matrix_handle_key_event(row, col, pressed);
+#endif
+}
+
+// Writes the 3-byte HID response header into `data`: 'P', the command id, then
+// '.' for ACK or '!' for NACK — replacing the repeated `memcpy(data, "P\xNN.", 3)`
+// literals (the command byte reads as a real number here, not a hex escape).
+// Callers still own the surrounding memset and the raw_hid_send.
+static inline void hid_reply(uint8_t *data, uint8_t cmd, bool ok) {
+    data[0] = 'P';
+    data[1] = cmd;
+    data[2] = ok ? '.' : '!';
+}
+
+// Bytes of report payload actually present at &data[header] (header = the count of
+// bytes before the payload, e.g. report-id + command + sub-fields). Centralises the
+// "clamp a host length/size to what the fixed-size report holds" arithmetic so the
+// bounds checks below can't drift into off-by-ones (SECURITY: FW-3 / FW-5 / FW-7).
+static inline uint16_t hid_payload_avail(uint8_t length, uint8_t header) {
+    return length > header ? (uint16_t)(length - header) : 0;
+}
+
+// A reply sent right before a deliberate reset waits in the USB endpoint until the
+// host fetches it, 71..103 ms after the request on the HIL rig. A reset before that
+// loses the reply, and a reset during the transfer delivers a cut-off report whose
+// last byte is garbage: the boot loop's 0xee and 0xfe status bytes (2026-10-21).
+// Probe reboot_ack, 100 reboots: 37 lost and 3 cut-off replies without a wait,
+// 11 lost and 0 cut-off with a 100 ms wait. So wait until the endpoint has sent
+// everything queued on it, at most RAW_HID_REPLY_BEFORE_RESET_MS (maintainer's
+// choice); the wait ends early once the host has the reply.
+#define RAW_HID_REPLY_BEFORE_RESET_MS 200
+void raw_hid_send_before_reset(uint8_t *data, uint8_t length) {
+    raw_hid_send(data, length);
+    const uint32_t t0 = timer_read32();
+    while (timer_elapsed32(t0) < RAW_HID_REPLY_BEFORE_RESET_MS) {
+        osalSysLock();
+        const bool sending = usbGetTransmitStatusI(&USB_DRIVER, RAW_IN_EPNUM);
+        osalSysUnlock();
+        if (!sending) return;
+    }
+}
+
+bool legacy_command_kb(uint8_t *data, uint8_t length) {
+    uint8_t *command_id   = &(data[0]);
+    uint8_t *command_data = &(data[1]);
+    uint8_t data_len = 0;
+
+    switch(*command_id) {
+        case id_dynamic_keymap_reset:
+            dynamic_keymap_reset_poly();
+            data_len = 1;
+            break;
+        case id_dynamic_keymap_set_keycode:
+            dynamic_keymap_set_keycode_poly(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
+            data_len = 6;
+            break;
+        case id_dynamic_keymap_set_buffer: {
+            uint16_t offset = (command_data[0] << 8) | command_data[1];
+            uint16_t size   = command_data[2];
+            // SECURITY (FW-5): `size` is a host byte (0..255) but the payload lives in
+            // the fixed-size report at &command_data[3]. Reading `size` bytes past it
+            // over-reads the report buffer (and, once this report is bridged verbatim,
+            // the slave's copy). Clamp to the bytes actually present and write the
+            // clamped value back so the bridged report carries the safe size too.
+            uint16_t avail = hid_payload_avail(length, 4);
+            if (size > avail) { size = avail; command_data[2] = (uint8_t)size; }
+            uprintf("Set dynamic buffer offset: %u, size: %u\n", offset, size);
+            dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
+            data_len = RAW_EPSIZE;
+            break;
+        }
+        case id_dynamic_keymap_get_layer_count:
+            command_data[0] = DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT;//dynamic_keymap_get_layer_count();
+            uprintf("Get dynamic layer count: %u.\n", command_data[0]);
+            raw_hid_send(data, length);
+            return true;
+        case id_dynamic_keymap_get_buffer: {
+            uint16_t offset = (command_data[0] << 8) | command_data[1];
+            uint16_t size   = command_data[2];
+            // SECURITY (FW-3): clamp the host `size` to the report space at
+            // &command_data[3]. dynamic_keymap_get_buffer writes `size` bytes there with
+            // no destination bound, so an unclamped 0..255 overruns the report buffer.
+            uint16_t avail = hid_payload_avail(length, 4);
+            if (size > avail) size = avail;
+            uprintf("Get dynamic buffer offset: %u, size: %u\n", offset, size);
+            dynamic_keymap_get_buffer(offset, size, &command_data[3]);
+            raw_hid_send(data, length);
+            return true;
+        }
+        default:
+            return false;
+    }
+    dynamic_keymap_sync_t sync_data;
+    memcpy(&sync_data.commands, data, data_len);
+    send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 10);
+    request_disp_refresh();
+    raw_hid_send(data, length);
+    return true;
+}
+
+// Handles HID commands: device ID, language change, overlay reception, mapping, and display control.
+// Global variables: hid_keycode, hid_modifier, hid_roi, hid_bit_index, hid_bit_index_bridge
+/**
+ * Apply a unicode input mode, optionally WITHOUT writing it to EEPROM.
+ *
+ * QMK's set_unicode_input_mode() always persists, and there is no noeeprom
+ * variant — but `unicode_config` is extern and unicode_input_mode_set_kb() is
+ * the notification the keycap legend rides on, so the volatile half is the
+ * persisting one minus a single call. No upstream patch.
+ *
+ * Why volatile exists: at Windows logon the host races WinCompose's own
+ * autostart, and an absent wincompose.exe is equally consistent with "not
+ * installed" and "not started yet". The host therefore applies its early
+ * reading volatile and re-asserts it persistently once it can tell the two
+ * apart. Without this, every logon on a WinCompose machine wrote Windows and
+ * then WinCompose back over it — two EEPROM writes to end where it started.
+ *
+ * NOTE the persisting path is unchanged: eeprom_update_byte() already skips a
+ * write when the byte matches, so re-asserting the SAME mode has always been
+ * free. It is only the transient wrong value that this avoids storing.
+ */
+static void apply_unicode_mode(uint8_t mode, bool persist) {
+    if (persist) {
+        set_unicode_input_mode(mode);
+        return;
+    }
+    unicode_config.input_mode = mode;
+    unicode_input_mode_set_kb(mode);
+}
+
+// cmd 11's action, shared with cmd 33's v21 flags so a flagged mapping report
+// does exactly what the separate prepare / enable report would have done.
+static void overlay_flags_on(poly_sync_t *local_state, uint8_t new_flags) {
+    local_state->overlay_flags = flag_on(local_state->overlay_flags, new_flags);
+    apply_overlay_action_flags(new_flags);
+    const bool needs_force_sync =
+        (new_flags & OVERLAY_ACTION_FLAGS) || (new_flags & OVERLAY_SYNCED_STATE_FLAGS);
+    if(needs_force_sync) {
+        if(!sync_succeeded(send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10))) {
+            // The ACTION bits (reset buffers/usage/mapping) are cleared
+            // right below and never re-sent, so a give-up here leaves the
+            // slave on the PREVIOUS program's mapping. DISPLAY_OVERLAYS /
+            // MIRROR_OVERLAYS are in OVERLAY_SYNCED_STATE_FLAGS and do get
+            // re-fired by the periodic diff, so only the action bits are
+            // genuinely lost. The enable-time repair below re-pushes the
+            // mapping, which is what actually corrects a stale slave.
+            note_overlay_map_sync_lost();
+            uprintf("Warning: overlay flags 0x%x did not reach the slave; repairing at enable.\n", new_flags);
+        }
+        if(new_flags & OVERLAY_ACTION_FLAGS) {
+            local_state->overlay_flags &= ~OVERLAY_ACTION_FLAGS;
+        }
+        request_disp_refresh();
+    }
+    // End of the host's app-switch sequence (prepare -> images ->
+    // mapping -> enable): if any bridge above dropped, arm a repair
+    // that rebuilds the slave's mapping from our own tables. The
+    // sending itself runs in housekeeping (overlay_map_repair_tick),
+    // NOT here — see the warning in fill_overlay.h.
+    if(new_flags & DISPLAY_OVERLAYS) {
+        arm_overlay_map_repair();
+    }
+}
+
+// Board name in the GET_ID reply — each variant header (QMK_KEYBOARD_H) may
+// define POLY_KB_NAME; default to "Split72" so split72 (which doesn't define
+// it) emits the exact same string as before.
+#ifndef POLY_KB_NAME
+#    define POLY_KB_NAME "Split72"
+#endif
+#define POLY_GET_ID_STR "P\x06." POLY_KB_NAME " " FW_VERSION " P" STR(PROTOCOL_VERSION) " HW" STR(DEVICE_VER) " "
+// The GET_ID reply is one 64-byte report carrying the id string, then the
+// NUL-terminated blocks after it: ['V'][count][u16 x count], ['G'][u16] and
+// ['A'][u8] (v28).
+// ⚠️ Asserted rather than written down as a measured number, because every part
+// of it moves: the version string grows, and the 'V' block grows TWO BYTES PER
+// BUNDLE. Both emitters below drop their block rather than truncate if it does
+// not fit, so overflowing would cost the host its font-pack versions SILENTLY --
+// it would read "no bundles on the device" and re-flash all of them on every
+// connect. sizeof() counts the string's own NUL, which is where the blocks start.
+_Static_assert(sizeof(POLY_GET_ID_STR) + 2u + FONTPACK_BUNDLE_COUNT * 2u + 3u + 2u
+                   <= HID_REPORT_SIZE,
+               "the GET_ID reply no longer fits one report - see the block layout above");
+
+// ---------------------------------------------------------------------------
+// Command handlers, one per command id, dispatched through s_hid_cmds below.
+// Each was a case of one switch in raw_hid_receive(); the bodies are unchanged
+// except that the `break` ending each case is a `return`.
+// ---------------------------------------------------------------------------
+
+// 16 and 18 open a sequence and fall through into 17 and 19.
+static void hid_cmd_17(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state);
+static void hid_cmd_19(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state);
+
+static void hid_cmd_6(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) {
+    const char * name = POLY_GET_ID_STR;
+    { //id
+    boot_banner_on_host_probe();
+    memset(data, 0, length);
+    size_t nlen = strlen(name);
+    memcpy(data, name, nlen);
+    if (s_fresh_boot) {
+        data[2] = '*'; // host sees '*' instead of '.' -> firmware just booted
+        s_fresh_boot = false;
+    }
+    // Per-bundle font-pack content versions, placed AFTER the string's
+    // NUL terminator so the FW/protocol/HW string stays free to grow.
+    // Block = ['V'][count][u16 little-endian version × count] in bundle
+    // order (PROTOCOL_VERSION >= 6). Older hosts stop at the NUL and
+    // ignore it; the host flashes only bundles whose device version is
+    // behind its shipped version.
+    uint8_t bcount = fontpack_bundle_count();
+    size_t  off    = nlen + 1;   // skip the NUL
+    if (off + 2u + (size_t)bcount * 2u <= length) {
+        data[off++] = 'V';
+        data[off++] = bcount;
+        for (uint8_t b = 0; b < bcount; ++b) {
+            // Both halves since v20 (fw_up_combined_bundle_version): a half
+            // that missed a flash reads as behind, so the host flashes it again.
+            uint16_t v = fw_up_reported_bundle_version(b);
+            data[off++] = (uint8_t)(v & 0xFF);
+            data[off++] = (uint8_t)(v >> 8);
+        }
+    }
+    // ['G'][u16 little-endian state generation] -- bumped whenever the
+    // BOARD changes something the host may be caching, so the host learns
+    // about it from a reply it already polls every second rather than from
+    // a new command or an unsolicited report (CLAUDE.md, "Telling the host
+    // something changed ON THE BOARD").
+    //
+    // ⚠️ AFTER the 'V' block, never before. The host finds that one
+    // POSITIONALLY -- parse_id_version_block requires 'V' at exactly
+    // nul + 1 -- so anything prepended here makes every deployed host read
+    // "no bundles on the device" and re-flash all eight on every connect.
+    // Both blocks are tag-led, so a newer host walks them in order.
+    //
+    // Budget: measured 50 of 64 bytes used on split72 (31-byte id string
+    // + NUL, then 18 bytes of 'V' for 8 bundles), so this fits with ~11 to
+    // spare -- shared with the 'V' block's 2 bytes per future bundle, i.e.
+    // about five more bundles. It is emitted only if it fits, so growing
+    // past that drops the block rather than truncating the reply.
+    const uint16_t gen = poly_state_generation();
+    if (off + 3u <= length) {
+        data[off++] = 'G';
+        data[off++] = (uint8_t)(gen & 0xFFu);
+        data[off++] = (uint8_t)(gen >> 8);
+    }
+    // ['A'][u8] (v28): what owns the keycaps right now -- POLY_ANIM_NONE,
+    // POLY_ANIM_INTRO (the one-shot boot / KC_EDEN show) or POLY_ANIM_IDLE (the
+    // Eden screensaver). The host holds its connect-time font-pack flash while
+    // this is not NONE: a flash during the boot intro drew the master's legends
+    // over Eden and left the slave in it (field, 2026-11-09).
+    if (off + 2u <= length) {
+        data[off++] = 'A';
+        data[off++] = !startup_anim_active() ? POLY_ANIM_NONE
+                    : startup_anim_is_loop() ? POLY_ANIM_IDLE : POLY_ANIM_INTRO;
+    }
+    raw_hid_send(data, length);
+    return;
+}
+}
+
+static void hid_cmd_7(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //lang
+    memset(data, 0, length);
+    // poly_reported_lang(), not local_state->lang: the host switches the OS
+    // layout to this answer, and the tutorial may be previewing another one.
+    switch(poly_reported_lang()) {
+        /*[[[cog
+        for lang in languages:
+            cog.outl(f'case LANG_{lang.upper()}: memcpy(data, "P\\x07.{lang}", 7); break;')
+        ]]]*/
+        case LANG_ENUS: memcpy(data, "P\x07.enUS", 7); break;
+        case LANG_DEDE: memcpy(data, "P\x07.deDE", 7); break;
+        case LANG_FRFR: memcpy(data, "P\x07.frFR", 7); break;
+        case LANG_ESES: memcpy(data, "P\x07.esES", 7); break;
+        case LANG_PTPT: memcpy(data, "P\x07.ptPT", 7); break;
+        case LANG_ITIT: memcpy(data, "P\x07.itIT", 7); break;
+        case LANG_TRTR: memcpy(data, "P\x07.trTR", 7); break;
+        case LANG_KOKR: memcpy(data, "P\x07.koKR", 7); break;
+        case LANG_JAJP: memcpy(data, "P\x07.jaJP", 7); break;
+        case LANG_ARSA: memcpy(data, "P\x07.arSA", 7); break;
+        case LANG_ELGR: memcpy(data, "P\x07.elGR", 7); break;
+        case LANG_UKUA: memcpy(data, "P\x07.ukUA", 7); break;
+        case LANG_RURU: memcpy(data, "P\x07.ruRU", 7); break;
+        case LANG_BEBY: memcpy(data, "P\x07.beBY", 7); break;
+        case LANG_KKKZ: memcpy(data, "P\x07.kkKZ", 7); break;
+        case LANG_BGBG: memcpy(data, "P\x07.bgBG", 7); break;
+        case LANG_PLPL: memcpy(data, "P\x07.plPL", 7); break;
+        case LANG_RORO: memcpy(data, "P\x07.roRO", 7); break;
+        case LANG_ZHCN: memcpy(data, "P\x07.zhCN", 7); break;
+        case LANG_NLNL: memcpy(data, "P\x07.nlNL", 7); break;
+        case LANG_HEIL: memcpy(data, "P\x07.heIL", 7); break;
+        case LANG_SVSE: memcpy(data, "P\x07.svSE", 7); break;
+        case LANG_FIFI: memcpy(data, "P\x07.fiFI", 7); break;
+        case LANG_NNNO: memcpy(data, "P\x07.nnNO", 7); break;
+        case LANG_DADK: memcpy(data, "P\x07.daDK", 7); break;
+        case LANG_HUHU: memcpy(data, "P\x07.huHU", 7); break;
+        case LANG_CSCZ: memcpy(data, "P\x07.csCZ", 7); break;
+        case LANG_HRHR: memcpy(data, "P\x07.hrHR", 7); break;
+        case LANG_SKSK: memcpy(data, "P\x07.skSK", 7); break;
+        case LANG_LTLT: memcpy(data, "P\x07.ltLT", 7); break;
+        case LANG_LVLV: memcpy(data, "P\x07.lvLV", 7); break;
+        case LANG_ETEE: memcpy(data, "P\x07.etEE", 7); break;
+        case LANG_PTBR: memcpy(data, "P\x07.ptBR", 7); break;
+        case LANG_SRRS: memcpy(data, "P\x07.srRS", 7); break;
+        case LANG_MKMK: memcpy(data, "P\x07.mkMK", 7); break;
+        case LANG_FAIR: memcpy(data, "P\x07.faIR", 7); break;
+        case LANG_HIIN: memcpy(data, "P\x07.hiIN", 7); break;
+        case LANG_MRIN: memcpy(data, "P\x07.mrIN", 7); break;
+        case LANG_NENP: memcpy(data, "P\x07.neNP", 7); break;
+        case LANG_MNMN: memcpy(data, "P\x07.mnMN", 7); break;
+        case LANG_URPK: memcpy(data, "P\x07.urPK", 7); break;
+        case LANG_ENGB: memcpy(data, "P\x07.enGB", 7); break;
+        case LANG_ESMX: memcpy(data, "P\x07.esMX", 7); break;
+        case LANG_DECH: memcpy(data, "P\x07.deCH", 7); break;
+        case LANG_FRBE: memcpy(data, "P\x07.frBE", 7); break;
+        case LANG_FRCA: memcpy(data, "P\x07.frCA", 7); break;
+        case LANG_THTH: memcpy(data, "P\x07.thTH", 7); break;
+        case LANG_BNIN: memcpy(data, "P\x07.bnIN", 7); break;
+        case LANG_TEIN: memcpy(data, "P\x07.teIN", 7); break;
+        case LANG_TAIN: memcpy(data, "P\x07.taIN", 7); break;
+        case LANG_ZHTW: memcpy(data, "P\x07.zhTW", 7); break;
+        case LANG_KAGE: memcpy(data, "P\x07.kaGE", 7); break;
+        case LANG_HYAM: memcpy(data, "P\x07.hyAM", 7); break;
+        case LANG_IDID: memcpy(data, "P\x07.idID", 7); break;
+        case LANG_AZAZ: memcpy(data, "P\x07.azAZ", 7); break;
+        case LANG_ISIS: memcpy(data, "P\x07.isIS", 7); break;
+        case LANG_VIVN: memcpy(data, "P\x07.viVN", 7); break;
+        case LANG_ZHHK: memcpy(data, "P\x07.zhHK", 7); break;
+        case LANG_ENAU: memcpy(data, "P\x07.enAU", 7); break;
+        case LANG_ENNZ: memcpy(data, "P\x07.enNZ", 7); break;
+        case LANG_MINZ: memcpy(data, "P\x07.miNZ", 7); break;
+        case LANG_SMWS: memcpy(data, "P\x07.smWS", 7); break;
+        case LANG_FJFJ: memcpy(data, "P\x07.fjFJ", 7); break;
+        case LANG_TLPH: memcpy(data, "P\x07.tlPH", 7); break;
+        case LANG_HWUS: memcpy(data, "P\x07.hwUS", 7); break;
+        case LANG_ENZA: memcpy(data, "P\x07.enZA", 7); break;
+        case LANG_AFZA: memcpy(data, "P\x07.afZA", 7); break;
+        case LANG_AREG: memcpy(data, "P\x07.arEG", 7); break;
+        case LANG_SWKE: memcpy(data, "P\x07.swKE", 7); break;
+        case LANG_AMET: memcpy(data, "P\x07.amET", 7); break;
+        case LANG_YONG: memcpy(data, "P\x07.yoNG", 7); break;
+        case LANG_ENNG: memcpy(data, "P\x07.enNG", 7); break;
+        case LANG_ARMA: memcpy(data, "P\x07.arMA", 7); break;
+        case LANG_ARIQ: memcpy(data, "P\x07.arIQ", 7); break;
+        case LANG_KUIQ: memcpy(data, "P\x07.kuIQ", 7); break;
+        case LANG_MSMY: memcpy(data, "P\x07.msMY", 7); break;
+        case LANG_UZUZ: memcpy(data, "P\x07.uzUZ", 7); break;
+        case LANG_ENCA: memcpy(data, "P\x07.enCA", 7); break;
+        case LANG_ESAR: memcpy(data, "P\x07.esAR", 7); break;
+        case LANG_ENPG: memcpy(data, "P\x07.enPG", 7); break;
+        case LANG_TYPF: memcpy(data, "P\x07.tyPF", 7); break;
+        case LANG_ESCO: memcpy(data, "P\x07.esCO", 7); break;
+        case LANG_ESPE: memcpy(data, "P\x07.esPE", 7); break;
+        case LANG_ESVE: memcpy(data, "P\x07.esVE", 7); break;
+        case LANG_ESCL: memcpy(data, "P\x07.esCL", 7); break;
+        case LANG_ESEC: memcpy(data, "P\x07.esEC", 7); break;
+        case LANG_ESGT: memcpy(data, "P\x07.esGT", 7); break;
+        case LANG_ESDO: memcpy(data, "P\x07.esDO", 7); break;
+        case LANG_ESBO: memcpy(data, "P\x07.esBO", 7); break;
+        case LANG_ESPY: memcpy(data, "P\x07.esPY", 7); break;
+        case LANG_ESCR: memcpy(data, "P\x07.esCR", 7); break;
+        case LANG_ESSV: memcpy(data, "P\x07.esSV", 7); break;
+        case LANG_ESHN: memcpy(data, "P\x07.esHN", 7); break;
+        case LANG_ESPA: memcpy(data, "P\x07.esPA", 7); break;
+        case LANG_ESUY: memcpy(data, "P\x07.esUY", 7); break;
+        case LANG_ESNI: memcpy(data, "P\x07.esNI", 7); break;
+        case LANG_DEAT: memcpy(data, "P\x07.deAT", 7); break;
+        case LANG_NLBE: memcpy(data, "P\x07.nlBE", 7); break;
+        case LANG_CAES: memcpy(data, "P\x07.caES", 7); break;
+        case LANG_ENIE: memcpy(data, "P\x07.enIE", 7); break;
+        case LANG_BSBA: memcpy(data, "P\x07.bsBA", 7); break;
+        case LANG_FRCH: memcpy(data, "P\x07.frCH", 7); break;
+        case LANG_SLSI: memcpy(data, "P\x07.slSI", 7); break;
+        case LANG_FOFO: memcpy(data, "P\x07.foFO", 7); break;
+        case LANG_ARAE: memcpy(data, "P\x07.arAE", 7); break;
+        case LANG_ARSY: memcpy(data, "P\x07.arSY", 7); break;
+        case LANG_ARJO: memcpy(data, "P\x07.arJO", 7); break;
+        case LANG_ARLB: memcpy(data, "P\x07.arLB", 7); break;
+        case LANG_ARYE: memcpy(data, "P\x07.arYE", 7); break;
+        case LANG_ARKW: memcpy(data, "P\x07.arKW", 7); break;
+        case LANG_AROM: memcpy(data, "P\x07.arOM", 7); break;
+        case LANG_ARPS: memcpy(data, "P\x07.arPS", 7); break;
+        case LANG_ARQA: memcpy(data, "P\x07.arQA", 7); break;
+        case LANG_ARBH: memcpy(data, "P\x07.arBH", 7); break;
+        case LANG_ARDZ: memcpy(data, "P\x07.arDZ", 7); break;
+        case LANG_ARSD: memcpy(data, "P\x07.arSD", 7); break;
+        case LANG_ARTN: memcpy(data, "P\x07.arTN", 7); break;
+        case LANG_ARLY: memcpy(data, "P\x07.arLY", 7); break;
+        case LANG_FRCD: memcpy(data, "P\x07.frCD", 7); break;
+        case LANG_FRCI: memcpy(data, "P\x07.frCI", 7); break;
+        case LANG_FRCM: memcpy(data, "P\x07.frCM", 7); break;
+        case LANG_FRSN: memcpy(data, "P\x07.frSN", 7); break;
+        case LANG_FRMG: memcpy(data, "P\x07.frMG", 7); break;
+        case LANG_ENGH: memcpy(data, "P\x07.enGH", 7); break;
+        case LANG_ENUG: memcpy(data, "P\x07.enUG", 7); break;
+        case LANG_ENZM: memcpy(data, "P\x07.enZM", 7); break;
+        case LANG_SWTZ: memcpy(data, "P\x07.swTZ", 7); break;
+        case LANG_PTAO: memcpy(data, "P\x07.ptAO", 7); break;
+        case LANG_PTMZ: memcpy(data, "P\x07.ptMZ", 7); break;
+        case LANG_BNBD: memcpy(data, "P\x07.bnBD", 7); break;
+        case LANG_ENIN: memcpy(data, "P\x07.enIN", 7); break;
+        case LANG_ENPK: memcpy(data, "P\x07.enPK", 7); break;
+        case LANG_ENPH: memcpy(data, "P\x07.enPH", 7); break;
+        case LANG_ENSG: memcpy(data, "P\x07.enSG", 7); break;
+        case LANG_ENLK: memcpy(data, "P\x07.enLK", 7); break;
+        case LANG_KYKG: memcpy(data, "P\x07.kyKG", 7); break;
+        case LANG_TGTJ: memcpy(data, "P\x07.tgTJ", 7); break;
+        case LANG_ENGU: memcpy(data, "P\x07.enGU", 7); break;
+        case LANG_ENSB: memcpy(data, "P\x07.enSB", 7); break;
+        case LANG_ENVU: memcpy(data, "P\x07.enVU", 7); break;
+        case LANG_ENFM: memcpy(data, "P\x07.enFM", 7); break;
+        case LANG_FRNC: memcpy(data, "P\x07.frNC", 7); break;
+        case LANG_TOTO: memcpy(data, "P\x07.toTO", 7); break;
+        case LANG_EUES: memcpy(data, "P\x07.euES", 7); break;
+        case LANG_GLES: memcpy(data, "P\x07.glES", 7); break;
+        case LANG_RMCH: memcpy(data, "P\x07.rmCH", 7); break;
+        case LANG_CYGB: memcpy(data, "P\x07.cyGB", 7); break;
+        case LANG_GAIE: memcpy(data, "P\x07.gaIE", 7); break;
+        case LANG_MTMT: memcpy(data, "P\x07.mtMT", 7); break;
+        case LANG_LBLU: memcpy(data, "P\x07.lbLU", 7); break;
+        case LANG_SENO: memcpy(data, "P\x07.seNO", 7); break;
+        case LANG_GNPY: memcpy(data, "P\x07.gnPY", 7); break;
+        case LANG_QUPE: memcpy(data, "P\x07.quPE", 7); break;
+        case LANG_AYBO: memcpy(data, "P\x07.ayBO", 7); break;
+        case LANG_NVUS: memcpy(data, "P\x07.nvUS", 7); break;
+        case LANG_NHMX: memcpy(data, "P\x07.nhMX", 7); break;
+        case LANG_PSAF: memcpy(data, "P\x07.psAF", 7); break;
+        case LANG_IUCA: memcpy(data, "P\x07.iuCA", 7); break;
+        case LANG_CRCA: memcpy(data, "P\x07.crCA", 7); break;
+        case LANG_CKUS: memcpy(data, "P\x07.ckUS", 7); break;
+        case LANG_JAUS: memcpy(data, "P\x07.jaUS", 7); break;
+        //[[[end]]]
+        default:
+            hid_reply(data, 0x07, false);
+            break;
+    }
+    raw_hid_send(data, length);
+    return;
+}
+
+static void hid_cmd_8(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { // GET_LANG_LIST (legacy ASCII list) — RETIRED in protocol v2.
+    // Superseded by GET_LANG_LIST_PACKED (cmd 27), which sends the
+    // same list as compact 2-byte ISO index pairs. Protocol-v2 hosts
+    // use cmd 27 exclusively; NACK the old command so any stale host
+    // that still asks for the ASCII list fails loudly instead of
+    // parsing a missing/partial reply. (Dropping the table here also
+    // frees the ~570 bytes of .rodata the ASCII list occupied.)
+    memset(data, 0, length);
+    hid_reply(data, 0x08, false);
+    raw_hid_send(data, length);
+    return;
+}
+
+static void hid_cmd_9(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //change language
+    {
+        uint8_t* start = &data[HID_DATA_IDX];
+        uint32_t decoded = LANG_TO_UI32_ARR(start);
+        uint8_t new_lang = local_state->lang;
+
+        for(uint8_t idx=0;idx<NUM_LANG;++idx) {
+            if(decode_lang(idx)==decoded) {
+                new_lang = idx;
+                break;
+            }
+        }
+
+        memset(data, 0, length);
+        if(new_lang<NUM_LANG) {
+            poly_set_host_lang(new_lang);
+            uprintf("Setting lang to %u.\n", new_lang);
+            request_disp_refresh();
+            update_performed();
+            hid_reply(data, 0x09, true);
+        } else {
+            uprintf("Invalid language index %u.\n", new_lang);
+            hid_reply(data, 0x09, false);
+        }
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_10(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //receive overlay
+    {
+        reset_fragment_context();
+        // Protocol 11: modifier (low nibble, 0..8) and segment index
+        // (high nibble, 0..5) share one header byte, so the 60-byte
+        // segment payload starts at HID_DATA_IDX+2 and fits the report
+        // exactly (2 fixed + keycode + packed + 60 = 64). The old
+        // layout put modifier and segment in separate bytes, leaving
+        // only 59 bytes for a 60-byte segment -> a 1-byte over-read.
+        uint8_t packed  = data[HID_DATA_IDX+1];
+        uint8_t segment = packed >> 4;
+        set_fragment_context_key(data[HID_DATA_IDX], packed & 0x0F);
+        if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI && segment<NUM_SEGMENTS_PER_OVERLAY) {
+            fill_overlay_buffer(segment, &data[HID_DATA_IDX+2]);
+            if(segment==NUM_SEGMENTS_PER_OVERLAY-1) {
+                // Refresh only — deliberately NOT update_performed().
+                // An overlay upload is the HOST reacting to a window
+                // switch, not the user touching the keyboard; counting
+                // it as activity restarted the whole idle countdown
+                // every time the focused app changed (so a keyboard
+                // watching a busy machine never idled) with nothing in
+                // the log to explain it. See the note in base/update.h.
+                request_disp_refresh();
+            }
+        }
+    }
+    return;
+}
+
+static void hid_cmd_11(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //overlays flags on
+    {
+        const uint8_t new_flags = data[HID_DATA_IDX];
+        overlay_flags_on(local_state, new_flags);
+        memset(data, 0, length);
+        hid_reply(data, 0x0b, true);
+        if (debug_enable) {
+            uprintf("Overlay flags 0x%x set.\n", new_flags);
+        }
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_12(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //overlays flags off
+    {
+        uint8_t flags_to_clear = data[HID_DATA_IDX];
+        uint8_t old_flags = local_state->overlay_flags;
+        local_state->overlay_flags = flag_off(old_flags, flags_to_clear);
+        if (flags_to_clear & DISPLAY_OVERLAYS) {
+            // Also when the board is suspended: the wake must not turn back on
+            // overlays the host switched off in the meantime.
+            poly_forget_suspended_overlays();
+        }
+        // Only sync + full-refresh when a synced-state bit (MIRROR /
+        // DISPLAY overlays) actually TRANSITIONED set->clear. Re-clearing
+        // an already-clear bit changes nothing on screen, so gating on the
+        // real transition avoids a blocking slave bridge-sync + full
+        // 72-keycap re-render for a no-op. A host that re-asserts
+        // "overlays off" on every active-window poll — e.g. a focused
+        // window with no overlays whose TITLE keeps changing (a terminal
+        // animating a spinner in its title) — would otherwise force one
+        // full render per poll. (The host now dedups this too; this is the
+        // firmware-side backstop for any client that re-asserts state.)
+        if(old_flags & flags_to_clear & OVERLAY_SYNCED_STATE_FLAGS) {
+            send_to_bridge(USER_SYNC_POLY_DATA, (void *)local_state, sizeof(poly_sync_t), 10);
+            request_disp_refresh();
+        }
+        memset(data, 0, length);
+        hid_reply(data, 0x0c, true);
+        uprintf("Overlay flags 0x%x cleared.\n", flags_to_clear);
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_13(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //set brightness
+    if ( data[HID_DATA_IDX] <= FULL_BRIGHT) {
+        // data[HID_DATA_IDX]   = brightness level (0..FULL_BRIGHT)
+        // data[HID_DATA_IDX+1] = flags (0 from pre-flag hosts ->
+        //                        plain persisted set, as before).
+        uint8_t br_flags = data[HID_DATA_IDX + 1];
+        if (br_flags & BR_FLAG_AUTO_OFF) {
+            // Leave host-auto; revert to the persisted manual value.
+            // The level byte is ignored on an AUTO_OFF message.
+            set_brightness_auto_mode(false);
+        } else if (br_flags & BR_FLAG_VOLATILE) {
+            if (br_flags & BR_FLAG_AUTO_ON) {
+                set_brightness_auto_mode(true);
+            }
+            // Daylight/auto update: applied only while auto mode
+            // is engaged, never persisted. Once the light sensor
+            // drives auto-brightness, the sensor wins: the host's
+            // level is dropped. Applying it would show it until the
+            // sensor's next tick (up to 500 ms), a visible dip
+            // every 10 min (daylight 2 vs sensor 42, 2026-10-16).
+            if (!poly_ltr559_drives_brightness()) {
+                set_auto_brightness_value(data[HID_DATA_IDX]);
+            }
+        } else if (br_flags & BR_FLAG_AUTO_ON) {
+            // Engage auto mode without turning this packet into a
+            // persisted manual write (which would clear auto again).
+            set_brightness_auto_mode(true);
+        } else {
+            // Explicit set (host slider / polyctl): persists and
+            // leaves auto mode, exactly like a keyboard key.
+            set_user_brightness(data[HID_DATA_IDX]);
+        }
+        memset(data, 0, length);
+        hid_reply(data, 0x0d, true);
+        uprintf("Set brightness to: %u (flags 0x%x, auto %u).\n",
+                local_state->contrast, br_flags, get_brightness_auto_mode());
+    } else {
+        uprintf("Refused to set brightness to: %u.\n", data[HID_DATA_IDX]);
+        memset(data, 0, length);
+        hid_reply(data, 0x0d, false);
+    }
+    raw_hid_send(data, length);
+    return;
+}
+
+static void hid_cmd_14(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //key press
+    // SECURITY: this injects a real key event into QMK (action_exec), i.e.
+    // the keyboard types into the host's focused app on the host's command —
+    // a keystroke-injection primitive. It's a demo/dev feature, so gate it on
+    // debug_enable (off by default; unlock with the DB_TOGG key, which needs
+    // physical access). When debug is off, NACK instead of injecting.
+    if (debug_enable) {
+        uint16_t keycode = ((uint16_t)data[HID_DATA_IDX])<<8 | data[HID_DATA_IDX+1];
+        uint8_t r = 0, c = 0;
+        enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(local_layer->layer), &r, &c, is_left_side());
+        const bool pressed = data[HID_DATA_IDX+2] == 0;
+        if(pos==POS_NOT_FOUND) {
+            pos = get_split_matrix_pos(keycode, local_layer->def_layer, &r, &c, is_left_side());
+        }
+        // key_has_display(): one key per half has no OLED, so it must
+        // not drive a chip-select. See the split72 header.
+        if (is_on_current_side(pos) && key_has_display(r, c)) {
+            invert_display(r, c, pressed);
+        }
+
+        if (is_on_other_side(pos)) {
+            const uint8_t data_len = 6;
+            dynamic_keymap_sync_t sync_data;
+            memcpy(&sync_data.commands, data, data_len);
+            send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 3);
+        }
+
+        action_exec(MAKE_KEYEVENT(r, c, pressed));
+        switch_events_poly(r,c, pressed);
+        memset(data, 0, length);
+        hid_reply(data, 0x0e, true);
+    } else {
+        memset(data, 0, length);
+        hid_reply(data, 0x0e, false);   // NACK: key injection requires debug mode
+    }
+    raw_hid_send(data, length);
+    return;
+}
+
+static void hid_cmd_15(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //start/stop idle
+    if(data[HID_DATA_IDX]==0) {
+        // A host "stop idle" is a wake, so it must tear down the DOOM
+        // attract screensaver (IDLE_STYLE_IDDQD) too — exactly as a
+        // keypress wake does via poly_force_wake()/poly_prepare_for_flash().
+        // The attract demo runs with STATUS_DISP_ON SET and DISP_IDLE
+        // CLEARED, so the flag handling alone never reaches it; without
+        // this the host cannot stop the screensaver over HID, and while
+        // doom holds the overlay pool a subsequent font/doom re-flash is
+        // refused (hid_fontpack.c FONTPACK_BEGIN gates on !doom_mode_active()).
+        // Self-guards: only an active attract demo is affected; a no-op
+        // inline stub on a non-doom build.
+        // The wake itself is shared with the demo's end-of-idle segment:
+        // poly_wake_from_idle() (poly_keymap.c) does exactly what this
+        // branch used to do inline, the doom stop included.
+        poly_wake_from_idle();
+        uprint("Stop idle.\n");
+    } else {
+        // Backdate the activity timestamp by a full idle interval so the
+        // fade begins on the next housekeeping pass. It must be the
+        // CONFIGURED interval (cmd 40), not a constant: backdating by a
+        // fixed 120 s on a board set to 5 minutes would leave the fade
+        // three minutes away and read as "start idle did nothing".
+        // Modular uint32 arithmetic makes this correct even in the first
+        // interval after boot — the old signed subtraction underflowed
+        // there, was clamped to 0, and idle never started.
+        //
+        // ⚠️ An ALREADY-idle board is woken first. The style is chosen only
+        // on the way INTO idle (the `(flags & DISP_IDLE) == 0` test in
+        // housekeeping), so a board that went idle in one style and was
+        // then given another (cmd 28) kept the old one: "start idle"
+        // backdated a timer nothing read. The rig's signed-DOOM-pack test
+        // hit exactly that after the flash-only soak left the board idle
+        // in jitter, and read it as a pack that never loaded.
+        if (access_local_state()->flags & DISP_IDLE) poly_wake_from_idle();
+        backdate_last_update(get_idle_timeout_ms());
+        uprint("Start idle.\n");
+    }
+    memset(data, 0, length);
+    hid_reply(data, 0x0f, true);
+    raw_hid_send(data, length);
+    return;
+}
+
+static void hid_cmd_16(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //receive RLE compressed overlay
+    reset_fragment_context();
+    set_fragment_context_key(data[HID_DATA_IDX], data[HID_DATA_IDX+1]);
+    uprintf("Start with compressed data for keycode 0x%x (modifiers: 0x%x).\n", get_fragment_context()->keycode, get_fragment_context()->modifier);
+
+    //fall through
+    // fall through: the first report of the sequence also carries data
+    hid_cmd_17(data, length, local_layer, local_state);
+}
+
+static void hid_cmd_17(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //receive RLE compressed overlay
+    {
+        bool first = data[HID_CMD_IDX]==16;
+        if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI) {
+            decompress_overlay_buffer(first?&data[HID_DATA_IDX+2]:&data[HID_DATA_IDX], first);
+        }
+    }
+    return;
+}
+
+static void hid_cmd_18(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //start roi overlay
+    if (set_fragment_context_from_buffer(&data[HID_DATA_IDX]) == ROI_BOUNDS_CLAMPED) {
+        const overlay_fragment_context_t *fc = get_fragment_context();
+        uprintf("ROI overlay: host sent out-of-bounds ROI for keycode %u — "
+                "clamped to x=%u y=%u xx=%u yy=%u.\n",
+                fc->keycode, fc->roi.x, fc->roi.y, fc->roi.xx, fc->roi.yy);
+    }
+    //fall through
+    // fall through: the first report of the sequence also carries data
+    hid_cmd_19(data, length, local_layer, local_state);
+}
+
+static void hid_cmd_19(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //receive roi overlay
+    {
+        bool first = data[HID_CMD_IDX]==18;
+        if(get_fragment_context()->keycode>=KC_A && get_fragment_context()->keycode<=KC_RIGHT_GUI) {
+            fill_roi_overlay_buffer(&data[HID_DATA_IDX], first);
+        }
+    }
+    return;
+}
+
+static void hid_cmd_42(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //fill pool slots from the icon library (protocol v20+)
+    {
+        // (pool slot, icon id) pairs at the width in data[2], in cmd 33's
+        // packing (base/map_codec.h, padded by repeating the last pair).
+        // Both halves draw from their own flash (base/icon_lib.h).
+        //
+        // REPLIED, unlike the other bulk writes: 'P' 42 '.' when every
+        // pair applied on both halves, else 'P' 42 '!' and data[3] = the
+        // first pair the host must upload as a bitmap itself (it and every
+        // pair after it). A slave that missed or refused the report is
+        // pair 0 -- the master's own fills are harmless to redo, since a
+        // bitmap upload goes to both halves.
+        const uint8_t width = data[HID_DATA_IDX];
+        overlay_map_sync_t fill;
+        memset(&fill, 0, sizeof(fill));
+        fill.width = (uint8_t)(width | OVERLAY_MAP_ICON_FILL);
+        fill.bytes = OVERLAY_MAP_W_BYTES;
+        memcpy(fill.mapping, &data[OVERLAY_MAP_W_HDR], OVERLAY_MAP_W_BYTES);
+        uint8_t bad = ICONLIB_FILL_OK;
+        uint16_t slave_ver = 0;
+        const bool slave_known = fw_up_slave_bundle_version(FONTPACK_ICONS_BUNDLE_ID, &slave_ver);
+        if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
+            bad = 0;
+        } else if (!iconlib_fill_allowed(fontpack_bundle_version(FONTPACK_ICONS_BUNDLE_ID),
+                                         slave_known, slave_ver)) {
+            // The slave would draw these ids from its own library, which may be
+            // another build (or unknown, in the first second after link-up).
+            bad = 0;
+        } else {
+            bad = iconlib_fill_pairs(fill.mapping, OVERLAY_MAP_W_BYTES, width,
+                                     NUM_OVERLAY_SLOTS, get_overlay);
+            // Same render-gate bit an upload sets (legacy, non-MRU mode).
+            mark_filled_icon_slots(fill.mapping, OVERLAY_MAP_W_BYTES, width, bad);
+            if (bad != 0 && !sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&fill,
+                                                           sizeof(overlay_map_sync_t), 10))) {
+                bad = 0;
+                uprint("Warning: icon fill did not reach the slave (or it refused); host uploads bitmaps.\n");
+            }
+        }
+        memset(data, 0, length);
+        hid_reply(data, 42, bad == ICONLIB_FILL_OK);
+        data[3] = bad;
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_41(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //PRC overlay images (protocol v19+)
+    // Whole images, one or more per report: no fragment context, no
+    // reply (a bulk write like 16-19). See base/prc_record.h.
+    receive_prc_overlay_report(&data[HID_DATA_IDX], (uint8_t)(length - HID_DATA_IDX));
+    return;
+}
+
+static void hid_cmd_20(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //set unicode input mode
+    // set_unicode_input_mode() is the SETTER. unicode_input_mode_set_user()
+    // is the notification CALLBACK QMK fires from it, and our override
+    // (poly_keymap.c) only mirrors the value into local_state->unicode_mode
+    // for the keycap legend — so calling it directly relabelled the language
+    // layer's Win/WinC/Lnx keys while unicode_config.input_mode, which
+    // decides how codepoints are actually typed, kept its old value. Field
+    // report: the legend read "Win ON" at startup while emoji still went out
+    // as WinCompose sequences, and pressing the Win key (the real setter)
+    // was what finally made them agree and broke emoji.
+    //
+    // data[3] (protocol 17+) is the VOLATILE flag: non-zero applies the
+    // mode in RAM only. It exists because at Windows logon the host
+    // cannot tell "WinCompose is not installed" from "WinCompose has not
+    // started yet" — see apply_unicode_mode() below. An older host sends
+    // a zero-padded report, so data[3] is 0 = persist, which is the
+    // behaviour it expects.
+    const bool persist = (data[HID_DATA_IDX + 1] == 0);
+    switch(data[HID_DATA_IDX]) {
+        case 0: //Linux = 0
+            apply_unicode_mode(UNICODE_MODE_LINUX, persist);
+            memset(data, 0, length);
+            hid_reply(data, 0x14, true);
+            break;
+        case 1: //Mac = 1
+            apply_unicode_mode(UNICODE_MODE_MACOS, persist);
+            memset(data, 0, length);
+            hid_reply(data, 0x14, true);
+            break;
+        case 2: //Windows = 2
+            apply_unicode_mode(UNICODE_MODE_WINDOWS, persist);
+            memset(data, 0, length);
+            hid_reply(data, 0x14, true);
+            break;
+        case 3: //WinCompose = 3
+            apply_unicode_mode(UNICODE_MODE_WINCOMPOSE, persist);
+            memset(data, 0, length);
+            hid_reply(data, 0x14, true);
+            break;
+        case 4: //BSD = 4
+            apply_unicode_mode(UNICODE_MODE_BSD, persist);
+            memset(data, 0, length);
+            hid_reply(data, 0x14, true);
+            break;
+        default:
+            memset(data, 0, length);
+            hid_reply(data, 0x14, false);
+            break;
+    }
+    raw_hid_send(data, length);
+    return;
+}
+
+static void hid_cmd_21(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //receive overlay mapping
+    {
+        // Deliberately no ACK (protocol v3+): like the other bulk
+        // overlay commands (10, 16/17, 18/19) this is fire-and-forget.
+        // The old per-chunk ACK was sent only after the blocking UART
+        // bridge below, so it arrived hundreds of ms late and the host
+        // discarded it unread — leftover ACKs poisoned the reply
+        // stream of later commands. Ordering for enable_overlays
+        // (case 11) still holds: reports are dispatched sequentially
+        // and the bridge completes before this case returns.
+        overlay_map_sync_t map_sync;
+        map_sync.width = OVERLAY_MAP_IDX_BITS;   // cmd 21 is fixed 10-bit
+        map_sync.bytes = HID_DATA_MAX;
+        memcpy(map_sync.mapping, &data[HID_DATA_IDX], HID_DATA_MAX);
+        // A chunk is one-shot — nothing re-fires it (unlike the periodic
+        // state syncs, where the diff IS the retry queue). Losing one used
+        // to blank exactly the display positions it carried on the slave,
+        // silently, until the host's next full mapping send. Latch it so
+        // enable_overlays (case 11) rebuilds the slave's mapping from our
+        // own tables — we applied this chunk locally either way.
+        if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync,
+                                           sizeof(overlay_map_sync_t), 10))) {
+            note_overlay_map_sync_lost();
+            uprint("Warning: overlay mapping chunk did not reach the slave; repairing at enable.\n");
+        }
+        // Render only if this chunk remapped a position that is on screen;
+        // an all-off-screen chunk (non-held variants, off-layer keys) is
+        // staged silently and shown by the enable-overlays refresh.
+        if (set_packed_overlay_mapping(&data[HID_DATA_IDX], HID_DATA_MAX,
+                                       OVERLAY_MAP_IDX_BITS, false)) {
+            request_disp_refresh();
+        }
+        // Routine per-chunk chatter — set_packed_overlay_mapping already
+        // logs the decoded pairs under the same gate.
+        if (debug_enable) {
+            uprint("Overlay mapping data received.\n");
+        }
+    }
+    return;
+}
+
+static void hid_cmd_33(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { // receive overlay mapping, host-chosen value width (v12+)
+    {
+        // Same stream as cmd 21, but data[2] carries the WIDTH so the host
+        // can send each group of pairs at the narrowest width it fits in:
+        // 8 bits = 30 pairs/report, 9 = 27, 10 = 24, 11 = 22. Pairs are
+        // order-independent (each is a standalone assignment), so the host
+        // partitions them by required width rather than by index order —
+        // variants 0..10 keep riding the dense 10-bit form and only the
+        // high GUI combos pay for 11. Silent, like cmd 21.
+        // v21: bits 5/6 of the width byte are the prepare / enable
+        // flags; only the masked width reaches the decoder and the slave.
+        // v23: bit 7 dims every pair in the report. The slave gets it as
+        // OVERLAY_MAP_SYNC_DIM, never as bit 7 (the icon-fill flag there).
+        const uint8_t flags = data[HID_DATA_IDX];
+        const uint8_t width = flags & OVERLAY_MAP_W_WIDTH_MASK;
+        const bool    dim   = (flags & OVERLAY_MAP_W_DIM) != 0;
+        // Refuse a bad width BEFORE either flag runs: otherwise the
+        // reset and the enable would apply around pairs the decoder
+        // then drops, leaving overlays on with a stale mapping.
+        if (width < OVERLAY_MAP_WIDTH_MIN || width > OVERLAY_MAP_WIDTH_MAX) {
+            uprintf("REJECTED overlay mapping report: bad width %u\n", (unsigned)width);
+            return;
+        }
+        if (flags & OVERLAY_MAP_W_RESET) {
+            overlay_flags_on(local_state, MIRROR_OVERLAYS | USAGE_RESET | MAPPING_RESET);
+        }
+        overlay_map_sync_t map_sync;
+        map_sync.width = (uint8_t)(width | (dim ? OVERLAY_MAP_SYNC_DIM : 0u));
+        map_sync.bytes = OVERLAY_MAP_W_BYTES;
+        memcpy(map_sync.mapping, &data[OVERLAY_MAP_W_HDR], OVERLAY_MAP_W_BYTES);
+        if (!sync_succeeded(send_to_bridge(USER_SYNC_OVERLAY_MAP_DATA, (void*)&map_sync,
+                                           sizeof(overlay_map_sync_t), 10))) {
+            note_overlay_map_sync_lost();
+            uprint("Warning: overlay mapping chunk did not reach the slave; repairing at enable.\n");
+        }
+        if (set_packed_overlay_mapping(&data[OVERLAY_MAP_W_HDR],
+                                       OVERLAY_MAP_W_BYTES, width, dim)) {
+            request_disp_refresh();
+        }
+        if (debug_enable) {
+            uprintf("Overlay mapping data received (%u-bit).\n", (unsigned)width);
+        }
+        if (flags & OVERLAY_MAP_W_SHOW) {
+            overlay_flags_on(local_state, DISPLAY_OVERLAYS);
+        }
+    }
+    return;
+}
+
+static void hid_cmd_22(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { // get default layer
+    memset(data, 0, length);
+    hid_reply(data, 0x16, true);
+    data[3] = (uint8_t)local_layer->def_layer;
+    raw_hid_send(data, length);
+    return;
+}
+
+static void hid_cmd_23(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { // enter bootloader (host-triggered; mirrors a QK_BOOTLOADER press)
+    uprint("Host requested bootloader.\n");
+    poly_announce_bootloader();
+    memset(data, 0, length);
+    hid_reply(data, 0x17, true);
+    raw_hid_send_before_reset(data, length);
+    reset_keyboard();
+    return;
+}
+
+static void hid_cmd_43(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //reboot both halves (protocol v22+)
+    {
+        // A plain reboot for host-driven diagnostics: the host's boot-loop
+        // test reboots, waits for the GET_ID fresh-boot marker, and reads
+        // cmd 39 to see whether the late-boot guard fired. cmd 25 also
+        // reboots both halves but rewrites the EEPROM byte and the
+        // handedness flash stamp every time, which 50 rounds must not do.
+        // Nothing here is persisted: shutdown_user() flushes only dirty
+        // state, the same as QK_REBOOT.
+        //
+        // ACK first, because the reset never returns and the host must
+        // see the command was taken. Then the slave, with the QK_REBOOT
+        // key's hardened handoff (poly_keymap.c): a dropped frame there
+        // reboots the master alone, and that hang is exactly the kind
+        // of boot problem the caller is looking for, not one to cause.
+        memset(data, 0, length);
+        hid_reply(data, 0x2b, true);
+        raw_hid_send_before_reset(data, length);
+        poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
+                                  .action = RESET_ACTION_REBOOT };
+        uint8_t ack = fw_up_send_slave_reset(&msg);
+        uprintf("Host reboot: slave ack=0x%02x\n", ack);
+        soft_reset_keyboard();
+    }
+    return;
+}
+
+static void hid_cmd_24(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //display off
+    poly_suspend();
+    sync_and_refresh_displays();
+    // Treat host display-off (e.g. system going to sleep) as a cue to
+    // flush all dirty user state to EEPROM (dirty-gated, so cheap).
+    // With core1 off the flash bus: Eden may have left a job in flight.
+    core1_off_during(save_all_dirty);
+    disable_idle_tracking();
+    memset(data, 0, length);
+    hid_reply(data, 0x18, true);
+    raw_hid_send(data, length);
+    return;
+}
+
+static void hid_cmd_25(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //set handedness (which half is left / which is right)
+    {
+        bool master_is_left = (data[HID_DATA_IDX] == 0);
+        // v24: board-flag op for THIS half's stamp (poly_board_op_t). 0
+        // keeps the stored flags, which is what an older host sends. An
+        // unknown op is refused before anything is written or reset.
+        uint8_t board_op = data[HID_DATA_IDX + 1];
+        if (board_op >= POLY_BOARD_OP_COUNT) {
+            memset(data, 0, length);
+            hid_reply(data, 0x19, false);
+            raw_hid_send(data, length);
+            return;
+        }
+        // Records the change; poly_hand_flush_pending() below writes
+        // both the EEPROM byte and the flash stamp. The stamp is what
+        // survives a wear-levelling wipe -- without it this setting is
+        // one torn EEPROM write away from silently reverting.
+        poly_hand_set_pending(master_is_left);
+        poly_hand_set_pending_board_op(board_op);
+        poly_hand_flush_pending();   // main loop, so the sector write is safe inline here
+        // ACK first, like cmd 43: the reset never returns, and the hardened
+        // handoff below can take a couple of seconds on a bad link.
+        memset(data, 0, length);
+        hid_reply(data, 0x19, true);
+        raw_hid_send_before_reset(data, length);
+        // Hardened handoff, same as cmd 43 and the reset key. A dropped
+        // frame here does double damage: the master reboots alone and
+        // hangs on the boot splash, AND the slave never records its new
+        // side, so after a replug both halves claim the same one.
+        poly_reset_sync_t msg = { .crc32 = 0, .magic = POLY_RESET_MAGIC,
+                                  .action = RESET_ACTION_REBOOT,
+                                  .set_handedness = 1, .is_left = master_is_left ? 0 : 1 };
+        uint8_t ack = fw_up_send_slave_reset(&msg);
+        uprintf("Set handedness: master=%s, slave ack=0x%02x\n", master_is_left ? "LEFT" : "RIGHT", ack);
+        soft_reset_keyboard();
+    }
+    return;
+}
+
+// Flush all dirty user state to EEPROM (host shutdown/suspend signal).
+// Master-only: HID commands run on the USB half. The slave flushes
+// independently via its own suspend hook. (Distinct from KC_STORE_EE,
+// which sets SAVE_EEPROM and syncs that flag to the slave — see base/com.h.)
+static void hid_cmd_26(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) {
+    // Sent while the board may sit in Eden, so core1 can be computing a
+    // keycap from flash: keep it off the bus for the write.
+    core1_off_during(save_all_dirty);
+    memset(data, 0, length);
+    hid_reply(data, 0x1A, true);
+    raw_hid_send(data, length);
+    return;
+}
+
+static void hid_cmd_27(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //packed lang list: 1 count byte + (ISO 639-1 idx, ISO 3166-1 idx) per lang
+    memset(data, 0, length);
+    /*[[[cog
+    import sys
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(cog.inFile))), "lang"))
+    from iso_lang_country import encode_pair
+    # Payload: count, then 2 index bytes per language (see lang/iso_lang_country.py).
+    packed = [len(languages)]
+    for lang in languages:
+        packed += list(encode_pair(lang))
+    CHUNK = RAW_EPSIZE - 3  # 61 payload bytes after the 3-byte "P\x1b." header (RAW_EPSIZE from the top cog block)
+    for off in range(0, len(packed), CHUNK):
+        seg = packed[off:off+CHUNK]
+        # All bytes emitted as \xNN (incl. header) so no literal char ever
+        # follows a hex escape -> avoids C's greedy \x escape swallowing it.
+        lit = "\\x50\\x1b\\x2e" + "".join(f"\\x{b:02x}" for b in seg)
+        cog.outl(f'memcpy(data, "{lit}", {3 + len(seg)});')
+        cog.outl('raw_hid_send(data, length);')
+        if off + CHUNK < len(packed):
+            cog.outl('memset(data, 0, length);')
+    ]]]*/
+    memcpy(data, "\x50\x1b\x2e\xa1\x25\xe8\x20\x38\x2f\x4a\x27\x43\x82\xb7\x48\x6d\xa4\xe0\x54\x79\x4a\x71\x07\xc0\x24\x58\xaa\xe5\x87\xbe\x0d\x23\x50\x7c\x0e\x15\x80\xb2\x86\xbc\xb6\x2f\x73\xa5\x38\x66\x99\xc4\x2c\x45\x74\xa6\x1f\x3a\x3d\x63\x1b\x37\x3b\x61\x8f\xc9\x61\x84", 64);
+    raw_hid_send(data, length);
+    memset(data, 0, length);
+    memcpy(data, "\x50\x1b\x2e\x63\x86\x28\x3f\x82\x1e\x95\xbd\x67\x8f\x2a\x6b\x39\x68\x6a\x68\x71\xa7\x69\x92\xab\xb1\x25\x4c\x27\x9c\x20\x2a\x2f\x13\x2f\x25\x9e\xd9\x12\x68\x9c\x68\x9b\x68\xb6\xe3\x4c\x4e\x3e\x06\x41\x64\x0b\x0f\x47\x6c\xae\xf0\xb6\x5e\x25\x0c\x25\xaa\x66", 64);
+    raw_hid_send(data, length);
+    memset(data, 0, length);
+    memcpy(data, "\x50\x1b\x2e\xaa\x91\xf3\x2d\x46\xa1\xb0\xb8\xe8\x25\xf6\x03\xf6\x07\x40\x9a\x72\x05\x44\xb4\xa3\x25\xa3\x07\x88\x07\x6a\x57\x6a\x6b\x9d\xac\xea\x25\x25\x27\x09\x25\xaf\xa8\xae\x27\x30\x27\xad\x27\xed\x27\x2d\x27\x3e\x27\x5a\x27\x3c\x27\x1c\x27\xb9\x27\x31", 64);
+    raw_hid_send(data, length);
+    memset(data, 0, length);
+    memcpy(data, "\x50\x1b\x2e\x27\xd1\x27\x60\x27\xac\x27\xe9\x27\xa4\x20\x0b\x73\x13\x16\x43\x25\x65\x15\x10\x2f\x2a\x90\xc7\x2e\x49\x07\x01\x07\xd3\x07\x70\x07\x7e\x07\xf4\x07\x7a\x07\xab\x07\xb6\x07\xba\x07\x16\x07\x3d\x07\xc3\x07\xde\x07\x87\x2f\x27\x2f\x2b\x2f\x2e\x2f", 64);
+    raw_hid_send(data, length);
+    memset(data, 0, length);
+    memcpy(data, "\x50\x1b\x2e\xcc\x2f\x8d\x25\x51\x25\xe6\x25\xf7\x9a\xe4\x82\x07\x82\x9e\x12\x12\x25\x68\x25\xb1\x25\xb0\x25\xc5\x25\x81\x5a\x73\x9d\xda\x25\x5b\x25\xc1\x25\xf1\x25\x48\x2f\xa0\xa3\xdf\x29\x43\x33\x43\x84\x2a\x1e\x4c\x31\x65\x6c\x98\x5c\x85\x8c\xa6\x34\xb9", 64);
+    raw_hid_send(data, length);
+    memset(data, 0, length);
+    memcpy(data, "\x50\x1b\x2e\x83\xad\x0a\x1c\x77\xe8\xb9\x9c\x81\x02\x49\x25\x1a\x25\xba\xe8\x4a\xe8", 21);
+    raw_hid_send(data, length);
+    //[[[end]]]
+    return;
+}
+
+static void hid_cmd_28(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //get/set idle (anti-burn-in) display style (protocol v4+)
+    {
+        // data[HID_DATA_IDX] == 0xFF -> query (reply current style in data[3]).
+        // Otherwise set the style (0 = pulse, 1 = jitter, 2 = doom attract
+        // screensaver — falls back to pulse at runtime when the demo can't
+        // start); persisted at the next EEPROM flush (suspend / store key).
+        uint8_t arg = data[HID_DATA_IDX];
+        memset(data, 0, length);
+        if (arg == 0xFF) {
+            hid_reply(data, 0x1c, true);
+            data[3] = get_idle_style();
+        } else if (arg < IDLE_STYLE_COUNT) {
+            set_idle_style(arg);
+            // The style is synced to the slave from housekeeping; both
+            // halves relocate their own keys, so there is no shared
+            // offset to reset here.
+            hid_reply(data, 0x1c, true);
+            data[3] = arg;
+            uprintf("Set idle style to %u.\n", arg);
+        } else {
+            hid_reply(data, 0x1c, false);
+            uprintf("Refused idle style %u.\n", arg);
+        }
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_29(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //get/set active host-OS identity (protocol v7+)
+    {
+        // data[HID_DATA_IDX]   = arg:
+        //   0xFF -> query (reply data[3] = active OS, data[4] = auto-mode flag)
+        //   0xFE -> engage auto mode (clear the manual pin; detection+host resume)
+        //   else -> set the OS (enum poly_os); data[HID_DATA_IDX+1] flags:
+        //           bit0 = 1 -> manual PIN (wins, persists); 0 -> host-auto push.
+        // The OS is its own state, independent of the unicode mode (cmd 20):
+        // it drives the modifier-legend swap, the OS icon, and the semantic
+        // action keys. Synced to the slave from housekeeping (active_os).
+        uint8_t arg   = data[HID_DATA_IDX];
+        uint8_t flags = data[HID_DATA_IDX + 1];
+        memset(data, 0, length);
+        if (arg == 0xFF) {
+            hid_reply(data, 0x1d, true);
+            data[3] = get_active_os();
+            data[4] = get_os_auto_mode() ? 1 : 0;
+        } else if (arg == 0xFE) {
+            set_os_auto_mode(true);
+            hid_reply(data, 0x1d, true);
+            data[3] = get_active_os();
+            data[4] = 1;
+            uprint("OS auto mode engaged.\n");
+        } else if (arg < POLY_OS_COUNT) {
+            if (flags & 0x01) {
+                set_user_os(arg);     // manual pin
+            } else {
+                set_host_os(arg);     // host-auto push
+            }
+            hid_reply(data, 0x1d, true);
+            data[3] = get_active_os();
+            data[4] = get_os_auto_mode() ? 1 : 0;
+            uprintf("Set OS to %u (pin=%u), active=%u.\n", arg, (unsigned)(flags & 0x01), data[3]);
+        } else {
+            hid_reply(data, 0x1d, false);
+            uprintf("Refused OS %u.\n", arg);
+        }
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_30(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //get/set glyph-script override (protocol v9+)
+    {
+        // data[HID_DATA_IDX] == 0xFF -> query (reply current script in data[3]).
+        // Otherwise set the script by INDEX (0 = standard/off, 1 = Tengwar,
+        // 2.. = the expanded scripts). Any index 0..0xFE is ACCEPTED even if
+        // this firmware doesn't know it or its font isn't flashed — the
+        // renderer just falls back to the normal legend (glyph_script_codepoint
+        // returns 0 for unknown indices). This is what decouples "add a font
+        // face" from the protocol version: the host may offer more scripts than
+        // a given keyboard has, and older keyboards degrade gracefully instead
+        // of NACKing. The override replaces the language-layer letter/digit
+        // legends only and is persisted at the next EEPROM flush (suspend /
+        // store key). The awake re-render + slave sync run from housekeeping.
+        //
+        // v26: data[HID_DATA_IDX+1] is the PLACEMENT op: 0 keep, 1 centre, 2 top-left
+        // (enum poly_glyph_place + 1). Zero keeps the stored placement, so an older
+        // host, whose reports are zero-padded, never resets it when it sets a script.
+        // A script byte of 0xFF with a non-zero op changes the placement only. Any
+        // other op is refused before anything is changed. The reply carries the
+        // script in data[3] and the placement (enum value, not op) in data[4];
+        // older firmware ignores the op byte, so the host sends one only at v26+.
+        uint8_t arg   = data[HID_DATA_IDX];
+        uint8_t place = data[HID_DATA_IDX + 1];
+        memset(data, 0, length);
+        uint8_t new_place = 0;
+        const glyph_place_op_kind_t op = glyph_place_op_decode(place, GLYPH_PLACE_COUNT, &new_place);
+        if (op == GLYPH_PLACE_OP_IS_INVALID) {
+            hid_reply(data, 0x1e, false);
+            raw_hid_send(data, length);
+            return;
+        }
+        if (arg != 0xFF) {
+            set_glyph_script(arg);
+            uprintf("Set glyph script to %u.\n", arg);
+        }
+        if (op == GLYPH_PLACE_OP_IS_SET) {
+            set_glyph_place(new_place);
+            uprintf("Set glyph script placement to %s.\n",
+                    new_place == GLYPH_PLACE_TOP_LEFT ? "top-left" : "centre");
+        }
+        hid_reply(data, 0x1e, true);
+        data[3] = get_glyph_script();
+        data[4] = get_glyph_place();
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_31(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //replay the startup ("Eden") animation on demand
+    {
+        // Fun/debug: re-play the one-time boot animation without a
+        // power cycle. Start it on this (master) half and bump the
+        // synced nonce so the slave replays too (see split_sync.c).
+        startup_anim_start();
+        access_local_state()->anim_nonce++;
+        memset(data, 0, length);
+        hid_reply(data, 0x1f, true);
+        raw_hid_send(data, length);
+        uprint("Replaying startup animation.\n");
+    }
+    return;
+}
+
+static void hid_cmd_34(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //get/set keycap legend size (protocol v13+)
+    {
+        // data[HID_DATA_IDX] == 0xFF -> query (reply current size in data[3]).
+        // Otherwise set the size (enum poly_glyph_size: 0 = small/original,
+        // 1 = medium, 2 = large). Applies to the key's MAIN legend only —
+        // the shift / AltGr previews and every other kind of chrome stay as
+        // they are. Persisted at the next EEPROM flush (suspend / store key);
+        // the awake re-render + slave sync run from housekeeping.
+        //
+        // ⚠️ The range is CLOSED, unlike the glyph script one command over.
+        // A script index the firmware doesn't know can fall through to the
+        // normal legend, so accepting it costs nothing and buys the host the
+        // freedom to add faces without a protocol bump. A SIZE is different:
+        // every value has to name a tier whose relocation base and baseline
+        // this firmware knows, so an unknown one would be stored, synced and
+        // persisted while rendering as small — a setting that silently does
+        // nothing. NACK it instead, and let the host's feature gate decide.
+        //
+        // Sizes above small need the `latinbig` font-pack bundle. That is NOT
+        // checked here: the bundle can be flashed after the choice is made, so
+        // the fallback lives at draw time (glyph_size_remap), where it is
+        // re-evaluated on every render.
+        uint8_t arg = data[HID_DATA_IDX];
+        memset(data, 0, length);
+        if (arg == 0xFF) {
+            hid_reply(data, 0x22, true);
+            data[3] = get_glyph_size();
+        } else if (arg < GLYPH_SIZE_COUNT) {
+            set_glyph_size(arg);
+            hid_reply(data, 0x22, true);
+            data[3] = arg;
+            uprintf("Set glyph size to %s.\n", glyph_size_name(arg));
+        } else {
+            hid_reply(data, 0x22, false);
+            uprintf("Refused glyph size %u.\n", arg);
+        }
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_35(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //report the host-remappable layers and their names (protocol v14+)
+    {
+        // Reply: "P\x23." then the payload
+        //
+        //     [0] total   whole payload length, THIS BYTE INCLUDED
+        //     [1] count   number of layers named
+        //     [2..] count NUL-terminated ASCII names, <= POLY_LAYER_NAME_MAX each
+        //
+        // split across as many reports as it needs (54 bytes / one report today).
+        //
+        // ⚠️ The TOTAL is what makes this decodable, and it is why the length
+        // does not live in the records. The host reads byte 0, keeps reading
+        // until it holds that many bytes, and only then splits on the NULs —
+        // so termination is arithmetic rather than a scan, and the zero fill
+        // past the payload is never examined. Two encodings were tried first
+        // and both are worse:
+        //   - fixed-width 8-byte records also give an arithmetic length, but
+        //     cost 65 bytes and therefore a second report;
+        //   - terminated records with no total force the decoder to scan for
+        //     the end, and the only way to tell a real terminator from the
+        //     report's zero fill is "an empty name means padding" — which
+        //     makes an UNNAMED layer (poly_layer_name_wire returning NULL,
+        //     i.e. a bare terminator) indistinguishable from the fill and
+        //     silently truncates the list.
+        //
+        // The count is DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT — the SAME value
+        // id_dynamic_keymap_get_layer_count already answers with, on purpose:
+        // the editor sizes its tab strip from that command and labels the tabs
+        // from this one, so two different counts would let it draw a tab it has
+        // no name for. Layers at or above the cap are served from flash and
+        // cannot be remapped, so they get no name.
+        //
+        // This exists because the names used to be a build-time artifact on the
+        // host, generated from layers.h by a script whose source path had gone
+        // stale — so the editor labelled tabs from an enum the firmware had not
+        // had for a long time. A name the keyboard states itself cannot drift.
+        // The payload itself is built by poly_layer_names_payload()
+        // (layer_names.c, unit-tested) — this case only chunks it into
+        // reports.
+        uint8_t        payload[LAYER_NAMES_PAYLOAD_MAX];
+        const uint16_t used  = poly_layer_names_payload(payload);
+        const uint16_t chunk = hid_payload_avail(length, 3);
+        for (uint16_t off = 0; off < used; off += chunk) {
+            const uint16_t n = (used - off < chunk) ? (uint16_t)(used - off) : chunk;
+            memset(data, 0, length);
+            hid_reply(data, 0x23, true);
+            memcpy(&data[3], &payload[off], n);
+            raw_hid_send(data, length);
+        }
+    }
+    return;
+}
+
+static void hid_cmd_36(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //macro info: how many, how big, how much is in use (protocol v15+)
+    {
+        // Read-only. The host needs all four before it can lay out an editor:
+        // the count and the label stride are compile-time, the capacity is
+        // whatever survived the EEPROM layout, and `used` is what makes the
+        // shared-storage bar honest -- the bodies share one buffer, so a long
+        // macro takes room from the others and that has to be visible before
+        // a save fails rather than after.
+        memset(data, 0, length);
+        hid_reply(data, 0x24, true);
+        data[3] = POLY_MACRO_COUNT;
+        data[4] = POLY_MACRO_LABEL_LEN;
+        uint16_t cap  = poly_macro_capacity();
+        uint16_t used = poly_macro_bytes_used();
+        data[5] = (uint8_t)(cap & 0xFF);
+        data[6] = (uint8_t)(cap >> 8);
+        data[7] = (uint8_t)(used & 0xFF);
+        data[8] = (uint8_t)(used >> 8);
+        // How many keycap styles this firmware can actually DRAW. The host
+        // may offer more (an unknown style degrades to the index rather
+        // than being refused), but a menu that lists only what the board
+        // renders is the honest one -- and this costs a byte in a report
+        // with 55 spare.
+        data[9] = POLY_MACRO_STYLE_COUNT;
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_37(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //macro body read/write, windowed (protocol v15+)
+    {
+        // data[2] = 0 read / 1 write, data[3..4] = offset LE, data[5] = count,
+        // data[6..] = bytes. Windowed rather than whole-macro because the
+        // buffer is up to ~2 KB and a report holds 64 -- the host streams it
+        // the same way it streams an overlay.
+        const uint8_t  header = 6;
+        uint8_t        sub    = data[HID_DATA_IDX];
+        uint16_t       offset = (uint16_t)data[3] | ((uint16_t)data[4] << 8);
+        uint16_t       want   = data[5];
+        const uint16_t avail  = hid_payload_avail(length, header);
+        if (want > avail) want = avail;
+
+        if (sub == 0) {
+            uint8_t buf[64];
+            poly_macro_read(offset, (uint16_t)want, buf);
+            memset(data, 0, length);
+            hid_reply(data, 0x25, true);
+            data[3] = (uint8_t)want;
+            memcpy(&data[header], buf, want);
+            raw_hid_send(data, length);
+        } else if (sub == 1) {
+            // A write lands mid-buffer, so a macro that is being replaced
+            // is briefly inconsistent -- and an interrupted upload would
+            // otherwise leave a playable splice of the new text and
+            // whatever preceded it. poly_macro_start() refuses to play a
+            // buffer whose last byte is not NUL; the HOST raises a non-zero
+            // marker there before it streams and clears it with the final
+            // window, so the guard is armed for exactly that window. The
+            // marker is the host's job because only the host knows a write
+            // has begun -- from here every window looks alike.
+            poly_macro_write(offset, (uint16_t)want, &data[header]);
+            memset(data, 0, length);
+            hid_reply(data, 0x25, true);
+            raw_hid_send(data, length);
+        } else {
+            // Anything else NACKs rather than falling into the write. The
+            // `else` used to catch every value, so a malformed or newer
+            // client silently modified macro EEPROM instead of being told
+            // the sub-command means nothing here (CodeRabbit, 2026-08-27).
+            memset(data, 0, length);
+            hid_reply(data, 0x25, false);
+            raw_hid_send(data, length);
+        }
+    }
+    return;
+}
+
+static void hid_cmd_38(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //macro look get/set (protocol v15+)
+    {
+        // The whole appearance of one macro in one exchange:
+        //   data[2]    macro id
+        //   data[3]    0xFF query, else the caption byte count
+        //   data[4]    style (POLY_MACRO_STYLE_*)
+        //   data[5..8] icon codepoint, little-endian
+        //   data[9..]  caption text
+        // The reply mirrors the same layout.
+        //
+        // One command rather than three, because a macro keycap composes
+        // the caption WITH the style and the icon -- splitting them lets a
+        // host apply half an appearance, and the keycap then draws a
+        // combination the user never asked for until the next write lands.
+        //
+        // ASCII only: poly_macro_look_set drops anything the _Nano_ face
+        // cannot draw, so what is stored is what the keycap will show. An
+        // unknown style is stored as STYLE_INDEX rather than refused -- see
+        // poly_macro.h.
+        const uint8_t header = 9;
+        uint8_t       id     = data[HID_DATA_IDX];
+        uint8_t       n      = data[3];
+        if (id >= POLY_MACRO_COUNT) {
+            memset(data, 0, length);
+            hid_reply(data, 0x26, false);
+            raw_hid_send(data, length);
+            return;
+        }
+        if (n != 0xFF) {
+            const uint16_t avail = hid_payload_avail(length, header);
+            if (n > avail) n = (uint8_t)avail;
+            if (n > POLY_MACRO_LABEL_LEN) n = POLY_MACRO_LABEL_LEN;
+            poly_macro_look_t look;
+            look.style = data[4];
+            look.icon  = poly_macro_icon_get(&data[5]);
+            memcpy(look.text, &data[header], n);
+            look.text[n] = '\0';
+            poly_macro_look_set(id, &look);
+            request_disp_refresh();
+        }
+        poly_macro_look_t look;
+        poly_macro_look_get(id, &look);
+        uint8_t len = (uint8_t)strlen(look.text);
+        memset(data, 0, length);
+        hid_reply(data, 0x26, true);
+        data[3] = len;
+        data[4] = look.style;
+        poly_macro_icon_put(&data[5], look.icon);
+        memcpy(&data[header], look.text, len);
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_39(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //crash record: read the last crash / clear the archive (protocol v16+)
+    {
+        // data[HID_DATA_IDX]: 0 = this half's archived crash record,
+        //                     1 = the slave's record as last pulled over the link,
+        //                     2 = clear (erase the flash archive, forget both copies).
+        // Reply "P\x27." then [flags][48-byte poly_crash_record_t]
+        // (crash_record_hid_body): flags bit0 present, bit1 fresh -- the boot
+        // before this one ended in that crash. A clear answers an empty body;
+        // anything else NACKs. The record's wire layout is drivers/crash_record.h.
+        //
+        // The console line printed with the boot banner is one channel the
+        // host alerts on; the host also reads this on the GET_ID fresh-boot
+        // marker. polyctl and the rig fetch the archive here, and it is the
+        // only way to clear it. ⚠️ Reading half 1 has a side effect: a fresh
+        // slave record reads fresh ONCE, then the slave is told the host has
+        // it (base/crash_ack.h).
+        const uint8_t which = data[HID_DATA_IDX];
+        if (which > 2) {
+            memset(data, 0, length);
+            hid_reply(data, 0x27, false);
+            raw_hid_send(data, length);
+            return;
+        }
+        if (which == 2) {
+            crash_record_clear();
+            uprint("Crash archive cleared.\n");
+        }
+        memset(data, 0, length);
+        hid_reply(data, 0x27, true);
+        if (which <= 1) {
+            crash_record_hid_body(which, &data[3], (uint8_t)(length - 3));
+            // AFTER the body: this read still reports FRESH, later ones
+            // do not, and the slave is told (base/crash_ack.h).
+            crash_record_note_host_read(which);
+        }
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_40(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //get/set the idle timeout preset (protocol v18+)
+    {
+        // data[HID_DATA_IDX] == 0xFF -> query. Otherwise set the preset
+        // (enum poly_idle_timeout: 0=15s 1=30s 2=45s 3=1min 4=2min 5=5min);
+        // persisted at the next EEPROM flush (suspend / store key).
+        //
+        // Reply on success: data[3] = the preset, data[4..5] = its duration
+        // in SECONDS, little-endian. The duration is there so a host that is
+        // OLDER than a firmware which added a preset can still label what it
+        // reads back, instead of showing a bare index it has no name for.
+        // That is the only concession to forward compatibility here: the
+        // SET range stays CLOSED and NACKs anything it does not know, the
+        // deliberate opposite of the glyph-script index one command family
+        // over (v10), because an unknown script degrades to the normal
+        // legend while an unknown timeout would be stored, persisted and
+        // then quietly resolved to some other duration.
+        uint8_t arg = data[HID_DATA_IDX];
+        memset(data, 0, length);
+        if (arg == 0xFF) {
+            hid_reply(data, 0x28, true);
+            data[3] = get_idle_timeout();
+            const uint16_t secs = (uint16_t)(get_idle_timeout_ms() / 1000u);
+            data[4] = (uint8_t)(secs & 0xFFu);
+            data[5] = (uint8_t)(secs >> 8);
+        } else if (arg < IDLE_TIMEOUT_COUNT) {
+            set_idle_timeout(arg);
+            // No last_update reset: the new delay is measured against the
+            // activity timestamp that is already running, so picking a
+            // shorter timeout than the time since the last keypress idles
+            // the board on the next housekeeping pass — which is what makes
+            // the setting feel like it took effect.
+            hid_reply(data, 0x28, true);
+            data[3] = arg;
+            const uint16_t secs = (uint16_t)(get_idle_timeout_ms() / 1000u);
+            data[4] = (uint8_t)(secs & 0xFFu);
+            data[5] = (uint8_t)(secs >> 8);
+            uprintf("Set idle timeout to preset %u (%ums).\n", arg,
+                    (unsigned int)get_idle_timeout_ms());
+        } else {
+            hid_reply(data, 0x28, false);
+            uprintf("Refused idle timeout %u.\n", arg);
+        }
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+// Cmd 44 reply flag: this build has Flow Tap compiled in (FLOW_TAP_TERM defined).
+// Without it the Flow Tap term is stored but used by nothing, and the host shows
+// the control disabled.
+#define TAP_TERMS_FLAG_FLOW_TAP     0x01u   // Flow Tap is compiled in
+#define TAP_TERMS_FLAG_AUTO_SHIFT   0x02u   // Auto Shift is compiled in (v30)
+#define TAP_TERMS_FLAG_AUTO_SHIFT_ON 0x04u  // Auto Shift is on (v30)
+
+static void hid_cmd_44(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //get/set the tap-hold terms (protocol v29+) and Auto Shift (v30+)
+    {
+        // Request: data[2] = op (0 query, 1 set), data[3..4] = tapping term ms,
+        // data[5..6] = Flow Tap term ms, both little-endian; TAP_TERM_KEEP (0xFFFF)
+        // leaves that term unchanged. v30: data[7] = Auto Shift op (0 keep, 1 off,
+        // 2 on), data[8..9] = Auto Shift timeout ms (0 or 0xFFFF keep). A v29 host
+        // zero-pads the report, so its sets keep Auto Shift as it is.
+        // Ranges: base/tap_terms.h. All are CLOSED, like the idle timeout (cmd 40):
+        // a value outside them is NACKed, because an accepted one is persisted and
+        // used for every key.
+        //
+        // Every field is validated before any is applied, so a report with one bad
+        // value changes nothing.
+        //
+        // Reply (ACK and NACK alike): data[3..4] = tapping term, data[5..6] = Flow
+        // Tap term, data[7] = flags (TAP_TERMS_FLAG_*), data[8..9] = Auto Shift
+        // timeout. Persisted at the next settings flush (suspend / store key).
+        const uint8_t  op       = hid_payload_avail(length, 2) > 0 ? data[2] : 0xFFu;
+        const uint16_t tap_ms   = hid_payload_avail(length, 4) > 0 ? (uint16_t)(data[3] | (data[4] << 8)) : TAP_TERM_KEEP;
+        const uint16_t flow_ms  = hid_payload_avail(length, 6) > 0 ? (uint16_t)(data[5] | (data[6] << 8)) : TAP_TERM_KEEP;
+        const uint8_t  as_op    = hid_payload_avail(length, 7) > 0 ? data[7] : AUTO_SHIFT_OP_KEEP;
+        uint16_t       as_ms    = hid_payload_avail(length, 9) > 0 ? (uint16_t)(data[8] | (data[9] << 8)) : AUTO_SHIFT_MS_KEEP;
+        if (as_ms == TAP_TERM_KEEP) {
+            as_ms = AUTO_SHIFT_MS_KEEP;
+        }
+        bool ok = false;
+        if (op == 0) {
+            ok = true;
+        } else if (op == 1) {
+            const bool tap_ok  = tap_ms == TAP_TERM_KEEP || tapping_term_valid(tap_ms);
+            const bool flow_ok = flow_ms == TAP_TERM_KEEP || flow_tap_term_valid(flow_ms);
+            const bool as_ok   = as_op <= AUTO_SHIFT_OP_ON
+                                 && (as_ms == AUTO_SHIFT_MS_KEEP || auto_shift_ms_valid(as_ms));
+            ok = tap_ok && flow_ok && as_ok;
+            if (ok) {
+                if (tap_ms != TAP_TERM_KEEP) {
+                    set_poly_tapping_term(tap_ms);
+                }
+                if (flow_ms != TAP_TERM_KEEP) {
+                    set_poly_flow_tap_term(flow_ms);
+                }
+                if (as_ms != AUTO_SHIFT_MS_KEEP) {
+                    set_poly_auto_shift_ms(as_ms);
+                }
+                if (as_op != AUTO_SHIFT_OP_KEEP) {
+                    set_poly_auto_shift(as_op == AUTO_SHIFT_OP_ON);
+                }
+                uprintf("Set tapping term %ums, flow tap term %ums, auto shift %s %ums.\n",
+                        (unsigned int)get_poly_tapping_term(), (unsigned int)get_poly_flow_tap_term(),
+                        get_poly_auto_shift() ? "on" : "off", (unsigned int)get_poly_auto_shift_ms());
+            } else {
+                uprintf("Refused tap terms %u / %u, auto shift %u / %u.\n", (unsigned int)tap_ms,
+                        (unsigned int)flow_ms, (unsigned int)as_op, (unsigned int)as_ms);
+            }
+        }
+        memset(data, 0, length);
+        hid_reply(data, 0x2C, ok);
+        const uint16_t cur_tap  = get_poly_tapping_term();
+        const uint16_t cur_flow = get_poly_flow_tap_term();
+        const uint16_t cur_as   = get_poly_auto_shift_ms();
+        data[3] = (uint8_t)(cur_tap & 0xFFu);
+        data[4] = (uint8_t)(cur_tap >> 8);
+        data[5] = (uint8_t)(cur_flow & 0xFFu);
+        data[6] = (uint8_t)(cur_flow >> 8);
+        uint8_t flags = 0;
+#ifdef FLOW_TAP_TERM
+        flags |= TAP_TERMS_FLAG_FLOW_TAP;
+#endif
+#ifdef AUTO_SHIFT_ENABLE
+        flags |= TAP_TERMS_FLAG_AUTO_SHIFT;
+        if (get_poly_auto_shift()) {
+            flags |= TAP_TERMS_FLAG_AUTO_SHIFT_ON;
+        }
+#endif
+        data[7] = flags;
+        data[8] = (uint8_t)(cur_as & 0xFFu);
+        data[9] = (uint8_t)(cur_as >> 8);
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+static void hid_cmd_45(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //AI mode: query / set keys / read events (protocol v31+)
+    ai_hid_cmd(data, length);
+}
+
+static void hid_cmd_46(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //AI card segment into a pool slot (protocol v31+)
+    ai_hid_card(data, length);
+}
+
+static void hid_cmd_47(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //key attention: the focus ripple on a key (protocol v32+)
+    key_attention_hid(data, length);
+}
+
+#ifdef POLY_HOST_TUTORIAL
+static void hid_cmd_49(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //host tutorial: status text, spotlight, reveal, conditions (protocol v35+)
+    host_tutorial_hid(data, length);
+}
+#endif
+
+// Cmd 48 operations (data[2]).
+#define COMBO_OP_INFO   0u
+#define COMBO_OP_GET    1u
+#define COMBO_OP_SET    2u
+#define COMBO_OP_COMMIT 3u
+#define COMBO_INFO_FLAG_AVAILABLE 0x01u   // this build has runtime combos / tap dance
+#define COMBO_COMMIT_FLAG_SLAVE   0x01u   // the other half stored the copy (its flash CRC matches)
+
+static void hid_cmd_48(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //runtime combos and tap dance (protocol v33+)
+    {
+        // Request: data[2] = op.
+        //   0 info    reply data[3] combo slots, data[4] tap-dance slots, data[5] record
+        //             bytes, data[6] flags (bit 0: available), data[7..8] combo term ms
+        //   1 get     data[3] kind (0 combo, 1 tap dance), data[4] index
+        //             reply data[3] kind, data[4] index, data[5..14] the record
+        //   2 set     data[3] kind, data[4] index, data[5..14] the record
+        //             (RAM only; reply as for get, with the record now in RAM)
+        //   3 commit  writes this half's flash sector and copies every record to the
+        //             other half; reply data[3] bit 0 = the other half stored it
+        // Records: base/combo_store.h. Both kinds are CLOSED: a record that fails
+        // validation is NACKed and nothing changes. The DOOM monolith has no
+        // runtime combos and NACKs every op (info reports flags 0).
+        const uint8_t op    = hid_payload_avail(length, 2) > 0 ? data[2] : 0xFFu;
+        const uint8_t kind  = hid_payload_avail(length, 3) > 0 ? data[3] : 0xFFu;
+        const uint8_t index = hid_payload_avail(length, 4) > 0 ? data[4] : 0xFFu;
+        uint8_t rec[POLY_COMBO_REC_BYTES];
+        memset(rec, 0, sizeof(rec));
+        bool ok = false;
+        bool slave_ok = false;
+#ifdef POLY_RUNTIME_COMBOS
+        const bool available = true;
+#else
+        const bool available = false;
+#endif
+        // No record change and no commit while a firmware update runs: the slave's
+        // flash write is skipped then (housekeeping is gated on it), and the apply
+        // resets both halves, so the copy would be lost with a success reply.
+        const bool fw_busy = fw_staging_fw_up_active() || fw_staging_commit_pending() ||
+                             fw_staging_reboot_pending();
+        if (op == COMBO_OP_INFO) {
+            ok = available;
+        } else if (op == COMBO_OP_GET) {
+            ok = poly_combo_record_get(kind, index, rec);
+        } else if (op == COMBO_OP_SET) {
+            if (!fw_busy && hid_payload_avail(length, 5) >= POLY_COMBO_REC_BYTES) {
+                memcpy(rec, &data[5], POLY_COMBO_REC_BYTES);
+                ok = poly_combo_record_set(kind, index, rec);
+                if (!ok) uprintf("Refused combo record kind %u index %u.\n", (unsigned)kind, (unsigned)index);
+            }
+            if (!ok) memset(rec, 0, sizeof(rec));
+            poly_combo_record_get(kind, index, rec);   // the record as it is now
+        } else if (op == COMBO_OP_COMMIT) {
+            ok = available && !fw_busy;
+            if (ok) {
+                const uint8_t stored = poly_combos_commit();
+                ok       = (stored & POLY_COMBOS_STORED_HERE) != 0;   // NACK: this half's flash failed
+                slave_ok = (stored & POLY_COMBOS_STORED_OTHER) != 0;
+                uprintf("Combos committed: %s; other half %s.\n", ok ? "stored" : "FLASH WRITE FAILED",
+                        slave_ok ? "stored them" : "NOT confirmed");
+            }
+        }
+        memset(data, 0, length);
+        hid_reply(data, 0x30, ok);
+        if (op == COMBO_OP_INFO) {
+            data[3] = available ? POLY_COMBO_SLOTS : 0;
+            data[4] = available ? POLY_TAP_DANCE_SLOTS : 0;
+            data[5] = POLY_COMBO_REC_BYTES;
+            data[6] = available ? COMBO_INFO_FLAG_AVAILABLE : 0;
+#ifdef COMBO_TERM
+            data[7] = (uint8_t)(COMBO_TERM & 0xFFu);
+            data[8] = (uint8_t)(COMBO_TERM >> 8);
+#endif
+        } else if (op == COMBO_OP_GET || op == COMBO_OP_SET) {
+            data[3] = kind;
+            data[4] = index;
+            memcpy(&data[5], rec, POLY_COMBO_REC_BYTES);
+        } else if (op == COMBO_OP_COMMIT) {
+            data[3] = slave_ok ? COMBO_COMMIT_FLAG_SLAVE : 0;
+        }
+        raw_hid_send(data, length);
+    }
+    return;
+}
+
+#ifdef POLYKYBD_LOOP_PROFILE
+static void hid_cmd_32(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //main-loop profiler control (POLYKYBD_LOOP_PROFILE builds only)
+    {
+        // Lets an automated harness (the polykybd-ctnd rig) bound ONE
+        // measurement: reset the counters, drive a workload, read the
+        // window back as binary. Without it the only readout is the
+        // periodic console block, whose counters are cumulative from
+        // boot and whose `worst` is an all-time maximum — impossible to
+        // attribute to a specific workload.
+        //
+        // NOT protocol-gated and bumps NO PROTOCOL_VERSION — like cmd 31
+        // (REPLAY_ANIM) and the fontpack commands, it is dispatched
+        // independently. On a normal (non-profiling) build the whole case
+        // is compiled out, so the command NACKs via the default branch;
+        // that NACK is how the rig distinguishes "no profiler in this
+        // firmware" from a real answer.
+        //
+        // data[2] = sub-command, data[3] = page (READ only).
+        const uint8_t sub  = hid_payload_avail(length, 2) > 0 ? data[2] : 0xFFu;
+        const uint8_t page = hid_payload_avail(length, 3) > 0 ? data[3] : 0;
+        switch (sub) {
+            case 0: // RESET — zero the counters and start a fresh window
+                loop_profile_reset();
+                memset(data, 0, length);
+                hid_reply(data, 32, true);
+                raw_hid_send(data, length);
+                break;
+            case 1: { // READ — binary snapshot of the current window
+                uint8_t body[64];
+                uint8_t n = loop_profile_snapshot(page, body, (uint8_t)sizeof(body));
+                memset(data, 0, length);
+                hid_reply(data, 32, n > 0);
+                if (n > 0) {
+                    data[3] = page;
+                    // Header is 4 bytes (P, cmd, status, page), so the
+                    // body is bounded by whatever the report holds after
+                    // it — via the shared helper, so a short report can
+                    // never underflow into a huge memcpy.
+                    const uint16_t room = hid_payload_avail(length, 4);
+                    if ((uint16_t)n > room) n = (uint8_t)room;
+                    memcpy(&data[4], body, n);
+                }
+                raw_hid_send(data, length);
+                break;
+            }
+            case 2: // LOG — dump the console summary block immediately
+                loop_profile_log_now();
+                memset(data, 0, length);
+                hid_reply(data, 32, true);
+                raw_hid_send(data, length);
+                break;
+            default:
+                memset(data, 0, length);
+                hid_reply(data, 32, false);
+                raw_hid_send(data, length);
+                break;
+        }
+    }
+    return;
+}
+#endif
+
+static void hid_cmd_50(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //hardware IDs of both halves (protocol v37+)
+    // Reply "P\x32." then:
+    //   data[3]      flags: bit0 = data[4..11] valid, bit1 = data[12..19] valid
+    //   data[4..11]  this half's flash unique ID (the half the host talks to)
+    //   data[12..19] the other half's, read over the split link now
+    // An ID is 8 bytes as the flash sends them. No request payload. Always ACKs:
+    // a missing ID is a clear flag bit, so a slave that is unplugged or runs older
+    // firmware still lets the host read the master's ID.
+    (void)local_layer;
+    (void)local_state;
+    uint8_t own[POLY_HW_UID_LEN];
+    uint8_t other[POLY_HW_UID_LEN];
+    const bool own_ok   = poly_hw_uid(own);
+    const bool other_ok = fw_up_query_slave_hw_uid(other);
+    memset(data, 0, length);
+    hid_reply(data, 50, true);
+    data[3] = (uint8_t)((own_ok ? 0x01u : 0u) | (other_ok ? 0x02u : 0u));
+    _Static_assert(4 + 2 * POLY_HW_UID_LEN <= RAW_EPSIZE, "cmd 50 reply must fit one report");
+    if (length >= 4 + 2 * POLY_HW_UID_LEN) {
+        memcpy(&data[4], own, POLY_HW_UID_LEN);
+        memcpy(&data[4 + POLY_HW_UID_LEN], other, POLY_HW_UID_LEN);
+    }
+    raw_hid_send(data, length);
+}
+
+static void hid_cmd_unknown(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) {
+    if (hid_fw_up_receive(data, length)) {
+        return;
+    }
+    if (hid_fontpack_receive(data, length)) {
+        return;
+    }
+    printf("Unknown command: %u.\n", data[HID_CMD_IDX]);
+    data[2] = '!';
+    raw_hid_send(data, length);
+    return;
+}
+
+// One row per command id. A missing row (or an id past the end) goes to
+// hid_cmd_unknown(), which offers the report to the firmware-update and font-pack
+// transports before NACKing it.
+typedef void (*hid_cmd_fn)(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state);
+
+typedef struct {
+    hid_cmd_fn fn;
+    uint8_t    flags;
+} hid_cmd_t;
+
+// The command is part of a bulk overlay or mapping burst (see raw_hid_receive()).
+#define HID_CMD_OVERLAY_BURST 0x01u
+
+static const hid_cmd_t s_hid_cmds[] = {
+    [6] = {hid_cmd_6, 0},
+    [7] = {hid_cmd_7, 0},
+    [8] = {hid_cmd_8, 0},
+    [9] = {hid_cmd_9, 0},
+    [10] = {hid_cmd_10, HID_CMD_OVERLAY_BURST},
+    [11] = {hid_cmd_11, HID_CMD_OVERLAY_BURST},
+    [12] = {hid_cmd_12, HID_CMD_OVERLAY_BURST},
+    [13] = {hid_cmd_13, 0},
+    [14] = {hid_cmd_14, 0},
+    [15] = {hid_cmd_15, 0},
+    [16] = {hid_cmd_16, HID_CMD_OVERLAY_BURST},
+    [17] = {hid_cmd_17, HID_CMD_OVERLAY_BURST},
+    [18] = {hid_cmd_18, HID_CMD_OVERLAY_BURST},
+    [19] = {hid_cmd_19, HID_CMD_OVERLAY_BURST},
+    [20] = {hid_cmd_20, 0},
+    [21] = {hid_cmd_21, HID_CMD_OVERLAY_BURST},
+    [22] = {hid_cmd_22, 0},
+    [23] = {hid_cmd_23, 0},
+    [24] = {hid_cmd_24, 0},
+    [25] = {hid_cmd_25, 0},
+    [26] = {hid_cmd_26, 0},
+    [27] = {hid_cmd_27, 0},
+    [28] = {hid_cmd_28, 0},
+    [29] = {hid_cmd_29, 0},
+    [30] = {hid_cmd_30, 0},
+    [31] = {hid_cmd_31, 0},
+#ifdef POLYKYBD_LOOP_PROFILE
+    [32] = {hid_cmd_32, 0},
+#endif
+    [33] = {hid_cmd_33, HID_CMD_OVERLAY_BURST},
+    [34] = {hid_cmd_34, 0},
+    [35] = {hid_cmd_35, 0},
+    [36] = {hid_cmd_36, 0},
+    [37] = {hid_cmd_37, 0},
+    [38] = {hid_cmd_38, 0},
+    [39] = {hid_cmd_39, 0},
+    [40] = {hid_cmd_40, 0},
+    [41] = {hid_cmd_41, HID_CMD_OVERLAY_BURST},
+    [42] = {hid_cmd_42, HID_CMD_OVERLAY_BURST},
+    [43] = {hid_cmd_43, 0},
+    [44] = {hid_cmd_44, 0},
+    [45] = {hid_cmd_45, 0},
+    [46] = {hid_cmd_46, 0},
+    [47] = {hid_cmd_47, 0},
+    [48] = {hid_cmd_48, 0},
+#ifdef POLY_HOST_TUTORIAL
+    [49] = {hid_cmd_49, 0},   // not in the DOOM monolith: NACKed as unknown there
+#endif
+    [50] = {hid_cmd_50, 0},
+};
+
+void raw_hid_receive(uint8_t *data, uint8_t length) {
+    if (length<1) {
+        return;
+    }
+#ifdef USE_CORE1
+    // A host report means a host is attached and reading the console, so this is
+    // where a core1 stall found while nobody was listening gets reported.
+    core1_stall_report();
+#endif
+
+    if(data[0] == id_custom_save || data[0] == 'P') {
+        // Doom easter egg: while game mode has borrowed the overlay pool as
+        // game memory, drop the pool-writing bulk commands (all ACKless — a
+        // reply here would inject a stale report into the host's read stream).
+        // Every other command keeps answering, GET_ID included.
+        if (doom_hid_frozen(data[1])) {
+            return;
+        }
+        // Crash-record breadcrumb: a watchdog timeout inside a handler names the
+        // command. Housekeeping resets the tag to LOOP on its next pass.
+        (void)crash_phase_enter(CRASH_PHASE_HID, data[1]);
+        const poly_layer_t* local_layer = get_local_layer();
+        poly_sync_t* local_state = access_local_state();
+        // Bulk overlay/mapping commands (10, 11, 12, 16-19, 21, 33, 41, 42) carry
+        // HID_CMD_OVERLAY_BURST. Two markers:
+        //  - note_overlay_activity() timestamps the burst so sync_and_refresh_displays()
+        //    can coalesce the many per-report renders of a program switch into one.
+        //  - loop_profile_note_overlay_cmd() tags the iteration for the timing profiler
+        //    (no-op unless POLYKYBD_LOOP_PROFILE).
+        const hid_cmd_t *cmd = data[1] < ARRAY_SIZE(s_hid_cmds) ? &s_hid_cmds[data[1]] : NULL;
+        if (cmd && (cmd->flags & HID_CMD_OVERLAY_BURST)) {
+            note_overlay_activity();
+            loop_profile_note_overlay_cmd();
+        }
+        if (cmd && cmd->fn) {
+            cmd->fn(data, length, local_layer, local_state);
+        } else {
+            hid_cmd_unknown(data, length, local_layer, local_state);
+        }
+    }
+    #ifdef DYNAMIC_KEYMAP_ENABLE
+    else {
+        legacy_command_kb(data, length);
+    }
+    #endif
+}

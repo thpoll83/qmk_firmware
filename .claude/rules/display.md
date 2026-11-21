@@ -1,6 +1,6 @@
 ---
 paths:
-  - "keyboards/polykybd/base/disp_array.c"
+  - "keyboards/polykybd/drivers/disp_array.c"
   - "keyboards/polykybd/base/font_lookup.c"
   - "keyboards/polykybd/base/legend_plan.c"
 ---

@@ -1,6 +1,6 @@
 # Crash diagnostics: the record, the watchdog and the phase breadcrumb
 
-`base/crash_record.*` — how a HardFault, an unhandled exception or a main-loop hang
+`drivers/crash_record.*` — how a HardFault, an unhandled exception or a main-loop hang
 is recorded, rebooted through and announced on the next boot. Moved out of
 `CLAUDE.md` on 2026-09-10: ~16 KB read while you are in that file, reading a crash
 line, or adding a blocking path.
@@ -19,7 +19,7 @@ users at open with a phantom crash dialog. The discriminator is the SDK's own
 
 ---
 
-## Crash diagnostics: the crash record, the watchdog and the phase breadcrumb (`base/crash_record.*`)
+## Crash diagnostics: the crash record, the watchdog and the phase breadcrumb (`drivers/crash_record.*`)
 
 A HardFault, an unhandled exception or a main-loop hang used to leave **nothing**:
 the M0+ HardFault vector fell into ChibiOS's `b .` loop, the board sat dead until

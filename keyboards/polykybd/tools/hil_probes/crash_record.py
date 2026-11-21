@@ -20,7 +20,7 @@ NEEDS_CONSOLE = False
 POLY_CHANNEL = 0x50
 CMD_CRASH_RECORD = 0x27
 
-# poly_crash_record_t, little-endian (base/crash_record.h; PolyKybdHost
+# poly_crash_record_t, little-endian (drivers/crash_record.h; PolyKybdHost
 # polyhost/services/crash_report.py RECORD_STRUCT).
 RECORD = struct.Struct("<IBBBBIIIIIIHH8sI")
 MAGIC = 0xC4A5C0DE

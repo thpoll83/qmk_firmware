@@ -1,7 +1,7 @@
 ---
 paths:
-  - "keyboards/polykybd/poly_keymap.c"
-  - "keyboards/polykybd/keycode_helper.c"
+  - "keyboards/polykybd/keymap/poly_keymap.c"
+  - "keyboards/polykybd/keymap/keycode_helper.c"
 ---
 # Editing the shared keymap / keycode legends
 

@@ -5,10 +5,10 @@
 #ifdef KEYBOARD_polykybd_split72
 #    include <stdint.h>
 #    include "quantum.h"
-#    include "base/disp_array.h"
-#    include "base/shift_reg.h"
+#    include "drivers/disp_array.h"
+#    include "drivers/shift_reg.h"
 #    include "base/tutorial_plan.h"   // the ring geometry + the dither field
-#    include "side.h"
+#    include "split_link/side.h"
 #    include "base/bitset.h"
 #    include QMK_KEYBOARD_H           // get_key_disp_bitmask, get_disp_bitmask_size
 

@@ -7,7 +7,7 @@ extern "C" {
 #include "os_hints.h"
 #include "quantum/quantum_keycodes.h"
 #include "quantum/modifiers.h"
-#include "poly_os.h"
+#include "keymap/poly_os.h"
 #include "lang/named_glyphs.h"
 
 // The pre-extraction table, compiled into this binary alongside the live one.

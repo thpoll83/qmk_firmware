@@ -507,7 +507,7 @@ be emitted unwrapped. (Gotcha: a literal `"` in a cell makes `U"""` — use the
 ## D. Keycap display geometry — the thing that bit us 3× on ur-PK
 - The per-keycap OLED is **72×40 px**, but the render buffer is **128 px wide**
   and the panel shows the **centre 72 px**: visible window = buffer
-  `x ∈ [BUFFER_X, BUFFER_X+SCREEN_WIDTH) = [28, 100)` (`base/disp_array.h`:
+  `x ∈ [BUFFER_X, BUFFER_X+SCREEN_WIDTH) = [28, 100)` (`drivers/disp_array.h`:
   `SCREEN_WIDTH 72`, `BUFFER_X 28`).
 - Every draw uses origin `x = 28 + h_off`, baseline `y = 23 + v_off`. So
   **`h_off = 0` is the LEFT edge of the visible area, not the centre.** Usable
@@ -534,7 +534,7 @@ be emitted unwrapped. (Gotcha: a literal `"` in a cell makes `U"""` — use the
 VAR_SMALL; an unshifted **shift preview** at VAR_SHIFT (skipped on shift/caps or
 HIDE); an **altgr preview** at VAR_ALTGR. Latin langs usually `HIDE` the shift
 preview; Arabic-script langs (ar/fa/ur) show base+shift (both real letters).
-- Added `kdisp_gfx_text_bounds()` (`base/disp_array.c/.h`) — measures a string's
+- Added `kdisp_gfx_text_bounds()` (`drivers/disp_array.c/.h`) — measures a string's
   pixel min/max x without drawing (mirrors the cursor advance).
 - The shift preview is now placed **generically, glyph-width driven** (no
   per-language code): start at the VAR_SHIFT x, push right to clear the base's

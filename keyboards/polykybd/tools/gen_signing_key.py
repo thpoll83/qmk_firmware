@@ -4,7 +4,7 @@
 """Generate the PolyKybd firmware-signing keypair (FW-2).
 
 Ed25519 (RFC 8032 / SHA-512) — matches the firmware's Monocypher
-``crypto_ed25519_check`` in ``base/fw_staging.c``. Run this **once**:
+``crypto_ed25519_check`` in ``drivers/fw_staging.c``. Run this **once**:
 
     python3 keyboards/polykybd/tools/gen_signing_key.py \\
         --out-privkey fw_signing_key.bin \\

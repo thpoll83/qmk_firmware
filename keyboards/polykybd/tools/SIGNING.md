@@ -5,7 +5,7 @@ applying it, so only images signed with *your* private key are trusted. This
 closes the "any host can flash arbitrary firmware" gap (the device's CRC32 only
 proves integrity, not authenticity).
 
-- **Verify** runs in the firmware: `base/fw_staging.c` (`fw_staging_finalize`),
+- **Verify** runs in the firmware: `drivers/fw_staging.c` (`fw_staging_finalize`),
   using vendored Monocypher (`base/crypto/`) and the public key in
   `base/fw_pubkey.h`.
 - **Sign** runs off-device: `tools/sign_firmware.py` (Ed25519 over the raw `.bin`).
@@ -163,7 +163,7 @@ longer describes anything that exists; warn-only is gone.)
 A botched regeneration is also guarded: if `fw_pubkey.h` ever reverts to the all-zero
 placeholder, `fw_staging_check_signature()` refuses outright rather than verifying
 against it (that key is an order-4 curve point, so it would otherwise be *forgeable* —
-see the comment on `fw_pubkey_provisioned()` in `base/fw_staging.c`).
+see the comment on `fw_pubkey_provisioned()` in `drivers/fw_staging.c`).
 
 ## Scope: master-only verification (deliberate)
 

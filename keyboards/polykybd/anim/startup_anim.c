@@ -9,15 +9,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include "quantum.h"                       // timer_read32/elapsed32, keymaps
-#include "base/disp_array.h"               // scratch buffer, BUFFER_X, kdisp_*
-#include "base/shift_reg.h"                // sr_shift_out_buffer_latch
-#include "side.h"                           // is_left_side()
-#include "bridge_helper.h"                  // is_usb_host_side() — for the startup trace
+#include "drivers/disp_array.h"               // scratch buffer, BUFFER_X, kdisp_*
+#include "drivers/shift_reg.h"                // sr_shift_out_buffer_latch
+#include "split_link/side.h"                           // is_left_side()
+#include "split_link/bridge_helper.h"                  // is_usb_host_side() — for the startup trace
 #include QMK_KEYBOARD_H                     // get_key_disp_bitmask, NUM_SHIFT_REGISTERS
-#include "poly_util.h"                      // poly_heavy_font(): the splash face, one copy
+#include "system/poly_util.h"                      // poly_heavy_font(): the splash face, one copy
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
-#include "../poly_keymap.h"
-#include "../multicore_exec.h"          // core1_eden_key(), core1_eden_available()
+#include "keymap/poly_keymap.h"
+#include "display/multicore_exec.h"          // core1_eden_key(), core1_eden_available()
 #include "polymod_core1.h"                 // dmb(); core1_stack_high_water_mark() (CORE1_STACK_HWM)
 
 // Cut a key's resting legend out of the idle comet field (dark silhouette). Defined

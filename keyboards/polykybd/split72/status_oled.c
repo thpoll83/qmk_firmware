@@ -3,11 +3,11 @@
 #include "status_oled.h"
 
 #include "split72.h"
-#include "../bridge_helper.h"
-#include "../state.h"
-#include "../side.h"
+#include "split_link/bridge_helper.h"
+#include "system/state.h"
+#include "split_link/side.h"
 #include "../base/com.h"
-#include "../base/disp_array.h"
+#include "drivers/disp_array.h"
 #include "../base/text_helper.h"
 #include "../base/fonts/NotoSans_Medium_Base_8pt.h"
 // _Mid_ (19px) utility font: defined in util_font.h, whose definitions are owned by
@@ -20,7 +20,7 @@ extern const GFXfont NotoSans_Regular_Mid_19px7b;
 // into the lock icons. At 6pt "159" is 19px, which fits both slots.
 extern const GFXfont NotoSans_Regular_Nano_10px7b;
 #include "../lang/named_glyphs.h"
-#include "../oled_helper.h"
+#include "display/oled_helper.h"
 
 #include QMK_KEYBOARD_H
 #include "quantum.h"
@@ -31,8 +31,8 @@ extern const GFXfont NotoSans_Regular_Nano_10px7b;
 // Status-OLED chrome (layer/lock icons, arrows) lives in the resident font set,
 // which sits at the front of the runtime g_all_fonts[] table.
 #include "base/fontpack.h"
-#include "base/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
-#include "../poly_keymap.h"
+#include "drivers/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
+#include "keymap/poly_keymap.h"
 #include "../emoji/emoji_layer.h"
 #include "../layers.h"
 
@@ -315,7 +315,7 @@ static void draw_lang_column(const GFXfont* const* font, int8_t x, uint8_t lang)
 
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
 #ifdef POLYKYBD_CIRQUE_GESTURES
-#    include "../cirque_gestures.h"
+#    include "peripherals/cirque_gestures.h"
 #    include "../base/cirque_gesture_fsm.h" /* the zone radii the view draws */
 
 /* The trackpad view: shown while the pad is IN USE, and the normal status screen

@@ -22,7 +22,7 @@ WS2812_DRIVER = vendor
 # over the RGB_MATRIX_* effect enums to name effects, which now exist again with
 # RGB re-enabled above).
 QUANTUM_LIB_SRC += spi_master.c
-SRC += status_oled.c base/update.c base/e2prom.c base/com.c base/text_helper.c base/helpers.c base/disp_array.c base/shift_reg.c base/spi_helper.c base/overlay.c lang/lang_lut.c base/fw_staging.c base/fontpack.c
+SRC += status_oled.c base/update.c drivers/e2prom.c base/com.c base/text_helper.c drivers/helpers.c drivers/disp_array.c drivers/shift_reg.c drivers/spi_helper.c base/overlay.c lang/lang_lut.c drivers/fw_staging.c base/fontpack.c
 
 # Pointing device: REMOVED — no trackpad exists on split42; it was only ever a
 # split-link workaround. The real requirement is the shmem RPC-guard pad below
@@ -62,7 +62,7 @@ OPT_DEFS += -DPOLY_SPLIT_SHMEM_RPC_GUARD
 
 # Emoji / language picker page size: split42's right half is 3 rows x 6 = 18 slots
 # (shared-code default is 38). Board geometry, so it lives here rather than in a
-# keymap's rules.mk — poly_keymap.c / emoji_layer.c are compiled at the keyboard level
+# keymap's rules.mk — keymap/poly_keymap.c / emoji_layer.c are compiled at the keyboard level
 # and never see a keymap's config.h.
 OPT_DEFS += -DEMJ_SLOTS_PER_PAGE=18
 OPT_DEFS += -DLANG_SLOTS_PER_PAGE=18

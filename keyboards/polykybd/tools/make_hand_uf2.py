@@ -59,6 +59,7 @@ import zlib
 
 HERE = pathlib.Path(__file__).resolve().parent
 BASE = HERE.parent / "base"
+DRIVERS = HERE.parent / "drivers"
 
 # UF2 container (github.com/microsoft/uf2). One block = 512 bytes, 256 of payload.
 UF2_MAGIC0, UF2_MAGIC1, UF2_MAGIC_END = 0x0A324655, 0x9E5D5157, 0x0AB16F30
@@ -105,7 +106,7 @@ def _resolve(defines, name, depth=0):
 
 
 def firmware_constants():
-    stamp_off = _resolve(_defines(BASE / "fw_staging.h"), "FW_HAND_STAMP_OFFSET")
+    stamp_off = _resolve(_defines(DRIVERS / "fw_staging.h"), "FW_HAND_STAMP_OFFSET")
     magic = _resolve(_defines(BASE / "hand_stamp.h"), "POLY_HAND_STAMP_MAGIC")
     return stamp_off, magic
 

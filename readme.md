@@ -14,7 +14,7 @@ Project progress and hardware info:
 
 ## AI-assisted development
 
-Since mid-2026, the PolyKybd code in this fork is written with AI assistance, mainly with Claude Code. CI and AI review bots check each change, but AI-written code can contain mistakes that these checks do not find. Please report problems as GitHub issues.
+Since mid-2026, the PolyKybd code in this fork is written with AI assistance, mainly with Claude Code. CI and AI review bots check most pull requests, but not every change, and AI-written code can contain mistakes that these checks do not find. Please report problems as GitHub issues.
 
 ## What is PolyKybd?
 

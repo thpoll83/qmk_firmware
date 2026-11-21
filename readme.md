@@ -62,3 +62,9 @@ and maintained by Jack Humbert of OLKB with contributions from the community and
 [Hasu](https://github.com/tmk). All upstream QMK keyboards and features remain in this
 tree; only `keyboards/polykybd/` and a handful of supporting build hooks are
 PolyKybd-specific.
+
+## AI-assisted development
+
+PolyKybd started as a project that I coded entirely by hand, apart from the libraries it uses. The code base has grown too large for one person to write alone. Since mid-2026 I use AI tools to write the PolyKybd code in this fork, so that I can move faster towards the vision of the project.
+
+I decide on every change. I review the changes, test them myself on real keyboards, and write the summaries based on the results. AI-written code can still contain mistakes. Please report problems as GitHub issues. For security problems, see [SECURITY.md](SECURITY.md).

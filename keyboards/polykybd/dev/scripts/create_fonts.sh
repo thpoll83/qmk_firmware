@@ -8,6 +8,6 @@
 # This script just forwards to that generator (any args are passed through,
 # e.g. --check or --fontconvert PATH).
 set -e
-cd "$(dirname "$0")"
-echo "note: create_fonts.sh is deprecated; running fonts/generate_fonts.py instead." >&2
+cd "$(dirname "$0")/../.."   # keyboards/polykybd
+echo "note: dev/scripts/create_fonts.sh is deprecated; running fonts/generate_fonts.py instead." >&2
 exec python3 fonts/generate_fonts.py "$@"

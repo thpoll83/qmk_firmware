@@ -1,7 +1,7 @@
 // Copyright 2025 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "status_oled.h"
-#include "keymap/layer_names.h"
+#include "keys_com/layer_names.h"
 #include "display/oled_helper.h"
 
 #include "split42.h"
@@ -33,7 +33,7 @@ extern const GFXfont NotoSans_Regular_Nano_10px7b;
 // which sits at the front of the runtime g_all_fonts[] table.
 #include "base/fontpack.h"
 #include "drivers/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
-#include "keymap/poly_keymap.h"
+#include "keys_com/poly_keymap.h"
 
 // Role icons (usb_status_bitmap / link_status_bitmap) are shared with split72 and
 // live in oled_helper.c.

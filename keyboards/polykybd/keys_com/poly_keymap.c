@@ -116,7 +116,7 @@
 #include "poly_combos.h"
 #include "lang/lang_lut_ext.h"
 
-#include "layers.h"
+#include "keys_com/layers.h"
 #include "keycode_helper.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
 #include "anim/tutorial_names_gen.h"   // pre-rendered native language names

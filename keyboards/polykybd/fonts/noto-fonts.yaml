@@ -12,7 +12,7 @@
 #    its own copy.
 #
 # Most Noto families are variable-only on Google Fonts now; FreeType renders them
-# transparently, so they drop in for the static filenames create_fonts.sh expects.
+# transparently, so they drop in for the static filenames dev/scripts/create_fonts.sh expects.
 fonts:
   - name: Noto Sans
     url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf
@@ -85,7 +85,7 @@ fonts:
     url: https://raw.githubusercontent.com/google/fonts/main/ofl/notosansmayannumerals/NotoSansMayanNumerals-Regular.ttf
     dest: Noto_Sans_Mayan_Numerals/NotoSansMayanNumerals-Regular.ttf
   # NotoColorEmoji lives in a separate repo; upstream filename differs from the
-  # path create_fonts.sh references (NotoColorEmoji-Regular.ttf)
+  # path dev/scripts/create_fonts.sh references (NotoColorEmoji-Regular.ttf)
   # Pinned to a release TAG: the 2026-09-24 release moved fonts/ to 2D/fonts/ and the
   # `main` URL went 404. It must be the CBDT bitmap build. The google/fonts copy of
   # NotoColorEmoji is COLRv1 + SVG with no bitmaps and renders different emoji.

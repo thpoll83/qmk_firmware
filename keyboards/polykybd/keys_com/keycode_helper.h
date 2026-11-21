@@ -11,7 +11,7 @@
 #include "lang/named_glyphs.h"
 
 #include "led.h"
-#include "layers.h"
+#include "keys_com/layers.h"
 
 // A mod-tap's TAP keycode, or `kc` unchanged. ⚠️ Every legend producer must unwrap
 // the same way: render_key() and to_static_text() are a pair, and a mod-tap that one

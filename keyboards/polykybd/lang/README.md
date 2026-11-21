@@ -1,9 +1,9 @@
 # `lang_lut.xlsx` — the code-generation workbook
 
 `lang_lut.xlsx` is the source for everything cog generates under
-`keyboards/polykybd/`. Regenerate with **`./run_cog.sh`** (from
+`keyboards/polykybd/`. Regenerate with **`dev/scripts/run_cog.sh`** (from
 `keyboards/polykybd/`); it needs `cogapp` + `openpyxl`. A clean run must leave the
-tree **unchanged** — `run_cog.sh` is idempotent, so any diff after running it means
+tree **unchanged** — `dev/scripts/run_cog.sh` is idempotent, so any diff after running it means
 the workbook and the committed headers have drifted.
 
 Sheets, and what reads them:
@@ -21,7 +21,7 @@ the **cached** result of each formula. openpyxl does not evaluate formulas, and
 saving through it **drops every cached value**. The sheets are full of formulas
 (`latin_sup_ex`'s whole hex grid is `=DEC2HEX(UNICODE(..))`; `named_glyphs` columns
 C–F likewise), so an openpyxl round-trip silently empties the generated tables on
-the next `run_cog.sh` — no error, just `NULL`s.
+the next `dev/scripts/run_cog.sh` — no error, just `NULL`s.
 
 Edit it in **Excel or LibreOffice**, which recalculate and re-cache on save. For a
 scripted one-cell change, patch the sheet XML inside the `.xlsx` zip directly and
@@ -34,7 +34,7 @@ the `named_glyphs` sync were made). Reading with openpyxl is fine — it is only
 `named_glyphs.h` is generated, but it has been hand-edited before, and the sheet
 then silently stops matching. That is not cosmetic: regenerating **deletes** any
 macro the sheet lacks, and those macros are used in real legends, so
-`run_cog.sh` breaks the build. It happened with `ICON_OS_WINDOWS`/`_LINUX`/
+`dev/scripts/run_cog.sh` breaks the build. It happened with `ICON_OS_WINDOWS`/`_LINUX`/
 `_ANDROID`/`ICON_MAC_CONTROL` (0x94–0x97, added to the header only) versus
 `ICON_VOL_UP`/`_VOL_DOWN`/`ICON_BONGO_CAT` (0x89/0x8A/0x93, left in the sheet after
 their glyphs were dropped from `IconsFont`).
@@ -78,7 +78,7 @@ duplicate label rather than emitting a quietly wrong table, so a repeat is loud.
 ```bash
 ./scripts/_add_latin_variation.py --dry-run lang_lut.xlsx S 'Ș' s 'ș'   # report, change nothing
 ./scripts/_add_latin_variation.py          lang_lut.xlsx S 'Ș' s 'ș'
-cd .. && ./run_cog.sh
+cd .. && dev/scripts/run_cog.sh
 ```
 
 It appends to the first free slot of each named row and writes **both** cells the

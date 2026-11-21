@@ -16,7 +16,7 @@
 #include QMK_KEYBOARD_H                     // get_key_disp_bitmask, NUM_SHIFT_REGISTERS
 #include "system/poly_util.h"                      // poly_heavy_font(): the splash face, one copy
 #include "startup_anim_geom.h"             // SA_GEOM_*, SA_LETTER_*, SA_TARGETS, SA_BOARD_*
-#include "keymap/poly_keymap.h"
+#include "keys_com/poly_keymap.h"
 #include "display/multicore_exec.h"          // core1_eden_key(), core1_eden_available()
 #include "polymod_core1.h"                 // dmb(); core1_stack_high_water_mark() (CORE1_STACK_HWM)
 

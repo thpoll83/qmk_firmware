@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 #include "quantum.h"
-#include "keymap/mru.h"
-#include "layers.h"
+#include "keys_com/mru.h"
+#include "keys_com/layers.h"
 // The idle-timeout presets + the EEPROM bias encoding. A separate, PURE header so
 // the encoding is host-testable (make test:polykybd_idle_timeout); re-exported here
 // so every consumer of state.h is unchanged, the same seam as base/sync_ack.h.
@@ -112,7 +112,7 @@ enum poly_glyph_place {
 // and the semantic action keys (Lock/Search/Copy/… resolve per-OS at press time).
 // Values are append-only: persisted in poly_eeconf_t.os_state and carried on the
 // wire (HID cmd 29), so never reorder or reuse — add new OSes at the end.
-#include "keymap/poly_os.h"   // enum poly_os, POLY_OS_VALUE_MASK / _AUTO_FLAG
+#include "keys_com/poly_os.h"   // enum poly_os, POLY_OS_VALUE_MASK / _AUTO_FLAG
 
 typedef struct _poly_layer_t {
     uint32_t      crc32;

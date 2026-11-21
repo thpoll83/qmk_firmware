@@ -12,7 +12,7 @@
 #include "split_link/side.h"         // is_left_side()
 #include "poly_util.h"    // clear_all_displays(), display_message()
 #include "state.h"        // get_idle_style(), idle_style_name()
-#include "layers.h"       // _ADDLANG1 (Intl picker banner line)
+#include "keys_com/layers.h"       // _ADDLANG1 (Intl picker banner line)
 #include "quantum/keymap_introspection.h"   // keycode_at_keymap_location_raw()
 #include "drivers/fw_staging.h"   // fw_staging_apply_breadcrumb()
 #include "drivers/crash_record.h" // crash_record_emit_lines()
@@ -31,7 +31,7 @@
 #include "boot_diag.h"
 #include "display/multicore_exec.h"    // g_core1_entered (boot_paint_mark)
 #include "base/hand_stamp.h"
-#include "keymap/poly_keymap.h"
+#include "keys_com/poly_keymap.h"
 
 // update_displays() is defined in poly_keymap.c; the SPLASH_DONE tail calls it to
 // hand the keycaps over to the real legends.

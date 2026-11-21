@@ -73,7 +73,7 @@ endif
 # The driver itself is the polykybd/polymod_ltr559 community module (listed in
 # keyboard.json) — listing it is what compiles and auto-hooks it, so there is no
 # SRC line and no enable define here. COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE is
-# defined by the build for us, and is what keymap/poly_keymap.c gates its consumer code on.
+# defined by the build for us, and is what keys_com/poly_keymap.c gates its consumer code on.
 OPT_DEFS += -DPOLYKYBD_LTR559_DRIVE
 
 #Allow raw hid communication (for bi-directional data transfer)

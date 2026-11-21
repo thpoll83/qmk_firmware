@@ -5,7 +5,7 @@
 
 #include "config.h"
 #include "system/state.h"
-#include "keymap/mru.h"     // MRU_EMOJI_PACKED / MRU_CAP used by mru_sync_t below
+#include "keys_com/mru.h"     // MRU_EMOJI_PACKED / MRU_CAP used by mru_sync_t below
 // The ack vocabulary (SYNC_ACK / SYNC_ACK_SIG / SYNC_CRC32_ERR /
 // SYNC_NACK_REFUSED, poly_sync_reply_t, sync_succeeded) lives in its own
 // dependency-free header so the contract can be unit-tested without the keyboard
@@ -14,7 +14,7 @@
 #include "base/sync_ack.h"
 // poly_macro_look_t crosses this link, so the declaration below needs the type. It is
 // a plain POD header (stdint/stdbool + config.h), so this costs nothing.
-#include "keymap/poly_macro.h"
+#include "keys_com/poly_macro.h"
 
 #include <stdint.h>
 #include <stdbool.h>

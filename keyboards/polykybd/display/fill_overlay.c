@@ -10,7 +10,7 @@
 #include "system/state.h"
 #include "split_link/side.h"
 #include "split_link/split_sync.h"
-#include "keymap/matrix_helper.h"
+#include "keys_com/matrix_helper.h"
 #include "multicore_exec.h"
 #include "split_link/bridge_helper.h"
 #include "base/com.h"
@@ -23,7 +23,7 @@
 
 #include <print.h>
 #include <transactions.h>
-#include "keymap/poly_keymap.h"
+#include "keys_com/poly_keymap.h"
 
 // The overlay decode runs on core1. The old core0 fallback was removed: it had not
 // been built since USE_CORE1 became unconditional in config.h.

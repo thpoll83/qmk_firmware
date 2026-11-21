@@ -3,7 +3,7 @@
 // First-run tutorial renderer — see anim/tutorial.h and docs/features/tutorial.md.
 #include "tutorial.h"
 #include "focus_ring.h"
-#include "keymap/keycode_helper.h"   // LAYER_ONESHOT / LAYER_SWITCH — the notation screen names the real marks
+#include "keys_com/keycode_helper.h"   // LAYER_ONESHOT / LAYER_SWITCH — the notation screen names the real marks
 #include "lang/named_glyphs.h" // ICON_SHIFT — the status line names the key by its own glyph
 
 #if defined(KEYBOARD_polykybd_split72)

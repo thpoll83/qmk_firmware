@@ -3,15 +3,15 @@
 
 #include "emoji_layer.h"
 #include "emoji_data.h"
-#include "keymap/keycode_helper.h"
-#include "keymap/mru.h"
+#include "keys_com/keycode_helper.h"
+#include "keys_com/mru.h"
 #include "base/update.h"
 #include "drivers/disp_array.h"
 #include "base/fontpack.h"
 #include "lang/named_glyphs.h"
 #include "lang/lang_lut.h"
 #include "base/emoji_dict.h"
-#include "layers.h"
+#include "keys_com/layers.h"
 #include "system/state.h"
 
 #include "quantum/unicode/unicode.h"

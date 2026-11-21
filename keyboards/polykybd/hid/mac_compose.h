@@ -8,6 +8,6 @@
 // F20 instead of Option while the hex digits are typed, so the host types the
 // character (base/host_unicode_mode.h). RAM only, defined in hid/hid_com.c. Any
 // change of the unicode mode clears it (unicode_input_mode_set_user in
-// keymap/poly_keymap.c).
+// keys_com/poly_keymap.c).
 void mac_compose_set(bool on);
 bool mac_compose_active(void);

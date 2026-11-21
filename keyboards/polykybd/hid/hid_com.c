@@ -3,7 +3,7 @@
 
 #include "hid_com.h"
 #include "fw_update/hid_fw_up.h"
-#include "keymap/poly_macro.h"
+#include "keys_com/poly_macro.h"
 #include "hid_fontpack.h"
 #include "fw_update/split_fw_up.h"
 #include "drivers/fw_staging.h"
@@ -20,7 +20,7 @@
 #include "config.h"
 #include "split_link/split_sync.h"
 #include "split_link/bridge_helper.h"
-#include "keymap/matrix_helper.h"
+#include "keys_com/matrix_helper.h"
 #include "display/fill_overlay.h"
 #include "lang/lang_lut.h"
 #include "base/com.h"
@@ -49,11 +49,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include "keymap/poly_keymap.h"
-#include "keymap/layer_names.h"
+#include "keys_com/poly_keymap.h"
+#include "keys_com/layer_names.h"
 #include "drivers/crash_record.h"
 #include "display/multicore_exec.h"   // core1_stall_report
-#include "keymap/poly_combos.h"      // cmd 48 runtime combos / tap dance (v33)
+#include "keys_com/poly_combos.h"      // cmd 48 runtime combos / tap dance (v33)
 #include "system/boot_diag.h"        // boot_banner_on_host_probe
 #include "peripherals/ltr559_policy.h"    // poly_ltr559_drives_brightness
 #include "modes/ai_mode.h"          // cmd 45 / 46 (protocol v31)
@@ -1399,7 +1399,7 @@ static void hid_cmd_35(uint8_t *data, uint8_t length, const poly_layer_t *local_
         // cannot be remapped, so they get no name.
         //
         // This exists because the names used to be a build-time artifact on the
-        // host, generated from layers.h by a script whose source path had gone
+        // host, generated from keys_com/layers.h by a script whose source path had gone
         // stale — so the editor labelled tabs from an enum the firmware had not
         // had for a long time. A name the keyboard states itself cannot drift.
         // The payload itself is built by poly_layer_names_payload()

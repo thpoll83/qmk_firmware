@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "layer_names.h"
-#include "layers.h"
+#include "keys_com/layers.h"
 
 #include <stddef.h>
 #include "config.h"
@@ -25,7 +25,7 @@ static const struct {
 #define NUM_LAYOUTS (sizeof(layouts) / sizeof(layouts[0]))
 
 // The layers above the base layouts. Indexed by (layer - NUM_LAYOUTS), so this
-// list must stay in step with the enum in layers.h from _FL up to the write cap.
+// list must stay in step with the enum in keys_com/layers.h from _FL up to the write cap.
 static const char* const fixed_wire[] = {
     "Fn",       // _FL
     "Numpad",   // _NL
@@ -35,7 +35,7 @@ static const char* const fixed_wire[] = {
 
 // The host may only remap layers below the write cap, so anything at or above it
 // has no editor tab to label. Assert the two lists together cover exactly that
-// range: a layer added or reordered in layers.h then fails the build here rather
+// range: a layer added or reordered in keys_com/layers.h then fails the build here rather
 // than silently reporting the name of its neighbour.
 _Static_assert(NUM_LAYOUTS + (sizeof(fixed_wire) / sizeof(fixed_wire[0]))
                    == DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT,

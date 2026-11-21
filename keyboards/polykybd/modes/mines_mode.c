@@ -17,8 +17,8 @@
 // (poly_keymap.c).
 extern const GFXfont NotoSans_Regular_Mid_19px7b;
 #include "system/state.h"
-#include "keymap/poly_keymap.h"           // poly_set_awake_state / poly_fw_screen
-#include "keymap/keycode_helper.h"        // KC_AI
+#include "keys_com/poly_keymap.h"           // poly_set_awake_state / poly_fw_screen
+#include "keys_com/keycode_helper.h"        // KC_AI
 #include "anim/startup_anim.h"     // startup_anim_stop (the Eden idle loop)
 #include "anim/demo_mode.h"
 #include "anim/tutorial.h"

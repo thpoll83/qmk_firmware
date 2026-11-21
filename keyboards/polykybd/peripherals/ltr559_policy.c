@@ -12,7 +12,7 @@
 #    include "print.h"
 #    include "system/state.h"
 #    include "split_link/bridge_helper.h"    // is_usb_host_side()
-#    include "keymap/poly_keymap.h"      // reset_idle_jitter()
+#    include "keys_com/poly_keymap.h"      // reset_idle_jitter()
 #    include "base/com.h"         // STATUS_DISP_ON / DISP_IDLE flags
 #    include "base/update.h"      // update_performed() / request_disp_refresh()
 #    include "doom/doom_mode.h"   // screensaver teardown (inline no-ops without POLYKYBD_DOOM)

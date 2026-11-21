@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 
 extern "C" {
-#include "keymap/layer_names.h"
+#include "keys_com/layer_names.h"
 }
 
 #include <string>

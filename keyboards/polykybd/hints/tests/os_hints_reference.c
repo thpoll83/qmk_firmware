@@ -4,7 +4,7 @@
 // GOLDEN REFERENCE: the OS shortcut-hint table exactly as it stood in
 // poly_keymap.c on the base branch, before it was extracted into
 // hints/os_hints.c. Copied verbatim from
-//   git show origin/PolyKybd:keyboards/polykybd/keymap/poly_keymap.c
+//   git show origin/PolyKybd:keyboards/polykybd/keys_com/poly_keymap.c
 // with only the two global-state reads turned into the parameters the extracted
 // version takes (asserted at generation time — see tests/README.md).
 //
@@ -17,7 +17,7 @@
 // future change intentionally alters a hint, that is the point at which this file
 // and the exhaustive test are retired or regenerated deliberately.
 
-#include "keymap/poly_os.h"
+#include "keys_com/poly_os.h"
 
 #include "quantum/quantum_keycodes.h"
 #include "quantum/modifiers.h"

@@ -10,8 +10,8 @@
 #include "display/multicore_exec.h"
 #include "hid/hid_com.h"
 #include "emoji/emoji_layer.h"
-#include "keymap/lang_layer.h"
-#include "keymap/mru.h"
+#include "keys_com/lang_layer.h"
+#include "keys_com/mru.h"
 
 #include "base/overlay.h"
 #include "base/icon_lib.h"   // cmd 42 fills bridged to this half (v20)
@@ -20,9 +20,9 @@
 #include "nvm_eeprom_eeconfig_internal.h"
 #include "dynamic_keymap.h"
 #include "keymap_introspection.h"   // keycode_at_keymap_location_raw() for the capped reset
-#include "keymap/poly_keymap.h"   // poly_fl_row_cache_invalidate()
-#include "keymap/poly_macro.h"
-#include "keymap/poly_combos.h"   // cmd 48 records bridged to this half (v33)
+#include "keys_com/poly_keymap.h"   // poly_fl_row_cache_invalidate()
+#include "keys_com/poly_macro.h"
+#include "keys_com/poly_combos.h"   // cmd 48 records bridged to this half (v33)
 #include "base/com.h"
 #include "drivers/disp_array.h"
 #include "base/update.h"
@@ -38,7 +38,7 @@
 #include "doom/doom_mirror.h"
 #include "doom/doom_mode.h"   // doom_shim_mirror_engaged (mirror ack status)
 #endif
-#include "keymap/matrix_helper.h"
+#include "keys_com/matrix_helper.h"
 #include "system/poly_util.h"
 
 void rgb_matrix_update_pwm_buffers(void);

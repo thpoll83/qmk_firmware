@@ -93,7 +93,7 @@ static const uint32_t emj_cat1[] = {  // Gestures, Body & Love
     // Manicule / pointing-hand variants (NotoSansSymbols2 BMP — SymBmp1)
     0x261A, 0x261B, 0x261C, 0x261E, 0x261F, // ☚☛☜☞☟ (☝ 0x261D above)
     // ── Love & Celebrations (category 3 up to 1.9.12). 0x2764 is BMP — font file
-    //    generated without -n (see create_fonts.sh) ──
+    //    generated without -n (see dev/scripts/create_fonts.sh) ──
     0x2764,  // ❤ (BMP — font index = 0x2764, no offset)
     // Celebrations (🎁🎉🎊 moved to cat0; EmjCelebrate)
     0x1F380, // 🎀 ribbon

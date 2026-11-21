@@ -473,7 +473,7 @@ def selftest():
         ("protocol bump PLUS a real edit in the same file", [patch("@@", "-#define PROTOCOL_VERSION 15", "+#define PROTOCOL_VERSION 16", "-#define SOMETHING 1", "+#define SOMETHING 2")], False),
         ("version bump PLUS a real edit in the same file", [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\"", "-#define SOMETHING 1", "+#define SOMETHING 2")], False),
         ("a second file changed", [patch("@@", "-#define FW_VERSION \"a\"", "+#define FW_VERSION \"b\""), {
-            "filename": "keyboards/polykybd/keymap/poly_keymap.c",
+            "filename": "keyboards/polykybd/keys_com/poly_keymap.c",
             "patch": "@@\n+x"
         }], False),
         ("only another file changed", [{
@@ -624,7 +624,7 @@ def selftest():
 
     reach_cases = [
         # (path, reaches the image?)
-        ("keyboards/polykybd/keymap/poly_keymap.c", True),
+        ("keyboards/polykybd/keys_com/poly_keymap.c", True),
         ("keyboards/polykybd/config.h", True),
         ("CLAUDE.md", False),
         ("keyboards/polykybd/docs/build/ci-checks.md", False),
@@ -696,7 +696,7 @@ def selftest():
         ("one real source file among the docs", [bump, {
             "filename": "CLAUDE.md"
         }, {
-            "filename": "keyboards/polykybd/keymap/poly_keymap.c",
+            "filename": "keyboards/polykybd/keys_com/poly_keymap.c",
             "patch": "@@\n+x"
         }], False),
         # ⚠️ A rename OUT of a build path removes a build input. The new name

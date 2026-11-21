@@ -19,7 +19,7 @@
 #include "drivers/disp_array.h"
 #include "base/font_lookup.h"   // kdisp_gfx_text_bbox
 #include "system/state.h"
-#include "keymap/keycode_helper.h"     // KC_AI
+#include "keys_com/keycode_helper.h"     // KC_AI
 #include "split_link/bridge_helper.h"      // send_to_bridge
 #include "split_link/split_sync.h"         // overlay_sync_t, OVERLAY_SEG_RAW_SLOT
 #include "anim/focus_ring.h"    // poly_focus_start, poly_slot_of (attention ripple)

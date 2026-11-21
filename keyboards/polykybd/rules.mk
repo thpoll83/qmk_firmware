@@ -152,7 +152,7 @@ OS_DETECTION_ENABLE = yes
 # it must NOT be listed here too (a second copy in SRC causes a duplicate
 # definition at link time once the file defines symbols, e.g. the POLYKYBD_HIL
 # is_keyboard_master_impl override).
-# keymap/poly_keymap.c holds the shared keymap logic compiled for every variant
+# keys_com/poly_keymap.c holds the shared keymap logic compiled for every variant
 # (split72, split42). Each variant's keymaps/default/keymap.c carries only its
 # data (keymaps[] / encoder_map[] / g_led_config).
 # base/fw_up_verdict.c is listed HERE, not in the per-variant rules.mk where the other
@@ -161,15 +161,15 @@ OS_DETECTION_ENABLE = yes
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
 # covers emoji/emoji_layer.c and hints/os_hints.c.
-POLY_SRC := keymap/poly_keymap.c keymap/layer_names.c system/boot_diag.c split_link/side.c system/state.c system/state_store.c split_link/split_sync.c fw_update/split_fw_up.c display/multicore_exec.c hid/hid_com.c fw_update/hid_fw_up.c hid/hid_fontpack.c display/fill_overlay.c system/poly_util.c keymap/matrix_helper.c split_link/bridge_helper.c display/oled_helper.c keymap/keycode_helper.c keymap/mru.c keymap/lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/key_attention.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c anim/demo_mode.c base/demo_plan.c modes/mines_mode.c base/mines_plan.c modes/ai_mode.c base/ai_events.c base/attn_guide.c base/idle_poem_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c keymap/poly_macro.c keymap/poly_macro_record.c base/macro_decode.c base/macro_record.c peripherals/ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c drivers/crash_record.c base/hand_stamp.c drivers/hw_uid.c base/core1_owner.c drivers/core1_owner_hw.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c split_link/slave_data.c display/oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
+POLY_SRC := keys_com/poly_keymap.c keys_com/layer_names.c system/boot_diag.c split_link/side.c system/state.c system/state_store.c split_link/split_sync.c fw_update/split_fw_up.c display/multicore_exec.c hid/hid_com.c fw_update/hid_fw_up.c hid/hid_fontpack.c display/fill_overlay.c system/poly_util.c keys_com/matrix_helper.c split_link/bridge_helper.c display/oled_helper.c keys_com/keycode_helper.c keys_com/mru.c keys_com/lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/key_attention.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c anim/demo_mode.c base/demo_plan.c modes/mines_mode.c base/mines_plan.c modes/ai_mode.c base/ai_events.c base/attn_guide.c base/idle_poem_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c keys_com/poly_macro.c keys_com/poly_macro_record.c base/macro_decode.c base/macro_record.c peripherals/ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c drivers/crash_record.c base/hand_stamp.c drivers/hw_uid.c base/core1_owner.c drivers/core1_owner_hw.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c split_link/slave_data.c display/oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
 SRC += $(POLY_SRC)
 
 # emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
-# keymap/poly_keymap.c / split_link/split_sync.c call into it (emj_*), and they also include layers.h.
+# keys_com/poly_keymap.c / split_link/split_sync.c call into it (emj_*), and they also include keys_com/layers.h.
 # Both used to live under <variant>/keymaps/default/ — layers.h resolved only through
 # QMK's keymap include path and emoji_layer.c only through that keymap's rules.mk — so
 # every keyboard-level source depended on one particular keymap, and split72:revision2
-# could neither compile nor link. layers.h now sits next to this file.
+# could neither compile nor link. layers.h is now in keys_com/, at the keyboard level.
 # NOTE: ENCODER_MAP_ENABLE deliberately stays per-keymap — `qmk lint --strict` rejects
 # encoder_map as a keyboard-level feature, and the map itself is keymap data.
 
@@ -294,7 +294,7 @@ ifeq ($(strip $(POLYKYBD_DOOM_PACK)), yes)
     POLYKYBD_DOOM = yes
     OPT_DEFS += -DPOLYKYBD_DOOM_PACK
 endif
-# Runtime combos and tap dance (HID cmd 48, keymap/poly_combos.c): every build except the
+# Runtime combos and tap dance (HID cmd 48, keys_com/poly_combos.c): every build except the
 # DOOM monolith, the developer build with the engine linked in. It has ~3.3 KB of RAM
 # left, the release workflow still has to link it, and nothing in the DOOM pack
 # comes from the keyboard code (build_pack.sh takes only the engine objects), so
@@ -305,7 +305,7 @@ endif
 # the ifeq, and puts any literal `*_ENABLE = yes` into every build's info_rules.mk,
 # so the monolith got COMBO_ENABLE without the tables and failed to compile
 # keymap_introspection.c. A non-boolean value is refused by its schema instead.
-# Every keymap.c must #include "poly_combos_keymap.h" for the two stub tables
+# Every keymap.c must #include "keys_com/poly_combos_keymap.h" for the two stub tables
 # (docs/build/variants.md).
 # Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`), as for MIDI below.
 ifeq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
@@ -314,7 +314,7 @@ else
     $(eval COMBO_ENABLE := yes)
     $(eval TAP_DANCE_ENABLE := yes)
     OPT_DEFS += -DPOLY_RUNTIME_COMBOS
-    SRC += keymap/poly_combos.c
+    SRC += keys_com/poly_combos.c
     # The host tutorial (HID cmd 49, anim/host_tutorial.c): same reasoning, ~180 B of
     # RAM per half. The monolith NACKs cmd 49 as an unknown command, and the host then
     # runs a tutorial with the focus ring only.
@@ -585,7 +585,7 @@ OPT_DEFS += -DPOLY_GIT_BRANCH=\"$(or $(POLY_GIT_BRANCH),unknown)\"
 # compiles the inline no-ops in diag/crash_test.h and pays nothing.
 # First-run boot intro (Eden + the tutorial): ON by default since 1.0.0; opt out with
 # `-e POLYKYBD_BOOT_INTRO=no`. It plays once per board (the EEPROM marker), and again
-# only after RESET Eden. See the note at the guard in keymap/poly_keymap.c for why the old
+# only after RESET Eden. See the note at the guard in keys_com/poly_keymap.c for why the old
 # "default OFF" is lifted.
 # ⚠️ HIL images default it OFF: a rig board boots with a pending marker, nobody presses
 # a key, so the lesson would never finish and would own the displays, the brightness

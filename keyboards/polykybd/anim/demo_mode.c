@@ -9,14 +9,14 @@
 #include "split_link/bridge_helper.h"         // is_usb_host_side()
 #include "split_link/side.h"                  // is_left_side()
 #include "system/state.h"
-#include "layers.h"
-#include "keymap/keycode_helper.h"        // KC_LANG
+#include "keys_com/layers.h"
+#include "keys_com/keycode_helper.h"        // KC_LANG
 #include "lang/lang_lut.h"         // LANG_*
-#include "keymap/lang_layer.h"            // lang_select_region / lang_pack_state / lang_apply_sync
+#include "keys_com/lang_layer.h"            // lang_select_region / lang_pack_state / lang_apply_sync
 #include "emoji/emoji_layer.h"     // emj_apply_sync / EMJ_NUM_CATS_VISIBLE
-#include "keymap/poly_keymap.h"           // poly_fw_screen / poly_wake_from_idle / poly_preview_renderable
-#include "keymap/poly_macro.h"
-#include "keymap/poly_macro_record.h"
+#include "keys_com/poly_keymap.h"           // poly_fw_screen / poly_wake_from_idle / poly_preview_renderable
+#include "keys_com/poly_macro.h"
+#include "keys_com/poly_macro_record.h"
 #include "anim/tutorial.h"
 #include "anim/startup_anim.h"
 #include "drivers/fw_staging.h"

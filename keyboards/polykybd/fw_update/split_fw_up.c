@@ -13,7 +13,7 @@
 
 _Static_assert(POLY_HW_UID_LEN == sizeof(((fw_up_hw_uid_reply_t *)0)->uid), "the wire ID is POLY_HW_UID_LEN bytes");
 #include "split_link/bridge_helper.h"       // send_to_bridge
-#include "keymap/poly_keymap.h"         // poly_prepare_for_flash
+#include "keys_com/poly_keymap.h"         // poly_prepare_for_flash
 #include "split_util.h"          // is_transport_connected
 #include "system/state.h"               // poly_state_touch: tell the host the V block moved
 

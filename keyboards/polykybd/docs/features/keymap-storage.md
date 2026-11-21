@@ -93,7 +93,7 @@ the host's layout editor renumbers them from the count the keyboard reports
 built against 13 layers still names `TO(8)` as `_SL` on a 1.11.x board that stores 8. A
 layer inserted in the MIDDLE of the stored block moves stored layers too, and the
 fold cannot recover that: older boards would preview the wrong legend on their layer
-keys. The host reads `layers.h` (`parse_layers_h()`); it now strips C comments, after
+keys. The host reads `keys_com/layers.h` (`parse_layers_h()`); it now strips C comments, after
 the comment on `_ML` made it drop `_SL`.
 
 ⚠️ **Every mutation goes through a `*_poly` wrapper in `split_sync.c`** —

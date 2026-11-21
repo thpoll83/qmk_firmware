@@ -5,7 +5,7 @@ and therefore every cached formula result cog reads with data_only=True -- is
 copied byte-for-byte.
 
 ⚠️ This exists because openpyxl MUST NOT save this workbook: it does not evaluate
-formulas, so a round-trip drops every cached <v> and the next run_cog.sh emits
+formulas, so a round-trip drops every cached <v> and the next dev/scripts/run_cog.sh emits
 empty tables with no error.  See lang/README.md.
 
 Each letter occupies two rows: the odd row holds the label in column A and the

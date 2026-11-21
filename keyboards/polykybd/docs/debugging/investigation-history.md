@@ -242,7 +242,7 @@ Base-layer changes apply immediately and persist on the next suspend/reset/store
 **Relevant files**:
 - `keyboards/polykybd/split_link/split_sync.c` — all `user_sync_*_data_handler` functions
 - `keyboards/polykybd/system/state.c` / `state.h` — deferred-write helpers
-- `keyboards/polykybd/keymap/poly_keymap.c` — `housekeeping_task_user()`
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `housekeeping_task_user()`
 
 ---
 
@@ -260,7 +260,7 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 **If the bug reappears**: Check whether a split transport failure (the other bug above) is preventing the suspend state from reaching the slave — if the slave never receives `STATUS_DISP_ON=0` it will keep its displays on indefinitely. The two bugs can look identical from the outside.
 
 **Relevant files**:
-- `keyboards/polykybd/keymap/poly_keymap.c` — `poly_suspend()`, `suspend_power_down_kb()`, `sync_and_refresh_displays()`
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `poly_suspend()`, `suspend_power_down_kb()`, `sync_and_refresh_displays()`
 - `keyboards/polykybd/base/com.h` — flag bit definitions (`STATUS_DISP_ON`, `IDLE_TRANSITION`, `DISP_IDLE`)
 
 ---
@@ -334,7 +334,7 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 - `keyboards/polykybd/system/state.c` / `state.h` — `g_user_brightness`, `set/note/get_user_brightness()`
 - `keyboards/polykybd/split_link/split_sync.c` — `user_sync_poly_data_handler` awake-guard
 - `keyboards/polykybd/hid/hid_com.c` — cmd 13 (set brightness), cmd 15 (stop idle)
-- `keyboards/polykybd/keymap/poly_keymap.c` — preset keys, idle/wake restore paths, boot seeding (shared by split72 + split42)
+- `keyboards/polykybd/keys_com/poly_keymap.c` — preset keys, idle/wake restore paths, boot seeding (shared by split72 + split42)
 
 **Follow-up (2026-06-23): host-auto state now persists across reboots.** The
 `g_user_brightness` model above keeps the *manual* brightness clean, but it is
@@ -449,7 +449,7 @@ protocol change). Do it only if the logs show it actually happens.
 
 **Relevant files**: `keyboards/polykybd/hid/hid_com.c` (cases 11, 21),
 `keyboards/polykybd/display/fill_overlay.c` (`arm_overlay_map_repair`,
-`overlay_map_repair_tick`, `resolve_upload_side`), `keyboards/polykybd/keymap/poly_keymap.c`
+`overlay_map_repair_tick`, `resolve_upload_side`), `keyboards/polykybd/keys_com/poly_keymap.c`
 (housekeeping drain)
 
 ---
@@ -494,7 +494,7 @@ always claimed. ⚠️ Never bool-test `send_to_bridge()` directly — every ret
 is non-zero; classify it with `sync_succeeded()`.
 
 **Relevant files**:
-- `keyboards/polykybd/keymap/poly_keymap.c` — `sync_and_refresh_displays()` send sites; `display_wakeup()`, `housekeeping_task_user()` (the single-shot wake)
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `sync_and_refresh_displays()` send sites; `display_wakeup()`, `housekeeping_task_user()` (the single-shot wake)
 - `keyboards/polykybd/split_link/split_sync.h` — `sync_succeeded()` helper + `SYNC_*` values
 - `keyboards/polykybd/split_link/bridge_helper.c` — `send_to_bridge()` (returns the ack byte / `SYNC_CRC32_ERR`)
 
@@ -545,7 +545,7 @@ so no `PROTOCOL_VERSION`/`__protocol__` bump.
 - `keyboards/polykybd/base/update.c` / `update.h` — `uint32_t last_update` +
   `idle_tracking`; `is_idle_tracking()`, `disable_idle_tracking()`,
   `backdate_last_update()`
-- `keyboards/polykybd/keymap/poly_keymap.c` — `housekeeping_task_user()` idle gate
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `housekeeping_task_user()` idle gate
   (`is_idle_tracking()`), the turn-off + `suspend_power_down_kb()` disable calls
 - `keyboards/polykybd/hid/hid_com.c` — cmd 15 start branch (`backdate_last_update`),
   cmd 24 display-off (`disable_idle_tracking`)
@@ -794,7 +794,7 @@ real value hides the fact that the real value is being thrown away.**
 **Relevant files**:
 - `keyboards/polykybd/split_link/split_sync.c` — per-transaction CRC32 (the only payload check)
 - `keyboards/polykybd/split_link/bridge_helper.c` / `.h` — `send_to_bridge` retries + the link health counters / `LINK_STATS_LOG_EVERY` summary
-- `keyboards/polykybd/keymap/poly_keymap.c` — `PERIODIC_SYNC_RETRIES`, `sync_and_refresh_displays()`
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `PERIODIC_SYNC_RETRIES`, `sync_and_refresh_displays()`
 - `keyboards/polykybd/config.h` — `SPLIT_MAX_CONNECTION_ERRORS`; the full-duplex defines (`SERIAL_USART_FULL_DUPLEX`, `SERIAL_USART_TX_PIN GP5`, `SERIAL_USART_RX_PIN GP4`, `SERIAL_USART_PIN_SWAP`)
 - `<variant>/halconf.h` — `SELECT_SOFT_SERIAL_SPEED`. ⚠️ **Currently `0`, i.e. 460800 baud** in both variants — *not* the 230400 quoted in the historical half-duplex paragraph above, which describes the pre-2026-06-16 setup and is the figure a reader otherwise carries forward. The mapping lives in `platforms/chibios/drivers/serial_usart.h` (0→460800, 1→230400, 2→115200, …). Since 2026-10-19 `config.h` defines `SERIAL_USART_SPEED 1843200` directly, which takes priority over the table (`docs/protocol/bulk-pipe.md`, split-link table); the 460800 figures below are from before that. It matters for any wire-time estimate: at 460800 8N1 one byte is **21.7 µs**, so the per-scan split transactions (slave matrix + pointing, unconditional in `transactions_master()`) are a fixed cost that does **not** shrink when the CPU clock rises — measured at ~473 µs, about half of an idle main-loop iteration (see the 200 MHz measurement in PR #187).
 - `platforms/chibios/drivers/serial_protocol.c`, `drivers/vendor/RP/RP2040/serial_vendor.c` — QMK transport (no payload integrity)
@@ -867,7 +867,7 @@ corrected by the next real layer diff. Not done — left optional since real har
 is unaffected.
 
 **Relevant files**:
-- `keyboards/polykybd/keymap/poly_keymap.c` — `g_force_layer_resync`, the forced-push branch in `sync_and_refresh_displays()` (`if ( layer_diff || g_force_layer_resync )`)
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `g_force_layer_resync`, the forced-push branch in `sync_and_refresh_displays()` (`if ( layer_diff || g_force_layer_resync )`)
 - `keyboards/polykybd/split_link/bridge_helper.c` — `send_to_bridge()` (per-attempt blocking cost = `PERIODIC_SYNC_RETRIES` × bridge timeout)
 - `polykybd-ctnd` `station/hil_tests.py` — the `get current language` test (no miss-tolerance, unlike `test_get_id_stress`)
 

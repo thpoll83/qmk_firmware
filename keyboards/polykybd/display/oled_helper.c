@@ -4,7 +4,7 @@
 #include "anim/tutorial.h"
 #include "system/boot_diag.h"      // boot_paint_mark()
 #include "anim/startup_anim.h"
-#include "keymap/layer_names.h"
+#include "keys_com/layer_names.h"
 
 #include "system/state.h"
 #include "split_link/side.h"
@@ -14,9 +14,9 @@
 #include "drivers/fw_staging.h"
 #include "base/fontpack.h"      // g_all_fonts: a framed keycap legend draws as the key does
 #include "base/status_brightness.h"   // poly_status_brightness() — the live panel level
-#include "keymap/poly_keymap.h"         // poly_fw_screen() / poly_fw_hold_active()
-#include "keymap/poly_macro.h"          // POLY_MACRO_COUNT
-#include "keymap/poly_macro_record.h"   // enum poly_rec_state + the recording read-outs
+#include "keys_com/poly_keymap.h"         // poly_fw_screen() / poly_fw_hold_active()
+#include "keys_com/poly_macro.h"          // POLY_MACRO_COUNT
+#include "keys_com/poly_macro_record.h"   // enum poly_rec_state + the recording read-outs
 #include "anim/demo_mode.h"      // demo_sync_active(): the "how do I stop this" hint
 #include "anim/host_tutorial.h"  // cmd 49: the host tutorial's two lines
 #ifdef POLYKYBD_DOOM

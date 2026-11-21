@@ -10,7 +10,7 @@ into a small piano with live note names on the keycaps. It is reached with `TO(_
 |---|---|
 | switch | `rules.mk` (`POLYKYBD_MIDI`, on), `config.h` (`MIDI_ADVANCED`, `MIDI_SEND_ONLY`, `MIDI_STREAM_IN_CAPACITY 2`) |
 | send-only interface | QMK core patch, `docs/build/upstream-patches.md` → `MIDI_SEND_ONLY` |
-| layer | `layers.h` (`_ML` = stored layer 8), both keymaps, `layer_names.c` ("MIDI") |
+| layer | `keys_com/layers.h` (`_ML` = stored layer 8), both keymaps, `layer_names.c` ("MIDI") |
 | legends | `midi_legend.c` (pure, unit-tested: `make test:polykybd_midi_legend`) |
 | symbols | `tools/midi_glyphs.py` → `fonts/gfx_icons.h` U+100029..U+100049 and the `ICON_MIDI_*` macros in `lang/named_glyphs.h` |
 | sync | `poly_sync_t.midi_cfg`, packed by `midi_cfg_pack()` |

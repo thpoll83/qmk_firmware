@@ -16,7 +16,7 @@
 #include <print.h>
 #include <transactions.h>
 #include "hardware/watchdog.h"
-#include "keymap/poly_keymap.h"
+#include "keys_com/poly_keymap.h"
 
 // ---------------------------------------------------------------------------
 // RP2040 warm-reset fix (QK_REBOOT / soft_reset_keyboard path).

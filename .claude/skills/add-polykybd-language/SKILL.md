@@ -189,7 +189,7 @@ split42), so there is a single keymap cog target — not one per variant:
 for f in lang/lang_lut.h lang/lang_lut.c lang/named_glyphs.h keycode_helper.h \
          hid_com.c poly_keymap.c; do
   /tmp/pkvenv/bin/python -m cogapp -r "$f"; done
-# (or just: bash run_cog.sh)
+# (or just: bash dev/scripts/run_cog.sh)
 ```
 ⚠️ **The `KCL_` keycode block is frozen at 160 languages.** Every keycode after it
 (`KC_OS_*`, `KC_IME`, the emoji and language layers) can be stored in a keyboard's

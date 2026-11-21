@@ -27,7 +27,7 @@ wrong mappings sit there; this does not.
 import argparse, json, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-KB   = os.path.dirname(HERE)
+KB = os.path.dirname(HERE)
 
 
 def layout_order(board):
@@ -104,13 +104,15 @@ def inverse_fold(board):
     # The WHOLE body, as one pattern. Searching for the expected pieces would still
     # pass with an extra statement or a later reassignment of *row / *col between
     # them (review on #349), so anything this does not recognise fails closed.
-    shape = (r"bool display_index_to_matrix\(bool right, uint8_t idx, uint8_t \*row, uint8_t \*col\) \{ "
-             r"const uint8_t dr = \(uint8_t\)\(idx / MATRIX_COLS\), dc = \(uint8_t\)\(idx % MATRIX_COLS\); "
-             r"if \(right\) \{ "
-             r"\*row = \(uint8_t\)\(dr \+ MATRIX_ROWS_PER_SIDE\); "
-             r"\*col = \(dr < (\d+)\) \? \(uint8_t\)\(dc \+ (\d+)\) : dc; "
-             r"\} else \{ \*row = dr; \*col = dc; \} "
-             r"return \(\*row < MATRIX_ROWS\) && \(\*col < MATRIX_COLS\);")
+    shape = (
+        r"bool display_index_to_matrix\(bool right, uint8_t idx, uint8_t \*row, uint8_t \*col\) \{ "
+        r"const uint8_t dr = \(uint8_t\)\(idx / MATRIX_COLS\), dc = \(uint8_t\)\(idx % MATRIX_COLS\); "
+        r"if \(right\) \{ "
+        r"\*row = \(uint8_t\)\(dr \+ MATRIX_ROWS_PER_SIDE\); "
+        r"\*col = \(dr < (\d+)\) \? \(uint8_t\)\(dc \+ (\d+)\) : dc; "
+        r"\} else \{ \*row = dr; \*col = dc; \} "
+        r"return \(\*row < MATRIX_ROWS\) && \(\*col < MATRIX_COLS\);"
+    )
     m = re.fullmatch(shape, flat)
     if not m:
         raise SystemExit("%s: display_index_to_matrix() does not have the shape this check "
@@ -145,8 +147,7 @@ def check(board, rows_per_side, cols, panels, verbose):
         # would turn the gate green having checked nothing, which is exactly the
         # silent pass it exists to prevent.
         print("%s: FAIL — the keymap's layout macro takes %d entries, keyboard.json "
-              "lists %d positions; cannot map keycodes to the matrix here."
-              % (board, len(args), len(order)))
+              "lists %d positions; cannot map keycodes to the matrix here." % (board, len(args), len(order)))
         return 1
     kc = dict(zip(order, args))
     lo, hi = fold(board)
@@ -166,12 +167,11 @@ def check(board, rows_per_side, cols, panels, verbose):
         for r in range(rows_per_side):
             for c in range(cols):
                 if kc.get((r + off, c), "KC_NO") == "KC_NO":
-                    skip += 1          # no OLED behind an absent key; realigned at row end
+                    skip += 1  # no OLED behind an absent key; realigned at row end
                     continue
                 got = key_display_index(r + off, c)
                 if verbose:
-                    print("   %s (%d,%d) -> panel %d  helper %s" %
-                          ("L" if left else "R", r + off, c, pos, got))
+                    print("   %s (%d,%d) -> panel %d  helper %s" % ("L" if left else "R", r + off, c, pos, got))
                 if got != pos:
                     bad.append((("L" if left else "R"), r + off, c, pos, got))
                 pos += 1
@@ -196,15 +196,13 @@ def check(board, rows_per_side, cols, panels, verbose):
             continue
         back = display_index_to_matrix(r >= rows_per_side, idx)
         if back != (r, c):
-            print("%s: display_index_to_matrix(panel %d) gives %s, expected %s"
-                  % (board, idx, back, (r, c)))
+            print("%s: display_index_to_matrix(panel %d) gives %s, expected %s" % (board, idx, back, (r, c)))
             inv_bad += 1
     print("%s: inverse fold round trip, %d mismatch(es)" % (board, inv_bad))
     bad += [None] * inv_bad
 
     for half, r, c, pos, got in [b for b in bad if b is not None]:
-        print("%s: %s half matrix (%d,%d) renders to panel %d but key_display_index() says %s"
-              % (board, half, r, c, pos, got))
+        print("%s: %s half matrix (%d,%d) renders to panel %d but key_display_index() says %s" % (board, half, r, c, pos, got))
     print("%s: %d key(s) checked, %d mismatch(es)" % (board, len(kc), len(bad)))
     return len(bad)
 
@@ -222,8 +220,7 @@ def fn_body(src, name):
     `}` in column 0. That is true throughout poly_keymap.c and is checked by the
     caller, which fails loudly rather than silently reporting no problem.
     """
-    m = re.search(r"^[A-Za-z_][\w \t\*]*\b%s\s*\([^;{]*\)\s*\{" % re.escape(name),
-                  src, re.M)
+    m = re.search(r"^[A-Za-z_][\w \t\*]*\b%s\s*\([^;{]*\)\s*\{" % re.escape(name), src, re.M)
     if not m:
         return None
     end = re.compile(r"^\}", re.M).search(src, m.end())
@@ -276,14 +273,12 @@ def check_callers(verbose):
                   "It addresses panels, so on split72's right half every bbox lands under "
                   "the neighbouring panel's index." % (name, used))
             bad += 1
-    print("poly_keymap.c: %d of %d display walk(s) go through key_display_index()"
-          % (len(CALLERS) - bad, len(CALLERS)))
+    print("poly_keymap.c: %d of %d display walk(s) go through key_display_index()" % (len(CALLERS) - bad, len(CALLERS)))
     return bad
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-v", "--verbose", action="store_true")
     a = ap.parse_args()
     bad = check("split72", 5, 8, 40, a.verbose)

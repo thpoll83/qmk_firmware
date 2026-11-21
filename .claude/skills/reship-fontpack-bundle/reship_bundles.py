@@ -49,8 +49,7 @@ def regen(fontpack, cfg, qmk: Path, content_versions: dict):
     sym2cat = fontpack.symbol_categories_from_tree(fonts_dir, cfg)
     # MIRROR THE BUILD: the shipped bytes reflect this prune. Skipping it re-inflates.
     fontpack.prune_shadowed_glyphs(order, resident, parsed)
-    return fontpack.build_bundles(order, resident, parsed, sym2cat, cfg,
-                                  content_versions=content_versions)
+    return fontpack.build_bundles(order, resident, parsed, sym2cat, cfg, content_versions=content_versions)
 
 
 def sha16(b: bytes) -> str:
@@ -81,17 +80,12 @@ def glyph_dims(fontpack, data: bytes):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     here = Path(__file__).resolve()
-    ap.add_argument("--qmk", default=str(here.parents[3]),
-                    help="qmk_firmware repo root (default: 3 dirs above this script)")
-    ap.add_argument("--host", default="",
-                    help="PolyKybdHost repo root (default: sibling of --qmk)")
-    ap.add_argument("--check", action="store_true",
-                    help="read-only report (default when --apply is absent)")
-    ap.add_argument("--apply", nargs="+", metavar="ID=N", default=None,
-                    help="reship these bundles at content_version N (write mode)")
+    ap.add_argument("--qmk", default=str(here.parents[3]), help="qmk_firmware repo root (default: 3 dirs above this script)")
+    ap.add_argument("--host", default="", help="PolyKybdHost repo root (default: sibling of --qmk)")
+    ap.add_argument("--check", action="store_true", help="read-only report (default when --apply is absent)")
+    ap.add_argument("--apply", nargs="+", metavar="ID=N", default=None, help="reship these bundles at content_version N (write mode)")
     args = ap.parse_args()
 
     qmk = Path(args.qmk).resolve()
@@ -123,7 +117,8 @@ def main():
     print(f"{'id':10} {'new sz':>8} {'ver':>4}  vs shipped host .plyf")
     changed_glyphs = []
     for b in bundles:
-        bid = b["id"]; data = b["data"]
+        bid = b["id"]
+        data = b["data"]
         shipped_path = fp_dir / f"{bid}.plyf"
         shipped = shipped_path.read_bytes() if shipped_path.exists() else None
         if shipped is None:
@@ -143,19 +138,15 @@ def main():
             fresh = next(b["data"] for b in bundles if b["id"] == bid)
             shipped = (fp_dir / f"{bid}.plyf").read_bytes()
             fd, sd = glyph_dims(fontpack, fresh), glyph_dims(fontpack, shipped)
-            diffs = [(fi, gi, fd[fi][gi], sd[fi][gi])
-                     for fi in fd for gi in range(min(len(fd[fi]), len(sd.get(fi, []))))
-                     if fd[fi][gi] != sd[fi][gi]]
+            diffs = [(fi, gi, fd[fi][gi], sd[fi][gi]) for fi in fd for gi in range(min(len(fd[fi]), len(sd.get(fi, [])))) if fd[fi][gi] != sd[fi][gi]]
             if diffs:
-                print(f"  {bid}: {len(diffs)} glyphs differ in WxH (render drift), e.g. "
-                      + ", ".join(f"font{fi}#{gi} {a}->{b}" for fi, gi, a, b in diffs[:3]))
+                print(f"  {bid}: {len(diffs)} glyphs differ in WxH (render drift), e.g. " + ", ".join(f"font{fi}#{gi} {a}->{b}" for fi, gi, a, b in diffs[:3]))
         print("\n(read-only. Re-run with --apply ID=N ... to reship the changed bundles.)")
         return
 
     # ---- write mode ----
     gen = qmk / "keyboards" / "polykybd" / "fonts" / "generated"
-    (gen / "fontpack_bundles.manifest.json").write_text(
-        fontpack.bundles_manifest_json(bundles, layout))
+    (gen / "fontpack_bundles.manifest.json").write_text(fontpack.bundles_manifest_json(bundles, layout))
     (gen / "fontpack_layout.h").write_text(fontpack.bundle_layout_header(bundles, layout))
     bj = host_bundles_json(host)
     touched = []

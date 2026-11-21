@@ -22,8 +22,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 KB = os.path.abspath(os.path.join(HERE, ".."))
 REPO = os.path.abspath(os.path.join(KB, "..", ".."))
-sys.path.insert(0, os.environ.get("POLYHOST_TOOLS",
-                                  os.path.join(REPO, "..", "PolyKybdHost", "tools")))
+sys.path.insert(0, os.environ.get("POLYHOST_TOOLS", os.path.join(REPO, "..", "PolyKybdHost", "tools")))
 import oled_preview as op  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
@@ -33,17 +32,17 @@ SCRIPT_BASE = {"TENGWAR": 0xE800, "RUNES": 0xE840, "AUREBESH": 0xE880, "BRAILLE"
 
 # (Latin name, native units | ("strip", SYM) | ("script", NAME), rtl)
 ITEMS = [
-    ("Greek",    "ΕΛΛΗΝΙΚΑ", False),
-    ("Arabic",   ("strip", "AR"), False),
-    ("Hebrew",   "עברית", True),
-    ("Hindi",    ("strip", "HI"), False),
-    ("Thai",     "ภาษาไทย", False),
+    ("Greek", "ΕΛΛΗΝΙΚΑ", False),
+    ("Arabic", ("strip", "AR"), False),
+    ("Hebrew", "עברית", True),
+    ("Hindi", ("strip", "HI"), False),
+    ("Thai", "ภาษาไทย", False),
     ("Japanese", ("strip", "JA"), False),
-    ("Korean",   ("strip", "KO"), False),
-    ("Elvish",   ("script", "TENGWAR"), False),
-    ("Runes",    ("script", "RUNES"), False),
+    ("Korean", ("strip", "KO"), False),
+    ("Elvish", ("script", "TENGWAR"), False),
+    ("Runes", ("script", "RUNES"), False),
     ("Aurebesh", ("script", "AUREBESH"), False),
-    ("Braille",  ("script", "BRAILLE"), False),
+    ("Braille", ("script", "BRAILLE"), False),
 ]
 # The closing TUT_LANG_MORE screen: (left top, left bottom, right top, right bottom).
 # The numbers are NUM_LANG and GLYPH_SCRIPT_COUNT - 1, read out of the headers below.
@@ -66,7 +65,7 @@ def enum_counts():
     n_lang = len(re.findall(r"\bLANG_[A-Z0-9_]+\b", body))
     st = open(os.path.join(KB, "system", "state.h"), encoding="utf-8").read()
     enum = st[st.index("enum poly_glyph_script"):st.index("GLYPH_SCRIPT_COUNT")]
-    n_scripts = len(re.findall(r"\bGLYPH_[A-Z0-9_]+\s*=", enum)) - 1   # minus GLYPH_STD
+    n_scripts = len(re.findall(r"\bGLYPH_[A-Z0-9_]+\s*=", enum)) - 1  # minus GLYPH_STD
     return n_lang, n_scripts
 
 
@@ -94,7 +93,7 @@ def char_tile(R, cp):
     im = Image.new("L", (W, H), 0)
     cps = [TIER + cp] if 65 <= cp <= 90 and R._font(TIER + cp) is not None else [cp]
     if R._font(cps[0]) is None:
-        ImageDraw.Draw(im).rectangle([0, 0, W - 1, H - 1], outline=160)   # missing glyph
+        ImageDraw.Draw(im).rectangle([0, 0, W - 1, H - 1], outline=160)  # missing glyph
         return im
     ink = set()
     R.draw(lambda x, y: ink.add((x, y)), cps, op.BUFFER_X, 30)
@@ -156,8 +155,7 @@ def main():
     # The two closing screens (TUT_LANG_MORE, TUT_LANG_MORE2): the number on the left
     # half, the word on the right, both on the middle row, in the heavy splash face.
     import gfx_font  # noqa: E402  (the host tool's own GFX header parser)
-    heavy = gfx_font.load_ui_font(os.path.join(KB, "fonts"), "FreeSansBold24pt7b.h",
-                                  "FreeSansBold24pt7b")
+    heavy = gfx_font.load_ui_font(os.path.join(KB, "fonts"), "FreeSansBold24pt7b.h", "FreeSansBold24pt7b")
     n_lang, n_scripts = enum_counts()
     for k, (num, word) in enumerate(((n_lang, MORE_WORDS[0]), (n_scripts, MORE_WORDS[1]))):
         y0 = 10 + (len(ITEMS) + k) * bh

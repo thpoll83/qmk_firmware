@@ -40,12 +40,12 @@ import gfx_font  # noqa: E402
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
 FONTS = gfx_font.load_all_fonts(str(_FONTS_DIR))
-ICONS = next(f for f in FONTS if f.name == 'IconsFont')      # g_all_fonts[0]
+ICONS = next(f for f in FONTS if f.name == 'IconsFont')  # g_all_fonts[0]
 
-BUFFER_X = gfx_font.BUFFER_X       # 28 — left edge of the visible window
-VIS_W, H = 72, gfx_font.OLED_H     # the keycap the user sees
-W = 128                            # the full scratch buffer row
-CY_DEFAULT = 3                     # KDISP_CY_DEFAULT
+BUFFER_X = gfx_font.BUFFER_X  # 28 — left edge of the visible window
+VIS_W, H = 72, gfx_font.OLED_H  # the keycap the user sees
+W = 128  # the full scratch buffer row
+CY_DEFAULT = 3  # KDISP_CY_DEFAULT
 HIDE_KEY = -128
 
 # poly_settings rows, named as `lang_lut.c` labels them rather than by ordinal.
@@ -59,23 +59,22 @@ HIDE_KEY = -128
 S_LETTER_H, S_LETTER_V = 'letter.hoffset', 'letter.voffset'
 S_NUM_H, S_NUM_V = 'num.hoffset', 'num.voffset'
 S_SYM_H, S_SYM_V = 'sym.hoffset', 'sym.voffset'
-S_LETTER_HALF, S_NUM_HALF, S_SYM_HALF = ('letter.altgrhalf', 'num.altgrhalf',
-                                         'sym.altgrhalf')
+S_LETTER_HALF, S_NUM_HALF, S_SYM_HALF = ('letter.altgrhalf', 'num.altgrhalf', 'sym.altgrhalf')
 VAR_SMALL, VAR_SHIFT, VAR_CAPS, VAR_ALTGR = range(4)
 
 WIN_X0, WIN_X1 = BUFFER_X, BUFFER_X + VIS_W - 1
 WIN_Y1 = H - 1
-ALTGR_HALF_MIN_INK_H = 7            # the firmware's mark guard, measured there
-
+ALTGR_HALF_MIN_INK_H = 7  # the firmware's mark guard, measured there
 
 # --- glyphs ------------------------------------------------------------------
+
 
 def find(cp):
     """Front-to-back lookup, exactly as kdisp_gfx_glyph_font() scans g_all_fonts."""
     for f in FONTS:
         if f.first <= cp <= f.last:
             g = f.glyphs[cp - f.first]
-            if g['width'] or g['height']:      # a gap record falls through
+            if g['width'] or g['height']:  # a gap record falls through
                 return f, g
     raise KeyError('no glyph for U+%04X' % cp)
 
@@ -95,36 +94,26 @@ def full_ink(cp, cur_x, cur_y):
     f, g = find(cp)
     y = cur_y + f.yAdvance - ICONS.yAdvance
     x0, y0 = cur_x + g['xOffset'], y + g['yOffset']
-    return {(x0 + sx, y0 + sy)
-            for sy in range(g['height']) for sx in range(g['width'])
-            if lit(f, g, sx, sy)}
+    return {(x0 + sx, y0 + sy) for sy in range(g['height']) for sx in range(g['width']) if lit(f, g, sx, sy)}
 
 
 def half_ink(cp, x, y):
     """HINT_HALF: 2x2-OR downsample at the literal ink top-left (no baseline align)."""
     f, g = find(cp)
     w, h = g['width'], g['height']
-    return {(x + dx, y + dy)
-            for dy in range((h + 1) // 2) for dx in range((w + 1) // 2)
-            if any(lit(f, g, dx * 2 + ox, dy * 2 + oy)
-                   for oy in (0, 1) for ox in (0, 1)
-                   if dx * 2 + ox < w and dy * 2 + oy < h)}
+    return {(x + dx, y + dy) for dy in range((h + 1) // 2) for dx in range((w + 1) // 2) if any(lit(f, g, dx * 2 + ox, dy * 2 + oy) for oy in (0, 1) for ox in (0, 1) if dx * 2 + ox < w and dy * 2 + oy < h)}
 
 
 def thin_ink(cp, x, y):
     """HINT_THIN: decimating downsample (every second pixel), same placement rule."""
     f, g = find(cp)
     w, h = g['width'], g['height']
-    return {(x + dx, y + dy)
-            for dy in range((h + 1) // 2) for dx in range((w + 1) // 2)
-            if lit(f, g, dx * 2, dy * 2)}
+    return {(x + dx, y + dy) for dy in range((h + 1) // 2) for dx in range((w + 1) // 2) if lit(f, g, dx * 2, dy * 2)}
 
 
 def courtyard(ink, radius=CY_DEFAULT):
     """The pixels a cy_radius draw CLEARS before plotting (its dilation)."""
-    return {(x + dx, y + dy) for (x, y) in ink
-            for dy in range(-radius, radius + 1)
-            for dx in range(-radius, radius + 1)}
+    return {(x + dx, y + dy) for (x, y) in ink for dy in range(-radius, radius + 1) for dx in range(-radius, radius + 1)}
 
 
 def small_ink(cp, cur_x, cur_y):
@@ -141,11 +130,7 @@ def small_ink(cp, cur_x, cur_y):
     y = cur_y + f.yAdvance - ICONS.yAdvance
     x0, y0 = cur_x + g['xOffset'] // 2, y + g['yOffset'] // 2
     w, h = g['width'], g['height']
-    return {(x0 + dx, y0 + dy)
-            for dy in range((h + 1) // 2) for dx in range((w + 1) // 2)
-            if any(lit(f, g, dx * 2 + ox, dy * 2 + oy)
-                   for oy in (0, 1) for ox in (0, 1)
-                   if dx * 2 + ox < w and dy * 2 + oy < h)}
+    return {(x0 + dx, y0 + dy) for dy in range((h + 1) // 2) for dx in range((w + 1) // 2) if any(lit(f, g, dx * 2 + ox, dy * 2 + oy) for oy in (0, 1) for ox in (0, 1) if dx * 2 + ox < w and dy * 2 + oy < h)}
 
 
 def rel_box(render, cp):
@@ -168,14 +153,19 @@ def clamp(x, y, box):
     firmware rather than chosen.
     """
     xmin, xmax, ymin, ymax = box
-    if x + xmax > WIN_X1: x = WIN_X1 - xmax
-    if x + xmin < WIN_X0: x = WIN_X0 - xmin
-    if y + ymin < 0:      y = -ymin
-    if y + ymax > WIN_Y1: y = WIN_Y1 - ymax
+    if x + xmax > WIN_X1:
+        x = WIN_X1 - xmax
+    if x + xmin < WIN_X0:
+        x = WIN_X0 - xmin
+    if y + ymin < 0:
+        y = -ymin
+    if y + ymax > WIN_Y1:
+        y = WIN_Y1 - ymax
     return x, y
 
 
 # --- render_key()'s legend ---------------------------------------------------
+
 
 def _poly_settings():
     """`{row label: {lang: [small, shift, caps, altgr]}}` out of `lang_lut.c`.
@@ -191,7 +181,7 @@ def _poly_settings():
     for label, block in zip(parts[1::2], parts[2::2]):
         rows = re.findall(r'/\*\s*(\S+)\*/\s*(-?\d+),(-?\d+),(-?\d+),(-?\d+)', block)
         out[label] = {name: [int(v) for v in vals] for name, *vals in rows}
-    if S_LETTER_H not in out:                       # a rename would fail open
+    if S_LETTER_H not in out:  # a rename would fail open
         raise RuntimeError('no %r block in %s' % (S_LETTER_H, _LANG_LUT))
     return out
 
@@ -226,10 +216,7 @@ def legend_ink(ch, lang='en-US', kind=None, shifted=None, altgr=None):
     """
     if kind is None:
         kind = 'letter' if ch.isalpha() else ('num' if ch.isdigit() else 'sym')
-    hrow, vrow, halfrow = {
-        'letter': (S_LETTER_H, S_LETTER_V, S_LETTER_HALF),
-        'num': (S_NUM_H, S_NUM_V, S_NUM_HALF),
-        'sym': (S_SYM_H, S_SYM_V, S_SYM_HALF)}[kind]
+    hrow, vrow, halfrow = {'letter': (S_LETTER_H, S_LETTER_V, S_LETTER_HALF), 'num': (S_NUM_H, S_NUM_V, S_NUM_HALF), 'sym': (S_SYM_H, S_SYM_V, S_SYM_HALF)}[kind]
 
     # --- the base legend: the language's own origin, clamped onto the panel -----
     bbox = rel_box(full_ink, ord(ch))
@@ -248,15 +235,15 @@ def legend_ink(ch, lang='en-US', kind=None, shifted=None, altgr=None):
         if shifted is not None:
             pbox = rel_box(full_ink, ord(shifted))
             pv_x = BUFFER_X + h_pv
-            if pv_x + pbox[0] < base_ink_max + 2:          # keep clear of the base
+            if pv_x + pbox[0] < base_ink_max + 2:  # keep clear of the base
                 pv_x = base_ink_max + 2 - pbox[0]
             pv_y = 23 + v_pv
             pv_x, pv_y = clamp(pv_x, pv_y, pbox)
-            if pv_x + pbox[0] <= base_ink_max:             # forced to overlap -> stagger
-                base_y -= 6                                # lift the flat base
+            if pv_x + pbox[0] <= base_ink_max:  # forced to overlap -> stagger
+                base_y -= 6  # lift the flat base
                 base_x, base_y = clamp(base_x, base_y, bbox)
                 base_ink_max = base_x + bbox[1]
-                pv_y += 4                                  # drop the preview
+                pv_y += 4  # drop the preview
                 pv_x, pv_y = clamp(pv_x, pv_y, pbox)
 
     # --- the AltGr hint, laid out as a PAIR with the shift preview -------------
@@ -278,8 +265,7 @@ def legend_ink(ch, lang='en-US', kind=None, shifted=None, altgr=None):
         # the shift LEFT into the gap between the base and the right-clamped AltGr,
         # never past the base's own 2 px margin and never right.
         if pv_x is not None:
-            if (pv_x + pbox[0] <= alt_x + abox[1] and alt_x + abox[0] <= pv_x + pbox[1]
-                    and pv_y + pbox[2] <= alt_y + abox[3] and alt_y + abox[2] <= pv_y + pbox[3]):
+            if (pv_x + pbox[0] <= alt_x + abox[1] and alt_x + abox[0] <= pv_x + pbox[1] and pv_y + pbox[2] <= alt_y + abox[3] and alt_y + abox[2] <= pv_y + pbox[3]):
                 want = max(alt_x + abox[0] - 2 - pbox[1], base_ink_max + 2 - pbox[0])
                 if want < pv_x:
                     pv_x = want
@@ -294,6 +280,7 @@ def legend_ink(ch, lang='en-US', kind=None, shifted=None, altgr=None):
 
 
 # --- measuring ---------------------------------------------------------------
+
 
 def collision(a, b):
     """Pixels where two ink sets overlap.
@@ -319,13 +306,12 @@ def extent(ink):
 
 def offscreen(ink):
     """Ink outside the visible keycap window — must be empty."""
-    return {(x, y) for (x, y) in ink
-            if not (BUFFER_X <= x < BUFFER_X + VIS_W and 0 <= y < H)}
+    return {(x, y) for (x, y) in ink if not (BUFFER_X <= x < BUFFER_X + VIS_W and 0 <= y < H)}
 
 
 # --- rendering ---------------------------------------------------------------
 
-_LIT = (222, 238, 255)      # what the OLEDs read as by eye (not the camera cyan)
+_LIT = (222, 238, 255)  # what the OLEDs read as by eye (not the camera cyan)
 _BG = (18, 18, 22)
 _FRAME = (58, 62, 72)
 _LABEL = (176, 180, 190)
@@ -340,9 +326,7 @@ def _cap(ink, scale):
     crop = img.crop((BUFFER_X, 0, BUFFER_X + VIS_W, H))
     w, h = VIS_W * scale, H * scale
     out = Image.new('RGB', (w + 2 * scale, h + 2 * scale), _BG)
-    ImageDraw.Draw(out).rounded_rectangle(
-        [0, 0, w + 2 * scale - 1, h + 2 * scale - 1],
-        radius=scale + 2, fill=(0, 0, 0), outline=_FRAME, width=1)
+    ImageDraw.Draw(out).rounded_rectangle([0, 0, w + 2 * scale - 1, h + 2 * scale - 1], radius=scale + 2, fill=(0, 0, 0), outline=_FRAME, width=1)
     rgb = Image.merge('RGB', tuple(crop.point(lambda v, c=c: v and c) for c in _LIT))
     out.paste(rgb.resize((w, h), Image.NEAREST), (scale, scale))
     return out
@@ -354,10 +338,9 @@ def _label_font(size=15):
     Only the caption under each keycap uses this — the keycap itself is drawn from
     the firmware's own font headers — so a fallback costs nothing but looks.
     """
-    for name in ('DejaVuSansMono-Bold.ttf', 'DejaVuSansMono.ttf',
-                 'LiberationMono-Bold.ttf', 'Menlo.ttc', 'consolab.ttf'):
+    for name in ('DejaVuSansMono-Bold.ttf', 'DejaVuSansMono.ttf', 'LiberationMono-Bold.ttf', 'Menlo.ttc', 'consolab.ttf'):
         try:
-            return ImageFont.truetype(name, size)      # PIL searches the font dirs
+            return ImageFont.truetype(name, size)  # PIL searches the font dirs
         except OSError:
             continue
     return ImageFont.load_default()
@@ -368,13 +351,11 @@ def sheet(cells, path, scale=5, gap=26, pad=22):
     font = _label_font()
     caps = [_cap(ink, scale) for ink, _ in cells]
     cw, chh = caps[0].size
-    out = Image.new('RGB', (pad * 2 + cw * len(caps) + gap * (len(caps) - 1),
-                            pad * 2 + chh + 26), _BG)
+    out = Image.new('RGB', (pad * 2 + cw * len(caps) + gap * (len(caps) - 1), pad * 2 + chh + 26), _BG)
     d = ImageDraw.Draw(out)
     for i, (cap, (_, label)) in enumerate(zip(caps, cells)):
         x = pad + i * (cw + gap)
         out.paste(cap, (x, pad))
-        d.text((x + (cw - d.textlength(label, font=font)) / 2, pad + chh + 8),
-               label, font=font, fill=_LABEL)
+        d.text((x + (cw - d.textlength(label, font=font)) / 2, pad + chh + 8), label, font=font, fill=_LABEL)
     out.save(path)
     return path

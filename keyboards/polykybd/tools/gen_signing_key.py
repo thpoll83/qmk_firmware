@@ -52,16 +52,11 @@ def _fmt_c_array(b: bytes) -> str:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out-privkey", required=True, type=Path,
-                    help="write the 32-byte raw Ed25519 seed here (KEEP SECRET)")
-    ap.add_argument("--out-pubkey", required=True, type=Path,
-                    help="write/overwrite the fw_pubkey.h C header here (commit it)")
-    ap.add_argument("--print-b64", action="store_true",
-                    help="also print the private seed base64 (for the GH secret FW_SIGNING_KEY)")
-    ap.add_argument("--force", action="store_true",
-                    help="overwrite an existing private-key file")
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--out-privkey", required=True, type=Path, help="write the 32-byte raw Ed25519 seed here (KEEP SECRET)")
+    ap.add_argument("--out-pubkey", required=True, type=Path, help="write/overwrite the fw_pubkey.h C header here (commit it)")
+    ap.add_argument("--print-b64", action="store_true", help="also print the private seed base64 (for the GH secret FW_SIGNING_KEY)")
+    ap.add_argument("--force", action="store_true", help="overwrite an existing private-key file")
     args = ap.parse_args()
 
     try:
@@ -99,8 +94,7 @@ def main() -> int:
     # runs, so the user is left holding an unusable keypair: a secret on disk they
     # never saw the base64 for, and a fw_pubkey.h truncated by the failed open.
     # (Same trap as scripts/publish_release.py — see the Releases note in CLAUDE.md.)
-    args.out_pubkey.write_text(PUBKEY_TEMPLATE.replace("{rows}", _fmt_c_array(pub)),
-                               encoding="utf-8")
+    args.out_pubkey.write_text(PUBKEY_TEMPLATE.replace("{rows}", _fmt_c_array(pub)), encoding="utf-8")
 
     print(f"private seed  -> {args.out_privkey}  (KEEP SECRET, do not commit)")
     print(f"public header -> {args.out_pubkey}   (commit this)")

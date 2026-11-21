@@ -35,19 +35,17 @@ def _qmk_root(start):
 _QMK = _qmk_root(HERE)
 
 # locate PolyKybdHost/tools/gfx_font.py (sibling repo, a few common layouts)
-CANDIDATES = [
-    p for p in (
-        os.path.join(os.path.dirname(_QMK), "PolyKybdHost", "tools") if _QMK else None,
-        os.path.expanduser("~/PolyKybdHost/tools"),
-        "/home/user/PolyKybdHost/tools",
-    ) if p
-]
+CANDIDATES = [p for p in (
+    os.path.join(os.path.dirname(_QMK), "PolyKybdHost", "tools") if _QMK else None,
+    os.path.expanduser("~/PolyKybdHost/tools"),
+    "/home/user/PolyKybdHost/tools",
+) if p]
 for c in CANDIDATES:
     if os.path.exists(os.path.join(c, "gfx_font.py")):
         sys.path.insert(0, c)
         break
-from gfx_font import _parse_header, OLED_W, OLED_H             # noqa: E402
-from PIL import Image, ImageDraw                                # noqa: E402
+from gfx_font import _parse_header, OLED_W, OLED_H  # noqa: E402
+from PIL import Image, ImageDraw  # noqa: E402
 
 base = int(sys.argv[1], 16)
 count = int(sys.argv[2])
@@ -103,15 +101,15 @@ rows = (count + cols - 1) // cols
 cw, ch = OLED_W + 6, OLED_H + 16
 sheet = Image.new("RGB", (cols * cw + 10, rows * ch + 26), (18, 18, 22))
 d = ImageDraw.Draw(sheet)
-d.text((6, 6), f"0x{base:04X}  first=0x{first:04X} last=0x{font['last']:04X}  {count} glyphs",
-       fill=(240, 240, 120))
+d.text((6, 6), f"0x{base:04X}  first=0x{first:04X} last=0x{font['last']:04X}  {count} glyphs", fill=(240, 240, 120))
 miss = 0
 for i in range(count):
     r, c = divmod(i, cols)
     ox, oy = 6 + c * cw, 22 + r * ch
     img = blit(base + i) if base + i <= font["last"] else None
     if img is None:
-        miss += 1; img = Image.new("L", (OLED_W, OLED_H), 0)
+        miss += 1
+        img = Image.new("L", (OLED_W, OLED_H), 0)
     sheet.paste(Image.eval(img.convert("RGB"), lambda v: 255 if v else 30), (ox, oy))
     d.rectangle([ox, oy, ox + OLED_W - 1, oy + OLED_H - 1], outline=(70, 70, 80))
     d.text((ox + 2, oy + OLED_H + 1), KEYS[i] if i < len(KEYS) else str(i), fill=(200, 200, 200))

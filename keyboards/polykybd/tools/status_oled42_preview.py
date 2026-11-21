@@ -35,14 +35,12 @@ from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 FONTDIR = os.path.normpath(os.path.join(HERE, "..", "fonts"))
 
-P_W, P_H = 32, 128            # logical portrait (= physical 128x32 rotated 90°)
-FULL_BRIGHT = 50             # config.h
+P_W, P_H = 32, 128  # logical portrait (= physical 128x32 rotated 90°)
+FULL_BRIGHT = 50  # config.h
 
 # Role icons (16x16 MSB-first) — mirror of status_oled.c usb_/link_status_bitmap.
-USB_BMP = [0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x80, 0x00, 0xb8, 0x04, 0xb8,
-           0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0]
-LINK_BMP = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x1c, 0x7f, 0xfe, 0x7f, 0xfe, 0x00, 0x00,
-            0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+USB_BMP = [0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x80, 0x00, 0xb8, 0x04, 0xb8, 0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0]
+LINK_BMP = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x1c, 0x7f, 0xfe, 0x7f, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 
 # short names — must match status_oled.c layout_name_short()
 SHORT_NAMES = ["Qwrty", "Stag!", "ColDH", "Neo", "Wkmn"]
@@ -63,16 +61,12 @@ def _parse_header(text, bitmaps, glyphs, fonts):
         glyphs[m.group(1)] = arr
     for m in re.finditer(r'const\s+GFXfont\s+(\w+)\s+PROGMEM\s*=\s*\{(.*?)\};', text, re.S):
         parts = [p.strip() for p in re.sub(r'//[^\n]*', '', m.group(2)).split(',')]
-        fonts[m.group(1)] = dict(bmp=re.findall(r'\w+', parts[0])[-1],
-                                 gly=re.findall(r'\w+', parts[1])[-1],
-                                 first=int(parts[2], 0), last=int(parts[3], 0),
-                                 yadv=int(parts[4], 0))
+        fonts[m.group(1)] = dict(bmp=re.findall(r'\w+', parts[0])[-1], gly=re.findall(r'\w+', parts[1])[-1], first=int(parts[2], 0), last=int(parts[3], 0), yadv=int(parts[4], 0))
 
 
 def load():
     B, G, F = {}, {}, {}
-    heads = ["nano_font.h", "gfx_icons.h",
-             os.path.join("generated", "emoji_fonts.h")]
+    heads = ["nano_font.h", "gfx_icons.h", os.path.join("generated", "emoji_fonts.h")]
     for rel in heads:
         p = os.path.join(FONTDIR, rel)
         if os.path.exists(p):
@@ -84,8 +78,7 @@ def load():
 
     nano = bundle('NotoSans_Regular_Nano_10px7b')
     tiny = bundle('NotoSans_Regular_Nano_10px7b')
-    icons = next((F[k], B[F[k]['bmp']], G[F[k]['gly']]) for k in F
-                 if F[k]['first'] <= 0x100005 <= F[k]['last'] and F[k]['gly'] in G)
+    icons = next((F[k], B[F[k]['bmp']], G[F[k]['gly']]) for k in F if F[k]['first'] <= 0x100005 <= F[k]['last'] and F[k]['gly'] in G)
     world = bundle('NotoEmoji_Medium_World_20pt16b')
     return nano, tiny, icons, world
 
@@ -173,15 +166,16 @@ def draw_brightness(setpix, contrast, bottom_y):
 
 
 # ------------------------------- compose -----------------------------------
-WPM_BMP = [0x1f,0x00, 0x71,0xc0, 0x43,0x40, 0xc2,0x60, 0x86,0x20, 0x8e,0x20]
+WPM_BMP = [0x1f, 0x00, 0x71, 0xc0, 0x43, 0x40, 0xc2, 0x60, 0x86, 0x20, 0x8e, 0x20]
 
 
-def build(side, nano, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0],
-          lang='en-US', wpm=0):
+def build(side, nano, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0], lang='en-US', wpm=0):
     """side 'L' (USB host, brightness+WPM) or 'R' (Link bridge, locks)."""
     pts = set()
+
     def setp(px, py):
         pts.add((px, py))
+
     # role
     if side == 'L':
         draw_bitmap(setp, USB_BMP, -3, 0)
@@ -192,15 +186,15 @@ def build(side, nano, tiny, icons, world, contrast=35, layout_name=SHORT_NAMES[0
     # Asymmetric halves: layout half = layer/layout/brightness/speed, lock half =
     # locks + language. Mirrors status_oled.c.
     if side == 'L':
-        draw_glyph(setp, icons, 0, 41, 0x100005)   # ICON_LAYER
+        draw_glyph(setp, icons, 0, 41, 0x100005)  # ICON_LAYER
         draw_text(setp, tiny, 18, 38, '0')
         draw_text_center(setp, nano, LAYOUT_NAME_BASE, layout_name)
         draw_brightness(setp, contrast, 82)
         draw_bitmap(setp, WPM_BMP, (P_W - 11) // 2, 93, 11, 6)
         draw_text_center(setp, tiny, 110, str(wpm))
     else:
-        draw_glyph_center(setp, icons, 36, 0x100011)   # NumLock off
-        draw_glyph_center(setp, icons, 60, 0x100013)   # CapsLock off
+        draw_glyph_center(setp, icons, 36, 0x100011)  # NumLock off
+        draw_glyph_center(setp, icons, 60, 0x100013)  # CapsLock off
         gh = draw_glyph_half(setp, world, (P_W - 20) // 2, 68, 0x1F310)
         for half in range(2):
             draw_text_center(setp, tiny, 68 + gh + 12 + half * 12, lang[half * 3:half * 3 + 2])
@@ -237,8 +231,7 @@ def render_diag(pts, title, sc=6, gut=4):
             clipped += 1
         cx, cy = (gut + x) * sc, (gut + y) * sc
         d.rectangle([cx, cy, cx + sc - 1, cy + sc - 1], fill=ON if inb else RED)
-    d.rectangle([gut * sc - 2, gut * sc - 2, (gut + P_W) * sc + 1, (gut + P_H) * sc + 1],
-                outline=(120, 140, 160), width=2)
+    d.rectangle([gut * sc - 2, gut * sc - 2, (gut + P_W) * sc + 1, (gut + P_H) * sc + 1], outline=(120, 140, 160), width=2)
     d.text((4, 2), title, fill=(200, 215, 235))
     d.text((4, ch * sc - 14), f"out-of-bounds px: {clipped}", fill=RED if clipped else (140, 200, 150))
     return im, clipped
@@ -261,6 +254,7 @@ def main():
         # clips adds beyond the L=0 / R=33 baseline.
         def clip_count(pts):
             return sum(1 for (x, y) in pts if not (0 <= x < P_W and 0 <= y < P_H))
+
         for nm in SHORT_NAMES + ["Unkn"]:
             lc = clip_count(build('L', nano, tiny, icons, world, layout_name=nm))
             rc = clip_count(build('R', nano, tiny, icons, world, layout_name=nm))
@@ -269,7 +263,8 @@ def main():
         Ri, rc = render_diag(R, 'RIGHT (Num/Caps lock)  RED=clipped')
         gap = 24
         c = Image.new('RGB', (Li.width + gap + Ri.width, max(Li.height, Ri.height)), (18, 18, 22))
-        c.paste(Li, (0, 0)); c.paste(Ri, (Li.width + gap, 0))
+        c.paste(Li, (0, 0))
+        c.paste(Ri, (Li.width + gap, 0))
         out = args.out or '/tmp/status_oled42_diag.png'
         c.save(out)
         print(f"{out}  representative (Qwrty): L={lc} R={rc}")
@@ -277,7 +272,8 @@ def main():
         Li, Ri = render_plain(L), render_plain(R)
         pad, gap = 16, 40
         c = Image.new('RGB', (pad * 2 + Li.width + gap + Ri.width, pad * 2 + Li.height), (26, 26, 30))
-        c.paste(Li, (pad, pad)); c.paste(Ri, (pad + Li.width + gap, pad))
+        c.paste(Li, (pad, pad))
+        c.paste(Ri, (pad + Li.width + gap, pad))
         out = args.out or '/tmp/status_oled42.png'
         c.save(out)
         print(out)

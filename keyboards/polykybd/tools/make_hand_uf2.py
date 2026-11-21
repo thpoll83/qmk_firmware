@@ -132,9 +132,16 @@ def uf2_block(addr, payload, block_no, num_blocks):
         raise SystemExit(f"refusing to emit a block at 0x{addr:08X} — the RP2040 bootrom drops a flash target that is not {PAGE}-byte aligned")
     return struct.pack(
         "<8I476sI",
-        UF2_MAGIC0, UF2_MAGIC1, UF2_FLAG_FAMILY_ID, addr,
-        len(payload), block_no, num_blocks, RP2040_FAMILY_ID,
-        payload.ljust(476, b"\x00"), UF2_MAGIC_END,
+        UF2_MAGIC0,
+        UF2_MAGIC1,
+        UF2_FLAG_FAMILY_ID,
+        addr,
+        len(payload),
+        block_no,
+        num_blocks,
+        RP2040_FAMILY_ID,
+        payload.ljust(476, b"\x00"),
+        UF2_MAGIC_END,
     )
 
 
@@ -197,8 +204,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--side", choices=("left", "right"), help="which half this UF2 is for")
     ap.add_argument("-o", "--out", type=pathlib.Path, help="output file (default polykybd-hand-<side>.uf2)")
-    ap.add_argument("--append-to", type=pathlib.Path, metavar="FW.UF2",
-                    help="copy a firmware UF2 and add the stamp block, so one file provisions a half")
+    ap.add_argument("--append-to", type=pathlib.Path, metavar="FW.UF2", help="copy a firmware UF2 and add the stamp block, so one file provisions a half")
     ap.add_argument("--verify", type=pathlib.Path, metavar="FILE", help="check a UF2's stamp block and exit")
     args = ap.parse_args()
 
@@ -229,11 +235,11 @@ def main():
             "--append-to is refused: the RP2040 bootrom tracks which sectors it has erased "
             "by BLOCK NUMBER, so an appended block 4 MB from the image base can share a "
             "bit with a firmware block and skip its own erase. Flash the firmware .uf2 and "
-            "the stamp .uf2 separately.")
+            "the stamp .uf2 separately."
+        )
     blocks.append(block)
 
-    out = args.out or pathlib.Path(
-        f"{args.append_to.stem}-hand-{args.side}.uf2" if args.append_to else f"polykybd-hand-{args.side}.uf2")
+    out = args.out or pathlib.Path(f"{args.append_to.stem}-hand-{args.side}.uf2" if args.append_to else f"polykybd-hand-{args.side}.uf2")
     write_uf2(out, blocks)
     verify(out)
     if not args.append_to:

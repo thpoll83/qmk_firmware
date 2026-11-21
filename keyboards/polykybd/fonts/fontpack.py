@@ -40,14 +40,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 MAGIC = b"PlyF"
-ABI_VERSION = 2             # 2: column-native (OLED page) glyph bitmaps (see _glyph_len)
+ABI_VERSION = 2  # 2: column-native (OLED page) glyph bitmaps (see _glyph_len)
 HEADER_SIZE = 32
 FONT_REC_SIZE = 20
 GLYPH_REC_SIZE = 8
 
-HEADER_FMT = "<4sHHIIIII"   # magic, abi, flags, content_ver, count, table_off, total, crc, (reserved appended)
-FONT_FMT = "<IIIIhH"         # bitmap_off, glyph_off, first, last, yAdvance, reserved
-GLYPH_FMT = "<Hbbbbbx"       # bitmapOffset, w, h, xAdvance, xOffset, yOffset, pad
+HEADER_FMT = "<4sHHIIIII"  # magic, abi, flags, content_ver, count, table_off, total, crc, (reserved appended)
+FONT_FMT = "<IIIIhH"  # bitmap_off, glyph_off, first, last, yAdvance, reserved
+GLYPH_FMT = "<Hbbbbbx"  # bitmapOffset, w, h, xAdvance, xOffset, yOffset, pad
 
 
 def _glyph_len(w: int, h: int) -> int:
@@ -59,6 +59,7 @@ def _glyph_len(w: int, h: int) -> int:
 
 
 # ─────────────────────────── parsing the C headers ──────────────────────────
+
 
 @dataclass
 class ParsedFont:
@@ -131,13 +132,11 @@ def parse_gfx_header(text: str) -> dict[str, ParsedFont]:
     bitmaps: dict[str, bytes] = {}
     glyphs: dict[str, list[tuple[int, ...]]] = {}
 
-    for m in re.finditer(r"const\s+uint8_t\s+(\w+?)Bitmaps\s*\[\]\s*\w*\s*=\s*\{(.*?)\}\s*;",
-                          clean, re.S):
+    for m in re.finditer(r"const\s+uint8_t\s+(\w+?)Bitmaps\s*\[\]\s*\w*\s*=\s*\{(.*?)\}\s*;", clean, re.S):
         toks = _HEX_RE.findall(m.group(2))
         bitmaps[m.group(1)] = bytes(_parse_int(t) & 0xFF for t in toks)
 
-    for m in re.finditer(r"const\s+GFXglyph\s+(\w+?)Glyphs\s*\[\]\s*\w*\s*=\s*\{(.*?)\}\s*;",
-                          clean, re.S):
+    for m in re.finditer(r"const\s+GFXglyph\s+(\w+?)Glyphs\s*\[\]\s*\w*\s*=\s*\{(.*?)\}\s*;", clean, re.S):
         body = m.group(2)
         rows = []
         for row in re.finditer(r"\{([^}]*)\}", body):
@@ -148,9 +147,8 @@ def parse_gfx_header(text: str) -> dict[str, ParsedFont]:
         glyphs[m.group(1)] = _canonical_offsets(m.group(1), rows)
 
     fonts: dict[str, ParsedFont] = {}
-    for m in re.finditer(
-        r"const\s+GFXfont\s+(\w+)\s*\w*\s*=\s*\{\s*\(uint8_t\s*\*\)\s*(\w+?)Bitmaps\s*,"
-        r"\s*\(GFXglyph\s*\*\)\s*(\w+?)Glyphs\s*,(.*?)\}\s*;", clean, re.S):
+    for m in re.finditer(r"const\s+GFXfont\s+(\w+)\s*\w*\s*=\s*\{\s*\(uint8_t\s*\*\)\s*(\w+?)Bitmaps\s*,"
+                         r"\s*\(GFXglyph\s*\*\)\s*(\w+?)Glyphs\s*,(.*?)\}\s*;", clean, re.S):
         sym, bsym, gsym, tail = m.groups()
         nums = _HEX_RE.findall(tail)
         if len(nums) < 3:
@@ -164,9 +162,8 @@ def parse_gfx_header(text: str) -> dict[str, ParsedFont]:
 
 # ─────────────────────────── serialize / deserialize ────────────────────────
 
-def serialize_pack(fonts: list[ParsedFont], content_version: int = 0,
-                   abi_version: int = ABI_VERSION,
-                   global_indices: list[int] | None = None) -> bytes:
+
+def serialize_pack(fonts: list[ParsedFont], content_version: int = 0, abi_version: int = ABI_VERSION, global_indices: list[int] | None = None) -> bytes:
     """Build a "PlyF" pack from an ordered list of fonts (order == priority).
 
     `global_indices`, when given, is a parallel list of each font's position in
@@ -186,11 +183,10 @@ def serialize_pack(fonts: list[ParsedFont], content_version: int = 0,
     glyph_offs = []
     for f in fonts:
         glyph_offs.append(cur)
-        blob = b"".join(struct.pack(GLYPH_FMT, g[0], g[1], g[2], g[3], g[4], g[5])
-                        for g in f.glyphs)
+        blob = b"".join(struct.pack(GLYPH_FMT, g[0], g[1], g[2], g[3], g[4], g[5]) for g in f.glyphs)
         glyph_blocks.append(blob)
         cur += len(blob)
-        cur = (cur + 3) & ~3                      # 4-align next block
+        cur = (cur + 3) & ~3  # 4-align next block
 
     bitmap_offs = []
     for f in fonts:
@@ -201,14 +197,13 @@ def serialize_pack(fonts: list[ParsedFont], content_version: int = 0,
 
     total_size = cur
 
-    table = b"".join(
-        struct.pack(FONT_FMT, bitmap_offs[i], glyph_offs[i], f.first, f.last, f.yadvance,
-                    (global_indices[i] if global_indices is not None else 0))
-        for i, f in enumerate(fonts))
+    table = b"".join(struct.pack(FONT_FMT, bitmap_offs[i], glyph_offs[i], f.first, f.last, f.yadvance, (global_indices[i] if global_indices is not None else 0)) for i, f in enumerate(fonts))
 
     body = bytearray(total_size - HEADER_SIZE)
+
     def place(off: int, blob: bytes):
-        body[off - HEADER_SIZE: off - HEADER_SIZE + len(blob)] = blob
+        body[off - HEADER_SIZE:off - HEADER_SIZE + len(blob)] = blob
+
     place(table_off, table)
     for off, blob in zip(glyph_offs, glyph_blocks):
         place(off, blob)
@@ -216,8 +211,7 @@ def serialize_pack(fonts: list[ParsedFont], content_version: int = 0,
         place(off, blob)
 
     crc = zlib.crc32(bytes(body)) & 0xFFFFFFFF
-    header = struct.pack(HEADER_FMT + "I", MAGIC, abi_version, 0, content_version,
-                         n, table_off, total_size, crc, 0)
+    header = struct.pack(HEADER_FMT + "I", MAGIC, abi_version, 0, content_version, n, table_off, total_size, crc, 0)
     return bytes(header) + bytes(body)
 
 
@@ -244,8 +238,7 @@ class Pack:
 def parse_pack(data: bytes) -> Pack:
     if len(data) < HEADER_SIZE:
         raise ValueError("pack shorter than header")
-    (magic, abi, _flags, content_ver, count, table_off, total, crc, _res) = struct.unpack(
-        HEADER_FMT + "I", data[:HEADER_SIZE])
+    (magic, abi, _flags, content_ver, count, table_off, total, crc, _res) = struct.unpack(HEADER_FMT + "I", data[:HEADER_SIZE])
     if magic != MAGIC:
         raise ValueError(f"bad magic {magic!r} (expected {MAGIC!r})")
     if total != len(data):
@@ -254,21 +247,20 @@ def parse_pack(data: bytes) -> Pack:
     fonts = []
     for i in range(count):
         base = table_off + i * FONT_REC_SIZE
-        boff, goff, first, last, yadv, _ = struct.unpack(
-            FONT_FMT, data[base:base + FONT_REC_SIZE])
+        boff, goff, first, last, yadv, _ = struct.unpack(FONT_FMT, data[base:base + FONT_REC_SIZE])
         fonts.append(PackFont(first, last, yadv, goff, boff))
     return Pack(abi, content_ver, count, total, crc, crc_ok, fonts)
 
 
 # ─────────────────────────── validation ─────────────────────────────────────
 
-def validate_pack(data: bytes, expected_manifest: list[dict] | None = None,
-                  abi_version: int = ABI_VERSION) -> list[str]:
+
+def validate_pack(data: bytes, expected_manifest: list[dict] | None = None, abi_version: int = ABI_VERSION) -> list[str]:
     """Return a list of problems (empty == valid)."""
     problems: list[str] = []
     try:
         pack = parse_pack(data)
-    except Exception as e:                                   # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
         return [f"unparseable: {e}"]
 
     if pack.abi_version != abi_version:
@@ -293,19 +285,19 @@ def validate_pack(data: bytes, expected_manifest: list[dict] | None = None,
         else:
             for i, (exp, got) in enumerate(zip(expected_manifest, pack.fonts)):
                 if exp["first"] != got.first or exp["last"] != got.last:
-                    problems.append(
-                        f"font {i} ({exp.get('symbol','?')}): range "
-                        f"0x{got.first:X}-0x{got.last:X} != manifest "
-                        f"0x{exp['first']:X}-0x{exp['last']:X}")
+                    problems.append(f"font {i} ({exp.get('symbol','?')}): range "
+                                    f"0x{got.first:X}-0x{got.last:X} != manifest "
+                                    f"0x{exp['first']:X}-0x{exp['last']:X}")
     return problems
 
 
 # ─────────────────────────── tree → pack (used by generate_fonts.py) ─────────
 
+
 def _load_yaml(path: Path) -> dict:
     try:
         import yaml
-    except ImportError:                                     # pragma: no cover
+    except ImportError:  # pragma: no cover
         sys.exit("PyYAML is required:  pip install pyyaml")
     return yaml.safe_load(path.read_text())
 
@@ -313,9 +305,9 @@ def _load_yaml(path: Path) -> dict:
 def resident_symbols(cfg: dict, fonts_dir: Path) -> set[str]:
     """Symbols that stay compiled into the firmware (NOT in the pack)."""
     idx = cfg.get("index", {})
-    res = set(idx.get("prepend_fonts", []))      # IconsFont etc.
-    res |= set(idx.get("append_fonts", []))      # resident fonts ordered last (none today)
-    res |= set(idx.get("resident_fonts", []))    # UI-chrome fonts in packed cats
+    res = set(idx.get("prepend_fonts", []))  # IconsFont etc.
+    res |= set(idx.get("append_fonts", []))  # resident fonts ordered last (none today)
+    res |= set(idx.get("resident_fonts", []))  # UI-chrome fonts in packed cats
     cats = cfg["categories"]
     for cat, meta in cats.items():
         if meta.get("resident"):
@@ -340,8 +332,7 @@ def all_fonts_order(fonts_dir: Path) -> list[str]:
     return re.findall(r"&(\w+)\s*,", body.split("};")[0])
 
 
-def build_pack(order: list[str], resident: set[str], parsed: dict[str, ParsedFont],
-               content_version: int = 0):
+def build_pack(order: list[str], resident: set[str], parsed: dict[str, ParsedFont], content_version: int = 0):
     """Core builder: (pack_bytes, manifest) from an ALL_FONTS order + parsed fonts.
 
     The pack contains every ALL_FONTS entry that is NOT resident, in ALL_FONTS
@@ -358,12 +349,10 @@ def build_pack(order: list[str], resident: set[str], parsed: dict[str, ParsedFon
             raise ValueError(f"ALL_FONTS entry {sym!r} not found in generated headers")
         pf = parsed[sym]
         if len(pf.glyphs) != pf.expected_glyph_count():
-            raise ValueError(
-                f"{sym}: {len(pf.glyphs)} glyphs != last-first+1="
-                f"{pf.expected_glyph_count()} (0x{pf.first:X}-0x{pf.last:X})")
+            raise ValueError(f"{sym}: {len(pf.glyphs)} glyphs != last-first+1="
+                             f"{pf.expected_glyph_count()} (0x{pf.first:X}-0x{pf.last:X})")
         pack_fonts.append(pf)
-        manifest.append({"all_fonts_index": gi, "symbol": sym,
-                         "first": pf.first, "last": pf.last})
+        manifest.append({"all_fonts_index": gi, "symbol": sym, "first": pf.first, "last": pf.last})
 
     data = serialize_pack(pack_fonts, content_version=content_version)
     return data, manifest
@@ -379,6 +368,7 @@ def build_pack(order: list[str], resident: set[str], parsed: dict[str, ParsedFon
 # because only never-drawn duplicates are removed, the assembled render is provably
 # unchanged (asserted below). Only PACK (non-resident) fonts are touched — resident
 # fonts are compiled in, not part of a bundle.
+
 
 def _glyph_key(pf: ParsedFont, i: int):
     """A byte-identity key for glyph `i` (metrics + exact bitmap), or None if empty."""
@@ -398,9 +388,9 @@ def _repack_font_without(pf: ParsedFont, empty_idxs: set[int]) -> ParsedFont:
     blob = bytearray()
     for i, (o, w, h, xa, xo, yo) in enumerate(pf.glyphs):
         if i in empty_idxs:
-            new_glyphs.append((len(blob), 0, 0, 0, 0, 0))       # drop the bitmap
+            new_glyphs.append((len(blob), 0, 0, 0, 0, 0))  # drop the bitmap
         elif w == 0 or h == 0:
-            new_glyphs.append((len(blob), w, h, xa, xo, yo))    # already empty
+            new_glyphs.append((len(blob), w, h, xa, xo, yo))  # already empty
         else:
             new_glyphs.append((len(blob), w, h, xa, xo, yo))
             blob += pf.bitmaps[o:o + _glyph_len(w, h)]
@@ -413,8 +403,7 @@ def _assembly_seq(order: list[str], resident: set[str]) -> list[str]:
     return [s for s in order if s in resident] + [s for s in order if s not in resident]
 
 
-def _assembled(order: list[str], resident: set[str],
-               parsed: dict[str, ParsedFont]) -> dict[int, tuple[str, tuple]]:
+def _assembled(order: list[str], resident: set[str], parsed: dict[str, ParsedFont]) -> dict[int, tuple[str, tuple]]:
     """{codepoint: (winning_symbol, glyph_key)} — what the keyboard actually draws."""
     out: dict[int, tuple[str, tuple]] = {}
     for sym in _assembly_seq(order, resident):
@@ -428,8 +417,7 @@ def _assembled(order: list[str], resident: set[str],
     return out
 
 
-def prune_shadowed_glyphs(order: list[str], resident: set[str],
-                          parsed: dict[str, ParsedFont]) -> list[tuple[str, int, int]]:
+def prune_shadowed_glyphs(order: list[str], resident: set[str], parsed: dict[str, ParsedFont]) -> list[tuple[str, int, int]]:
     """Empty every pack glyph that is byte-identical to, and shadowed by, the font
     that actually renders that codepoint. Mutates `parsed` in place; returns
     ``[(symbol, glyphs_emptied, bytes_reclaimed)]`` sorted by bytes desc.
@@ -447,7 +435,7 @@ def prune_shadowed_glyphs(order: list[str], resident: set[str],
             if k is None:
                 continue
             win = before.get(pf.first + i)
-            if win is not None and win[0] != sym and win[1] == k:   # shadow == winner
+            if win is not None and win[0] != sym and win[1] == k:  # shadow == winner
                 to_empty.setdefault(sym, set()).add(i)
 
     saved: list[tuple[str, int, int]] = []
@@ -479,8 +467,7 @@ def extra_pack_symbols(cfg: dict) -> list[str]:
     return [e["symbol"] for e in cfg.get("index", {}).get("pack_extra_fonts", [])]
 
 
-def build_pack_from_tree(fonts_dir: Path, cfg: dict, content_version: int = 0,
-                         dedupe: bool = True):
+def build_pack_from_tree(fonts_dir: Path, cfg: dict, content_version: int = 0, dedupe: bool = True):
     """build_pack() sourced from the committed headers on disk.
 
     Prunes shadowed glyphs like manifest_from_texts() and the bundle path, so
@@ -496,9 +483,7 @@ def build_pack_from_tree(fonts_dir: Path, cfg: dict, content_version: int = 0,
     return build_pack(order, resident, parsed, content_version)
 
 
-def manifest_from_texts(order: list[str], category_texts: dict[str, str],
-                        cfg: dict, fonts_dir: Path, content_version: int = 0,
-                        dedupe: bool = True):
+def manifest_from_texts(order: list[str], category_texts: dict[str, str], cfg: dict, fonts_dir: Path, content_version: int = 0, dedupe: bool = True):
     """build_pack() sourced from in-memory header text (for generate_fonts --check).
 
     `order` is the full font priority order (resident + pack); `category_texts`
@@ -508,8 +493,7 @@ def manifest_from_texts(order: list[str], category_texts: dict[str, str],
     regenerated header set.
     """
     idx = cfg.get("index", {})
-    resident = (set(idx.get("prepend_fonts", [])) | set(idx.get("append_fonts", []))
-                | set(idx.get("resident_fonts", [])))
+    resident = (set(idx.get("prepend_fonts", [])) | set(idx.get("append_fonts", [])) | set(idx.get("resident_fonts", [])))
     parsed: dict[str, ParsedFont] = {}
     cats = cfg["categories"]
     for cat, text in category_texts.items():
@@ -536,7 +520,7 @@ def manifest_from_texts(order: list[str], category_texts: dict[str, str],
 # `reserved` u16), so the firmware merges the fonts of all present bundles back
 # into global priority order. Grouping + slot sizes live in fonts.yaml `bundles:`.
 
-SECTOR_SIZE = 0x1000   # 4 KB flash sector — slot offsets/sizes are sector-aligned
+SECTOR_SIZE = 0x1000  # 4 KB flash sector — slot offsets/sizes are sector-aligned
 
 # Reserved high gidx band for `pack_extra` fonts (currently just the LangFlags
 # pack font in the `flags` bundle). The stored `reserved` u16 is ONLY a sort key
@@ -591,19 +575,16 @@ def compute_bundle_layout(cfg: dict) -> dict:
                 raise ValueError(f"bundle {e['id']!r}: reserve_kb must be a sector "
                                  f"multiple of at least slot_kb")
             off += advance
-        slots.append({"id": e["id"], "index": i, "offset": start, "size": size,
-                      "kind": e.get("kind", "fonts")})
+        slots.append({"id": e["id"], "index": i, "offset": start, "size": size, "kind": e.get("kind", "fonts")})
     if off > region:
         raise ValueError(f"bundle slots ({off} B) exceed the {region} B fontpack region")
-    spans = sorted([(0, dir_size, "directory")] +
-                   [(s["offset"], s["offset"] + s["size"], s["id"]) for s in slots])
+    spans = sorted([(0, dir_size, "directory")] + [(s["offset"], s["offset"] + s["size"], s["id"]) for s in slots])
     for (a0, a1, an), (b0, b1, bn) in zip(spans, spans[1:]):
         if b0 < a1:
             raise ValueError(f"bundle slots {an!r} and {bn!r} overlap")
     if spans[-1][1] > region:
         raise ValueError(f"bundle {spans[-1][2]!r} ends past the {region} B fontpack region")
-    return {"layout_version": int(b["layout_version"]), "region": region,
-            "dir_offset": 0, "dir_size": dir_size, "sector": SECTOR_SIZE, "slots": slots}
+    return {"layout_version": int(b["layout_version"]), "region": region, "dir_offset": 0, "dir_size": dir_size, "sector": SECTOR_SIZE, "slots": slots}
 
 
 def symbol_categories_from_texts(category_texts: dict[str, str]) -> dict[str, str]:
@@ -617,15 +598,11 @@ def symbol_categories_from_texts(category_texts: dict[str, str]) -> dict[str, st
 
 def symbol_categories_from_tree(fonts_dir: Path, cfg: dict) -> dict[str, str]:
     gen = fonts_dir / "generated"
-    texts = {cat: (gen / meta["output"]).read_text()
-             for cat, meta in cfg["categories"].items()
-             if (gen / meta["output"]).exists()}
+    texts = {cat: (gen / meta["output"]).read_text() for cat, meta in cfg["categories"].items() if (gen / meta["output"]).exists()}
     return symbol_categories_from_texts(texts)
 
 
-def build_bundles(order: list[str], resident: set[str], parsed: dict[str, ParsedFont],
-                  sym2cat: dict[str, str], cfg: dict,
-                  content_versions: dict[str, int] | None = None):
+def build_bundles(order: list[str], resident: set[str], parsed: dict[str, ParsedFont], sym2cat: dict[str, str], cfg: dict, content_versions: dict[str, int] | None = None):
     """Split the pack into per-family bundles.
 
     Returns (bundles, layout) where each bundle is a dict {id, index, data,
@@ -664,9 +641,8 @@ def build_bundles(order: list[str], resident: set[str], parsed: dict[str, Parsed
             # `reserved`/gidx is a u16; fail the build loudly rather than wrap if the
             # reserved band ever fills (and keep it clear of a real font's dense gi).
             if stored > 0xFFFF:
-                raise ValueError(
-                    f"pack_extra gidx overflow: {stored:#06x} > 0xFFFF — too many "
-                    f"pack_extra fonts for the band at {PACK_EXTRA_GIDX_BASE:#06x}")
+                raise ValueError(f"pack_extra gidx overflow: {stored:#06x} > 0xFFFF — too many "
+                                 f"pack_extra fonts for the band at {PACK_EXTRA_GIDX_BASE:#06x}")
             extra_n += 1
         else:
             cat = sym2cat.get(sym)
@@ -684,52 +660,50 @@ def build_bundles(order: list[str], resident: set[str], parsed: dict[str, Parsed
         mem = members[i]
         for _, pf in mem:
             if len(pf.glyphs) != pf.expected_glyph_count():
-                raise ValueError(
-                    f"{pf.symbol}: {len(pf.glyphs)} glyphs != last-first+1="
-                    f"{pf.expected_glyph_count()}")
+                raise ValueError(f"{pf.symbol}: {len(pf.glyphs)} glyphs != last-first+1="
+                                 f"{pf.expected_glyph_count()}")
         cver = int(cvers.get(e["id"], 0))
-        data = serialize_pack([pf for _, pf in mem], content_version=cver,
-                              global_indices=[gi for gi, _ in mem])
+        data = serialize_pack([pf for _, pf in mem], content_version=cver, global_indices=[gi for gi, _ in mem])
         slot = layout["slots"][i]
         if len(data) > slot["size"]:
             raise ValueError(f"bundle {e['id']!r}: {len(data)} B exceeds its "
                              f"{slot['size']} B slot — enlarge slot_kb in fonts.yaml")
-        bundles.append({
-            "id": e["id"], "index": i, "data": data, "content_version": cver, "slot": slot,
-            "fonts": [{"all_fonts_index": gi, "symbol": pf.symbol,
-                       "first": pf.first, "last": pf.last} for gi, pf in mem]})
+        bundles.append({"id": e["id"], "index": i, "data": data, "content_version": cver, "slot": slot, "fonts": [{"all_fonts_index": gi, "symbol": pf.symbol, "first": pf.first, "last": pf.last} for gi, pf in mem]})
     return bundles, layout
 
 
 def bundles_manifest_json(bundles: list[dict], layout: dict) -> str:
     """Deterministic per-bundle ABI contract (no volatile content_version)."""
-    doc = {"abi_version": ABI_VERSION, "layout_version": layout["layout_version"],
-           "region_size": layout["region"], "dir_offset": layout["dir_offset"],
-           "dir_size": layout["dir_size"], "bundle_count": len(bundles),
-           "bundles": [{"id": b["id"], "index": b["index"],
-                        "slot_offset": b["slot"]["offset"], "slot_size": b["slot"]["size"],
-                        "total_size": len(b["data"]), "font_count": len(b["fonts"]),
-                        "fonts": b["fonts"]} for b in bundles]}
+    doc = {
+        "abi_version": ABI_VERSION,
+        "layout_version": layout["layout_version"],
+        "region_size": layout["region"],
+        "dir_offset": layout["dir_offset"],
+        "dir_size": layout["dir_size"],
+        "bundle_count": len(bundles),
+        "bundles": [{
+            "id": b["id"],
+            "index": b["index"],
+            "slot_offset": b["slot"]["offset"],
+            "slot_size": b["slot"]["size"],
+            "total_size": len(b["data"]),
+            "font_count": len(b["fonts"]),
+            "fonts": b["fonts"]
+        } for b in bundles]
+    }
     font_ids = {b["id"] for b in bundles}
     doc["bundle_count"] = len(layout["slots"])
-    doc["reserved_slots"] = [{"id": s["id"], "index": s["index"], "kind": s["kind"],
-                              "slot_offset": s["offset"], "slot_size": s["size"]}
-                             for s in layout["slots"] if s["id"] not in font_ids]
+    doc["reserved_slots"] = [{"id": s["id"], "index": s["index"], "kind": s["kind"], "slot_offset": s["offset"], "slot_size": s["size"]} for s in layout["slots"] if s["id"] not in font_ids]
     return json.dumps(doc, indent=2) + "\n"
 
 
 def bundle_layout_header(bundles: list[dict], layout: dict) -> str:
     """C header shared by firmware + host: region, directory, per-bundle slots."""
     lines = [
-        "// AUTO-GENERATED by fonts/generate_fonts.py — do not edit.",
-        "// Font-pack bundle flash layout (slots are relative to FW_RESOURCE_OFFSET).",
-        "#pragma once", "",
-        f"#define FONTPACK_LAYOUT_VERSION {layout['layout_version']}u",
-        f"#define FONTPACK_REGION_SIZE    0x{layout['region']:X}UL",
-        f"#define FONTPACK_DIR_OFFSET     0x{layout['dir_offset']:X}UL",
-        f"#define FONTPACK_DIR_SIZE       0x{layout['dir_size']:X}UL",
-        f"#define FONTPACK_SECTOR_SIZE    0x{layout['sector']:X}UL",
-        f"#define FONTPACK_BUNDLE_COUNT   {len(layout['slots'])}u", ""]
+        "// AUTO-GENERATED by fonts/generate_fonts.py — do not edit.", "// Font-pack bundle flash layout (slots are relative to FW_RESOURCE_OFFSET).", "#pragma once", "", f"#define FONTPACK_LAYOUT_VERSION {layout['layout_version']}u",
+        f"#define FONTPACK_REGION_SIZE    0x{layout['region']:X}UL", f"#define FONTPACK_DIR_OFFSET     0x{layout['dir_offset']:X}UL", f"#define FONTPACK_DIR_SIZE       0x{layout['dir_size']:X}UL",
+        f"#define FONTPACK_SECTOR_SIZE    0x{layout['sector']:X}UL", f"#define FONTPACK_BUNDLE_COUNT   {len(layout['slots'])}u", ""
+    ]
     # Every slot, font bundles and the icon library alike: the X-list is the slot
     # table the firmware flashes into and reports versions for.
     icons = [s for s in layout["slots"] if s["kind"] == "icons"]
@@ -737,19 +711,14 @@ def bundle_layout_header(bundles: list[dict], layout: dict) -> str:
     if len(icons) > 1 or len(dicts) > 1:
         raise ValueError("more than one icon or emojidict bundle slot")
     if icons:
-        lines += ["// The PlyI overlay icon library (HID cmd 42): validated by its own loader,",
-                  "// never by the font loader.",
-                  f"#define FONTPACK_ICONS_BUNDLE_ID {icons[0]['index']}u", ""]
+        lines += ["// The PlyI overlay icon library (HID cmd 42): validated by its own loader,", "// never by the font loader.", f"#define FONTPACK_ICONS_BUNDLE_ID {icons[0]['index']}u", ""]
     if dicts:
-        lines += ["// The emoji search dictionary (emoji/emoji_dict.py): validated by its own",
-                  "// loader, never by the font loader.",
-                  f"#define FONTPACK_EMOJIDICT_BUNDLE_ID {dicts[0]['index']}u", ""]
-    lines += ["// X(id, index, slot_offset, slot_size)",
-              "#define FONTPACK_BUNDLE_LIST \\"]
+        lines += ["// The emoji search dictionary (emoji/emoji_dict.py): validated by its own", "// loader, never by the font loader.", f"#define FONTPACK_EMOJIDICT_BUNDLE_ID {dicts[0]['index']}u", ""]
+    lines += ["// X(id, index, slot_offset, slot_size)", "#define FONTPACK_BUNDLE_LIST \\"]
     for s in layout["slots"]:
         lines.append(f"    X({s['id']}, {s['index']}, 0x{s['offset']:X}UL, "
                      f"0x{s['size']:X}UL) \\")
-    lines[-1] = lines[-1].rstrip(" \\")     # drop trailing continuation
+    lines[-1] = lines[-1].rstrip(" \\")  # drop trailing continuation
     lines.append("")
     return "\n".join(lines) + "\n"
 
@@ -761,8 +730,7 @@ def manifest_json(data: bytes, manifest: list[dict]) -> str:
     each font's codepoint range + structural sizes, so a checkout can be verified
     without rebuilding from TTFs, and step-3 firmware can derive its index map.
     """
-    doc = {"abi_version": ABI_VERSION, "font_count": len(manifest),
-           "total_size": len(data), "fonts": manifest}
+    doc = {"abi_version": ABI_VERSION, "font_count": len(manifest), "total_size": len(data), "fonts": manifest}
     return json.dumps(doc, indent=2) + "\n"
 
 
@@ -771,8 +739,7 @@ def canonical_manifest(fonts_dir: Path, cfg: dict) -> tuple[str, bytes]:
     return manifest_json(data, manifest), data
 
 
-def write_pack(fonts_dir: Path, cfg: dict, out_bin: Path | None, out_manifest: Path,
-               content_version: int = 0) -> tuple[int, int]:
+def write_pack(fonts_dir: Path, cfg: dict, out_bin: Path | None, out_manifest: Path, content_version: int = 0) -> tuple[int, int]:
     text, data = canonical_manifest(fonts_dir, cfg)
     out_manifest.write_text(text)
     if out_bin is not None:
@@ -783,6 +750,7 @@ def write_pack(fonts_dir: Path, cfg: dict, out_bin: Path | None, out_manifest: P
 
 
 # ─────────────────────────── CLI ────────────────────────────────────────────
+
 
 def _human(n: int) -> str:
     return f"{n:,} B (~{n // 1024} KB)"
@@ -853,24 +821,24 @@ def _cmd_selftest(args) -> int:
     pf = pack.fonts[0]
     assert (pf.first, pf.last, pf.yadvance) == (0x41, 0x42, 12)
     # bit-flip → crc must fail
-    bad = bytearray(data); bad[-1] ^= 0xFF
+    bad = bytearray(data)
+    bad[-1] ^= 0xFF
     assert not parse_pack(bytes(bad)).crc_ok
 
     # dedupe: a lower-priority font that draws 0x41 byte-identically to the winner
     # gets that glyph emptied (its bytes reclaimed); its unique 0x42 stays; the
     # winner and the assembled render are untouched.
     A = ParsedFont("A", 0x41, 0x41, 12, [(0, 3, 4, 5, 0, 0)], b"\xAB\xC0")
-    B = ParsedFont("B", 0x41, 0x42, 12,
-                   [(0, 3, 4, 5, 0, 0), (2, 2, 2, 3, 0, 0)], b"\xAB\xC0\xF0")
+    B = ParsedFont("B", 0x41, 0x42, 12, [(0, 3, 4, 5, 0, 0), (2, 2, 2, 3, 0, 0)], b"\xAB\xC0\xF0")
     parsed = {"A": A, "B": B}
     before = _assembled(["A", "B"], set(), parsed)
     saved = prune_shadowed_glyphs(["A", "B"], set(), parsed)
     assert saved == [("B", 1, 2)], saved
-    assert parsed["A"].bitmaps == b"\xAB\xC0"                 # winner untouched
-    assert parsed["B"].glyphs[0][1:3] == (0, 0)              # 0x41 emptied
-    assert parsed["B"].glyphs[1][1:3] == (2, 2)              # 0x42 kept
-    assert parsed["B"].bitmaps == b"\xF0"                    # only 0x42's bytes remain
-    assert _assembled(["A", "B"], set(), parsed) == before   # render unchanged
+    assert parsed["A"].bitmaps == b"\xAB\xC0"  # winner untouched
+    assert parsed["B"].glyphs[0][1:3] == (0, 0)  # 0x41 emptied
+    assert parsed["B"].glyphs[1][1:3] == (2, 2)  # 0x42 kept
+    assert parsed["B"].bitmaps == b"\xF0"  # only 0x42's bytes remain
+    assert _assembled(["A", "B"], set(), parsed) == before  # render unchanged
     print("selftest OK")
     return 0
 
@@ -909,5 +877,5 @@ def main(argv=None) -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except BrokenPipeError:                 # piping `dump` into head/less
+    except BrokenPipeError:  # piping `dump` into head/less
         sys.exit(0)

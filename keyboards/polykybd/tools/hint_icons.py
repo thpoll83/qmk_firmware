@@ -46,8 +46,8 @@ import sys
 
 from PIL import Image, ImageDraw
 
-DESIGN = 28          # icons are authored on a 28 grid ...
-S = 34               # ... and drawn on a 34 grid: coordinates scale, strokes stay 2 px
+DESIGN = 28  # icons are authored on a 28 grid ...
+S = 34  # ... and drawn on a 34 grid: coordinates scale, strokes stay 2 px
 K = S / DESIGN
 
 
@@ -58,7 +58,6 @@ def _s(v):
 class ScaledDraw:
     """ImageDraw proxy: scales every coordinate by K, keeps stroke widths, and keeps
     a filled bar <= 3 px thick at its authored thickness so 2 px lines stay 2 px."""
-
     def __init__(self, d):
         self.d = d
 
@@ -100,7 +99,7 @@ class Icon:
     def __init__(self):
         self.im = Image.new("1", (S, S), 0)
         self.d = ScaledDraw(ImageDraw.Draw(self.im))
-        self.n = ImageDraw.Draw(self.im)   # NATIVE 34-grid drawing, no scaling
+        self.n = ImageDraw.Draw(self.im)  # NATIVE 34-grid drawing, no scaling
 
     # ---- native 34-grid helpers -------------------------------------------------
     # Corner brackets, dashed frames and the badge are drawn on the real grid: scaled
@@ -124,8 +123,10 @@ class Icon:
         lo, hi = 1, S - 2
         runs = [(1, 4), (8, 11), (15, 18), (22, 25), (29, 32)]
         for a, b in runs:
-            self.NF(a, lo, b, lo + 1); self.NF(a, hi - 1, b, hi)
-            self.NF(lo, a, lo + 1, b); self.NF(hi - 1, a, hi, b)
+            self.NF(a, lo, b, lo + 1)
+            self.NF(a, hi - 1, b, hi)
+            self.NF(lo, a, lo + 1, b)
+            self.NF(hi - 1, a, hi, b)
 
     # ---- primitives (all strokes 2 px) ----
     def R(self, x0, y0, x1, y1, fill=False):
@@ -158,10 +159,14 @@ class Icon:
 
     def head(self, x, y, dirn, c=1, s=4):
         """Filled arrowhead whose TIP is at (x,y)."""
-        if dirn == "l": self.P([(x, y), (x + s, y - s), (x + s, y + s)], c=c)
-        if dirn == "r": self.P([(x, y), (x - s, y - s), (x - s, y + s)], c=c)
-        if dirn == "u": self.P([(x, y), (x - s, y + s), (x + s, y + s)], c=c)
-        if dirn == "d": self.P([(x, y), (x - s, y - s), (x + s, y - s)], c=c)
+        if dirn == "l":
+            self.P([(x, y), (x + s, y - s), (x + s, y + s)], c=c)
+        if dirn == "r":
+            self.P([(x, y), (x - s, y - s), (x - s, y + s)], c=c)
+        if dirn == "u":
+            self.P([(x, y), (x - s, y + s), (x + s, y + s)], c=c)
+        if dirn == "d":
+            self.P([(x, y), (x - s, y - s), (x + s, y - s)], c=c)
 
     def arrow(self, x0, y0, x1, y1, c=1, s=4):
         dirn = "r" if x1 > x0 else "l" if x1 < x0 else "d" if y1 > y0 else "u"
@@ -189,7 +194,9 @@ class Icon:
     def doc(self, x0, y0, x1, y1, lines=0):
         f = 6
         self.L((x0, y0), (x1 - f, y0), (x1, y0 + f), (x1, y1), (x0, y1), (x0, y0))
-        self.F(x0, y0, x0 + 1, y1); self.F(x0, y1 - 1, x1, y1); self.F(x1 - 1, y0 + f, x1, y1)
+        self.F(x0, y0, x0 + 1, y1)
+        self.F(x0, y1 - 1, x1, y1)
+        self.F(x1 - 1, y0 + f, x1, y1)
         self.F(x0, y0, x1 - f, y0 + 1)
         self.L((x1 - f, y0), (x1 - f, y0 + f), (x1, y0 + f))
         for i in range(lines):
@@ -234,25 +241,34 @@ class Icon:
         d = ImageDraw.Draw(m)
         f = lambda x0, y0, x1, y1: d.rectangle([x0, y0, x1, y1], fill=1)
         if sym in ("d", "u", "l", "r"):
-            f(6, 3, 7, 6)                                   # stem, pointing down
+            f(6, 3, 7, 6)  # stem, pointing down
             for i, (x0, x1) in enumerate(((3, 10), (4, 9), (5, 8), (6, 7))):
-                f(x0, 7 + i, x1, 7 + i)                     # head, tip on row 10
-            m = m.transpose({"d": None, "u": Image.FLIP_TOP_BOTTOM,
-                             "r": Image.ROTATE_90, "l": Image.ROTATE_270}[sym]) if sym != "d" else m
-        if sym == "+": f(3, 6, 10, 7); f(6, 3, 7, 10)
-        if sym == "-": f(3, 6, 10, 7)
+                f(x0, 7 + i, x1, 7 + i)  # head, tip on row 10
+            m = m.transpose({"d": None, "u": Image.FLIP_TOP_BOTTOM, "r": Image.ROTATE_90, "l": Image.ROTATE_270}[sym]) if sym != "d" else m
+        if sym == "+":
+            f(3, 6, 10, 7)
+            f(6, 3, 7, 10)
+        if sym == "-":
+            f(3, 6, 10, 7)
         if sym == "x":
             for t in range(7):
-                f(3 + t, 3 + t, 4 + t, 3 + t); f(9 - t, 3 + t, 10 - t, 3 + t)
-        if sym == "i": f(6, 2, 7, 3); f(6, 5, 7, 11)
-        if sym == "clock": f(6, 2, 7, 7); f(6, 6, 10, 7)
+                f(3 + t, 3 + t, 4 + t, 3 + t)
+                f(9 - t, 3 + t, 10 - t, 3 + t)
+        if sym == "i":
+            f(6, 2, 7, 3)
+            f(6, 5, 7, 11)
+        if sym == "clock":
+            f(6, 2, 7, 7)
+            f(6, 6, 10, 7)
         if sym == "rec":
-            pass                                         # the solid disc IS the record dot
-        mp = m.load(); ip = self.im.load()
+            pass  # the solid disc IS the record dot
+        mp = m.load()
+        ip = self.im.load()
         for y in range(14):
             for x in range(14):
                 if mp[x, y]:
                     ip[20 + x, 20 + y] = 0
+
 
 def mic(I, cx=14, top=3, waves=False):
     I.R(cx - 4, top, cx + 4, top + 13)
@@ -261,7 +277,8 @@ def mic(I, cx=14, top=3, waves=False):
     I.F(cx, top + 18, cx + 1, top + 21)
     I.F(cx - 5, top + 21, cx + 5, top + 22)
     # rounded cap
-    I.F(cx - 4, top, cx - 4, top, 0); I.F(cx + 4, top, cx + 4, top, 0)
+    I.F(cx - 4, top, cx - 4, top, 0)
+    I.F(cx + 4, top, cx + 4, top, 0)
     if waves:
         I.A(cx, top + 6, 11, -40, 40)
         I.A(cx, top + 6, 11, 140, 220)
@@ -285,6 +302,7 @@ def icon(name):
     def deco(fn):
         ICONS[name] = fn
         return fn
+
     return deco
 
 
@@ -295,235 +313,364 @@ def _(I):
     I.F(8, 0, 27, 22, 0)
     I.doc(9, 1, 26, 21)
 
+
 @icon("cut")
 def _(I):
-    I.C(7, 21, 4); I.C(20, 21, 4)
-    I.L((9, 17), (19, 2)); I.L((18, 17), (8, 2))
+    I.C(7, 21, 4)
+    I.C(20, 21, 4)
+    I.L((9, 17), (19, 2))
+    I.L((18, 17), (8, 2))
+
 
 @icon("paste")
 def _(I):
     I.R(3, 4, 24, 27)
     I.F(9, 1, 18, 7)  # solid clip
-    I.F(8, 13, 19, 14); I.F(8, 18, 19, 19); I.F(8, 23, 15, 24)
+    I.F(8, 13, 19, 14)
+    I.F(8, 18, 19, 19)
+    I.F(8, 23, 15, 24)
+
 
 @icon("undo")
 def _(I):
     I.A(14, 15, 9, -90, 90)
-    I.F(8, 5, 14, 6); I.F(8, 23, 14, 24)
+    I.F(8, 5, 14, 6)
+    I.F(8, 23, 14, 24)
     I.head(2, 6, "l", s=5)
+
 
 @icon("redo")
 def _(I):
     I.A(13, 15, 9, 90, 270)
-    I.F(13, 5, 19, 6); I.F(13, 23, 19, 24)
+    I.F(13, 5, 19, 6)
+    I.F(13, 23, 19, 24)
     I.head(25, 6, "r", s=5)
+
 
 @icon("select_all")
 def _(I):
     I.dashed_frame()
     I.NF(9, 9, 24, 24)
 
+
 @icon("find")
 def _(I):
-    I.lens(11, 11, 9); I.F(7, 8, 15, 9); I.F(7, 12, 13, 13)
+    I.lens(11, 11, 9)
+    I.F(7, 8, 15, 9)
+    I.F(7, 12, 13, 13)
+
 
 @icon("search")
 def _(I):
     I.lens(11, 11, 9)
 
+
 @icon("save")
 def _(I):
     I.L((1, 1), (21, 1), (26, 6), (26, 26), (1, 26), (1, 1))
-    I.F(1, 1, 2, 26); I.F(1, 25, 26, 26); I.F(25, 6, 26, 26); I.F(1, 1, 21, 2)
-    I.F(7, 1, 18, 9)            # solid shutter
-    I.R(6, 15, 21, 26)          # label
+    I.F(1, 1, 2, 26)
+    I.F(1, 25, 26, 26)
+    I.F(25, 6, 26, 26)
+    I.F(1, 1, 21, 2)
+    I.F(7, 1, 18, 9)  # solid shutter
+    I.R(6, 15, 21, 26)  # label
+
 
 @icon("open")
 def _(I):
-    I.F(1, 4, 9, 5); I.F(1, 4, 2, 25); I.F(9, 6, 22, 7); I.F(8, 4, 9, 7); I.F(21, 6, 22, 11)
+    I.F(1, 4, 9, 5)
+    I.F(1, 4, 2, 25)
+    I.F(9, 6, 22, 7)
+    I.F(8, 4, 9, 7)
+    I.F(21, 6, 22, 11)
     I.P([(1, 25), (6, 11), (27, 11), (22, 25)], fill=False)
     I.L((1, 25), (6, 11), (27, 11), (22, 25), (1, 25))
 
+
 @icon("print")
 def _(I):
-    I.R(7, 1, 20, 9); I.R(1, 8, 26, 20); I.F(1, 8, 26, 9)
-    I.F(7, 16, 20, 26, 0); I.R(7, 16, 20, 26)
+    I.R(7, 1, 20, 9)
+    I.R(1, 8, 26, 20)
+    I.F(1, 8, 26, 9)
+    I.F(7, 16, 20, 26, 0)
+    I.R(7, 16, 20, 26)
     I.F(21, 12, 22, 13)
+
 
 @icon("delete")
 def _(I):
-    I.F(1, 5, 26, 6); I.R(10, 1, 17, 6)
+    I.F(1, 5, 26, 6)
+    I.R(10, 1, 17, 6)
     I.L((4, 8), (6, 26), (21, 26), (23, 8))
     I.F(5, 25, 22, 26)
-    I.F(10, 11, 11, 22); I.F(16, 11, 17, 22)
+    I.F(10, 11, 11, 22)
+    I.F(16, 11, 17, 22)
+
 
 @icon("rename")
 def _(I):
     I.R(1, 8, 26, 21)
-    I.F(5, 13, 13, 16)           # selected text
-    I.F(17, 4, 18, 25); I.F(15, 4, 20, 5); I.F(15, 24, 20, 25)  # I-beam
+    I.F(5, 13, 13, 16)  # selected text
+    I.F(17, 4, 18, 25)
+    I.F(15, 4, 20, 5)
+    I.F(15, 24, 20, 25)  # I-beam
+
 
 @icon("refresh")
 def _(I):
     I.A(14, 15, 11, -60, 230)
     I.P([(18, 1), (26, 7), (17, 10)])
 
+
 @icon("clip_history")
 def _(I):
-    ICONS["paste"](I); I.badge("clock")
+    ICONS["paste"](I)
+    I.badge("clock")
+
 
 # ===================== text navigation =====================
 def word(I, x0):
     I.R(x0, 9, x0 + 9, 18, fill=True)
 
+
 @icon("word_left")
 def _(I):
-    I.F(16, 9, 26, 18); I.F(9, 13, 15, 14); I.head(5, 13.5, "l", s=5); I.F(1, 9, 3, 18)
+    I.F(16, 9, 26, 18)
+    I.F(9, 13, 15, 14)
+    I.head(5, 13.5, "l", s=5)
+    I.F(1, 9, 3, 18)
+
 
 @icon("word_right")
 def _(I):
-    I.F(1, 9, 11, 18); I.F(12, 13, 18, 14); I.head(22, 13.5, "r", s=5); I.F(24, 9, 26, 18)
+    I.F(1, 9, 11, 18)
+    I.F(12, 13, 18, 14)
+    I.head(22, 13.5, "r", s=5)
+    I.F(24, 9, 26, 18)
+
 
 @icon("line_start")
 def _(I):
-    I.F(1, 3, 2, 24); I.F(7, 13, 26, 14); I.head(4, 13.5, "l", s=5)
+    I.F(1, 3, 2, 24)
+    I.F(7, 13, 26, 14)
+    I.head(4, 13.5, "l", s=5)
+
 
 @icon("line_end")
 def _(I):
-    I.F(25, 3, 26, 24); I.F(1, 13, 20, 14); I.head(23, 13.5, "r", s=5)
+    I.F(25, 3, 26, 24)
+    I.F(1, 13, 20, 14)
+    I.head(23, 13.5, "r", s=5)
+
 
 # ===================== windows =====================
 @icon("close")
 def _(I):
-    I.window(1, 2, 26, 25); I.L((8, 11), (19, 21)); I.L((8, 21), (19, 11))
+    I.window(1, 2, 26, 25)
+    I.L((8, 11), (19, 21))
+    I.L((8, 21), (19, 11))
+
 
 @icon("quit")
 def _(I):
-    I.window(1, 2, 26, 25); I.badge("x")
+    I.window(1, 2, 26, 25)
+    I.badge("x")
+
 
 @icon("minimize")
 def _(I):
-    I.window(1, 2, 26, 25); I.F(7, 18, 20, 20)
+    I.window(1, 2, 26, 25)
+    I.F(7, 18, 20, 20)
+
 
 @icon("maximize")
 def _(I):
-    I.window(1, 2, 26, 25); I.R(7, 10, 20, 20)
+    I.window(1, 2, 26, 25)
+    I.R(7, 10, 20, 20)
+
 
 @icon("fullscreen")
 def _(I):
     I.brackets(9)
     I.n.rectangle([10, 10, 23, 23], outline=1, width=2)
 
+
 @icon("minimize_all")
 def _(I):
-    I.window(8, 1, 27, 14); I.F(0, 6, 20, 21, 0); I.window(1, 7, 19, 20)
+    I.window(8, 1, 27, 14)
+    I.F(0, 6, 20, 21, 0)
+    I.window(1, 7, 19, 20)
     I.badge("d")
+
 
 @icon("minimize_others")
 def _(I):
-    I.window(4, 1, 23, 17); I.F(1, 24, 7, 26); I.F(11, 24, 17, 26); I.F(21, 24, 26, 26)
+    I.window(4, 1, 23, 17)
+    I.F(1, 24, 7, 26)
+    I.F(11, 24, 17, 26)
+    I.F(21, 24, 26, 26)
+
 
 @icon("snap_left")
 def _(I):
-    I.R(1, 3, 26, 24); I.F(1, 3, 13, 24)
+    I.R(1, 3, 26, 24)
+    I.F(1, 3, 13, 24)
+
 
 @icon("snap_right")
 def _(I):
-    I.R(1, 3, 26, 24); I.F(14, 3, 26, 24)
+    I.R(1, 3, 26, 24)
+    I.F(14, 3, 26, 24)
+
 
 @icon("app_switch")
 def _(I):
     I.R(0, 6, 27, 21)
     for i, x in enumerate((3, 11, 19)):
-        if i == 1: I.F(x, 9, x + 5, 18)
-        else: I.R(x, 9, x + 5, 18)
+        if i == 1:
+            I.F(x, 9, x + 5, 18)
+        else:
+            I.R(x, 9, x + 5, 18)
+
 
 @icon("window_switch")
 def _(I):
-    I.window(1, 1, 12, 12, solid=True); I.window(15, 1, 26, 12)
-    I.window(1, 15, 12, 26); I.window(15, 15, 26, 26)
+    I.window(1, 1, 12, 12, solid=True)
+    I.window(15, 1, 26, 12)
+    I.window(1, 15, 12, 26)
+    I.window(15, 15, 26, 26)
+
 
 @icon("show_desktop")
 def _(I):
-    I.screen(0, 1, 27, 20); I.F(4, 5, 6, 7); I.F(4, 10, 6, 12); I.F(4, 15, 6, 17)
+    I.screen(0, 1, 27, 20)
+    I.F(4, 5, 6, 7)
+    I.F(4, 10, 6, 12)
+    I.F(4, 15, 6, 17)
+
 
 @icon("peek_desktop")
 def _(I):
     I.screen(0, 1, 27, 20)
-    for x in range(8, 23, 4): I.F(x, 5, x + 1, 5); I.F(x, 16, x + 1, 16)
-    for y in range(5, 17, 4): I.F(8, y, 8, y + 1); I.F(23, y, 23, y + 1)
+    for x in range(8, 23, 4):
+        I.F(x, 5, x + 1, 5)
+        I.F(x, 16, x + 1, 16)
+    for y in range(5, 17, 4):
+        I.F(8, y, 8, y + 1)
+        I.F(23, y, 23, y + 1)
+
 
 # ===================== screens / desktops =====================
 @icon("display")
 def _(I):
-    I.screen(9, 1, 27, 15); I.F(0, 9, 17, 27, 0); I.screen(0, 9, 17, 21)
+    I.screen(9, 1, 27, 15)
+    I.F(0, 9, 17, 27, 0)
+    I.screen(0, 9, 17, 21)
+
 
 @icon("desktop_new")
 def _(I):
-    I.screen(0, 1, 27, 20, cx=7); I.badge("+")
+    I.screen(0, 1, 27, 20, cx=7)
+    I.badge("+")
+
 
 @icon("desktop_prev")
 def _(I):
-    I.screen(0, 1, 27, 20, cx=7); I.badge("l")
+    I.screen(0, 1, 27, 20, cx=7)
+    I.badge("l")
+
 
 @icon("desktop_next")
 def _(I):
-    I.screen(0, 1, 27, 20, cx=7); I.badge("r")
+    I.screen(0, 1, 27, 20, cx=7)
+    I.badge("r")
+
 
 @icon("desktop_close")
 def _(I):
-    I.screen(0, 1, 27, 20, cx=7); I.badge("x")
+    I.screen(0, 1, 27, 20, cx=7)
+    I.badge("x")
+
 
 @icon("gfx_restart")
 def _(I):
-    I.screen(0, 1, 27, 20, cx=7); I.badge("ref")
+    I.screen(0, 1, 27, 20, cx=7)
+    I.badge("ref")
+
 
 @icon("system_props")
 def _(I):
-    I.screen(0, 1, 27, 20, cx=7); I.badge("i")
+    I.screen(0, 1, 27, 20, cx=7)
+    I.badge("i")
+
 
 @icon("network")
 def _(I):
     I.screen(8, 0, 19, 7)
-    I.F(13, 12, 14, 15); I.F(4, 14, 23, 15); I.F(4, 14, 5, 17); I.F(22, 14, 23, 17)
-    I.R(0, 17, 9, 24); I.R(18, 17, 27, 24)
-    I.F(3, 26, 6, 27); I.F(21, 26, 24, 27)
+    I.F(13, 12, 14, 15)
+    I.F(4, 14, 23, 15)
+    I.F(4, 14, 5, 17)
+    I.F(22, 14, 23, 17)
+    I.R(0, 17, 9, 24)
+    I.R(18, 17, 27, 24)
+    I.F(3, 26, 6, 27)
+    I.F(21, 26, 24, 27)
+
 
 @icon("cast")
 def _(I):
     I.L((1, 8), (1, 2), (26, 2), (26, 22), (16, 22))
-    I.F(0, 2, 1, 9); I.F(16, 21, 26, 22)
-    I.F(0, 23, 3, 26); I.A(0, 26, 8, 270, 360); I.A(0, 26, 14, 270, 360)
+    I.F(0, 2, 1, 9)
+    I.F(16, 21, 26, 22)
+    I.F(0, 23, 3, 26)
+    I.A(0, 26, 8, 270, 360)
+    I.A(0, 26, 14, 270, 360)
+
 
 # ===================== capture =====================
 @icon("screenshot")
 def _(I):
-    I.R(1, 7, 26, 24); I.F(8, 3, 17, 7); I.C(13, 15, 5); I.F(21, 10, 22, 11)
+    I.R(1, 7, 26, 24)
+    I.F(8, 3, 17, 7)
+    I.C(13, 15, 5)
+    I.F(21, 10, 22, 11)
+
 
 @icon("snip")
 def _(I):
     I.dashed_frame()
-    I.NF(16, 9, 17, 24); I.NF(9, 16, 24, 17)
+    I.NF(16, 9, 17, 24)
+    I.NF(9, 16, 24, 17)
+
 
 @icon("screen_record")
 def _(I):
-    I.screen(0, 1, 27, 20, cx=7); I.badge("rec")
+    I.screen(0, 1, 27, 20, cx=7)
+    I.badge("rec")
+
 
 @icon("text_recog")
 def _(I):
     I.brackets(7)
-    I.NF(9, 9, 24, 10); I.NF(16, 9, 17, 25)
+    I.NF(9, 9, 24, 10)
+    I.NF(16, 9, 17, 25)
+
 
 @icon("lock")
 def _(I):
-    I.A(14, 11, 7, 180, 360); I.F(7, 10, 8, 13); I.F(20, 10, 21, 13)
+    I.A(14, 11, 7, 180, 360)
+    I.F(7, 10, 8, 13)
+    I.F(20, 10, 21, 13)
     I.R(3, 13, 25, 27, fill=True)
     I.F(13, 17, 15, 23, 0)
+
 
 @icon("run")
 def _(I):
     I.window(0, 2, 27, 25)
-    I.L((4, 11), (8, 15), (4, 19)); I.F(11, 19, 19, 20)
+    I.L((4, 11), (8, 15), (4, 19))
+    I.F(11, 19, 19, 20)
+
 
 @icon("settings")
 def _(I):
@@ -533,43 +680,65 @@ def _(I):
         a = k * math.pi / 4
         x, y = cx + 11 * math.cos(a), cy + 11 * math.sin(a)
         I.C(int(round(x)), int(round(y)), 2, fill=True)
-    I.C(13, 13, 9, fill=True); I.C(13, 13, 4, fill=True, c=0)
+    I.C(13, 13, 9, fill=True)
+    I.C(13, 13, 4, fill=True, c=0)
+
 
 @icon("quick_settings")
 def _(I):
-    I.R(1, 2, 26, 11); I.F(16, 4, 24, 9)        # toggle ON
-    I.R(1, 15, 26, 24); I.R(3, 17, 11, 22, fill=True)  # toggle OFF knob left
+    I.R(1, 2, 26, 11)
+    I.F(16, 4, 24, 9)  # toggle ON
+    I.R(1, 15, 26, 24)
+    I.R(3, 17, 11, 22, fill=True)  # toggle OFF knob left
     I.F(5, 19, 9, 20, 0)
+
 
 @icon("tray")
 def _(I):
-    I.R(0, 19, 27, 26); I.F(3, 22, 6, 23); I.F(9, 22, 12, 23)
+    I.R(0, 19, 27, 26)
+    I.F(3, 22, 6, 23)
+    I.F(9, 22, 12, 23)
     I.L((14, 12), (20, 6), (26, 12))
+
 
 @icon("quick_menu")
 def _(I):
-    I.R(4, 0, 27, 21); I.F(8, 5, 23, 6); I.F(8, 10, 23, 11); I.F(8, 15, 23, 16)
+    I.R(4, 0, 27, 21)
+    I.F(8, 5, 23, 6)
+    I.F(8, 10, 23, 11)
+    I.F(8, 15, 23, 16)
     I.F(0, 21, 6, 27)
+
 
 @icon("task_cycle")
 def _(I):
-    I.R(0, 17, 27, 26); I.F(3, 20, 7, 23); I.R(10, 19, 15, 24); I.R(18, 19, 23, 24)
-    I.F(4, 8, 16, 9); I.head(22, 8.5, "r", s=5)
+    I.R(0, 17, 27, 26)
+    I.F(3, 20, 7, 23)
+    I.R(10, 19, 15, 24)
+    I.R(18, 19, 23, 24)
+    I.F(4, 8, 16, 9)
+    I.head(22, 8.5, "r", s=5)
+
 
 @icon("explorer")
 def _(I):
     I.folder(1, 3, 26, 25)
 
+
 @icon("accessibility")
 def _(I):
     I.C(14, 3, 2, fill=True)
-    I.F(2, 8, 25, 9); I.F(12, 8, 15, 17)
-    I.L((12, 17), (8, 26)); I.L((15, 17), (19, 26))
+    I.F(2, 8, 25, 9)
+    I.F(12, 8, 15, 17)
+    I.L((12, 17), (8, 26))
+    I.L((15, 17), (19, 26))
+
 
 # ===================== input / media =====================
 @icon("dictation")
 def _(I):
     mic(I)
+
 
 @icon("speech_rec")
 def _(I):
@@ -577,48 +746,71 @@ def _(I):
     for x, h in ((5, 2), (9, 4), (13, 6), (17, 3), (21, 5)):
         I.F(x, 11 - h, x + 1, 11 + h)
 
+
 @icon("narrator")
 def _(I):
-    speaker(I); I.A(14, 14, 6, -50, 50); I.A(14, 14, 11, -50, 50)
+    speaker(I)
+    I.A(14, 14, 6, -50, 50)
+    I.A(14, 14, 11, -50, 50)
+
 
 @icon("volume_mixer")
 def _(I):
     for i, (x, k) in enumerate(((3, 18), (12, 7), (21, 13))):
-        I.F(x + 1, 1, x + 2, 26); I.F(x - 1, k, x + 4, k + 4)
+        I.F(x + 1, 1, x + 2, 26)
+        I.F(x - 1, k, x + 4, k + 4)
+
 
 @icon("emoji")
 def _(I):
-    I.C(13, 13, 12); I.F(8, 8, 10, 11); I.F(17, 8, 19, 11); I.A(13, 13, 7, 30, 150)
+    I.C(13, 13, 12)
+    I.F(8, 8, 10, 11)
+    I.F(17, 8, 19, 11)
+    I.A(13, 13, 7, 30, 150)
+
 
 @icon("zoom_in")
 def _(I):
     I.lens(11, 11, 9, "+")
 
+
 @icon("zoom_out")
 def _(I):
     I.lens(11, 11, 9, "-")
+
 
 # ===================== apps / services =====================
 @icon("game_bar")
 def _(I):
     I.d.rounded_rectangle([0, 6, 27, 22], radius=6, outline=1, width=2)
-    I.F(5, 13, 11, 14); I.F(7, 11, 8, 16); I.F(19, 11, 20, 12); I.F(22, 14, 23, 15)
+    I.F(5, 13, 11, 14)
+    I.F(7, 11, 8, 16)
+    I.F(19, 11, 20, 12)
+    I.F(22, 14, 23, 15)
+
 
 @icon("feedback")
 def _(I):
-    bubble(I, 1, 1, 26, 19); I.F(13, 5, 14, 11); I.F(13, 14, 14, 15)
+    bubble(I, 1, 1, 26, 19)
+    I.F(13, 5, 14, 11)
+    I.F(13, 14, 14, 15)
+
 
 @icon("copilot")
 def _(I):
     I.P([(12, 0), (15, 9), (24, 12), (15, 15), (12, 26), (9, 15), (0, 12), (9, 9)])
     I.P([(22, 0), (23, 3), (26, 4), (23, 5), (22, 8), (21, 5), (18, 4), (21, 3)])
 
+
 @icon("quick_assist")
 def _(I):
     I.A(14, 15, 11, 180, 360)
-    I.F(3, 15, 4, 17); I.F(24, 15, 25, 17)
-    I.F(1, 14, 7, 23); I.F(21, 14, 27, 23)
-    I.F(23, 23, 24, 26); I.F(15, 25, 24, 26)
+    I.F(3, 15, 4, 17)
+    I.F(24, 15, 25, 17)
+    I.F(1, 14, 7, 23)
+    I.F(21, 14, 27, 23)
+    I.F(23, 23, 24, 26)
+    I.F(15, 25, 24, 26)
     I.F(11, 24, 15, 27)
 
 
@@ -632,23 +824,21 @@ def render(name):
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 KB = os.path.dirname(HERE)
-HEADER = os.path.join(KB, "fonts", "gfx_icons.h")       # resident IconsFont
+HEADER = os.path.join(KB, "fonts", "gfx_icons.h")  # resident IconsFont
 HINT_HEADER = os.path.join(KB, "fonts", "hint_icons.h")  # the pack font
 SYMBOL = "PolyHintIcons"
-Y_ADVANCE = 40           # IconsFont's: glyphs are baseline-aligned against fonts[0]
+Y_ADVANCE = 40  # IconsFont's: glyphs are baseline-aligned against fonts[0]
 
-FIRST_CP = 0x100100      # own block; IconsFont (U+100000..) grows up to it
-X_OFFSET = 36            # panel column of the grid's left edge (x 36..69)
-TOP_ROW = 3              # panel row of the grid's top edge (y 3..36)
-BASELINE = 23            # os hints are drawn with the cursor at y 23
+FIRST_CP = 0x100100  # own block; IconsFont (U+100000..) grows up to it
+X_OFFSET = 36  # panel column of the grid's left edge (x 36..69)
+TOP_ROW = 3  # panel row of the grid's top edge (y 3..36)
+BASELINE = 23  # os hints are drawn with the cursor at y 23
 X_ADVANCE = X_OFFSET + S
 
 BEGIN = "/* ---- BEGIN hint icons: generated by tools/hint_icons.py, do not edit ---- */"
 END = "/* ---- END hint icons ---- */"
 
-
-RETIRED = {"copy", "cut", "paste", "undo", "redo", "select_all", "find", "save", "open",
-           "print", "delete", "rename", "refresh", "quit"}
+RETIRED = {"copy", "cut", "paste", "undo", "redo", "select_all", "find", "save", "open", "print", "delete", "rename", "refresh", "quit"}
 
 
 def font_names():
@@ -675,8 +865,7 @@ def glyph_bytes(im):
     return out
 
 
-STYLES = {"a": None, "b": "hint_icons_solid", "c": "hint_icons_bold", "d": "hint_icons_stage",
-          "e": "hint_icons_retro"}
+STYLES = {"a": None, "b": "hint_icons_solid", "c": "hint_icons_bold", "d": "hint_icons_stage", "e": "hint_icons_retro"}
 
 
 def style_render(style):
@@ -722,8 +911,7 @@ def resident_icons(src):
     records = len(re.findall(r"^\s*\{\s*\d+\s*,", gl.group(1), re.M))
     last = 0x100000 + records - 1
     assert last < FIRST_CP, f"IconsFont (U+100000..U+{last:X}) runs into the hint block at U+{FIRST_CP:X}"
-    src = re.sub(r"(\(GFXglyph \*\)IconsGlyphs,\s*0x100000,\s*)0x[0-9A-Fa-f]+",
-                 lambda m: m.group(1) + f"0x{last:06X}", src)
+    src = re.sub(r"(\(GFXglyph \*\)IconsGlyphs,\s*0x100000,\s*)0x[0-9A-Fa-f]+", lambda m: m.group(1) + f"0x{last:06X}", src)
     return re.sub(r"// Approx\. \d+ bytes", f"// Approx. {bitmap_len(bm.group(2))} bytes", src)
 
 
@@ -791,10 +979,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--check", action="store_true", help="exit 1 if a generated header is stale")
     ap.add_argument("--sheet", metavar="PNG", help="write a contact sheet instead")
-    ap.add_argument("--macros", action="store_true",
-                    help="print the ICON_HINT_* #defines for lang/named_glyphs.h")
-    ap.add_argument("--style", choices=sorted(STYLES),
-                    help="icon style to write (default: the one the header carries)")
+    ap.add_argument("--macros", action="store_true", help="print the ICON_HINT_* #defines for lang/named_glyphs.h")
+    ap.add_argument("--style", choices=sorted(STYLES), help="icon style to write (default: the one the header carries)")
     a = ap.parse_args()
     icons = open(HEADER, encoding="utf-8").read()
     hint = open(HINT_HEADER, encoding="utf-8").read() if os.path.exists(HINT_HEADER) else ""
@@ -815,13 +1001,11 @@ def main():
         have = [(m, int(c, 16)) for m, c in re.findall(r'#define\s+(ICON_HINT_\w+)\s+U"\\x([0-9A-Fa-f]+)"', ng)]
         want = [(macro(n), FIRST_CP + i) for i, n in enumerate(names)]
         if have != want:
-            print("lang/named_glyphs.h ICON_HINT_* block is stale: paste python3 tools/hint_icons.py --macros",
-                  file=sys.stderr)
+            print("lang/named_glyphs.h ICON_HINT_* block is stale: paste python3 tools/hint_icons.py --macros", file=sys.stderr)
             return 1
         stale = [p for p, new, old in ((HEADER, new_icons, icons), (HINT_HEADER, new_hint, hint)) if new != old]
         if stale:
-            print(f"{', '.join(os.path.basename(p) for p in stale)} stale: run python3 tools/hint_icons.py",
-                  file=sys.stderr)
+            print(f"{', '.join(os.path.basename(p) for p in stale)} stale: run python3 tools/hint_icons.py", file=sys.stderr)
             return 1
         print(f"hint_icons.h up to date ({len(names)} hint icons, style {style})")
         return 0

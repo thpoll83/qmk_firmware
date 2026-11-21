@@ -38,7 +38,7 @@ def load_fontpack(qmk: Path):
 
 def regen(fontpack, cfg, qmk: Path, content_versions: dict):
     """Rebuild all bundles from the committed headers + dedupe. Returns (bundles, layout)."""
-    fonts_dir = qmk / "keyboards" / "polykybd" / "base" / "fonts"
+    fonts_dir = qmk / "keyboards" / "polykybd" / "fonts"
     gen = fonts_dir / "generated"
     order = fontpack.all_fonts_order(fonts_dir)
     resident = fontpack.resident_symbols(cfg, fonts_dir)
@@ -153,7 +153,7 @@ def main():
         return
 
     # ---- write mode ----
-    gen = qmk / "keyboards" / "polykybd" / "base" / "fonts" / "generated"
+    gen = qmk / "keyboards" / "polykybd" / "fonts" / "generated"
     (gen / "fontpack_bundles.manifest.json").write_text(
         fontpack.bundles_manifest_json(bundles, layout))
     (gen / "fontpack_layout.h").write_text(fontpack.bundle_layout_header(bundles, layout))

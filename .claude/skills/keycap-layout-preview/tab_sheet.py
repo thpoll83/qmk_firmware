@@ -47,7 +47,7 @@ PANEL_H, PANEL_W = OLED_H, OLED_W          # SCREEN_HEIGHT, SCREEN_WIDTH: 40, 72
 BASELINE = 23
 DOWN2, UP2, RIGHT2 = 0x05, 0x0C, 0x06       # \x05, \f, \x06 display-list moves
 
-RENDERER = oled_preview.load_renderer(str(_PK / 'base' / 'fonts'))
+RENDERER = oled_preview.load_renderer(str(_PK / 'fonts'))
 
 
 def slot_lift(cp: int) -> int:

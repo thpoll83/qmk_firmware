@@ -29,7 +29,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve()
 _QMK = next(p for p in _HERE.parents if (p / 'keyboards' / 'polykybd').is_dir())
-_FONTS_DIR = _QMK / 'keyboards' / 'polykybd' / 'base' / 'fonts'
+_FONTS_DIR = _QMK / 'keyboards' / 'polykybd' / 'fonts'
 _LANG_LUT = _QMK / 'keyboards' / 'polykybd' / 'lang' / 'lang_lut.c'
 # gfx_font.py is the host repo's parser for the generated headers — the same one
 # oled_preview.py uses. Reaching sideways is deliberate: a second parser would be

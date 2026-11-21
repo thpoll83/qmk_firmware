@@ -52,7 +52,7 @@ from PIL import Image, ImageDraw                                # noqa: E402
 base = int(sys.argv[1], 16)
 count = int(sys.argv[2])
 header = sys.argv[3] if len(sys.argv) > 3 else \
-    os.path.join(_QMK, "keyboards", "polykybd", "base", "fonts", "generated",
+    os.path.join(_QMK, "keyboards", "polykybd", "fonts", "generated",
                  "gscript_fonts.h")
 out = sys.argv[4] if len(sys.argv) > 4 else "/tmp/gscript_preview.png"
 

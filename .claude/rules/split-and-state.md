@@ -1,9 +1,9 @@
 ---
 paths:
-  - "keyboards/polykybd/split_link/split_sync.c"
-  - "keyboards/polykybd/system/state.c"
-  - "keyboards/polykybd/system/state.h"
-  - "keyboards/polykybd/system/state_store.c"
+  - "keyboards/polykybd/lib/split_link/split_sync.c"
+  - "keyboards/polykybd/lib/system/state.c"
+  - "keyboards/polykybd/lib/system/state.h"
+  - "keyboards/polykybd/lib/system/state_store.c"
 ---
 # Split sync and persisted state
 

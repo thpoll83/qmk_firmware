@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render emoji-picker slots the way the firmware places them, and report cuts.
 
-Mirrors `make_slot_str()` in `keyboards/polykybd/emoji/emoji_layer.c`: the x
+Mirrors `make_slot_str()` in `keyboards/polykybd/features/emoji/emoji_layer.c`: the x
 before a superscript or subscript, `slot_lift()`, the box clamp in 2 px steps,
 and the centring of a symbol too wide for the two leading spaces. It draws the
 resulting display list with PolyKybdHost's `oled_preview.Renderer`, the same
@@ -133,7 +133,7 @@ def render(cp: int) -> tuple[Image.Image, int, bool]:
 
 
 def tab(name: str) -> list[int]:
-    src = re.sub(r'//.*', '', (_PK / 'emoji' / 'emoji_data.h').read_text())
+    src = re.sub(r'//.*', '', (_PK / 'features' / 'emoji' / 'emoji_data.h').read_text())
     m = re.search(rf'static const uint32_t {name}\[\] = \{{(.*?)\}};', src, re.S)
     if not m:
         sys.exit(f'no array {name} in emoji_data.h')

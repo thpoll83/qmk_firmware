@@ -1,7 +1,7 @@
 """Model the firmware's per-keycap draw path in Python, so keycap chrome can be
 placed and MEASURED without flashing.
 
-This mirrors `drivers/disp_array.c` (`kdisp_write_gfx_char`'s baseline-align + its
+This mirrors `lib/drivers/disp_array.c` (`kdisp_write_gfx_char`'s baseline-align + its
 courtyard clear, `kdisp_draw_glyph_half_at`, `kdisp_draw_glyph_thin_at`) and the
 legend placement in `poly_keymap.c` `render_key()` (base glyph, shift preview and
 AltGr preview, using the REAL per-language offsets parsed out of `lang_lut.c`).

@@ -34,7 +34,7 @@ POLY_EE_HANDS_GOALS := uf2-split-left uf2-split-right dfu-util-split-left dfu-ut
 ifneq (,$(filter $(MAKECMDGOALS),$(POLY_EE_HANDS_GOALS)))
 $(error PolyKybd does not use EE_HANDS, so $(filter $(MAKECMDGOALS),$(POLY_EE_HANDS_GOALS)) would set no handedness. \
 Build the image with the plain `uf2` target, then set the side with a stamp UF2: \
-`python3 keyboards/polykybd/tools/make_hand_uf2.py --side left|right` (or take the \
+`python3 keyboards/polykybd/dev/tools/make_hand_uf2.py --side left|right` (or take the \
 polykybd-handedness-*.uf2 pair from any firmware release). See keyboards/polykybd/readme.md)
 endif
 
@@ -64,7 +64,7 @@ endif
 # widening cast the check cannot be satisfied about without editing a
 # cross-boundary contract. Those offsets are `_Static_assert`ed 4-aligned in
 # doom_arena.h instead, which is the substance; the one such cast OUTSIDE the
-# doom tree (split_link/split_sync.c) carries a narrow pragma pointing at those asserts.
+# doom tree (lib/split_link/split_sync.c) carries a narrow pragma pointing at those asserts.
 #
 # ⚠️ A path filter that matches NOTHING fails open: the flag simply never
 # applies and the guard looks installed while doing nothing. Verify by building
@@ -72,7 +72,7 @@ endif
 # make output.
 #
 # Casts from `void *` do not warn (GCC exempts them), so the split-link CRC store
-# in split_link/bridge_helper.c is unaffected — and is separately safe, since every caller
+# in lib/split_link/bridge_helper.c is unaffected — and is separately safe, since every caller
 # passes a struct whose first member is a uint32_t.
 # modules/polykybd/ is ours too (polymod_crc32 / _rle / _ltr559); polymod_monocypher
 # is vendored, so it is excluded alongside the doom tree.
@@ -156,16 +156,16 @@ OS_DETECTION_ENABLE = yes
 # (split72, split42). Each variant's keymaps/default/keymap.c carries only its
 # data (keymaps[] / encoder_map[] / g_led_config).
 # base/fw_up_verdict.c is listed HERE, not in the per-variant rules.mk where the other
-# base/*.c sources live: its consumer (fw_update/split_fw_up.c) is in this shared list, so a
+# base/*.c sources live: its consumer (lib/fw_update/split_fw_up.c) is in this shared list, so a
 # variant that forgot the line would simply fail to link — exactly the split72/split42
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
-# covers emoji/emoji_layer.c and hints/os_hints.c.
-POLY_SRC := keys_com/poly_keymap.c keys_com/layer_names.c system/boot_diag.c split_link/side.c system/state.c system/state_store.c split_link/split_sync.c fw_update/split_fw_up.c display/multicore_exec.c hid/hid_com.c fw_update/hid_fw_up.c hid/hid_fontpack.c display/fill_overlay.c system/poly_util.c keys_com/matrix_helper.c split_link/bridge_helper.c display/oled_helper.c keys_com/keycode_helper.c keys_com/mru.c keys_com/lang_layer.c anim/startup_anim.c anim/tutorial.c anim/focus_ring.c anim/key_attention.c anim/menu_cascade.c anim/lang_sparkle.c anim/tutorial_rgb.c base/tutorial_plan.c anim/demo_mode.c base/demo_plan.c modes/mines_mode.c base/mines_plan.c modes/ai_mode.c base/ai_events.c base/attn_guide.c base/idle_poem_plan.c emoji/emoji_layer.c hints/os_hints.c base/fw_up_verdict.c keys_com/poly_macro.c keys_com/poly_macro_record.c base/macro_decode.c base/macro_record.c peripherals/ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c drivers/crash_record.c base/hand_stamp.c drivers/hw_uid.c base/core1_owner.c drivers/core1_owner_hw.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c split_link/slave_data.c display/oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
+# covers features/emoji/emoji_layer.c and features/hints/os_hints.c.
+POLY_SRC := keys_com/poly_keymap.c keys_com/layer_names.c lib/system/boot_diag.c lib/split_link/side.c lib/system/state.c lib/system/state_store.c lib/split_link/split_sync.c lib/fw_update/split_fw_up.c lib/display/multicore_exec.c lib/hid/hid_com.c lib/fw_update/hid_fw_up.c lib/hid/hid_fontpack.c lib/display/fill_overlay.c lib/system/poly_util.c keys_com/matrix_helper.c lib/split_link/bridge_helper.c lib/display/oled_helper.c keys_com/keycode_helper.c keys_com/mru.c keys_com/lang_layer.c features/anim/startup_anim.c features/anim/tutorial.c features/anim/focus_ring.c features/anim/key_attention.c features/anim/menu_cascade.c features/anim/lang_sparkle.c features/anim/tutorial_rgb.c base/tutorial_plan.c features/anim/demo_mode.c base/demo_plan.c features/modes/mines_mode.c base/mines_plan.c features/modes/ai_mode.c base/ai_events.c base/attn_guide.c base/idle_poem_plan.c features/emoji/emoji_layer.c features/hints/os_hints.c base/fw_up_verdict.c keys_com/poly_macro.c keys_com/poly_macro_record.c base/macro_decode.c base/macro_record.c lib/peripherals/ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c lib/drivers/crash_record.c base/hand_stamp.c lib/drivers/hw_uid.c base/core1_owner.c lib/drivers/core1_owner_hw.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c lib/split_link/slave_data.c lib/display/oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
 SRC += $(POLY_SRC)
 
-# emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
-# keys_com/poly_keymap.c / split_link/split_sync.c call into it (emj_*), and they also include keys_com/layers.h.
+# features/emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
+# keys_com/poly_keymap.c / lib/split_link/split_sync.c call into it (emj_*), and they also include keys_com/layers.h.
 # Both used to live under <variant>/keymaps/default/ — layers.h resolved only through
 # QMK's keymap include path and emoji_layer.c only through that keymap's rules.mk — so
 # every keyboard-level source depended on one particular keymap, and split72:revision2
@@ -201,7 +201,7 @@ POLYKYBD_BULK_PIPE ?= yes
 ifeq ($(strip $(POLYKYBD_BULK_PIPE)), yes)
     VIRTSER_ENABLE = yes
     OPT_DEFS += -DPOLYKYBD_BULK_PIPE
-    SRC += hid/poly_pipe.c
+    SRC += lib/hid/poly_pipe.c
 endif
 
 # Optional main-loop timing instrumentation (OFF by default). Measures the per-
@@ -212,17 +212,17 @@ endif
 # uprintf readout. Zero cost in a normal build (all hooks are no-op inlines).
 ifeq ($(strip $(POLYKYBD_LOOP_PROFILE)), yes)
     OPT_DEFS += -DPOLYKYBD_LOOP_PROFILE
-    SRC += profiling/loop_profile.c
+    SRC += dev/profiling/loop_profile.c
 endif
 
 # USB bus-reset race stress (OFF by default, never in a release). Masks interrupts
 # in erase-sized windows while the host enumerates, and counts in the USB ISR how
-# often a bus reset and a SETUP are handled in one pass (diag/usb_stress.h). The
-# rig drives it with tools/hil_probes/usb_reset_race.py. Needs CONSOLE_ENABLE for
+# often a bus reset and a SETUP are handled in one pass (dev/diag/usb_stress.h). The
+# rig drives it with dev/tools/hil_probes/usb_reset_race.py. Needs CONSOLE_ENABLE for
 # the `usbdiag:` readout.
 ifeq ($(strip $(POLYKYBD_USB_STRESS)), yes)
     OPT_DEFS += -DPOLYKYBD_USB_STRESS -DPOLYKYBD_USB_RACE_DIAG
-    SRC += diag/usb_stress.c
+    SRC += dev/diag/usb_stress.c
     # The A side of an A/B run: Contrib's original SETUP-before-reset order.
     ifeq ($(strip $(POLYKYBD_USB_LEGACY_RESET_ORDER)), yes)
         OPT_DEFS += -DPOLYKYBD_USB_LEGACY_RESET_ORDER
@@ -257,7 +257,7 @@ endif
 # The stamp sector (base/hand_stamp.h) is written through the same stamp_write()
 # the host's HID cmd 25 uses, from keyboard_pre_init_user(), and only when the
 # sector does not already say this -- so no page is burned per boot. This exists
-# because the standalone 512-byte stamp UF2 (tools/make_hand_uf2.py) is currently
+# because the standalone 512-byte stamp UF2 (dev/tools/make_hand_uf2.py) is currently
 # unexplained-broken on hardware, while an ordinary multi-block firmware .uf2
 # flashes fine; a provisioning IMAGE sidesteps the whole question.
 #
@@ -315,11 +315,11 @@ else
     $(eval TAP_DANCE_ENABLE := yes)
     OPT_DEFS += -DPOLY_RUNTIME_COMBOS
     SRC += keys_com/poly_combos.c
-    # The host tutorial (HID cmd 49, anim/host_tutorial.c): same reasoning, ~180 B of
+    # The host tutorial (HID cmd 49, features/anim/host_tutorial.c): same reasoning, ~180 B of
     # RAM per half. The monolith NACKs cmd 49 as an unknown command, and the host then
     # runs a tutorial with the focus ring only.
     OPT_DEFS += -DPOLY_HOST_TUTORIAL
-    SRC += anim/host_tutorial.c base/host_tutorial_plan.c
+    SRC += features/anim/host_tutorial.c base/host_tutorial_plan.c
 endif
 
 # USB MIDI (send-only, MIDI_ADVANCED; config.h has the buffer sizes). The keyboard
@@ -342,7 +342,7 @@ ifeq ($(strip $(POLYKYBD_MIDI)), yes)
         MIDI_ENABLE = yes
         # The legends read the synced settings; a build without MIDI draws the
         # keycodes as plain QMK names would (nothing), and saves the buffer.
-        SRC += modes/midi_legend.c
+        SRC += features/modes/midi_legend.c
     endif
 endif
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)
@@ -572,9 +572,9 @@ POLY_GIT_BRANCH := $(shell printf '%s' '$(subst ',,$(POLY_GIT_BRANCH))' | tr -cd
 OPT_DEFS += -DPOLY_GIT_BRANCH=\"$(or $(POLY_GIT_BRANCH),unknown)\"
 
 # ---------------------------------------------------------------------------
-# Deliberate crashes, for exercising drivers/crash_record.* on real hardware
+# Deliberate crashes, for exercising lib/drivers/crash_record.* on real hardware
 # ---------------------------------------------------------------------------
-# `qmk compile ... -e POLYKYBD_CRASH_TEST=yes` compiles diag/crash_test.c and makes a
+# `qmk compile ... -e POLYKYBD_CRASH_TEST=yes` compiles dev/diag/crash_test.c and makes a
 # key chord (LCtrl+LShift+LAlt + a digit) fault the board on purpose. Every other
 # part of the crash record has been driven end to end already; the FAULT HANDLERS
 # themselves never have, so the naked HardFault_Handler, the stacked-frame read,
@@ -582,7 +582,7 @@ OPT_DEFS += -DPOLY_GIT_BRANCH=\"$(or $(POLY_GIT_BRANCH),unknown)\"
 # core1/slave paths are all unproven. This is how they get proven.
 #
 # ⚠️ TEST BUILDS ONLY -- never ship this in a release image. A normal build
-# compiles the inline no-ops in diag/crash_test.h and pays nothing.
+# compiles the inline no-ops in dev/diag/crash_test.h and pays nothing.
 # First-run boot intro (Eden + the tutorial): ON by default since 1.0.0; opt out with
 # `-e POLYKYBD_BOOT_INTRO=no`. It plays once per board (the EEPROM marker), and again
 # only after RESET Eden. See the note at the guard in keys_com/poly_keymap.c for why the old
@@ -601,7 +601,7 @@ endif
 
 # Tutorial TEST build: `-e POLYKYBD_TUTORIAL_TEST=yes` plays the first-run experience
 # (Eden, then the tutorial) once per FLASHED BUILD: the boot marker's "played" value is
-# keyed to the build stamp (boot_done_value() in system/state.c), so a new image plays, a
+# keyed to the build stamp (boot_done_value() in lib/system/state.c), so a new image plays, a
 # finished lesson stays finished, and RESET Eden replays it. It is the same boot path
 # POLYKYBD_BOOT_INTRO gates, so it also exercises the pre-watchdog start. ⚠️ TEST BUILDS ONLY.
 ifeq ($(strip $(POLYKYBD_TUTORIAL_TEST)), yes)
@@ -610,8 +610,8 @@ endif
 
 ifeq ($(strip $(POLYKYBD_CRASH_TEST)), yes)
     OPT_DEFS += -DPOLYKYBD_CRASH_TEST
-    SRC += diag/crash_test.c
-    $(eval $(call POLY_APPLY_WARN,diag/crash_test.c))
+    SRC += dev/diag/crash_test.c
+    $(eval $(call POLY_APPLY_WARN,dev/diag/crash_test.c))
 endif
 
 # ---------------------------------------------------------------------------
@@ -622,7 +622,7 @@ endif
 # would build the unpatched driver with a green build. Refuse instead.
 # Rationale and the drop-the-copy procedure: docs/build/upstream-patches.md ->
 # "ChibiOS-Contrib RP2040 USB driver".
-PLATFORM_MK := keyboards/polykybd/chibios_overrides/platform.mk
+PLATFORM_MK := keyboards/polykybd/lib/chibios_overrides/platform.mk
 ifeq ($(wildcard $(PLATFORM_MK)),)
     $(error $(PLATFORM_MK) is missing -- the build would silently use Contrib's unpatched RP2040 USB driver)
 endif

@@ -5,7 +5,7 @@
     python3 -B compare_sheet.py out.png --base PolyKybd~1     # any git revision as "before"
     python3 -B compare_sheet.py out.png clip_history emoji    # these icons, changed or not
 
-"before" is tools/hint_icons_stage.py at --base (default HEAD); "after" is the file
+"before" is dev/tools/hint_icons_stage.py at --base (default HEAD); "after" is the file
 in the working tree. Each version is loaded from its own temp file under its own
 module name. Never render variants by rewriting one module and reloading it: the
 bytecode cache is keyed by (mtime, size), so a same-size edit in the same second
@@ -32,7 +32,7 @@ def repo_root():
     return d
 
 
-REL = "keyboards/polykybd/tools/hint_icons_stage.py"
+REL = "keyboards/polykybd/dev/tools/hint_icons_stage.py"
 
 
 def load(path, name):

@@ -5,7 +5,7 @@
 // Emoji search dictionary (font-pack bundle `emojidict`): the loader and the
 // keyword search of the emoji layer's search mode.
 //
-// The bundle is built by emoji/emoji_dict.py, whose module docstring has the
+// The bundle is built by features/emoji/emoji_dict.py, whose module docstring has the
 // byte layout and whose Dict.search() is the reference this search follows; the
 // polykybd_emoji_dict suite checks the two agree on a built bundle. Design and
 // sizes: docs/features/emoji-search.md.

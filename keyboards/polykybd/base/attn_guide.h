@@ -7,7 +7,7 @@
 // on. The ripple is on the step whose layer is the active one, so holding FN moves it
 // to the next key and letting go moves it back. The guide ends when the target layer
 // becomes active. No quantum.h, so it is unit-tested on the host
-// (make test:polykybd_attn_guide). The firmware binding is anim/key_attention.c.
+// (make test:polykybd_attn_guide). The firmware binding is features/anim/key_attention.c.
 #pragma once
 
 #include <stdbool.h>

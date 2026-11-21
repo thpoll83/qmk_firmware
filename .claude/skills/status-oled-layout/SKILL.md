@@ -84,9 +84,9 @@ The preview is a separate implementation, so **every C edit needs the matching
 Python edit** or the renders stop being evidence. Then:
 
 ```bash
-python3 tools/status_oled_preview.py -b 35 --lang en-US --wpm 62 -o /tmp/on.png --diag
-python3 tools/status_oled_preview.py --rgb-off -b 35 --lang en-US --wpm 62 -o /tmp/off.png --diag
-python3 tools/status_oled42_preview.py -o /tmp/42.png --diag
+python3 dev/tools/status_oled_preview.py -b 35 --lang en-US --wpm 62 -o /tmp/on.png --diag
+python3 dev/tools/status_oled_preview.py --rgb-off -b 35 --lang en-US --wpm 62 -o /tmp/off.png --diag
+python3 dev/tools/status_oled42_preview.py -o /tmp/42.png --diag
 python3 ../../.claude/skills/status-oled-layout/measure_bands.py 72   # re-measure: gaps as intended?
 
 export QMK_HOME=$(git rev-parse --show-toplevel)

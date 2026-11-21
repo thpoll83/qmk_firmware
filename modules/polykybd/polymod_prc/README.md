@@ -82,6 +82,6 @@ with different bytes unless you pass `--force`.
 encoder PolyKybd's host uses. Both must stay step-for-step identical to the
 decoder here: the template order, the zero padding outside the ROI, the
 probability scale and the range coder.
-`keyboards/polykybd/tools/tests/prc_tool_test.py` checks that the tool reproduces
+`keyboards/polykybd/dev/tools/tests/prc_tool_test.py` checks that the tool reproduces
 the host's golden payloads byte for byte, and its trainer was checked against the
 host's on the full set of PolyKybd templates (1007 cells, identical tables).

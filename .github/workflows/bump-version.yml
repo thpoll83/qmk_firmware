@@ -45,7 +45,7 @@ jobs:
       # carrying both it and a real bump label is contradictory, and the safe
       # reading of a contradiction is "do not move the version". A change that
       # cannot alter the firmware image should not move FW_VERSION: every bump
-      # commit widens the delta that keyboards/polykybd/tools/
+      # commit widens the delta that keyboards/polykybd/dev/tools/
       # require_fwapply_run.py has to prove harmless before a release may
       # publish.
       - name: Bump version for every PR merged since the version last changed

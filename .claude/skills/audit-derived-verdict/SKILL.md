@@ -99,7 +99,7 @@ perfect flash report as a CRC failure.
 ### 5. For a delegated verdict, check the binding and the receiver
 
 ```bash
-grep -n "<sync field>" keyboards/polykybd/system/state.h keyboards/polykybd/keys_com/poly_keymap.c \
+grep -n "<sync field>" keyboards/polykybd/lib/system/state.h keyboards/polykybd/keys_com/poly_keymap.c \
                       keyboards/polykybd/<consumer>.c
 ```
 

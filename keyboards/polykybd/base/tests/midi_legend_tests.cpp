@@ -5,12 +5,12 @@
 // is built from the packed settings word the master syncs (poly_sync_t.midi_cfg),
 // so these pin what both halves draw for a given set of settings. Pixel placement
 // is checked separately, against the renderer, when the glyphs change
-// (tools/midi_glyphs.py); here it is the content: which note, which number.
+// (dev/tools/midi_glyphs.py); here it is the content: which note, which number.
 
 #include "gtest/gtest.h"
 
 extern "C" {
-#include "modes/midi_legend.h"
+#include "features/modes/midi_legend.h"
 #include "lang/named_glyphs.h"
 #include "quantum_keycodes.h"
 }

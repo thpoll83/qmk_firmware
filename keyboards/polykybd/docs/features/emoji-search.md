@@ -9,7 +9,7 @@ names (tray: Selected Language → Emoji Search Language). Not done: split42's
 two-step search. Until that host release, flash a dictionary by hand:
 
 ```bash
-python3 keyboards/polykybd/emoji/emoji_dict.py build en -o en.plyd
+python3 keyboards/polykybd/features/emoji/emoji_dict.py build en -o en.plyd
 polyctl fontpack flash --file en.plyd --bundle-id 9
 ```
 
@@ -195,7 +195,7 @@ paging. The mode key or Backspace returns to typing.
 - Layout v4 (`fonts/fonts.yaml`): emoji is a 384 KB slot that still advances 512 KB
   (`reserve_kb`), and `emojidict` (id 9, `kind: emojidict`) is placed at `0xE9000`
   with `offset_kb`. No other slot moves; `compute_bundle_layout()` refuses an
-  overlap. `tools/tests/fontpack_layout_test.py` pins it.
+  overlap. `dev/tools/tests/fontpack_layout_test.py` pins it.
 - `fontpack_load()` hands slot 9 to `emjdict_load_at()`, like the icon library: a
   PlyF with `FLAG_DATA` and no fonts, or the wipe sentinel. COMMIT's slot-present
   gate therefore works unchanged, and the slot's version is in the GET_ID `V` block

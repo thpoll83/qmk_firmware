@@ -318,7 +318,7 @@ enum my_keycodes {
     // shows the active value. Appended at the very end for the same no-renumbering
     // reason as KC_EDEN.
     KC_IDLE_TIMEOUT,
-    // Settings-layer key: start the showroom DEMO MODE (anim/demo_mode.h) — a ~15
+    // Settings-layer key: start the showroom DEMO MODE (features/anim/demo_mode.h) — a ~15
     // minute loop of typing, menus, language and script previews and the idle
     // animation, until Esc is held for two seconds. Behind KC_SETTINGS_MORE because
     // the demo swallows every key: a stray tap would leave a board that seems dead to

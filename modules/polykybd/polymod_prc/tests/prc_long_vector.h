@@ -3,7 +3,7 @@
 // (Python random.seed(7), random.randint(0, 1) per pixel, row by row), encoded with
 // table v1. Its 571-byte payload is longer than 255 bytes, which a uint8_t
 // length could not carry. prc_tool.py reproduces the host's golden payloads byte
-// for byte (keyboards/polykybd/tools/tests/prc_tool_test.py), so this is what the
+// for byte (keyboards/polykybd/dev/tools/tests/prc_tool_test.py), so this is what the
 // host's encoder would produce too.
 #pragma once
 

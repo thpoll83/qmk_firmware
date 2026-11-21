@@ -3,7 +3,7 @@
 //
 // Tests for base/emoji_dict.c: the emoji search dictionary loader and search.
 //
-// The bundles are built here by the Python builder (emoji/emoji_dict.py) from
+// The bundles are built here by the Python builder (features/emoji/emoji_dict.py) from
 // the committed sources, and the expected results come from its reference
 // search (`vectors`), so the C search is checked against the reference on every
 // query in VECTOR_QUERIES, for en and de. The rest are refusals: the bundle is
@@ -29,7 +29,7 @@ extern "C" {
 
 namespace {
 
-const char *kTool = "keyboards/polykybd/emoji/emoji_dict.py";
+const char *kTool = "keyboards/polykybd/features/emoji/emoji_dict.py";
 
 std::string run(const std::string &cmd) {
     std::string out;

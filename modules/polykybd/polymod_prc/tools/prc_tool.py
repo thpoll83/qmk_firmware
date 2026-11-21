@@ -24,7 +24,7 @@ The core functions (train, encode, decode, contexts) need only the standard
 library; reading image files needs Pillow (`pip install pillow`).
 
 This is a port of PolyKybdHost polyhost/util/prc_codec.py, which encodes what
-PolyKybd's keycaps decode. keyboards/polykybd/tools/tests/prc_tool_test.py
+PolyKybd's keycaps decode. keyboards/polykybd/dev/tools/tests/prc_tool_test.py
 checks that this encoder reproduces the host's golden vectors byte for byte.
 """
 from __future__ import annotations

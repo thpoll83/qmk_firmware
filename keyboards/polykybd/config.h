@@ -11,7 +11,7 @@
 #define UNICODE_CYCLE_PERSIST true
 #define UNICODE_KEY_WINC      KC_RIGHT_ALT
 // QMK's macOS mode holds this key while it types the hex digits: Option, or F20 in
-// MacCompose (protocol v38, hid/hid_com.c). Only quantum/unicode/unicode.c uses it.
+// MacCompose (protocol v38, lib/hid/hid_com.c). Only quantum/unicode/unicode.c uses it.
 #define UNICODE_KEY_MAC       poly_unicode_key_mac()
 #if !defined(__ASSEMBLER__)
 unsigned char poly_unicode_key_mac(void);
@@ -163,7 +163,7 @@ unsigned char poly_unicode_key_mac(void);
 // fw_staging_write_chunk: `space = FLASH_PAGE_SIZE(256) - s_buf_fill` was a
 // uint8_t and truncated to 0 whenever the page buffer was empty (chunk 0 and
 // every 256 B boundary), spinning the copy loop forever. Fixed in
-// drivers/fw_staging.c (space/copy widened to uint32_t). Probe left here, disabled,
+// lib/drivers/fw_staging.c (space/copy widened to uint32_t). Probe left here, disabled,
 // for regression reference. See docs/archive/fw-up-baseline.md (run 5).
 // #define FW_UP_CHUNK_NOOP_PROBE
 
@@ -315,7 +315,7 @@ unsigned char poly_unicode_key_mac(void);
 //      cmd 46 (AI_CARD: one 60-byte segment straight into a pool slot) for AI mode
 //      (ai_mode.h, KC_AI). Older firmware NACKs both, which is the host's signal.
 //  v32 cmd 47 (key attention: the focus ripple on one key, a count of times or until
-//      cancelled, anim/key_attention.h). Older firmware NACKs it.
+//      cancelled, features/anim/key_attention.h). Older firmware NACKs it.
 //  v33 cmd 48 (runtime combos and tap dance, poly_combos.c): op 0 info, 1 get, 2 set,
 //      3 commit. 16 combos (2..4 trigger keycodes + a result) and 16 tap dances
 //      (TD(0)..TD(15): on tap, on hold, on double tap, on tap-then-hold, own term),
@@ -329,7 +329,7 @@ unsigned char poly_unicode_key_mac(void);
 //      that finished on another page (base/ai_events.h). Esc shows "Next 1/2", the AI
 //      key rings for agents on another page, and AI mode's end is an op 2 event. A
 //      host before v36 zero-pads them: page count 0 keeps the v35 behaviour.
-//  v37 cmd 50: the flash unique IDs of both halves (drivers/hw_uid.h), for the host's
+//  v37 cmd 50: the flash unique IDs of both halves (lib/drivers/hw_uid.h), for the host's
 //      telemetry device count. The slave's ID comes over USER_SYNC_FLASH_STAGE op 5.
 //      Older firmware NACKs cmd 50; an older slave leaves its flag bit clear.
 //  v38 cmd 20 value 6, MacCompose: the macOS unicode mode with F20 held instead of
@@ -539,7 +539,7 @@ unsigned char poly_unicode_key_mac(void);
 // ⚠️ The wear-levelling EEPROM backing store lives at the TOP of physical flash:
 // the rp2040_flash driver places it at PICO_FLASH_SIZE_BYTES - WEAR_LEVELING_BACKING_SIZE
 // (0x7FE000..0x800000 here), i.e. INSIDE our resource region — see the flash map in
-// drivers/fw_staging.h, where FW_DOOMPACK_SLOT_SIZE subtracts it. It is pinned here
+// lib/drivers/fw_staging.h, where FW_DOOMPACK_SLOT_SIZE subtracts it. It is pinned here
 // rather than inherited from the driver default so that (a) the reservation is
 // visible beside the flash size it is carved out of, and (b) changing it is a
 // deliberate act that the _Static_assert in fw_staging.c re-checks against the

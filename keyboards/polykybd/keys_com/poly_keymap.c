@@ -31,39 +31,39 @@
 #include <hardware/flash.h>
 
 #include "polykybd.h"
-#include "hints/os_hints.h"
+#include "features/hints/os_hints.h"
 #include "poly_keymap.h"   // our own exports — declarations checked against the definitions below
 #include "status_oled.h"
-#include "split_link/bridge_helper.h"
-#include "profiling/loop_profile.h"
+#include "lib/split_link/bridge_helper.h"
+#include "dev/profiling/loop_profile.h"
 #ifdef POLYKYBD_LOOP_PROFILE
 #    include "hardware/structs/timer.h"   // timer_hw->timerawl — raw 1 MHz us counter
 #endif
-#include "fw_update/split_fw_up.h"
+#include "lib/fw_update/split_fw_up.h"
 #ifdef POLYKYBD_BULK_PIPE
-#    include "hid/poly_pipe.h"
+#    include "lib/hid/poly_pipe.h"
 #endif
-#include "drivers/fw_staging.h"
+#include "lib/drivers/fw_staging.h"
 #include "base/core1_owner.h"
 #include "uni.h"
-#include "split_link/side.h"
-#include "display/fill_overlay.h"
-#include "system/poly_util.h"
+#include "lib/split_link/side.h"
+#include "lib/display/fill_overlay.h"
+#include "lib/system/poly_util.h"
 
 #include "base/com.h"
-#include "hid/mac_compose.h"   // mac_compose_set (protocol v38)
+#include "lib/hid/mac_compose.h"   // mac_compose_set (protocol v38)
 #include "polymod_rle.h"
-#include "drivers/e2prom.h"
+#include "lib/drivers/e2prom.h"
 #include "base/overlay.h"
-#include "drivers/disp_array.h"
-#include "drivers/helpers.h"
+#include "lib/drivers/disp_array.h"
+#include "lib/drivers/helpers.h"
 #include "base/update.h"
-#include "drivers/spi_helper.h"
-#include "drivers/shift_reg.h"
+#include "lib/drivers/spi_helper.h"
+#include "lib/drivers/shift_reg.h"
 #include "base/text_helper.h"
 #include "fonts/gfx_used_fonts.h"
 #include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
-#include "modes/midi_legend.h"                 // QK_MIDI_* legends from the synced MIDI settings
+#include "features/modes/midi_legend.h"                 // QK_MIDI_* legends from the synced MIDI settings
 #include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
 #include "base/ime_key_plan.h"           // what KC_IME sends, per language and OS
 #include "base/ime_held_slots.h"         // which KC_IME key holds which usage
@@ -73,26 +73,26 @@
 #include "fonts/nano_font.h"          // 10px label font under the flags
 #include "fonts/util_font.h"         // mid (10px) utility-label font
 #include "polymod_core1.h"
-#include "anim/tutorial.h"
-#include "anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
-#include "modes/mines_mode.h"                   // the idle-screen mine sweeper (hold Hyper while idle)
-#include "modes/ai_mode.h"                      // AI mode: agent cards on the number row (KC_AI)
-#include "anim/key_attention.h"            // cmd 47: the focus ripple on a key
-#include "anim/host_tutorial.h"            // cmd 49: the host tutorial (text, spotlight, events)
-#include "anim/focus_ring.h"                 // the reusable "point at this key" ripple
+#include "features/anim/tutorial.h"
+#include "features/anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
+#include "features/modes/mines_mode.h"                   // the idle-screen mine sweeper (hold Hyper while idle)
+#include "features/modes/ai_mode.h"                      // AI mode: agent cards on the number row (KC_AI)
+#include "features/anim/key_attention.h"            // cmd 47: the focus ripple on a key
+#include "features/anim/host_tutorial.h"            // cmd 49: the host tutorial (text, spotlight, events)
+#include "features/anim/focus_ring.h"                 // the reusable "point at this key" ripple
 #include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
-#include "anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
-#include "anim/lang_sparkle.h"             // lang_sparkle_tick()
-#include "anim/tutorial_rgb.h"             // the key LEDs during the show and the lesson
-#include "system/boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
-#include "drivers/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
-#include "diag/usb_stress.h"              // no-op unless -e POLYKYBD_USB_STRESS=yes
+#include "features/anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
+#include "features/anim/lang_sparkle.h"             // lang_sparkle_tick()
+#include "features/anim/tutorial_rgb.h"             // the key LEDs during the show and the lesson
+#include "lib/system/boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
+#include "lib/drivers/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
+#include "dev/diag/usb_stress.h"              // no-op unless -e POLYKYBD_USB_STRESS=yes
 #include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
-#include "drivers/hw_uid.h"                  // flash unique ID, read once here (cmd 50)
+#include "lib/drivers/hw_uid.h"                  // flash unique ID, read once here (cmd 50)
 #include "base/status_brightness.h"      // one brightness scale for keycaps + status OLED
 #include "usb_util.h"                     // usb_vbus_state() — the suspend-time power check
-#include "diag/crash_test.h"              // POLYKYBD_CRASH_TEST: deliberate faults (no-op inlines otherwise)
-#include "split_link/slave_data.h"                   // slave_data_register(), slave_data_crash_pull_tick()
+#include "dev/diag/crash_test.h"              // POLYKYBD_CRASH_TEST: deliberate faults (no-op inlines otherwise)
+#include "lib/split_link/slave_data.h"                   // slave_data_register(), slave_data_crash_pull_tick()
 #include "polymod_crc32.h"
 
 // The LTR-559 driver is the polykybd/polymod_ltr559 community module; the build
@@ -103,13 +103,13 @@
 #    include "polymod_ltr559.h"
 #    define LTR559_LOG_MS 600000   // sensor telemetry log cadence: 10 min
 #endif
-#include "peripherals/ltr559_policy.h"        // the POLICY on the module (POLYKYBD_LTR559_DRIVE)
+#include "lib/peripherals/ltr559_policy.h"        // the POLICY on the module (POLYKYBD_LTR559_DRIVE)
 
-#include "system/state.h"
+#include "lib/system/state.h"
 #include "poly_macro.h"
 #include "poly_macro_record.h"
-#include "display/multicore_exec.h"
-#include "split_link/split_sync.h"
+#include "lib/display/multicore_exec.h"
+#include "lib/split_link/split_sync.h"
 
 #include "lang/lang_lut.h"
 #include "base/caps_word_letter.h"
@@ -119,11 +119,11 @@
 #include "keys_com/layers.h"
 #include "keycode_helper.h"
 #include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
-#include "anim/tutorial_names_gen.h"   // pre-rendered native language names
-#include "anim/startup_anim.h"   // one-time procedural boot animation (split72; no-op stubs on split42)
-#include "display/status_idle.h"          // the status panel's idle screen (split72 only)
+#include "features/anim/tutorial_names_gen.h"   // pre-rendered native language names
+#include "features/anim/startup_anim.h"   // one-time procedural boot animation (split72; no-op stubs on split42)
+#include "lib/display/status_idle.h"          // the status panel's idle screen (split72 only)
 #include "polymod_os_actions.h"
-#include "emoji/emoji_layer.h"
+#include "features/emoji/emoji_layer.h"
 #include "lang_layer.h"
 #include "mru.h"
 
@@ -300,7 +300,7 @@ void early_hardware_init_post(void) {
 // the dirty-window bboxes so the first awake render erases whatever the mode drew.
 static bool s_disp_render_active = false;
 
-// ---- the menu cascade's view of this file (anim/menu_cascade.h) ----------------
+// ---- the menu cascade's view of this file (features/anim/menu_cascade.h) ----------------
 bool poly_render_live(void) { return s_disp_render_active; }
 
 // What the language / emoji menu shows right now, or 0 when neither is up. Built from
@@ -3411,12 +3411,12 @@ bool render_key(uint16_t keycode, led_t state, uint8_t mods) {
 }
 
 // Returns builtin icon/symbol overlay text for keycode based on current modifiers and mod-tap states.
-// The OS-aware shortcut-hint table itself lives in hints/os_hints.c as a PURE
+// The OS-aware shortcut-hint table itself lives in features/hints/os_hints.c as a PURE
 // function. This wrapper is the only thing that knows where the two inputs come
 // from, so the table can be exercised directly in a unit test.
 const uint32_t* keycode_to_disp_overlay(uint16_t keycode) {
     const uint32_t* hint = os_hint_for_keycode(keycode, get_local_layer()->mods, get_local_state()->active_os);
-    // The hint icons are a font-pack font (tools/hint_icons.py, symbol bundle). With
+    // The hint icons are a font-pack font (dev/tools/hint_icons.py, symbol bundle). With
     // no pack flashed their glyphs are absent, and drawing one would show the
     // missing-glyph '!' on every key the modifier touches: show no hint instead, so
     // the key keeps its own legend. A leading control code is a display-list op
@@ -4358,7 +4358,7 @@ static bool render_idle_key(uint16_t keycode, led_t state, uint32_t seed) {
 // invert it to (r,c) to resolve the keycode. Returns false without touching the
 // buffer for keys with no plain-text legend (flags/emoji/tabs/overlays) — those faces
 // just show the plain comet field. Mirrors render_idle_key's legend derivation.
-// ---- first-run tutorial callbacks (see anim/tutorial.h) -------------------
+// ---- first-run tutorial callbacks (see features/anim/tutorial.h) -------------------
 // Matrix (row,col) -> packed display slot, or TUT_SLOT_NONE when no OLED sits behind
 // that key. The INVERSE of eden_idle_erase_legend's mapping, right-half `c--` display
 // fold included. That fold is why the mirrored skip key at the outer edge is NOT the
@@ -4707,7 +4707,7 @@ typedef struct {
     bool            rtl;      // native reads right to left: laid out from the right
     // A name the keycap renderer cannot spell character by character — joined letters,
     // attached vowel signs, or glyphs the fonts lack — pre-rendered offline into keycap
-    // tiles (tools/gen_tutorial_names.py -> anim/tutorial_names_gen.h).
+    // tiles (dev/tools/gen_tutorial_names.py -> features/anim/tutorial_names_gen.h).
     const tut_name_strip_t *strip;
     // The left status panel's lead-in; the right panel finishes it with `name` and a
     // "?" (tutorial_preview_name()), so every lead-in must open a QUESTION. ONE per row,
@@ -4745,7 +4745,7 @@ static uint8_t s_tut_preview_n;
 // Can this board draw the entry? Asked of the fonts actually flashed, through the same
 // lookup the renderer uses: on a fresh board with no font pack every non-Latin entry
 // fails here and the chapter shows only the reveal, rather than a board of blanks.
-// Shared with the demo's language and script tour (anim/demo_mode.c), which asks the same
+// Shared with the demo's language and script tour (features/anim/demo_mode.c), which asks the same
 // question of the same fonts.
 bool poly_preview_renderable(bool script, uint8_t value) {
     uint32_t cp = 0;
@@ -4875,7 +4875,7 @@ typedef struct {
 
 static const tut_tour_kind_info_t k_tour_kind[] = {
     [TUT_TOUR_LANG]        = {_LL,   0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
-    // A tab's dwell holds the cascade (anim/menu_cascade.c, ~1.7 s with the last fade)
+    // A tab's dwell holds the cascade (features/anim/menu_cascade.c, ~1.7 s with the last fade)
     // plus a moment to look.
     [TUT_TOUR_LCAT]        = {_LL,   0xFFu,     0u, 26u, TUT_PROG_LANGMENU},
     [TUT_TOUR_BASE_LL]     = {0xFFu, 0xFFu,     0u, 0u, TUT_PROG_LANGMENU},
@@ -5844,7 +5844,7 @@ void update_displays(enum refresh_mode mode) {
                                tutorial_is_chrome_key((uint8_t)(r + offset), c)) {
                         // The tutorial's chrome: "Hold to / skip..." on Esc, the chapter
                         // on its mirror at the top-right outer edge. A preview name's
-                        // letters are chrome too, and cascade in (anim/menu_cascade.h):
+                        // letters are chrome too, and cascade in (features/anim/menu_cascade.h):
                         // until its turn such a key stays dark.
                         kdisp_set_buffer(0x00);
                         if (!menu_cascade_hidden((uint8_t)(r + offset), c)) {
@@ -5877,7 +5877,7 @@ void update_displays(enum refresh_mode mode) {
                         kdisp_send_window();
                         doom_handled = true;
                     } else if (menu_cascade_hidden((uint8_t)(r + offset), c)) {
-                        // A menu's content rows appear key by key (anim/menu_cascade.h);
+                        // A menu's content rows appear key by key (features/anim/menu_cascade.h);
                         // until its turn a key stays dark. Asked on both halves, from
                         // each one's own synced menu state.
                         kdisp_set_buffer(0x00);
@@ -8092,7 +8092,7 @@ void keyboard_pre_init_user(void) {
     poly_hand_boot_init();
 
     // The flash unique ID for cmd 50. A flash command, so it runs here, before
-    // core1 exists (drivers/hw_uid.h).
+    // core1 exists (lib/drivers/hw_uid.h).
     poly_hw_uid_boot_init();
 
     // Load the external-flash font pack and assemble g_all_fonts = resident ++

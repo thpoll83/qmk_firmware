@@ -8,4 +8,4 @@ cog -r lang/named_glyphs.h
 cog -r keys_com/poly_keymap.c
 cog -r keys_com/keycode_helper.h
 cog -r keys_com/uni.h
-cog -r hid/hid_com.c
+cog -r lib/hid/hid_com.c

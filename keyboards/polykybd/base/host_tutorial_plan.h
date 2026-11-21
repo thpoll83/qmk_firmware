@@ -10,7 +10,7 @@
 //
 // No quantum.h: parsing, validation, matching and the watchdog are unit-tested on the
 // host (make test:polykybd_host_tutorial_plan). The firmware binding, the relay to the
-// slave and the drawing are anim/host_tutorial.c.
+// slave and the drawing are features/anim/host_tutorial.c.
 #pragma once
 
 #include <stdbool.h>
@@ -110,7 +110,7 @@ void host_tut_note_layers(host_tut_conds_t *c, uint32_t layers_on);
 // more before `now_ms`. Wrap-safe.
 bool host_tut_expired(uint32_t last_ms, uint32_t now_ms);
 
-// What the master still has to send the slave (anim/host_tutorial.c), sent in this order.
+// What the master still has to send the slave (features/anim/host_tutorial.c), sent in this order.
 #define HOST_TUT_DIRTY_END  0x01u
 #define HOST_TUT_DIRTY_TEXT 0x02u
 #define HOST_TUT_DIRTY_SPOT 0x04u

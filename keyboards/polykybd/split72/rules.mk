@@ -15,7 +15,7 @@ RGB_MATRIX_DRIVER = ws2812
 
 #source files
 QUANTUM_LIB_SRC += spi_master.c
-SRC += status_oled.c display/status_idle.c base/update.c drivers/e2prom.c base/com.c base/text_helper.c drivers/helpers.c drivers/disp_array.c drivers/shift_reg.c drivers/spi_helper.c base/overlay.c lang/lang_lut.c drivers/fw_staging.c base/fontpack.c
+SRC += status_oled.c lib/display/status_idle.c base/update.c lib/drivers/e2prom.c base/com.c base/text_helper.c lib/drivers/helpers.c lib/drivers/disp_array.c lib/drivers/shift_reg.c lib/drivers/spi_helper.c base/overlay.c lang/lang_lut.c lib/drivers/fw_staging.c base/fontpack.c
 
 # Build Options
 WS2812_DRIVER = vendor
@@ -44,13 +44,13 @@ endif
 # ABSOLUTE + our gesture layer is the DEFAULT, and the flavour every hardware
 # round was run against. Absolute mode implies the gesture layer: the stock one
 # cannot place its zones in the pad's physical frame, so the two are one switch.
-# See keyboards/polykybd/peripherals/cirque_gestures.c and keyboards/polykybd/docs/features/trackpad.md.
+# See keyboards/polykybd/lib/peripherals/cirque_gestures.c and keyboards/polykybd/docs/features/trackpad.md.
 ifneq ($(strip $(POLYKYBD_CIRQUE_RELATIVE)), yes)
     OPT_DEFS += -DPOLYKYBD_CIRQUE_ABSOLUTE
     OPT_DEFS += -DPOLYKYBD_CIRQUE_GESTURES
     # Only the absolute flavour references these, so the relative build carries
     # no dead objects rather than relying on the linker to drop them.
-    SRC += peripherals/cirque_gestures.c base/cirque_gesture_fsm.c
+    SRC += lib/peripherals/cirque_gestures.c base/cirque_gesture_fsm.c
 endif
 # -e POLYKYBD_CIRQUE_TRACE=yes puts a live pad readout on the status OLED of the
 # half holding the pad, so the window and z numbers can be read off the keyboard

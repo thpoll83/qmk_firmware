@@ -7,6 +7,9 @@ display under every keycap. The PolyKybd-specific firmware lives at
 kept so the customisations can ride on QMK's build system, HID stack and ChibiOS
 RP2040 port.
 
+The folders of the firmware, and what each one holds, are described in
+[`keyboards/polykybd/readme.md`](/keyboards/polykybd/readme.md#folder-layout).
+
 Project progress and hardware info:
 
 * Hardware & build log: [github.com/thpoll83/PolyKybd](https://github.com/thpoll83/PolyKybd)

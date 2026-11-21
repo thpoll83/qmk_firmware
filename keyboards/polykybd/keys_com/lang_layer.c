@@ -7,7 +7,7 @@
 #include "lang/lang_lut.h"
 #include "lang/named_glyphs.h"
 #include "base/update.h"
-#include "drivers/disp_array.h"
+#include "lib/drivers/disp_array.h"
 
 // ── Region grouping ───────────────────────────────────────────────────────────
 //

@@ -302,9 +302,9 @@ matching the flash / confirm / apply screens there.
   spelled out in full the line measures **135 px against a 127 px budget** — while the
   `1234tx` of a fresh boot fits comfortably. The count is abbreviated `k`/`M` and the
   rate drops its decimal at/above 10 %, which puts the widest reachable form at
-  122 px. Checked with `tools/status_oled_preview.py --telemetry --diag` at the worst
+  122 px. Checked with `dev/tools/status_oled_preview.py --telemetry --diag` at the worst
   case (`--link 1000,4294967295 --uptime "999d 23h"`), not at the default.
-- `tools/status_oled_preview.py --telemetry` renders it (both halves, `--diag` for the
+- `dev/tools/status_oled_preview.py --telemetry` renders it (both halves, `--diag` for the
   clipping check) — the same mirror-the-C treatment `build_fw_confirm_panel` gets.
   - ⚠️ **Mirror the C's GUARDS, not just its formatting — a preview's INPUT DOMAIN can
     be wider than the device's reachable state space.** `oled_telemetry_screen()` tests
@@ -348,7 +348,7 @@ lookup but plot through `pset` (the shared `kdisp_write_gfx_*` draw landscape in
 `POLY42_STATUS_ROT_CW`** — flip it if the panel reads mirrored/upside-down (nothing
 else changes; everything composes in logical space). The flash/update + boot-logo
 screens are still landscape (deferred). Preview + clip check:
-`tools/status_oled42_preview.py` (`--diag`) mirrors the C coordinate-for-coordinate.
+`dev/tools/status_oled42_preview.py` (`--diag`) mirrors the C coordinate-for-coordinate.
 
 **Layout work: MEASURE the pixel bands, don't eyeball the render** (2026-07-29).
 `--diag` only catches pixels off the *panel*; it says nothing about rows colliding

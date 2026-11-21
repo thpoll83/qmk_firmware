@@ -35,7 +35,7 @@ static void __attribute__((naked)) core1_trampoline(void) {
     // IRQs still enabled before it gets there. In that window the strongly-overridden
     // ChibiOS Vector80 (SIO_IRQ_PROC1) can fire — its CH_IRQ_EPILOGUE triggers an NMI
     // via ICSR.NMIPENDSET, which runs the context-switch NMI handler on a core with no
-    // thread state and hangs it (see keyboards/polykybd/drivers/fw_staging.c and CLAUDE.md).
+    // thread state and hangs it (see keyboards/polykybd/lib/drivers/fw_staging.c and CLAUDE.md).
     // On a cold power-on that window is usually harmless, but a watchdog-reset boot (the
     // firmware-apply / QK_REBOOT reset path) can inherit SIO-FIFO/IRQ state a power-on
     // doesn't, so a stale/pending FIFO IRQ fires here and hangs the MASTER on the boot

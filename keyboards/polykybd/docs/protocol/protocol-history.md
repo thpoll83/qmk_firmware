@@ -453,8 +453,8 @@ reading before you change either one.
     Host writes (op 1, cmd 46) do not move `G`.
   - Older firmware NACKs both commands.
 
-  **v32** adds cmd `47` **KEY ATTENTION** (`anim/key_attention.h`): the Eden
-  intro's focus ripple (`anim/focus_ring.h`) on one key, for a program tutorial or
+  **v32** adds cmd `47` **KEY ATTENTION** (`features/anim/key_attention.h`): the Eden
+  intro's focus ripple (`features/anim/focus_ring.h`) on one key, for a program tutorial or
   anything else that points at a key.
   - `data[2]` op, closed: `0` START, `1` CANCEL; any other op NACKs.
   - START: `data[3]` row, `data[4]` col (matrix position; a key without a display
@@ -515,7 +515,7 @@ reading before you change either one.
     `attn: guide done`, `attn: guide ran out`, `attn: refused guide`.
   - A v33 or older firmware NACKs op 2 (the op range is closed).
 
-  **v35** adds cmd `49`, the **host tutorial** (`anim/host_tutorial.c`,
+  **v35** adds cmd `49`, the **host tutorial** (`features/anim/host_tutorial.c`,
   `base/host_tutorial_plan.h`): the host's tutorial scripts (PolyKybdHost
   `services/tutorials`) put two lines on the status displays, darken every key outside
   a set of keys (the spotlight), light them again with the board-reveal wave, and ask
@@ -572,7 +572,7 @@ reading before you change either one.
     sends them only from v36. A page not below its count, or a page without a count,
     is NACKed with the rest of the report, before anything changes.
 
-  **v37** adds cmd `50`, the **hardware IDs** of both halves (`drivers/hw_uid.h`): the
+  **v37** adds cmd `50`, the **hardware IDs** of both halves (`lib/drivers/hw_uid.h`): the
   64-bit unique ID of each half's QSPI flash chip (RUID command `0x4B`). The host
   hashes them for the telemetry device count. Reply `P\x32.`, then `data[3]` flags
   (bit 0: `data[4..11]` valid, bit 1: `data[12..19]` valid), `data[4..11]` the ID of
@@ -671,7 +671,7 @@ reading before you change either one.
   inside `#ifdef POLYKYBD_LOOP_PROFILE`, so a normal build **NACKs** it — that
   NACK is the deliberate capability signal telling a host "no profiler here"
   instead of handing back a page of zeros. Consumed by the rig's automated perf
-  run; see `keyboards/polykybd/profiling/README.md`.
+  run; see `keyboards/polykybd/dev/profiling/README.md`.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`, protocol 11+: modifier+segment packed into one header byte), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)

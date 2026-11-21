@@ -1,6 +1,6 @@
 ---
 paths:
-  - "keyboards/polykybd/drivers/disp_array.c"
+  - "keyboards/polykybd/lib/drivers/disp_array.c"
   - "keyboards/polykybd/base/font_lookup.c"
   - "keyboards/polykybd/base/legend_plan.c"
 ---
@@ -19,6 +19,6 @@ Notes: `docs/display/legend-rendering.md` · `docs/display/legend-layout.md` · 
 - ⚠️ **Keep every glyph of one legend in ONE font** — the baseline align is
   `font->yAdvance - fonts[0]->yAdvance`, so two faces sit on two baselines.
 - ⚠️ **The resident C1 icon band `0x80–0x9F` is FULL, and `0xA0+` is not an option.**
-  `tools/check_icon_slots.py` is the only thing that can answer "is this slot free?".
+  `dev/tools/check_icon_slots.py` is the only thing that can answer "is this slot free?".
 - ⚠️ **The display grid is NOT a rectangle and two physical keys have no OLED** — gate on
   `key_has_display(r,c)`; a bounds check is not a substitute.

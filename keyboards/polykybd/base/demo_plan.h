@@ -12,7 +12,7 @@
 // Deliberately free of quantum.h, the display stack and the keymap: the arithmetic here
 // (where the cycle is, which character is down, when Shift is held) is the part a unit
 // test can reach (`make test:polykybd_demo_plan`). The plan speaks in ABSTRACT views and
-// looks; anim/demo_mode.c maps them to layers, languages and glyph scripts. Same seam as
+// looks; features/anim/demo_mode.c maps them to layers, languages and glyph scripts. Same seam as
 // base/tutorial_plan.c.
 //
 // ⚠️ Both halves run this. The master chooses the segment and syncs its index; each half

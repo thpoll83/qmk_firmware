@@ -16,7 +16,7 @@ import argparse
 import os
 import sys
 
-# Resolve tools/ from THIS file, not cwd, so the script runs from anywhere. The qmk
+# Resolve dev/tools/ from THIS file, not cwd, so the script runs from anywhere. The qmk
 # root is DERIVED by walking up for keyboards/polykybd rather than counted as a `../`
 # chain: a counted chain encodes how deeply this skill dir sits and breaks silently
 # the day it moves, which is what happened when these skills were relocated out of
@@ -34,8 +34,8 @@ def _qmk_root(start):
 
 
 _QMK = _qmk_root(_HERE)
-_TOOLS = os.path.join(_QMK, "keyboards", "polykybd", "tools") if _QMK else ""
-sys.path.insert(0, _TOOLS if os.path.isdir(_TOOLS) else os.path.join(os.getcwd(), "tools"))
+_TOOLS = os.path.join(_QMK, "keyboards", "polykybd", "dev", "tools") if _QMK else ""
+sys.path.insert(0, _TOOLS if os.path.isdir(_TOOLS) else os.path.join(os.getcwd(), "dev", "tools"))
 
 # Draw helpers worth attributing; missing names are skipped per module.
 WRAPPED = ("draw", "draw_bitmap", "draw_glyph", "draw_glyph_half", "draw_glyph_center",

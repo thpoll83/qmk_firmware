@@ -2,7 +2,7 @@
 
 The four idle styles — PULSE, JITTER, IDDQD and EDEN — and the procedural
 per-keycap animation two of them drive. Moved out of `CLAUDE.md` on 2026-09-10:
-~16 KB read while you are in `kdisp_idle()`, `anim/startup_anim.c` or the idle
+~16 KB read while you are in `kdisp_idle()`, `features/anim/startup_anim.c` or the idle
 paths of `poly_keymap.c`.
 
 ⚠️ **The looping idle frame is TIME-SLICED and must never be rendered as one
@@ -96,7 +96,7 @@ while they run (see "Eden startup animation & idle screensaver" below for EDEN):
 change generalise well beyond this setting:
 - ⚠️ **EDEN on split42 would have been an anti-burn-in setting that does NOTHING —
   and the enum's own comment claimed it "behaves like PULSE".** It does not.
-  `anim/startup_anim.c` is `#if defined(KEYBOARD_polykybd_split72)` with no-op
+  `features/anim/startup_anim.c` is `#if defined(KEYBOARD_polykybd_split72)` with no-op
   stubs, *and* every other idle painter stands down for EDEN by design:
   `kdisp_idle()` returns immediately, the engage branch holds contrast at
   `EDEN_IDLE_BRIGHTNESS` instead of computing a pulse, and `update_displays()`
@@ -267,7 +267,7 @@ change generalise well beyond this setting:
 
 ---
 
-## Eden startup animation & idle screensaver (`anim/startup_anim.*`, `poly_keymap.c`)
+## Eden startup animation & idle screensaver (`features/anim/startup_anim.*`, `poly_keymap.c`)
 A **fully procedural** (no framebuffer) per-keycap comet-field animation that
 converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
 - **One-shot intro** — `startup_anim_start()` (`s_loop == false`): runs to black
@@ -275,7 +275,7 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
   (REPLAY_ANIM). ⚠️ **cmd 31 is NOT protocol-gated / bumps NO `PROTOCOL_VERSION`**
   — it's dispatched independently in `hid_com.c` case 31, like the fontpack cmds.
   There is deliberately **no boot auto-play yet** (see the TODO in
-  `anim/startup_anim.h`: play the intro after the boot splash with a fade-in).
+  `features/anim/startup_anim.h`: play the intro after the boot splash with a fade-in).
 - **Looping screensaver** — `IDLE_STYLE_EDEN` (3): `startup_anim_start_loop(contrast)`
   holds the opening comet field open forever at the idle brightness, no letters/
   converge/fade. `eden_idle_tick()` in `poly_keymap.c` drives it; it is a **no-op
@@ -410,9 +410,9 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
   off the same `epoch` as the drift, because the scanline gate is on ABSOLUTE buffer
   y and a fixed phase would light the same panel rows forever; see the plotter-mode
   note in the per-keycap rendering gotchas.
-- **split72-only.** `anim/startup_anim.c` gates on
+- **split72-only.** `features/anim/startup_anim.c` gates on
   `#if defined(KEYBOARD_polykybd_split72)` (else no-op stubs) because it needs the
-  generated per-board geometry header `anim/startup_anim_geom.h` (key OLED
+  generated per-board geometry header `features/anim/startup_anim_geom.h` (key OLED
   positions/rotations + splash-letter targets), produced by
   `PolyKybdHost/tools/startup_anim_demo.py --emit-geom … --kle …`. **The recipe to
   add split42 is `docs/design/split42-eden.md`** (author a split42 KLE + splash plan,

@@ -11,7 +11,7 @@ flash LMAs); entry/arena offsets come from the .elf symbol table. The CRC is
 plain zlib crc32 == the firmware's crc32_1byte with seed 0.
 
 The emitted pack is UNSIGNED; releases append the 64-byte Ed25519 trailer with
-tools/sign_doompack.py (FW-9) — FW_REQUIRE_SIGNATURE firmware refuses a pack
+dev/tools/sign_doompack.py (FW-9) — FW_REQUIRE_SIGNATURE firmware refuses a pack
 without it.
 """
 import argparse

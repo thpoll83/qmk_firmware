@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "status_oled.h"
 #include "keys_com/layer_names.h"
-#include "display/oled_helper.h"
+#include "lib/display/oled_helper.h"
 
 #include "split42.h"
-#include "split_link/bridge_helper.h"
-#include "system/state.h"
-#include "split_link/side.h"
+#include "lib/split_link/bridge_helper.h"
+#include "lib/system/state.h"
+#include "lib/split_link/side.h"
 #include "../base/com.h"
-#include "drivers/disp_array.h"
+#include "lib/drivers/disp_array.h"
 #include "../base/glyph_meta.h"
 #include "../base/text_helper.h"
 #include "fonts/NotoSans_Medium_Base_8pt.h"
@@ -32,7 +32,7 @@ extern const GFXfont NotoSans_Regular_Nano_10px7b;
 // Status-OLED chrome (layer/lock icons, arrows) lives in the resident font set,
 // which sits at the front of the runtime g_all_fonts[] table.
 #include "base/fontpack.h"
-#include "drivers/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
+#include "lib/drivers/fw_staging.h"  // fw_staging_active_target/image_size/next_offset, FW_TARGET_*
 #include "keys_com/poly_keymap.h"
 
 // Role icons (usb_status_bitmap / link_status_bitmap) are shared with split72 and
@@ -46,7 +46,7 @@ extern const GFXfont NotoSans_Regular_Nano_10px7b;
  * 32x128 portrait space and software-rotate every lit pixel into the physical
  * 128x32 page buffer (pset() below). split42 has no RGB, so both halves share the
  * top chrome; the middle band differs by physical side (see the layout comment in
- * oled_update_buffer). Design/preview: tools/status_oled42_preview.py mirrors this
+ * oled_update_buffer). Design/preview: dev/tools/status_oled42_preview.py mirrors this
  * (--diag for the clip check).
  *
  *   logical portrait (both halves)          left side        right side

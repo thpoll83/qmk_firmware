@@ -12,7 +12,7 @@
 #include "report.h"
 
 #include "poly_macro.h"
-#include "system/state.h"
+#include "lib/system/state.h"
 #include "base/update.h"
 
 // The report shapes this file diffs are QMK's, and base/macro_record.c takes plain

@@ -7,7 +7,7 @@ description: >
   hint for Win/Cmd/Super+X", "change the <name> icon", "make the lines thicker /
   move them up", "try variations of the network icon", or "remove a hint". Covers
   drawing in the style-D grammar, before/after sheets, regenerating
-  PolyHintIcons and the named_glyphs.h macros, wiring hints/os_hints.c and its
+  PolyHintIcons and the named_glyphs.h macros, wiring features/hints/os_hints.c and its
   tests, reshipping the symbol font-pack bundle, and handing the tester a .bin,
   the .plyf and the flash command. NOT for app shortcuts like Ctrl+C or F2 (those
   belong to the host app overlays: generate-app-overlays), full keyboard
@@ -21,9 +21,9 @@ first. It holds the style-D rules and the reason behind every icon's current sha
 and most change requests were already decided there once.
 
 Every hint is ONE glyph of the font `PolyHintIcons` (U+100100..), drawn by
-`tools/hint_icons_stage.py`, written by `tools/hint_icons.py` to
+`dev/tools/hint_icons_stage.py`, written by `dev/tools/hint_icons.py` to
 `fonts/hint_icons.h`, and shipped in the `symbol` font-pack bundle, NOT in the
-firmware image. `hints/os_hints.c` returns the `ICON_HINT_*` macro for a chord.
+firmware image. `features/hints/os_hints.c` returns the `ICON_HINT_*` macro for a chord.
 
 All paths below are relative to `keyboards/polykybd/` unless they start with a repo
 name.
@@ -40,7 +40,7 @@ name.
 
 ## 1. Draw (or retouch) the icon
 
-In `tools/hint_icons_stage.py`, an icon is a function on the 34×34 grid:
+In `dev/tools/hint_icons_stage.py`, an icon is a function on the 34×34 grid:
 
 ```python
 @icon("clip_history")
@@ -77,22 +77,22 @@ python3 -B $SK/compare_sheet.py /tmp/cmp.png --base <rev> clip_history emoji
 12× with row numbers, before and after side by side. Send it to the maintainer.
 For "give me variations", draw each variant as its own `@icon` name in a scratch
 copy and render them on one sheet; never rewrite-and-reload one module (see
-Pitfalls). A whole-set overview at 4×: `python3 tools/hint_icons.py --sheet /tmp/all.png --style d`.
+Pitfalls). A whole-set overview at 4×: `python3 dev/tools/hint_icons.py --sheet /tmp/all.png --style d`.
 
 ## 3. Regenerate and check
 
 ```bash
 cd keyboards/polykybd
-python3 tools/hint_icons.py                # rewrite fonts/hint_icons.h (keeps style d)
-python3 tools/hint_icons.py --macros       # only when names or slots changed:
+python3 dev/tools/hint_icons.py                # rewrite fonts/hint_icons.h (keeps style d)
+python3 dev/tools/hint_icons.py --macros       # only when names or slots changed:
                                            #   paste into lang/named_glyphs.h's ICON_HINT block
-python3 tools/hint_icons.py --check        # header + macro block both current
-python3 tools/check_icon_slots.py          # no macro between the two icon fonts
+python3 dev/tools/hint_icons.py --check        # header + macro block both current
+python3 dev/tools/check_icon_slots.py          # no macro between the two icon fonts
 ```
 
 ## 4. Wire a new chord (skip for a retouch)
 
-- Return the macro from the right OS branch of `hints/os_hints.c`, with a trailing
+- Return the macro from the right OS branch of `features/hints/os_hints.c`, with a trailing
   comment naming the chord, like its neighbours.
 - **The extraction test will refuse a NEW chord.**
   `OsHintsExtraction.ShowsAHintForExactlyThePreExtractionChords` compares every

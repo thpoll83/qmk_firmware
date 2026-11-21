@@ -5,7 +5,7 @@
 
 #include QMK_KEYBOARD_H
 
-#include "split_link/side.h"
+#include "lib/split_link/side.h"
 #include "quantum/keymap_introspection.h"
 
 enum key_split_pos get_split_matrix_pos(uint16_t keycode, uint8_t layer, uint8_t* row, uint8_t* col, bool prefer_rc_left) {

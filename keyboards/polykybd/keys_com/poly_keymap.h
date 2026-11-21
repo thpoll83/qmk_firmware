@@ -24,8 +24,8 @@
 #include QMK_KEYBOARD_H
 
 #include "base/update.h" // enum refresh_mode
-#include "drivers/fw_staging.h" // fw_apply_verdict_t
-#include "system/state.h"           // poly_sync_t
+#include "lib/drivers/fw_staging.h" // fw_apply_verdict_t
+#include "lib/system/state.h"           // poly_sync_t
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -64,7 +64,7 @@ uint8_t to_brightness(uint8_t b);
 void reset_idle_jitter(void);
 
 // Erases the drifting idle legend for one keycap so the Eden screensaver can paint
-// over it. Called by anim/startup_anim.c.
+// over it. Called by features/anim/startup_anim.c.
 bool eden_idle_erase_legend(uint8_t disp_idx);
 
 // Draws the boot splash (progressively; see boot_diag.c splash_progress()).

@@ -969,7 +969,7 @@ this in one pass; whatever was actually run, it was not that.
 ⚠️ **Keep the failure mode, not just the fix: a stated measurement is only worth what
 the command that produced it is worth, and prose cannot carry that.** The repo already
 had the rule (`docs/display/font-pack.md`: *"never `0xA0+`"*) **and** a script to check it
-(`tools/check_icon_slots.py`) — but the script printed a caution and exited 0, so running
+(`dev/tools/check_icon_slots.py`) — but the script printed a caution and exited 0, so running
 it felt like verification and proved nothing. It exits 1 now. The two marks live on the
 **shoulders** 0x7F (DEL) and 0xA0 (NBSP), the last two codepoints adjacent to a full C1
 block that no other resident or pack font covers and that appear in no legend.
@@ -1196,7 +1196,7 @@ arm lets the **else** fire and paint the built-in hints over the lesson instead,
 the identical trap the Intl layer already documents one line above. A lesson's keycaps are
 the payload; an app overlay or a shortcut hint over them teaches the wrong thing.
 
-## 15. The FOCUS RIPPLE (built — `anim/focus_ring.h`)
+## 15. The FOCUS RIPPLE (built — `features/anim/focus_ring.h`)
 
 *"It would be great to have the circular focus also in normal operation to point out keys
 — if we support that we can maybe also do step 1 without the special mode?"*
@@ -1409,7 +1409,7 @@ Three things worth keeping:
   in `invert_display()` and again in `tutorial_slot_of()`. It is now
   `key_display_index()`, and both callers go through it — the same shape as every other
   "guard that enumerates its siblings" this repo has been caught by.
-- **It was settled by replaying the walk, not by reading it.** `tools/check_disp_index.py`
+- **It was settled by replaying the walk, not by reading it.** `dev/tools/check_disp_index.py`
   simulates the walking-zero panel walk against the real keymap and `keyboard.json` and
   compares every key: **0 mismatches** with the helper, **28** with the old expression,
   all on the right half. Reading the two functions and agreeing that they agreed is what
@@ -1489,7 +1489,7 @@ a second include is a link error on `IconsBitmaps`/`IconsGlyphs`/`HelperGlyphs`.
 `extern const GFXfont IconsFont;` is how every other font in `oled_helper.c` is reached.
 
 Verified by rendering rather than by reading: a model of `oled_tutorial_screen()` driven
-by `tools/status_oled_preview.py`'s own font parser, over all five screens, **0 pixels
+by `dev/tools/status_oled_preview.py`'s own font parser, over all five screens, **0 pixels
 outside the 128×64 panel**.
 
 ## Round 20 — the review round, and two rules this repo had already written down
@@ -1502,7 +1502,7 @@ which is the part that matters.
   `IconsFont` at `0xA0`/`0xA1`, and `IconsFont` is `g_all_fonts[0]` — first match wins,
   so `INVERTED_EMARK` (U+00A1, used by ~20 `es-*` layouts) resolved to a lightning bolt.
   `docs/display/font-pack.md` already carried the trap *and* the reason the C1 band stops at `0x9F`,
-  and `tools/check_icon_slots.py` already existed to answer "is this slot free?".
+  and `dev/tools/check_icon_slots.py` already existed to answer "is this slot free?".
   **The gate printed the caution and exited 0**, so running it proved nothing. It
   enforces now, and the two marks live on the shoulders `0x7F`/`0xA0` — measured to be
   covered by no other font and used in no legend.
@@ -1730,10 +1730,10 @@ its last two units on the last key (JAPANE|SE, ΕΛΛΗΝΙ|ΚΑ).
   renderer draws one glyph at a time with no shaper, so Arabic's joins and Devanagari's
   vowel signs and conjuncts fall apart, and 日本語 / 한국어 have no glyphs in the keycap
   fonts at all (only kana and conjoining jamo). Those four are PRE-RENDERED:
-  `tools/gen_tutorial_names.py` shapes each with HarfBuzz from the Noto fonts listed in
+  `dev/tools/gen_tutorial_names.py` shapes each with HarfBuzz from the Noto fonts listed in
   `fonts/noto-fonts.yaml` (weight 500, 1 bit), cuts it into 72x40 tiles on one common
   baseline — one grapheme cluster per key for Hindi/Japanese/Korean, key-width pieces cut
-  at glyph boundaries for Arabic — and writes `anim/tutorial_names_gen.h` (3240 bytes).
+  at glyph boundaries for Arabic — and writes `features/anim/tutorial_names_gen.h` (3240 bytes).
   The tiles are in VISUAL order, so Arabic reads right to left across its keys with no
   special case. Tiles need no font pack, so these names show on a board that has none.
 - **Long names use two rows.** Up to 7 units sit on display row 2; more are split over
@@ -1742,7 +1742,7 @@ its last two units on the last key (JAPANE|SE, ΕΛΛΗΝΙ|ΚΑ).
 - ⚠️ `tutorial_draw_key_letter()` looked every single character up at 0xF0000 + cp (the
   latinbig relocation); for a non-Latin codepoint that is an unrelated glyph — にほ drew
   as "k{". Only A–Z take the larger tier now.
-- `tools/tutorial_name_sheet.py` renders every item's name screen as the keys draw it,
+- `dev/tools/tutorial_name_sheet.py` renders every item's name screen as the keys draw it,
   reading the pre-rendered tiles out of the generated header. Its item list is a replica
   of `s_tut_preview_all[]` — change both.
 
@@ -1964,7 +1964,7 @@ Hardware feedback:
 
 ## Round 34 — the cascade leaves the tutorial, a smaller menu pointer, vowels
 
-- **The menu cascade is a keyboard feature now** (`anim/menu_cascade.c`), not a
+- **The menu cascade is a keyboard feature now** (`features/anim/menu_cascade.c`), not a
   tutorial one. Whenever the language or emoji layer shows new items (the layer is
   entered, a tab or the page key is pressed), the three content rows appear key by key
   and fade up: 1.44 s first to last, 288 ms per key (20 % faster than round 33). The tab
@@ -2011,7 +2011,7 @@ Hardware feedback:
   undrawn keys were never on the panel, and the diffing renderer had no reason to
   draw them, so a slave that saw the next phase a sync early would keep them dark.
 - While a language layout is shown (`TUT_LANG_SHOW`), keys twinkle
-  (`anim/lang_sparkle.c`): up to three at a time per half, a new one every 150 ms,
+  (`features/anim/lang_sparkle.c`): up to three at a time per half, a new one every 150 ms,
   each a dot, a cross, a four-point star and back over 480 ms, with a black halo so
   it reads over ink. Each half picks its own keys; nothing is synced.
 - Each preview item's name (Latin on one half, native on the other) and the words of
@@ -2026,8 +2026,8 @@ Hardware feedback:
   the rest.** "Lang" at matrix (4,7) and "PgDn" at (9,0) sit on the keyboard's fourth
   row (keyboard.json `y`=3) but on the fifth display row, so both were treated as the
   bottom row and drawn at once while their row faded in (hardware). The cascade now
-  reads each panel's physical row from `anim/menu_cascade_rows.h`, generated from
-  `split72/keyboard.json` by `tools/gen_cascade_rows.py` (`--check` says whether it is
+  reads each panel's physical row from `features/anim/menu_cascade_rows.h`, generated from
+  `split72/keyboard.json` by `dev/tools/gen_cascade_rows.py` (`--check` says whether it is
   stale). The generator takes the right-half column fold from `check_disp_index.py`'s
   reading of `key_display_index()`, so the two cannot disagree about a key's panel.
   Both Shifts sit on physical row 3, so the reveal now spans rows 1..3.
@@ -2057,7 +2057,7 @@ Hardware feedback:
   `kdisp_window_is_blank()`; a blank key is finished as it stands, with no frames.
 - **25 % faster again:** 756 ms first to last, 152 ms per key (dot to 50 ms, half size to
   101 ms). The two zoom frames make a key recognisable sooner, so the spread can shrink.
-- **The key LEDs** (`anim/tutorial_rgb.c`), painted from `rgb_matrix_indicators_kb()`:
+- **The key LEDs** (`features/anim/tutorial_rgb.c`), painted from `rgb_matrix_indicators_kb()`:
   - Eden opens on the stock left-to-right rainbow, which fades out while POLYKYBD is
     first written (tt 130..165 of the intro, the letters' dither-in).
   - Any focus ring (a key being pointed at, the board reveal, a language wipe) lights
@@ -2234,7 +2234,7 @@ underneath. When `tutorial_active()` drops, the next pass writes the real langua
 The key tour never selects a language (Lang key, the category tabs, `KC_BASE`), so the
 park cannot overwrite a choice the lesson asked for.
 
-## The first-run intro and tutorial (`anim/tutorial.c`, `base/tutorial_plan.c`)
+## The first-run intro and tutorial (`features/anim/tutorial.c`, `base/tutorial_plan.c`)
 
 _Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
 

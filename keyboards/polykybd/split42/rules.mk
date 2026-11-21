@@ -22,7 +22,7 @@ WS2812_DRIVER = vendor
 # over the RGB_MATRIX_* effect enums to name effects, which now exist again with
 # RGB re-enabled above).
 QUANTUM_LIB_SRC += spi_master.c
-SRC += status_oled.c base/update.c drivers/e2prom.c base/com.c base/text_helper.c drivers/helpers.c drivers/disp_array.c drivers/shift_reg.c drivers/spi_helper.c base/overlay.c lang/lang_lut.c drivers/fw_staging.c base/fontpack.c
+SRC += status_oled.c base/update.c lib/drivers/e2prom.c base/com.c base/text_helper.c lib/drivers/helpers.c lib/drivers/disp_array.c lib/drivers/shift_reg.c lib/drivers/spi_helper.c base/overlay.c lang/lang_lut.c lib/drivers/fw_staging.c base/fontpack.c
 
 # Pointing device: REMOVED — no trackpad exists on split42; it was only ever a
 # split-link workaround. The real requirement is the shmem RPC-guard pad below

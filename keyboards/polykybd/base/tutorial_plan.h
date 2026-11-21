@@ -6,7 +6,7 @@
 // Deliberately free of quantum.h, the display stack and EEPROM: the arithmetic here
 // (phase transitions, the fade curve, the ripple envelope, letter selection) is the
 // part with a bug history and the only part reachable from a unit test. The firmware
-// binding lives in anim/tutorial.c. Same seam as base/legend_plan.c and
+// binding lives in features/anim/tutorial.c. Same seam as base/legend_plan.c and
 // base/macro_decode.c.
 #pragma once
 #include <stdbool.h>
@@ -236,7 +236,7 @@ typedef enum {
 // exist. **A mode that wants the board to behave normally must let the board behave
 // normally**; it annotates, it does not re-draw.
 // ⚠️ NOTHING is exclusive any more. The ripple became a general FOCUS service that
-// composites over the board's own legends (anim/focus_ring.h), which was the last thing
+// composites over the board's own legends (features/anim/focus_ring.h), which was the last thing
 // the normal renderer could not express — so chapter 1 is an ordinary chapter too, with
 // a lit set of exactly one key. The predicate is kept rather than deleted because it is
 // the seam: if a future chapter ever genuinely needs the panels to itself, it says so

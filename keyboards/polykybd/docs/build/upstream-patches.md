@@ -59,7 +59,7 @@ keyboard. Without the define every file compiles exactly as upstream's.
 What remains is one external IN jack (0x02) feeding the embedded OUT jack (0x03),
 carried by the IN endpoint. That is a valid USB-MIDI 1.0 topology.
 
-Measured on split72 (local gcc 13.2, `tools/ram_report.py`): RAM headroom 9052 B
+Measured on split72 (local gcc 13.2, `dev/tools/ram_report.py`): RAM headroom 9052 B
 without MIDI, 7868 B with QMK's default MIDI, 8604 B with `MIDI_SEND_ONLY` and
 `MIDI_STREAM_IN_CAPACITY 2`. MIDI costs 448 B instead of 1184 B. The decoded
 configuration descriptor walks exactly to its `wTotalLength` and the MIDI
@@ -134,7 +134,7 @@ Two changes to `raw_hid_task` for backpressure during overlay transfers:
    turn between two raw HID receives, even when the OUT queue is full.
 
 The strong override of `raw_hid_pre_receive_kb` lives in
-`keyboards/polykybd/display/multicore_exec.c` and calls `core1_is_busy()`.
+`keyboards/polykybd/lib/display/multicore_exec.c` and calls `core1_is_busy()`.
 
 If a future QMK upstream changes the signature or semantics of `raw_hid_task`,
 re-apply by hand: keep the weak hook, keep the `if`-not-`while`.
@@ -153,7 +153,7 @@ off the flash bus during it:
 Upstream masks only core0's interrupts. A core1 fetching from XIP while the write has
 the QSPI out of XIP mode never completes the fetch: core1 stops for good, or the bus
 stalls and the half resets by watchdog (field 2026-10-12). The strong overrides live in
-`keyboards/polykybd/display/multicore_exec.c`: the quiesce hook sends core1 a PARK word and
+`keyboards/polykybd/lib/display/multicore_exec.c`: the quiesce hook sends core1 a PARK word and
 waits for core1 to acknowledge it from its RAM wait loop, which it does once its
 earlier work (Eden keycap jobs, RLE fragments) is done. Without an acknowledgement it
 forces core1 off and drops its lost work before interrupts return; the resume hook
@@ -258,11 +258,11 @@ own automatic VREG raise for `SYS_CLK_MHZ=200` and does not compile
      clocks_init();
 ```
 
-## ChibiOS-Contrib RP2040 USB driver (vendored, `chibios_overrides/`)
+## ChibiOS-Contrib RP2040 USB driver (vendored, `lib/chibios_overrides/`)
 
 **Not a patch to a tracked file — a COPY.** `lib/chibios-contrib` is a pinned
 submodule of `qmk/ChibiOS-Contrib`, so it cannot carry a local change. Instead
-`keyboards/polykybd/chibios_overrides/` holds:
+`keyboards/polykybd/lib/chibios_overrides/` holds:
 
 - `platform.mk` — Contrib's `os/hal/ports/RP/RP2040/platform.mk` with ONE line
   changed: the USBDv1 `driver.mk` include points at the copy below.
@@ -287,9 +287,9 @@ a `KEYMAP_LAYERS_FL_MERGED` bump — QMK connects the pull-up in
 post_init rewrites the keymap.
 
 **Diagnostics (`-DPOLYKYBD_USB_RACE_DIAG`, set by `-e POLYKYBD_USB_STRESS=yes`):**
-`poly_usb_diag.h` counters in the ISR, read by `diag/usb_stress.c`, which also
+`poly_usb_diag.h` counters in the ISR, read by `dev/diag/usb_stress.c`, which also
 masks interrupts in erase-sized windows during enumeration. The rig drives it
-with `tools/hil_probes/usb_reset_race.py`. A normal build contains none of it.
+with `dev/tools/hil_probes/usb_reset_race.py`. A normal build contains none of it.
 
 ⚠️ **`tier: debug` builds the NORMAL HIL images**, and `qmk-test.yml` has no input
 for extra build flags, so the probe on its own finds no `usbdiag:` line and stops
@@ -320,16 +320,16 @@ bf8fde8 removed it for the B side, and 527bab7 removed the rest.
 
 **When Contrib or QMK picks the fix up** (check
 `grep -n "USB_INTS_BUS_RESET" -A3 lib/chibios-contrib/os/hal/ports/RP/LLD/USBDv1/hal_usb_lld.c`
-— the reset branch must come first): delete `chibios_overrides/` and the
+— the reset branch must come first): delete `lib/chibios_overrides/` and the
 `PLATFORM_MK` block in `rules.mk`. Until then, **after every submodule bump, diff
 the copy against the new Contrib file** and carry any upstream change across —
 the copy does not follow the submodule on its own:
 
 ```sh
 diff -ru lib/chibios-contrib/os/hal/ports/RP/LLD/USBDv1 \
-         keyboards/polykybd/chibios_overrides/USBDv1
+         keyboards/polykybd/lib/chibios_overrides/USBDv1
 diff lib/chibios-contrib/os/hal/ports/RP/RP2040/platform.mk \
-     keyboards/polykybd/chibios_overrides/platform.mk
+     keyboards/polykybd/lib/chibios_overrides/platform.mk
 ```
 
 Expected differences, and nothing else: `hal_usb_lld.c` carries the reordered

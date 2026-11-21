@@ -10,8 +10,8 @@
 #include "send_string.h"
 
 #include "base/macro_decode.h"
-#include "split_link/split_sync.h"      // POLY_KEYMAP_OP_MACRO_LABEL, sync_succeeded()
-#include "split_link/bridge_helper.h"   // send_to_bridge()
+#include "lib/split_link/split_sync.h"      // POLY_KEYMAP_OP_MACRO_LABEL, sync_succeeded()
+#include "lib/split_link/bridge_helper.h"   // send_to_bridge()
 #include <transactions.h>    // USER_SYNC_DYNAMIC_KEYMAP_DATA
 
 // The label array must not overlap the bodies, and both must stay inside the region

@@ -371,9 +371,9 @@ category and composes `gfx_used_fonts.h`; `--check` flags stale headers. Full do
   bundle: no reship, no `content_version` bump) — and a codepoint **inside** an existing
   span costs only its bitmap, since the record already exists.
 - ⚠️ **Every codepoint a legend draws must be in a font, and
-  `tools/check_glyph_coverage.py` is what says so** — it walks all four LUT columns of
+  `dev/tools/check_glyph_coverage.py` is what says so** — it walks all four LUT columns of
   all 160 layouts, skipping display-list ops the way `bbox_walk()` does, and exits 1 on
-  a gap. CI runs it through `tools/tests` (`RealTreeTest`). A gap used to HardFault the
+  a gap. CI runs it through `dev/tools/tests` (`RealTreeTest`). A gap used to HardFault the
   master: the missing-glyph fallback read `'!'` from `g_all_fonts[0]`, which is
   `IconsFont` at U+100000, and the glyph index underflowed (hy-AM's U+2014 Shift legend,
   2026-10-01, twice in demo mode; #329). It now draws `'!'` from the font that has one,

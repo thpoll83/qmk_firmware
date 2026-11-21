@@ -11,7 +11,7 @@
 #include "split72/split72.h"
 #include "keys_com/layers.h"
 #include "keys_com/keycode_helper.h"
-#include "emoji/emoji_layer.h"
+#include "features/emoji/emoji_layer.h"
 #include "keys_com/poly_combos_keymap.h"   // QMK needs the tables; the real ones are runtime (cmd 48)
 #include "keys_com/lang_layer.h"
 

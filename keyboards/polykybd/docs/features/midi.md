@@ -12,7 +12,7 @@ into a small piano with live note names on the keycaps. It is reached with `TO(_
 | send-only interface | QMK core patch, `docs/build/upstream-patches.md` → `MIDI_SEND_ONLY` |
 | layer | `keys_com/layers.h` (`_ML` = stored layer 8), both keymaps, `layer_names.c` ("MIDI") |
 | legends | `midi_legend.c` (pure, unit-tested: `make test:polykybd_midi_legend`) |
-| symbols | `tools/midi_glyphs.py` → `fonts/gfx_icons.h` U+100029..U+100049 and the `ICON_MIDI_*` macros in `lang/named_glyphs.h` |
+| symbols | `dev/tools/midi_glyphs.py` → `fonts/gfx_icons.h` U+100029..U+100049 and the `ICON_MIDI_*` macros in `lang/named_glyphs.h` |
 | sync | `poly_sync_t.midi_cfg`, packed by `midi_cfg_pack()` |
 
 - **MIDI is off in the DOOM monolith** (`POLYKYBD_DOOM=yes` without `POLYKYBD_DOOM_PACK`).
@@ -49,7 +49,7 @@ draws QMK's start values.
 
 Each symbol is an `IconsFont` glyph that carries its own position on the keycap
 (xOffset, yOffset) and has xAdvance 0. A legend draws the symbol first and its text
-after it. Change a symbol in `tools/midi_glyphs.py` and rerun it; `--check` fails when
+after it. Change a symbol in `dev/tools/midi_glyphs.py` and rerun it; `--check` fails when
 a header is out of date and `--sheet out.png` shows every glyph on a keycap. Dynamics,
 flat, sharp and the text marks are rendered from GNU FreeFont FreeSerif
 (GPLv3 with the font exception, Debian `fonts-freefont-ttf`); the staff, hairpins,
@@ -62,7 +62,7 @@ for all 144 keycodes at three settings with `PolyKybdHost/tools/oled_preview.py`
 
 ## Cost
 
-Measured on split72 with local gcc 13.2 (`tools/ram_report.py`), against the build
+Measured on split72 with local gcc 13.2 (`dev/tools/ram_report.py`), against the build
 without MIDI:
 
 | flavour | RAM headroom | flash |

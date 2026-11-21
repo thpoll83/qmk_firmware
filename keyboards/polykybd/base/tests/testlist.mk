@@ -38,3 +38,4 @@ TEST_LIST += polykybd_attn_guide
 TEST_LIST += polykybd_host_tutorial_plan
 TEST_LIST += polykybd_idle_style
 TEST_LIST += polykybd_emoji_dict
+TEST_LIST += polykybd_host_unicode_mode

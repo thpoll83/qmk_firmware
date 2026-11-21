@@ -51,6 +51,7 @@
 #include "system/poly_util.h"
 
 #include "base/com.h"
+#include "hid/mac_compose.h"   // mac_compose_set (protocol v38)
 #include "polymod_rle.h"
 #include "drivers/e2prom.h"
 #include "base/overlay.h"
@@ -7582,6 +7583,9 @@ bool display_wakeup(keyrecord_t* record) {
 // unicode_config.input_mode, so the keycaps would advertise a mode the keyboard
 // does not type in. Use set_unicode_input_mode() (see hid_com.c case 20).
 void unicode_input_mode_set_user(uint8_t unicode_mode) {
+    // Every mode change ends MacCompose; cmd 20 value 6 sets it again AFTER
+    // applying the macOS mode (hid_com.c).
+    mac_compose_set(false);
     access_local_state()->unicode_mode = unicode_mode;
     request_disp_refresh();
 }

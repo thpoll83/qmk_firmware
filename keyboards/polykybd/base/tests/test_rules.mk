@@ -141,6 +141,15 @@ polykybd_idle_timeout_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# host_unicode_mode.h is header-only and pure, like idle_timeout.h: the cmd 20 mode
+# values and the MacCompose flag (v38) are tested without a device.
+polykybd_host_unicode_mode_SRC := \
+	$(POLY_BASE_PATH)/tests/host_unicode_mode_tests.cpp
+
+polykybd_host_unicode_mode_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
 # tap_terms.h is header-only and pure, like idle_timeout.h: the cmd 44 ranges and
 # the biased EEPROM encoding are tested without a device.
 polykybd_tap_terms_SRC := \

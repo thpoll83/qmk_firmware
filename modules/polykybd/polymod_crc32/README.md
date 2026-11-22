@@ -32,8 +32,7 @@ pack loader.
 - The module defines no QMK hooks. Listing `polykybd/polymod_crc32` in `keyboard.json`
   only adds the source file to the build. Both split72 and split42 list it.
 - Tests: `make test:polymod_crc32` (this module), and several `base/tests` suites link
-  `polymod_crc32.c` too (`fw_up_verdict`, `polykybd_icon_lib`,
-  `polykybd_idle_poem_plan`, `polykybd_emoji_dict`).
+  `polymod_crc32.c` too (`fw_up_verdict`, `polykybd_icon_lib`, `polykybd_emoji_dict`).
 
 ## Important
 

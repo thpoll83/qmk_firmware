@@ -27,7 +27,9 @@ modules never include files from there, except `polymod_os_actions/tests`, which
   generates three weak functions per listed module (`<api>_<module>()`,
   `<api>_<module>_kb()`, `<api>_<module>_user()`) and one call per module in
   `<api>_modules()`. So every listed module costs flash, also a library module that
-  defines no hook (`polymod_crc32`, `polymod_rle`).
+  defines no hook (`polymod_crc32`, `polymod_rle`). Measured for `polymod_oled_i2c_diag`
+  (qmk_firmware#453): 456 B on split72 (16 hooks) and 368 B on split42 (14 hooks), no
+  RAM.
 - This fork is on module API 1.1.2. The available hooks are in
   `data/constants/module_hooks/*.hjson`.
 

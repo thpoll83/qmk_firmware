@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 
 extern "C" {
-#include "oled_i2c_diag.h"
+#include "polymod_oled_i2c_diag_log.h"
 }
 
 #include <string>

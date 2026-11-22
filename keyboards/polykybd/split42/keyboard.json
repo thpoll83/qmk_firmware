@@ -15,6 +15,7 @@
         "polykybd/polymod_crc32",
         "polykybd/polymod_ltr559",
         "polykybd/polymod_monocypher",
+        "polykybd/polymod_oled_i2c_diag",
         "polykybd/polymod_os_actions",
         "polykybd/polymod_prc",
         "polykybd/polymod_rle"

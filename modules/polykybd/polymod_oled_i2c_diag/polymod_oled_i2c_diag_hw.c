@@ -1,14 +1,15 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Status-OLED I2C writes with a diagnosis attached.
+// Status-OLED I2C writes with a diagnosis attached (community module
+// polymod_oled_i2c_diag, the hardware half).
 //
 // Overrides the QMK OLED driver's WEAK oled_send_cmd()/oled_send_data()
 // (drivers/oled/oled_driver.c), so no upstream file is patched. Each write is the
 // same i2c_transmit()/i2c_write_register() the driver would make. On a failure it
 // reads what the hardware can still tell us, retries once, and lets
-// base/oled_i2c_diag.c decide what to print; the wording and the rate limit live
-// there.
+// polymod_oled_i2c_diag_log.c decide what to print; the wording and the rate limit
+// live there.
 //
 // What the extra fields can tell apart:
 //   * timeout vs nack vs arb_lost: a NACK means the panel did not acknowledge (a
@@ -23,13 +24,26 @@
 //
 // ⚠️ This prints only on the half whose console reaches the host. A failure on the
 // slave half's status OLED is counted there and never seen.
-#include QMK_KEYBOARD_H
+#include "quantum.h"
 
-#if defined(OLED_ENABLE) && defined(OLED_TRANSPORT_I2C)
+// ChibiOS only: the error flags come from i2cGetErrors().
+#if defined(OLED_ENABLE) && defined(OLED_TRANSPORT_I2C) && defined(PROTOCOL_CHIBIOS)
 
 #    include <hal.h>
 #    include "i2c_master.h"
-#    include "base/oled_i2c_diag.h"
+#    include "polymod_oled_i2c_diag_log.h"
+
+// The same defaults as platforms/chibios/drivers/i2c_master.c, which keeps them
+// file-local. A keyboard that uses other pins sets these in its config.h.
+#    ifndef I2C_DRIVER
+#        define I2C_DRIVER I2CD1
+#    endif
+#    ifndef I2C1_SCL_PIN
+#        define I2C1_SCL_PIN B6
+#    endif
+#    ifndef I2C1_SDA_PIN
+#        define I2C1_SDA_PIN B7
+#    endif
 
 // Same values as drivers/oled/oled_driver.c, which keeps them file-local.
 #    define OLED_I2C_DATA_CONTROL 0x40

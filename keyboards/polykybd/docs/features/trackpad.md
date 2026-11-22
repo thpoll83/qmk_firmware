@@ -32,11 +32,12 @@ different causes, and each cost a hardware round because the arithmetic shared a
 function with the sensor. `make test:polymod_cirque_gestures` now replays taps, drags
 and dials built from measured pad numbers; it is mutation-checked.
 
-**It is the DEFAULT build.** `split72/rules.mk` sets `-DPOLYKYBD_CIRQUE_ABSOLUTE` unless
-`-e POLYKYBD_CIRQUE_RELATIVE=yes` opts out. That one switch also decides the gesture
-layer: the module takes the pad over only when `CIRQUE_PINNACLE_POSITION_MODE` is
-absolute, and in relative mode its adapter compiles to nothing. The relative flavour
-survives only as an A/B escape hatch against stock behaviour. The module header defines
+**It is the only build.** `split72/config.h` sets `CIRQUE_PINNACLE_POSITION_MODE` to
+absolute mode, the 4X gain and `CIRQUE_PINNACLE_CURVED_OVERLAY`, with no switches. The
+relative-mode escape hatch (`-e POLYKYBD_CIRQUE_RELATIVE=yes`), the gain switch
+(`POLYKYBD_CIRQUE_ATTEN`), `POLYKYBD_CIRQUE_NO_CURVED_OVERLAY` and the unused
+`POLYKYBD_CIRQUE_TRACE` were removed in 2026-11: no CI job, release or rig test built
+them. The module header defines
 `POLYMOD_CIRQUE_GESTURES_ACTIVE` when it takes the pad over (a Cirque Pinnacle in
 absolute mode). The adapter and the status OLED's pad view both test that one macro, so
 a build with another pointing driver compiles neither. The tunables and the reasoning behind each number live in
@@ -163,10 +164,8 @@ Three things then need fixing:
    `oled_pad_view_active()` is driven by `s_last_touch_ms`, which only moves on the
    half that has the pad.
 
-Rotation needs no work in the absolute flavour, which defines none — both
-`pointing_device_adjust_by_defines()` and its `_right` twin are identity there. In
-**relative** mode `POINTING_DEVICE_COMBINED` would additionally need
-`POINTING_DEVICE_ROTATION_90_RIGHT`.
+Rotation needs no work: the build defines none, so both
+`pointing_device_adjust_by_defines()` and its `_right` twin are identity.
 
 ### What cannot be settled from the code
 

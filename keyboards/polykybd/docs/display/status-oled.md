@@ -69,7 +69,7 @@ the ~6 ms chunks held Eden's core0 work back visibly on hardware, and ~3 ms chun
 not. Still unpulled: I2C Fast-Mode+ 1 MHz (`I2C1_CLOCK_SPEED`, above
 SSD1306 spec, and the bus may be shared — A/B on real hardware).
 
-### A failed I2C write: what it prints (`oled_i2c.c`, `base/oled_i2c_diag.c`)
+### A failed I2C write: what it prints (`polymod_oled_i2c_diag`)
 
 Stock QMK prints `oled_render offset command failed` (or `… data failed`) when a
 write does not land, drops the rest of that frame, and repaints it on the next one.
@@ -77,9 +77,11 @@ That line says neither why the write failed nor whether the panel came back. A f
 report (2026-10-02, firmware 1.5.0) showed one such line in ~7300 idle-screen frames
 and could not be taken further.
 
-`oled_i2c.c` overrides the driver's **weak** `oled_send_cmd()` / `oled_send_data()`,
-so no upstream file is patched. A failed write is retried once, and
-`base/oled_i2c_diag.c` (pure, `make test:polykybd_oled_i2c_diag`) prints:
+The community module `polymod_oled_i2c_diag` (`modules/polykybd/polymod_oled_i2c_diag/`,
+listed in both variants' `keyboard.json`) handles it. Its
+`polymod_oled_i2c_diag_hw.c` overrides the driver's **weak** `oled_send_cmd()` /
+`oled_send_data()`, so no upstream file is patched. A failed write is retried once, and
+`polymod_oled_i2c_diag_log.c` (pure, `make test:polymod_oled_i2c_diag`) prints:
 
 ```
 oled_i2c: cmd write failed #1 (nack, flags=0x00, sda=1 scl=1, len=7, 66 ms after the last good write) - retry ok

@@ -173,7 +173,7 @@ void emit_boot_banner(void) {
     // the define is what we ASKED for, this is what the PLL actually landed on.
     // VSEL is the core-voltage select (0xB = 1.10 V default, 0xC = 1.15 V), the
     // pairing that decides whether the clock below is a certified operating
-    // point — see POLYKYBD_SYS_CLK in rules.mk.
+    // point — see the system clock block in rules.mk.
     uprintf("   clk: sys=%luHz vreg_vsel=0x%X\n",
             (unsigned long)clock_get_hz(clk_sys),
             (unsigned int)((vreg_and_chip_reset_hw->vreg & VREG_AND_CHIP_RESET_VREG_VSEL_BITS) >> VREG_AND_CHIP_RESET_VREG_VSEL_LSB));

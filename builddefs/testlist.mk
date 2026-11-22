@@ -13,6 +13,7 @@ include modules/polykybd/polymod_core1/tests/testlist.mk
 include modules/polykybd/polymod_crc32/tests/testlist.mk
 include modules/polykybd/polymod_ltr559/tests/testlist.mk
 include modules/polykybd/polymod_monocypher/tests/testlist.mk
+include modules/polykybd/polymod_oled_i2c_diag/tests/testlist.mk
 include modules/polykybd/polymod_os_actions/tests/testlist.mk
 include modules/polykybd/polymod_prc/tests/testlist.mk
 include keyboards/polykybd/features/hints/tests/testlist.mk

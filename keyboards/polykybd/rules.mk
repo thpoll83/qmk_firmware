@@ -81,7 +81,7 @@ POLY_CAST_ALIGN_SKIP = $(filter keyboards/polykybd/doom/% modules/polykybd/polym
 EXTRAFLAGS += $(if $(POLY_CAST_ALIGN_SRC),$(if $(POLY_CAST_ALIGN_SKIP),,-Wcast-align))
 
 # ---------------------------------------------------------------------------
-# System clock — 200 MHz by DEFAULT (`-e POLYKYBD_SYS_CLK=125` opts out)
+# System clock — 200 MHz
 # ---------------------------------------------------------------------------
 # The RP2040 clock is NOT set by QMK — ChibiOS's hal_lld_init() (and, earlier,
 # the double-tap-reset __late_init) calls the pico-sdk clocks_init(), which
@@ -111,26 +111,14 @@ EXTRAFLAGS += $(if $(POLY_CAST_ALIGN_SRC),$(if $(POLY_CAST_ALIGN_SKIP),,-Wcast-a
 # both far inside any QSPI part's rating. If you ever add a clock, re-check that
 # list rather than assuming it stays true.
 #
-# `?=` so a command-line `-e POLYKYBD_SYS_CLK=125` (which make treats as an
-# override) still wins — that is the escape hatch if a board ever misbehaves at
-# the higher clock, and it produces an image byte-identical to the pre-200 MHz
-# builds.
-POLYKYBD_SYS_CLK ?= 200
-ifeq ($(strip $(POLYKYBD_SYS_CLK)),200)
-    OPT_DEFS += -DSYS_CLK_KHZ=200000 \
-                -DPLL_SYS_VCO_FREQ_KHZ=1200000 \
-                -DPLL_SYS_POSTDIV1=6 \
-                -DPLL_SYS_POSTDIV2=1 \
-                -DPOLYKYBD_VREG_VSEL=0xC
-else ifeq ($(strip $(POLYKYBD_SYS_CLK)),125)
-    # The SDK default: emit nothing at all, so this is the pre-200 MHz image.
-    # Deliberately NOT -DSYS_CLK_KHZ=125000 — that would be the same value by a
-    # different route and would stop the two builds being byte-comparable.
-else
-    $(error POLYKYBD_SYS_CLK=$(POLYKYBD_SYS_CLK) is not a supported system clock \
-            (200 = default, 125 = the SDK stock clock). Adding one means picking \
-            a VCO/postdiv triple AND the core voltage its frequency is certified at)
-endif
+# The 125 MHz opt-out (`-e POLYKYBD_SYS_CLK=125`) was removed in 2026-11. Changing
+# the clock means picking a VCO/postdiv triple AND the core voltage its frequency
+# is certified at.
+OPT_DEFS += -DSYS_CLK_KHZ=200000 \
+            -DPLL_SYS_VCO_FREQ_KHZ=1200000 \
+            -DPLL_SYS_POSTDIV1=6 \
+            -DPLL_SYS_POSTDIV2=1 \
+            -DPOLYKYBD_VREG_VSEL=0xC
 
 # Split-link baud. The default is the SERIAL_USART_SPEED in config.h (1843200);
 # `-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed for an A/B run on the rig
@@ -161,7 +149,7 @@ OS_DETECTION_ENABLE = yes
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
 # covers features/emoji/emoji_layer.c and features/hints/os_hints.c.
-POLY_SRC := keys_com/poly_keymap.c keys_com/layer_names.c lib/system/boot_diag.c lib/split_link/side.c lib/system/state.c lib/system/state_store.c lib/split_link/split_sync.c lib/fw_update/split_fw_up.c lib/display/multicore_exec.c lib/hid/hid_com.c lib/fw_update/hid_fw_up.c lib/hid/hid_fontpack.c lib/display/fill_overlay.c lib/system/poly_util.c keys_com/matrix_helper.c lib/split_link/bridge_helper.c lib/display/oled_helper.c keys_com/keycode_helper.c keys_com/mru.c keys_com/lang_layer.c features/anim/startup_anim.c features/anim/tutorial.c features/anim/focus_ring.c features/anim/key_attention.c features/anim/menu_cascade.c features/anim/lang_sparkle.c features/anim/tutorial_rgb.c base/tutorial_plan.c features/anim/demo_mode.c base/demo_plan.c features/modes/mines_mode.c base/mines_plan.c features/modes/ai_mode.c base/ai_events.c base/attn_guide.c base/idle_poem_plan.c features/emoji/emoji_layer.c features/hints/os_hints.c base/fw_up_verdict.c keys_com/poly_macro.c keys_com/poly_macro_record.c base/macro_decode.c base/macro_record.c lib/peripherals/ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c lib/drivers/crash_record.c base/hand_stamp.c lib/drivers/hw_uid.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c lib/split_link/slave_data.c lib/display/oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
+POLY_SRC := keys_com/poly_keymap.c keys_com/layer_names.c lib/system/boot_diag.c lib/split_link/side.c lib/system/state.c lib/system/state_store.c lib/split_link/split_sync.c lib/fw_update/split_fw_up.c lib/display/multicore_exec.c lib/hid/hid_com.c lib/fw_update/hid_fw_up.c lib/hid/hid_fontpack.c lib/display/fill_overlay.c lib/system/poly_util.c keys_com/matrix_helper.c lib/split_link/bridge_helper.c lib/display/oled_helper.c keys_com/keycode_helper.c keys_com/mru.c keys_com/lang_layer.c features/anim/startup_anim.c features/anim/tutorial.c features/anim/focus_ring.c features/anim/key_attention.c features/anim/menu_cascade.c features/anim/lang_sparkle.c features/anim/tutorial_rgb.c base/tutorial_plan.c features/anim/demo_mode.c base/demo_plan.c features/modes/mines_mode.c base/mines_plan.c features/modes/ai_mode.c base/ai_events.c base/attn_guide.c base/idle_poem_plan.c features/emoji/emoji_layer.c features/hints/os_hints.c base/fw_up_verdict.c keys_com/poly_macro.c keys_com/poly_macro_record.c base/macro_decode.c base/macro_record.c lib/peripherals/ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c lib/drivers/crash_record.c base/hand_stamp.c lib/drivers/hw_uid.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c lib/split_link/slave_data.c base/idle_style.c
 SRC += $(POLY_SRC)
 
 # features/emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
@@ -195,7 +183,9 @@ endef
 # not match, so only the extra files are listed.
 POLY_MODULE_WARN_SRC := modules/polykybd/polymod_core1/polymod_core1_owner.c \
                         modules/polykybd/polymod_core1/polymod_core1_owner_hw.c \
-                        modules/polykybd/polymod_cirque_gestures/polymod_cirque_gesture_fsm.c
+                        modules/polykybd/polymod_cirque_gestures/polymod_cirque_gesture_fsm.c \
+                        modules/polykybd/polymod_oled_i2c_diag/polymod_oled_i2c_diag_hw.c \
+                        modules/polykybd/polymod_oled_i2c_diag/polymod_oled_i2c_diag_log.c
 $(foreach s,$(POLY_SRC) $(POLY_MODULE_WARN_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
 
 # Bulk pipe: a CDC-ACM (virtual serial) interface whose bulk endpoints carry
@@ -335,22 +325,19 @@ endif
 # without POLYKYBD_DOOM_PACK): that build only exists to compile the engine objects
 # for the .plyx pack and has the least RAM to spare. It sits here, after the block
 # above, because the pack flavour sets POLYKYBD_DOOM itself, so "monolith" is DOOM
-# without DOOM_PACK. `-e POLYKYBD_MIDI=no` drops it from any flavour.
+# without DOOM_PACK.
 # Measured cost (split72, send-only, 2 send buffers): see config.h.
-POLYKYBD_MIDI ?= yes
 # ⚠️ Assign MIDI_ENABLE on EVERY path, `no` first. QMK's data-driven step reads this
 # file without evaluating the conditionals, sees the `= yes` below and generates
 # `MIDI_ENABLE ?= yes` in .build/.../info_rules.mk. A path that leaves the variable
 # unset therefore gets MIDI anyway: the monolith did, until this line.
 MIDI_ENABLE = no
-ifeq ($(strip $(POLYKYBD_MIDI)), yes)
-    # Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`).
-    ifneq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
-        MIDI_ENABLE = yes
-        # The legends read the synced settings; a build without MIDI draws the
-        # keycodes as plain QMK names would (nothing), and saves the buffer.
-        SRC += features/modes/midi_legend.c
-    endif
+# Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`).
+ifneq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
+    MIDI_ENABLE = yes
+    # The legends read the synced settings; the monolith, without MIDI, draws the
+    # keycodes as plain QMK names would (nothing), and saves the buffer.
+    SRC += features/modes/midi_legend.c
 endif
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     OPT_DEFS += -DPOLYKYBD_DOOM

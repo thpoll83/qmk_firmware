@@ -37,8 +37,8 @@ source includes other sources by their path from here, for example
   - `hid/`: the HID command handler (`hid_com.c`), font-pack transfer, the bulk pipe,
     MacCompose.
   - `fw_update/`: firmware update over HID and its relay to the slave half.
-  - `display/`: the keycap OLED output: overlay fill, the core1 executor, the I2C
-    driver and the status-display idle style.
+  - `display/`: the keycap OLED output: overlay fill, the core1 executor and the
+    status-display idle style.
   - `drivers/`: hardware drivers: shift registers, SPI, external EEPROM, firmware
     staging in flash, the crash record, the flash unique ID.
   - `peripherals/`: the LTR-559 light sensor policy.
@@ -55,7 +55,8 @@ source includes other sources by their path from here, for example
 - [`../../modules/polykybd/`](../../modules/polykybd/): code with no PolyKybd types, as
   QMK community modules. Each variant's `keyboard.json` lists the ones it uses. Among
   them: the core1 launcher and owner (`polymod_core1`), the Cirque trackpad gestures
-  (`polymod_cirque_gestures`, split72 only), the LTR-559 driver, CRC32, RLE and Ed25519.
+  (`polymod_cirque_gestures`, split72 only), the OLED I2C write diagnostics
+  (`polymod_oled_i2c_diag`), the LTR-559 driver, CRC32, RLE and Ed25519.
 - [`base/`](base/): pure logic without hardware access (no `quantum.h`, no display),
   with unit tests in `base/tests/` that run on the host (`make test:<name>`). Code moves
   here when it can be tested without a keyboard.

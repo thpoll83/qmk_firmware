@@ -1,6 +1,6 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "oled_i2c_diag.h"
+#include "polymod_oled_i2c_diag_log.h"
 
 #include <stdarg.h>
 #include <stdio.h>

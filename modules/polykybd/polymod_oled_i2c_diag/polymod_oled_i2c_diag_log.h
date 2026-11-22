@@ -3,11 +3,11 @@
 //
 // Pure bookkeeping + console wording for status-OLED I2C write failures.
 //
-// The status OLED is an SSD1306 on I2CD0 (GP0/GP1). Stock QMK reports a failed
+// On PolyKybd the status OLED is an SSD1306 on I2CD0 (GP0/GP1). Stock QMK reports a failed
 // write as one bare line (`oled_render offset command failed`) and drops the
 // frame, which says neither WHY the write failed nor whether the panel came back.
 // A field report (2026-10-02, one failure in ~7300 idle frames) could not be
-// diagnosed past "a write did not land". oled_i2c.c overrides the driver's weak
+// diagnosed past "a write did not land". polymod_oled_i2c_diag_hw.c overrides the driver's weak
 // oled_send_cmd()/oled_send_data(), retries a failed write once, and hands the
 // outcome to this module, which decides what to print:
 //
@@ -31,7 +31,7 @@
 // ⚠️ The host's problem scan (PolyKybdHost services/problem_scan.py) matches
 // these lines by their wording. Change a line here, change the pattern there.
 //
-// Free of quantum.h and ChibiOS so `make test:polykybd_oled_i2c_diag` reaches it;
+// Free of quantum.h and ChibiOS so `make test:polymod_oled_i2c_diag` reaches it;
 // the caller passes the clock and the already-classified failure.
 #pragma once
 #include <stdbool.h>

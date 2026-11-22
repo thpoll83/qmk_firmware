@@ -119,7 +119,7 @@ unsigned char poly_unicode_key_mac(void);
 //by the desired SPI clock speed. For example, an MCU running at 8 MHz
 //wanting to talk to an SPI device at 4 MHz would set the divisor to 2
 #define SPI_DIVISOR (CPU_CLOCK / 10000000) // CPU_CLOCK is the LIVE clk_sys (RP_CORE_CLK), so
-                                           // SPI stays at 10 MHz on any POLYKYBD_SYS_CLK
+                                           // SPI stays at 10 MHz whatever the clock
 
 
 //only for v3 and later
@@ -427,7 +427,7 @@ unsigned char poly_unicode_key_mac(void);
 #    define CDC_OUT_CAPACITY 8
 #endif
 
-// USB MIDI (rules.mk POLYKYBD_MIDI). MIDI_ADVANCED handles every QMK_MIDI_*
+// USB MIDI (rules.mk: on in every flavour except the DOOM monolith). MIDI_ADVANCED handles every QMK_MIDI_*
 // keycode the host editor offers (notes, octave, transpose, velocity, channel,
 // pedals, modulation, pitch bend). MIDI_SEND_ONLY is a PolyKybd patch to QMK
 // (docs/build/upstream-patches.md): the keyboard only plays, so the computer->keyboard

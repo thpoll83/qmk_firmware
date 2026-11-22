@@ -87,8 +87,9 @@ than `keyboards/polykybd/`: currently `polymod_crc32`, `polymod_rle` and `polymo
 (pure-algorithm libraries; `polymod_prc` also ships its table and a Python trainer),
 `polymod_core1` (the core1 launcher and the core1 owner), `polymod_monocypher`
 (vendored Ed25519), `polymod_os_actions` (the per-OS chord table), `polymod_ltr559`
-(the LTR-559 driver) and `polymod_cirque_gestures` (the Cirque absolute-mode gesture
-layer, split72 only), each extracted the same way. The mechanics are not obvious from the QMK docs alone:
+(the LTR-559 driver), `polymod_cirque_gestures` (the Cirque absolute-mode gesture
+layer, split72 only) and `polymod_oled_i2c_diag` (the OLED I2C write diagnostics),
+each extracted the same way. The mechanics are not obvious from the QMK docs alone:
 
 - **Declared in `keyboard.json`, not `keymap.json`.** Both variants carry a
   `"modules": ["polykybd/polymod_crc32", …]` array. The docs describe the

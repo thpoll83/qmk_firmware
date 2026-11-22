@@ -98,7 +98,7 @@ Finished plans and status logs. Kept for reference; not current.
 
 ## Where files moved into community modules (2026-11)
 
-Two subsystems moved out of the keyboard folder into `modules/polykybd/`. Their test
+Three subsystems moved out of the keyboard folder into `modules/polykybd/`. Their test
 suites moved and were renamed with them.
 
 | before | now |
@@ -109,9 +109,12 @@ suites moved and were renamed with them.
 | `lib/drivers/core1_owner_hw.c` | `modules/polykybd/polymod_core1/polymod_core1_owner_hw.c` |
 | `make test:polykybd_cirque_gesture` | `make test:polymod_cirque_gestures` |
 | `make test:polykybd_core1_owner` | `make test:polymod_core1_owner` |
+| `lib/display/oled_i2c.c` | `modules/polykybd/polymod_oled_i2c_diag/polymod_oled_i2c_diag_hw.c` |
+| `base/oled_i2c_diag.c`/`.h` | `modules/polykybd/polymod_oled_i2c_diag/polymod_oled_i2c_diag_log.c`/`.h` |
+| `make test:polykybd_oled_i2c_diag` | `make test:polymod_oled_i2c_diag` |
 
 `-DPOLYKYBD_CIRQUE_GESTURES` is gone: listing the module in `keyboard.json` is the
-enable, and `-DPOLYKYBD_CIRQUE_ABSOLUTE` still selects absolute mode.
+enable. Absolute mode is fixed in `split72/config.h`.
 
 ## Where files moved, second step (2026-11)
 

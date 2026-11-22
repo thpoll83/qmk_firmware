@@ -73,6 +73,7 @@ include modules/polykybd/polymod_core1/tests/rules.mk
 include modules/polykybd/polymod_crc32/tests/rules.mk
 include modules/polykybd/polymod_ltr559/tests/rules.mk
 include modules/polykybd/polymod_monocypher/tests/rules.mk
+include modules/polykybd/polymod_oled_i2c_diag/tests/rules.mk
 include modules/polykybd/polymod_os_actions/tests/rules.mk
 include modules/polykybd/polymod_prc/tests/rules.mk
 include keyboards/polykybd/features/hints/tests/test_rules.mk

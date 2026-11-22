@@ -69,6 +69,7 @@ jobs:
             -i modules/polykybd/polymod_core1/tests \
             -i modules/polykybd/polymod_ltr559/tests \
             -i modules/polykybd/polymod_monocypher/tests \
+            -i modules/polykybd/polymod_oled_i2c_diag/tests \
             -i modules/polykybd/polymod_os_actions/tests \
             -i modules/polykybd/polymod_prc/tests \
             --template='{file}:{line}: {severity}: {message} [{id}]' \

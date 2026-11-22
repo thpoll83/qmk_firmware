@@ -81,7 +81,7 @@ POLY_CAST_ALIGN_SKIP = $(filter keyboards/polykybd/doom/% modules/polykybd/polym
 EXTRAFLAGS += $(if $(POLY_CAST_ALIGN_SRC),$(if $(POLY_CAST_ALIGN_SKIP),,-Wcast-align))
 
 # ---------------------------------------------------------------------------
-# System clock — 200 MHz by DEFAULT (`-e POLYKYBD_SYS_CLK=125` opts out)
+# System clock — 200 MHz
 # ---------------------------------------------------------------------------
 # The RP2040 clock is NOT set by QMK — ChibiOS's hal_lld_init() (and, earlier,
 # the double-tap-reset __late_init) calls the pico-sdk clocks_init(), which
@@ -111,34 +111,14 @@ EXTRAFLAGS += $(if $(POLY_CAST_ALIGN_SRC),$(if $(POLY_CAST_ALIGN_SKIP),,-Wcast-a
 # both far inside any QSPI part's rating. If you ever add a clock, re-check that
 # list rather than assuming it stays true.
 #
-# `?=` so a command-line `-e POLYKYBD_SYS_CLK=125` (which make treats as an
-# override) still wins — that is the escape hatch if a board ever misbehaves at
-# the higher clock, and it produces an image byte-identical to the pre-200 MHz
-# builds.
-POLYKYBD_SYS_CLK ?= 200
-ifeq ($(strip $(POLYKYBD_SYS_CLK)),200)
-    OPT_DEFS += -DSYS_CLK_KHZ=200000 \
-                -DPLL_SYS_VCO_FREQ_KHZ=1200000 \
-                -DPLL_SYS_POSTDIV1=6 \
-                -DPLL_SYS_POSTDIV2=1 \
-                -DPOLYKYBD_VREG_VSEL=0xC
-else ifeq ($(strip $(POLYKYBD_SYS_CLK)),125)
-    # The SDK default: emit nothing at all, so this is the pre-200 MHz image.
-    # Deliberately NOT -DSYS_CLK_KHZ=125000 — that would be the same value by a
-    # different route and would stop the two builds being byte-comparable.
-else
-    $(error POLYKYBD_SYS_CLK=$(POLYKYBD_SYS_CLK) is not a supported system clock \
-            (200 = default, 125 = the SDK stock clock). Adding one means picking \
-            a VCO/postdiv triple AND the core voltage its frequency is certified at)
-endif
-
-# Split-link baud. The default is the SERIAL_USART_SPEED in config.h (1843200);
-# `-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed for an A/B run on the rig
-# (any value the PIO divider can represent is accepted; the extended HIL soak's
-# crc_err / transport_fail counters are the verdict, not whether it links).
-ifneq ($(strip $(POLYKYBD_SPLIT_BAUD)),)
-    OPT_DEFS += -DSERIAL_USART_SPEED=$(strip $(POLYKYBD_SPLIT_BAUD))
-endif
+# The 125 MHz opt-out (`-e POLYKYBD_SYS_CLK=125`) was removed in 2026-11. Changing
+# the clock means picking a VCO/postdiv triple AND the core voltage its frequency
+# is certified at.
+OPT_DEFS += -DSYS_CLK_KHZ=200000 \
+            -DPLL_SYS_VCO_FREQ_KHZ=1200000 \
+            -DPLL_SYS_POSTDIV1=6 \
+            -DPLL_SYS_POSTDIV2=1 \
+            -DPOLYKYBD_VREG_VSEL=0xC
 
 # OS detection (QMK feature): fingerprints the USB enumeration (wLength pattern) to
 # guess the host OS. Used as the AUTO-mode fallback for the active-OS state — the
@@ -337,22 +317,19 @@ endif
 # without POLYKYBD_DOOM_PACK): that build only exists to compile the engine objects
 # for the .plyx pack and has the least RAM to spare. It sits here, after the block
 # above, because the pack flavour sets POLYKYBD_DOOM itself, so "monolith" is DOOM
-# without DOOM_PACK. `-e POLYKYBD_MIDI=no` drops it from any flavour.
+# without DOOM_PACK.
 # Measured cost (split72, send-only, 2 send buffers): see config.h.
-POLYKYBD_MIDI ?= yes
 # ⚠️ Assign MIDI_ENABLE on EVERY path, `no` first. QMK's data-driven step reads this
 # file without evaluating the conditionals, sees the `= yes` below and generates
 # `MIDI_ENABLE ?= yes` in .build/.../info_rules.mk. A path that leaves the variable
 # unset therefore gets MIDI anyway: the monolith did, until this line.
 MIDI_ENABLE = no
-ifeq ($(strip $(POLYKYBD_MIDI)), yes)
-    # Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`).
-    ifneq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
-        MIDI_ENABLE = yes
-        # The legends read the synced settings; a build without MIDI draws the
-        # keycodes as plain QMK names would (nothing), and saves the buffer.
-        SRC += features/modes/midi_legend.c
-    endif
+# Monolith = DOOM on and the pack NOT `yes` (unset or an explicit `no`).
+ifneq ($(strip $(POLYKYBD_DOOM)):$(filter yes,$(strip $(POLYKYBD_DOOM_PACK))), yes:)
+    MIDI_ENABLE = yes
+    # The legends read the synced settings; the monolith, without MIDI, draws the
+    # keycodes as plain QMK names would (nothing), and saves the buffer.
+    SRC += features/modes/midi_legend.c
 endif
 ifeq ($(strip $(POLYKYBD_DOOM)), yes)
     OPT_DEFS += -DPOLYKYBD_DOOM

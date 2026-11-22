@@ -44,7 +44,6 @@ unsigned char poly_unicode_key_mac(void);
 // bytes and the CRC32 plus retries recover them. 1843200 (4x the old 460800) passed
 // two extended HIL runs with 0 link faults (docs/protocol/bulk-pipe.md, split-link table); it cuts
 // the firmware relay to the slave from 13 s to 3.4 s of wire time per 541 KB image.
-// `-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed for an A/B on the rig.
 #ifndef SERIAL_USART_SPEED
 #    define SERIAL_USART_SPEED 1843200
 #endif
@@ -119,7 +118,7 @@ unsigned char poly_unicode_key_mac(void);
 //by the desired SPI clock speed. For example, an MCU running at 8 MHz
 //wanting to talk to an SPI device at 4 MHz would set the divisor to 2
 #define SPI_DIVISOR (CPU_CLOCK / 10000000) // CPU_CLOCK is the LIVE clk_sys (RP_CORE_CLK), so
-                                           // SPI stays at 10 MHz on any POLYKYBD_SYS_CLK
+                                           // SPI stays at 10 MHz whatever the clock
 
 
 //only for v3 and later
@@ -427,7 +426,7 @@ unsigned char poly_unicode_key_mac(void);
 #    define CDC_OUT_CAPACITY 8
 #endif
 
-// USB MIDI (rules.mk POLYKYBD_MIDI). MIDI_ADVANCED handles every QMK_MIDI_*
+// USB MIDI (rules.mk: on in every flavour except the DOOM monolith). MIDI_ADVANCED handles every QMK_MIDI_*
 // keycode the host editor offers (notes, octave, transpose, velocity, channel,
 // pedals, modulation, pitch bend). MIDI_SEND_ONLY is a PolyKybd patch to QMK
 // (docs/build/upstream-patches.md): the keyboard only plays, so the computer->keyboard

@@ -61,7 +61,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //by the desired SPI clock speed. For example, an MCU running at 8 MHz
 //wanting to talk to an SPI device at 4 MHz would set the divisor to 2
 #define SPI_DIVISOR (CPU_CLOCK / 10000000) // CPU_CLOCK is the LIVE clk_sys (RP_CORE_CLK), so
-                                           // SPI stays at 10 MHz on any POLYKYBD_SYS_CLK
+                                           // SPI stays at 10 MHz whatever the clock
 
 // Shift register to select the display
 //#define SR_NMR_PIN //NO_PIN if possible
@@ -77,9 +77,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Setup Cirque
 //
-// Two flavours, selected by the rules.mk switches of the same name.
-//
-// ABSOLUTE (DEFAULT): every sample carries x, y and z, so
+// ABSOLUTE mode: every sample carries x, y and z, so
 // modules/polykybd/polymod_cirque_gestures/polymod_cirque_gestures.c takes the report function over and decides
 // tap, right click and scroll itself, with its own z threshold and with the zones
 // placed in the pad's PHYSICAL frame. The stock absolute gestures are NOT used --
@@ -87,39 +85,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // ring from CIRQUE_PINNACLE_X/Y_LOWER/UPPER, whose defaults describe Cirque's
 // 40 mm circle pad rather than this 35 mm one.
 //
-// RELATIVE (-e POLYKYBD_CIRQUE_RELATIVE=yes) hands the pad back to the ASIC: it
-// does its own tap/gesture detection and returns deltas plus button bits, so the
-// knobs are FeedConfig2 bits written at init rather than something QMK evaluates
-// per report. The gesture ZONES then live in the sensor's own frame and nothing
-// can move them -- POINTING_DEVICE_ROTATION_90 rotates reported x/y, not the
-// corner the ASIC watches -- so the corner tap and the scroll strip land wherever
-// the pad happens to be mounted. That is WHY it is no longer the default, and why
-// it survives only as an A/B escape hatch.
+// The ASIC's own relative mode was removed as a build option (2026-11): its gesture
+// zones sit in the sensor's frame, so its corner tap landed at 10-11 o'clock
+// wherever the pad was mounted and neither stock scroll ever fired.
 #define CIRQUE_PINNACLE_DIAMETER_MM 35
-
-#ifdef POLYKYBD_CIRQUE_ABSOLUTE
-#    define CIRQUE_PINNACLE_POSITION_MODE CIRQUE_PINNACLE_ABSOLUTE_MODE
+#define CIRQUE_PINNACLE_POSITION_MODE CIRQUE_PINNACLE_ABSOLUTE_MODE
 // NO stock gesture defines here on purpose. polymod_cirque_gestures.c replaces the
 // driver's get_report outright, so CIRQUE_PINNACLE_TAP_ENABLE, circular scroll
 // and cursor glide would only compile in code nothing calls. Tap threshold,
 // tap term, the right-click corner and the scroll strip are all POLY_CIRQUE_*
 // tunables in that file instead.
-#else
-#    define CIRQUE_PINNACLE_POSITION_MODE CIRQUE_PINNACLE_RELATIVE_MODE
-// Corner tap -> right click (clears FEEDCONFIG2__SECONDARY_TAP_DISABLE). NOT a
-// two-finger tap: the Pinnacle tracks a single contact, so the gesture is a tap
-// in the sensor's upper-right corner. Requires CIRQUE_PINNACLE_TAP_ENABLE.
-#    define CIRQUE_PINNACLE_SECONDARY_TAP_ENABLE
-// Tap to click, detected on the ASIC (clears FEEDCONFIG2__ALL_TAP_DISABLE).
-#    define CIRQUE_PINNACLE_TAP_ENABLE
-// Side scroll: a drag along the sensor's right edge (clears
-// FEEDCONFIG2__SCROLL_DISABLE). Measured on hardware: never fires here, because
-// that edge is not one a finger reaches the way the pad is mounted.
-#    define POINTING_DEVICE_GESTURES_SCROLL_ENABLE
-#endif
 
 
-// Touch sensitivity, as -e POLYKYBD_CIRQUE_ATTEN=1|2|3|4 (1X = most gain).
+// Touch sensitivity: the ADC gain, 4X.
 //
 // 1X SATURATES THIS PAD AND WAS A MISTAKE. It was chosen from the regdefs comment
 // "1X = most sensitive", which is true and is not the same as useful: measured on
@@ -153,28 +131,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // tap detection meaningful at all -- the firmware can require a real press and still
 // tell it apart from a firmer one -- and it is why the thresholds in
 // polymod_cirque_gestures.c can carry hysteresis instead of sitting on a cliff edge.
-//
-// The default is per flavour, because 4X is chosen for OUR threshold and says
-// nothing about the ASIC's. The relative build goes back to the chip's own
-// power-on value rather than inheriting a number picked for a different consumer.
-#ifndef POLYKYBD_CIRQUE_ATTEN
-#    ifdef POLYKYBD_CIRQUE_ABSOLUTE
-#        define POLYKYBD_CIRQUE_ATTEN 4
-#    else
-#        define POLYKYBD_CIRQUE_ATTEN 2
-#    endif
-#endif
-#if POLYKYBD_CIRQUE_ATTEN == 1
-#    define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_1X
-#elif POLYKYBD_CIRQUE_ATTEN == 2
-#    define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_2X
-#elif POLYKYBD_CIRQUE_ATTEN == 3
-#    define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_3X
-#elif POLYKYBD_CIRQUE_ATTEN == 4
-#    define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_4X
-#else
-#    error "POLYKYBD_CIRQUE_ATTEN must be 1, 2, 3 or 4"
-#endif
+#define CIRQUE_PINNACLE_ATTENUATION EXTREG__TRACK_ADCCONFIG__ADC_ATTENUATE_4X
 
 // The MEASURED reachable window, from sweeping the four corners of the real pad
 // (2026-09-15): x 280..1660, y 190..1340, against defaults of x 127..1919,
@@ -198,17 +155,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 // KEEP IT. Measured on hardware by building both ways: without it the ASIC's
 // corner tap moved from 11 o'clock to 10 and wanted a harder press, so the edge
-// tuning is helping. That also shows the WIDEZMIN pair shifts where the ASIC
-// thinks its own edge is -- which is why the corner cannot be aimed by tuning,
-// and why the absolute flavour stops trying.
+// tuning is helping.
 //
 // It also keeps the boot calibration alive: cirque_pinnacle_set_adc_attenuation()
-// returns true only when the value CHANGES, so at the 2X default above it writes
-// nothing, and this define becomes the sole reason cirque_pinnacle_calibrate()
-// still runs at init.
-#ifndef POLYKYBD_CIRQUE_NO_CURVED_OVERLAY
-#    define CIRQUE_PINNACLE_CURVED_OVERLAY
-#endif
+// returns true only when it CHANGES the gain, so when the ASIC already holds 4X it
+// writes nothing, and this define is then the only reason cirque_pinnacle_calibrate()
+// runs at init.
+#define CIRQUE_PINNACLE_CURVED_OVERLAY
 
 // Enable use of pointing device on slave split.
 #define SPLIT_POINTING_ENABLE
@@ -220,18 +173,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Limits the frequency that the sensor is polled for motion.
 #define POINTING_DEVICE_TASK_THROTTLE_MS 1
 
-// POINTING_DEVICE_ROTATION_90_RIGHT only applies in POINTING_DEVICE_COMBINED mode.
-//
-// RELATIVE ONLY. pointing_device_task() applies pointing_device_adjust_by_defines()
-// to whatever get_report returned, so with the absolute gesture layer -- which
-// already emits deltas in the pad's PHYSICAL frame -- this rotates them a SECOND
-// time and the cursor comes out 90 degrees off. Reported from hardware, and the
-// reason orientation belongs in exactly one place: to_physical().
-#ifndef POLYKYBD_CIRQUE_ABSOLUTE
-#    define POINTING_DEVICE_ROTATION_90
-#endif
-// (absolute-mode only — see the Cirque block above)
-//#define POINTING_DEVICE_GESTURES_CURSOR_GLIDE_ENABLE
+// NO POINTING_DEVICE_ROTATION_90: pointing_device_task() applies
+// pointing_device_adjust_by_defines() to whatever get_report returned, and the
+// gesture layer already emits deltas in the pad's PHYSICAL frame, so a rotation here
+// turns the cursor a second time, 90 degrees off. Orientation lives in exactly one
+// place: to_physical().
 
 //#define POINTING_DEVICE_DEBUG
 //#define PIMORONI_TRACKBALL_SCALE 5

@@ -114,7 +114,7 @@ suites moved and were renamed with them.
 | `make test:polykybd_oled_i2c_diag` | `make test:polymod_oled_i2c_diag` |
 
 `-DPOLYKYBD_CIRQUE_GESTURES` is gone: listing the module in `keyboard.json` is the
-enable, and `-DPOLYKYBD_CIRQUE_ABSOLUTE` still selects absolute mode.
+enable. Absolute mode is fixed in `split72/config.h`.
 
 ## Where files moved, second step (2026-11)
 

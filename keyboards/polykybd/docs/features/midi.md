@@ -8,7 +8,7 @@ into a small piano with live note names on the keycaps. It is reached with `TO(_
 
 | part | where |
 |---|---|
-| switch | `rules.mk` (`POLYKYBD_MIDI`, on), `config.h` (`MIDI_ADVANCED`, `MIDI_SEND_ONLY`, `MIDI_STREAM_IN_CAPACITY 2`) |
+| switch | `rules.mk` (on in every flavour except the DOOM monolith), `config.h` (`MIDI_ADVANCED`, `MIDI_SEND_ONLY`, `MIDI_STREAM_IN_CAPACITY 2`) |
 | send-only interface | QMK core patch, `docs/build/upstream-patches.md` → `MIDI_SEND_ONLY` |
 | layer | `keys_com/layers.h` (`_ML` = stored layer 8), both keymaps, `layer_names.c` ("MIDI") |
 | legends | `midi_legend.c` (pure, unit-tested: `make test:polykybd_midi_legend`) |

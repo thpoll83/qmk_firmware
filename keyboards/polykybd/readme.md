@@ -41,7 +41,7 @@ source includes other sources by their path from here, for example
     driver and the status-display idle style.
   - `drivers/`: hardware drivers: shift registers, SPI, external EEPROM, firmware
     staging in flash, the crash record, the flash unique ID.
-  - `peripherals/`: Cirque trackpad gestures and the LTR-559 light sensor policy.
+  - `peripherals/`: the LTR-559 light sensor policy.
   - `chibios_overrides/`: a patched copy of ChibiOS-Contrib's RP2040 USB driver, used
     through `PLATFORM_MK` in `rules.mk`
     ([`docs/build/upstream-patches.md`](docs/build/upstream-patches.md)).
@@ -52,6 +52,10 @@ source includes other sources by their path from here, for example
   - `modes/`: AI mode, the MIDI legend and the mines game.
   - `emoji/`: the emoji layer, its search dictionary and the dictionary sources.
   - `hints/`: OS shortcut hints shown while a modifier is held.
+- [`../../modules/polykybd/`](../../modules/polykybd/): code with no PolyKybd types, as
+  QMK community modules. Each variant's `keyboard.json` lists the ones it uses. Among
+  them: the core1 launcher and owner (`polymod_core1`), the Cirque trackpad gestures
+  (`polymod_cirque_gestures`, split72 only), the LTR-559 driver, CRC32, RLE and Ed25519.
 - [`base/`](base/): pure logic without hardware access (no `quantum.h`, no display),
   with unit tests in `base/tests/` that run on the host (`make test:<name>`). Code moves
   here when it can be tested without a keyboard.

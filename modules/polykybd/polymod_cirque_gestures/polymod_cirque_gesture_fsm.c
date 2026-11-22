@@ -1,5 +1,5 @@
-/* PolyKybd Cirque gesture decision — pure. See cirque_gesture_fsm.h for why. */
-#include "cirque_gesture_fsm.h"
+/* Cirque Pinnacle gesture decision — pure. See polymod_cirque_gesture_fsm.h for why. */
+#include "polymod_cirque_gesture_fsm.h"
 
 #include <stdlib.h>
 

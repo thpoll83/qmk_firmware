@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // core1 ownership logic. Hardware access goes through the core1_hw_* seam in
-// core1_owner.h, so this file is pure and unit-tested
-// (make test:polykybd_core1_owner).
-#include "core1_owner.h"
+// polymod_core1_owner.h, so this file is pure and unit-tested
+// (make test:polymod_core1_owner).
+#include "polymod_core1_owner.h"
 
 static uint8_t        s_holds;
 static core1_tenant_t s_tenant = CORE1_TENANT_SERVICE;

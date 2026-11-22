@@ -13,7 +13,7 @@
 #include QMK_KEYBOARD_H
 
 #include "doom_mode.h"
-#include "base/core1_owner.h"
+#include "polymod_core1_owner.h"
 #include "doom_arena.h"
 #include "doom_blit.h"
 #include "doom_game.h"

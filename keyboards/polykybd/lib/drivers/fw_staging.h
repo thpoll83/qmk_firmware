@@ -127,7 +127,7 @@ bool fw_staging_refused_unsigned(void);
 // Must be called once before any other fw_staging_* function.
 
 // core1 holds for a caller doing its own flash work (an EEPROM flush, a crash
-// record, the hand stamp) are core1_hold()/core1_release() in core1_owner.h. They
+// record, the hand stamp) are core1_hold()/core1_release() in polymod_core1_owner.h. They
 // nest with fw_staging's own hold, so none of them can release core1 mid-erase.
 
 // Why an apply was refused. The two failures are genuinely different events and the

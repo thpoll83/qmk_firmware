@@ -244,19 +244,6 @@ polykybd_hand_stamp_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
-# Pure gesture decision: no quantum.h, no timer, no I2C, so it links with just the
-# tests. That decoupling is the reason the suite can exist at all -- the arithmetic
-# used to share a function with the sensor, which is why three different tap bugs
-# each cost a hardware round to find.
-polykybd_cirque_gesture_SRC := \
-	$(POLY_BASE_PATH)/cirque_gesture_fsm.c \
-	$(POLY_BASE_PATH)/tests/cirque_gesture_tests.cpp
-
-polykybd_cirque_gesture_INC := \
-	$(POLY_BASE_PATH) \
-	$(POLY_BASE_PATH)/tests \
-	keyboards/polykybd
-
 # status_brightness.h is header-only (static inline over config.h macros), so the
 # suite is just the tests -- the same shape as mode_byte and map_codec. It pins the
 # keycap-scale -> status-panel-register map that both oled_set_brightness() call
@@ -351,16 +338,6 @@ polykybd_ime_held_slots_SRC := \
 
 polykybd_ime_held_slots_INC := \
 	$(POLY_BASE_PATH)
-
-# core1_owner.c is pure: the RP2040/ChibiOS calls sit behind the core1_hw_* seam,
-# which the suite fakes, so it links with just the tests.
-polykybd_core1_owner_SRC := \
-	$(POLY_BASE_PATH)/core1_owner.c \
-	$(POLY_BASE_PATH)/tests/core1_owner_tests.cpp
-
-polykybd_core1_owner_INC := \
-	$(POLY_BASE_PATH) \
-	keyboards/polykybd
 
 # core1_suspend.c is the suspend hold's decision logic, with no dependencies.
 polykybd_core1_suspend_SRC := \

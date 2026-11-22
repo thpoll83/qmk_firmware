@@ -161,7 +161,7 @@ OS_DETECTION_ENABLE = yes
 # drift the shared keymap exists to prevent. It also gets the strict PolyKybd warning
 # flags applied below, which the per-variant base sources do not. The same argument
 # covers features/emoji/emoji_layer.c and features/hints/os_hints.c.
-POLY_SRC := keys_com/poly_keymap.c keys_com/layer_names.c lib/system/boot_diag.c lib/split_link/side.c lib/system/state.c lib/system/state_store.c lib/split_link/split_sync.c lib/fw_update/split_fw_up.c lib/display/multicore_exec.c lib/hid/hid_com.c lib/fw_update/hid_fw_up.c lib/hid/hid_fontpack.c lib/display/fill_overlay.c lib/system/poly_util.c keys_com/matrix_helper.c lib/split_link/bridge_helper.c lib/display/oled_helper.c keys_com/keycode_helper.c keys_com/mru.c keys_com/lang_layer.c features/anim/startup_anim.c features/anim/tutorial.c features/anim/focus_ring.c features/anim/key_attention.c features/anim/menu_cascade.c features/anim/lang_sparkle.c features/anim/tutorial_rgb.c base/tutorial_plan.c features/anim/demo_mode.c base/demo_plan.c features/modes/mines_mode.c base/mines_plan.c features/modes/ai_mode.c base/ai_events.c base/attn_guide.c base/idle_poem_plan.c features/emoji/emoji_layer.c features/hints/os_hints.c base/fw_up_verdict.c keys_com/poly_macro.c keys_com/poly_macro_record.c base/macro_decode.c base/macro_record.c lib/peripherals/ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c lib/drivers/crash_record.c base/hand_stamp.c lib/drivers/hw_uid.c base/core1_owner.c lib/drivers/core1_owner_hw.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c lib/split_link/slave_data.c lib/display/oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
+POLY_SRC := keys_com/poly_keymap.c keys_com/layer_names.c lib/system/boot_diag.c lib/split_link/side.c lib/system/state.c lib/system/state_store.c lib/split_link/split_sync.c lib/fw_update/split_fw_up.c lib/display/multicore_exec.c lib/hid/hid_com.c lib/fw_update/hid_fw_up.c lib/hid/hid_fontpack.c lib/display/fill_overlay.c lib/system/poly_util.c keys_com/matrix_helper.c lib/split_link/bridge_helper.c lib/display/oled_helper.c keys_com/keycode_helper.c keys_com/mru.c keys_com/lang_layer.c features/anim/startup_anim.c features/anim/tutorial.c features/anim/focus_ring.c features/anim/key_attention.c features/anim/menu_cascade.c features/anim/lang_sparkle.c features/anim/tutorial_rgb.c base/tutorial_plan.c features/anim/demo_mode.c base/demo_plan.c features/modes/mines_mode.c base/mines_plan.c features/modes/ai_mode.c base/ai_events.c base/attn_guide.c base/idle_poem_plan.c features/emoji/emoji_layer.c features/hints/os_hints.c base/fw_up_verdict.c keys_com/poly_macro.c keys_com/poly_macro_record.c base/macro_decode.c base/macro_record.c lib/peripherals/ltr559_policy.c base/legend_plan.c base/ime_key_plan.c base/ime_held_slots.c base/font_lookup.c lib/drivers/crash_record.c base/hand_stamp.c lib/drivers/hw_uid.c base/core1_suspend.c base/fw_stage.c base/prc_record.c base/icon_lib.c base/emoji_dict.c lib/split_link/slave_data.c lib/display/oled_i2c.c base/oled_i2c_diag.c base/idle_style.c
 SRC += $(POLY_SRC)
 
 # features/emoji/emoji_layer.c is listed here, not in a keymap's rules.mk: the keyboard-level
@@ -189,7 +189,14 @@ POLY_WARN_CFLAGS := -Wextra -Wno-unused-parameter -Wno-old-style-declaration
 define POLY_APPLY_WARN
 $(INTERMEDIATE_OUTPUT)/$(patsubst %.c,%.o,$(patsubst ./%,%,$1)): FILE_SPECIFIC_CFLAGS += $(POLY_WARN_CFLAGS)
 endef
-$(foreach s,$(POLY_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
+# PolyKybd's own sources inside its community modules get the same flags. The module
+# build adds them to SRC (modules/polykybd/*/rules.mk), so they are not in POLY_SRC.
+# The module's main <name>.c is compiled by its absolute path, which this pattern does
+# not match, so only the extra files are listed.
+POLY_MODULE_WARN_SRC := modules/polykybd/polymod_core1/polymod_core1_owner.c \
+                        modules/polykybd/polymod_core1/polymod_core1_owner_hw.c \
+                        modules/polykybd/polymod_cirque_gestures/polymod_cirque_gesture_fsm.c
+$(foreach s,$(POLY_SRC) $(POLY_MODULE_WARN_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
 
 # Bulk pipe: a CDC-ACM (virtual serial) interface whose bulk endpoints carry
 # large host->keyboard transfers that raw HID (one 64-byte report per 1 ms USB

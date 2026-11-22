@@ -65,6 +65,8 @@ jobs:
             -i modules/polykybd/polymod_monocypher/monocypher-ed25519.c \
             -i keyboards/polykybd/base/tests \
             -i keyboards/polykybd/features/hints/tests \
+            -i modules/polykybd/polymod_cirque_gestures/tests \
+            -i modules/polykybd/polymod_core1/tests \
             -i modules/polykybd/polymod_ltr559/tests \
             -i modules/polykybd/polymod_monocypher/tests \
             -i modules/polykybd/polymod_os_actions/tests \

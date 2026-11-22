@@ -1,6 +1,6 @@
-/* PolyKybd Cirque gesture layer — the ADAPTER.
+/* Cirque Pinnacle gesture layer — the ADAPTER (community module polymod_cirque_gestures).
  *
- * All the decision-making lives in base/cirque_gesture_fsm.c, which is pure: no
+ * All the decision-making lives in polymod_cirque_gesture_fsm.c, which is pure: no
  * quantum.h, no timer, no I2C, no report_mouse_t. This file is only the seam between
  * that and QMK — read a sample, hand it over with a clock, copy the answer into a
  * mouse report.
@@ -10,7 +10,7 @@
  * length standing in for displacement, a z bar sitting on top of the tap
  * distribution, and per-sample scatter plus a slow poll rate — and every one cost a
  * hardware round to guess at, because the arithmetic shared a function with the
- * sensor and could not be run anywhere else. `make test:polykybd_cirque_gesture`
+ * sensor and could not be run anywhere else. `make test:polymod_cirque_gestures`
  * now replays taps, drags and dials built from the measured pad numbers, and is
  * mutation-checked against nine deliberate breaks.
  *
@@ -19,25 +19,28 @@
  * after the ASIC has chosen its corner, so the corner-tap right click landed at 11
  * o'clock and moved to 10 when CURVED_OVERLAY changed the edge tuning under it.
  * Neither stock scroll ever fired. And tap force is the ASIC's, with no z-threshold
- * register exposed. The long form is in split72/config.h and the FSM header.
+ * register exposed. The long form is in keyboards/polykybd/split72/config.h and the
+ * FSM header.
  *
  * The stock driver still owns init: cirque_pinnacle_init() configures the ASIC, and
- * only then does pointing_device_init_kb() swap the get_report function. Nothing
- * upstream is patched.
+ * only then does the module's pointing_device_init hook swap the get_report function.
+ * Nothing upstream is patched.
+ *
+ * Listing the module is the enable. It takes the pad over only when the pointing
+ * device is a Cirque Pinnacle in ABSOLUTE mode (CIRQUE_PINNACLE_POSITION_MODE); in
+ * relative mode this file compiles to nothing and the stock driver keeps the pad.
  */
-#include "cirque_gestures.h"
+#include "polymod_cirque_gestures.h"
 
-#ifdef POLYKYBD_CIRQUE_GESTURES
+#ifdef POLYMOD_CIRQUE_GESTURES_ACTIVE
 
 #    include "quantum.h"
+#    include "community_modules.h"
+/* 1.1.0 is the first module API with the pointing_device_init hook used below. */
+ASSERT_COMMUNITY_MODULES_MIN_API_VERSION(1, 1, 0);
 #    include "pointing_device.h"
 #    include "timer.h"
-#    include "drivers/sensors/cirque_pinnacle.h"
-#    include "base/cirque_gesture_fsm.h"
-
-#    if !CIRQUE_PINNACLE_POSITION_MODE
-#        error "poly cirque gestures need CIRQUE_PINNACLE_ABSOLUTE_MODE (do not set -e POLYKYBD_CIRQUE_RELATIVE=yes)"
-#    endif
+#    include "polymod_cirque_gesture_fsm.h"
 
 static poly_gest_t s_gest;
 /* The pad view replaces the status screen while the pad is IN USE and hands it back
@@ -105,11 +108,12 @@ void poly_cirque_install(void) {
     pointing_device_driver = &poly_cirque_driver;
 }
 
-/* Weak in QMK, and called from pointing_device_init() AFTER driver->init(), so the
- * ASIC is already configured by the time we take the report function over.
- * pointing_device_init_user() is invoked separately by the same caller, so overriding
- * this one does not swallow it. */
-void pointing_device_init_kb(void) {
+/* pointing_device_init() calls the module hooks AFTER driver->init() and before
+ * pointing_device_init_kb()/_user(), so the ASIC is already configured by the time we
+ * take the report function over, and the keyboard's own hooks stay free. Overriding
+ * the module hook means calling its _kb link ourselves. */
+void pointing_device_init_polymod_cirque_gestures(void) {
+    pointing_device_init_polymod_cirque_gestures_kb();
     poly_cirque_install();
 }
 
@@ -146,4 +150,4 @@ void poly_cirque_debug_snapshot(poly_cirque_dbg_t *out) {
     }
 }
 
-#endif /* POLYKYBD_CIRQUE_GESTURES */
+#endif /* POLYMOD_CIRQUE_GESTURES_ACTIVE */

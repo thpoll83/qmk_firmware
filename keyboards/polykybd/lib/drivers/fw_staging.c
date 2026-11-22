@@ -103,7 +103,7 @@ static bool s_erase_cut_short = false;
 
 #ifdef USE_CORE1
 #include "polymod_core1.h"
-#include "base/core1_owner.h"
+#include "polymod_core1_owner.h"
 
 #define _PSM_WDSEL     (*(volatile uint32_t *)(0x40010000u + 0x08u))
 #define _WD_CTRL       (*(volatile uint32_t *)(0x40058000u + 0x00u))

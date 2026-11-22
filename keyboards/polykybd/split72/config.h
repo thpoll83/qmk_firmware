@@ -80,7 +80,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Two flavours, selected by the rules.mk switches of the same name.
 //
 // ABSOLUTE (DEFAULT): every sample carries x, y and z, so
-// keyboards/polykybd/lib/peripherals/cirque_gestures.c takes the report function over and decides
+// modules/polykybd/polymod_cirque_gestures/polymod_cirque_gestures.c takes the report function over and decides
 // tap, right click and scroll itself, with its own z threshold and with the zones
 // placed in the pad's PHYSICAL frame. The stock absolute gestures are NOT used --
 // measured on hardware, circular scroll never fires, because it sizes its outer
@@ -99,7 +99,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifdef POLYKYBD_CIRQUE_ABSOLUTE
 #    define CIRQUE_PINNACLE_POSITION_MODE CIRQUE_PINNACLE_ABSOLUTE_MODE
-// NO stock gesture defines here on purpose. cirque_gestures.c replaces the
+// NO stock gesture defines here on purpose. polymod_cirque_gestures.c replaces the
 // driver's get_report outright, so CIRQUE_PINNACLE_TAP_ENABLE, circular scroll
 // and cursor glide would only compile in code nothing calls. Tap threshold,
 // tap term, the right-click corner and the scroll strip are all POLY_CIRQUE_*
@@ -152,7 +152,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // deliberate light touch reads ~30, normal 38-42, hard 45. That range is what makes
 // tap detection meaningful at all -- the firmware can require a real press and still
 // tell it apart from a firmer one -- and it is why the thresholds in
-// cirque_gestures.c can carry hysteresis instead of sitting on a cliff edge.
+// polymod_cirque_gestures.c can carry hysteresis instead of sitting on a cliff edge.
 //
 // The default is per flavour, because 4X is chosen for OUR threshold and says
 // nothing about the ASIC's. The relative build goes back to the chip's own
@@ -185,7 +185,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // until the arithmetic was actually run. Feeding the four measured corners through
 // scale_data() and the ring test gives magnitudes of 112-120 against a threshold of
 // 85: all four pass comfortably. The wrong window skews positions, it does not stop
-// the ring arming. See cirque_gestures.c for what does explain it.
+// the ring arming. See polymod_cirque_gestures.c for what does explain it.
 #define CIRQUE_PINNACLE_X_LOWER 280
 #define CIRQUE_PINNACLE_X_UPPER 1660
 #define CIRQUE_PINNACLE_Y_LOWER 190

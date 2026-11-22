@@ -7,7 +7,7 @@
 
 #include "quantum.h"          // eeconfig_read_handedness / eeconfig_update_handedness
 #include "lib/drivers/fw_staging.h"       // FW_HAND_STAMP_OFFSET
-#include "core1_owner.h"      // core1_hold()/core1_release() around the write
+#include "polymod_core1_owner.h"      // core1_hold()/core1_release() around the write
 #include "lib/drivers/crash_record.h"     // CRASH_PHASE_FLASH breadcrumb
 #include "polymod_crc32.h"
 

@@ -11,7 +11,7 @@
 #include <vector>
 
 extern "C" {
-#include "core1_owner.h"
+#include "polymod_core1_owner.h"
 }
 
 // --- fake hardware ----------------------------------------------------------

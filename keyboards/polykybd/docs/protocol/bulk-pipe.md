@@ -137,8 +137,8 @@ next measurement: run `tools/pipe_bench.py` there and add the row above.
 ## What the pipe can and cannot speed up
 
 The split link between the halves is a UART, 1843200 baud since the firmware
-update moved onto the pipe (460800 before; `SERIAL_USART_SPEED` in `config.h`).
-Anything that must reach
+update moved onto the pipe (460800 before; `SERIAL_USART_SPEED` in `config.h`,
+`-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed). Anything that must reach
 the slave half still crosses it: the slave's overlays, the font pack, the firmware
 image. A faster host link cannot change that, so the pipe helps with:
 

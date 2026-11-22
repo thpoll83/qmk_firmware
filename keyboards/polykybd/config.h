@@ -44,6 +44,7 @@ unsigned char poly_unicode_key_mac(void);
 // bytes and the CRC32 plus retries recover them. 1843200 (4x the old 460800) passed
 // two extended HIL runs with 0 link faults (docs/protocol/bulk-pipe.md, split-link table); it cuts
 // the firmware relay to the slave from 13 s to 3.4 s of wire time per 541 KB image.
+// `-e POLYKYBD_SPLIT_BAUD=460800` rebuilds the old speed for an A/B on the rig.
 #ifndef SERIAL_USART_SPEED
 #    define SERIAL_USART_SPEED 1843200
 #endif

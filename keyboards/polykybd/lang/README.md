@@ -104,3 +104,8 @@ cases) has no room, which is what currently keeps Vietnamese `Ơ ơ Ư ư` and p
 nothing without a font pack; check with `PolyKybdHost/tools/gfx_font.py` against
 `fonts` before adding (Latin-1 Sup / Ext-A / Ext-B are all covered by the
 `latin` category, which is `resident: true`).
+
+## Subfolders
+
+- [`scripts/`](scripts/README.md): the scripts that edit `lang_lut.xlsx`.
+- [`tests/`](tests/README.md): `latin_pick_test.c` and `shift_preview_test.py`.

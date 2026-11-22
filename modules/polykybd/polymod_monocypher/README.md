@@ -11,3 +11,7 @@ Listing the module in a `keyboard.json` `modules` array is the entire enable.
 The `make test:polymod_monocypher` suite pins the vendored code against the
 RFC 8032 known-answer vectors, so a build-flag or toolchain change that breaks
 the crypto fails on the host instead of bricking a signature check on hardware.
+
+## Subfolders
+
+- [`tests/`](tests/README.md): the host unit tests, against the RFC 8032 Ed25519 and FIPS 180-2 SHA-512 vectors.

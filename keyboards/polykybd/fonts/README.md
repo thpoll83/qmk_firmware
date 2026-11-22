@@ -391,3 +391,6 @@ flash as a CRC failure. ⚠️ **Because FONTPACK writes IN PLACE, a slot is val
 the last chunk lands — COMMIT is not what makes it so.** The `reship-fontpack-bundle`
 skill handles a reship; it needs no `fontconvert`.
 
+## Subfolders
+
+- [`generated/`](generated/README.md): the generated font headers; regenerate them, never edit them.

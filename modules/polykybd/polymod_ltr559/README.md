@@ -75,3 +75,7 @@ Written for the [PolyKybd](https://github.com/thpoll83/qmk_firmware) split
 keyboard, where the sensor drives per-keycap OLED auto-brightness and
 proximity-based idle inhibit. That policy lives in the keyboard, not here — this
 module only provides the readings.
+
+## Subfolders
+
+- [`tests/`](tests/README.md): the host unit tests of the driver against a mock bus.

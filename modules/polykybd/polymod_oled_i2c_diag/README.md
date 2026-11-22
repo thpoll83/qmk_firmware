@@ -47,3 +47,7 @@ by their wording. Change a line here, change the pattern there.
 
 `make test:polymod_oled_i2c_diag` runs the bookkeeping and wording against the real
 code.
+
+## Subfolders
+
+- [`tests/`](tests/README.md): the host unit tests of the bookkeeping and wording.

@@ -14,16 +14,17 @@ where each file moved in 2026-11.
 ## Folder layout
 
 The files at this level are the ones QMK requires: `config.h`, `rules.mk`, this
-`readme.md`, and `polykybd.c` / `polykybd.h`, which pull in the active variant. Every
-source includes other sources by their path from here, for example
+`readme.md`, and `polykybd.c` / `polykybd.h`, which pull in the active variant. Each folder has a `README.md` that lists its files and explains
+the concepts behind them. Every source includes other sources by their path from here, for example
 `#include "lib/system/state.h"`.
 
-- [`split72/`](split72/), [`split42/`](split42/): the two hardware variants. Each has
-  its own `keyboard.json`, `config.h`, `rules.mk` and `keymaps/default/keymap.c`. The
+- [`split72/`](split72/README.md), [`split42/`](split42/README.md): the two hardware variants. Each has
+  its own `keyboard.json`, `config.h`, `rules.mk` and `keymaps/default/keymap.c`
+  ([split72](split72/keymaps/default/README.md), [split42](split42/keymaps/default/README.md)). The
   keymap holds only the variant's data: which keycode sits on which key on each layer
   (`keymaps[]`), the encoder map and, on `split72`, the RGB LED positions.
   `split72/status_oled.c` draws the 128×64 status display.
-- [`keys_com/`](keys_com/): the key handling and keycap legends that every variant
+- [`keys_com/`](keys_com/README.md): the key handling and keycap legends that every variant
   compiles. `poly_keymap.c` processes the keys, handles the HID overlays, the language
   selection and idle/suspend, and returns each key's legend text (`to_static_text`).
   `render_key.c` draws the keycaps that need more than a text legend, and
@@ -31,53 +32,54 @@ source includes other sources by their path from here, for example
   keycode (`keycode_helper`), the language layer and Unicode map (`lang_layer`,
   `uni.h`), layer names (`layer_names`), macros (`poly_macro*`), combos
   (`poly_combos*`), the overlay cache (`mru`) and the layer enum (`layers.h`).
-- [`lib/`](lib/): the keyboard's own shared code, grouped by subsystem. QMK keyboards
+- [`lib/`](lib/README.md): the keyboard's own shared code, grouped by subsystem. QMK keyboards
   use `lib/` for code shared inside one keyboard.
-  - `system/`: the synced state (`state.h`), its EEPROM storage, the boot banner.
-  - `split_link/`: the link between the halves: state sync, the bridge to the slave,
+  - [`system/`](lib/system/README.md): the synced state (`state.h`), its EEPROM storage, the boot banner.
+  - [`split_link/`](lib/split_link/README.md): the link between the halves: state sync, the bridge to the slave,
     which side is master.
-  - `hid/`: the HID command handler (`hid_com.c`), font-pack transfer, the bulk pipe,
+  - [`hid/`](lib/hid/README.md): the HID command handler (`hid_com.c`), font-pack transfer, the bulk pipe,
     MacCompose.
-  - `fw_update/`: firmware update over HID and its relay to the slave half.
-  - `display/`: the keycap OLED output: overlay fill, the core1 executor and the
+  - [`fw_update/`](lib/fw_update/README.md): firmware update over HID and its relay to the slave half.
+  - [`display/`](lib/display/README.md): the keycap OLED output: overlay fill, the core1 executor and the
     status-display idle style.
-  - `drivers/`: hardware drivers: shift registers, SPI, external EEPROM, firmware
+  - [`drivers/`](lib/drivers/README.md): hardware drivers: shift registers, SPI, external EEPROM, firmware
     staging in flash, the crash record, the flash unique ID.
-  - `peripherals/`: the LTR-559 light sensor policy.
-  - `chibios_overrides/`: a patched copy of ChibiOS-Contrib's RP2040 USB driver, used
+  - [`peripherals/`](lib/peripherals/README.md): the LTR-559 light sensor policy.
+  - [`chibios_overrides/`](lib/chibios_overrides/README.md): a patched copy of ChibiOS-Contrib's RP2040 USB driver, used
     through `PLATFORM_MK` in `rules.mk`
     ([`docs/build/upstream-patches.md`](docs/build/upstream-patches.md)).
-- [`features/`](features/): user-facing features that sit on top of `keys_com/` and
+- [`features/`](features/README.md): user-facing features that sit on top of `keys_com/` and
   `lib/`.
-  - `anim/`: startup animation, tutorial, demo mode, focus ring and the other keycap
+  - [`anim/`](features/anim/README.md): startup animation, tutorial, demo mode, focus ring and the other keycap
     animations.
-  - `modes/`: AI mode, the MIDI legend and the mines game.
-  - `emoji/`: the emoji layer, its search dictionary and the dictionary sources.
-  - `hints/`: OS shortcut hints shown while a modifier is held.
-- [`../../modules/polykybd/`](../../modules/polykybd/): code with no PolyKybd types, as
+  - [`modes/`](features/modes/README.md): AI mode, the MIDI legend and the mines game.
+  - [`emoji/`](features/emoji/README.md): the emoji layer, its search dictionary and the dictionary sources.
+  - [`hints/`](features/hints/README.md): OS shortcut hints shown while a modifier is held.
+- [`../../modules/polykybd/`](../../modules/polykybd/README.md): code with no PolyKybd types, as
   QMK community modules. Each variant's `keyboard.json` lists the ones it uses. Among
   them: the core1 launcher and owner (`polymod_core1`), the Cirque trackpad gestures
   (`polymod_cirque_gestures`, split72 only), the OLED I2C write diagnostics
   (`polymod_oled_i2c_diag`), the LTR-559 driver, CRC32, RLE and Ed25519.
-- [`base/`](base/): pure logic without hardware access (no `quantum.h`, no display),
-  with unit tests in `base/tests/` that run on the host (`make test:<name>`). Code moves
+- [`base/`](base/README.md): pure logic without hardware access (no `quantum.h`, no display),
+  with unit tests in [`base/tests/`](base/tests/README.md) that run on the host (`make test:<name>`). Code moves
   here when it can be tested without a keyboard.
-- [`lang/`](lang/): the language tables. `lang_lut.xlsx` is the source that cog turns
+- [`lang/`](lang/README.md): the language tables. `lang_lut.xlsx` is the source that cog turns
   into `lang_lut.c`/`.h` and the generated parts of `keys_com/` and `lib/hid/`; the
-  scripts that edit the workbook are in `lang/scripts/`. The host reads `lang_lut.xlsx`
+  scripts that edit the workbook are in [`lang/scripts/`](lang/scripts/README.md). The host reads `lang_lut.xlsx`
   from here; `iso_lang_country.py` has byte-identical copies in the host and the rig.
-- [`fonts/`](fonts/): the font headers and their generator (`generate_fonts.py`, driven
-  by `fonts.yaml`); the generated headers are in `fonts/generated/`.
-- [`doom/`](doom/): the DOOM easter egg: the engine, the engine-pack build (`doom/pack/`)
-  and its tools ([`doom/README.md`](doom/README.md)).
-- [`ld/`](ld/): the linker scripts of the DOOM builds. QMK looks for linker scripts only
+- [`fonts/`](fonts/README.md): the font headers and their generator (`generate_fonts.py`, driven
+  by `fonts.yaml`); the generated headers are in [`fonts/generated/`](fonts/generated/README.md).
+- [`doom/`](doom/README.md): the DOOM easter egg: the engine, the engine-pack build
+  ([`doom/pack/`](doom/pack/README.md)) and its tools ([`doom/tools/`](doom/tools/README.md)).
+- [`ld/`](ld/README.md): the linker scripts of the DOOM builds. QMK looks for linker scripts only
   in a keyboard's `ld/` folder.
-- [`dev/`](dev/): code and tools for development, not part of a normal build.
-  - `scripts/`: `run_cog.sh` (regenerates every cog block) and `create_fonts.sh`.
-  - `tools/`: Python tools: previews, generators, checks, signing, the HIL probes
-    (`tools/hil_probes/`) and their tests (`tools/tests/`).
-  - `diag/`: diagnostic builds (crash test, USB stress), off by default.
-  - `profiling/`: the main-loop profiler (`POLYKYBD_LOOP_PROFILE=yes`, HID cmd 32).
+- [`dev/`](dev/README.md): code and tools for development, not part of a normal build.
+  - [`scripts/`](dev/scripts/README.md): `run_cog.sh` (regenerates every cog block) and `create_fonts.sh`.
+  - [`tools/`](dev/tools/README.md): Python tools: previews, generators, checks, signing, the HIL probes
+    ([`tools/hil_probes/`](dev/tools/hil_probes/README.md)) and their tests
+    ([`tools/tests/`](dev/tools/tests/README.md)).
+  - [`diag/`](dev/diag/README.md): diagnostic builds (crash test, USB stress), off by default.
+  - [`profiling/`](dev/profiling/README.md): the main-loop profiler (`POLYKYBD_LOOP_PROFILE=yes`, HID cmd 32).
 - [`docs/`](docs/README.md): the firmware documentation, by topic.
 
 # Build Notes

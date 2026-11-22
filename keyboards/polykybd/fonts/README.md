@@ -223,13 +223,10 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
     3→4 (the text scripts), then `symbol` 6→7 (119 glyphs). `flags` and `emoji`
     stayed byte-identical throughout. Use the `reship-fontpack-bundle` skill — its
     `--check` is what tells you which bundles actually moved.
-- ⚠️ **Two committed generated artifacts were already STALE before this work and
-  `--check` flags them**: `fontpack.manifest.json`'s `total_size` (the committed
-  480140 is the *post-dedupe* size, but the script builds that manifest **before**
-  `prune_shadowed_glyphs` runs, so it emits the unpruned 492328), and
-  `fontpack_render_settings.json` was missing all 12 `latin` records. Regenerating
-  corrects both. If `--check` is ever wired into CI, fix the manifest/prune ordering
-  rather than hand-editing the committed value.
+- Two committed generated artifacts were stale before this work: `fontpack.manifest.json`'s
+  `total_size` (the manifest was built without the dedupe; fixed, see below) and
+  `fontpack_render_settings.json`, which was missing all 12 `latin` records.
+  Regenerating corrected both.
 - **Byte-reproducible output requires the pinned `fontconvert` build (FreeType 2.13.3 / HarfBuzz 2.6.7, the CMake ExternalProject)** — the distro fast-path build renders ~1px differently on some glyphs. The committed headers are built with the pinned toolchain.
 - ⚠️ **`generate_fonts.py --check` no longer passes on a clean checkout** (it did on
   2026-08-11). On 2026-10-30 an unmodified `PolyKybd` reported `DRIFT` for

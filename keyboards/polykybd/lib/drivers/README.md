@@ -25,8 +25,7 @@ initialises and uses all of them. `lib/display/`, `features/anim/` and both
   one bit to select the next panel (the split72 render walk), and `sr_shift_out_0_latch()` selects every panel of
   the half.
 - `spi_helper.c` / `spi_helper.h`: `spi_prepare_commands()` and `spi_prepare_data()` set
-  `SPI_DC_PIN` low or high. The body of `spi_hw_setup()` is commented out, and
-  `spi_reset()` is declared but has no definition.
+  `SPI_DC_PIN` low or high. The body of `spi_hw_setup()` is commented out.
 - `helpers.c` / `helpers.h`: `peripherals_reset()` pulses `HW_RST_PIN` low for 2 µs, and
   the `PK_MIN`, `PK_MAX`, `PK_ABS` and `PK_POW` macros.
 - `e2prom.c` / `e2prom.h`: `persistent_default_layer_get()` / `_set()` read and write

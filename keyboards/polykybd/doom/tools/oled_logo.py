@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 # Copyright 2026 thpoll83
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Generate doom_logo_oled.h — the 128x64 1-bit DOOM title screen for the
-status OLED, shown while game mode runs (oled_helper.c oled_task_user).
+"""Generate doom_logo_oled.h — the 128x64 1-bit DOOM logo for the status OLED,
+shown while game mode runs (oled_helper.c oled_task_user).
 
-Decodes TITLEPIC (DOOM "picture format": 8-byte header, per-column post
-lists) + PLAYPAL from the freely-redistributable v1.9 shareware DOOM1.WAD
-(the same IWAD doom1.whx is converted from), downscales the full 320x200
-page to 128x64 (the status OLED is 2:1 wider than the 1.6:1 frame — the
-mild horizontal squeeze reads fine for the logo), Floyd-Steinberg dithers
-to 1bpp and emits the bitmap in the QMK oled driver's raw page-major
+Decodes the M_DOOM lump (the 123x60 menu-title logo, DOOM "picture format":
+8-byte header, per-column post lists) + PLAYPAL from the freely-redistributable
+v1.9 shareware DOOM1.WAD (the same IWAD doom1.whx is converted from), centres it
+unscaled on a 128x64 canvas, Floyd-Steinberg dithers to 1bpp and emits the bitmap in the QMK oled driver's raw page-major
 layout: byte = (row/8)*128 + col, bit k = row (row/8)*8 + k, bit 0 at the
 top of the page.
 
@@ -92,10 +90,10 @@ def main() -> None:
         f.write(f"""// Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// The DOOM title screen for the 128x64 status OLED, shown while game mode
-// runs. Derived from TITLEPIC of the freely-redistributable v1.9 shareware
-// DOOM1.WAD (the same IWAD doom1.whx is converted from) by
-// doom/tools/oled_logo.py — full 320x200 page downscaled to 128x64 and
+// The DOOM logo for the 128x64 status OLED, shown while game mode runs.
+// Derived from the M_DOOM lump (the 123x60 menu-title logo) of the
+// freely-redistributable v1.9 shareware DOOM1.WAD (the same IWAD doom1.whx is
+// converted from) by doom/tools/oled_logo.py — centred unscaled on 128x64 and
 // Floyd-Steinberg dithered to 1bpp, in the QMK oled driver's raw page-major
 // layout (oled_write_raw).
 #pragma once

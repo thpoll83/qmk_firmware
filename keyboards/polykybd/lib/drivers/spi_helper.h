@@ -27,5 +27,3 @@ void spi_prepare_commands(void);
 // Prepare SPI device for data transfer; SPI_DC_PIN will be set to high
 void spi_prepare_data(void);
 
-// Reset all connected SPI devices by pulling SPI_RST_PIN to low for 1 msec
-void spi_reset(void);

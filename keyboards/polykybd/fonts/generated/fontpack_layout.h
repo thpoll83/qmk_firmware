@@ -13,7 +13,7 @@
 // never by the font loader.
 #define FONTPACK_ICONS_BUNDLE_ID 8u
 
-// The emoji search dictionary (emoji/emoji_dict.py): validated by its own
+// The emoji search dictionary (features/emoji/emoji_dict.py): validated by its own
 // loader, never by the font loader.
 #define FONTPACK_EMOJIDICT_BUNDLE_ID 9u
 

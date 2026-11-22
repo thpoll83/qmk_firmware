@@ -55,8 +55,8 @@ measured rather than derived.
 | `hid_com.c` | `raw_hid_receive()` — main HID command dispatcher (21 command IDs, `0x01`–`0x15`) |
 | `fill_overlay.c` | Receives overlay segments from host, decompresses RLE, writes to overlay memory |
 | `base/overlay.c` | Overlay memory: `overlays[810][360]` — 90 keycap slots × 9 modifier variants × 360 bytes |
-| `drivers/disp_array.c` | Per-keycap OLED driver: `kdisp_write_gfx_char()`, `kdisp_draw_bitmap()`, `kdisp_invert()` |
-| `drivers/shift_reg.c` | Shift-register multiplexing — selects which keycap OLED receives the next SPI write |
+| `lib/drivers/disp_array.c` | Per-keycap OLED driver: `kdisp_write_gfx_char()`, `kdisp_draw_bitmap()`, `kdisp_invert()` |
+| `lib/drivers/shift_reg.c` | Shift-register multiplexing — selects which keycap OLED receives the next SPI write |
 | `split_sync.c` | CRC32-validated transactions that synchronise overlays and state to the other half |
 | `state.c` / `state_store.c` | `poly_sync_t` / `poly_layer_t` — shared state structs with CRC32. Split 2026-08 (#240): `state.c` is the policy half (dirty flags, brightness model, sync snapshots), `state_store.c` the persistence half (every EEPROM read/write, behind `state.c`'s public getters) |
 | `multicore_exec.c` | Offloads RLE decompression to RP2040 core1 via FIFO, keeping QMK's core0 responsive |
@@ -93,7 +93,7 @@ the host's layout editor renumbers them from the count the keyboard reports
 built against 13 layers still names `TO(8)` as `_SL` on a 1.11.x board that stores 8. A
 layer inserted in the MIDDLE of the stored block moves stored layers too, and the
 fold cannot recover that: older boards would preview the wrong legend on their layer
-keys. The host reads `layers.h` (`parse_layers_h()`); it now strips C comments, after
+keys. The host reads `keys_com/layers.h` (`parse_layers_h()`); it now strips C comments, after
 the comment on `_ML` made it drop `_SL`.
 
 ⚠️ **Every mutation goes through a `*_poly` wrapper in `split_sync.c`** —

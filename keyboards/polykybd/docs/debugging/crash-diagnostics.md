@@ -1,6 +1,6 @@
 # Crash diagnostics: the record, the watchdog and the phase breadcrumb
 
-`drivers/crash_record.*` — how a HardFault, an unhandled exception or a main-loop hang
+`lib/drivers/crash_record.*` — how a HardFault, an unhandled exception or a main-loop hang
 is recorded, rebooted through and announced on the next boot. Moved out of
 `CLAUDE.md` on 2026-09-10: ~16 KB read while you are in that file, reading a crash
 line, or adding a blocking path.
@@ -19,7 +19,7 @@ users at open with a phantom crash dialog. The discriminator is the SDK's own
 
 ---
 
-## Crash diagnostics: the crash record, the watchdog and the phase breadcrumb (`drivers/crash_record.*`)
+## Crash diagnostics: the crash record, the watchdog and the phase breadcrumb (`lib/drivers/crash_record.*`)
 
 A HardFault, an unhandled exception or a main-loop hang used to leave **nothing**:
 the M0+ HardFault vector fell into ChibiOS's `b .` loop, the board sat dead until
@@ -156,7 +156,7 @@ run on it (`test_no_crash_record`). What is worth knowing:
     for a second pass). Split across two bands the widest parts are 88 and 48 px — but
     the 19 px face then clips 2 px off the top of split42's **32 px** panel, so the
     short panel uses the 15 px one. Both measured with
-    `tools/status_oled_preview.py --boot <step>`; 0 off-panel pixels at every milestone
+    `dev/tools/status_oled_preview.py --boot <step>`; 0 off-panel pixels at every milestone
     on both heights.
   - `boot_render_mark()` (`boot_diag.c`) stamps the breadcrumb **per KEY** through that
     final render — `phase=1:0x08NN`, `NN = row*MATRIX_COLS + col + 1` — and repaints the
@@ -304,7 +304,7 @@ run on it (`test_no_crash_record`). What is worth knowing:
   unverified is the **fault path itself**: the naked handler, the stacked frame
   and the `watchdog_reboot()` out of it. The `debug-firmware-on-rig` skill with a
   probe that dereferences a bad pointer over HID is the way to close that.
-  - **`-e POLYKYBD_CRASH_TEST=yes` is the by-hand route** (`diag/crash_test.c`, a
+  - **`-e POLYKYBD_CRASH_TEST=yes` is the by-hand route** (`dev/diag/crash_test.c`, a
     TEST-ONLY flag — a normal build compiles inline no-ops and pays nothing).
     Hold Ctrl+Shift+Alt and press a digit: **1** unaligned word store (the
     qmk#258 brick, reproduced), **2** a branch to an address with bit 0 clear,

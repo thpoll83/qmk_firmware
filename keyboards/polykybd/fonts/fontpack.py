@@ -621,7 +621,7 @@ def build_bundles(order: list[str], resident: set[str], parsed: dict[str, Parsed
 
     # A `kind: icons` entry reserves a slot for the host-built PlyI icon bundle
     # (docs/design/overlay-icon-library.md), and `kind: emojidict` one for the emoji
-    # search dictionary (emoji/emoji_dict.py): neither has fonts or a .plyf here.
+    # search dictionary (features/emoji/emoji_dict.py): neither has fonts or a .plyf here.
     font_idx = [i for i, e in enumerate(lst) if e.get("kind", "fonts") == "fonts"]
     for i, e in enumerate(lst):
         if e.get("kind", "fonts") not in ("fonts", "icons", "emojidict"):
@@ -713,7 +713,7 @@ def bundle_layout_header(bundles: list[dict], layout: dict) -> str:
     if icons:
         lines += ["// The PlyI overlay icon library (HID cmd 42): validated by its own loader,", "// never by the font loader.", f"#define FONTPACK_ICONS_BUNDLE_ID {icons[0]['index']}u", ""]
     if dicts:
-        lines += ["// The emoji search dictionary (emoji/emoji_dict.py): validated by its own", "// loader, never by the font loader.", f"#define FONTPACK_EMOJIDICT_BUNDLE_ID {dicts[0]['index']}u", ""]
+        lines += ["// The emoji search dictionary (features/emoji/emoji_dict.py): validated by its own", "// loader, never by the font loader.", f"#define FONTPACK_EMOJIDICT_BUNDLE_ID {dicts[0]['index']}u", ""]
     lines += ["// X(id, index, slot_offset, slot_size)", "#define FONTPACK_BUNDLE_LIST \\"]
     for s in layout["slots"]:
         lines.append(f"    X({s['id']}, {s['index']}, 0x{s['offset']:X}UL, "

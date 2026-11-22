@@ -5,12 +5,12 @@
 #include "quantum.h"
 //#include "usb_device_state.h"
 
-#include "split_link/side.h"
+#include "lib/split_link/side.h"
 #include "base/com.h"
-#include "drivers/disp_array.h"
-#include "drivers/helpers.h"
-#include "drivers/spi_helper.h"
-#include "drivers/shift_reg.h"
+#include "lib/drivers/disp_array.h"
+#include "lib/drivers/helpers.h"
+#include "lib/drivers/spi_helper.h"
+#include "lib/drivers/shift_reg.h"
 #include "base/text_helper.h"
 
 #include <string.h>

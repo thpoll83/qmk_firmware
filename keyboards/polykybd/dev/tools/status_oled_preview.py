@@ -1,0 +1,877 @@
+#!/usr/bin/env python3
+"""Faithful preview of the split72 status OLED (128x64) — the same panel that
+``split72/status_oled.c`` (`oled_update_buffer`) composes on hardware.
+
+It parses the real committed status fonts + IconsFont straight from the headers
+(continuous-bit-packed GFXfont, comment-stripped so ``/* range 0x20-0x7e */`` hex
+in the array header is NOT mistaken for pixel bytes — that bit me once), then
+draws each element at the same (x, baseline) coordinates the C code uses. Handy
+for eyeballing layout tweaks (row nudges, new fields) without flashing.
+
+Two modes:
+  * default            -> both halves, cool-white-on-black, as the SSD1306 shows.
+  * ``--diag``         -> clipping diagnostic: a 6px gutter + panel-edge frame,
+                          and any pixel drawn OUTSIDE the 128x64 panel is RED
+                          (i.e. clipped by the hardware's SET_PIXEL_CLIPPED). Use
+                          it to check that a nudged row / tall glyph isn't losing
+                          pixels at an edge (mirrors the keycap HTML preview's
+                          no-clip margin check).
+
+Usage (run from keyboards/polykybd/):
+    python3 dev/tools/status_oled_preview.py            [-o out.png]
+    python3 dev/tools/status_oled_preview.py --diag     [-o diag.png]
+
+Only stdlib + Pillow. Representative live values (layer/brightness/WPM/lang and
+RGB mode/HSV/speed) are placeholders — tweak the dicts in build_panel().
+"""
+import argparse
+import os
+import re
+import sys
+
+from PIL import Image, ImageDraw
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+FONTDIR = os.path.normpath(os.path.join(HERE, "..", "..", "fonts"))
+
+P_W, P_H = 128, 64  # split72 status OLED
+
+# ---- coordinates, kept in sync with split72/status_oled.c oled_update_buffer ----
+TOP_BASE = 15  # first text line (layer icon / hex layer / side)  [was 14]
+# Rows B..D are spaced PER PANEL so the bottom row's last pixel lands on screen row
+# 63 and the slack splits evenly -- the layout panel's descenders sit on row B
+# ("Qwerty Stag!") while the RGB panel's sit on row C ("Cyan"), so one shared set
+# cannot space both. See the matching block in split72/status_oled.c.
+LOCK_ROW_B = 29  # layout name
+LOCK_ROW_C = 48  # speed + language
+LOCK_ROW_D = 63  # brightness
+RGB_ROW_B = 30  # effect index + name
+RGB_ROW_C = 45  # colour name + hue
+RGB_ROW_D = 63  # saturation + value
+# RGB-off re-flow: three rows on both panels instead of four, again bottomed out on 63.
+CAPS_LOCK_BASE = 43  # evens the column gaps (10/9); SPEED_BOX_H tracks it
+SIDE_MARKER_BASE = 63  # physical-side marker, bottomed out (was 56)
+OFF_ROW_B = 37
+OFF_ROW_C = 63
+RGB_OFF_ROW_B = 39
+RGB_OFF_ROW_C = 63
+OFF_GLOBE_Y = 1
+OFF_CODE1_BASE = 31
+OFF_CODE2_BASE = 43
+
+
+# ----------------------------- GFXfont parsing -----------------------------
+def _parse_header(text, bitmaps, glyphs, fonts):
+    for m in re.finditer(r'const\s+uint8_t\s+(\w+)\s*\[\]\s*PROGMEM\s*=\s*\{(.*?)\};', text, re.S):
+        body = re.sub(r'/\*.*?\*/', '', m.group(2), flags=re.S)
+        body = re.sub(r'//[^\n]*', '', body)
+        bitmaps[m.group(1)] = [int(b, 16) for b in re.findall(r'0x([0-9A-Fa-f]{2})', body)]
+    for m in re.finditer(r'const\s+GFXglyph\s+(\w+)\s*\[\]\s*(?:PROGMEM\s*)?=\s*\{(.*?)\};', text, re.S):
+        body = re.sub(r'//[^\n]*', '', m.group(2))
+        arr = []
+        for g in re.finditer(r'\{\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(-?\d+)\s*\}', body):
+            v = list(map(int, g.groups()))
+            arr.append(dict(off=v[0], w=v[1], h=v[2], xa=v[3], xo=v[4], yo=v[5]))
+        glyphs[m.group(1)] = arr
+    for m in re.finditer(r'const\s+GFXfont\s+(\w+)\s+PROGMEM\s*=\s*\{(.*?)\};', text, re.S):
+        parts = [p.strip() for p in re.sub(r'//[^\n]*', '', m.group(2)).split(',')]
+        fonts[m.group(1)] = dict(bmp=re.findall(r'\w+', parts[0])[-1], gly=re.findall(r'\w+', parts[1])[-1], first=int(parts[2], 0), last=int(parts[3], 0))
+
+
+def load_fonts():
+    B, G, F = {}, {}, {}
+    for rel in ("util_font.h", "NotoSans_Medium_Base_8pt.h", "gfx_icons.h", "nano_font.h", "generated/emoji_fonts.h"):
+        _parse_header(open(os.path.join(FONTDIR, rel), encoding="utf-8").read(), B, G, F)
+
+    def bundle(name):
+        f = F[name]
+        return f, B[f['bmp']], G[f['gly']]
+
+    disp = bundle('NotoSans_Regular_Mid_19px7b')  # top row shares _Mid_
+    small = bundle('NotoSans_Regular_Small_15px7b')
+    tiny = bundle('NotoSans_Regular_Nano_10px7b')  # language index only (see status_oled.c)
+    icons = None
+    for _n, f in F.items():
+        if f['first'] <= 0x100005 <= f['last'] and f['gly'] in G:
+            icons = (f, B[f['bmp']], G[f['gly']])
+            break
+    globe = bundle('NotoEmoji_Medium_World_20pt16b')
+    return disp, small, icons, tiny, globe
+
+
+def load_notice_font():
+    """The U+2B6F arrow used by the firmware notice screens, loaded SEPARATELY.
+
+    ⚠️ Deliberately not appended to load_fonts()'s tuple. The status-oled-layout
+    skill calls `P.build_panel(side, *P.load_fonts(), brightness, ...)`, so one more
+    element there slides `arrow` into build_panel's `brightness` slot — a silent
+    wrong-argument bug in a file that lives in another directory and that nothing in
+    this repo's CI imports. Keeping the arity fixed is what stops that."""
+    B, G, F = {}, {}, {}
+    _parse_header(open(os.path.join(FONTDIR, "generated", "symbol_fonts.h"), encoding="utf-8").read(), B, G, F)
+    f = F['NotoSansSymbols2_Regular_Arrows_20pt16b']
+    return f, B[f['bmp']], G[f['gly']]
+
+
+def draw(setpix, font, x, y, text):
+    """Draw a codepoint list at (x, baseline y). setpix(px, py) records a lit
+    pixel; it decides in/out-of-bounds (no clipping here, so diag can see it)."""
+    f, bm, gl = font
+    for cp in text:
+        if not (f['first'] <= cp <= f['last']):
+            continue
+        g = gl[cp - f['first']]
+        # COLUMN-NATIVE (OLED page) layout, matching kdisp_write_gfx_char and the
+        # host's tools/gfx_font.py: 1 byte = 8 VERTICAL pixels, cb bytes per
+        # column, LSB = top of the page. NOT the classic row-major Adafruit
+        # layout — reading it that way renders scrambled glyphs that look like
+        # dither noise (which is what this tool did before the ABI-2 transpose
+        # was accounted for here).
+        cb = (g['h'] + 7) >> 3
+        for gx in range(g['w']):
+            col = g['off'] + gx * cb
+            for gy in range(g['h']):
+                if bm[col + (gy >> 3)] & (1 << (gy & 7)):
+                    setpix(x + g['xo'] + gx, y + g['yo'] + gy)
+        x += g['xa']
+
+
+def draw_glyph_half(setpix, font, x, y, cp):
+    """Mirror of kdisp_draw_glyph_half_at: 2x2-OR downsample, dims rounded up,
+    (x, y) is the TOP-LEFT of the halved glyph (no baseline/yOffset math)."""
+    f, bm, gl = font
+    if not (f['first'] <= cp <= f['last']):
+        return
+    g = gl[cp - f['first']]
+    w, h = g['w'], g['h']
+    for dy in range((h + 1) // 2):
+        for dx in range((w + 1) // 2):
+            for oy in range(2):
+                for ox in range(2):
+                    sx, sy = dx * 2 + ox, dy * 2 + oy
+                    if sx >= w or sy >= h:
+                        continue
+                    cb = (h + 7) >> 3  # column-native, as in draw()
+                    if bm[g['off'] + sx * cb + (sy >> 3)] & (1 << (sy & 7)):
+                        setpix(x + dx, y + dy)
+                        break
+                else:
+                    continue
+                break
+
+
+def text_bbox(font, text):
+    """Mirror of kdisp_gfx_text_bbox: lit-pixel extents of `text` drawn at
+    (x=0, baseline=0), as (x0, x1, y0, y1). Single-font array, so there is no
+    per-glyph yAdvance baseline shift to fold in."""
+    f, _bm, gl = font
+    x = 0
+    x0 = y0 = 127
+    x1 = y1 = -128
+    for cp in text:
+        if not (f['first'] <= cp <= f['last']):
+            continue
+        g = gl[cp - f['first']]
+        if g['w'] and g['h']:
+            x0 = min(x0, x + g['xo'])
+            x1 = max(x1, x + g['xo'] + g['w'] - 1)
+            y0 = min(y0, g['yo'])
+            y1 = max(y1, g['yo'] + g['h'] - 1)
+        x += g['xa']
+    return x0, x1, y0, y1
+
+
+def build_fw_confirm_panel(side, small):
+    """FW-2 unsigned-image confirmation screen — mirror of oled_helper.c's
+    oled_fw_confirm_screen(). Three lines, each centred in its own H/3 band from
+    its own bbox, so a line with a descender sits level rather than being pushed
+    by the tallest line in the set. `side` is 'L' or 'R' — each half names its
+    OWN key, exactly as the firmware does."""
+    pts = []
+    setp = lambda px, py: pts.append((px, py))
+    tall = P_H >= 64
+    l0 = s2cp("Unsigned") if tall else s2cp("Unsigned!")
+    l1 = s2cp("firmware!") if tall else None
+    l2 = s2cp("A = ACCEPT") if side == 'L' else s2cp("R = REJECT")
+    lines = [l0, l1, l2] if l1 else [l0, l2]
+    band = P_H // len(lines)
+    for i, txt in enumerate(lines):
+        bx0, bx1, by0, by1 = text_bbox(small, txt)
+        w = bx1 - bx0 + 1
+        x = (P_W - w) // 2 - bx0
+        if x < 0:
+            x = 0
+        base = band * i + band // 2 - (by0 + by1) // 2
+        draw(setp, small, x, base, txt)
+    return pts
+
+
+def build_fw_notice_panel(side, disp, arrow, word, icon=True):
+    """The two-word firmware notice — mirror of oled_helper.c's oled_fw_notice(),
+    behind oled_fw_apply_screen() / oled_fw_restart_screen() / oled_fw_failed_screen().
+
+    Reads across the PAIR of panels, so each `side` renders only its own word. The
+    arrow (resident U+2B6F) sits OUTSIDE the word: left of it on the left half, right
+    of it on the right half. Each element is centred on its own bbox, so the word and
+    the much taller arrow sit level instead of one shoving the other.
+
+    `icon=False` is the failure notice: the arrow means "in progress" and has no
+    business on a screen that says nothing is.
+
+    This exists to answer the question a build cannot: does the widest word still fit?
+    "Restarting" measures 125 of the 128 px here, which is why the firmware says
+    "Restart".
+    """
+    pts = []
+    setp = lambda px, py: pts.append((px, py))
+    gap = 3 if icon else 0
+    ix0, ix1, iy0, iy1 = text_bbox(arrow, [0x2B6F]) if icon else (0, -1, 0, -1)
+    tx0, tx1, ty0, ty1 = text_bbox(disp, s2cp(word))
+    iw = (ix1 - ix0 + 1) if icon else 0
+    tw = tx1 - tx0 + 1
+    gx = (P_W - (iw + gap + tw)) // 2
+    if gx < 0:
+        gx = 0
+    i_base = P_H // 2 - (iy0 + iy1) // 2
+    t_base = P_H // 2 - (ty0 + ty1) // 2
+    if not icon:
+        draw(setp, disp, gx - tx0, t_base, s2cp(word))
+    elif side == 'L':
+        draw(setp, arrow, gx - ix0, i_base, [0x2B6F])
+        draw(setp, disp, gx + iw + gap - tx0, t_base, s2cp(word))
+    else:
+        draw(setp, disp, gx - tx0, t_base, s2cp(word))
+        draw(setp, arrow, gx + tw + gap - ix0, i_base, [0x2B6F])
+    return pts
+
+
+def build_boot_panel(disp, step, total=8, small=None, sub=0, sub_total=0, note=None):
+    """Boot progress — mirror of oled_helper.c's oled_boot_progress().
+
+    TWO lines, because "Booting.... 100%" measures 143 of the 128 px in this font.
+    Both halves draw the same thing (each is reporting its OWN boot), so there is no
+    `side`. The percent rounds to nearest: 25 / 38 / 50 / 63 / 75 / 88 / 100.
+
+    A sub-step (`sub` >= 1) makes it THREE bands on the 64 px panel, context first and
+    the percent last and largest: "Booting...." / "17 / 40" in the small face, then the
+    percent in the panel's own. `sub_total` 0 prints the count alone. The 32 px panel
+    cannot hold three bands (10 px apart, a 14 px face), so there the percent stays on
+    the label line -- mirror of the C. `note` (e.g. "USB 4>2 @18") replaces the LABEL
+    line when the boot has something more urgent to say.
+    """
+    pts = []
+    setp = lambda px, py: pts.append((px, py))
+    # The 19 px face clips 2 px off the top of a 32 px panel with two bands, so the
+    # short panel uses the 15 px one -- mirror of the same test in the C.
+    face = disp if P_H >= 64 else (small or disp)
+    pct = "%d%%" % ((step * 100 + total // 2) // total)
+    frac = ("%d / %d" % (sub, sub_total)) if sub_total else "%d" % sub
+    if sub and P_H >= 64:
+        lines = [note or "Booting....", frac, pct]
+        faces = [small or disp, small or disp, face]
+    elif sub:
+        lines = [note or ("Booting " + pct), frac]
+        faces = [small or disp, small or disp]
+    else:
+        lines = ["Booting....", pct]
+        faces = [face, face]
+    band = P_H // len(lines)
+    for i, txt in enumerate(lines):
+        cp = s2cp(txt)
+        bx0, bx1, by0, by1 = text_bbox(faces[i], cp)
+        x = (P_W - (bx1 - bx0 + 1)) // 2 - bx0
+        if x < 0:
+            x = 0
+        draw(setp, faces[i], x, band * i + band // 2 - (by0 + by1) // 2, cp)
+    return pts
+
+
+def build_fw_failed_panel(side, small, why='crc', size=492916, want=0xa1b2c3d4, got=0x5e6f7a8b):
+    """The refused-apply screen — mirror of oled_helper.c's oled_fw_failed_screen().
+
+    Band layout (oled_fw_confirm_panel's shape), because this is the one firmware
+    screen with something to say. LEFT half = what happened and why, RIGHT half = the
+    numbers. `why` is 'crc' or 'none'. On the 32 px panel the MIDDLE line is dropped.
+    """
+    pts = []
+    setp = lambda px, py: pts.append((px, py))
+    no_image = (why == 'none')
+    if side == 'L':
+        lines = ["Update", "FAILED", "not staged" if no_image else "bad checksum"]
+    elif no_image:
+        lines = ["Nothing was", "staged", "upload again"]
+    else:
+        lines = ["%d KB" % ((size + 1023) // 1024), "want %08x" % want, "got  %08x" % got]
+    if P_H < 64:
+        lines = [lines[0], lines[2]]
+    band = P_H // len(lines)
+    for i, txt in enumerate(lines):
+        cp = s2cp(txt)
+        bx0, bx1, by0, by1 = text_bbox(small, cp)
+        x = (P_W - (bx1 - bx0 + 1)) // 2 - bx0
+        if x < 0:
+            x = 0
+        draw(setp, small, x, band * i + band // 2 - (by0 + by1) // 2, cp)
+    return pts
+
+
+def build_telemetry_panel(usb_side, small, fw="0.16.18", proto=15, hw="0x0320", uptime="1:23:45", link=None):
+    """Settings -> "More" telemetry screen — mirror of oled_helper.c's
+    oled_telemetry_screen(). Four lines on the 64px panel (two on a 32px one),
+    each centred in its own band from its own bbox, exactly as the FW-2 confirm
+    screen above and the C do.
+
+    `usb_side` picks the half: the USB (master) half is the only one that owns the
+    split-link counters, so the LINK line reads "n/a" on the other — the C refuses
+    to render the slave's all-zero counters as a perfect 0.0%. `link` is
+    (err_permille, frames) for the master, or None for a link that has sent
+    nothing yet."""
+    pts = []
+
+    def setp(px, py):
+        pts.append((px, py))
+
+    l_fw = "FW %s" % fw
+    l_ver = "P%d  HW %s" % (proto, hw)
+    l_up = "%s  up %s" % ("USB" if usb_side else "LNK", uptime)
+    if not usb_side:
+        l_link = "Lnk n/a"
+    elif link is None or link[1] == 0:
+        # ⚠️ frames == 0 is the SAME branch, because the C tests `ls.attempts == 0U`
+        # BEFORE it computes a rate -- so a zero-frame panel showing a percentage is
+        # a reading no keyboard can produce. Mirroring only the None case let
+        # `--link 0,0` render "Lnk 0.0% 0", i.e. the preview drifting from the C in
+        # exactly the direction it exists to catch.
+        l_link = "Lnk idle"
+    else:
+        pm, frames = link
+        # Same compaction as the C: the count climbs into the millions, so it is
+        # abbreviated, and the rate drops its decimal at/above 10% -- both so the
+        # WORST case fits the 128px panel rather than only the fresh-boot one.
+        if frames < 1000:
+            tx = "%d" % frames
+        elif frames < 1000000:
+            tx = "%dk" % (frames // 1000)
+        else:
+            tx = "%dM" % (frames // 1000000)
+        l_link = ("Lnk %d.%d%% %s" % (pm // 10, pm % 10, tx)) if pm < 100 \
+            else ("Lnk %d%% %s" % ((pm + 5) // 10, tx))
+
+    lines = [l_fw, l_ver, l_up, l_link][:(4 if P_H >= 64 else 2)]
+    band = P_H // len(lines)
+    for i, line in enumerate(lines):
+        txt = s2cp(line)
+        bx0, bx1, by0, by1 = text_bbox(small, txt)
+        w = bx1 - bx0 + 1
+        x = (P_W - w) // 2 - bx0
+        if x < 0:
+            x = 0
+        base = band * i + band // 2 - (by0 + by1) // 2
+        draw(setp, small, x, base, txt)
+    return pts
+
+
+def measure_width(font, text):
+    """Rightmost lit pixel of `text`, mirroring kdisp_gfx_text_bounds' hi. Skips
+    out-of-range codepoints exactly as draw() does, so a missing glyph can't raise."""
+    f, _bm, gl = font
+    x = 0
+    hi = 0
+    for cp in text:
+        if not (f['first'] <= cp <= f['last']):
+            continue
+        g = gl[cp - f['first']]
+        if g['w']:
+            hi = max(hi, x + g['xo'] + g['w'] - 1)
+        x += g['xa']
+    return hi
+
+
+def draw_right(setpix, font, right_x, y, text):
+    """Mirror of oled_draw_text_right: rightmost lit pixel lands on right_x."""
+    draw(setpix, font, max(0, right_x - measure_width(font, text)), y, text)
+
+
+def fill_rect(setpix, x, y, w, h):
+    """Mirror of kdisp_fill_rect."""
+    for px in range(x, x + w):
+        for py in range(y, y + h):
+            setpix(px, py)
+
+
+def round_rect(setpix, x, y, w, h, r):
+    """Mirror of kdisp_draw_round_rect (same midpoint-arc walk, so the corners land
+    on the same pixels as the firmware's)."""
+    if w < 2 or h < 2:
+        return
+    x0, y0, x1, y1 = x, y, x + w - 1, y + h - 1
+    r = max(0, min(r, (w - 1) // 2, (h - 1) // 2))
+    for i in range(x0 + r, x1 - r + 1):
+        setpix(i, y0)
+        setpix(i, y1)
+    for j in range(y0 + r, y1 - r + 1):
+        setpix(x0, j)
+        setpix(x1, j)
+    cxl, cxr, cyt, cyb = x0 + r, x1 - r, y0 + r, y1 - r
+    f, ddF_x, ddF_y, px, py = 1 - r, 1, -2 * r, 0, r
+    while px < py:
+        if f >= 0:
+            py -= 1
+            ddF_y += 2
+            f += ddF_y
+        px += 1
+        ddF_x += 2
+        f += ddF_x
+        for sx, sy in ((cxr + px, cyt - py), (cxr + py, cyt - px), (cxl - px, cyt - py), (cxl - py, cyt - px), (cxr + px, cyb + py), (cxr + py, cyb + px), (cxl - px, cyb + py), (cxl - py, cyb + px)):
+            setpix(sx, sy)
+
+
+# ---- RGB speed gauge, kept in sync with split72/status_oled.c ----
+COL_W = 17  # indicator column both panels reserve on their inner edge
+SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H = 0, COL_W, 44  # Num Lock top .. Caps Lock bottom
+SPEED_FILL_W = SPEED_BOX_W - 6
+SPEED_FILL_BOTTOM = SPEED_BOX_Y + SPEED_BOX_H - 4
+SPEED_FILL_H = SPEED_BOX_H - 6
+
+
+def draw_speed_gauge(setpix, x, speed):
+    round_rect(setpix, x, SPEED_BOX_Y, SPEED_BOX_W, SPEED_BOX_H, 3)
+    round_rect(setpix, x + 1, SPEED_BOX_Y + 1, SPEED_BOX_W - 2, SPEED_BOX_H - 2, 2)
+    fill = (speed * SPEED_FILL_H + 127) // 255
+    if fill:
+        fill_rect(setpix, x + 3, SPEED_FILL_BOTTOM - fill + 1, SPEED_FILL_W, fill)
+
+
+# ---- brightness gauge, kept in sync with split72/status_oled.c ----
+SUN_BMP = [0x04, 0x00, 0x44, 0x40, 0x20, 0x80, 0x0e, 0x00, 0x1f, 0x00, 0xdf, 0x60, 0x1f, 0x00, 0x0e, 0x00, 0x20, 0x80, 0x44, 0x40, 0x04, 0x00]
+SUN_W = SUN_H = 11
+GLOBE_BMP = [0x0f, 0x80, 0x38, 0xe0, 0x68, 0xb0, 0x48, 0x90, 0x90, 0x48, 0x90, 0x48, 0xff, 0xf8, 0x90, 0x48, 0x90, 0x48, 0x48, 0x90, 0x68, 0xb0, 0x38, 0xe0, 0x0f, 0x80]
+GLOBE_W = GLOBE_H = 13
+GLOBE_BIG_BMP = [
+    0x07, 0xf0, 0x00, 0x0e, 0x38, 0x00, 0x32, 0x26, 0x00, 0x24, 0x12, 0x00, 0x44, 0x11, 0x00, 0xc4, 0x11, 0x80, 0x84, 0x10, 0x80, 0x84, 0x10, 0x80, 0xff, 0xff, 0x80, 0x84, 0x10, 0x80, 0x84, 0x10, 0x80, 0xc4, 0x11, 0x80, 0x44, 0x11, 0x00, 0x24, 0x12, 0x00,
+    0x32, 0x26, 0x00, 0x0e, 0x38, 0x00, 0x07, 0xf0, 0x00
+]
+GLOBE_BIG_W = GLOBE_BIG_H = 17
+WPM_BMP = [0x1f, 0x00, 0x71, 0xc0, 0x43, 0x40, 0xc2, 0x60, 0x86, 0x20, 0x8e, 0x20]
+WPM_ICON_W, WPM_ICON_H = 11, 6
+DEGREE_BMP = [0xe0, 0xa0, 0xe0]  # 3x3 degree sign
+DEGREE_W = DEGREE_H = 3
+SUPER2_BMP = [0x70, 0x88, 0x10, 0x20, 0x40, 0xf8]  # 5x6 superscript 2
+SUPER2_W, SUPER2_H = 5, 6
+DROPLET_BMP = [0x08, 0x00, 0x08, 0x00, 0x1c, 0x00, 0x1c, 0x00, 0x3e, 0x00, 0x7f, 0x00, 0x7f, 0x00, 0x7f, 0x00, 0x3e, 0x00, 0x1c, 0x00]
+DROPLET_W, DROPLET_H, DROPLET_Y = 9, 10, 53  # saturation
+SUN_SMALL_BMP = [0x08, 0x00, 0x41, 0x00, 0x1c, 0x00, 0x3e, 0x00, 0xbe, 0x80, 0x3e, 0x00, 0x1c, 0x00, 0x41, 0x00, 0x08, 0x00]
+SUN_SMALL_W, SUN_SMALL_H, SUN_SMALL_Y = 9, 9, 54  # value
+SV_ICON_GAP = 2
+
+
+def hue_to_degrees(hue):
+    """Mirror of text_helper.c hue_to_degrees()."""
+    return hue * 360 // 255
+
+
+def hue_name(hue, sat):
+    """Mirror of text_helper.c get_hue_name()."""
+    if sat < 26:
+        return 'White'
+    deg = hue_to_degrees(hue)
+    for limit, name in ((15, 'Red'), (45, 'Orange'), (70, 'Yellow'), (100, 'Lime'), (165, 'Green'), (195, 'Cyan'), (240, 'Azure'), (270, 'Blue'), (300, 'Violet'), (330, 'Magenta'), (345, 'Pink')):
+        if deg < limit:
+            return name
+    return 'Red'
+
+
+def byte_to_percent(v):
+    return (v * 100 + 127) // 255
+
+
+# GAUGE_* mirror the defines in split72/status_oled.c; FULL_BRIGHT mirrors config.h.
+GAUGE_SEGMENTS, GAUGE_BAR_W, GAUGE_PITCH, GAUGE_MIN_H = 10, 4, 6, 3
+FULL_BRIGHT = 50
+
+MAX_BRIGHT = 100  # RGB_MATRIX_MAXIMUM_BRIGHTNESS (split72/config.h)
+
+
+def val_to_percent(v):
+    """Mirror of status_oled.c val_to_percent() -- the VALUE is capped at
+    RGB_MATRIX_MAXIMUM_BRIGHTNESS, not 255, so it scales against that."""
+    v = min(v, MAX_BRIGHT)
+    return (v * 100 + MAX_BRIGHT // 2) // MAX_BRIGHT
+
+
+def brightness_to_level(contrast):
+    contrast = min(contrast, FULL_BRIGHT)
+    return min((contrast * GAUGE_SEGMENTS + FULL_BRIGHT // 2) // FULL_BRIGHT, GAUGE_SEGMENTS)
+
+
+def draw_brightness_bars(setpix, x, bottom_y, level):
+    for i in range(GAUGE_SEGMENTS):
+        bx, h = x + i * GAUGE_PITCH, GAUGE_MIN_H + i
+        if i < level:
+            fill_rect(setpix, bx, bottom_y - h + 1, GAUGE_BAR_W, h)
+        else:
+            fill_rect(setpix, bx, bottom_y, GAUGE_BAR_W, 1)
+
+
+# Top-row role icons (16x16, MSB-first) — mirror of status_oled.c usb_/link_status_bitmap.
+USB_BMP = [0x00, 0x80, 0x01, 0xc0, 0x01, 0xc0, 0x03, 0xe0, 0x03, 0xe0, 0x00, 0x80, 0x00, 0xb8, 0x04, 0xb8, 0x0e, 0xb8, 0x0e, 0x90, 0x04, 0xe0, 0x03, 0x80, 0x00, 0x80, 0x01, 0xc0, 0x03, 0x60, 0x01, 0xc0]
+LINK_BMP = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x1c, 0x7f, 0xfe, 0x7f, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x7f, 0xfe, 0x7f, 0xfe, 0x38, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+
+
+def s2cp(t):
+    return [ord(c) for c in t]
+
+
+def s(t):
+    return [ord(c) for c in t]
+
+
+def draw_bitmap(setpix, data, ox, oy, w=16, h=16):
+    bw = (w + 7) // 8
+    for y in range(h):
+        for x in range(w):
+            if data[y * bw + (x >> 3)] & (0x80 >> (x & 7)):
+                setpix(ox + x, oy + y)
+
+
+def draw_brightness_row(setp, small, x, base_y, brightness):
+    """Mirror of draw_brightness_row()."""
+    draw_bitmap(setp, SUN_BMP, x, base_y - 11, SUN_W, SUN_H)
+    draw(setp, small, x + 15, base_y, s(str(brightness)))
+    draw_brightness_bars(setp, x + 40, base_y - 1, brightness_to_level(brightness))
+
+
+def draw_lang_column(setp, tiny, globe, x, code):
+    """Mirror of draw_lang_column(): big globe over the code on two lines."""
+    draw_glyph_half(setp, globe, x, OFF_GLOBE_Y, 0x1F310)
+    f, _bm, gl = tiny
+    for half, base in ((0, OFF_CODE1_BASE), (1, OFF_CODE2_BASE)):
+        txt = s(code[half * 3:half * 3 + 2])
+        lo, hi, cx = 127, 0, 0
+        for cp in txt:
+            # Same range guard draw()/measure_width() use -- `code` comes from --lang,
+            # so an out-of-range char would index gl[] out of bounds (or wrap negative).
+            if not (f['first'] <= cp <= f['last']):
+                continue
+            g = gl[cp - f['first']]
+            if g['w']:
+                lo = min(lo, cx + g['xo'])
+                hi = max(hi, cx + g['xo'] + g['w'] - 1)
+            cx += g['xa']
+        nx = x + (COL_W - (hi - lo + 1)) // 2 - lo + 1
+        draw(setp, tiny, max(x, nx), base, txt)
+
+
+# ---- trackpad view (split72/status_oled.c oled_draw_pad_view) ------------------
+# Shown only while the pad is in use; the status screen returns when the finger
+# leaves. Coordinates here must track the PAD_* defines in the C.
+PAD_CX, PAD_CY = 64, 32
+PAD_R = 31  # the pad rim: as large as 64 rows allow
+PAD_DOT_R = PAD_R - 4  # how far the finger dot travels
+PAD_SPAN = 896  # POLY_GEST_SPAN, the gesture layer's pad units
+PAD_RING = 405  # POLY_GEST_RING_R
+
+
+def pad_circle(setpix, r, dash):
+    """Mirror of the C's midpoint walk, including the dash rule, so the dotted
+    ring lands on the same pixels the firmware lights."""
+    x, y, err, n = r, 0, 1 - r, 0
+    while x >= y:
+        if not dash or (n % 3) == 0:
+            for px, py in ((x, y), (y, x), (-y, x), (-x, y), (-x, -y), (-y, -x), (y, -x), (x, -y)):
+                setpix(PAD_CX + px, PAD_CY + py)
+        n += 1
+        y += 1
+        if err < 0:
+            err += 2 * y + 1
+        else:
+            x -= 1
+            err += 2 * (y - x) + 1
+
+
+def pad_sector(setpix, left=False, dash=False):
+    """The corner markers, just OUTSIDE the rim. Angles as integer slope ratios
+    rather than trig, exactly as the C does it: both span 29..61 degrees off the
+    horizontal, and tan(29), tan(61) are 554 and 1804 per 1000.
+
+    `left` mirrors it to the top-left dial wedge, drawn DASHED to match the dotted
+    dial ring -- dotted means dial, solid means right click."""
+    for y in range(-PAD_R - 4, 1):
+        for x in range(0, PAD_R + 5):
+            rsq = x * x + y * y
+            if rsq < (PAD_R + 1)**2 or rsq > (PAD_R + 4)**2:
+                continue
+            up = -y * 1000
+            if up < 554 * x or up > 1804 * x:
+                continue
+            if dash and ((x + y) & 2):
+                continue
+            setpix(PAD_CX + (-x if left else x), PAD_CY + y)
+
+
+def pad_disc(setpix, cx, cy, r):
+    for dy in range(-r, r + 1):
+        for dx in range(-r, r + 1):
+            if dx * dx + dy * dy <= r * r:
+                setpix(cx + dx, cy + dy)
+
+
+def build_pad_panel(small, px=448, py=448, down=True, tapping=False):
+    """The trackpad view. Drawn as a CIRCLE: the sensor silicon is square and the
+    gesture zones are computed in that square, but the pad a customer touches is
+    round, so the circle is what the display is of.
+
+    Three radii kept apart on purpose -- marker 32..34, rim 31, finger travel
+    0..27, dial ring 24. At the full radius the dot sat on the rim, and inside the
+    right-click sector it merged with the marker and vanished; both faults showed
+    up only in the frame that put the dot there, which is why the preview renders
+    one frame per state rather than a default."""
+    pts = []
+
+    def setp(a, b):
+        pts.append((a, b))
+
+    pad_circle(setp, PAD_R, False)
+    pad_circle(setp, (PAD_DOT_R * PAD_RING) // (PAD_SPAN // 2), True)
+    pad_sector(setp)
+    pad_sector(setp, left=True, dash=True)
+
+    if down:
+        x = (px - PAD_SPAN // 2) * PAD_DOT_R // (PAD_SPAN // 2)
+        y = (py - PAD_SPAN // 2) * PAD_DOT_R // (PAD_SPAN // 2)
+        msq = x * x + y * y
+        if msq > PAD_DOT_R * PAD_DOT_R:
+            m = int(msq**0.5)
+            if m:
+                x = x * PAD_DOT_R // m
+                y = y * PAD_DOT_R // m
+        pad_disc(setp, PAD_CX + x, PAD_CY + y, 4 if tapping else 2)
+
+    # Position in the bottom corners, in the 15px face -- the circle is only a few
+    # pixels wide in those rows, so the corners are free.
+    draw(setp, small, 0, 63, s(str(px)))
+    draw_right(setp, small, 127, 63, s(str(py)))
+    return pts
+
+
+def build_panel(side, disp, small, icons, tiny, globe, brightness=50, rgb=(128, 255, 100, 80, 5, 'Rainbow'), lang='en-US', wpm=0, layout='Qwerty'):
+    """side: 'L' (USB host, layout panel) or 'R' (bridge, RGB panel). The role word
+    (USB/Link) follows is_usb_host_side() on hardware; here 'L' models the USB half.
+    rgb=None models RGB being switched off, which re-flows BOTH panels.
+    Returns set of (x,y) pixels."""
+    rgb_on = rgb is not None
+    pts = set()
+
+    def setp(px, py):
+        pts.add((px, py))
+
+    # Each half's indicator column sits on its INNER edge (see status_oled.c), so the
+    # text origin differs per panel.
+    lock_panel = (side == 'L')
+    COL_X = 108 if lock_panel else 0
+    TEXT_X = 0 if lock_panel else (20 if rgb_on else 26)
+    TEXT_R = 104 if lock_panel else 127
+    # top line: layer + role icon + role word
+    draw(setp, icons, TEXT_X, TOP_BASE, [0x100005])  # ICON_LAYER
+    draw(setp, disp, TEXT_X + 20, TOP_BASE, s('0'))  # hex layer
+    if lock_panel:
+        draw_bitmap(setp, USB_BMP, TEXT_X + 38, 0)
+        draw(setp, disp, TEXT_X + 57, TOP_BASE, s('USB'))
+    else:
+        draw_bitmap(setp, LINK_BMP, TEXT_X + 38, 0)
+        draw(setp, disp, TEXT_X + 57, TOP_BASE, s('Link'))
+    # Lock LEDs render on the layout panel only (identical state on both halves) —
+    # the RGB panel's column is the speed gauge now.
+    if lock_panel:
+        draw(setp, icons, COL_X, 16, [0x100011])  # NumLock off
+        draw(setp, icons, COL_X, CAPS_LOCK_BASE, [0x100013])  # CapsLock off
+        draw(setp, small, COL_X + 6, SIDE_MARKER_BASE, s('L'))
+    else:
+        draw(setp, small, COL_X + 5, SIDE_MARKER_BASE, s('R'))
+    if lock_panel:
+        draw(setp, small, TEXT_X, LOCK_ROW_B if rgb_on else OFF_ROW_B, s(layout))
+        if rgb_on:
+            # Speed (+ the language slot sharing its row) sits under the layout name and
+            # brightness takes the bottom row -- the ~98px meter needs a row to itself.
+            draw_bitmap(setp, WPM_BMP, 0, LOCK_ROW_C - 8, WPM_ICON_W, WPM_ICON_H)
+            draw(setp, small, 15, LOCK_ROW_C, s(str(wpm)))
+            draw_bitmap(setp, GLOBE_BMP, 46, LOCK_ROW_C - 12, GLOBE_W, GLOBE_H)
+            draw(setp, tiny, 62, LOCK_ROW_C, s(lang))
+            draw_brightness_row(setp, small, 0, LOCK_ROW_D, brightness)
+        else:
+            # Brightness holds this panel's bottom row in BOTH modes, so the speed is
+            # what migrates to the near-empty RGB panel.
+            draw_brightness_row(setp, small, 0, OFF_ROW_C, brightness)
+    elif not rgb_on:
+        draw(setp, small, TEXT_X, RGB_OFF_ROW_B, s('RGB'))
+        draw(setp, small, TEXT_X + 34, RGB_OFF_ROW_B, s('Off'))
+        draw_bitmap(setp, WPM_BMP, TEXT_X, RGB_OFF_ROW_C - 8, WPM_ICON_W, WPM_ICON_H)
+        draw(setp, small, TEXT_X + 15, RGB_OFF_ROW_C, s(str(wpm)))
+        draw_lang_column(setp, tiny, globe, COL_X, lang)
+    else:
+        hue, sat, val, speed, mode, name = rgb
+        draw(setp, small, TEXT_X, RGB_ROW_B, s(str(mode)))
+        name_x = TEXT_X + 22
+        draw(setp, small, name_x, RGB_ROW_B, s(name.rstrip('2')))
+        if name.endswith('2'):  # "Splash2" in the fixture -> "Splash" + superscript
+            hi = measure_width(small, s(name.rstrip('2')))
+            draw_bitmap(setp, SUPER2_BMP, name_x + hi + 2, 18, SUPER2_W, SUPER2_H)
+        draw_speed_gauge(setp, COL_X, speed)
+        draw(setp, small, TEXT_X, RGB_ROW_C, s(hue_name(hue, sat)))
+        draw_right(setp, small, TEXT_R - 4, RGB_ROW_C, s(str(hue_to_degrees(hue))))
+        draw_bitmap(setp, DEGREE_BMP, TEXT_R - 2, 34, DEGREE_W, DEGREE_H)
+        draw_bitmap(setp, DROPLET_BMP, TEXT_X, DROPLET_Y, DROPLET_W, DROPLET_H)
+        draw(setp, small, TEXT_X + DROPLET_W + SV_ICON_GAP, RGB_ROW_D, s('%d%%' % byte_to_percent(sat)))
+        vtxt = s('%d%%' % val_to_percent(val))
+        vx = TEXT_R - measure_width(small, vtxt)
+        draw_bitmap(setp, SUN_SMALL_BMP, vx - SV_ICON_GAP - SUN_SMALL_W, SUN_SMALL_Y, SUN_SMALL_W, SUN_SMALL_H)
+        draw(setp, small, vx, RGB_ROW_D, vtxt)
+    return pts
+
+
+# ------------------------------- rendering ---------------------------------
+ON = (198, 226, 255)
+OFF = (7, 9, 13)
+RED = (255, 70, 70)
+
+
+def render_plain(pts, sc=6):
+    im = Image.new('RGB', (P_W * sc, P_H * sc), OFF)
+    d = ImageDraw.Draw(im)
+    for (x, y) in pts:
+        if 0 <= x < P_W and 0 <= y < P_H:
+            d.rectangle([x * sc, y * sc, x * sc + sc - 1, y * sc + sc - 1], fill=ON)
+    return im
+
+
+def render_diag(pts, title, sc=8, gut=6):
+    cw, ch = P_W + 2 * gut, P_H + 2 * gut
+    im = Image.new('RGB', (cw * sc, ch * sc), (18, 18, 22))
+    d = ImageDraw.Draw(im)
+    d.rectangle([gut * sc, gut * sc, (gut + P_W) * sc - 1, (gut + P_H) * sc - 1], fill=OFF)
+    clipped = 0
+    for (x, y) in sorted(pts):
+        inb = (0 <= x < P_W and 0 <= y < P_H)
+        if not inb:
+            clipped += 1
+        cx, cy = (gut + x) * sc, (gut + y) * sc
+        d.rectangle([cx, cy, cx + sc - 1, cy + sc - 1], fill=ON if inb else RED)
+    d.rectangle([gut * sc - 2, gut * sc - 2, (gut + P_W) * sc + 1, (gut + P_H) * sc + 1], outline=(120, 140, 160), width=2)
+    d.text((4, 2), title, fill=(200, 215, 235))
+    d.text((4, ch * sc - 16), f"clipped(out-of-bounds) pixels: {clipped}", fill=RED if clipped else (140, 200, 150))
+    return im, clipped
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--diag', action='store_true', help='clipping diagnostic (gutter + red out-of-bounds)')
+    ap.add_argument('-o', '--out', help='output PNG (default: /tmp/status_oled[_diag].png)')
+
+    def brightness_arg(v):
+        n = int(v)
+        if not 0 <= n <= FULL_BRIGHT:
+            raise argparse.ArgumentTypeError('brightness must be 0..%d' % FULL_BRIGHT)
+        return n
+
+    ap.add_argument('-b', '--brightness', type=brightness_arg, default=FULL_BRIGHT, help='keycap brightness 0..%d shown in the gauge (default %d)' % (FULL_BRIGHT, FULL_BRIGHT))
+    ap.add_argument('--lang', default='en-US', help="language code shown, e.g. mn-MN")
+    ap.add_argument('--wpm', type=int, default=0, help='WPM value shown')
+    ap.add_argument('--layout', default='Qwerty', help="base-layout name on the layout panel, as oled_helper.c names it "
+                    "(Qwerty, 'Qwerty Stag!', 'Colemak DH', Neo, Workman)")
+    ap.add_argument('--rgb-off', action='store_true', help='preview the RGB-off layout (both panels re-flow to three rows)')
+    ap.add_argument('--boot', type=int, choices=range(2, 9), metavar='STEP', help='preview the boot-progress screen at splash milestone 2..8')
+    ap.add_argument('--boot-note', metavar='TEXT', default=None, help='with --boot-sub: the note line that displaces the label '
+                    '(e.g. "USB 4>2 @18")')
+    ap.add_argument('--boot-sub', metavar='N/M', default=None, help='with --boot: a sub-step inside that milestone, as "N/M" '
+                    '(e.g. 17/40 for the final render). "N" alone omits the total.')
+    ap.add_argument('--fw-notice', choices=('apply', 'restart', 'failed', 'failed-none'), help='preview a firmware notice screen instead of the status screen')
+    ap.add_argument('--telemetry', action='store_true', help='preview the settings->More telemetry screen instead of the status screen')
+    ap.add_argument('--pad', action='store_true', help='preview the trackpad view (shown while the pad is in use)')
+    ap.add_argument('--pad-xy', default='448,448', help='finger position in gesture pad units 0..%d (default the centre)' % PAD_SPAN)
+    ap.add_argument('--pad-tap', action='store_true', help='render the enlarged dot of a tap')
+    ap.add_argument('--uptime', default='1:23:45', help='uptime string shown by --telemetry')
+
+    def link_arg(v):
+        # Validated here rather than at use: an unparsable value otherwise reached
+        # the "pm, frames = link" unpack and came out as a raw traceback, and a
+        # negative / >100% rate rendered a reading the firmware counters cannot
+        # produce. argparse reports it as an ordinary usage error instead.
+        if v == 'idle':
+            return None
+        parts = v.split(',')
+        if len(parts) != 2:
+            raise argparse.ArgumentTypeError('link must be "idle" or "<err_permille>,<frames>"')
+        try:
+            pm, frames = (int(p) for p in parts)
+        except ValueError:
+            raise argparse.ArgumentTypeError('link fields must be whole numbers') from None
+        if not 0 <= pm <= 1000:
+            raise argparse.ArgumentTypeError('err_permille must be 0..1000 (1000 = 100 percent)')
+        # The firmware counter is a uint32_t, so anything outside that range is a
+        # reading the panel can never show -- same reasoning as the rate bound above.
+        if not 0 <= frames <= 0xFFFFFFFF:
+            raise argparse.ArgumentTypeError('frames must be 0..4294967295 (the uint32_t counter)')
+        # poly_link_err_permille() returns 0 when attempts is 0, so a non-zero rate
+        # over no frames describes no device. (Zero frames alone is fine -- it is
+        # spelled "idle", which the renderer above produces either way.)
+        if frames == 0 and pm != 0:
+            raise argparse.ArgumentTypeError('a non-zero err_permille needs frames > 0 (the firmware reports "idle" at 0 frames)')
+        return (pm, frames)
+
+    ap.add_argument('--link', type=link_arg, default=(4, 1234), help='--telemetry link health as "<err_permille>,<frames>", or "idle"')
+    args = ap.parse_args()
+
+    disp, small, icons, tiny, globe = load_fonts()
+    if args.pad:
+        fx, fy = (int(v) for v in args.pad_xy.split(','))
+        L = build_pad_panel(small, fx, fy, tapping=args.pad_tap)
+        R = L
+    elif args.boot is not None:
+        sub, sub_total = 0, 0
+        if args.boot_sub:
+            n, _, m = args.boot_sub.partition('/')
+            sub, sub_total = int(n), (int(m) if m else 0)
+        L = build_boot_panel(disp, args.boot, small=small, sub=sub, sub_total=sub_total, note=args.boot_note)
+        R = L
+    elif args.fw_notice in ('failed', 'failed-none'):
+        why = 'none' if args.fw_notice == 'failed-none' else 'crc'
+        L = build_fw_failed_panel('L', small, why)
+        R = build_fw_failed_panel('R', small, why)
+    elif args.fw_notice:
+        arrow = load_notice_font()
+        words = {'apply': ('Applying', 'Firmware'), 'restart': ('Restart', 'Now')}[args.fw_notice]
+        L = build_fw_notice_panel('L', disp, arrow, words[0])
+        R = build_fw_notice_panel('R', disp, arrow, words[1])
+    elif args.telemetry:
+        L = build_telemetry_panel(True, small, uptime=args.uptime, link=args.link)
+        R = build_telemetry_panel(False, small, uptime=args.uptime, link=args.link)
+    else:
+        rgb = None if args.rgb_off else (128, 255, 100, 80, 5, 'Rainbow')
+        L = build_panel('L', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang, args.wpm, args.layout)
+        R = build_panel('R', disp, small, icons, tiny, globe, args.brightness, rgb, args.lang, args.wpm, args.layout)
+
+    if args.diag:
+        ltitle = 'USB half   128x64  |  RED = clipped' if args.telemetry else 'LEFT (layout)  128x64  |  RED = clipped'
+        rtitle = 'LINK half  128x64  |  RED = clipped' if args.telemetry else 'RIGHT (RGB)    128x64  |  RED = clipped'
+        Li, lc = render_diag(L, ltitle)
+        Ri, rc = render_diag(R, rtitle)
+        w = max(Li.width, Ri.width)
+        c = Image.new('RGB', (w, Li.height + Ri.height + 12), (18, 18, 22))
+        c.paste(Li, (0, 0))
+        c.paste(Ri, (0, Li.height + 12))
+        out = args.out or '/tmp/status_oled_diag.png'
+        c.save(out)
+        print(f"{out}  clipped L={lc} R={rc}")
+    else:
+        Li, Ri = render_plain(L), render_plain(R)
+        pad, gap = 16, 24
+        c = Image.new('RGB', (pad * 2 + Li.width * 2 + gap, pad * 2 + Li.height), (26, 26, 30))
+        for i, im in enumerate((Li, Ri)):
+            c.paste(im, (pad + i * (Li.width + gap), pad))
+        out = args.out or '/tmp/status_oled.png'
+        c.save(out)
+        print(out)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

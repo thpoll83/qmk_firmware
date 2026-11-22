@@ -23,7 +23,7 @@
 # build and the tree is entirely ours.
 #
 # `-I keyboards/polykybd` is the include path the compiler uses. Sources in
-# subfolders include "config.h" and "system/state.h" from the keyboard root;
+# subfolders include "config.h" and "lib/system/state.h" from the keyboard root;
 # without it cppcheck misses config.h, USE_CORE1 is undefined and the
 # `#error "... requires USE_CORE1"` guards fire.
 name: cppcheck (polykybd)
@@ -64,7 +64,7 @@ jobs:
             -i modules/polykybd/polymod_monocypher/monocypher.c \
             -i modules/polykybd/polymod_monocypher/monocypher-ed25519.c \
             -i keyboards/polykybd/base/tests \
-            -i keyboards/polykybd/hints/tests \
+            -i keyboards/polykybd/features/hints/tests \
             -i modules/polykybd/polymod_ltr559/tests \
             -i modules/polykybd/polymod_monocypher/tests \
             -i modules/polykybd/polymod_os_actions/tests \

@@ -46,7 +46,7 @@ Two things that made this diagnosable, and are worth keeping:
 
 Four states, each with its own cue. Two of them were added 2026-09-16; the notice
 screens are previewable without flashing via
-`tools/status_oled_preview.py --fw-notice {apply,restart,failed}`.
+`dev/tools/status_oled_preview.py --fw-notice {apply,restart,failed}`.
 
 | state | RGB | keycaps | status OLED |
 |---|---|---|---|
@@ -155,7 +155,7 @@ keycaps still blanked from stage 0. That path re-verifies to learn WHICH refusal
 failure notice and hands the legends back, exactly like the stage-2 refusal.
 
 ⚠️ **Measure every line; two of them did not fit and one glyph was not there.**
-`tools/status_oled_preview.py --fw-notice {apply,restart,failed,failed-none}` renders
+`dev/tools/status_oled_preview.py --fw-notice {apply,restart,failed,failed-none}` renders
 these from the real committed fonts. It caught `"Restarting"` at 125 of 128 px,
 `"no image staged"` at 123 (now `"not staged"`, 80) — and that **U+2014 is absent from
 `NotoSans_Regular_Small_15px7b`**, where `kdisp_write_gfx_text()` SKIPS a glyph the
@@ -273,7 +273,7 @@ An image that fails that check is **not refused outright** — the keyboard asks
   and holds `update_performed()` while pending, so the idle fade can't dim the prompt
   out from under the user (`update_displays` early-returns once `DISP_IDLE` is set, so
   it would never be redrawn either).
-- `kdisp_draw_glyph_double_at()` (`drivers/disp_array.c`) is the 2× mirror of
+- `kdisp_draw_glyph_double_at()` (`lib/drivers/disp_array.c`) is the 2× mirror of
   `kdisp_draw_glyph_half_at()` — the keycap fonts top out at the 27 px `_Base_` face,
   so it is the only way to fill a 72×40 panel with one character. Both take the literal
   top-left of the **ink** (no baseline align, no `xOffset`).
@@ -309,7 +309,7 @@ An image that fails that check is **not refused outright** — the keyboard asks
   A fault, an unhandled exception or a hang is recorded, rebooted through and
   announced on the next boot: console line, HID **cmd 39** (protocol v16), and the
   slave's own record pulled over the split link. Four rules that bind code outside
-  `drivers/crash_record.c`:
+  `lib/drivers/crash_record.c`:
   - ⚠️ **A new blocking path longer than 8 s needs a `crash_watchdog_feed()` inside
     it** (`CRASH_WATCHDOG_MS`), or it produces a `kind=watchdog` record — which is
     the point, but know which one you are choosing. Two places disarm it

@@ -16,7 +16,7 @@ import argparse
 import os
 import sys
 
-# Resolve tools/ from THIS file, not cwd, so the script runs from anywhere. The qmk
+# Resolve dev/tools/ from THIS file, not cwd, so the script runs from anywhere. The qmk
 # root is DERIVED by walking up for keyboards/polykybd rather than counted as a `../`
 # chain: a counted chain encodes how deeply this skill dir sits and breaks silently
 # the day it moves, which is what happened when these skills were relocated out of
@@ -34,14 +34,14 @@ def _qmk_root(start):
 
 
 _QMK = _qmk_root(_HERE)
-_TOOLS = os.path.join(_QMK, "keyboards", "polykybd", "tools") if _QMK else ""
-sys.path.insert(0, _TOOLS if os.path.isdir(_TOOLS) else os.path.join(os.getcwd(), "tools"))
+_TOOLS = os.path.join(_QMK, "keyboards", "polykybd", "dev", "tools") if _QMK else ""
+sys.path.insert(0, _TOOLS if os.path.isdir(_TOOLS) else os.path.join(os.getcwd(), "dev", "tools"))
 
 # Draw helpers worth attributing; missing names are skipped per module.
-WRAPPED = ("draw", "draw_bitmap", "draw_glyph", "draw_glyph_half", "draw_glyph_center",
-           "draw_text", "draw_text_center", "draw_text_center_half", "draw_right",
-           "draw_brightness_row", "draw_brightness", "draw_brightness_bars",
-           "draw_lang_column", "draw_speed_gauge", "round_rect", "fill_rect")
+WRAPPED = (
+    "draw", "draw_bitmap", "draw_glyph", "draw_glyph_half", "draw_glyph_center", "draw_text", "draw_text_center", "draw_text_center_half", "draw_right", "draw_brightness_row", "draw_brightness", "draw_brightness_bars", "draw_lang_column",
+    "draw_speed_gauge", "round_rect", "fill_rect"
+)
 
 
 def instrument(mod, sink):
@@ -71,10 +71,11 @@ def instrument(mod, sink):
                 finally:
                     depth[0] -= 1
                 if got and depth[0] == 0:
-                    sink.append((name, min(y for _, y in got), max(y for _, y in got),
-                                 min(x for x, _ in got), max(x for x, _ in got)))
+                    sink.append((name, min(y for _, y in got), max(y for _, y in got), min(x for x, _ in got), max(x for x, _ in got)))
                 return r
+
             return wrapper
+
         setattr(mod, name, make())
 
 
@@ -122,8 +123,7 @@ def main():
         instrument(P, calls)
         # (label, x-slice) -- the indicator column sits on each panel's INNER edge,
         # so slice it apart from the text area or the two get merged into one band.
-        views = [("L", "layout text", 0, 107), ("L", "lock column", 108, 127),
-                 ("R", "RGB text", 20, 127), ("R", "speed column", 0, 19)]
+        views = [("L", "layout text", 0, 107), ("L", "lock column", 108, 127), ("R", "RGB text", 20, 127), ("R", "speed column", 0, 19)]
         modes = [("RGB ON", (128, 255, 100, 80, 5, "Rainbow")), ("RGB OFF", None)]
         for mname, rgb in modes:
             print(f"--- split72 {mname} ---")
@@ -143,8 +143,7 @@ def main():
         # 128x32 page buffer), so bands run over the full logical height, not 64.
         for side, label in (("L", "layout half"), ("R", "lock half")):
             calls.clear()
-            pts = Q.build(side, *fonts, args.brightness, Q.SHORT_NAMES[0],
-                          args.lang, args.wpm)
+            pts = Q.build(side, *fonts, args.brightness, Q.SHORT_NAMES[0], args.lang, args.wpm)
             print(f"--- split42 {label} ---")
             report(label, pts, 0, 31, 128)
             if args.calls:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the PolyKybd per-keycap pixel-font headers from fonts.yaml.
 
-This replaces the old create_fonts.sh.  It reads fonts/fonts.yaml (the single
+This replaces the old dev/scripts/create_fonts.sh.  It reads fonts/fonts.yaml (the single
 source of truth), invokes the `fontconvert` tool once per font entry, groups the
 resulting GFXfont definitions into a small set of per-category headers in
 fonts/generated/, and composes fonts/gfx_used_fonts.h with the

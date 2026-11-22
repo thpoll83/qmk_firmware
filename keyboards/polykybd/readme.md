@@ -11,6 +11,68 @@ Hardware Supported: RP2040
 The firmware docs are in [`docs/`](docs/README.md): one index, with a record of
 where each file moved in 2026-11.
 
+## Folder layout
+
+The files at this level are the ones QMK requires: `config.h`, `rules.mk`, this
+`readme.md`, and `polykybd.c` / `polykybd.h`, which pull in the active variant. Every
+source includes other sources by their path from here, for example
+`#include "lib/system/state.h"`.
+
+- [`split72/`](split72/), [`split42/`](split42/): the two hardware variants. Each has
+  its own `keyboard.json`, `config.h`, `rules.mk` and `keymaps/default/keymap.c`. The
+  keymap holds only the variant's data: which keycode sits on which key on each layer
+  (`keymaps[]`), the encoder map and, on `split72`, the RGB LED positions.
+  `split72/status_oled.c` draws the 128×64 status display.
+- [`keys_com/`](keys_com/): the key handling and keycap legends that every variant
+  compiles. `poly_keymap.c` processes the keys and draws the legends, handles the HID
+  overlays, the language selection and idle/suspend. Next to it: the legend for each
+  keycode (`keycode_helper`), the language layer and Unicode map (`lang_layer`,
+  `uni.h`), layer names (`layer_names`), macros (`poly_macro*`), combos
+  (`poly_combos*`), the overlay cache (`mru`) and the layer enum (`layers.h`).
+- [`lib/`](lib/): the keyboard's own shared code, grouped by subsystem. QMK keyboards
+  use `lib/` for code shared inside one keyboard.
+  - `system/`: the synced state (`state.h`), its EEPROM storage, the boot banner.
+  - `split_link/`: the link between the halves: state sync, the bridge to the slave,
+    which side is master.
+  - `hid/`: the HID command handler (`hid_com.c`), font-pack transfer, the bulk pipe,
+    MacCompose.
+  - `fw_update/`: firmware update over HID and its relay to the slave half.
+  - `display/`: the keycap OLED output: overlay fill, the core1 executor, the I2C
+    driver and the status-display idle style.
+  - `drivers/`: hardware drivers: shift registers, SPI, external EEPROM, firmware
+    staging in flash, the crash record, the flash unique ID.
+  - `peripherals/`: Cirque trackpad gestures and the LTR-559 light sensor policy.
+  - `chibios_overrides/`: a patched copy of ChibiOS-Contrib's RP2040 USB driver, used
+    through `PLATFORM_MK` in `rules.mk`
+    ([`docs/build/upstream-patches.md`](docs/build/upstream-patches.md)).
+- [`features/`](features/): user-facing features that sit on top of `keys_com/` and
+  `lib/`.
+  - `anim/`: startup animation, tutorial, demo mode, focus ring and the other keycap
+    animations.
+  - `modes/`: AI mode, the MIDI legend and the mines game.
+  - `emoji/`: the emoji layer, its search dictionary and the dictionary sources.
+  - `hints/`: OS shortcut hints shown while a modifier is held.
+- [`base/`](base/): pure logic without hardware access (no `quantum.h`, no display),
+  with unit tests in `base/tests/` that run on the host (`make test:<name>`). Code moves
+  here when it can be tested without a keyboard.
+- [`lang/`](lang/): the language tables. `lang_lut.xlsx` is the source that cog turns
+  into `lang_lut.c`/`.h` and the generated parts of `keys_com/` and `lib/hid/`; the
+  scripts that edit the workbook are in `lang/scripts/`. The host reads `lang_lut.xlsx`
+  from here; `iso_lang_country.py` has byte-identical copies in the host and the rig.
+- [`fonts/`](fonts/): the font headers and their generator (`generate_fonts.py`, driven
+  by `fonts.yaml`); the generated headers are in `fonts/generated/`.
+- [`doom/`](doom/): the DOOM easter egg: the engine, the engine-pack build (`doom/pack/`)
+  and its tools ([`doom/README.md`](doom/README.md)).
+- [`ld/`](ld/): the linker scripts of the DOOM builds. QMK looks for linker scripts only
+  in a keyboard's `ld/` folder.
+- [`dev/`](dev/): code and tools for development, not part of a normal build.
+  - `scripts/`: `run_cog.sh` (regenerates every cog block) and `create_fonts.sh`.
+  - `tools/`: Python tools: previews, generators, checks, signing, the HIL probes
+    (`tools/hil_probes/`) and their tests (`tools/tests/`).
+  - `diag/`: diagnostic builds (crash test, USB stress), off by default.
+  - `profiling/`: the main-loop profiler (`POLYKYBD_LOOP_PROFILE=yes`, HID cmd 32).
+- [`docs/`](docs/README.md): the firmware documentation, by topic.
+
 # Build Notes
 
 ## Keyboard Variants
@@ -18,7 +80,7 @@ where each file moved in 2026-11.
 - `split72` is the current hardware (HW rev2 and up) iteration of `wave` with slight differences. Only `split72` is actively developed.
 - `split42` is the 42-key (CRKBD-footprint) variant. **It was previously named `corne42` and was renamed to `split42` in 2026-06** — same hardware, same `LAYOUT_crkbd` footprint, same USB PID. If you have an older checkout or external reference to `polykybd/corne42`, use `polykybd/split42` instead.
 
-> **Shared keymap logic** — both variants compile the same `keymap/poly_keymap.c` at the
+> **Shared keymap logic** — both variants compile the same `keys_com/poly_keymap.c` at the
 > keyboard level (rendering, HID/overlay handling, language selection, idle/suspend,
 > split sync, firmware-update state machine). Each variant's
 > `keymaps/default/keymap.c` carries only its data (`keymaps[]`, `encoder_map[]`,
@@ -34,7 +96,7 @@ Please be aware that the code makes use of cog to generate some code parts. You 
 
 [https://github.com/nedbat/cog](https://github.com/nedbat/cog)
 
-Please run `run_cog.sh` in the keymap folder of your choice.
+Run `dev/scripts/run_cog.sh` after changing `lang/lang_lut.xlsx` or a cog block. It works from any directory.
 
 ## Clean
 
@@ -210,9 +272,9 @@ drags, or put a multi-block firmware `.uf2` in between.
 Build them yourself — the release build just runs this, and still does, so the format
 stays tested even while the assets are unpublished:
 
-`python3 tools/make_hand_uf2.py --side left`
-`python3 tools/make_hand_uf2.py --side right`
-`python3 tools/make_hand_uf2.py --verify polykybd-hand-left.uf2`
+`python3 dev/tools/make_hand_uf2.py --side left`
+`python3 dev/tools/make_hand_uf2.py --side right`
+`python3 dev/tools/make_hand_uf2.py --verify polykybd-hand-left.uf2`
 
 `--append-to` is **refused**: the bootrom tracks which sectors it has already erased by
 BLOCK NUMBER (`page_no = block_no * 256 / FLASH_SECTOR_ERASE_SIZE`), which is the sector
@@ -274,10 +336,10 @@ The per-keycap OLED fonts are generated from Noto TTF files using the `fontconve
 
 ```sh
 keyboards/polykybd/fonts/dl-fonts.sh   # download Noto fonts (one-off)
-keyboards/polykybd/create_fonts.sh     # invoke fontconvert per range; writes fonts/generated/*.h
+keyboards/polykybd/dev/scripts/create_fonts.sh     # invoke fontconvert per range; writes fonts/generated/*.h
 ```
 
-`fonts/gfx_used_fonts.h` is auto-generated by `run_cog.sh` from the generated headers.
+`fonts/gfx_used_fonts.h` is auto-generated by `dev/scripts/run_cog.sh` from the generated headers.
 
 ## Diagnostics
 
@@ -395,7 +457,7 @@ The `_EMJ` layer organises emojis into 12 categories. The top row holds category
 
 The tab key shows the first emoji of its category. Pressing a tab switches the grid immediately; pressing a slot key types that emoji via Unicode input. Categories with 2 pages use ◀ / ▶ to navigate.
 
-Font data for the emoji categories is generated by `create_fonts.sh`. After any change to category ranges, re-run the script to rebuild `fonts/generated/` and the auto-generated `fonts/gfx_used_fonts.h`.
+Font data for the emoji categories is generated by `dev/scripts/create_fonts.sh`. After any change to category ranges, re-run the script to rebuild `fonts/generated/` and the auto-generated `fonts/gfx_used_fonts.h`.
 
 
 

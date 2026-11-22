@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "system/state.h"      // LATIN_PICK_MAX — the ceiling the assert below checks
+#include "lib/system/state.h"      // LATIN_PICK_MAX — the ceiling the assert below checks
 
 // Variation slots per (letter, case).  Rows 0..25 are UPPERCASE A..Z, rows
 // 26..51 lowercase a..z; a row is padded with NULL past its real variations.

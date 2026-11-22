@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // split42 VARIANT DATA ONLY. All shared keymap behaviour lives in
-// keyboards/polykybd/keymap/poly_keymap.c (compiled for every variant), so this 42-key
+// keyboards/polykybd/keys_com/poly_keymap.c (compiled for every variant), so this 42-key
 // variant stays in lockstep with split72. This file defines only the data the
 // linker pulls from the keymap TU:
 //   * keymaps[]      — the layer definitions (LAYOUT_lr_stacked42)
@@ -16,11 +16,11 @@
 // + RIGHT thumbs (3) = 42.
 #include QMK_KEYBOARD_H
 #include "split42/split42.h"
-#include "layers.h"
-#include "keymap/keycode_helper.h"
-#include "emoji/emoji_layer.h"
-#include "poly_combos_keymap.h"   // QMK needs the tables; the real ones are runtime (cmd 48)
-#include "keymap/lang_layer.h"
+#include "keys_com/layers.h"
+#include "keys_com/keycode_helper.h"
+#include "features/emoji/emoji_layer.h"
+#include "keys_com/poly_combos_keymap.h"   // QMK needs the tables; the real ones are runtime (cmd 48)
+#include "keys_com/lang_layer.h"
 
 // Right-half mirror (POLY_SPLIT42_MIRROR_RIGHT, config.h). split42 currently ships as
 // two LEFT boards; the one used as the RIGHT half is physically mirrored across the

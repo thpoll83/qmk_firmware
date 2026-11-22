@@ -7,6 +7,9 @@ display under every keycap. The PolyKybd-specific firmware lives at
 kept so the customisations can ride on QMK's build system, HID stack and ChibiOS
 RP2040 port.
 
+The folders of the firmware, and what each one holds, are described in
+[`keyboards/polykybd/readme.md`](/keyboards/polykybd/readme.md#folder-layout).
+
 Project progress and hardware info:
 
 * Hardware & build log: [github.com/thpoll83/PolyKybd](https://github.com/thpoll83/PolyKybd)
@@ -24,7 +27,7 @@ over a custom 64-byte HID report protocol.
 ### Variants
 
 Two hardware variants share one firmware (the shared logic lives in
-`keyboards/polykybd/keymap/poly_keymap.c`):
+`keyboards/polykybd/keys_com/poly_keymap.c`):
 
 * **`split72`** — 72-key, RGB matrix, Cirque trackpad, 128×64 status OLED (actively developed).
 * **`split42`** — 42-key CRKBD-footprint variant (formerly `corne42`, renamed 2026-06).

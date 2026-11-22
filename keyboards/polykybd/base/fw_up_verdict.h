@@ -22,7 +22,7 @@
 #include <stdbool.h>
 
 #include "sync_ack.h"
-#include "drivers/fw_staging.h"
+#include "lib/drivers/fw_staging.h"
 
 // Why a COMMIT that did not come back SYNC_ACK failed. The two need OPPOSITE
 // responses, which is the whole reason this distinction exists: re-flashing a

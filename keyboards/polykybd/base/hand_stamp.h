@@ -27,7 +27,7 @@
 // changes and no wear worth thinking about.
 //
 // Being an ordinary flash sector rather than emulated EEPROM has a second
-// payoff: BOOTSEL/UF2 can write it directly. `tools/make_hand_uf2.py --side
+// payoff: BOOTSEL/UF2 can write it directly. `dev/tools/make_hand_uf2.py --side
 // left|right` builds a 512-byte UF2 that stamps one half without touching the
 // firmware, the font pack or the EEPROM, which is the recovery path for a board
 // that is already on the wrong side (and the way to provision a fresh one
@@ -194,7 +194,7 @@ bool poly_hand_is_left(void);
 // side from the image itself, so provisioning needs no hand-built 512-byte UF2 --
 // the artifact is an ordinary multi-block firmware .uf2, flashed over BOOTSEL like
 // any other. That matters because the standalone stamp UF2 route is currently
-// unexplained-broken on hardware (see tools/make_hand_uf2.py), while this path is
+// unexplained-broken on hardware (see dev/tools/make_hand_uf2.py), while this path is
 // the same stamp_write() the host's HID cmd 25 has always used.
 //
 // Idempotent: writes only when the sector does not already say this, so re-flashing

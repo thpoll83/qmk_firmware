@@ -25,9 +25,9 @@ differences resolve at compile time:
 lands on both keyboards at once — they can't drift apart. Don't re-introduce
 per-variant copies of the keymap logic (that drift is exactly what this
 extraction fixed: `corne42` had silently fallen ~98 languages behind split72).
-`run_cog.sh` targets `poly_keymap.c`.
+`dev/scripts/run_cog.sh` targets `poly_keymap.c`.
 
-⚠️ **Every `keymap.c` must `#include "poly_combos_keymap.h"`.** QMK's
+⚠️ **Every `keymap.c` must `#include "keys_com/poly_combos_keymap.h"`.** QMK's
 `keymap_introspection.c` includes `keymap.c` and needs `key_combos[]` and
 `tap_dance_actions[]` there whenever `COMBO_ENABLE` / `TAP_DANCE_ENABLE` are on, which
 `rules.mk` does for every build except the DOOM monolith. The header supplies the

@@ -240,9 +240,9 @@ Base-layer changes apply immediately and persist on the next suspend/reset/store
 3. **Proper fix: offload EEPROM writes to core 1.** The keyboard already uses core 1 for RLE decompression via `multicore_exec.c` and the FIFO dispatch. Instead of calling `save_user_settings()` / `save_user_latin()` / `eeconfig_update_default_layer()` directly on core 0, post the write as a job to core 1 via the FIFO. Core 1 does the blocking flash operation while core 0 (QMK main loop, UART, USB) keeps running uninterrupted — eliminating the framing-corruption risk entirely. Main caveat: core 1 is currently single-purpose (RLE decompression), so the two job types must not collide; check that core 1 is idle before posting, or add a small job queue. EEPROM writes and RLE decompression are unlikely to overlap in practice since both are rare and burst-style.
 
 **Relevant files**:
-- `keyboards/polykybd/split_link/split_sync.c` — all `user_sync_*_data_handler` functions
-- `keyboards/polykybd/system/state.c` / `state.h` — deferred-write helpers
-- `keyboards/polykybd/keymap/poly_keymap.c` — `housekeeping_task_user()`
+- `keyboards/polykybd/lib/split_link/split_sync.c` — all `user_sync_*_data_handler` functions
+- `keyboards/polykybd/lib/system/state.c` / `state.h` — deferred-write helpers
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `housekeeping_task_user()`
 
 ---
 
@@ -260,7 +260,7 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 **If the bug reappears**: Check whether a split transport failure (the other bug above) is preventing the suspend state from reaching the slave — if the slave never receives `STATUS_DISP_ON=0` it will keep its displays on indefinitely. The two bugs can look identical from the outside.
 
 **Relevant files**:
-- `keyboards/polykybd/keymap/poly_keymap.c` — `poly_suspend()`, `suspend_power_down_kb()`, `sync_and_refresh_displays()`
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `poly_suspend()`, `suspend_power_down_kb()`, `sync_and_refresh_displays()`
 - `keyboards/polykybd/base/com.h` — flag bit definitions (`STATUS_DISP_ON`, `IDLE_TRANSITION`, `DISP_IDLE`)
 
 ---
@@ -286,7 +286,7 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 **Top remaining suspect — ChibiOS context switch via NMI**. ChibiOS `ARMv6-M-RP2` port with `CH_CFG_SMP_MODE=TRUE` (set in `platforms/chibios/boards/GENERIC_RP_RP2040/configs/chconf.h`) and `CORTEX_ALTERNATE_SWITCH=FALSE` (default) uses **NMI as the context-switch vector** (strong `NMI_Handler` in `lib/chibios/os/common/ports/ARMv6-M-RP2/chcore.c`) and a strong `Vector80` (SIO_IRQ_PROC1) FIFO drain in the same file whose `CH_IRQ_EPILOGUE` triggers NMI via `__port_exit_from_isr` writing `ICSR.NMIPENDSET`. But: NMI is unmaskable by PRIMASK, so this *can't* be what cpsid is preventing — unless the chain is "Vector80 fires (IRQ 16, maskable) → handler triggers NMI". In that case, masking Vector80 (the IRQ) prevents NMI from being triggered. PRIMASK=1 would do that. Catch: `NVIC->ISER` bit 16 is consistently 0 in our captures, meaning Vector80 shouldn't fire. Either our capture has a timing gap that misses a transient ISER bit being set, or some other path triggers it.
 
 **What's currently in tree (post-cleanup, 2026-05-15; updated 2026-05-16)**:
-- `keyboards/polykybd/display/multicore_exec.c` — `__asm volatile("cpsid i" ::: "memory");` at the top of `core1_entry` (with an explanatory comment pointing at this doc). Also: `core0_decomp_count` changed from plain `static uint32_t` to `static volatile uint32_t` (real correctness fix — the compiler could otherwise hoist the load out of the wait loops).
+- `keyboards/polykybd/lib/display/multicore_exec.c` — `__asm volatile("cpsid i" ::: "memory");` at the top of `core1_entry` (with an explanatory comment pointing at this doc). Also: `core0_decomp_count` changed from plain `static uint32_t` to `static volatile uint32_t` (real correctness fix — the compiler could otherwise hoist the load out of the wait loops).
 - `keyboards/polykybd/base/multicore/core1.c` — `CORE1_STACK_SIZE` set to 384 (originally 256, briefly bumped to 1024 during the investigation, then sized based on measurement: peak observed ~164 bytes via the `CORE1_STACK_HWM` probe — see `keyboards/polykybd/readme.md` "For developers" → "Diagnostics"). The same file ships an `#ifdef CORE1_STACK_HWM` painting/walking probe that is off by default.
 - All diagnostic instrumentation has been removed from `multicore_exec.c`, `base/overlay.c`, and `base/rle.c` apart from the gated HWM probe.
 - **Reverted as not-actually-a-race (2026-05-16)**: an earlier cleanup added a `core0_decomp_count != core1_decomp_count` wait to `core1_roi_start()` framed as a "race fix". On re-analysis it was redundant — `CORE1_CMD_RESET_BIT_IDX` only mutates `core1_bit_index`, FIFO ordering guarantees any in-flight DECOMPRESS/ROI_UPDATE finishes atomically before RESET runs, and every caller immediately follows `core1_roi_start()` with `core1_update_roi()` which has its own wait + buffer-write + dmb + push. Now reduced to the bare `multicore_fifo_push_blocking(CORE1_CMD_RESET_BIT_IDX)`.
@@ -331,10 +331,10 @@ local_state->flags &= ~((uint8_t)STATUS_DISP_ON) & ~((uint8_t)DISP_IDLE) & ~((ui
 **Fix**: `state.c` keeps a `g_user_brightness` snapshot that is updated **only** at deliberate set-points — `inc/dec_brightness()`, the new `set_user_brightness()` (used by the `KC_D*` preset keys and HID cmd 13), `note_user_brightness()` at boot-time EEPROM load, and on the slave when adopting an *awake* master's synced contrast (`contrast > DISP_OFF` and `DISP_IDLE|IDLE_TRANSITION` clear). `save_user_settings()` persists `~g_user_brightness` instead of `~l_state.contrast`. All idle/suspend *restore* paths (`back_from_idle_transition`, fade target, `display_wakeup()`, `suspend_wakeup_init_kb()`, HID stop-idle) now read `get_user_brightness()` instead of re-loading EEPROM — which also means an unflushed brightness change survives an idle/wake cycle (EEPROM was stale there under the suspend-only flush model). The suspend-only flush model itself is unchanged.
 
 **Relevant files**:
-- `keyboards/polykybd/system/state.c` / `state.h` — `g_user_brightness`, `set/note/get_user_brightness()`
-- `keyboards/polykybd/split_link/split_sync.c` — `user_sync_poly_data_handler` awake-guard
-- `keyboards/polykybd/hid/hid_com.c` — cmd 13 (set brightness), cmd 15 (stop idle)
-- `keyboards/polykybd/keymap/poly_keymap.c` — preset keys, idle/wake restore paths, boot seeding (shared by split72 + split42)
+- `keyboards/polykybd/lib/system/state.c` / `state.h` — `g_user_brightness`, `set/note/get_user_brightness()`
+- `keyboards/polykybd/lib/split_link/split_sync.c` — `user_sync_poly_data_handler` awake-guard
+- `keyboards/polykybd/lib/hid/hid_com.c` — cmd 13 (set brightness), cmd 15 (stop idle)
+- `keyboards/polykybd/keys_com/poly_keymap.c` — preset keys, idle/wake restore paths, boot seeding (shared by split72 + split42)
 
 **Follow-up (2026-06-23): host-auto state now persists across reboots.** The
 `g_user_brightness` model above keeps the *manual* brightness clean, but it is
@@ -382,8 +382,8 @@ brightness every boot), so the slave can't independently bank a stale auto value
 **Fix 3 — ESC (and any key in a later mapping chunk) not appearing** (`base/com.h`): The MRU host sends overlay mappings in chunks of 24 pairs per HID report. For programs with many overlays (e.g. an IDE with all A–Z + numbers), ESC (display_flat_idx=37) falls in the second chunk. Fix 1's per-chunk refresh fires after chunk 1 lands — at that point ESC's usage bit is still 0 — so ESC shows fallback text. Chunk 2 fires another refresh and should correct it, but this creates a transient window. The reliable fix: add `DISPLAY_OVERLAYS` to `OVERLAY_SYNCED_STATE_FLAGS` so that `enable_overlays()` (called by the host after **all** mapping chunks are confirmed ACK'd) force-syncs state to the slave via case 11. The slave detects `state_diff`, calls `request_disp_refresh()`, and renders with all chunks already in place — guaranteed final correct refresh.
 
 **Relevant files**:
-- `keyboards/polykybd/split_link/split_sync.c` — `user_sync_overlay_map_data_handler`
-- `keyboards/polykybd/hid/hid_com.c` — case 21
+- `keyboards/polykybd/lib/split_link/split_sync.c` — `user_sync_overlay_map_data_handler`
+- `keyboards/polykybd/lib/hid/hid_com.c` — case 21
 - `keyboards/polykybd/base/com.h` — `OVERLAY_SYNCED_STATE_FLAGS`
 
 ---
@@ -447,9 +447,9 @@ per the table above the master cannot: it never had the bytes. Closing that woul
 a master-side shadow copy (RAM it does not have) or a host-visible failure signal (a
 protocol change). Do it only if the logs show it actually happens.
 
-**Relevant files**: `keyboards/polykybd/hid/hid_com.c` (cases 11, 21),
-`keyboards/polykybd/display/fill_overlay.c` (`arm_overlay_map_repair`,
-`overlay_map_repair_tick`, `resolve_upload_side`), `keyboards/polykybd/keymap/poly_keymap.c`
+**Relevant files**: `keyboards/polykybd/lib/hid/hid_com.c` (cases 11, 21),
+`keyboards/polykybd/lib/display/fill_overlay.c` (`arm_overlay_map_repair`,
+`overlay_map_repair_tick`, `resolve_upload_side`), `keyboards/polykybd/keys_com/poly_keymap.c`
 (housekeeping drain)
 
 ---
@@ -494,9 +494,9 @@ always claimed. ⚠️ Never bool-test `send_to_bridge()` directly — every ret
 is non-zero; classify it with `sync_succeeded()`.
 
 **Relevant files**:
-- `keyboards/polykybd/keymap/poly_keymap.c` — `sync_and_refresh_displays()` send sites; `display_wakeup()`, `housekeeping_task_user()` (the single-shot wake)
-- `keyboards/polykybd/split_link/split_sync.h` — `sync_succeeded()` helper + `SYNC_*` values
-- `keyboards/polykybd/split_link/bridge_helper.c` — `send_to_bridge()` (returns the ack byte / `SYNC_CRC32_ERR`)
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `sync_and_refresh_displays()` send sites; `display_wakeup()`, `housekeeping_task_user()` (the single-shot wake)
+- `keyboards/polykybd/lib/split_link/split_sync.h` — `sync_succeeded()` helper + `SYNC_*` values
+- `keyboards/polykybd/lib/split_link/bridge_helper.c` — `send_to_bridge()` (returns the ack byte / `SYNC_CRC32_ERR`)
 
 ---
 
@@ -545,9 +545,9 @@ so no `PROTOCOL_VERSION`/`__protocol__` bump.
 - `keyboards/polykybd/base/update.c` / `update.h` — `uint32_t last_update` +
   `idle_tracking`; `is_idle_tracking()`, `disable_idle_tracking()`,
   `backdate_last_update()`
-- `keyboards/polykybd/keymap/poly_keymap.c` — `housekeeping_task_user()` idle gate
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `housekeeping_task_user()` idle gate
   (`is_idle_tracking()`), the turn-off + `suspend_power_down_kb()` disable calls
-- `keyboards/polykybd/hid/hid_com.c` — cmd 15 start branch (`backdate_last_update`),
+- `keyboards/polykybd/lib/hid/hid_com.c` — cmd 15 start branch (`backdate_last_update`),
   cmd 24 display-off (`disable_idle_tracking`)
 
 ---
@@ -580,8 +580,8 @@ the slave, which already has the image staged), or flash the slave directly via
 BOOTSEL/UF2. The high `err%` clears once both halves run matching firmware.
 
 **Relevant files**:
-- `keyboards/polykybd/fw_update/hid_fw_up.c` — `CMD_FW_UP_APPLY` (slave bridge retries)
-- `keyboards/polykybd/fw_update/split_fw_up.c` — `user_sync_fw_up_apply_handler` (deferred, ACK-first)
+- `keyboards/polykybd/lib/fw_update/hid_fw_up.c` — `CMD_FW_UP_APPLY` (slave bridge retries)
+- `keyboards/polykybd/lib/fw_update/split_fw_up.c` — `user_sync_fw_up_apply_handler` (deferred, ACK-first)
 
 ---
 
@@ -792,9 +792,9 @@ real value hides the fact that the real value is being thrown away.**
    steady-state error rate to zero, so options 1–3 above were never needed.
 
 **Relevant files**:
-- `keyboards/polykybd/split_link/split_sync.c` — per-transaction CRC32 (the only payload check)
-- `keyboards/polykybd/split_link/bridge_helper.c` / `.h` — `send_to_bridge` retries + the link health counters / `LINK_STATS_LOG_EVERY` summary
-- `keyboards/polykybd/keymap/poly_keymap.c` — `PERIODIC_SYNC_RETRIES`, `sync_and_refresh_displays()`
+- `keyboards/polykybd/lib/split_link/split_sync.c` — per-transaction CRC32 (the only payload check)
+- `keyboards/polykybd/lib/split_link/bridge_helper.c` / `.h` — `send_to_bridge` retries + the link health counters / `LINK_STATS_LOG_EVERY` summary
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `PERIODIC_SYNC_RETRIES`, `sync_and_refresh_displays()`
 - `keyboards/polykybd/config.h` — `SPLIT_MAX_CONNECTION_ERRORS`; the full-duplex defines (`SERIAL_USART_FULL_DUPLEX`, `SERIAL_USART_TX_PIN GP5`, `SERIAL_USART_RX_PIN GP4`, `SERIAL_USART_PIN_SWAP`)
 - `<variant>/halconf.h` — `SELECT_SOFT_SERIAL_SPEED`. ⚠️ **Currently `0`, i.e. 460800 baud** in both variants — *not* the 230400 quoted in the historical half-duplex paragraph above, which describes the pre-2026-06-16 setup and is the figure a reader otherwise carries forward. The mapping lives in `platforms/chibios/drivers/serial_usart.h` (0→460800, 1→230400, 2→115200, …). Since 2026-10-19 `config.h` defines `SERIAL_USART_SPEED 1843200` directly, which takes priority over the table (`docs/protocol/bulk-pipe.md`, split-link table); the 460800 figures below are from before that. It matters for any wire-time estimate: at 460800 8N1 one byte is **21.7 µs**, so the per-scan split transactions (slave matrix + pointing, unconditional in `transactions_master()`) are a fixed cost that does **not** shrink when the CPU clock rises — measured at ~473 µs, about half of an idle main-loop iteration (see the 200 MHz measurement in PR #187).
 - `platforms/chibios/drivers/serial_protocol.c`, `drivers/vendor/RP/RP2040/serial_vendor.c` — QMK transport (no payload integrity)
@@ -867,8 +867,8 @@ corrected by the next real layer diff. Not done — left optional since real har
 is unaffected.
 
 **Relevant files**:
-- `keyboards/polykybd/keymap/poly_keymap.c` — `g_force_layer_resync`, the forced-push branch in `sync_and_refresh_displays()` (`if ( layer_diff || g_force_layer_resync )`)
-- `keyboards/polykybd/split_link/bridge_helper.c` — `send_to_bridge()` (per-attempt blocking cost = `PERIODIC_SYNC_RETRIES` × bridge timeout)
+- `keyboards/polykybd/keys_com/poly_keymap.c` — `g_force_layer_resync`, the forced-push branch in `sync_and_refresh_displays()` (`if ( layer_diff || g_force_layer_resync )`)
+- `keyboards/polykybd/lib/split_link/bridge_helper.c` — `send_to_bridge()` (per-attempt blocking cost = `PERIODIC_SYNC_RETRIES` × bridge timeout)
 - `polykybd-ctnd` `station/hil_tests.py` — the `get current language` test (no miss-tolerance, unlike `test_get_id_stress`)
 
 ## Troubleshooting principle: don't take shortcuts — mechanical, auditable steps beat clever guesses
@@ -984,7 +984,7 @@ somebody is about to reverse.** What must stay in context is the rules themselve
   Empirically the only fix for the overlay/ROI hang; the mechanism was never
   established, and it is safe because core1 polls the FIFO rather than waiting on an
   IRQ. Do not remove it on the strength of a theory.
-- ⚠️ **The RP2040 USB driver is a VENDORED copy** (`keyboards/polykybd/chibios_overrides/`,
+- ⚠️ **The RP2040 USB driver is a VENDORED copy** (`keyboards/polykybd/lib/chibios_overrides/`,
   selected by `PLATFORM_MK`), carrying ChibiOS trunk's bus-reset-before-SETUP fix that
   Contrib lacks. A `lib/chibios-contrib` bump does **not** update it: diff the copy
   against the new submodule after every bump (`docs/build/upstream-patches.md` → "ChibiOS-Contrib

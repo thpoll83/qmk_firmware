@@ -11,4 +11,4 @@ same shape as `polymod_crc32` / `polymod_rle`, which also ship without one).
 
 Listing the module in a `keyboard.json` `modules` array is the entire enable;
 consumers include `polymod_core1.h`. The PolyKybd users are `multicore_exec.c`
-(RLE/ROI offload), `drivers/fw_staging.c` and the DOOM easter egg.
+(RLE/ROI offload), `lib/drivers/fw_staging.c` and the DOOM easter egg.

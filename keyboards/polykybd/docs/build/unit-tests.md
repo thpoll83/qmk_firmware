@@ -36,7 +36,7 @@ missing output was noticed (2026-08-18); the suite is `polykybd_os_hints`. **Jud
 run by the `[  PASSED  ] N tests.` line, never by the exit code** — a real run always
 prints one. `grep -rn "TEST_LIST +=" --include=testlist.mk .` is the authoritative
 list of registered names — they live in `base/tests/testlist.mk`,
-`hints/tests/testlist.mk` and each `modules/polykybd/polymod_*/tests/`; neither a
+`features/hints/tests/testlist.mk` and each `modules/polykybd/polymod_*/tests/`; neither a
 count nor an enumeration is kept here, because this sentence once listed four
 suites while eleven existed.
 

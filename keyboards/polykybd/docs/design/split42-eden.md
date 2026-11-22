@@ -11,7 +11,7 @@ file is the recipe to add split42 later.
 
 ## Why it's split72-only right now
 
-`anim/startup_anim.c` gates the entire engine on the variant:
+`features/anim/startup_anim.c` gates the entire engine on the variant:
 
 ```c
 #if defined(KEYBOARD_polykybd_split72)
@@ -35,7 +35,7 @@ which is **generated for split72 only**.
 
 ### What the geom header provides (all consumed by `startup_anim.c`)
 
-`anim/startup_anim_geom.h` (auto-generated, DO NOT hand-edit) contains:
+`features/anim/startup_anim_geom.h` (auto-generated, DO NOT hand-edit) contains:
 
 - `typedef struct { int16_t cx, cy; uint8_t ang, valid; } sa_key_geom_t;`
 - `#define SA_BOARD_W / SA_BOARD_H` — global board size in OLED-native-pixel units.
@@ -98,10 +98,10 @@ table and it runs.
 
 3. **Generate the split42 geom header**:
    ```shell
-   startup_anim_demo.py --emit-geom keyboards/polykybd/anim/startup_anim_geom_split42.h \
+   startup_anim_demo.py --emit-geom keyboards/polykybd/features/anim/startup_anim_geom_split42.h \
        --kle PolyKybdHost/polyhost/res/polykybd-split42.json   # + --variant split42
    ```
-   Commit `anim/startup_anim_geom_split42.h` (it now carries the SPDX header the
+   Commit `features/anim/startup_anim_geom_split42.h` (it now carries the SPDX header the
    generator emits). Note `SA_GEOM_*` are `[40]` today (`disp_row*8 + disp_col`, 5
    rows); confirm split42's display index range fits, or size the arrays to split42's
    grid and keep the same `disp_idx` convention the renderer uses.
@@ -163,5 +163,5 @@ table and it runs.
 - `PolyKybdHost/polyhost/res/polykybd-split42.json` — **new** KLE layout.
 - `PolyKybdHost/tools/startup_anim_demo.py` — split42 splash plan / `_disp_mp` fold
   (+ optional `--variant`).
-- `keyboards/polykybd/anim/startup_anim_geom_split42.h` — **new** generated geom.
-- `keyboards/polykybd/anim/startup_anim.c` — per-variant include; drop the split42 stub.
+- `keyboards/polykybd/features/anim/startup_anim_geom_split42.h` — **new** generated geom.
+- `keyboards/polykybd/features/anim/startup_anim.c` — per-variant include; drop the split42 stub.

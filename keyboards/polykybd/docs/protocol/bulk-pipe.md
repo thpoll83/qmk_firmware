@@ -70,7 +70,7 @@ Two things had to change in QMK for it to be fast:
 - `PolyKybdHost/tools/pipe_bench.py`: finds the port by VID/PID, streams N MB
   of SINK frames, reads STAT back, checks byte count and CRC, times ECHO round
   trips, and with `--hid` times raw-HID GET_ID round trips for comparison.
-- `tools/hil_probes/bulk_pipe.py`: the same measurement on the rig
+- `dev/tools/hil_probes/bulk_pipe.py`: the same measurement on the rig
   (`tier: debug`, `probe: bulk_pipe`). It SKIPs on a rig provisioned before the
   tty udev rule and dialout group in ctnd `setup.sh`.
 
@@ -82,7 +82,7 @@ dumping `ConfigurationDescriptor`.
 
 ## Cost
 
-Measured with `tools/ram_report.py` on the local gcc 13.2 (CI's gcc 15.2 needs
+Measured with `dev/tools/ram_report.py` on the local gcc 13.2 (CI's gcc 15.2 needs
 400 to 500 B more for the same source).
 
 | build | headroom before | headroom with pipe | cost |

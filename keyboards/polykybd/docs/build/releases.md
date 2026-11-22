@@ -89,7 +89,7 @@ that cost real debugging to learn (2026-07):
   declares the version.
 
 - ⚠️ **Publishing is GATED on a green firmware-APPLY run for the commit being
-  released** (`tools/require_fwapply_run.py`, an early step of `release.yml`,
+  released** (`dev/tools/require_fwapply_run.py`, an early step of `release.yml`,
   before the build so a refusal changes nothing). The HID-apply brick shipped
   because no release artifact had ever been applied on hardware — the rig flashes
   by UF2 over GPIO BOOTSEL, which bypasses `fw_staging` entirely, and this

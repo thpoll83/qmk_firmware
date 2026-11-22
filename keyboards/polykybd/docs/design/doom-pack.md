@@ -44,7 +44,7 @@ would have erased the keymap, brightness, language, idle style and Intl map with
 no diagnostic. `FW_DOOMPACK_SLOT_SIZE` is now derived from the reservation and
 `_Static_assert`ed against it in `fw_staging.c`.
 
-Constants in `drivers/fw_staging.h`: `FW_DOOMWAD_SLOT_SIZE` shrinks
+Constants in `lib/drivers/fw_staging.h`: `FW_DOOMWAD_SLOT_SIZE` shrinks
 0x200000 → 0x1C0000; new `FW_DOOMPACK_SLOT_OFF 0x3C0000` /
 `FW_DOOMPACK_SLOT_SIZE (0x40000 - FW_EEPROM_RESERVE_SIZE)`; new pseudo-bundle id
 `FONTPACK_BUNDLE_DOOMPACK 0x7E` (the WHX uses 0x7F). Static-asserted

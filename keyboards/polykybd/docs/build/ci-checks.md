@@ -264,7 +264,7 @@ in either shape, so "not failed" is never "passed".
     load are a documented class — so treat this as a **delivery** failure, not a
     config bug, and do not go looking for a mechanism in the workflow.
     - **The design already absorbs it, which is the reassuring half.** The release
-      gate (`tools/require_fwapply_run.py`) refuses to publish firmware no apply
+      gate (`dev/tools/require_fwapply_run.py`) refuses to publish firmware no apply
       run has covered, so a dropped push event costs a **manual dispatch at release
       time**, not a bricked release. That is the gate doing exactly its job.
     - **Recovery: dispatch *Build and HIL Test* with `tier: fwapply`.** Verified
@@ -312,13 +312,13 @@ in either shape, so "not failed" is never "passed".
 - ✅ **The DEBUG LOOP: a firmware bug can now be chased on the rig with nobody
   flashing a `.bin`.** Dispatch `qmk-test.yml` on a branch with **`tier: debug`,
   `probe: <name>`** and the rig builds that branch, flashes both halves, runs a
-  probe committed at `keyboards/polykybd/tools/hil_probes/<name>.py`, and pipes
+  probe committed at `keyboards/polykybd/dev/tools/hil_probes/<name>.py`, and pipes
   the firmware's own console into the job log as `[qmk] …` lines. Edit, push,
   dispatch, read the log. **The `debug-firmware-on-rig` skill drives the whole
   loop** (when a probe beats the graded suite, the dispatch call, reading the
   `[qmk]` lines back out, and the measured cost of a turn); the rig side is
   `polykybd-ctnd/station/probe.py` (`--probe`) and the probe format + pitfalls
-  are in `keyboards/polykybd/tools/hil_probes/README.md`. Verified end to end
+  are in `keyboards/polykybd/dev/tools/hil_probes/README.md`. Verified end to end
   2026-09-01, run `33559310727`: `Debug probe (split72)` green with every other
   job — `HIL test (split72)` included — correctly skipped, 5m21s wall clock of
   which 4m03s is the cloud build. This existed in pieces before — the rig has echoed `[qmk]` lines
@@ -365,7 +365,7 @@ in either shape, so "not failed" is never "passed".
     while its status is still `queued` was never picked up by a runner at all.
   - ⚠️ **It silently arms a release refusal.** The FW-APPLY tier runs on every push
     to `PolyKybd`, so an offline rig means the merge's own apply run hangs too —
-    and `tools/require_fwapply_run.py` refuses to publish a release the apply tier
+    and `dev/tools/require_fwapply_run.py` refuses to publish a release the apply tier
     has not covered. The failure surfaces at publish time, on a commit that looked
     fine when it merged. The recovery is the one that note already prescribes:
     dispatch *Build and HIL Test* with `tier: fwapply` on the right ref once the
@@ -610,7 +610,7 @@ in either shape, so "not failed" is never "passed".
     a new file does not have — the check that replaces it is **whether the same
     objection reproduces on a neighbouring committed file**. It does: the aligned
     `#define SYNC_ACK_SIG    0b…` block is flagged identically in
-    `origin/PolyKybd:keyboards/polykybd/split_link/split_sync.h`, which CI has been passing for
+    `origin/PolyKybd:keyboards/polykybd/lib/split_link/split_sync.h`, which CI has been passing for
     months.
   - `qmk format-text` itself cannot be run in the container — it needs **`dos2unix`,
     which is not installed** (`FileNotFoundError: 'dos2unix'`). Its whole job is line
@@ -693,7 +693,7 @@ in either shape, so "not failed" is never "passed".
   only by force-cancel). `!cancelled()` runs after a failed or skipped need just
   the same and stops on a cancel. **Use this instead of asking the user to
   flash a build and paste the console log.** See
-  `keyboards/polykybd/profiling/README.md` (§ on-demand control, HID cmd 32) and the
+  `keyboards/polykybd/dev/profiling/README.md` (§ on-demand control, HID cmd 32) and the
   `polykybd-ctnd` CLAUDE.md § Performance measurement.
 
 - **An upstream merge is the canonical case for the `hil-perf` label.** A catch-up merge
@@ -852,7 +852,7 @@ inherited-upstream noise:
   the link failed 40 B over main RAM and the release went out with **no files**, so
   every host reported "newer but has no .bin"). Since then the `build-release-shape`
   job runs `doom/pack/build_pack.sh` on every PR in the release's own image, and its
-  "RAM headroom" step prints each build's free RAM (`tools/ram_report.py`).
+  "RAM headroom" step prints each build's free RAM (`dev/tools/ram_report.py`).
   ⚠️ **Read the headroom from that job, not from a local build.** The container's gcc
   13.2 leaves 400–500 B more free than the image's gcc 15.2: v1.9.1 had 344 B free
   locally and failed in CI, and #390 measured 7,832 B locally against 7,336 B in CI. About 14.7 KB of code runs from RAM, so compiler code

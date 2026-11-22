@@ -56,8 +56,7 @@ def main():
     a = ap.parse_args()
 
     root = repo_root()
-    src = subprocess.run(["git", "-C", root, "show", f"{a.base}:{REL}"],
-                         capture_output=True, text=True, check=True).stdout
+    src = subprocess.run(["git", "-C", root, "show", f"{a.base}:{REL}"], capture_output=True, text=True, check=True).stdout
     with tempfile.TemporaryDirectory() as tmp:
         old_path = os.path.join(tmp, "stage_before.py")
         with open(old_path, "w", encoding="utf-8") as f:
@@ -65,8 +64,7 @@ def main():
         old = load(old_path, "stage_before")
         new = load(os.path.join(root, REL), "stage_after")
 
-    names = a.names or [n for n in new.ICONS
-                        if n not in old.ICONS or bits(old.render(n)) != bits(new.render(n))]
+    names = a.names or [n for n in new.ICONS if n not in old.ICONS or bits(old.render(n)) != bits(new.render(n))]
     if not names:
         print(f"no icon differs from {a.base}")
         return 0
@@ -93,13 +91,10 @@ def main():
             for yy in range(S):
                 for xx in range(S):
                     if px[yy][xx]:
-                        dr.rectangle([x0 + xx * SC, y0 + yy * SC,
-                                      x0 + xx * SC + SC - 2, y0 + yy * SC + SC - 2],
-                                     fill=(90, 200, 255))
+                        dr.rectangle([x0 + xx * SC, y0 + yy * SC, x0 + xx * SC + SC - 2, y0 + yy * SC + SC - 2], fill=(90, 200, 255))
                     else:
                         dr.point((x0 + xx * SC, y0 + yy * SC), fill=(60, 60, 66))
-        dr.text((gutter, y0 + cell + 4), f"{n}: {a.base} | working tree",
-                fill=(230, 230, 230), font=f)
+        dr.text((gutter, y0 + cell + 4), f"{n}: {a.base} | working tree", fill=(230, 230, 230), font=f)
     sheet.save(a.out)
     print(f"{len(names)} icon(s): {', '.join(names)} -> {a.out}")
     return 0

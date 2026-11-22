@@ -78,11 +78,9 @@ def main() -> None:
         f.write(hdr)
         f.write(image)
 
-    print(
-        f"mkpack: {args.out}: image {len(image)} B, entry_off {entry_off:#x}, "
-        f"ram {args.ram_base:#010x}+{args.ram_size}, arena_off {arena_off}, "
-        f"v{args.version}"
-    )
+    print(f"mkpack: {args.out}: image {len(image)} B, entry_off {entry_off:#x}, "
+          f"ram {args.ram_base:#010x}+{args.ram_size}, arena_off {arena_off}, "
+          f"v{args.version}")
 
 
 if __name__ == "__main__":

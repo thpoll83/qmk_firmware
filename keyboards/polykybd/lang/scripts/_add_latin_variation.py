@@ -36,8 +36,8 @@ SHEET = "xl/worksheets/sheet3.xml"
 # packs it in a LATIN_PICK_BITS-wide field per (letter, case), so LATIN_PICK_MAX is
 # the most that can ever be addressed -- keep it in step with state.h.  (It was a
 # nibble/16 until the 6-bit widening.)
-MAX_SLOTS    = 64                # LATIN_PICK_MAX in state.h (6-bit field)
-FIRST_COL    = 2                 # column B
+MAX_SLOTS = 64  # LATIN_PICK_MAX in state.h (6-bit field)
+FIRST_COL = 2  # column B
 
 
 def _colname(n):
@@ -48,8 +48,8 @@ def _colname(n):
     return s
 
 
-HELPER_MIN   = _colname(FIRST_COL + MAX_SLOTS)       # first column past every slot
-HELPER_MAX   = _colname(FIRST_COL + MAX_SLOTS + 1)
+HELPER_MIN = _colname(FIRST_COL + MAX_SLOTS)  # first column past every slot
+HELPER_MAX = _colname(FIRST_COL + MAX_SLOTS + 1)
 USAGE = """usage: _add_latin_variation.py [--dry-run] [--allow-asymmetric]
                               <xlsx> <letter> <char> [<letter> <char> ...]
 
@@ -81,7 +81,7 @@ if not os.path.isfile(XLSX):
     die(f"file not found: {XLSX}")
 
 
-def colname(n):                                  # 1-based index -> A1 letters
+def colname(n):  # 1-based index -> A1 letters
     s = ""
     while n:
         n, r = divmod(n - 1, 26)
@@ -155,13 +155,13 @@ def style_at(xml, row, target):
 #     only (the cog never reads S/T), but they are in the way, so they move down
 #     and their ranges are widened to cover the rows being added.
 
+
 def block_end(xml):
     """Last odd row whose column A is filled — the end of the letter block."""
     last = 0
     for m in re.finditer(r'<row r="(\d+)"[^>]*>(.*?)</row>', xml, re.S):
         r = int(m.group(1))
-        if r % 2 and any(ref_of(c).startswith("A") and col_of(ref_of(c)) == 1
-                         for c in cells_of(m.group(2))):
+        if r % 2 and any(ref_of(c).startswith("A") and col_of(ref_of(c)) == 1 for c in cells_of(m.group(2))):
             last = max(last, r)
     return last
 
@@ -187,14 +187,13 @@ def shift_trailing_rows(xml, first, delta):
                          f"relocate the sheet-wide {HELPER_MIN}/{HELPER_MAX}/Q "
                          f"aggregate rows")
         moved.append(r)
-    for r in sorted(moved, reverse=True):          # high to low: refs stay unique
+    for r in sorted(moved, reverse=True):  # high to low: refs stay unique
         m = row_xml(xml, r)
         body = m.group(2)
         body = re.sub(r'(<c r="([A-Z]+))%d"' % r, lambda mm: f'{mm.group(1)}{r + delta}"', body)
         # a formula referencing another moved row (row 80's DEC2HEX(S79))
         for other in moved:
-            body = re.sub(r'\b([A-Z]+)%d\b' % other,
-                          lambda mm, o=other: f"{mm.group(1)}{o + delta}", body)
+            body = re.sub(r'\b([A-Z]+)%d\b' % other, lambda mm, o=other: f"{mm.group(1)}{o + delta}", body)
         head = m.group(1).replace(f'r="{r}"', f'r="{r + delta}"', 1)
         xml = xml[:m.start()] + head + body + m.group(3) + xml[m.end():]
     # Widen the aggregate ranges (…BN2:BN92) so they span the newly added rows.
@@ -204,8 +203,7 @@ def shift_trailing_rows(xml, first, delta):
     # followed by the row number reads as group \192, which is a regex error, and
     # the character class was hardcoded to the old S/T columns besides.
     for col in (HELPER_MIN, HELPER_MAX):
-        xml = re.sub(r'\b%s2:%s%d\b' % (col, col, first - 1),
-                     f"{col}2:{col}{first - 1 + delta}", xml)
+        xml = re.sub(r'\b%s2:%s%d\b' % (col, col, first - 1), f"{col}2:{col}{first - 1 + delta}", xml)
     return xml
 
 
@@ -222,20 +220,19 @@ def new_letter_rows(xml, letter, row, style_row):
 
 # --- plan: locate each letter's row + its slot (reading is safe, saving is not)
 from openpyxl import load_workbook
+
 wb = load_workbook(XLSX, data_only=True)
 sh = wb["latin_sup_ex"]
-plan, taken = [], {}          # taken: row -> next free column, across this batch
+plan, taken = [], {}  # taken: row -> next free column, across this batch
 # End of the contiguous letter block; rows for absent letters are appended here.
-BLOCK_END = max((r for r in range(1, sh.max_row + 1, 2) if sh[f"A{r}"].value),
-                default=0)
+BLOCK_END = max((r for r in range(1, sh.max_row + 1, 2) if sh[f"A{r}"].value), default=0)
 created, next_new = {}, BLOCK_END + 2
 for letter, char in pairs:
     if len(char) != 1:
         die(f"{letter!r}: expected a single character, got {char!r}")
     if len(letter) != 1 or not letter.isascii() or not letter.isalpha():
         die(f"{letter!r}: expected a single ASCII letter")
-    row = next((r for r in range(1, sh.max_row + 1, 2)
-                if sh[f"A{r}"].value == letter), None)
+    row = next((r for r in range(1, sh.max_row + 1, 2) if sh[f"A{r}"].value == letter), None)
     if row is None:
         # A letter with no variations yet has no row at all (B F M P Q V X).
         # Appending one is safe: the cog keys a dict by the label, so the sheet's
@@ -259,21 +256,19 @@ for letter, char in pairs:
     if any(p for p in plan if p[2] == row and p[1] == char):
         die(f"{letter}: {char!r} named twice in one command")
     taken[row] = col + 1
-    plan.append((letter, char, row, col, f"{ord(char):X}"))   # DEC2HEX(UNICODE())
+    plan.append((letter, char, row, col, f"{ord(char):X}"))  # DEC2HEX(UNICODE())
 wb.close()
 
 # The table is case-symmetric -- every variation exists in both cases -- and a
 # half-pair is the shape of the mislabelled-row bug that shipped for ~2 years.
-lonely = [l for l, _ in pairs
-          if (l.swapcase() not in [x for x, _ in pairs])]
+lonely = [l for l, _ in pairs if (l.swapcase() not in [x for x, _ in pairs])]
 if lonely and not ASYM:
     die(f"one-case addition for {', '.join(sorted(set(lonely)))} -- the table is "
         f"case-symmetric, so pass both cases (or --allow-asymmetric if deliberate)")
 
 for letter, char, row, col, hexv in plan:
     print(f"{letter}: append {char!r} U+{ord(char):04X} "
-          f"({unicodedata.name(char, '?')}) at {colname(col)}{row} -> slot {col - 2}"
-          + ("   [new row]" if letter in created else ""))
+          f"({unicodedata.name(char, '?')}) at {colname(col)}{row} -> slot {col - 2}" + ("   [new row]" if letter in created else ""))
 for letter, row in sorted(created.items(), key=lambda kv: kv[1]):
     print(f"{letter}: creating row {row} (letter had no variations before)")
 
@@ -281,7 +276,7 @@ if DRY:
     sys.exit(0)
 
 with zipfile.ZipFile(XLSX) as z:
-    xml = z.read(SHEET).decode("utf-8")     # read the one member; never extractall
+    xml = z.read(SHEET).decode("utf-8")  # read the one member; never extractall
 
 if created:
     # Push the trailing sheet-wide aggregate rows clear of the letter block, then
@@ -294,13 +289,11 @@ for letter, char, row, col, hexv in plan:
     ref, hex_ref = f"{colname(col)}{row}", f"{colname(col)}{row + 1}"
     prev, prev_hex = f"{colname(col - 1)}{row}", f"{colname(col - 1)}{row + 1}"
 
-    xml = splice(xml, row,
-                 {col: f'<c r="{ref}"{style_at(xml, row, prev)} t="inlineStr">'
-                       f'<is><t xml:space="preserve">{escape(char)}</t></is></c>'})
-    xml = splice(xml, row + 1,
-                 {col: f'<c r="{hex_ref}"{style_at(xml, row + 1, prev_hex)} t="str">'
-                       f'<f aca="false">DEC2HEX(_xlfn.UNICODE({ref}))</f>'
-                       f'<v>{hexv}</v></c>'})
+    xml = splice(xml, row, {col: f'<c r="{ref}"{style_at(xml, row, prev)} t="inlineStr">'
+                                 f'<is><t xml:space="preserve">{escape(char)}</t></is></c>'})
+    xml = splice(xml, row + 1, {col: f'<c r="{hex_ref}"{style_at(xml, row + 1, prev_hex)} t="str">'
+                                     f'<f aca="false">DEC2HEX(_xlfn.UNICODE({ref}))</f>'
+                                     f'<v>{hexv}</v></c>'})
 
     # Helper columns S (min) / T (max) are human-facing only -- cog never reads
     # them -- but a cache that disagrees with the row is worse than none.  S's
@@ -318,9 +311,7 @@ for letter, char, row, col, hexv in plan:
         # in step there, so leave the placeholder alone.
         cached = re.search(r'<v>(-?\d+)</v>', c)
         if r.startswith(HELPER_MIN) and cached:
-            c = re.sub(r'(<f[^>]*>MIN\()(.*?)(\)</f>)',
-                       lambda mm: f"{mm.group(1)}{mm.group(2)},HEX2DEC({hex_ref}){mm.group(3)}",
-                       c)
+            c = re.sub(r'(<f[^>]*>MIN\()(.*?)(\)</f>)', lambda mm: f"{mm.group(1)}{mm.group(2)},HEX2DEC({hex_ref}){mm.group(3)}", c)
             c = re.sub(r'<v>-?\d+</v>', f'<v>{min(int(cached.group(1)), ord(char))}</v>', c)
         elif r.startswith(HELPER_MAX) and cached:
             c = re.sub(r'<v>-?\d+</v>', f'<v>{max(int(cached.group(1)), ord(char))}</v>', c)
@@ -339,7 +330,6 @@ except Exception as e:
 out = XLSX + ".new"
 with zipfile.ZipFile(XLSX) as zin, zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zout:
     for it in zin.infolist():
-        zout.writestr(it, xml.encode("utf-8") if it.filename == SHEET
-                          else zin.read(it.filename))
+        zout.writestr(it, xml.encode("utf-8") if it.filename == SHEET else zin.read(it.filename))
 shutil.move(out, XLSX)
 print(f"wrote {XLSX} ({len(plan)} variation(s))")

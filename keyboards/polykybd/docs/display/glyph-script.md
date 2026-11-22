@@ -25,7 +25,7 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`, then
   choice made before the matching font-pack update survives it. Adding a `GLYPH_*` value
   therefore needs NO `PROTOCOL_VERSION` change — just the enum entry, the
   `glyph_script_blocks[]` row, the font, and the host `GlyphScript`/label.
-- **Render hook — one choke point in `render_key()`** (`poly_keymap.c`): right after
+- **Render hook — one choke point in `render_key()`** (`keys_com/render_key.c`): right after
   `local_state` is fetched, when `glyph_script != GLYPH_STD` and the key is a plain
   letter/digit on the normal layer (not the `_ADDLANG1` latin-variation layer), it
   draws the override glyph centered and **returns**, so it replaces the *whole* base
@@ -67,7 +67,7 @@ GLYPH_IBMVGA=6, GLYPH_C64=7, GLYPH_AMIGA=8, GLYPH_APL=9, GLYPH_BRAILLE=10`, then
   beside `_C64_`, so it takes the highest ALL_FONTS index and only the `fantasy`
   bundle changes (v7); in the middle it shifted `latinbig`'s gidx and would have
   forced a second reship.
-  Script 11's LETTER keys use layout A (`render_c64_keycap()` in `poly_keymap.c`):
+  Script 11's LETTER keys use layout A (`render_c64_keycap()` in `keys_com/render_key.c`):
   a 22 px letter (`_C64KeyLtr_`, size 16, `0xEAC0`) with the key's two PETSCII
   graphics below it as 14x14 framed cells (`_C64Petscii_`, size 10, `0xEB00`:
   Commodore+key a..z, then Shift+key a..z), as printed on the front of a real C64

@@ -24,8 +24,10 @@ source includes other sources by their path from here, for example
   (`keymaps[]`), the encoder map and, on `split72`, the RGB LED positions.
   `split72/status_oled.c` draws the 128×64 status display.
 - [`keys_com/`](keys_com/): the key handling and keycap legends that every variant
-  compiles. `poly_keymap.c` processes the keys and draws the legends, handles the HID
-  overlays, the language selection and idle/suspend. Next to it: the legend for each
+  compiles. `poly_keymap.c` processes the keys, handles the HID overlays, the language
+  selection and idle/suspend, and returns each key's legend text (`to_static_text`).
+  `render_key.c` draws the keycaps that need more than a text legend, and
+  `latin_picker.c` holds the Intl latin-variation picker. Next to them: the legend for each
   keycode (`keycode_helper`), the language layer and Unicode map (`lang_layer`,
   `uni.h`), layer names (`layer_names`), macros (`poly_macro*`), combos
   (`poly_combos*`), the overlay cache (`mru`) and the layer enum (`layers.h`).

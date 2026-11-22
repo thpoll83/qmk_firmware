@@ -3,7 +3,7 @@ placed and MEASURED without flashing.
 
 This mirrors `lib/drivers/disp_array.c` (`kdisp_write_gfx_char`'s baseline-align + its
 courtyard clear, `kdisp_draw_glyph_half_at`, `kdisp_draw_glyph_thin_at`) and the
-legend placement in `poly_keymap.c` `render_key()` (base glyph, shift preview and
+legend placement in `keys_com/render_key.c` `render_key()` (base glyph, shift preview and
 AltGr preview, using the REAL per-language offsets parsed out of `lang_lut.c`).
 
 Everything works on **ink sets** — `{(x, y), …}` of lit buffer pixels — because the

@@ -11,7 +11,7 @@ Notes: `docs/features/keycode-handling.md` · `docs/display/display-pipeline.md`
   layer a release-edge action fires up to THREE times (one tap stepped the legend size
   three tiers; a toggle reads as doing nothing at all). A REAL keycode cannot use this —
   swallowing stops it reaching the host.
-- ⚠️ **`render_key()` and `to_static_text()` are a PAIR** — `render_key()` is consulted
+- ⚠️ **`render_key()` (`render_key.c`) and `to_static_text()` (`poly_keymap.c`) are a PAIR** — `render_key()` is consulted
   only when `to_static_text()` returns NULL, so a mismatch draws chrome and NO legend.
   A third seam, `update_displays()`, can contain a per-keycode branch that makes the
   legend DEAD: **grep for your keycode there before believing a legend edit does

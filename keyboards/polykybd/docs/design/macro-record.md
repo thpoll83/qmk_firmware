@@ -23,7 +23,7 @@ Macros shipped in protocol v15 (qmk #234). The parts that carry over unchanged:
 | A pure decoder, unit-tested (`make test:polykybd_macro_decode`) | `base/macro_decode.c` |
 | Playback as a housekeeping state machine, `clear_keyboard()` on abort | `poly_macro_tick()` / `poly_macro_abort()` |
 | The look record (style / icon / 12-char caption) with a dirty-bit queue that pushes to the slave | `poly_macro_look_set()` / `poly_macro_label_sync_tick()` |
-| The keycap render, caption truncated by measured pixel width | `render_macro_key()` (`poly_keymap.c:2690`) |
+| The keycap render, caption truncated by measured pixel width | `render_macro_key()` (`keys_com/render_key.c`) |
 
 What is missing is only: a way to capture keystrokes, an encoder, a way to splice a
 body into the middle of the shared buffer, and a gesture to drive it.

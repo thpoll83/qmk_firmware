@@ -138,7 +138,7 @@ enum my_keycodes {
     // and KC_IDDQD: widening that range would push KC_DAUTO/KC_IDDQD up by two, and
     // those values are what a host-remapped key stores in the dynamic-keymap EEPROM.
     // The cost is that KC_LAT0..KC_LAT9 and KC_LAT10..KC_LAT11 are NOT contiguous —
-    // use latin_picker_slot() (poly_keymap.c) instead of `keycode - KC_LAT0`, and do
+    // use latin_picker_slot() (latin_picker.c) instead of `keycode - KC_LAT0`, and do
     // not write `KC_LAT0 ... KC_LAT11` as a case range.
     KC_LAT10,
     KC_LAT11,

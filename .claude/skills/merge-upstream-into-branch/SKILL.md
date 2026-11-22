@@ -70,7 +70,7 @@ git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -5
    ```
    Also show which of the fork's touched files appear in upstream's commit range — these are the likely conflict sites:
    ```bash
-   git diff --name-only HEAD...upstream/master -- tmk_core/ quantum/ lib/drivers/ | head -30
+   git diff --name-only HEAD...upstream/master -- tmk_core/ quantum/ drivers/ | head -30
    ```
 
 4. **Merge**:

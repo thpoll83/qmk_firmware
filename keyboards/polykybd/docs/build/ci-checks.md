@@ -595,7 +595,7 @@ in either shape, so "not failed" is never "passed".
       **`qmk format-text` only**, then fails any changed file that `git diff` shows as
       modified — that is where `File '…' Requires Formatting` comes from.
     - **`format.yml`** ("PR Lint Format") is the one that runs clang-format, and its
-      `paths:` are `lib/drivers/ lib/arm_atsam/ lib/lib8tion/ lib/python/ modules/
+      `paths:` are `drivers/ lib/arm_atsam/ lib/lib8tion/ lib/python/ modules/
       platforms/ quantum/ tests/ tmk_core/` — **no `keyboards/`**.
     - **`format_push.yml`** only fires on pushes to `master`/`develop`, i.e. the
       upstream-mirror branches, never on `PolyKybd` or a `claude/**` PR.

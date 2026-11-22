@@ -4,7 +4,8 @@
 // GOLDEN REFERENCE: the OS shortcut-hint table exactly as it stood in
 // poly_keymap.c on the base branch, before it was extracted into
 // features/hints/os_hints.c. Copied verbatim from
-//   git show origin/PolyKybd:keyboards/polykybd/keys_com/poly_keymap.c
+//   git show 4931d0d202^:keyboards/polykybd/poly_keymap.c
+//   (the file was at the keyboard root then; it is keys_com/poly_keymap.c now)
 // with only the two global-state reads turned into the parameters the extracted
 // version takes (asserted at generation time — see tests/README.md).
 //

@@ -60,9 +60,11 @@ the concepts behind them. Every source includes other sources by their path from
   them: the core1 launcher and owner (`polymod_core1`), the Cirque trackpad gestures
   (`polymod_cirque_gestures`, split72 only), the OLED I2C write diagnostics
   (`polymod_oled_i2c_diag`), the LTR-559 driver, CRC32, RLE and Ed25519.
-- [`base/`](base/README.md): pure logic without hardware access (no `quantum.h`, no display),
-  with unit tests in [`base/tests/`](base/tests/README.md) that run on the host (`make test:<name>`). Code moves
-  here when it can be tested without a keyboard.
+- [`base/`](base/README.md): logic kept free of hardware access so it can be tested on the
+  host, with unit tests in [`base/tests/`](base/tests/README.md) (`make test:<name>`). Code
+  moves here when it can be tested without a keyboard. Three files still depend on QMK
+  (`hand_stamp.c`, `text_helper.c`, `overlay.c`), and no suite links them. `update.c` needs
+  only the timer, which its suite provides.
 - [`lang/`](lang/README.md): the language tables. `lang_lut.xlsx` is the source that cog turns
   into `lang_lut.c`/`.h` and the generated parts of `keys_com/` and `lib/hid/`; the
   scripts that edit the workbook are in [`lang/scripts/`](lang/scripts/README.md). The host reads `lang_lut.xlsx`

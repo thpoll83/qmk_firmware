@@ -62,7 +62,7 @@ bool core1_restore_service(void);
 core1_tenant_t core1_tenant(void);
 
 // ---------------------------------------------------------------------------
-// Hardware seam. core1_owner.c holds only the logic; core1_owner_hw.c
+// Hardware seam. polymod_core1_owner.c holds only the logic; polymod_core1_owner_hw.c
 // implements these for the RP2040 and ChibiOS, and the unit tests fake them.
 // ---------------------------------------------------------------------------
 void core1_hw_lock(void);

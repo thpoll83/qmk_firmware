@@ -189,7 +189,14 @@ POLY_WARN_CFLAGS := -Wextra -Wno-unused-parameter -Wno-old-style-declaration
 define POLY_APPLY_WARN
 $(INTERMEDIATE_OUTPUT)/$(patsubst %.c,%.o,$(patsubst ./%,%,$1)): FILE_SPECIFIC_CFLAGS += $(POLY_WARN_CFLAGS)
 endef
-$(foreach s,$(POLY_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
+# PolyKybd's own sources inside its community modules get the same flags. The module
+# build adds them to SRC (modules/polykybd/*/rules.mk), so they are not in POLY_SRC.
+# The module's main <name>.c is compiled by its absolute path, which this pattern does
+# not match, so only the extra files are listed.
+POLY_MODULE_WARN_SRC := modules/polykybd/polymod_core1/polymod_core1_owner.c \
+                        modules/polykybd/polymod_core1/polymod_core1_owner_hw.c \
+                        modules/polykybd/polymod_cirque_gestures/polymod_cirque_gesture_fsm.c
+$(foreach s,$(POLY_SRC) $(POLY_MODULE_WARN_SRC),$(eval $(call POLY_APPLY_WARN,$(s))))
 
 # Bulk pipe: a CDC-ACM (virtual serial) interface whose bulk endpoints carry
 # large host->keyboard transfers that raw HID (one 64-byte report per 1 ms USB

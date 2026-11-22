@@ -37,12 +37,12 @@ The 270 MHz overclock exists to hit 60 fps *while racing the VGA beam*. We need 
 | SRAM | 264 KB total | RP2040 |
 | — of which overlay pool | **226,800 B** — `overlays[630][360]` (90 slots × 7 variants × 360 B) | `base/overlay.c`, `config.h` |
 | — everything else (QMK + ChibiOS + USB + stacks) | ≤ ~43 KB (it all fits in 264 KB today) | arithmetic |
-| Flash | 8 MB QSPI, partitioned | `drivers/fw_staging.h` |
+| Flash | 8 MB QSPI, partitioned | `lib/drivers/fw_staging.h` |
 | — firmware partition | 2 MB, ~0.76 MB used → **~1.2 MB free** | linker `flash1` |
 | — staging partition | 2 MB (0x200000–0x400000) | `fw_staging.h` |
 | — resource region | 4 MB (0x400000–0x800000): first 2 MB = font-pack slots, **upper 2 MB unused** (minus the 8 KB EEPROM journal at the very top) | `fontpack_layout.h`, wear-leveling config |
-| Keycap displays | 72× SSD1306-class, 72×40 px visible (128×64 controller), 1-bit | `drivers/disp_array.c` |
-| Display bus (per half) | Shared 10 MHz SPI + 5 shift registers for chip-select (36 displays per half) | `split72/config.h`, `drivers/shift_reg.c` |
+| Keycap displays | 72× SSD1306-class, 72×40 px visible (128×64 controller), 1-bit | `lib/drivers/disp_array.c` |
+| Display bus (per half) | Shared 10 MHz SPI + 5 shift registers for chip-select (36 displays per half) | `split72/config.h`, `lib/drivers/shift_reg.c` |
 | Split link | Full-duplex PIO UART, **230,400 baud** | `halconf.h`, `serial_usart.h` |
 | Status OLED | 128×64 (master half) — free for a HUD | `split72/status_oled.c` |
 | Input | 72 keys. It's a keyboard. | — |

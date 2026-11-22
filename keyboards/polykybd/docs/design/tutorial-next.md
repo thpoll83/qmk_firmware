@@ -3,7 +3,7 @@
 Companion to [`docs/features/tutorial.md`](../features/tutorial.md), which holds the design and the per-round
 post-mortems. **This file is the worklist**: what is finished, what is deliberately
 postponed, and what a future session has to do to take it further. Read both before
-touching `anim/tutorial.c`, `base/tutorial_plan.[ch]` or `anim/focus_ring.[ch]`.
+touching `features/anim/tutorial.c`, `base/tutorial_plan.[ch]` or `features/anim/focus_ring.[ch]`.
 
 Chapters 1–2 merged to `PolyKybd` in #306 and #309. Since 1.0.0 the boot trigger is
 **on by default** (`-e POLYKYBD_BOOT_INTRO=no` opts out); HIL images (`POLYKYBD_HIL=yes|left|right`)
@@ -210,8 +210,8 @@ in `docs/features/tutorial.md`; this is the checklist.
 |---|---|
 | `base/tutorial_plan.h` / `.c` | pure timeline, phases, curves, ring geometry — no quantum.h, unit-tested |
 | `base/tests/tutorial_plan_tests.cpp` | 73 tests (`make test:polykybd_tutorial_plan`) |
-| `anim/tutorial.h` / `.c` | the firmware binding: lifecycle, split sync, status prose |
-| `anim/focus_ring.h` / `.c` | the reusable "point at this key" ripple — general, not tutorial-only |
+| `features/anim/tutorial.h` / `.c` | the firmware binding: lifecycle, split sync, status prose |
+| `features/anim/focus_ring.h` / `.c` | the reusable "point at this key" ripple — general, not tutorial-only |
 | `docs/features/tutorial.md` | design + per-round post-mortems |
 | `poly_keymap.c` | the keymap-facing half: slot resolution, the lit-set gate, layout park/restore, the housekeeping hook |
 | `oled_helper.c` | `oled_tutorial_screen()` — the status panels |

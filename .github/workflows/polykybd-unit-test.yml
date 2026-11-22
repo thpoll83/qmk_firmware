@@ -121,14 +121,14 @@ jobs:
       # rig flashes elf2uf2-made images, so no build and no hardware round could
       # have caught it. Only the release workflow ran the tool at all.
       #
-      # ⚠️ Scoped to tools/tests, NOT a repo-wide discover: keyboards/polykybd/lang/
+      # ⚠️ Scoped to dev/tools/tests, NOT a repo-wide discover: keyboards/polykybd/lang/
       # carries tests needing openpyxl and a spreadsheet, which are not installed
       # here. A discover that silently collects zero tests is the failure this
       # whole workflow exists to prevent, so the count is asserted below.
       - name: Run PolyKybd tool tests (Python)
         run: |
           set -eu
-          dir=keyboards/polykybd/tools/tests
+          dir=keyboards/polykybd/dev/tools/tests
           if [ ! -d "$dir" ]; then
             echo "::error::$dir is missing — the tool test suite was moved or deleted."
             exit 1

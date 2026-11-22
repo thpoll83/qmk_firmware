@@ -147,7 +147,7 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     matrix breathes (cyan = font pack, orange = firmware/bootloader = "can't type");
     `poly_prepare_for_flash()` (HID BEGIN) drops to the base layer + bridges it to the
     slave so typing still works. See `oled_helper.c`, `poly_keymap.c` (`flash_rgb_tick`,
-    `rgb_matrix_indicators_kb`), `drivers/fw_staging.c` (`fw_staging_active_target`).
+    `rgb_matrix_indicators_kb`), `lib/drivers/fw_staging.c` (`fw_staging_active_target`).
 
 - **Make a pack font resident** (so UI chrome renders with no pack): add its
   generated symbol name to `index.resident_fonts` in `fonts.yaml`, then regenerate.
@@ -161,7 +161,7 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   menu icons (Settings ⚙, World 🌐), Brightness moons, Hyper/Meh, GuiKey, Util
   (screenshot/calc/my-computer/paste), EmjLayer, plus the always-resident Arrows.
 - **The OS shortcut-hint icons are a PACK font, not resident** (2026-10).
-  `tools/hint_icons.py` writes them as their own GFXfont, `PolyHintIcons`, in
+  `dev/tools/hint_icons.py` writes them as their own GFXfont, `PolyHintIcons`, in
   `fonts/hint_icons.h` (U+100100.., a block of its own: `IconsFont` runs
   U+100000..U+100025 and can grow by 218 icons before reaching it; yAdvance 40 like
   `IconsFont`, so the baseline alignment against `fonts[0]` moves nothing). `fonts.yaml` lists it under `index.pack_extra_fonts`
@@ -171,7 +171,7 @@ flashes all stale bundles, `flash <id>` force-flashes one).
   includes the header. ⚠️ **With no pack flashed the glyphs are absent**, so
   `keycode_to_disp_overlay()` returns no hint when the first glyph is missing; the key
   keeps its legend instead of drawing the missing-glyph `!`. After any icon change:
-  `python3 tools/hint_icons.py`, then reship `symbol` with the
+  `python3 dev/tools/hint_icons.py`, then reship `symbol` with the
   `reship-fontpack-bundle` skill. `check_icon_slots.py` reads both headers, fails
   on a macro that points between them, and reports how many slots `IconsFont` has left. The design
   rules and the reason for each icon's shape are [`docs/display/hint-icons.md`](hint-icons.md).
@@ -207,7 +207,7 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     (`reship_bundles.py --check`). ⚠️ Host code that hard-codes the old C1 values
     (`shortcut_icons.py`, `status_screen.py`, `keycap_preview.py`, the preview tools)
     needs the same remap, along with a re-export of the keycap preview data.
-  - **`python3 tools/check_icon_slots.py` is the gate, and it is the only thing that
+  - **`python3 dev/tools/check_icon_slots.py` is the gate, and it is the only thing that
     can answer "is this slot free?"** The named_glyphs sheet's own "Distance Helper"
     column measures the sheet against *itself*, so a codepoint that holds a real glyph
     but has no macro reads as free space. The script cross-checks `gfx_icons.h` against
@@ -310,7 +310,7 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     while gaining grid-fitting: the status-OLED row gaps went 3/2/3 + 3/3/3 → 4/3/3
     + 4/3/4 (every gap +1 px, nothing moved, bottom still pinned at 63). Re-run
     `.claude/skills/status-oled-layout/measure_bands.py 72` after any size change
-    (from the repo root, or anywhere — it derives `tools/` from its own location;
+    (from the repo root, or anywhere — it derives `dev/tools/` from its own location;
     needs an interpreter with Pillow, e.g. `/root/.qmk_venv/bin/python`).
   - Symbols are named for their **real** size (`NotoSans_Regular_Small_15px7b`,
     `..._Nano_10px7b`, `..._Mid_19px7b`). The old `…8pt7b`/`…6pt7b` names were

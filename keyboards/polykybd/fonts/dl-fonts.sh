@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Download all Noto fonts required by create_fonts.sh / generate_fonts.py.
+# Download all Noto fonts required by dev/scripts/create_fonts.sh / generate_fonts.py.
 # Run from: qmk_firmware/keyboards/polykybd/fonts/
 #
 # The font list (url + destination) lives in noto-fonts.yaml — the single source
@@ -8,7 +8,7 @@
 #
 # Most Noto fonts on Google Fonts are now variable-only; FreeType handles
 # variable fonts transparently, so they work as drop-in replacements for
-# the static filenames expected by create_fonts.sh.
+# the static filenames expected by dev/scripts/create_fonts.sh.
 
 set -e
 cd "$(dirname "$0")"

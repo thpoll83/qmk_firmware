@@ -1,7 +1,7 @@
 ---
 paths:
-  - "keyboards/polykybd/hid/hid_com.c"
-  - "keyboards/polykybd/display/fill_overlay.c"
+  - "keyboards/polykybd/lib/hid/hid_com.c"
+  - "keyboards/polykybd/lib/display/fill_overlay.c"
 ---
 # Editing the HID dispatcher
 

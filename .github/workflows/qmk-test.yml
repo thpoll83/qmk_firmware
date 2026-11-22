@@ -107,7 +107,7 @@ on:
         default: all
         options: [all, default, extended, perf, doom, fwapply, debug]
       probe:
-        description: "tier=debug only: probe name under keyboards/polykybd/tools/hil_probes/"
+        description: "tier=debug only: probe name under keyboards/polykybd/dev/tools/hil_probes/"
         type: string
         required: false
         default: ""
@@ -232,7 +232,7 @@ jobs:
       - name: RAM headroom
         uses: docker://qmkfm/qmk_cli
         with:
-          args: python3 keyboards/polykybd/tools/ram_report.py keyboards/polykybd/doom/pack/build/monolith.elf keyboards/polykybd/doom/pack/build/firmware.elf
+          args: python3 keyboards/polykybd/dev/tools/ram_report.py keyboards/polykybd/doom/pack/build/monolith.elf keyboards/polykybd/doom/pack/build/firmware.elf
 
   hil-test:
     name: HIL test (split72)
@@ -648,7 +648,7 @@ jobs:
       - name: Generate an ephemeral signing key
         run: |
           python3 -m pip install --quiet cryptography
-          python3 keyboards/polykybd/tools/gen_signing_key.py \
+          python3 keyboards/polykybd/dev/tools/gen_signing_key.py \
             --out-privkey /tmp/doom_ephemeral_key.bin \
             --out-pubkey keyboards/polykybd/base/fw_pubkey.h \
             --force
@@ -682,7 +682,7 @@ jobs:
           # which the host runner user cannot do until it takes ownership.
           sudo chown "$(id -u):$(id -g)" "$PLYX"
           before=$(stat -c%s "$PLYX")
-          python3 keyboards/polykybd/tools/sign_doompack.py --privkey /tmp/doom_ephemeral_key.bin "$PLYX"
+          python3 keyboards/polykybd/dev/tools/sign_doompack.py --privkey /tmp/doom_ephemeral_key.bin "$PLYX"
           after=$(stat -c%s "$PLYX")
           if [ "$after" -ne "$((before + 64))" ]; then
             echo "::error::signing did not append exactly 64 bytes ($before -> $after)"
@@ -757,7 +757,7 @@ jobs:
       - name: Generate an ephemeral signing key
         run: |
           python3 -m pip install --quiet cryptography
-          python3 keyboards/polykybd/tools/gen_signing_key.py \
+          python3 keyboards/polykybd/dev/tools/gen_signing_key.py \
             --out-privkey /tmp/fwapply_ephemeral_key.bin \
             --out-pubkey keyboards/polykybd/base/fw_pubkey.h \
             --force
@@ -790,7 +790,7 @@ jobs:
             || docker run --rm -v "$PWD:/w" -w /w qmkfm/qmk_cli \
                  arm-none-eabi-objcopy -O binary "$ELF" "$BIN"
           sudo chown "$(id -u):$(id -g)" "$BIN"
-          python3 keyboards/polykybd/tools/sign_firmware.py \
+          python3 keyboards/polykybd/dev/tools/sign_firmware.py \
             --privkey /tmp/fwapply_ephemeral_key.bin "$BIN"
           rm -f /tmp/fwapply_ephemeral_key.bin
           if [ ! -s "$BIN.sig" ]; then
@@ -892,7 +892,7 @@ jobs:
 
   # ── ad-hoc debug probe (dispatch-only) ──────────────────────────────────────
   # The debug loop. A PROBE is a Python file committed on this branch under
-  # keyboards/polykybd/tools/hil_probes/ that drives the flashed keyboard over
+  # keyboards/polykybd/dev/tools/hil_probes/ that drives the flashed keyboard over
   # raw HID and asserts whatever the bug of the day needs. The rig pipes the
   # firmware's own console into the job log as `[qmk] …` lines, so the whole
   # flash -> drive -> read-what-it-printed cycle happens here rather than through

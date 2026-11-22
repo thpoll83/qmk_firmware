@@ -453,8 +453,8 @@ reading before you change either one.
     Host writes (op 1, cmd 46) do not move `G`.
   - Older firmware NACKs both commands.
 
-  **v32** adds cmd `47` **KEY ATTENTION** (`anim/key_attention.h`): the Eden
-  intro's focus ripple (`anim/focus_ring.h`) on one key, for a program tutorial or
+  **v32** adds cmd `47` **KEY ATTENTION** (`features/anim/key_attention.h`): the Eden
+  intro's focus ripple (`features/anim/focus_ring.h`) on one key, for a program tutorial or
   anything else that points at a key.
   - `data[2]` op, closed: `0` START, `1` CANCEL; any other op NACKs.
   - START: `data[3]` row, `data[4]` col (matrix position; a key without a display
@@ -515,7 +515,7 @@ reading before you change either one.
     `attn: guide done`, `attn: guide ran out`, `attn: refused guide`.
   - A v33 or older firmware NACKs op 2 (the op range is closed).
 
-  **v35** adds cmd `49`, the **host tutorial** (`anim/host_tutorial.c`,
+  **v35** adds cmd `49`, the **host tutorial** (`features/anim/host_tutorial.c`,
   `base/host_tutorial_plan.h`): the host's tutorial scripts (PolyKybdHost
   `services/tutorials`) put two lines on the status displays, darken every key outside
   a set of keys (the spotlight), light them again with the board-reveal wave, and ask
@@ -572,7 +572,7 @@ reading before you change either one.
     sends them only from v36. A page not below its count, or a page without a count,
     is NACKed with the rest of the report, before anything changes.
 
-  **v37** adds cmd `50`, the **hardware IDs** of both halves (`drivers/hw_uid.h`): the
+  **v37** adds cmd `50`, the **hardware IDs** of both halves (`lib/drivers/hw_uid.h`): the
   64-bit unique ID of each half's QSPI flash chip (RUID command `0x4B`). The host
   hashes them for the telemetry device count. Reply `P\x32.`, then `data[3]` flags
   (bit 0: `data[4..11]` valid, bit 1: `data[12..19]` valid), `data[4..11]` the ID of
@@ -586,6 +586,26 @@ reading before you change either one.
     bit 1, and the host still gets the master's ID. A chip that answers all `0x00` or
     all `0xFF` has no usable ID and clears its bit.
   - A v36 or older firmware NACKs cmd 50 (unknown command).
+
+  **v38** adds value `6`, **MacCompose**, to `SET_UNICODE_MODE` (cmd `20`,
+  `data[2]`). It is QMK's macOS mode with F20 held instead of Option while the hex
+  digits are typed. The host's keyboard event tap reads the digits between F20 down
+  and F20 up, drops them and posts the character with
+  `CGEventKeyboardSetUnicodeString`, so Unicode works with every macOS input source.
+  QMK's macOS mode needs Unicode Hex Input selected, and since host v1.2.8 the host
+  selects the layout that matches the keyboard language.
+  - The wire values and their QMK modes are in `base/host_unicode_mode.h`; the
+    host's `InputMethod` numbers macOS `1`, QMK numbers it `0`. Value `5` is the
+    host's `InputMethod.Unknown` and stays NACKed, like `7` and up.
+  - `UNICODE_KEY_MAC` (`config.h`) is `poly_unicode_key_mac()`, which returns
+    `KC_F20` in MacCompose and `KC_LEFT_ALT` otherwise. No QMK file changes.
+  - The F20 flag is RAM only, on the master. With the VOLATILE flag clear, value `6`
+    stores plain macOS, so a keyboard taken to a Mac without the host types
+    Option+hex again. `unicode_input_mode_set_user()` clears the flag, so any
+    other mode change (another cmd 20 value, a `QK_UNICODE_MODE_*` key) ends it.
+  - A code point above U+FFFF still goes out as a UTF-16 surrogate pair (8 digits),
+    as in the macOS mode, and the host combines the pair.
+  - A v37 or older firmware NACKs value `6`, so the host sends it only from v38.
 
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
@@ -619,6 +639,7 @@ reading before you change either one.
   | 32 | `47` KEY_ATTENTION | the focus ripple on one key; op and period CLOSED |
   | 34 | `47` op 2 GUIDE | the ripple follows a path of layer keys to a target layer |
   | 37 | `50` HW_ID | flash unique IDs of both halves; always ACKs, flag bits say which are valid |
+  | 38 | `20` SET_UNICODE_MODE | value `6` MacCompose: macOS mode with F20 held instead of Option; RAM only |
 
   ⚠️ **v13's CLOSED range is the deliberate OPPOSITE of v10's open one, one command
   over.** An unknown SCRIPT falls through to the normal legend, so accepting it costs
@@ -650,7 +671,7 @@ reading before you change either one.
   inside `#ifdef POLYKYBD_LOOP_PROFILE`, so a normal build **NACKs** it — that
   NACK is the deliberate capability signal telling a host "no profiler here"
   instead of handing back a page of zeros. Consumed by the rig's automated perf
-  run; see `keyboards/polykybd/profiling/README.md`.
+  run; see `keyboards/polykybd/dev/profiling/README.md`.
 - Overlay transmission: each keycap overlay (360 bytes) is split into 6 × 60-byte segments (cmd `0x0A`, protocol 11+: modifier+segment packed into one header byte), or sent RLE-compressed in 1–2 packets (cmds `0x10`/`0x11`)
 - ROI updates (cmds `0x12`/`0x13`) allow partial refresh of a keycap's display area
 - Overlay index = `keycode_slot + 90 * modifier_variant` (9 variants: bare, Ctrl, Shift, Ctrl+Shift, Alt, Ctrl+Alt, Alt+Shift, Ctrl+Alt+Shift, GUI)

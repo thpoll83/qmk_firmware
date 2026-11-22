@@ -107,11 +107,11 @@ polykybd_idle_update_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
-# layer_names.c needs only config.h + layers.h (both macro/enum-only), so the
+# layer_names.c needs only config.h + keys_com/layers.h (both macro/enum-only), so the
 # HID cmd 35 wire encoder links without quantum. The keyboards/polykybd include
 # path is what resolves those two.
 polykybd_layer_names_SRC := \
-	keyboards/polykybd/keymap/layer_names.c \
+	keyboards/polykybd/keys_com/layer_names.c \
 	$(POLY_BASE_PATH)/tests/layer_names_tests.cpp
 
 polykybd_layer_names_INC := \
@@ -121,7 +121,7 @@ polykybd_layer_names_INC := \
 # midi_legend.c is pure: it reads only the packed settings word it is given, so it
 # links without quantum. quantum_keycodes.h needs the sequencer include path.
 polykybd_midi_legend_SRC := \
-	keyboards/polykybd/modes/midi_legend.c \
+	keyboards/polykybd/features/modes/midi_legend.c \
 	$(POLY_BASE_PATH)/tests/midi_legend_tests.cpp
 
 polykybd_midi_legend_INC := \
@@ -138,6 +138,15 @@ polykybd_idle_timeout_SRC := \
 	$(POLY_BASE_PATH)/tests/idle_timeout_tests.cpp
 
 polykybd_idle_timeout_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
+# host_unicode_mode.h is header-only and pure, like idle_timeout.h: the cmd 20 mode
+# values and the MacCompose flag (v38) are tested without a device.
+polykybd_host_unicode_mode_SRC := \
+	$(POLY_BASE_PATH)/tests/host_unicode_mode_tests.cpp
+
+polykybd_host_unicode_mode_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
@@ -261,7 +270,7 @@ polykybd_status_brightness_INC := \
 
 # tutorial_plan.c is pure by construction — no quantum.h, no display, no EEPROM, no
 # timer (the caller passes `now` in) — so the first-run tutorial's phase machine,
-# curves and letter selection link standalone. The firmware binding is anim/tutorial.c.
+# curves and letter selection link standalone. The firmware binding is features/anim/tutorial.c.
 polykybd_tutorial_plan_SRC := \
 	$(POLY_BASE_PATH)/tutorial_plan.c \
 	$(POLY_BASE_PATH)/tests/tutorial_plan_tests.cpp
@@ -272,7 +281,7 @@ polykybd_tutorial_plan_INC := \
 
 # demo_plan.c is the showroom demo's playlist and timeline (KC_DEMO). Pure for the same
 # reason as tutorial_plan.c: the caller passes "ms into the segment", so no timer, no
-# keymap and no display are linked. The firmware binding is anim/demo_mode.c.
+# keymap and no display are linked. The firmware binding is features/anim/demo_mode.c.
 polykybd_demo_plan_SRC := \
 	$(POLY_BASE_PATH)/demo_plan.c \
 	$(POLY_BASE_PATH)/idle_poem_plan.c \
@@ -308,7 +317,7 @@ polykybd_icon_lib_INC := \
 
 # oled_i2c_diag.c decides what a failed status-OLED I2C write prints (detail line,
 # rate limit, stuck/recovered) and whether to retry. Pure: the caller passes the
-# clock and the classified failure. The firmware binding is keyboards/polykybd/display/oled_i2c.c.
+# clock and the classified failure. The firmware binding is keyboards/polykybd/lib/display/oled_i2c.c.
 polykybd_oled_i2c_diag_SRC := \
 	$(POLY_BASE_PATH)/oled_i2c_diag.c \
 	$(POLY_BASE_PATH)/tests/oled_i2c_diag_tests.cpp
@@ -390,7 +399,7 @@ polykybd_ai_events_INC := \
 	$(POLY_BASE_PATH)
 
 # attn_guide.c is the pure part of cmd 47 op 2 (GUIDE): the parse and the step for
-# the active layer. The firmware binding is anim/key_attention.c.
+# the active layer. The firmware binding is features/anim/key_attention.c.
 polykybd_attn_guide_SRC := \
 	$(POLY_BASE_PATH)/attn_guide.c \
 	$(POLY_BASE_PATH)/tests/attn_guide_tests.cpp
@@ -399,7 +408,7 @@ polykybd_attn_guide_INC := \
 	$(POLY_BASE_PATH)
 
 # host_tutorial_plan.c is the pure part of cmd 49 (HOST TUTORIAL): text, spotlight
-# and condition parsing, the matching and the watchdog. The binding is anim/host_tutorial.c.
+# and condition parsing, the matching and the watchdog. The binding is features/anim/host_tutorial.c.
 polykybd_host_tutorial_plan_SRC := \
 	$(POLY_BASE_PATH)/host_tutorial_plan.c \
 	$(POLY_BASE_PATH)/tests/host_tutorial_plan_tests.cpp
@@ -418,7 +427,7 @@ polykybd_idle_style_INC := \
 
 # emoji_dict.c is the emoji search dictionary's loader and search (docs/features/emoji-search.md).
 # Dependency-free apart from crc32. The suite builds its bundles with python3 and
-# emoji/emoji_dict.py and compares the C search with that reference.
+# features/emoji/emoji_dict.py and compares the C search with that reference.
 polykybd_emoji_dict_SRC := \
 	$(POLY_BASE_PATH)/emoji_dict.c \
 	$(POLY_CRC32_PATH)/polymod_crc32.c \

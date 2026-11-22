@@ -127,7 +127,7 @@ TEST(HandStampTest, TheChosenSideAlwaysComesFromOneOfTheTwoSources) {
 
 // --- the on-flash record ----------------------------------------------------
 
-// tools/make_hand_uf2.py writes this record from Python (STAMP_FMT "<IB3xI",
+// dev/tools/make_hand_uf2.py writes this record from Python (STAMP_FMT "<IB3xI",
 // STAMP_CRC_SPAN 8) so a handedness stamp can be flashed over BOOTSEL. Python
 // cannot see the struct, so the layout is the one thing it repeats by hand --
 // pin it here, or a field added to poly_hand_stamp_t would silently start

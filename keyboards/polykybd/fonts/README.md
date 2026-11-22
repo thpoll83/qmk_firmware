@@ -4,7 +4,7 @@ The per-keycap OLED fonts are generated from **`fonts.yaml`** — the single
 source of truth — by **`generate_fonts.py`**, which drives the `fontconvert`
 tool (from the AdafruitGFX repo) and writes the headers the firmware compiles.
 
-This replaces the old `create_fonts.sh` (now a thin wrapper that just calls the
+This replaces the old `dev/scripts/create_fonts.sh` (now a thin wrapper that just calls the
 generator).
 
 ```
@@ -186,7 +186,7 @@ Fonts for the per-keycap OLEDs are generated using the `fontconvert` tool from t
   mirrored **byte-identically** in the host repo at
   `PolyKybdHost/polyhost/res/fonts/noto-fonts.yaml` (its "Download Noto…" button in
   the font-pack extend dialog reads the same catalog) — keep both in sync (`cmp`).
-- `create_fonts.sh` is now a thin deprecated wrapper that forwards to `generate_fonts.py`.
+- `dev/scripts/create_fonts.sh` is now a thin deprecated wrapper that forwards to `generate_fonts.py`.
 - **`fonts/gen-lang-fonts.sh`** — generates `fonts/flag_fonts.h` for the language-selection layer (`_LL`): country flags from NotoColorEmoji, one per `LANG_*` at codepoint `0xE000 + enum index`, via fontconvert's `-F`; the country list is derived from `lang_lut.xlsx` automatically. (The `_Tiny_` lang-code label font moved to `fonts/gen-status-fonts.sh` — see "Standalone UI text fonts" below.) These are **not** in `fonts.yaml`/`ALL_FONTS` — like the status-OLED fonts they're used via dedicated single-font arrays. `render_lang_flag_key()` in `poly_keymap.c` draws the flag (top 28 px) + the `xx-YY` code (bottom 12 px) per key, with a frame on the selected language. Re-run only when the language list changes. It also emits **`fonts/generated/lang_flags.json`** — the flag font's render record (source NotoColorEmoji, the `-s20 -g -r54 -W72 -O1 -Dfs -e-0.10` options, `seq_first` 0xE000, and the per-flag regional-indicator `sequence`). The flag font isn't in `fonts.yaml`, so `generate_fonts.py` emits no render record for it; this sidecar lets the host font-pack **editor** rebuild a single flag (sequence mode). ⚠️ Mirrored **byte-identically** in `PolyKybdHost/polyhost/res/fontpack/lang_flags.json` — keep both in sync (`cmp`).
 - **The keycap `latin` category is built grid-fitted (`hinting: auto` in
   `fonts.yaml` → `fontconvert -Hauto`).** Same reason as the status fonts: NotoSans
@@ -371,9 +371,9 @@ category and composes `gfx_used_fonts.h`; `--check` flags stale headers. Full do
   bundle: no reship, no `content_version` bump) — and a codepoint **inside** an existing
   span costs only its bitmap, since the record already exists.
 - ⚠️ **Every codepoint a legend draws must be in a font, and
-  `tools/check_glyph_coverage.py` is what says so** — it walks all four LUT columns of
+  `dev/tools/check_glyph_coverage.py` is what says so** — it walks all four LUT columns of
   all 160 layouts, skipping display-list ops the way `bbox_walk()` does, and exits 1 on
-  a gap. CI runs it through `tools/tests` (`RealTreeTest`). A gap used to HardFault the
+  a gap. CI runs it through `dev/tools/tests` (`RealTreeTest`). A gap used to HardFault the
   master: the missing-glyph fallback read `'!'` from `g_all_fonts[0]`, which is
   `IconsFont` at U+100000, and the glyph index underflowed (hy-AM's U+2014 Shift legend,
   2026-10-01, twice in demo mode; #329). It now draws `'!'` from the font that has one,

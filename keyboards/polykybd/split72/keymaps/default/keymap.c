@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // split72 VARIANT DATA ONLY. All shared keymap behaviour lives in
-// keyboards/polykybd/keymap/poly_keymap.c (compiled for every variant).
+// keyboards/polykybd/keys_com/poly_keymap.c (compiled for every variant).
 // This file defines just the data the linker pulls from the keymap TU:
 //   * keymaps[]      — the layer definitions (LAYOUT_left_right_stacked)
 //   * g_led_config   — the RGB matrix LED layout (split72 has 72 LEDs)
 //   * encoder_map[]  — the rotary-encoder action map
 #include QMK_KEYBOARD_H
 #include "split72/split72.h"
-#include "layers.h"
-#include "keymap/keycode_helper.h"
-#include "emoji/emoji_layer.h"
-#include "poly_combos_keymap.h"   // QMK needs the tables; the real ones are runtime (cmd 48)
-#include "keymap/lang_layer.h"
+#include "keys_com/layers.h"
+#include "keys_com/keycode_helper.h"
+#include "features/emoji/emoji_layer.h"
+#include "keys_com/poly_combos_keymap.h"   // QMK needs the tables; the real ones are runtime (cmd 48)
+#include "keys_com/lang_layer.h"
 
 const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     //Base Layers

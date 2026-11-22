@@ -1,4 +1,4 @@
-# Demo mode (`anim/demo_mode.c`, `base/demo_plan.c`)
+# Demo mode (`features/anim/demo_mode.c`, `base/demo_plan.c`)
 
 _Moved verbatim from `CLAUDE.md` on 2026-10-10. CLAUDE.md keeps a short pointer._
 

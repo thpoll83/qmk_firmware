@@ -20,23 +20,23 @@
 #include "doom_mirror.h"
 #include "doom_playpal_luma.h"
 
-#include "hid/hid_com.h"           // poly_mark_fresh_boot (host overlay-cache reset on exit)
-#include "keymap/keycode_helper.h"    // KC_IDDQD (the armed utilities-layer menu item)
-#include "layers.h"            // _UL (the egg menu position is utilities-layer-gated)
-#include "split_link/split_sync.h"        // sync_succeeded (mirror bridge sends)
+#include "lib/hid/hid_com.h"           // poly_mark_fresh_boot (host overlay-cache reset on exit)
+#include "keys_com/keycode_helper.h"    // KC_IDDQD (the armed utilities-layer menu item)
+#include "keys_com/layers.h"            // _UL (the egg menu position is utilities-layer-gated)
+#include "lib/split_link/split_sync.h"        // sync_succeeded (mirror bridge sends)
 #include "polymod_crc32.h"     // crc32_1byte (mirror message framing)
 #include "transactions.h"      // USER_SYNC_OVERLAY_MAP_DATA (mirror rides it)
 
-#include "split_link/bridge_helper.h"
-#include "split_link/side.h"               // is_left_side() (HUD column selection)
+#include "lib/split_link/bridge_helper.h"
+#include "lib/split_link/side.h"               // is_left_side() (HUD column selection)
 #include "base/overlay.h"
 #include "base/update.h"
-#include "drivers/fw_staging.h"
+#include "lib/drivers/fw_staging.h"
 #include "polymod_core1.h"
 
 #include "doomkeys.h"           // engine key codes (doom_translate_key)
 #include "doom_weapon_icons.h"  // slave weapon-pad bitmaps (shareware sprites)
-#include "keymap/poly_keymap.h"
+#include "keys_com/poly_keymap.h"
 
 #ifdef POLYKYBD_DOOM
 

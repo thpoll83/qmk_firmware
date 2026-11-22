@@ -13,7 +13,7 @@
 #include "lang_lut_ext.h"
 #include "quantum.h"
 
-#include "system/state.h"
+#include "lib/system/state.h"
 
 static const uint32_t* lang_plane [ALPHA + NUM + ADDITIONAL][NUM_LANG * 4] = {
     /*[[[cog

@@ -152,7 +152,7 @@ else wrapped `U"<cell>"`; empty → `NULL`.
   must still be in the index, or there's no later font to find.
 - **Byte-repro**: regenerate with `/tmp/fontconvert_pinned` and the canonical
   source font; the diff on an existing header should be **only** your new block.
-- ⚠️ **Run `python3 keyboards/polykybd/tools/check_glyph_coverage.py` after the
+- ⚠️ **Run `python3 keyboards/polykybd/dev/tools/check_glyph_coverage.py` after the
   re-cog.** It checks every codepoint of every LUT column against the fonts and exits 1
   on a gap. A gap draws `'!'` on the keycap (before #329 it HardFaulted the master), and
   CI fails the PR on it. A `latin` gap is the cheap fix: add the codepoint to a resident
@@ -189,14 +189,14 @@ split42), so there is a single keymap cog target — not one per variant:
 for f in lang/lang_lut.h lang/lang_lut.c lang/named_glyphs.h keycode_helper.h \
          hid_com.c poly_keymap.c; do
   /tmp/pkvenv/bin/python -m cogapp -r "$f"; done
-# (or just: bash run_cog.sh)
+# (or just: bash dev/scripts/run_cog.sh)
 ```
 ⚠️ **The `KCL_` keycode block is frozen at 160 languages.** Every keycode after it
 (`KC_OS_*`, `KC_IME`, the emoji and language layers) can be stored in a keyboard's
 EEPROM, so the 161st language onward gets its `KCL_` keycode in the tail block cog
 appends after `KC_IME`. Re-cog does this on its own. Add a `LANG_xx` /
 `KCL_xx` `static_assert` beside the `LANG_JAUS` one in `poly_keymap.c`, and bump the
-language count in `tools/tests/check_glyph_coverage_test.py`. The pins on
+language count in `dev/tools/tests/check_glyph_coverage_test.py`. The pins on
 `LBL_TEXT` and `KC_IME` fail the build if a keycode moves.
 
 If only cell *values* changed (not the language list/order), `keycode_helper.h`,

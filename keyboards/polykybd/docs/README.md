@@ -96,6 +96,29 @@ Finished plans and status logs. Kept for reference; not current.
 - [`split42-hardware-plan.md`](archive/split42-hardware-plan.md): PolyKybd split42 — New Hardware Variant Plan
 - [`split42-link-status.md`](archive/split42-link-status.md): split42 split-link status — RESTART (2026-07-15 evening)
 
+## Where files moved, second step (2026-11)
+
+The second step grouped the 24 folders at the keyboard root into 12. The commits are on
+branch `feature/polykybd-layout-2`; the folders are described in
+[`../readme.md`](../readme.md#folder-layout). Includes changed with them, for example
+`"system/state.h"` is now `"lib/system/state.h"`.
+
+| commit | what moved |
+|---|---|
+| polykybd: keymap/ to keys_com/, root headers and scripts into folders | `keymap/` into `keys_com/`; `layers.h` and `poly_combos_keymap.h` into `keys_com/`; `run_cog.sh` and `create_fonts.sh` into `dev/scripts/`; deletes the forwarding headers `keycode_helper.h` and `lang_layer.h` |
+| polykybd: group the folders into lib/, features/ and dev/ | the table below |
+
+| before | now |
+|---|---|
+| `system/`, `split_link/`, `hid/`, `fw_update/`, `display/`, `drivers/`, `peripherals/`, `chibios_overrides/` | `lib/<same name>/` |
+| `anim/`, `modes/`, `emoji/`, `hints/` | `features/<same name>/` |
+| `diag/`, `profiling/`, `tools/` | `dev/<same name>/` |
+| `images/png_to_code.py` | `dev/tools/png_to_code.py` |
+
+A keymap outside this repo that includes `keycode_helper.h`, `lang_layer.h` or
+`layers.h` by their old root paths now includes `keys_com/keycode_helper.h`,
+`keys_com/lang_layer.h` and `keys_com/layers.h`.
+
 ## Where files moved (2026-11)
 
 The `keyboards/polykybd` root held 69 sources and 37 docs. The commits below, on branch

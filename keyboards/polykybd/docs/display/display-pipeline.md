@@ -8,14 +8,14 @@ and relative links were adjusted to suit a standalone file.
 2. On key event, `split72.c` selects the keycap via shift-register bitmask and calls `kdisp_invert()` for instant visual feedback
 3. Active window change → host sends new overlay set → firmware swaps all 72 keycap images
 
-**Per-keycap rendering gotchas (`drivers/disp_array.c`)** — learned the hard way:
+**Per-keycap rendering gotchas (`lib/drivers/disp_array.c`)** — learned the hard way:
 - **How a legend is actually DRAWN — glyph resolution and the baseline align, the
   column-native bitmap layout, the plotter modes, the courtyard, the whole `HINT_*`
   display-list vocabulary, the three size tiers and the bbox walker — is
   [`keyboards/polykybd/docs/display/legend-rendering.md`](legend-rendering.md).**
   Its sibling `docs/display/legend-layout.md` covers where the elements GO; that one is
   placement, this one is the drawing primitives. Read it before touching
-  `drivers/disp_array.c`, `base/font_lookup.c`, `base/legend_plan.c` or
+  `lib/drivers/disp_array.c`, `base/font_lookup.c`, `base/legend_plan.c` or
   `keycode_helper.c`. Four rules from it apply even if you never open it:
   - ⚠️ **Adding an op is TWO walkers, not one — THREE counting the host.** The draw
     dispatch (`disp_array.c`) and the measurement (`font_lookup.c`) must clear the
@@ -36,7 +36,7 @@ and relative links were adjusted to suit a standalone file.
     language flags use `{ &flag_font }`.
   - **The resident icons live in plane-16 PUA (U+100000..)**, where they cannot
     shadow a real character. They moved out of the C1 band `0x80–0x9F` after it
-    filled up (docs/display/font-pack.md). `python3 tools/check_icon_slots.py` is the only thing
+    filled up (docs/display/font-pack.md). `python3 dev/tools/check_icon_slots.py` is the only thing
     that can answer "is this slot free?".
 - ⚠️ **`render_key()` and `to_static_text()` are a PAIR — both must normalise the
   keycode the same way, or a key draws its chrome and NO legend.** `update_displays()`
@@ -192,7 +192,7 @@ copy. It returns `255` for a matrix position with no panel of its own.
 - ⚠️ **A wrong index here does not look like a wrong index.** It looks like a rendering
   bug in whatever drew the unusual shape, which is where three rounds of this one went.
   The tell is that it is **one half only**.
-- **`python3 tools/check_disp_index.py` is the gate**, and reading the two and agreeing
+- **`python3 dev/tools/check_disp_index.py` is the gate**, and reading the two and agreeing
   that they agree is not: it replays the walking-zero panel walk against the real keymap
   and the real `keyboard.json`, and compares each key's landing panel with what
   `key_display_index()` says. Mutation-checked — narrowing the fold's row range by one at

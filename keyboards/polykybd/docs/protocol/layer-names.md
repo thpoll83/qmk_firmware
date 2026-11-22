@@ -7,7 +7,7 @@ and relative links were adjusted to suit a standalone file.
 
 The host layout editor labels its layer tabs. It used to read those labels from
 `PolyKybdHost/polyhost/res/layer_names.yaml`, a build-time artifact generated from
-this repo's `layers.h` — and that generator's default source path had been dead
+this repo's `keys_com/layers.h` — and that generator's default source path had been dead
 through **two** renames, so nothing regenerated it and nothing failed. The committed
 file still listed 14 layers ending `EMJ0`/`EMJ1`, a split this firmware had not had
 in a very long time (found 2026-08-26). The editor was mislabelling tabs against an

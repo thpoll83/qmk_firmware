@@ -117,8 +117,8 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
         run: |
-          python3 keyboards/polykybd/tools/require_fwapply_run.py --selftest
-          python3 keyboards/polykybd/tools/require_fwapply_run.py
+          python3 keyboards/polykybd/dev/tools/require_fwapply_run.py --selftest
+          python3 keyboards/polykybd/dev/tools/require_fwapply_run.py
 
       # Shipping shape is the POLYKYBD_DOOM_PACK flavour (docs/design/doom-pack.md):
       # the doom easter egg's loader + trigger compile in, the engine ships as a
@@ -203,7 +203,7 @@ jobs:
             exit 0
           fi
           python3 -m pip install --quiet cryptography
-          python3 keyboards/polykybd/tools/sign_firmware.py "${TARGET}.bin"
+          python3 keyboards/polykybd/dev/tools/sign_firmware.py "${TARGET}.bin"
           # Fail loudly rather than let the release step's `[ -f ... ]` silently drop
           # the asset: a release that is meant to be signed must not ship without .sig.
           if [ ! -s "${TARGET}.bin.sig" ]; then
@@ -219,7 +219,7 @@ jobs:
           PACK_VER=$(cat keyboards/polykybd/doom/pack/PACK_VERSION)
           PLYX="doom_pack_v${PACK_VER}.plyx"
           BEFORE=$(stat -c%s "${PLYX}")
-          python3 keyboards/polykybd/tools/sign_doompack.py "${PLYX}"
+          python3 keyboards/polykybd/dev/tools/sign_doompack.py "${PLYX}"
           AFTER=$(stat -c%s "${PLYX}")
           if [ "${AFTER}" -ne $((BEFORE + 64)) ] && [ "${AFTER}" -ne "${BEFORE}" ]; then
             echo "::error::${PLYX} size moved ${BEFORE} -> ${AFTER}; expected +64 (fresh sign) or unchanged (re-sign)"
@@ -275,7 +275,7 @@ jobs:
           # rewrite handedness, so grabbing the wrong file silently flips a half.
           # Provisioning and updating are different jobs; keep them different files.
           #
-          # Board-independent: split42 and split72 share drivers/fw_staging.h and are
+          # Board-independent: split42 and split72 share lib/drivers/fw_staging.h and are
           # both 8 MB, so the stamp sector is at the same offset for each. Versioned
           # like every other asset only so downloads of two releases do not collide
           # in the browser (see the note above); the bytes are identical from
@@ -301,9 +301,9 @@ jobs:
           #
           # Until (2) is reproduced on the rig and understood, handedness is
           # provisioned over HID cmd 25 (readme.md), which has run on hardware.
-          python3 keyboards/polykybd/tools/make_hand_uf2.py --side left \
+          python3 keyboards/polykybd/dev/tools/make_hand_uf2.py --side left \
             -o "polykybd-handedness-left_v${VER}.uf2"
-          python3 keyboards/polykybd/tools/make_hand_uf2.py --side right \
+          python3 keyboards/polykybd/dev/tools/make_hand_uf2.py --side right \
             -o "polykybd-handedness-right_v${VER}.uf2"
           # Include the detached signature when the Sign step produced one (FW-2).
           # It must travel as "<bin>.sig" of the RENAMED bin, or hid_fw_up.py will

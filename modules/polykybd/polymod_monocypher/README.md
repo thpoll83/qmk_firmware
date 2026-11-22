@@ -1,7 +1,7 @@
 # polymod_monocypher
 
 Vendored [Monocypher](https://monocypher.org) 4.0.2 — the Ed25519 signature
-check (+ SHA-512) behind the firmware-signing gate (`drivers/fw_staging.c`,
+check (+ SHA-512) behind the firmware-signing gate (`lib/drivers/fw_staging.c`,
 `fw_staging_check_signature()`). The sources are byte-for-byte upstream
 (BSD-2-Clause OR CC0-1.0) and keep their upstream names; `rules.mk` adds them to
 the build since there is no `polymod_monocypher.c` for the module machinery's

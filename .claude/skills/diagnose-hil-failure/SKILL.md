@@ -57,7 +57,7 @@ and no class to assign. Instead:
 
 4. **Remember the delayed consequence.** The FW-APPLY tier runs on every push to
    `PolyKybd`, so a merge during the outage hangs the same way and
-   `tools/require_fwapply_run.py` then refuses to publish that release — at
+   `dev/tools/require_fwapply_run.py` then refuses to publish that release — at
    publish time, on a commit that looked fine when it merged. Recovery is a
    dispatch with `tier: fwapply` on the right ref once the rig is back (the branch
    tip only works while it IS the release commit; otherwise dispatch on the tag).

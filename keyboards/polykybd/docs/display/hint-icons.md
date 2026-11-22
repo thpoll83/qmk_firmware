@@ -12,13 +12,13 @@ them instead of from the pixels. The mechanics (font, slots, pack) are in
 
 | What | Where |
 |---|---|
-| The drawings (style D, the one that ships) | `tools/hint_icons_stage.py` |
-| Slot order, retired set, header writer | `tools/hint_icons.py` (`ICONS`, `RETIRED`) |
-| Four other styles, same slots | `tools/hint_icons.py` (a), `_solid` (b), `_bold` (c), `_retro` (e) |
+| The drawings (style D, the one that ships) | `dev/tools/hint_icons_stage.py` |
+| Slot order, retired set, header writer | `dev/tools/hint_icons.py` (`ICONS`, `RETIRED`) |
+| Four other styles, same slots | `dev/tools/hint_icons.py` (a), `_solid` (b), `_bold` (c), `_retro` (e) |
 | The generated font `PolyHintIcons` | `fonts/hint_icons.h`, U+100100.. |
 | The `ICON_HINT_*` names | `lang/named_glyphs.h`, pasted from `hint_icons.py --macros` |
-| Which chord shows which icon | `hints/os_hints.c` |
-| The pin on that mapping | `hints/tests/os_hints_tests.cpp` (`kExpected`) |
+| Which chord shows which icon | `features/hints/os_hints.c` |
+| The pin on that mapping | `features/hints/tests/os_hints_tests.cpp` (`kExpected`) |
 
 The font ships in the `symbol` font-pack bundle, not in the image. A board without
 the pack shows no hint at all, and the key keeps its legend.

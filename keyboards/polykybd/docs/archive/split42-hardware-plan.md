@@ -297,9 +297,9 @@ OLED_DRIVER = ssd1306
 # Source files — status_oled.c resolves to split42/status_oled.c via QMK search order
 QUANTUM_LIB_SRC += spi_master.c
 SRC += status_oled.c \
-       base/update.c drivers/e2prom.c base/rle.c base/com.c base/crc32.c \
-       base/text_helper.c drivers/helpers.c drivers/disp_array.c \
-       drivers/shift_reg.c drivers/spi_helper.c base/overlay.c \
+       base/update.c lib/drivers/e2prom.c base/rle.c base/com.c base/crc32.c \
+       base/text_helper.c lib/drivers/helpers.c lib/drivers/disp_array.c \
+       lib/drivers/shift_reg.c lib/drivers/spi_helper.c base/overlay.c \
        base/multicore/core1.c lang/lang_lut.c
 
 DEFAULT_FOLDER = polykybd/split42
@@ -346,7 +346,7 @@ y ≤ 31 px  →  Row 3: WPM + language + display brightness bar
 
 The num/caps/scroll lock icons currently drawn at y=16, y=38, y=54 need to collapse to fit in 32 px.
 
-**4. New logo bitmaps** *(superseded 2026-09: the scrolling logos were removed on both variants; split42 idles on a blank panel)*: `oled_draw_kybd()` and `oled_draw_poly()` contain 128×64 bitmaps (rendered by `oled_write_raw_P`). For 128×32 the raw buffer must be 512 bytes (128×32/8). Generate new bitmaps using the existing `images/png_to_code.py` tool or any image editor, then paste the byte arrays.
+**4. New logo bitmaps** *(superseded 2026-09: the scrolling logos were removed on both variants; split42 idles on a blank panel)*: `oled_draw_kybd()` and `oled_draw_poly()` contain 128×64 bitmaps (rendered by `oled_write_raw_P`). For 128×32 the raw buffer must be 512 bytes (128×32/8). Generate new bitmaps using the existing `dev/tools/png_to_code.py` tool or any image editor, then paste the byte arrays.
 
 `oled_task_user()`, `oled_status_screen()`, and `oled_render_logos()` are structurally identical to split72 — copy verbatim.
 
@@ -488,7 +488,7 @@ split42/keymaps/default/keymap.c
 
 ### MODIFIED files (3)
 ```
-polykybd/split_link/split_sync.c       — line 18: replace #include with forward declaration of invert_display()
+polykybd/lib/split_link/split_sync.c       — line 18: replace #include with forward declaration of invert_display()
 polykybd/config.h           — move OLED_DISPLAY_128X64 + all ENABLE_RGB_MATRIX_* to split72/config.h
 polykybd/split72/config.h   — add OLED_DISPLAY_128X64 + all ENABLE_RGB_MATRIX_* blocks moved from above
 ```

@@ -360,7 +360,7 @@ be `test_rules.mk`, not `rules.mk`: `qmk ci-validate-keyboard-targets` globs
    test suite, so the image is unchanged).
 2. The host-driver shim and the capture state machine, behind the gesture.
 3. `poly_sync_t` fields, the slot picker, the keycap cues.
-4. The status-OLED screen (measure with `tools/status_oled_preview.py` and the
+4. The status-OLED screen (measure with `dev/tools/status_oled_preview.py` and the
    `status-oled-layout` skill — bands, not eyeballs).
 5. `QK_MACRO_*` on `_UL`, so a recording is usable with no host.
 6. `poly_state_touch()` + the `G` block in the GET_ID reply + the host read-back

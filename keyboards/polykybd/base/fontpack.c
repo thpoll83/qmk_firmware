@@ -26,7 +26,7 @@
 #ifndef FONTPACK_HOST_TEST
 #    include "quantum.h"
 #    include "hardware/flash.h"   // XIP_BASE
-#    include "drivers/fw_staging.h"  // FW_RESOURCE_OFFSET (flash map)
+#    include "lib/drivers/fw_staging.h"  // FW_RESOURCE_OFFSET (flash map)
 #    include "fonts/generated/fontpack_layout.h"  // slot table (X-macro)
 // The pack region occupies the start of the resource region (see fw_staging.h).
 #    define FONTPACK_XIP_BASE ((const uint8_t *)(XIP_BASE + FW_RESOURCE_OFFSET))

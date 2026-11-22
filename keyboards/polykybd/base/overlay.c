@@ -1,7 +1,7 @@
 #include "overlay.h"
 #include "config.h" //for all constants
 
-#include "drivers/disp_array.h"
+#include "lib/drivers/disp_array.h"
 #include "polymod_rle.h"
 #include "map_codec.h"
 

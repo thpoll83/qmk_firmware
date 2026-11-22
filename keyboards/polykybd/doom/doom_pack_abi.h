@@ -44,7 +44,7 @@ extern "C" {
 // image_size, so the header layout (and the ABI) is unchanged, and a signed
 // pack still loads on pre-signature firmware (which never reads past the
 // image). Signing the header too is load-bearing: entry_off/ram_base are what
-// an attacker would edit to re-target a signed image. tools/sign_doompack.py
+// an attacker would edit to re-target a signed image. dev/tools/sign_doompack.py
 // appends it; doom_pack_load.c verifies it (FW_REQUIRE_SIGNATURE builds)
 // against base/fw_pubkey.h at LOAD time, before computing the entry pointer.
 typedef struct {

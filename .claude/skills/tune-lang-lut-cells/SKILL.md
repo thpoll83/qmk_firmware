@@ -74,25 +74,25 @@ tolerated, or the guard can never be green).
 
 ## 4. Re-cog, then confine the diff
 
-⚠️ **Run `run_cog.sh`, not `cog -r lang_lut.c`.** The workbook feeds **seven**
+⚠️ **Run `dev/scripts/run_cog.sh`, not `cog -r lang_lut.c`.** The workbook feeds **seven**
 generated files — `lang/lang_lut.c`, `lang/lang_lut.h`, `lang/named_glyphs.h`,
 `poly_keymap.c`, `keycode_helper.h`, `uni.h` and `hid_com.c` — and which of them a
 given edit reaches depends on what you touched: an offset row reaches only
 `lang_lut.c`, a named glyph or a language-list change reaches several. Regenerating
-one file leaves the rest stale with nothing to say so. `run_cog.sh` is **idempotent**
+one file leaves the rest stale with nothing to say so. `dev/scripts/run_cog.sh` is **idempotent**
 (verified: a full run on a clean tree changes nothing), so running all seven costs
 only seconds and removes the judgement call.
 
 ```bash
 # subshell: §6 does `export QMK_HOME=$PWD`, so this must NOT leave you in polykybd/
-(cd keyboards/polykybd && PATH="/root/.qmk_venv/bin:$PATH" ./run_cog.sh)
+(cd keyboards/polykybd && PATH="/root/.qmk_venv/bin:$PATH" dev/scripts/run_cog.sh)
 ```
 
 Then **assert the generated diff contains only what you meant** — this is the check
 that replaces a reviewer:
 
 ```bash
-# EVERY generated file run_cog.sh touches, and BOTH directions: a line that
+# EVERY generated file dev/scripts/run_cog.sh touches, and BOTH directions: a line that
 # disappeared is as much a surprise as one that appeared.
 # ⚠️ Capture the count and TEST it. `grep -c` exits 0 when it matched something
 # and 1 when it matched nothing, i.e. its status is the OPPOSITE of the intent

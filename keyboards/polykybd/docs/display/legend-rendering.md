@@ -3,7 +3,7 @@
 The composition half of the keycap legend: how a glyph is resolved and placed, the
 plotter modes, the courtyard, the display-list op vocabulary (`HINT_*`), the three
 size tiers, and the two walkers that must agree about all of it. Moved out of
-`CLAUDE.md` on 2026-09-10 — ~58 KB read while you are in `drivers/disp_array.c`,
+`CLAUDE.md` on 2026-09-10 — ~58 KB read while you are in `lib/drivers/disp_array.c`,
 `base/font_lookup.c`, `base/legend_plan.c` or `keycode_helper.c`.
 
 **Its sibling is [`docs/display/legend-layout.md`](legend-layout.md)**, which covers WHERE the
@@ -15,7 +15,7 @@ Two rules govern nearly everything here, and both are the reason a note is kept
 whole with its measurement:
 
 ⚠️ **Adding an op is TWO walkers, not one — three counting the host.** The draw
-dispatch in `drivers/disp_array.c` and the measurement in `base/font_lookup.c` must
+dispatch in `lib/drivers/disp_array.c` and the measurement in `base/font_lookup.c` must
 agree, or the bbox describes a legend the draw does not produce and every consumer
 of that box is working from fiction. `PolyKybdHost`'s `oled_preview.py` (and its
 `SUPPORTED_OPS`) is the third edit, and skipping it is silent — a refused op makes
@@ -30,7 +30,7 @@ interpreter — and counting pixels outside the 72x40 window. Require **0**.
 
 ---
 
-## Per-keycap rendering gotchas (`drivers/disp_array.c`)
+## Per-keycap rendering gotchas (`lib/drivers/disp_array.c`)
 
 - **`kdisp_write_gfx_char` baseline-aligns every glyph to `fonts[0]`**:
   `y += currentFont->yAdvance - fonts[0]->yAdvance`. So drawing a *single* icon
@@ -462,7 +462,7 @@ returns to the caller's pool at full size. The RGB preset keycaps are what neede
 a half-scale `Preset:` over a mid-face `Solid` / `Breath` / `Cycle` / `Rainbw`.
 
 - ⚠️ **Adding an op is TWO walkers, not one.** The draw dispatch in
-  `drivers/disp_array.c` and the measurement in `base/font_lookup.c` must clear the same
+  `lib/drivers/disp_array.c` and the measurement in `base/font_lookup.c` must clear the same
   flags, or the bbox describes a legend the draw does not produce — and every consumer
   of that box (`plan_main_legend()`'s shift-preview layout, `roll_idle_offset()`'s
   idle travel) is then working from fiction. `make test:polykybd_font_bbox` pins all
@@ -797,7 +797,7 @@ with `−`/`+` and no staircase (they name no level); `KC_DAUTO` spells **AUTO**
   Nine glyphs at 50–58 px wide; the monolithic `POLYKYBD_DOOM=yes` flavour still links.
 - ⚠️ **The now-unused `PRIVATE_DISP_*` moon macros stay, and so does the resident
   `_Brightness_` font (1208 B) — it is NOT dead.** It covers `0x1F311..0x1F318`, which
-  the **emoji layer** also lists (`emoji/emoji_data.h`), and resident wins the
+  the **emoji layer** also lists (`features/emoji/emoji_data.h`), and resident wins the
   front-to-back lookup — so dropping it would silently re-render those emoji from the
   pack at a different size. Removing a resident font also shifts every pack font's
   gidx and forces a full-pack reship, for 1.2 KB against a 2 MB partition at ~38%.

@@ -3,7 +3,7 @@ name: debug-firmware-on-rig
 description: >
   Chase a PolyKybd firmware bug on real hardware WITHOUT asking the user to flash
   a `.bin` and paste a console log back. Writes a one-off probe under
-  `keyboards/polykybd/tools/hil_probes/`, dispatches `qmk-test.yml` with
+  `keyboards/polykybd/dev/tools/hil_probes/`, dispatches `qmk-test.yml` with
   `tier: debug`, and reads the firmware's own `[qmk] …` console lines out of the
   job log. Use when a bug needs the keyboard to answer a question the graded HIL
   suite does not ask — "does it still NACK after X", "what does the console say
@@ -43,7 +43,7 @@ what HID and the console say. If the answer is a picture, it is a user round.
 
 ### 1. Write the probe
 
-`keyboards/polykybd/tools/hil_probes/<name>.py`, on the **same branch as the
+`keyboards/polykybd/dev/tools/hil_probes/<name>.py`, on the **same branch as the
 firmware change it investigates** — probe and firmware are then one commit:
 
 ```python
@@ -59,14 +59,14 @@ def probe(raw, log):
 
 `raw` is the rig's `RawHID`, `log` writes into the run log, `True` passes. The
 flash, the readiness gates and the console tap are already done when it runs.
-`keyboards/polykybd/tools/hil_probes/README.md` is the **reference** — the probe
+`keyboards/polykybd/dev/tools/hil_probes/README.md` is the **reference** — the probe
 format, the `TAP.mark()`/`TAP.since()` console idiom, and the pitfalls. Read it
 before writing anything non-trivial; this skill is only the driver around it.
 
 ### 2. Push the branch
 
 ```bash
-git add keyboards/polykybd/tools/hil_probes/<name>.py && \
+git add keyboards/polykybd/dev/tools/hil_probes/<name>.py && \
   git commit -m "hil: probe for <question>" && git push -u origin <branch>
 ```
 

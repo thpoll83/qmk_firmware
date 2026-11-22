@@ -19,9 +19,9 @@
 
 extern "C" {
 #include "sync_ack.h"
-#include "drivers/fw_staging.h"
+#include "lib/drivers/fw_staging.h"
 #include "fw_up_verdict.h"
-#include "hid/hid_fontpack.h"
+#include "lib/hid/hid_fontpack.h"
 #include "polymod_crc32.h"
 }
 

@@ -5,10 +5,10 @@ applying it, so only images signed with *your* private key are trusted. This
 closes the "any host can flash arbitrary firmware" gap (the device's CRC32 only
 proves integrity, not authenticity).
 
-- **Verify** runs in the firmware: `drivers/fw_staging.c` (`fw_staging_finalize`),
+- **Verify** runs in the firmware: `lib/drivers/fw_staging.c` (`fw_staging_finalize`),
   using vendored Monocypher (`base/crypto/`) and the public key in
   `base/fw_pubkey.h`.
-- **Sign** runs off-device: `tools/sign_firmware.py` (Ed25519 over the raw `.bin`).
+- **Sign** runs off-device: `dev/tools/sign_firmware.py` (Ed25519 over the raw `.bin`).
 - **Transport**: PolyKybdHost sends the 64-byte signature over HID
   (`CMD_FW_UP_SIGNATURE 0x45`) before `COMMIT`.
 
@@ -59,7 +59,7 @@ over HID. Two ways through:
 
    ```bash
    arm-none-eabi-objcopy -O binary .build/polykybd_split72_default.elf out.bin
-   python3 keyboards/polykybd/tools/sign_firmware.py --privkey fw_signing_key.bin out.bin
+   python3 keyboards/polykybd/dev/tools/sign_firmware.py --privkey fw_signing_key.bin out.bin
    ```
 
 2. **Confirm it on the keyboard**: just flash. At COMMIT the keyboard notices the
@@ -98,7 +98,7 @@ the HIL rig is untouched: `polykybd-ctnd` flashes with `picotool`, not over HID.
 1. Generate the keypair (needs `pip install cryptography`):
 
    ```bash
-   python3 keyboards/polykybd/tools/gen_signing_key.py \
+   python3 keyboards/polykybd/dev/tools/gen_signing_key.py \
        --out-privkey fw_signing_key.bin \
        --out-pubkey  keyboards/polykybd/base/fw_pubkey.h \
        --print-b64
@@ -117,7 +117,7 @@ Local (dev):
 
 ```bash
 arm-none-eabi-objcopy -O binary .build/polykybd_split72_default.elf out.bin
-python3 keyboards/polykybd/tools/sign_firmware.py --privkey fw_signing_key.bin out.bin
+python3 keyboards/polykybd/dev/tools/sign_firmware.py --privkey fw_signing_key.bin out.bin
 # -> out.bin.sig (64 bytes)
 ```
 
@@ -163,7 +163,7 @@ longer describes anything that exists; warn-only is gone.)
 A botched regeneration is also guarded: if `fw_pubkey.h` ever reverts to the all-zero
 placeholder, `fw_staging_check_signature()` refuses outright rather than verifying
 against it (that key is an order-4 curve point, so it would otherwise be *forgeable* —
-see the comment on `fw_pubkey_provisioned()` in `drivers/fw_staging.c`).
+see the comment on `fw_pubkey_provisioned()` in `lib/drivers/fw_staging.c`).
 
 ## Scope: master-only verification (deliberate)
 
@@ -198,7 +198,7 @@ execution on the next idle (SECURITY_AUDIT.md FW-9). The same key now covers it:
   attacker would edit to re-target a signed image. The header layout and pack
   ABI are unchanged, so a signed pack still loads on pre-signature firmware
   (which never reads past the image).
-- **Signing**: `tools/sign_doompack.py <pack>.plyx` rewrites the file in place
+- **Signing**: `dev/tools/sign_doompack.py <pack>.plyx` rewrites the file in place
   (same key sources as `sign_firmware.py`; re-signing replaces the trailer;
   self-verifies before writing). `release.yml` runs it in the same step that
   signs the `.bin`.

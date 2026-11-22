@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Emoji search dictionary: validation and keyword search. Format and contract
-// in emoji_dict.h and emoji/emoji_dict.py.
+// in emoji_dict.h and features/emoji/emoji_dict.py.
 //
 // The bundle is file-controlled data on the unsigned resource transport, so
 // every field is read with memcpy (an unaligned wide load is a HardFault on the

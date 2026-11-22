@@ -14,9 +14,9 @@
 #include "doom_pack_abi.h"
 #include "doom_pack_gate.h" // the unsigned/invalid x interactive/automatic decision
 
-#include "drivers/fw_staging.h"
-#include "split_link/bridge_helper.h"   // is_usb_host_side()
-#include "system/state.h"           // get_local_state() -> the synced doom_pack_auth
+#include "lib/drivers/fw_staging.h"
+#include "lib/split_link/bridge_helper.h"   // is_usb_host_side()
+#include "lib/system/state.h"           // get_local_state() -> the synced doom_pack_auth
 #include "polymod_crc32.h"
 
 #include <string.h>
@@ -24,7 +24,7 @@
 // FW-9: a 64-byte Ed25519 signature over (header || image) — the header too, or
 // a signed image could be re-targeted by editing entry_off/ram_base around it —
 // trails the image at slot + DOOM_PACK_HDR_SIZE + image_size. Emitted by
-// tools/sign_doompack.py; release.yml signs the .plyx beside the .bin.
+// dev/tools/sign_doompack.py; release.yml signs the .plyx beside the .bin.
 #define DOOM_PACK_SIG_SIZE 64u
 
 // ── Stub table: every call safe before a pack is loaded ─────────────────────

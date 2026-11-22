@@ -23,15 +23,15 @@ def read_lump(wad: bytes, name: bytes) -> bytes:
     ident, numlumps, diroff = struct.unpack("<4sII", wad[:12])
     assert ident in (b"IWAD", b"PWAD"), "not a WAD"
     for i in range(numlumps):
-        off, size, lname = struct.unpack("<II8s", wad[diroff + 16 * i : diroff + 16 * i + 16])
+        off, size, lname = struct.unpack("<II8s", wad[diroff + 16 * i:diroff + 16 * i + 16])
         if lname.rstrip(b"\0") == name:
-            return wad[off : off + size]
+            return wad[off:off + size]
     raise KeyError(name.decode())
 
 
 def decode_picture(lump: bytes):
     w, h, _lo, _to = struct.unpack("<hhhh", lump[:8])
-    colofs = struct.unpack("<%dI" % w, lump[8 : 8 + 4 * w])
+    colofs = struct.unpack("<%dI" % w, lump[8:8 + 4 * w])
     img = [[None] * w for _ in range(h)]
     for x in range(w):
         p = colofs[x]
@@ -84,10 +84,11 @@ def main() -> None:
 
     lines = []
     for i in range(0, len(pages), 16):
-        lines.append("    " + ", ".join("0x%02X" % b for b in pages[i : i + 16]) + ",")
+        lines.append("    " + ", ".join("0x%02X" % b for b in pages[i:i + 16]) + ",")
     body = "\n".join(lines)
     with open(out_path, "w") as f:
-        f.write(f"""// Copyright 2026 thpoll83
+        f.write(
+            f"""// Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // The DOOM logo for the 128x64 status OLED, shown while game mode runs.
@@ -102,7 +103,8 @@ def main() -> None:
 static const char DOOM_LOGO_OLED[128 * 8] = {{
 {body}
 }};
-""")
+"""
+        )
     print("wrote", out_path)
 
 

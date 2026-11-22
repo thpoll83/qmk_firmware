@@ -50,7 +50,8 @@ Each check exits 1 on a failure, so it can gate a commit.
   `fonts/generated/all_fonts_order.json`. CI runs it through
   `tests/check_glyph_coverage_test.py`.
 - `check_disp_index.py`: replays the panel walk against the real keymap and checks
-  that `key_display_index()` names the panel each key lands on. Manual, not in CI.
+  that `key_display_index()` names the panel that the walk reaches for each key.
+  Manual, not in CI.
 - `check_icon_slots.py`: reports which IconsFont codepoints in `fonts/gfx_icons.h`
   are taken, free or named wrong in `lang/named_glyphs.h`. `--free` prints the next
   free slot.

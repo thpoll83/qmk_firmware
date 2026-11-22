@@ -7,7 +7,8 @@ and relative links were adjusted to suit a standalone file.
 
 Two hardware variants share one firmware: **`split72`** (72-key, RGB matrix,
 Cirque trackpad, 128×64 status OLED) and **`split42`** (42-key CRKBD footprint,
-no RGB, no trackpad, 128×32 status OLED). **`split42` was renamed from `corne42`
+no RGB LEDs fitted though the RGB matrix is compiled in, no trackpad, 128×32 status
+OLED). **`split42` was renamed from `corne42`
 in 2026-06** — same hardware/PID/`LAYOUT_crkbd`; old `corne42` paths are gone.
 
 All behaviour lives in the keyboard-level `poly_keymap.c` (compiled for both via

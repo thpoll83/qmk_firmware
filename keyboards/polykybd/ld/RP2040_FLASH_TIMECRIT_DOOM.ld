@@ -15,8 +15,8 @@
  *    never zeroes it: doom_enter() memsets the whole block before the engine
  *    starts (fresh zero-init statics on every entry), and the overlay
  *    accessors never read it before the host writes it.
- *  - The block is padded to exactly the pool size (226,800 =
- *    NUM_OVERLAYS * NUM_VARIATIONS * 360); if the engine statics ever outgrow
+ *  - The block is padded to exactly the pool size (216,000 =
+ *    NUM_OVERLAY_SLOTS * 360); if the engine statics ever outgrow
  *    the pool the link fails ("cannot move location counter backwards")
  *    instead of silently shrinking the arena.
  */

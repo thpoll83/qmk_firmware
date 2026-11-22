@@ -64,8 +64,10 @@ entry byte for byte, so the cached formula results that cog reads stay intact.
 
 - ⚠️ Never save `lang_lut.xlsx` with openpyxl. It drops every cached formula
   value, and the next `run_cog.sh` writes empty tables with no error.
-- ⚠️ `latin_sup_ex` has only `LATIN_EX_VARIATIONS` (10) slots per letter, because
-  `KC_LAT0..KC_LAT9` are the picker keys.
+- ⚠️ `_add_latin_variation.py` allows `MAX_SLOTS` (64) variations per row, the
+  `LATIN_PICK_MAX` of the 6-bit pick field in `lib/system/state.h`. Keep both
+  together. `LATIN_EX_VARIATIONS` in `lang/lang_lut_ext.h` (now 36) must match the
+  widest row; the cog emits a `_Static_assert` for it.
 - ⚠️ The `named_glyphs` rows must stay contiguous. The cog loop stops at the first
   blank row, so a row after a gap is not read.
 - ⚠️ `_gen_region_tables.py` imports the host module from the fixed path

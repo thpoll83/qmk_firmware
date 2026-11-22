@@ -285,8 +285,9 @@ endif
 # (docs/design/doom-pack.md): the firmware side of the executable-pack split —
 # mode machinery + blitter + fire demo + the PlyX pack loader, with the
 # engine expected in the DOOMPACK flash slot and every doom_shim_* call
-# dispatched through the pack's export table. No engine sources, no custom
-# linker script, no printf/alloc wraps (those exist for the in-image engine).
+# dispatched through the pack's export table. No engine sources and no
+# printf/alloc wraps (those exist for the in-image engine). Its linker script
+# only pins the overlay pool (MCU_LDSCRIPT below).
 ifeq ($(strip $(POLYKYBD_DOOM_PACK)), yes)
     POLYKYBD_DOOM = yes
     OPT_DEFS += -DPOLYKYBD_DOOM_PACK

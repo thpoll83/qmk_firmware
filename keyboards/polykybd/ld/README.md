@@ -43,9 +43,9 @@ files.
 ## Important
 
 - ⚠️ Do not move this folder out of the keyboard root (see *Core concepts*).
-- ⚠️ The header comments of both scripts give the pool size as 226,800 bytes. The
-  scripts pad to 216000, which matches `NUM_OVERLAY_SLOTS` × 360. The padding value must
-  follow the pool size in `base/overlay.c`.
+- ⚠️ Both scripts pad the pool to 216000 bytes, `NUM_OVERLAY_SLOTS` (600, `config.h`) ×
+  360. The padding value must follow the pool size in `base/overlay.c`; a change to one
+  without the other either fails the link or leaves unused RAM.
 - ⚠️ `doom/doom_mode.c` takes the core1 stack from the end of `.doom_shared`. The block
   stays `ALIGN(8)` because AAPCS needs an 8-byte aligned stack pointer.
 - ⚠️ If the overlay pool is made smaller, keep it at about 205 KB or more, or the DOOM

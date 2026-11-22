@@ -41,9 +41,12 @@ state to the slave.
 - `poly_sync_t` is sent whole on every change and must stay at most
   `RPC_M2S_BUFFER_SIZE` (252) bytes and padding-free. Both rules are
   `static_assert`s in `state.h`.
-- Settings in `poly_eeconf_t` are written only at flush points: suspend, the host
-  shutdown signal, the store key and a reset (`save_all_dirty()`). The slave gets the
-  store key as the `SAVE_EEPROM` flag and flushes from housekeeping.
+- Settings in `poly_eeconf_t` are written only at flush points, all through
+  `save_all_dirty()`: a store request (`request_eeprom_save()`, drained by
+  `save_all_if_requested()` in housekeeping), `suspend_power_down_kb()` (skipped while
+  VBUS is low), `shutdown_user()`, the reset that follows a reset-sync, and before a
+  firmware apply. The slave gets a store request as the `SAVE_EEPROM` flag and flushes
+  from housekeeping.
 - The `set_*()` function of a persisted setting marks it dirty. Some also
   call `poly_state_touch()` (for example `set_idle_style()`, `set_glyph_script()`).
   A `note_*()` function is the boot-time EEPROM load and marks nothing dirty.

@@ -36,9 +36,10 @@ and dials built from measured pad numbers; it is mutation-checked.
 `-e POLYKYBD_CIRQUE_RELATIVE=yes` opts out. That one switch also decides the gesture
 layer: the module takes the pad over only when `CIRQUE_PINNACLE_POSITION_MODE` is
 absolute, and in relative mode its adapter compiles to nothing. The relative flavour
-survives only as an A/B escape hatch against stock behaviour. The status OLED's pad view
-is gated on `COMMUNITY_MODULE_POLYMOD_CIRQUE_GESTURES_ENABLE` and
-`POLYKYBD_CIRQUE_ABSOLUTE`. The tunables and the reasoning behind each number live in
+survives only as an A/B escape hatch against stock behaviour. The module header defines
+`POLYMOD_CIRQUE_GESTURES_ACTIVE` when it takes the pad over (a Cirque Pinnacle in
+absolute mode). The adapter and the status OLED's pad view both test that one macro, so
+a build with another pointing driver compiles neither. The tunables and the reasoning behind each number live in
 `polymod_cirque_gesture_fsm.h` and
 `split72/config.h`.
 

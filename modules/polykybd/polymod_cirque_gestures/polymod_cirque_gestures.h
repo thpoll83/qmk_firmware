@@ -11,6 +11,20 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+/* POLYMOD_CIRQUE_GESTURES_ACTIVE is defined when the layer takes the pad over: a
+ * pointing device that is a Cirque Pinnacle (I2C or SPI) in absolute mode. The adapter
+ * and every caller of the functions below test this one macro, so a keyboard that
+ * lists the module with another pointing driver neither compiles the adapter nor
+ * references its functions. */
+#if defined(POINTING_DEVICE_ENABLE) && (defined(POINTING_DEVICE_DRIVER_cirque_pinnacle_i2c) || defined(POINTING_DEVICE_DRIVER_cirque_pinnacle_spi))
+#    include "drivers/sensors/cirque_pinnacle.h"
+#    if CIRQUE_PINNACLE_POSITION_MODE
+#        define POLYMOD_CIRQUE_GESTURES_ACTIVE
+#    endif
+#endif
+
+#ifdef POLYMOD_CIRQUE_GESTURES_ACTIVE
+
 /* Installed from the module's pointing_device_init hook, i.e. after the stock
  * cirque_pinnacle_init() has already configured the ASIC. */
 void poly_cirque_install(void);
@@ -36,3 +50,5 @@ typedef struct {
 } poly_cirque_dbg_t;
 
 void poly_cirque_debug_snapshot(poly_cirque_dbg_t *out);
+
+#endif /* POLYMOD_CIRQUE_GESTURES_ACTIVE */

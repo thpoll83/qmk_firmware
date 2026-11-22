@@ -20,7 +20,9 @@ It takes the pad over only when all of these hold:
 - `CIRQUE_PINNACLE_POSITION_MODE` is `CIRQUE_PINNACLE_ABSOLUTE_MODE` (the QMK
   default).
 
-Otherwise the adapter compiles to nothing and the stock driver keeps the pad. Do not
+Then `polymod_cirque_gestures.h` defines `POLYMOD_CIRQUE_GESTURES_ACTIVE`. Otherwise the
+adapter compiles to nothing and the stock driver keeps the pad. Code that calls
+`poly_cirque_debug_snapshot()` tests the same macro. Do not
 also enable the stock gesture options (`CIRQUE_PINNACLE_TAP_ENABLE`, circular
 scroll): they would only compile code that nothing calls.
 

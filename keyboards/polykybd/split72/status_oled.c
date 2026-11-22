@@ -314,13 +314,16 @@ static void draw_lang_column(const GFXfont* const* font, int8_t x, uint8_t lang)
 }
 
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
-// The pad view needs the gesture module AND absolute mode: in relative mode the
-// module leaves the pad to the stock driver and has nothing to show.
-#if defined(COMMUNITY_MODULE_POLYMOD_CIRQUE_GESTURES_ENABLE) && defined(POLYKYBD_CIRQUE_ABSOLUTE)
+// The pad view needs the gesture module to have taken the pad over
+// (POLYMOD_CIRQUE_GESTURES_ACTIVE: a Cirque Pinnacle in absolute mode). In relative
+// mode, or with another pointing driver, the module has nothing to show.
+#ifdef COMMUNITY_MODULE_POLYMOD_CIRQUE_GESTURES_ENABLE
+#    include "polymod_cirque_gestures.h"
+#endif
+#ifdef POLYMOD_CIRQUE_GESTURES_ACTIVE
 #    define POLY_PAD_VIEW
 #endif
 #ifdef POLY_PAD_VIEW
-#    include "polymod_cirque_gestures.h"
 #    include "polymod_cirque_gesture_fsm.h" /* the zone radii the view draws */
 
 /* The trackpad view: shown while the pad is IN USE, and the normal status screen

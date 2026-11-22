@@ -32,14 +32,12 @@
  */
 #include "polymod_cirque_gestures.h"
 
-#if defined(POINTING_DEVICE_ENABLE) && (defined(POINTING_DEVICE_DRIVER_cirque_pinnacle_i2c) || defined(POINTING_DEVICE_DRIVER_cirque_pinnacle_spi))
+#ifdef POLYMOD_CIRQUE_GESTURES_ACTIVE
+
 #    include "quantum.h"
-#    include "drivers/sensors/cirque_pinnacle.h"
-#endif
-
-#if defined(POINTING_DEVICE_ENABLE) && (defined(POINTING_DEVICE_DRIVER_cirque_pinnacle_i2c) || defined(POINTING_DEVICE_DRIVER_cirque_pinnacle_spi)) && CIRQUE_PINNACLE_POSITION_MODE
-
 #    include "community_modules.h"
+/* 1.1.0 is the first module API with the pointing_device_init hook used below. */
+ASSERT_COMMUNITY_MODULES_MIN_API_VERSION(1, 1, 0);
 #    include "pointing_device.h"
 #    include "timer.h"
 #    include "polymod_cirque_gesture_fsm.h"
@@ -152,4 +150,4 @@ void poly_cirque_debug_snapshot(poly_cirque_dbg_t *out) {
     }
 }
 
-#endif /* Cirque Pinnacle in absolute mode */
+#endif /* POLYMOD_CIRQUE_GESTURES_ACTIVE */

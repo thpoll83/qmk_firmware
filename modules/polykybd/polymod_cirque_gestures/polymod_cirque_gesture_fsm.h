@@ -1,12 +1,16 @@
-/* PolyKybd Cirque gesture decision — PURE.
+/* Cirque Pinnacle gesture decision — PURE (community module polymod_cirque_gestures).
  *
  * No quantum.h, no timer, no I2C, no report_mouse_t. Samples and a millisecond clock
  * go in, cursor deltas / wheel / buttons come out. That is the whole point: "tapping
  * does not work" was reported three times for three different causes, and each guess
  * cost a hardware round because the arithmetic shared a function with the sensor.
- * Same seam as fw_up_verdict.c and macro_decode.c, for the same reason.
+ * Same seam as PolyKybd's base/fw_up_verdict.c and base/macro_decode.c, for the same
+ * reason.
  *
- * Geometry and thresholds are #ifndef so a test can override them.
+ * Geometry and thresholds are #ifndef so a test or a keyboard can override them. The
+ * defaults are the values measured on the PolyKybd split72 pad (35 mm, mounted
+ * skewed). Another keyboard re-fits the POLY_GEST_PX_* / POLY_GEST_PY_* affine terms
+ * in its config.h for its own mounting.
  */
 #pragma once
 

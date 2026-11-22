@@ -12,28 +12,34 @@ chosen its corner. So the stock corner-tap right click landed at 11 o'clock, mov
 10 when `CIRQUE_PINNACLE_CURVED_OVERLAY` retuned the edges under it, and neither stock
 scroll ever fired. Tap force is the ASIC's, with no z-threshold register exposed.
 
-The replacement splits in two:
+The replacement is the community module `polymod_cirque_gestures`
+(`modules/polykybd/polymod_cirque_gestures/`), listed in `split72/keyboard.json`. It
+splits in two:
 
-- **`base/cirque_gesture_fsm.c`** — the decision. Pure: no `quantum.h`, no timer, no
+- **`polymod_cirque_gesture_fsm.c`** — the decision. Pure: no `quantum.h`, no timer, no
   I2C, no `report_mouse_t`. Samples plus a millisecond clock in, deltas / wheel /
   buttons out. A least-squares affine fit (Q12 fixed point) maps sensor coordinates to
   a 896-unit pad frame, and the zones are tested there.
-- **`cirque_gestures.c`** — the adapter. Reads `cirque_pinnacle_read_data()`, calls
+- **`polymod_cirque_gestures.c`** — the adapter. Reads `cirque_pinnacle_read_data()`, calls
   `poly_gest_feed()` with `timer_read32()`, copies the answer into a mouse report, and
-  installs `poly_cirque_driver` from `pointing_device_init_kb()` — which QMK calls
-  *after* `driver->init()`, so the stock driver still configures the ASIC and nothing
-  upstream is patched.
+  installs `poly_cirque_driver` from the module's `pointing_device_init` hook, which QMK
+  calls *after* `driver->init()` and before `pointing_device_init_kb()`. So the stock
+  driver still configures the ASIC, nothing upstream is patched, and the keyboard's own
+  hooks stay free.
 
 That split is not tidiness. "Tapping does not work" was reported four times for four
 different causes, and each cost a hardware round because the arithmetic shared a
-function with the sensor. `make test:polykybd_cirque_gesture` now replays taps, drags
+function with the sensor. `make test:polymod_cirque_gestures` now replays taps, drags
 and dials built from measured pad numbers; it is mutation-checked.
 
-**It is the DEFAULT build.** `split72/rules.mk` sets `-DPOLYKYBD_CIRQUE_ABSOLUTE` and
-`-DPOLYKYBD_CIRQUE_GESTURES` unless `-e POLYKYBD_CIRQUE_RELATIVE=yes` opts out, and the
-two are one switch because absolute mode implies the gesture layer. The relative flavour
-survives only as an A/B escape hatch against stock behaviour; it compiles neither source.
-The tunables and the reasoning behind each number live in `base/cirque_gesture_fsm.h` and
+**It is the DEFAULT build.** `split72/rules.mk` sets `-DPOLYKYBD_CIRQUE_ABSOLUTE` unless
+`-e POLYKYBD_CIRQUE_RELATIVE=yes` opts out. That one switch also decides the gesture
+layer: the module takes the pad over only when `CIRQUE_PINNACLE_POSITION_MODE` is
+absolute, and in relative mode its adapter compiles to nothing. The relative flavour
+survives only as an A/B escape hatch against stock behaviour. The status OLED's pad view
+is gated on `COMMUNITY_MODULE_POLYMOD_CIRQUE_GESTURES_ENABLE` and
+`POLYKYBD_CIRQUE_ABSOLUTE`. The tunables and the reasoning behind each number live in
+`polymod_cirque_gesture_fsm.h` and
 `split72/config.h`.
 
 ⚠️ **It was opt-in until 2026-09-15, and that was a real gap rather than caution.** PR CI
@@ -88,7 +94,7 @@ the touchdown radius.
 Acceleration is quadratic above the knee, `(mag - 6)^2 / 20` percent on top of the 65 %
 base, capped at 130 %. The old linear ramp reached the cap at 30 motion units per sample,
 so a quick short move already ran at double speed ("acceleration starts too fast",
-2026-09-25). The table and the measured strokes are in `base/cirque_gesture_fsm.h`.
+2026-09-25). The table and the measured strokes are in `polymod_cirque_gesture_fsm.h`.
 
 The cursor also ignores samples whose z sits in the release band (`Z_RELEASE..Z_TOUCH`).
 As a finger lifts, the reported position wanders, and on a short move that wander was

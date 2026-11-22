@@ -15,7 +15,7 @@
 #include "fill_overlay.h"   // for mark_display_has_overlay_post_upload
 #include "features/anim/startup_anim.h"   // startup_anim_core1_job (the Eden idle keycap job)
 #include "doom/doom_mode.h"      // doom_mode_active: DOOM owns core1 while it runs
-#include "base/core1_owner.h"    // core1_held/hold/release: the one owner of core1
+#include "polymod_core1_owner.h"    // core1_held/hold/release: the one owner of core1
 #include "base/core1_suspend.h"  // core1_suspend_step/core1_resume_step: the hold across a USB suspend
 
 #ifdef USE_CORE1

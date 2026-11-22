@@ -35,7 +35,7 @@
 #include "quantum.h"
 #include "base/combo_store.h"
 #include "lib/drivers/fw_staging.h"     // FW_COMBO_STORE_OFFSET
-#include "base/core1_owner.h"    // core1_hold()/core1_release() around the write
+#include "polymod_core1_owner.h"    // core1_hold()/core1_release() around the write
 #include "lib/drivers/crash_record.h"   // CRASH_PHASE_FLASH breadcrumb
 #include "polymod_crc32.h"
 #include "lib/split_link/bridge_helper.h"       // send_to_bridge()

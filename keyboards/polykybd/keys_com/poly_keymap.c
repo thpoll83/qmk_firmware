@@ -44,7 +44,7 @@
 #    include "lib/hid/poly_pipe.h"
 #endif
 #include "lib/drivers/fw_staging.h"
-#include "base/core1_owner.h"
+#include "polymod_core1_owner.h"
 #include "uni.h"
 #include "lib/split_link/side.h"
 #include "lib/display/fill_overlay.h"

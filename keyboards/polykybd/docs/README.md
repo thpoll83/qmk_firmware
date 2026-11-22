@@ -96,6 +96,23 @@ Finished plans and status logs. Kept for reference; not current.
 - [`split42-hardware-plan.md`](archive/split42-hardware-plan.md): PolyKybd split42 — New Hardware Variant Plan
 - [`split42-link-status.md`](archive/split42-link-status.md): split42 split-link status — RESTART (2026-07-15 evening)
 
+## Where files moved into community modules (2026-11)
+
+Two subsystems moved out of the keyboard folder into `modules/polykybd/`. Their test
+suites moved and were renamed with them.
+
+| before | now |
+|---|---|
+| `lib/peripherals/cirque_gestures.c`/`.h` | `modules/polykybd/polymod_cirque_gestures/polymod_cirque_gestures.c`/`.h` |
+| `base/cirque_gesture_fsm.c`/`.h` | `modules/polykybd/polymod_cirque_gestures/polymod_cirque_gesture_fsm.c`/`.h` |
+| `base/core1_owner.c`/`.h` | `modules/polykybd/polymod_core1/polymod_core1_owner.c`/`.h` |
+| `lib/drivers/core1_owner_hw.c` | `modules/polykybd/polymod_core1/polymod_core1_owner_hw.c` |
+| `make test:polykybd_cirque_gesture` | `make test:polymod_cirque_gestures` |
+| `make test:polykybd_core1_owner` | `make test:polymod_core1_owner` |
+
+`-DPOLYKYBD_CIRQUE_GESTURES` is gone: listing the module in `keyboard.json` is the
+enable, and `-DPOLYKYBD_CIRQUE_ABSOLUTE` still selects absolute mode.
+
 ## Where files moved, second step (2026-11)
 
 The second step grouped the 24 folders at the keyboard root into 12. The commits are on

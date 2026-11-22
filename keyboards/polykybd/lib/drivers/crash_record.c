@@ -7,7 +7,7 @@
 #include "quantum.h"          // FW_VERSION
 #include "print.h"
 #include "fw_staging.h"       // FW_CRASH_LOG_OFFSET
-#include "base/core1_owner.h"      // core1_hold()/core1_release() around the write
+#include "polymod_core1_owner.h"      // core1_hold()/core1_release() around the write
 #include "polymod_crc32.h"
 
 #include "hardware/flash.h"

@@ -407,14 +407,16 @@ user-facing story are
   answer lands. Blocking there would guarantee the keypress is never seen — the same trap
   `FW_UP_COMMIT` avoids.
 
-## Who may stop and start core1 (`base/core1_owner.c`)
+## Who may stop and start core1 (`polymod_core1_owner.c`)
 
 Anything that rewrites flash keeps core1 in PSM reset, because a core1 fetch from XIP
 while the QSPI is out of XIP mode stalls the bus for good. **One module owns that
 decision**: `core1_hold()` / `core1_release()` nest through a count, core1 leaves reset
 only when the last hold goes (and the RLE service is relaunched then, bounded), and
 `core1_run()` / `core1_restore_service()` refuse to launch anything while a hold is
-outstanding. The check and the reset share one critical section.
+outstanding. The check and the reset share one critical section. The code is in the
+`polymod_core1` community module: `polymod_core1_owner.c` (the logic) and
+`polymod_core1_owner_hw.c` (the RP2040 and ChibiOS half).
 
 - fw_staging's long hold (BEGIN until the erase completes or the stream is finalized)
   is a flag over one `core1_hold()`, because BEGIN can arrive twice for the same image.
@@ -429,7 +431,7 @@ outstanding. The check and the reset share one critical section.
   them finishing during a flash erase would have released core1 mid-erase.
 - Not covered on purpose: the boot launch in post_init, and `fw_staging_do_apply()`,
   which runs from RAM, never returns and must not call into flash or take a lock.
-- The logic is pure behind a `core1_hw_*` seam; `make test:polykybd_core1_owner` covers
+- The logic is pure behind a `core1_hw_*` seam; `make test:polymod_core1_owner` covers
   the three bug shapes of 2026-10-07 (engine start mid-erase, engine stop mid-erase, a
   hold landing during a launch handshake) plus the nested-release case.
 

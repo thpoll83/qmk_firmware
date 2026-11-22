@@ -44,13 +44,12 @@ endif
 # ABSOLUTE + our gesture layer is the DEFAULT, and the flavour every hardware
 # round was run against. Absolute mode implies the gesture layer: the stock one
 # cannot place its zones in the pad's physical frame, so the two are one switch.
-# See keyboards/polykybd/lib/peripherals/cirque_gestures.c and keyboards/polykybd/docs/features/trackpad.md.
+# The gesture layer is the community module polymod_cirque_gestures (listed in
+# keyboard.json). It takes the pad over only in absolute mode, so this switch is
+# the whole choice. See modules/polykybd/polymod_cirque_gestures/ and
+# keyboards/polykybd/docs/features/trackpad.md.
 ifneq ($(strip $(POLYKYBD_CIRQUE_RELATIVE)), yes)
     OPT_DEFS += -DPOLYKYBD_CIRQUE_ABSOLUTE
-    OPT_DEFS += -DPOLYKYBD_CIRQUE_GESTURES
-    # Only the absolute flavour references these, so the relative build carries
-    # no dead objects rather than relying on the linker to drop them.
-    SRC += lib/peripherals/cirque_gestures.c base/cirque_gesture_fsm.c
 endif
 # -e POLYKYBD_CIRQUE_TRACE=yes puts a live pad readout on the status OLED of the
 # half holding the pad, so the window and z numbers can be read off the keyboard

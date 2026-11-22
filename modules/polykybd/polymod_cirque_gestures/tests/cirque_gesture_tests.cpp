@@ -12,7 +12,7 @@
  */
 #include "gtest/gtest.h"
 extern "C" {
-#include "cirque_gesture_fsm.h"
+#include "polymod_cirque_gesture_fsm.h"
 }
 
 #include <cmath>

@@ -1,16 +1,17 @@
-/* PolyKybd Cirque gesture layer — absolute mode only.
+/* Cirque Pinnacle gesture layer — absolute mode only (community module
+ * polymod_cirque_gestures).
  *
- * Replaces the stock driver's get_report so the gestures are decided HERE, in
- * PolyKybd code, from real pad coordinates. See cirque_gestures.c for why.
+ * Replaces the stock driver's get_report so the gestures are decided HERE, from real
+ * pad coordinates, not by the ASIC. See polymod_cirque_gestures.c for why. The
+ * functions below exist only when the pointing device is a Cirque Pinnacle in
+ * absolute mode.
  */
 #pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
 
-#ifdef POLYKYBD_CIRQUE_GESTURES
-
-/* Installed from pointing_device_init_kb(), i.e. after the stock
+/* Installed from the module's pointing_device_init hook, i.e. after the stock
  * cirque_pinnacle_init() has already configured the ASIC. */
 void poly_cirque_install(void);
 
@@ -35,5 +36,3 @@ typedef struct {
 } poly_cirque_dbg_t;
 
 void poly_cirque_debug_snapshot(poly_cirque_dbg_t *out);
-
-#endif

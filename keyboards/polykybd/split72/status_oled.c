@@ -314,9 +314,14 @@ static void draw_lang_column(const GFXfont* const* font, int8_t x, uint8_t lang)
 }
 
 // Renders status screen with layer, lock states, RGB settings, display brightness, WPM, and language on OLED.
-#ifdef POLYKYBD_CIRQUE_GESTURES
-#    include "lib/peripherals/cirque_gestures.h"
-#    include "../base/cirque_gesture_fsm.h" /* the zone radii the view draws */
+// The pad view needs the gesture module AND absolute mode: in relative mode the
+// module leaves the pad to the stock driver and has nothing to show.
+#if defined(COMMUNITY_MODULE_POLYMOD_CIRQUE_GESTURES_ENABLE) && defined(POLYKYBD_CIRQUE_ABSOLUTE)
+#    define POLY_PAD_VIEW
+#endif
+#ifdef POLY_PAD_VIEW
+#    include "polymod_cirque_gestures.h"
+#    include "polymod_cirque_gesture_fsm.h" /* the zone radii the view draws */
 
 /* The trackpad view: shown while the pad is IN USE, and the normal status screen
  * comes back about a second after the finger leaves.
@@ -452,7 +457,7 @@ void oled_update_buffer(void) {
 
     kdisp_set_buffer(0);
 
-#ifdef POLYKYBD_CIRQUE_GESTURES
+#ifdef POLY_PAD_VIEW
     /* Only while the pad is in use — otherwise the normal status screen stands. */
     if (is_right_side() && oled_pad_view_active()) {
         oled_draw_pad_view();

@@ -1,8 +1,8 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// RP2040 + ChibiOS implementation of the core1_owner hardware seam.
-#include "base/core1_owner.h"
+// RP2040 + ChibiOS implementation of the polymod_core1_owner hardware seam.
+#include "polymod_core1_owner.h"
 
 #include <ch.h>
 

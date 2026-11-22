@@ -68,6 +68,8 @@ include $(QUANTUM_PATH)/encoder/tests/rules.mk
 include $(QUANTUM_PATH)/os_detection/tests/rules.mk
 include $(QUANTUM_PATH)/sequencer/tests/rules.mk
 include $(QUANTUM_PATH)/wear_leveling/tests/rules.mk
+include modules/polykybd/polymod_cirque_gestures/tests/rules.mk
+include modules/polykybd/polymod_core1/tests/rules.mk
 include modules/polykybd/polymod_crc32/tests/rules.mk
 include modules/polykybd/polymod_ltr559/tests/rules.mk
 include modules/polykybd/polymod_monocypher/tests/rules.mk

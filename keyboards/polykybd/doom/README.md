@@ -1312,3 +1312,8 @@ hardware-test log). What remains, in order:
    `TryRunTics` from the display-frame handoff (shrinks the structural slave
    view lag; the RGB fire cue already compensates via
    `DOOM_RGB_MASTER_FIRE_LAG_MS`).
+
+## Subfolders
+
+- [`pack/`](pack/README.md): the engine-pack build: `build_pack.sh` and the pack format.
+- [`tools/`](tools/README.md): host-side scripts: the DOOM data download, the UF2 conversion, the keycap display map, and the menu, logo and weapon-icon previews.

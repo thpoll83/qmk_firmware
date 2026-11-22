@@ -81,7 +81,7 @@ enum poly_glyph_script {
 // thing. GLYPH_SIZE_S is the size the keyboard has always drawn.
 //
 // The bigger faces are latin only and live in the `latinbig` font-pack bundle at
-// relocated codepoints (see glyph_size_remap() in poly_keymap.c). A keyboard whose
+// relocated codepoints (see glyph_size_remap() in keys_com/render_key.c). A keyboard whose
 // pack is missing that bundle — or a legend outside the latin repertoire, e.g. a
 // CJK or Arabic keycap — silently falls back to GLYPH_SIZE_S rather than blanking.
 //

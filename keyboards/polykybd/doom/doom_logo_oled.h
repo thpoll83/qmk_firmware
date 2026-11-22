@@ -1,10 +1,10 @@
 // Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// The DOOM title screen for the 128x64 status OLED, shown while game mode
-// runs. Derived from TITLEPIC of the freely-redistributable v1.9 shareware
-// DOOM1.WAD (the same IWAD doom1.whx is converted from) by
-// doom/tools/oled_logo.py — full 320x200 page downscaled to 128x64 and
+// The DOOM logo for the 128x64 status OLED, shown while game mode runs.
+// Derived from the M_DOOM lump (the 123x60 menu-title logo) of the
+// freely-redistributable v1.9 shareware DOOM1.WAD (the same IWAD doom1.whx is
+// converted from) by doom/tools/oled_logo.py — centred unscaled on 128x64 and
 // Floyd-Steinberg dithered to 1bpp, in the QMK oled driver's raw page-major
 // layout (oled_write_raw).
 #pragma once

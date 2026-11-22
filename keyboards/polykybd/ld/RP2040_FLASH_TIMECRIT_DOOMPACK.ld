@@ -14,8 +14,8 @@
  * never zeroes it — same semantics as the monolith's .doom_shared: the
  * overlay usage bits gate every read and the reset/refill paths memset it,
  * and doom_session_start() memsets the whole pool at game entry. The block
- * is padded to exactly the pool size (226,800 = NUM_OVERLAYS *
- * NUM_VARIATIONS * 360); if the array ever outgrows it the link fails
+ * is padded to exactly the pool size (216,000 = NUM_OVERLAY_SLOTS *
+ * 360); if the array ever outgrows it the link fails
  * loudly ("cannot move location counter backwards").
  */
 /*

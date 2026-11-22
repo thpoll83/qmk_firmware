@@ -49,3 +49,7 @@ in the sensor frame and re-fit the six affine terms `POLY_GEST_PX_A` …
 
 `make test:polymod_cirque_gestures` replays taps, drags and dials built from measured
 pad numbers against the decision code (46 tests).
+
+## Subfolders
+
+- [`tests/`](tests/README.md): the host unit tests of the gesture decision.

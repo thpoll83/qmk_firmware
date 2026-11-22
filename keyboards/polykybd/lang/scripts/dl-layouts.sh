@@ -7,7 +7,8 @@
 # plain `curl` from the build container reaches raw.githubusercontent.com just
 # fine (same path the font downloader uses). CLDR publishes the real per-OS
 # keyboard layouts there as simple XML — one `<map iso="D01" to="Ꭺ"/>` per key
-# per modifier state — which `_gen_wave2_cols.py` (CLDR mode) parses directly.
+# per modifier state. The CLDR-mode column generator that parsed them,
+# `_gen_wave2_cols.py`, was deleted (keyboards/polykybd/docs/README.md).
 #
 # Pinned to CLDR release-42: the last release with the pre-overhaul keyboard
 # format (osx/ + windows/ trees). The newer keyboards/3.0/ format reorganised

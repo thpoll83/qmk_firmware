@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 # Copyright 2026 thpoll83
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Generate doom_logo_oled.h — the 128x64 1-bit DOOM title screen for the
-status OLED, shown while game mode runs (oled_helper.c oled_task_user).
+"""Generate doom_logo_oled.h — the 128x64 1-bit DOOM logo for the status OLED,
+shown while game mode runs (oled_helper.c oled_task_user).
 
-Decodes TITLEPIC (DOOM "picture format": 8-byte header, per-column post
-lists) + PLAYPAL from the freely-redistributable v1.9 shareware DOOM1.WAD
-(the same IWAD doom1.whx is converted from), downscales the full 320x200
-page to 128x64 (the status OLED is 2:1 wider than the 1.6:1 frame — the
-mild horizontal squeeze reads fine for the logo), Floyd-Steinberg dithers
-to 1bpp and emits the bitmap in the QMK oled driver's raw page-major
+Decodes the M_DOOM lump (the 123x60 menu-title logo, DOOM "picture format":
+8-byte header, per-column post lists) + PLAYPAL from the freely-redistributable
+v1.9 shareware DOOM1.WAD (the same IWAD doom1.whx is converted from), centres it
+unscaled on a 128x64 canvas, Floyd-Steinberg dithers to 1bpp and emits the bitmap in the QMK oled driver's raw page-major
 layout: byte = (row/8)*128 + col, bit k = row (row/8)*8 + k, bit 0 at the
 top of the page.
 
@@ -25,15 +23,15 @@ def read_lump(wad: bytes, name: bytes) -> bytes:
     ident, numlumps, diroff = struct.unpack("<4sII", wad[:12])
     assert ident in (b"IWAD", b"PWAD"), "not a WAD"
     for i in range(numlumps):
-        off, size, lname = struct.unpack("<II8s", wad[diroff + 16 * i : diroff + 16 * i + 16])
+        off, size, lname = struct.unpack("<II8s", wad[diroff + 16 * i:diroff + 16 * i + 16])
         if lname.rstrip(b"\0") == name:
-            return wad[off : off + size]
+            return wad[off:off + size]
     raise KeyError(name.decode())
 
 
 def decode_picture(lump: bytes):
     w, h, _lo, _to = struct.unpack("<hhhh", lump[:8])
-    colofs = struct.unpack("<%dI" % w, lump[8 : 8 + 4 * w])
+    colofs = struct.unpack("<%dI" % w, lump[8:8 + 4 * w])
     img = [[None] * w for _ in range(h)]
     for x in range(w):
         p = colofs[x]
@@ -86,16 +84,17 @@ def main() -> None:
 
     lines = []
     for i in range(0, len(pages), 16):
-        lines.append("    " + ", ".join("0x%02X" % b for b in pages[i : i + 16]) + ",")
+        lines.append("    " + ", ".join("0x%02X" % b for b in pages[i:i + 16]) + ",")
     body = "\n".join(lines)
     with open(out_path, "w") as f:
-        f.write(f"""// Copyright 2026 thpoll83
+        f.write(
+            f"""// Copyright 2026 thpoll83
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// The DOOM title screen for the 128x64 status OLED, shown while game mode
-// runs. Derived from TITLEPIC of the freely-redistributable v1.9 shareware
-// DOOM1.WAD (the same IWAD doom1.whx is converted from) by
-// doom/tools/oled_logo.py — full 320x200 page downscaled to 128x64 and
+// The DOOM logo for the 128x64 status OLED, shown while game mode runs.
+// Derived from the M_DOOM lump (the 123x60 menu-title logo) of the
+// freely-redistributable v1.9 shareware DOOM1.WAD (the same IWAD doom1.whx is
+// converted from) by doom/tools/oled_logo.py — centred unscaled on 128x64 and
 // Floyd-Steinberg dithered to 1bpp, in the QMK oled driver's raw page-major
 // layout (oled_write_raw).
 #pragma once
@@ -104,7 +103,8 @@ def main() -> None:
 static const char DOOM_LOGO_OLED[128 * 8] = {{
 {body}
 }};
-""")
+"""
+        )
     print("wrote", out_path)
 
 

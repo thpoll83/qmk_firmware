@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Stand-in for quantum.h in the standalone googletest build (OS_ACTIONS_UNIT_TEST):
-// the five mod/tap primitives the emitter calls (implemented by the suite as a
+// the six mod/tap primitives the emitter calls (implemented by the suite as a
 // recording mock) and the keycode/modifier constants the chord table spells its
 // entries with. Values are QMK's real ones (HID usage ids / MOD_BIT masks) so a
 // recorded tap reads like the firmware's.

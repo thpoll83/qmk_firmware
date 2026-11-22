@@ -5,26 +5,19 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// ── Integration points ──────────────────────────────────────────────────────
+// ── Callers ─────────────────────────────────────────────────────────────────
 //
-// In keymap.c to_static_text(), add ONE line before the existing keycode_to_emoji() call:
-//     const uint32_t *emj = emj_display_text(keycode);
-//     if (emj) return emj;
-//
-// In keymap.c process_record_user(), add ONE line before process_unicodemap_poly():
-//     if (emj_process_keycode(keycode, record->event.pressed)) return false;
-//
-// In split_sync.c user_sync_poly_data_handler(), after copy_local_state():
-//     emj_apply_sync(local_state->emj_category, local_state->emj_page);
-//
-// In keymap.c display loop, add ONE line before kdisp_send_buffer():
-//     emj_draw_tab_indicator(keycode);
+// keys_com/poly_keymap.c: emj_display_text() in to_static_text(), before
+// keycode_to_emoji(); emj_process_keycode() in process_record_user(), before
+// process_unicodemap_poly(); emj_draw_tab_indicator() in the display loop.
+// lib/split_link/split_sync.c: emj_apply_sync() in user_sync_poly_data_handler(),
+// after copy_local_state(). features/anim/demo_mode.c also calls emj_apply_sync().
 //
 // ───────────────────────────────────────────────────────────────────────────
 
 // Maximum number of emoji slots that can appear in a keymap layer.
-// The split72 layout exposes 50 slots; the split42 exposes 24.
-// Override before including this header if needed.
+// The keymaps set it: 38 on split72 and 18 on split42 (keymaps/default/config.h).
+// 50 is only the fallback when no config sets it.
 #ifndef EMJ_SLOTS_PER_PAGE
 #  define EMJ_SLOTS_PER_PAGE 50
 #endif
@@ -58,7 +51,7 @@ uint8_t emj_active_page(void);
 // How many pages category `cat` has (0 for an unknown or empty category).
 uint8_t emj_page_count(uint8_t cat);
 
-// Draws a 3-px tab indicator on the active categor.
+// Draws a 3-px tab indicator on the active category.
 // Call after kdisp_write_gfx_text but before kdisp_send_buffer.
 // No-op for any keycode that is not the currently active category tab.
 void emj_draw_tab_indicator(uint16_t keycode);

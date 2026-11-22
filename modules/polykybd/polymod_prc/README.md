@@ -85,3 +85,8 @@ probability scale and the range coder.
 `keyboards/polykybd/dev/tools/tests/prc_tool_test.py` checks that the tool reproduces
 the host's golden payloads byte for byte, and its trainer was checked against the
 host's on the full set of PolyKybd templates (1007 cells, identical tables).
+
+## Subfolders
+
+- [`tests/`](tests/README.md): the host unit tests of the decoder.
+- [`tools/`](tools/README.md): `prc_tool.py`, which trains the PRC probability tables and encodes 1-bit images.

@@ -20,3 +20,7 @@ module-allocated range would renumber keycodes stored in users' EEPROM keymaps.
 quantum surface (recorded register/tap/unregister log): per-OS routing, the
 Unknown fallback, NA no-ops, bounds, the held-modifier save/restore, and the
 GNOME/KDE fold helper.
+
+## Subfolders
+
+- [`tests/`](tests/README.md): the host unit tests of the per-OS chord table.

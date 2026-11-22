@@ -41,7 +41,8 @@ their glyphs were dropped from `IconsFont`).
 
 **Add the row to the sheet, not the macro to the header.** A name here is only
 useful if `fonts/gfx_icons.h` actually has a glyph at that codepoint — that
-file is hand-maintained and is the other half of the contract. Keep the rows in
+file is hand-maintained, except the block `dev/tools/midi_glyphs.py` writes and the
+hint block `dev/tools/hint_icons.py` removes, and it is the other half of the contract. Keep the rows in
 ascending codepoint order; column F shows the gap to the previous row, which makes
 a missing or duplicated codepoint visible at a glance.
 
@@ -97,10 +98,14 @@ shape of the bug the section above describes, so a one-case command is refused
 unless you mean it (`--allow-asymmetric`). Naming one letter twice is fine and
 lands in consecutive slots.
 
-Two things it will not do for you. There are only **`LATIN_EX_VARIATIONS` (10)**
-slots, because `KC_LAT0..KC_LAT9` are the picker keys — a full row (`A I O U`, both
-cases) has no room, which is what currently keeps Vietnamese `Ơ ơ Ư ư` and pinyin
-`ǖ ǘ ǚ ǜ` out. And the glyph must exist in a **resident** font or the keycap draws
+Two things it will not do for you. A letter has at most **`LATIN_EX_VARIATIONS` (36,
+`lang_lut_ext.h`)** variations; the picker shows `LATIN_PICKER_SLOTS` of them at a time
+(12 on split72, 10 on split42) and pages through the rest. And the glyph must exist in a **resident** font or the keycap draws
 nothing without a font pack; check with `PolyKybdHost/tools/gfx_font.py` against
 `fonts` before adding (Latin-1 Sup / Ext-A / Ext-B are all covered by the
 `latin` category, which is `resident: true`).
+
+## Subfolders
+
+- [`scripts/`](scripts/README.md): the scripts that edit `lang_lut.xlsx`.
+- [`tests/`](tests/README.md): `latin_pick_test.c` and `shift_preview_test.py`.

@@ -51,7 +51,9 @@ measured rather than derived.
 
 | File | Role |
 |------|------|
-| `poly_keymap.c` | **Shared keymap logic, compiled for every variant** — rendering (`render_key`, `update_displays`, `to_static_text`), HID/overlay handling, language selection, idle/suspend, split sync glue, the firmware-update state machine, and all QMK `*_user`/`*_kb` callbacks. Holds the keymap-side cog blocks (the language tables). |
+| `render_key.c` | The keycap renderers: `render_key()` and the menu, macro, macro-picker, MRU and region-tab keys. Paired with `to_static_text()`, which stays in `poly_keymap.c` because the host parses it there. |
+| `latin_picker.c` | The Intl latin-variation picker and the remap mode (`latin_picker.h`). |
+| `poly_keymap.c` | **Shared keymap logic, compiled for every variant** — rendering (`update_displays`, `to_static_text`), HID/overlay handling, language selection, idle/suspend, split sync glue, the firmware-update state machine, and all QMK `*_user`/`*_kb` callbacks. Holds the keymap-side cog blocks (the language tables). |
 | `hid_com.c` | `raw_hid_receive()` — main HID command dispatcher (21 command IDs, `0x01`–`0x15`) |
 | `fill_overlay.c` | Receives overlay segments from host, decompresses RLE, writes to overlay memory |
 | `base/overlay.c` | Overlay memory: `overlays[810][360]` — 90 keycap slots × 9 modifier variants × 360 bytes |

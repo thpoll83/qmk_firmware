@@ -21,7 +21,7 @@ A glyph script replaces the language-layer **letter/digit** legends with an
 alternative face while leaving overlays and OS-hints untouched. Selection is HID
 cmd 30 (`GET/SET_GLYPH_SCRIPT`), persisted + slave-synced. Every script's glyphs
 live in the external-flash **`fantasy`** font-pack bundle, each in its own dense
-private-PUA block. The render choke point is `render_key()` in `poly_keymap.c`.
+private-PUA block. The render choke point is `render_key()` in `keys_com/render_key.c`.
 
 **Key design fact — adding a script does NOT bump the protocol.** Since v10 the
 glyph-script byte is an OPEN-ENDED INDEX: `hid_com.c` case 30 ACKs any value

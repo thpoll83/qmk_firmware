@@ -38,6 +38,9 @@ Suites (run with `make test:<suite>` from the repo root):
   (`idle_timeout.h`).
 - `polykybd_tap_terms`: the cmd 44 ranges and the biased EEPROM encoding
   (`tap_terms.h`).
+- `polykybd_latin_bits`: every pick and assignment field with every value, no bleed
+  into the neighbouring fields, no write past the array, and the fallback of an
+  unassigned key (`latin_bits.h`).
 - `polykybd_caps_word_letter`: Caps Word's letter test (`caps_word_letter.h`).
 - `polykybd_combo_store`: the cmd 48 combo and tap-dance records and the tap-dance plan
   (`combo_store.h`).

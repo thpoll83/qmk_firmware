@@ -9,6 +9,7 @@ TEST_LIST += polykybd_glyph_place_op
 TEST_LIST += polykybd_idle_update
 TEST_LIST += polykybd_idle_timeout
 TEST_LIST += polykybd_tap_terms
+TEST_LIST += polykybd_latin_bits
 TEST_LIST += polykybd_caps_word_letter
 TEST_LIST += polykybd_combo_store
 TEST_LIST += polykybd_layer_names

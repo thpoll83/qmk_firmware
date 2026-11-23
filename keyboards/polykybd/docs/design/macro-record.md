@@ -63,7 +63,7 @@ Two altitudes were considered:
   `report_keyboard_t`. This records what the host actually receives.
 
 Take the report shim. It removes the whole "what cannot be recorded" category:
-the macOS GUI/Alt swap (`poly_keymap.c`, `s_apple_swap_latch`), the Intl picker's
+the macOS GUI/Alt swap (`keys_com/record.c`, `s_apple_swap_latch`), the Intl picker's
 registered Ctrl, and unicode input — which bottoms out in real keycodes anyway — all
 record correctly with no special cases. Mods arrive as plain `0xE0..0xE7`, which the
 existing encoding already expresses as DOWN/UP.

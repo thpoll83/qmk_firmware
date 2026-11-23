@@ -85,6 +85,19 @@ void ltr559_housekeeping_tick(void);
 void idle_fade_tick(void);
 void master_state_sync_tick(void);
 
+// Defined in poly_keymap.c (uni.h for process_unicodemap_poly()) and called from the
+// key event path in record.c.
+uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col);
+bool     settings_more_hidden(uint16_t keycode);
+bool     process_unicodemap_poly(uint16_t keycode, keyrecord_t* record);
+
+// The key-matrix LEDs, in rgb.c (RGB_MATRIX_ENABLE builds only).
+#ifdef RGB_MATRIX_ENABLE
+void flash_rgb_tick(void);
+void rgb_adjust_key_down(uint16_t keycode);
+void rgb_adjust_key_up(void);
+#endif
+
 // Suspend and wake, in power.c. poly_set_awake_state(), suspend_wakeup_init_kb() and
 // poly_prepare_for_flash() call it; true when it switched the overlays back on.
 bool restore_suspended_overlays(poly_sync_t* local_state);

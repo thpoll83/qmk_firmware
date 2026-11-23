@@ -102,7 +102,6 @@
 // PolyKybd-side POLICY on top of it (auto-brightness, idle-inhibit, telemetry).
 #ifdef COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE
 #    include "polymod_ltr559.h"
-#    define LTR559_LOG_MS 600000   // sensor telemetry log cadence: 10 min
 #endif
 #include "lib/peripherals/ltr559_policy.h"        // the POLICY on the module (POLYKYBD_LTR559_DRIVE)
 
@@ -992,6 +991,120 @@ void poly_arm_tutorial_after_intro(void) {
     if (!s_tutorial_armed) arm_tutorial_after_intro();
 }
 
+// Who draws the keycaps this pass: the ONE-SHOT boot/KC_EDEN animation, the chapter 1
+// tutorial, or the normal path. Stays in this file because the Eden finish edge
+// reads s_tutorial_armed.
+static void housekeeping_display_tick(void) {
+    // One-time startup animation: render a frame while active (both halves
+    // render their own keycaps). On the finishing edge, persist the "played"
+    // marker and request a normal refresh so the base legends come back. Gated
+    // to the ONE-SHOT animation — the looping idle screensaver is driven by
+    // eden_idle_tick() in housekeeping_task_user() and must not run the finish edge / nonce sync here.
+    if (startup_anim_active() && !startup_anim_is_loop()) {
+        // Render THIS half's frame first — the keycap animation must never wait on
+        // the split link (the boot-time link is flaky; blocking here left the master
+        // stuck on the splash with dark keycaps).
+        startup_anim_tick();
+        // Then, ONCE and only when the transport is actually up, deliver the replay
+        // nonce to the slave so a HID replay (cmd 31) or a KC_EDEN-rearmed boot plays
+        // on both halves in lockstep. We skip the normal per-pass
+        // sync_and_refresh_displays() while Eden owns the displays, so this is the
+        // only carrier for the nonce. Gated on is_transport_connected() (non-blocking)
+        // so a fresh boot — where both halves already animate from their own marker —
+        // never stalls waiting on a slave that is still coming up; the send just
+        // rides along once the link settles and the slave's !active guard makes it a
+        // no-op there. Retried each pass until it lands (or the animation ends).
+        static bool s_anim_synced = false;
+        if (!s_anim_synced && is_usb_host_side() && is_transport_connected()) {
+            // Classify the ack via sync_succeeded() — never bool-test send_to_bridge()
+            // directly (every return is non-zero). Only latch on a genuine success so a
+            // failed send stays eligible for retry on a later pass.
+            uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 3);
+            if (sync_succeeded(ack)) {
+                s_anim_synced = true;
+            }
+        }
+        if (!startup_anim_active()) {   // just finished this pass
+            s_anim_synced = false;      // re-arm for the next replay (KC_EDEN / HID)
+            // Hand off to the tutorial rather than stamping the marker here. The
+            // marker must record "the TUTORIAL was seen", not "Eden played":
+            // stamped here, RESET Eden would clear it, replay the animation, and
+            // this line would re-stamp it a second later — so the tutorial could
+            // never appear, with nothing in any log to say why.
+            if (s_tutorial_armed) {
+                s_tutorial_armed = false;
+                poly_tutorial_skip_reset();
+                // ⚠️ RETIRE THE SYNCED LEVEL HERE, not only at the teardown. It has
+                // done its job — the slave armed itself from it during Eden — and
+                // tutorial_sync_fill() PRESERVES it, so left set it rides every sync
+                // for the rest of the session. Two paths then go wrong: the branch
+                // below that finds nothing to teach never reaches the teardown that
+                // clears it, and a later Eden replay re-arms the slave, which starts
+                // a lesson alone and is torn down by the next !ACTIVE packet.
+                // Both halves run this, and both own their own copy of the bit.
+                access_local_state()->tut[0] &= (uint8_t)~TUT_SYNC_ARMED;
+                // The layer stack AND the default layout are parked inside
+                // tutorial_start() -> tutorial_enter_base_layout(), so both halves
+                // do it rather than only the one that owns this arm site.
+                tutorial_start(timer_read32());
+                poly_tutorial_publish_active();
+                if (!tutorial_active()) {                        // nothing to teach
+                    core1_hold();            // see the teardown
+                    mark_boot_intro_done();
+                    core1_release();
+                }
+            }
+            // Eden ran at full brightness; restore the user's normal
+            // brightness behaviour now that it has faded to black, then
+            // redraw the real legends and resume normal split sync. Skipped when
+            // the tutorial just took the keycaps over — it owns them now.
+            if (!tutorial_active()) {
+                set_displays(get_local_state()->contrast, false);
+                request_disp_refresh();
+                sync_and_refresh_displays();
+            }
+        }
+        // While Eden plays we OWN the displays: skip sync_and_refresh_displays
+        // (its set_displays() would overwrite our full-bright contrast with the
+        // user brightness — the "brightness changes mid-animation" bug) and skip
+        // the boot forced-layer-resync's per-pass blocking UART, which also
+        // stole frame time. Each half renders its own keycaps independently.
+    } else if (tutorial_exclusive()) {
+        // ⚠️ CHAPTER 1 ONLY. From chapter 2 the tutorial runs in INTRO mode and
+        // falls through to the normal `else` below — the stock mods snapshot, the
+        // stock layer sync, the stock render, on both halves. This branch used to
+        // carry hand-rolled copies of all three, and each one was a bug: the mods
+        // were never refreshed, the layer never reached the slave, and the repaint
+        // front covered 12 % of the board. The fix was to stop re-implementing
+        // rather than to fix the copies. See base/tutorial_plan.h.
+        //
+        // The renderer is SLICED (a few ms per pass) precisely so the matrix keeps
+        // being scanned mid-frame — it has to notice a tap, which the unsliced Eden
+        // path provably cannot.
+        tutorial_tick();
+        poly_tutorial_push_sync();
+        poly_tutorial_finish_if_done();
+    } else {
+        // INTRO mode rides the normal path: the board renders itself, and the
+        // tutorial only advances its own phase machine and keeps the other half in
+        // step. tutorial_tick() does NOT touch a panel outside chapter 1.
+        if (tutorial_active()) {
+            tutorial_tick();
+            // The preview for the phase just entered, before anything draws or is
+            // pushed (see poly_apply_draw_script()).
+            if (is_usb_host_side()) poly_apply_draw_script();
+            poly_tutorial_skip_if_held();
+            poly_tutorial_push_sync();
+            poly_tutorial_finish_if_done();
+        }
+        sync_and_refresh_displays();
+        // After the render, so a change it just drew has already started the cascade.
+        menu_cascade_tick();
+        lang_sparkle_tick();   // the language preview's twinkles; self-gating
+    }
+}
+
+
 void housekeeping_task_user(void) {
     // Optional loop-timing probe (no-op unless POLYKYBD_LOOP_PROFILE). At the very
     // top so it measures the FULL previous iteration — matrix scan, HID, bridge.
@@ -1039,78 +1152,14 @@ void housekeeping_task_user(void) {
         return;
     }
 
-    // FW-2: drive the unsigned-image confirmation prompt. The master owns the
-    // decision, but poly_sync_t.fw_confirm is synced so BOTH halves turn their
-    // keycaps into the dialog (the slave's own render is driven by the sync
-    // handler's refresh). Deliberately outside the !fw_up_active gate below: the
-    // prompt only goes up at COMMIT, i.e. after finalize has already cleared
-    // fw_up_active, and a prompt that could not be drawn would be unanswerable.
-    // is_keyboard_master(), not is_usb_host_side(): the confirmation state only
-    // ever exists on the half that verified the signature, and fw_staging gates
-    // that on is_keyboard_master() (which the HIL images override per side).
-    // On-keyboard macro recording. The master owns the gesture (only it runs
-    // process_record -- the slave's matrix is pulled over the link), and the state is
-    // mirrored into the synced struct so the SLAVE draws its half of the slot picker.
-    // Outside the !fw_up_active gate below for the same reason the FW-2 prompt is: a
+    // On-keyboard macro recording, then the FW-2 / FW-9 confirmation prompt
+    // (keys_com/housekeeping.c). Both are outside the !fw_up_active gate below: a
     // dialog that could not be drawn or advanced would be unanswerable.
-    if (is_keyboard_master()) {
-        poly_macro_rec_tick();
-        poly_sync_t *rec_state = access_local_state();
-        const uint8_t rs = (uint8_t)poly_macro_rec_state();
-        const uint8_t rl = poly_macro_rec_slot();
-        if (rec_state->rec_state != rs || rec_state->rec_slot != rl) {
-            rec_state->rec_state = rs;
-            rec_state->rec_slot  = rl;
-            request_disp_refresh();
-        }
-        // Hold the idle countdown off for the whole gesture, the same way the FW-2
-        // prompt below does. The panel IS the only indicator a recording has, and
-        // update_displays() early-returns once DISP_IDLE is set — so a slow-typed
-        // macro that crossed the idle timeout would dim the picker and the REC readout
-        // out from under the user, with no way back short of a keypress that the
-        // recorder would then capture.
-        if (rs != (uint8_t)POLY_REC_IDLE) {
-            update_performed();
-        }
-    }
-
-    if (is_keyboard_master()) {
-        fw_staging_confirm_tick();
-        // Which dialog the board IS right now. FW-2's unsigned image outranks
-        // FW-9's unsigned pack: a flash in flight is the more consequential
-        // question, and doom_session_start() refuses to take the pool while the
-        // stager owns the link anyway, so the two cannot really coincide.
-        const uint8_t want = fw_staging_awaiting_confirm() ? POLY_CONFIRM_FW_IMAGE
-                           : doom_pack_confirm_pending()   ? POLY_CONFIRM_DOOM_PACK
-                                                           : POLY_CONFIRM_NONE;
-        // The slave never sees the keypress, so the master's answer travels with
-        // the rest of the synced state (state.h explains why delegating it is
-        // sound, and what stays local).
-        access_local_state()->doom_pack_auth_crc = doom_pack_auth_crc();
-        poly_sync_t *cfm_state = access_local_state();
-        if (cfm_state->fw_confirm != want) {
-            cfm_state->fw_confirm = want;
-            if (want) {
-                // Release anything still registered host-side BEFORE we start
-                // swallowing events. A key held when the prompt goes up would
-                // otherwise never have its release forwarded — the host keeps the
-                // keycode down and auto-repeats it for the whole window (field:
-                // "a few hundred repetitions until the keyboard rebooted"). Same
-                // reasoning, same fix as doom_begin().
-                clear_keyboard();
-            }
-            request_disp_refresh();
-        }
-        // Hold the idle timer off while we are asking: the fade/pulse would dim
-        // the prompt out from under the user (update_displays early-returns once
-        // DISP_IDLE is set, so it would never be redrawn either).
-        if (want) {
-            update_performed();
-        }
-    }
+    macro_rec_sync_tick();
+    fw_confirm_sync_tick();
 
     // Hold the idle countdown off for the whole transfer, the same way the
-    // confirmation prompt above does. The idle state machine below is NOT behind
+    // confirmation prompt does. The idle state machine (idle_fade_tick()) is NOT behind
     // the !fw_up_active gate (only the refresh that would act on it is), so a
     // flash long enough to cross the idle timeout with nobody typing flips the state
     // to idle mid-transfer — the keycaps poly_prepare_for_flash() just made
@@ -1161,8 +1210,8 @@ void housekeeping_task_user(void) {
         // poly_apply_draw_script()). Idempotent; the master block repeats it later.
         if (is_usb_host_side() && demo_active()) poly_apply_draw_script();
         // Idle "Eden" screensaver frame tick (IDLE_STYLE_EDEN, both halves). Runs
-        // before the boot-animation block below and owns the LOOPING variant; the
-        // block below is for the ONE-SHOT boot/KC_EDEN animation only.
+        // before the boot-animation block in housekeeping_display_tick() and owns the LOOPING variant; the
+        // block there is for the ONE-SHOT boot/KC_EDEN animation only.
 #if defined(KEYBOARD_polykybd_split72)
         // The status panel's idle frame, when one is due. BEFORE eden_idle_tick(), so
         // on the pass between two Eden frames the panel composes first and Eden then
@@ -1176,113 +1225,8 @@ void housekeeping_task_user(void) {
         split_sync_drain_keymap_reset();
         // Combos / tap dances the master sent: this half's flash write (cmd 48).
         poly_combos_drain_pending();
-        // One-time startup animation: render a frame while active (both halves
-        // render their own keycaps). On the finishing edge, persist the "played"
-        // marker and request a normal refresh so the base legends come back. Gated
-        // to the ONE-SHOT animation — the looping idle screensaver is driven by
-        // eden_idle_tick() above and must not run the finish edge / nonce sync here.
-        if (startup_anim_active() && !startup_anim_is_loop()) {
-            // Render THIS half's frame first — the keycap animation must never wait on
-            // the split link (the boot-time link is flaky; blocking here left the master
-            // stuck on the splash with dark keycaps).
-            startup_anim_tick();
-            // Then, ONCE and only when the transport is actually up, deliver the replay
-            // nonce to the slave so a HID replay (cmd 31) or a KC_EDEN-rearmed boot plays
-            // on both halves in lockstep. We skip the normal per-pass
-            // sync_and_refresh_displays() while Eden owns the displays, so this is the
-            // only carrier for the nonce. Gated on is_transport_connected() (non-blocking)
-            // so a fresh boot — where both halves already animate from their own marker —
-            // never stalls waiting on a slave that is still coming up; the send just
-            // rides along once the link settles and the slave's !active guard makes it a
-            // no-op there. Retried each pass until it lands (or the animation ends).
-            static bool s_anim_synced = false;
-            if (!s_anim_synced && is_usb_host_side() && is_transport_connected()) {
-                // Classify the ack via sync_succeeded() — never bool-test send_to_bridge()
-                // directly (every return is non-zero). Only latch on a genuine success so a
-                // failed send stays eligible for retry on a later pass.
-                uint8_t ack = send_to_bridge(USER_SYNC_POLY_DATA, (void *)access_local_state(), sizeof(poly_sync_t), 3);
-                if (sync_succeeded(ack)) {
-                    s_anim_synced = true;
-                }
-            }
-            if (!startup_anim_active()) {   // just finished this pass
-                s_anim_synced = false;      // re-arm for the next replay (KC_EDEN / HID)
-                // Hand off to the tutorial rather than stamping the marker here. The
-                // marker must record "the TUTORIAL was seen", not "Eden played":
-                // stamped here, RESET Eden would clear it, replay the animation, and
-                // this line would re-stamp it a second later — so the tutorial could
-                // never appear, with nothing in any log to say why.
-                if (s_tutorial_armed) {
-                    s_tutorial_armed = false;
-                    poly_tutorial_skip_reset();
-                    // ⚠️ RETIRE THE SYNCED LEVEL HERE, not only at the teardown. It has
-                    // done its job — the slave armed itself from it during Eden — and
-                    // tutorial_sync_fill() PRESERVES it, so left set it rides every sync
-                    // for the rest of the session. Two paths then go wrong: the branch
-                    // below that finds nothing to teach never reaches the teardown that
-                    // clears it, and a later Eden replay re-arms the slave, which starts
-                    // a lesson alone and is torn down by the next !ACTIVE packet.
-                    // Both halves run this, and both own their own copy of the bit.
-                    access_local_state()->tut[0] &= (uint8_t)~TUT_SYNC_ARMED;
-                    // The layer stack AND the default layout are parked inside
-                    // tutorial_start() -> tutorial_enter_base_layout(), so both halves
-                    // do it rather than only the one that owns this arm site.
-                    tutorial_start(timer_read32());
-                    poly_tutorial_publish_active();
-                    if (!tutorial_active()) {                        // nothing to teach
-                        core1_hold();            // see the teardown
-                        mark_boot_intro_done();
-                        core1_release();
-                    }
-                }
-                // Eden ran at full brightness; restore the user's normal
-                // brightness behaviour now that it has faded to black, then
-                // redraw the real legends and resume normal split sync. Skipped when
-                // the tutorial just took the keycaps over — it owns them now.
-                if (!tutorial_active()) {
-                    set_displays(get_local_state()->contrast, false);
-                    request_disp_refresh();
-                    sync_and_refresh_displays();
-                }
-            }
-            // While Eden plays we OWN the displays: skip sync_and_refresh_displays
-            // (its set_displays() would overwrite our full-bright contrast with the
-            // user brightness — the "brightness changes mid-animation" bug) and skip
-            // the boot forced-layer-resync's per-pass blocking UART, which also
-            // stole frame time. Each half renders its own keycaps independently.
-        } else if (tutorial_exclusive()) {
-            // ⚠️ CHAPTER 1 ONLY. From chapter 2 the tutorial runs in INTRO mode and
-            // falls through to the normal `else` below — the stock mods snapshot, the
-            // stock layer sync, the stock render, on both halves. This branch used to
-            // carry hand-rolled copies of all three, and each one was a bug: the mods
-            // were never refreshed, the layer never reached the slave, and the repaint
-            // front covered 12 % of the board. The fix was to stop re-implementing
-            // rather than to fix the copies. See base/tutorial_plan.h.
-            //
-            // The renderer is SLICED (a few ms per pass) precisely so the matrix keeps
-            // being scanned mid-frame — it has to notice a tap, which the unsliced Eden
-            // path provably cannot.
-            tutorial_tick();
-            poly_tutorial_push_sync();
-            poly_tutorial_finish_if_done();
-        } else {
-            // INTRO mode rides the normal path: the board renders itself, and the
-            // tutorial only advances its own phase machine and keeps the other half in
-            // step. tutorial_tick() does NOT touch a panel outside chapter 1.
-            if (tutorial_active()) {
-                tutorial_tick();
-                // The preview for the phase just entered, before anything draws or is
-                // pushed (see poly_apply_draw_script()).
-                if (is_usb_host_side()) poly_apply_draw_script();
-                poly_tutorial_skip_if_held();
-                poly_tutorial_push_sync();
-                poly_tutorial_finish_if_done();
-            }
-            sync_and_refresh_displays();
-            // After the render, so a change it just drew has already started the cascade.
-            menu_cascade_tick();
-            lang_sparkle_tick();   // the language preview's twinkles; self-gating
-        }
+        // Eden, the chapter 1 tutorial, or the normal sync and render.
+        housekeeping_display_tick();
         // The host tutorial (cmd 49): a staged report on the slave, the relay, the
         // watchdog and the layer conditions on the master, the end of a reveal.
         host_tutorial_tick();
@@ -1323,201 +1267,10 @@ void housekeeping_task_user(void) {
             (void)transaction_rpc_exec(USER_SYNC_SLAVE_DATA, sizeof(kind), &kind, sizeof(reply), reply);
         }
 #endif
-#ifdef COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE
-        // The module's own housekeeping hook has already polled the sensor this
-        // pass — quantum/keyboard.c runs housekeeping_task_modules() before
-        // housekeeping_task_user(), so the reading below is this pass's, not the
-        // previous one's. It polls on BOTH halves (the sensor is auto-detected on
-        // whichever half it is soldered to); the half without it gives up after a
-        // bounded number of retries so it can't stall the loop.
-        //
-        // Sensor telemetry heartbeat: only the half that actually has the sensor
-        // logs (gated on ltr559_available()), and only every LTR559_LOG_MS (10 min)
-        // so it's a periodic reading, not spam. This replaces the live status-OLED
-        // readout used during bring-up. NOTE: this rolls its own timer; if a third
-        // timed log ever appears, factor them into one shared timer — see
-        // readme.md "Diagnostics" -> "Timed console logs".
-        if (ltr559_available()) {
-            static uint32_t s_ltr_log = 0;
-            if (timer_elapsed32(s_ltr_log) >= LTR559_LOG_MS) {
-                s_ltr_log = timer_read32();
-                ltr559_reading_t r;
-                ltr559_get_reading(&r);
-                uprintf("LTR-559: lux=%u avg=%u prox=%u%s ch0=%u ch1=%u B=%u\n",
-                        r.lux, ltr559_avg_lux(), r.prox, r.prox_sat ? " SAT" : "",
-                        r.ch0, r.ch1, get_local_state()->contrast);
-            }
-        }
-#    ifdef POLYKYBD_LTR559_DRIVE
-        // Not while Eden or the tutorial owns the displays: the sensor pushes a fresh
-        // contrast about twice a second and would dim the intro out from under itself.
-        if (!startup_anim_active() && !tutorial_active()) {
-            poly_ltr559_drive();   // master-side auto-brightness + idle-inhibit
-        }
-#    endif
-#endif
+        ltr559_housekeeping_tick();   // LTR-559 telemetry and auto-brightness (housekeeping.c)
     }
-    // The ONE-SHOT boot/KC_EDEN animation owns the whole idle pipeline; skip it.
-    // The LOOPING Eden screensaver, however, still needs this block to run — it sets
-    // DISP_IDLE, keeps contrast steady, and reaches the TURN_OFF suspend deadline.
-    if(is_idle_tracking() && !(startup_anim_active() && !startup_anim_is_loop())) {
-        //turn off displays
-        // Full uint32 elapsed via timer_elapsed32 — no sign gate, so idle keeps
-        // working past ~24.86 days of uptime (when timer_read32() sets bit 31).
-        uint32_t elapsed_time_since_update = get_time_since_last_update();
-        if (is_usb_host_side()) {
-            poly_sync_t* local_state = access_local_state();
-            uint8_t  contrast = local_state->contrast;
-            uint8_t  flags = local_state->flags;
-
-            flags |= STATUS_DISP_ON;
-            flags &= ~((uint8_t)IDLE_TRANSITION);
-
-            // The idle delay is a per-board SETTING now (enum poly_idle_timeout, HID
-            // cmd 40), read fresh every pass rather than latched: a host that shortens
-            // it below the time already elapsed must drop the board into idle on the
-            // very next pass, not at the next key press.
-            const uint32_t idle_after_ms = get_idle_timeout_ms();
-            if(elapsed_time_since_update > idle_after_ms && contrast >= MIN_BRIGHT && (flags & DISP_IDLE)==0) {
-                int32_t time_after = elapsed_time_since_update - idle_after_ms;
-                int16_t brightness = ((FADE_TRANSITION_TIME - time_after) * get_active_brightness()) / FADE_TRANSITION_TIME;
-
-                //transition to pulsing mode
-                if(brightness<=MIN_BRIGHT) {
-                    // Log the CONFIGURED style on every transition: three different
-                    // styles land in the pulse branch below (pulse, jitter, and an
-                    // iddqd that could not start its demo), so an unnamed
-                    // "Transition to pulsing" cannot tell you which one is active.
-                    const uint8_t            style = get_idle_style();
-                    const idle_style_desc_t *desc  = idle_style_desc(style);
-                    if (desc->enter == IDLE_ENTER_DOOM && doom_screensaver_start()) {
-                        // Doom attract screensaver instead of the pulse: the demo
-                        // owns the keycaps at the user brightness — no DISP_IDLE,
-                        // and IDLE_TRANSITION stays dropped (cleared above), which
-                        // fires the back_from_idle_transition brightness restore.
-                        // doom_tick() holds last_update while the demo runs and
-                        // hands over to the normal TURN_OFF suspend at its own
-                        // deadline.
-                        contrast = get_active_brightness();
-                        uprintf("Transition to idle [style=%s] - doom screensaver\n", desc->name);
-                    } else if (desc->enter == IDLE_ENTER_STEADY) {
-                        // A style that draws the keycaps itself (Eden): enter DISP_IDLE
-                        // like the pulse, so wake-on-key, the TURN_OFF suspend and the
-                        // slave's copy of the flag work unchanged, but hold contrast DIM
-                        // and steady. Its renderer owns the pixels every pass and
-                        // migrates them itself, so there is no burn-in and no per-pass
-                        // pulse contrast to fight.
-                        contrast = desc->steady_contrast;
-                        flags |= DISP_IDLE;
-                        uprintf("Transition to idle [style=%s] - %s screensaver\n", desc->name, desc->name);
-                    } else {
-                        contrast = DISP_OFF;
-                        flags |= DISP_IDLE;
-                        flags |= IDLE_TRANSITION;
-                        // A DOOM style here means doom_screensaver_start() refused (no
-                        // doom build / fw staging active) and we silently degraded to
-                        // the legacy pulse — say so rather than reporting a plain
-                        // "pulsing" the user never selected.
-                        uprintf("Transition to idle [style=%s] - pulsing%s\n", desc->name,
-                                desc->enter == IDLE_ENTER_DOOM ? " (doom unavailable)" : "");
-                    }
-                } else if(brightness>FULL_BRIGHT) {
-                    contrast = FULL_BRIGHT;
-                    flags |= IDLE_TRANSITION;
-                    uprint("Limiting brightness\n");
-                } else{
-                    contrast = brightness;
-                    flags |= IDLE_TRANSITION;
-                }
-            } else if(elapsed_time_since_update > TURN_OFF_TIME) {
-                uprint("Turning off\n");
-                poly_suspend();
-                disable_idle_tracking();
-                contrast = local_state->contrast;
-                flags = local_state->flags;
-            } else if((flags & DISP_IDLE)!=0) {
-                const idle_style_desc_t *desc = idle_style_desc(get_idle_style());
-                if (desc->enter == IDLE_ENTER_STEADY) {
-                    // The style's renderer owns the visuals (Eden: eden_idle_tick());
-                    // keep the panel DIM and steady and DON'T compute a pulse contrast
-                    // (a per-pass contrast diff would call kdisp_idle() and fight it).
-                    contrast = desc->steady_contrast;
-                } else {
-                    int32_t time_after = PK_MAX(elapsed_time_since_update - idle_after_ms - FADE_TRANSITION_TIME, 0)/300;
-                    contrast = time_after%50;
-                    // In JITTER style each key relocates its own legend independently as
-                    // it pulses dark (kdisp_idle) — there is no shared per-cycle offset
-                    // to compute here; only the pulse `contrast` drives both halves.
-                }
-            } else {
-                flags &= ~((uint8_t)DISP_IDLE);
-            }
-
-            local_state->contrast = contrast;
-            local_state->flags = flags;
-            // Sync the active idle style so the slave jitters in lockstep with us.
-            local_state->idle_style = get_idle_style();
-        }
-    }
-    // Refresh the synced active-OS on the MASTER every pass — it is the single
-    // source of truth (resolves manual pin / host push / USB detection); the slave
-    // adopts it via copy_local_state for its legends/actions. Must be master-only:
-    // get_active_os() reads this half's own state, which on the slave is empty and
-    // would clobber the just-synced value. Cheap (a couple of branches) and the
-    // diff-gated poly sync only crosses the UART when the value actually changes.
-    if (is_usb_host_side()) {
-        uint8_t os = (uint8_t)(get_active_os() | (get_os_auto_mode() ? POLY_OS_AUTO_FLAG : 0));
-        if (access_local_state()->active_os != os) {
-            access_local_state()->active_os = os;
-            request_disp_refresh();   // OS or auto/pin mode changed -> re-render legends + icon
-        }
-        // Master-authoritative glyph-script override; the slave adopts it via
-        // copy_local_state and re-renders its own legends on the synced diff.
-        // The tutorial's chapter 3 may be previewing a language or script: it writes
-        // that over the board's state for a couple of seconds at a time and hands back
-        // the script to draw. Outside the tutorial this is get_glyph_script().
-        poly_apply_draw_script();
-        // Master-authoritative keycap legend size, adopted + re-rendered by the
-        // slave the same way.
-        if (access_local_state()->glyph_size != get_glyph_size()) {
-            access_local_state()->glyph_size = get_glyph_size();
-            request_disp_refresh();   // size changed -> re-render every main legend
-        }
-        // Glyph-script placement (cmd 30 v26), adopted + re-rendered the same way.
-        if (access_local_state()->glyph_place != get_glyph_place()) {
-            access_local_state()->glyph_place = get_glyph_place();
-            request_disp_refresh();
-        }
-        // Idle style and timeout, every pass, so the KC_IDLE_STYLE / KC_IDLE_TIMEOUT
-        // legends on the SLAVE half follow a change made here. The idle block below
-        // also writes idle_style, but only while idle tracking runs.
-        if (access_local_state()->idle_style != get_idle_style() ||
-            access_local_state()->idle_timeout != get_idle_timeout()) {
-            access_local_state()->idle_style   = get_idle_style();
-            access_local_state()->idle_timeout = get_idle_timeout();
-            request_disp_refresh();   // re-render the two setting legends
-        }
-        // Doom game mode: synced so the SLAVE strips its legends down to the
-        // game controls (the split_sync poly handler refreshes on the diff).
-        // No master-side refresh — its keycaps are owned by the game blitter
-        // while active, and doom_exit() restores them itself. The weapon-pad
-        // state rides along; a change re-renders the slave's pad keys.
-        // 2 = attract screensaver: chrome-free — the slave renders NO pad/ESC
-        // legends, every keycap belongs to the mirror blitter (full-bleed demo).
-        uint8_t doom_want = doom_mode_active() ? (doom_mode_screensaver() ? 2 : 1) : 0;
-        if (access_local_state()->doom_ctl != doom_want) {
-            // Breadcrumb: this is the value the next POLY sync carries to the
-            // slave — "slave stayed in game mode" reports hinge on it.
-            uprintf("doom ctl -> %u\n", doom_want);
-        }
-        access_local_state()->doom_ctl = doom_want;
-        uint8_t wpn_owned = 0, wpn_ready = 0;
-        if (access_local_state()->doom_ctl) {
-            doom_weapon_state(&wpn_owned, &wpn_ready);
-        }
-        access_local_state()->doom_wpn_owned = wpn_owned;
-        access_local_state()->doom_wpn_ready = wpn_ready;
-    }
+    idle_fade_tick();           // the idle fade state machine (housekeeping.c)
+    master_state_sync_tick();   // the master-authoritative synced fields (housekeeping.c)
 }
 
 

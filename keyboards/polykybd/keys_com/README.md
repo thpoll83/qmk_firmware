@@ -39,10 +39,18 @@ status OLED files and `features/` call into this folder.
   `get_flow_tap_term()` return the terms set over HID cmd 44; `caps_word_press_user()`
   tests letters in the active language; `chordal_hold_handedness()` derives the hand
   from the row.
+- `housekeeping.c`: phases of `housekeeping_task_user()` that need nothing private to
+  `poly_keymap.c`. `macro_rec_sync_tick()` and `fw_confirm_sync_tick()` copy the macro
+  recorder and the FW-2 / FW-9 confirm prompt into the synced state.
+  `ltr559_housekeeping_tick()` logs the LTR-559 reading and drives auto-brightness.
+  `idle_fade_tick()` runs the idle fade, the screensaver entry and the `TURN_OFF_TIME`
+  suspend. `master_state_sync_tick()` writes the master-authoritative fields (active OS,
+  glyph script, size and placement, idle style and timeout, Doom state).
+  `housekeeping_task_user()` calls them in that order.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
-  out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`): `latin_publish()`,
-  `render_lang_flag_key()`, `plan_main_legend()`, `poly_keycode_at()`,
-  `display_keycode_at()`, the `poly_tutorial_*()` calls, `keymaps[]`,
+  out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`):
+  `latin_publish()`, the `housekeeping.c` phases, `render_lang_flag_key()`,
+  `plan_main_legend()`, `poly_keycode_at()`, `display_keycode_at()`, the `poly_tutorial_*()` calls, `keymaps[]`,
   `FW_CONFIRM_ROW`/`FW_CONFIRM_COL` and `LATIN_PICKER_MOD`. Only files in `keys_com/`
   include it.
 - `keycode_helper.c` / `keycode_helper.h`: the custom keycode enum (`enum my_keycodes`:

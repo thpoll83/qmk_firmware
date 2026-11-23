@@ -298,7 +298,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Baseline hold threshold, used when none of the rules below has already decided.
 // Since protocol v28 this is only the DEFAULT: the live value is a setting (HID
 // cmd 44, base/tap_terms.h) returned by get_tapping_term() in keys_com/tap_hold.c.
-// poly_keymap.c asserts it equals POLY_DEFAULT_TAPPING_TERM_MS.
+// keys_com/tap_hold.c asserts it equals POLY_DEFAULT_TAPPING_TERM_MS.
 #define TAPPING_TERM 200
 
 // The opposite-hands rule, and the single biggest reason home row mods are usable:

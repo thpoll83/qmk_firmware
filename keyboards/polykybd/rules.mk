@@ -603,6 +603,15 @@ ifeq ($(strip $(POLYKYBD_TUTORIAL_TEST)), yes)
     OPT_DEFS += -DPOLYKYBD_TUTORIAL_TEST
 endif
 
+# Debug build: `-e POLYKYBD_DEBUG=yes` boots with debug_enable on, as if DB_TOGG had been
+# pressed. That turns on the key log in process_record_user() and the commands that
+# debug_enable gates: cmd 14 (key injection) and cmd 23 (bootloader entry). The rig's
+# tutorial job (qmk-test.yml `tutorial-test`) flashes this build and presses keys with
+# cmd 14. ⚠️ TEST BUILDS ONLY: on a user's board any host program could type with it.
+ifeq ($(strip $(POLYKYBD_DEBUG)), yes)
+    OPT_DEFS += -DPOLYKYBD_DEBUG
+endif
+
 ifeq ($(strip $(POLYKYBD_CRASH_TEST)), yes)
     OPT_DEFS += -DPOLYKYBD_CRASH_TEST
     SRC += dev/diag/crash_test.c

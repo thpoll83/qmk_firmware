@@ -5017,7 +5017,12 @@ void keyboard_post_init_user(void) {
     // console (process_record_user) and the host-driven active-control HID commands
     // (cmd 14 key injection, cmd 23 bootloader entry). Enable at runtime with the
     // DB_TOGG key (physical access required) when you actually want demo/debug.
+    // A POLYKYBD_DEBUG build (rules.mk, test builds only) starts with it on.
+#ifdef POLYKYBD_DEBUG
+    debug_enable = true;
+#else
     debug_enable = false;
+#endif
     debug_matrix = false;
     debug_keyboard = false;
     debug_mouse = false;

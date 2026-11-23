@@ -235,6 +235,25 @@ shipping image.
 One extended-tier HIL test: arm → power-cycle (the `reboot_persistence` machinery already
 does this) → assert the board comes up in the tutorial → skip remotely → assert normal.
 
+**The rig test that exists (2026-11-23).** The `tutorial-test` job in `qmk-test.yml` flashes
+a second pair of HIL images built with `-e POLYKYBD_DEBUG=yes`. That build boots with
+`debug_enable` on, so HID cmd 14 can press keys. The ctnd runner's `--tutorial` flag runs
+only the `TIER_TUTORIAL` tests (`station/first_run_tutorial.py`):
+
+- press `MO(_FL)` and `TO(_SL)`, tap `KC_SETTINGS_MORE` (0x7FA3) to show the advanced
+  row, then press `KC_EDEN` (0x7FA0). Both values are pinned in `keycode_helper.h`.
+  `KC_EDEN` plays Eden and starts the tutorial;
+- answer chapter 1 with the three letters the console names
+  (`Tutorial slotN: ... letter=X`), chapter 2 with left and then right Shift, and
+  chapter 3 with a held Fn;
+- hold Esc for longer than `TUT_SKIP_HOLD_MS` to skip, then wait for
+  `Tutorial skipped; displays handed back`.
+
+The test follows the steps through `Tutorial phase <NAME>` lines, which
+`tutorial_tick()` prints on the master at each step change (`k_tut_phase_names[]` in
+`features/anim/tutorial.c`, in `tut_phase_t` order). Opt in with the `hil-tutorial` label,
+`[hil-tutorial]` in a pushed commit message, or a dispatch with tier `tutorial`.
+
 ## 12. Step 1 — three letters
 
 | t | Keycaps | Status OLED |

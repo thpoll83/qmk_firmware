@@ -748,6 +748,14 @@ static void hid_cmd_14(uint8_t *data, uint8_t length, const poly_layer_t *local_
         if(pos==POS_NOT_FOUND) {
             pos = get_split_matrix_pos(keycode, local_layer->def_layer, &r, &c, is_left_side());
         }
+        // A keycode on neither layer has no key to press. NACK it: injecting at the
+        // (0, 0) the lookup leaves behind pressed whatever that position holds.
+        if (pos == POS_NOT_FOUND) {
+            memset(data, 0, length);
+            hid_reply(data, 0x0e, false);
+            raw_hid_send(data, length);
+            return;
+        }
         // key_has_display(): one key per half has no OLED, so it must
         // not drive a chip-select. See the split72 header.
         if (is_on_current_side(pos) && key_has_display(r, c)) {

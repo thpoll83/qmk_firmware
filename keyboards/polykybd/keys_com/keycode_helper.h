@@ -372,6 +372,8 @@ static_assert((int)KC_DAUTO <= (int)QK_KB_31, "Too many custom QK key codes");
 static_assert((int)KC_AI <= (int)QK_KB_MAX, "Too many custom QK key codes");
 static_assert((int)KC_AI < (int)KCL_ENUS, "Overlap detected");
 static_assert((int)KC_AI == 0x7E2A, "KC_AI moved: the host binds it as 0x7E2A");
+static_assert((int)KC_EDEN == 0x7FA0, "KC_EDEN moved: the rig's tutorial test presses it as 0x7FA0");
+static_assert((int)KC_SETTINGS_MORE == 0x7FA3, "KC_SETTINGS_MORE moved: the rig's tutorial test presses it as 0x7FA3");
 static_assert((int)KC_LANG_END <= 0x7FFF, "Emoji/Lang keycodes exceed QK_USER_MAX");
 static_assert((int)KC_OS_SET_END <= 0x7FFF, "OS action keycodes exceed QK_USER_MAX");
 // ⚠️ Same re-anchoring rule as the QK_KB guards above, and the same way it goes

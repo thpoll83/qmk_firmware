@@ -11,7 +11,7 @@ status OLED files and `features/` call into this folder.
 
 - `poly_keymap.c` / `poly_keymap.h`: the shared keymap logic. It holds the QMK
   callbacks (`housekeeping_task_user()`, `keyboard_post_init_user()`), the display
-  refresh (`update_displays()`, `sync_and_refresh_displays()`), idle (`kdisp_idle()`),
+  refresh (`update_displays()`), idle (`kdisp_idle()`),
   the language selection, and the resting legend of each key (`to_static_text()`).
   `poly_ime_family()` is here too. `poly_keymap.h` declares its exports; QMK's own
   `*_user` / `*_kb` callbacks are not in it.
@@ -58,6 +58,13 @@ status OLED files and `features/` call into this folder.
   suspend. `master_state_sync_tick()` writes the master-authoritative fields (active OS,
   glyph script, size and placement, idle style and timeout, Doom state).
   `housekeeping_task_user()` calls them in that order.
+- `display_sync.c`: `sync_and_refresh_displays()`, split into phases (the master's
+  pushes of the synced state, the MRU lists, the latin table, the layer state and the
+  last key; `apply_state_diff()`; the overlay-burst hold; `run_refresh()`), and
+  `latin_publish()`. It also holds the Eden idle loop (`eden_idle_tick()`), the
+  hand-off from Eden to the tutorial (`arm_tutorial_after_intro()`,
+  `poly_arm_tutorial_after_intro()`) and `housekeeping_display_tick()`, which picks
+  Eden, the chapter 1 tutorial or the normal sync and render each pass.
 - `key_render_helpers.c`: the helpers that `update_displays()` and `kdisp_idle()` call.
   It binds the legend-size planner to the fonts (`plan_main_legend()`), draws the overlay
   icons and records which overlay slots are on screen (`copy_overlay_to_buffer()`,
@@ -85,7 +92,7 @@ status OLED files and `features/` call into this folder.
   these three.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
   out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`,
-  `custom_keys.c`, `record.c`, `key_render_helpers.c`): `latin_publish()`, the `housekeeping.c` phases,
+  `custom_keys.c`, `record.c`, `key_render_helpers.c`, `display_sync.c`): `latin_publish()`, the `housekeeping.c` phases,
   `render_lang_flag_key()`, `plan_main_legend()`, `poly_keycode_at()`,
   `display_keycode_at()`, the `poly_tutorial_*()` calls, `keymaps[]`,
   `FW_CONFIRM_ROW`/`FW_CONFIRM_COL` and `LATIN_PICKER_MOD`. Only files in `keys_com/`

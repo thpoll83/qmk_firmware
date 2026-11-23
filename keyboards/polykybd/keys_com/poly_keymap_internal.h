@@ -3,7 +3,7 @@
 //
 // Helpers poly_keymap.c shares with the files split out of it (latin_picker.c,
 // render_key.c, tutorial_board.c, housekeeping.c, custom_keys.c,
-// key_render_helpers.c). Not a public API: only keys_com/ includes this.
+// key_render_helpers.c, display_sync.c). Not a public API: only keys_com/ includes this.
 #pragma once
 
 #include <stdbool.h>
@@ -14,7 +14,7 @@
 #include "base/legend_plan.h"  // legend_plan_env_t
 #include "fonts/gfxfont.h"     // GFXfont
 
-// Publish the Intl latin table to the slave half (poly_keymap.c owns the retry).
+// Publish the Intl latin table to the slave half (display_sync.c owns the retry).
 void latin_publish(void);
 
 // Shared between poly_keymap.c and render_key.c.
@@ -45,7 +45,7 @@ void poly_tutorial_publish_active(void);
 void poly_tutorial_push_sync(void);
 void poly_tutorial_finish_if_done(void);
 void poly_apply_draw_script(void);
-// Arms the tutorial to start when Eden ends (poly_keymap.c). KC_EDEN calls it too.
+// Arms the tutorial to start when Eden ends (display_sync.c). KC_EDEN calls it too.
 void arm_tutorial_after_intro(void);
 
 // The settings and utility keycodes, in custom_keys.c. process_record_user() calls it;
@@ -109,3 +109,13 @@ void     render_macro_rec_cancel_key(void);
 uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col);
 bool     render_idle_key(uint16_t keycode, led_t state, uint32_t seed);
 void     draw_legend_cx(const uint32_t* text, int8_t y);
+
+// The display sync, in display_sync.c. housekeeping_task_user() calls eden_idle_tick()
+// and then housekeeping_display_tick(); keyboard_post_init_user() re-arms the boot
+// layer resync. status_oled_level() is in poly_keymap.c.
+#define FORCE_LAYER_RESYNC_TRIES 12
+extern bool    g_force_layer_resync;
+extern uint8_t g_force_resync_tries;
+void    eden_idle_tick(void);
+void    housekeeping_display_tick(void);
+uint8_t status_oled_level(bool idle);

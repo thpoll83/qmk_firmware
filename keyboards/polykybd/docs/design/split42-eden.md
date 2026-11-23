@@ -128,7 +128,7 @@ table and it runs.
    line up with the split42 geom indexing.
 
 5. **The idle path is already variant-agnostic** — `eden_idle_tick()` in
-   `poly_keymap.c` runs on both variants and both halves; it's a no-op on split42
+   `keys_com/display_sync.c` runs on both variants and both halves; it's a no-op on split42
    today only because `startup_anim_*` are stubs. Once step 4 compiles the engine for
    split42, `IDLE_STYLE_EDEN` renders there automatically. Nothing else in
    `poly_keymap.c` should need changing (the one-shot boot intro is still only fired

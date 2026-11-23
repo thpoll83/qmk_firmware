@@ -12,9 +12,8 @@ status OLED files and `features/` call into this folder.
 - `poly_keymap.c` / `poly_keymap.h`: the shared keymap logic. It holds the QMK
   callbacks (`process_record_user()`, `housekeeping_task_user()`,
   `keyboard_post_init_user()`), the display refresh (`update_displays()`,
-  `sync_and_refresh_displays()`), idle and suspend (`kdisp_idle()`, `poly_suspend()`,
-  `display_wakeup()`), the overlays (`copy_overlay_to_buffer()`), the language
-  selection, and the resting legend of each key (`to_static_text()`). `poly_ime_family()`
+  `sync_and_refresh_displays()`), idle (`kdisp_idle()`), the overlays
+  (`copy_overlay_to_buffer()`), the language selection, and the resting legend of each key (`to_static_text()`). `poly_ime_family()`
   and `poly_keycode_at()` are here too. `poly_keymap.h` declares its exports; QMK's own
   `*_user` / `*_kb` callbacks are not in it.
 - `render_key.c`: `render_key()`, which draws the keys that need more than a text
@@ -44,6 +43,14 @@ status OLED files and `features/` call into this folder.
   family: settings toggles, base layer, brightness, OS selection, display style,
   Eden and the demos, and the language layer. Each handler owns both edges of its keys
   and acts on the release.
+- `power.c`: suspend, wake and shutdown. `set_displays()` sets the keycap contrast.
+  The wake paths are `display_wakeup()` (a key press), `poly_wake_from_idle()` (HID
+  cmd 15, the demo) and `suspend_wakeup_init_kb()` (USB resume), which releases core1
+  first. `suspend_power_down_kb()` feeds the watchdog, calls `poly_suspend()` and
+  `core1_suspend_tick()`, and flushes the dirty EEPROM state when
+  `core1_suspend_flush_ready()` allows it. `shutdown_user()` flushes before every
+  reset and then stops the watchdog. `poly_suspend()` records whether it switched the
+  app overlays off, and `restore_suspended_overlays()` switches them back on.
 - `housekeeping.c`: phases of `housekeeping_task_user()` that need nothing private to
   `poly_keymap.c`. `macro_rec_sync_tick()` and `fw_confirm_sync_tick()` copy the macro
   recorder and the FW-2 / FW-9 confirm prompt into the synced state.

@@ -84,3 +84,7 @@ void fw_confirm_sync_tick(void);
 void ltr559_housekeeping_tick(void);
 void idle_fade_tick(void);
 void master_state_sync_tick(void);
+
+// Suspend and wake, in power.c. poly_set_awake_state(), suspend_wakeup_init_kb() and
+// poly_prepare_for_flash() call it; true when it switched the overlays back on.
+bool restore_suspended_overlays(poly_sync_t* local_state);

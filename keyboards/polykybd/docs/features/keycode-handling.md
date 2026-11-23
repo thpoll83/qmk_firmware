@@ -66,9 +66,9 @@ after each key press" — but it does not need one, because `process_record()` r
 **before** `process_action()` when `process_record_user()` returns false, so the
 synthetic release is never generated at all. QMK compensates for the swallow in the
 same early-return path (`clear_oneshot_layer_state(ONESHOT_OTHER_KEY_PRESSED)`), so
-`OSL()` still resolves after one key. `poly_custom_key_action()` in `poly_keymap.c`
-holds the whole settings switch (both edges) and returns whether it owned the
-keycode; `process_record_user()` calls it last, before `display_wakeup()`.
+`OSL()` still resolves after one key. `poly_custom_key_action()` in `custom_keys.c`
+hands the keycode to one handler per keycode family. Each handler owns both edges of
+its keys, and the function returns whether one of them owned the keycode; `process_record_user()` calls it last, before `display_wakeup()`.
 - ⚠️ **A REAL keycode cannot use this** — swallowing it would stop it reaching the
   host. The shifts, the `_LL` F-keys and `RM_NEXT`/`RM_PREV` therefore stay in
   `post_process_record_user()`; all three are idempotent repaints, so the extra

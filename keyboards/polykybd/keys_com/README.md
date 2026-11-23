@@ -39,8 +39,13 @@ status OLED files and `features/` call into this folder.
   `get_flow_tap_term()` return the terms set over HID cmd 44; `caps_word_press_user()`
   tests letters in the active language; `chordal_hold_handedness()` derives the hand
   from the row.
+- `custom_keys.c`: the settings and utility keycodes. `poly_custom_key_action()` is
+  called from `process_record_user()` and hands each keycode to one handler per
+  family: settings toggles, base layer, brightness, OS selection, display style,
+  Eden and the demos, and the language layer. Each handler owns both edges of its keys
+  and acts on the release.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
-  out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`): `latin_publish()`,
+  out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `custom_keys.c`): `latin_publish()`,
   `render_lang_flag_key()`, `plan_main_legend()`, `poly_keycode_at()`,
   `display_keycode_at()`, the `poly_tutorial_*()` calls, `keymaps[]`,
   `FW_CONFIRM_ROW`/`FW_CONFIRM_COL` and `LATIN_PICKER_MOD`. Only files in `keys_com/`

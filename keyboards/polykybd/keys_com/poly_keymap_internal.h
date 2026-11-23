@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Helpers poly_keymap.c shares with the files split out of it (latin_picker.c,
-// render_key.c, tutorial_board.c). Not a public API: only keys_com/ includes this.
+// render_key.c, tutorial_board.c, custom_keys.c). Not a public API: only keys_com/
+// includes this.
 #pragma once
 
 #include <stdbool.h>
@@ -22,6 +23,7 @@ bool render_menu_key(uint16_t keycode, led_t state, uint8_t current_lang);
 void draw_mru_top_bar(uint16_t keycode);
 uint32_t glyph_script_codepoint(uint8_t script, uint16_t keycode);
 uint16_t kcl_for_lang(uint8_t lang);
+int16_t  kcl_lang_index(uint16_t keycode);   // the LANG index of a KCL_ keycode, or -1
 void render_lang_flag_key(uint8_t idx, const uint32_t* label, uint8_t current_lang);
 extern const GFXfont* const lang_label_fonts[];
 extern const legend_plan_env_t legend_plan_env;
@@ -43,6 +45,12 @@ void poly_tutorial_publish_active(void);
 void poly_tutorial_push_sync(void);
 void poly_tutorial_finish_if_done(void);
 void poly_apply_draw_script(void);
+// Arms the tutorial to start when Eden ends (poly_keymap.c). KC_EDEN calls it too.
+void arm_tutorial_after_intro(void);
+
+// The settings and utility keycodes, in custom_keys.c. process_record_user() calls it;
+// true means the keycode was ours and is swallowed.
+bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record);
 
 // Defined in poly_keymap.c and used by tutorial_board.c too.
 uint16_t poly_keycode_at(uint8_t layer, uint8_t row, uint8_t col);

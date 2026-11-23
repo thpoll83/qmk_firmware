@@ -146,7 +146,7 @@ flashes all stale bundles, `flash <id>` force-flashes one).
     fonts/firmware — do not unplug" screen with a full-width progress bar, and the RGB
     matrix breathes (cyan = font pack, orange = firmware/bootloader = "can't type");
     `poly_prepare_for_flash()` (HID BEGIN) drops to the base layer + bridges it to the
-    slave so typing still works. See `oled_helper.c`, `poly_keymap.c` (`flash_rgb_tick`,
+    slave so typing still works. See `oled_helper.c`, `keys_com/rgb.c` (`flash_rgb_tick`,
     `rgb_matrix_indicators_kb`), `lib/drivers/fw_staging.c` (`fw_staging_active_target`).
 
 - **Make a pack font resident** (so UI chrome renders with no pack): add its

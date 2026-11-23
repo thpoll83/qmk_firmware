@@ -84,3 +84,10 @@ void fw_confirm_sync_tick(void);
 void ltr559_housekeeping_tick(void);
 void idle_fade_tick(void);
 void master_state_sync_tick(void);
+
+// The key-matrix LEDs, in rgb.c (RGB_MATRIX_ENABLE builds only).
+#ifdef RGB_MATRIX_ENABLE
+void flash_rgb_tick(void);
+void rgb_adjust_key_down(uint16_t keycode);
+void rgb_adjust_key_up(void);
+#endif

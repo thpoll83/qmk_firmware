@@ -4424,8 +4424,6 @@ static void boot_trace(const uint32_t* digit) {
 }
 #endif
 
-// Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
-// Global variables: com
 // ---- keyboard_post_init_user(), in the order it runs -----------------------------
 // Each step is called once, from keyboard_post_init_user() below. The order is the
 // boot order; the splash and sub-step numbers in the steps are what a hang report names.
@@ -4829,6 +4827,8 @@ static void post_init_latin_table(poly_eeconf_t* ee) {
     }
 }
 
+// QMK calls this once after reset. It runs the post_init_*() steps above in boot
+// order, then the displays, the first-run intro and the watchdog.
 void keyboard_post_init_user(void) {
     post_init_tables();
     post_init_debug_flags();

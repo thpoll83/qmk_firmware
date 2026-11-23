@@ -990,7 +990,7 @@ static void render_macro_key(uint8_t id) {
 // The "Preset" / "Clear" MRU control keys that bracket the top recents row.
 // The label sits next to the recents (Preset right-aligned on the left corner,
 // Clear left-aligned on the right corner) with an arrow pointing into the row.
-// (lang_label_fonts is declared above render_lang_flag_key.)
+// (lang_label_fonts is defined above render_lang_flag_key, in key_render_helpers.c.)
 static void render_mru_ctrl_key(bool preset) {
     if (preset) {
         kdisp_write_gfx_text(lang_label_fonts, 1, BUFFER_X + 14, 18, U"Preset");

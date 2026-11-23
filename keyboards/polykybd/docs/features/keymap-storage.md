@@ -52,6 +52,7 @@ measured rather than derived.
 | File | Role |
 |------|------|
 | `render_key.c` | The keycap renderers: `render_key()` and the menu, macro, macro-picker, MRU and region-tab keys. Paired with `to_static_text()`, which stays in `poly_keymap.c` because the host parses it there. |
+| `key_render_helpers.c` | The helpers `update_displays()` and `kdisp_idle()` call: the overlay blit, the language flag and FW-2 confirm keys, `poly_keycode_at()` with the F-row alignment, the idle legend relocation and the centred legend draw. |
 | `latin_picker.c` | The Intl latin-variation picker and the remap mode (`latin_picker.h`). |
 | `tutorial_board.c` | The keyboard side of the first-run tutorial: the callbacks `tutorial.c` calls, the key tour, the chapter 3 preview and the tutorial branch of `process_record_user()`. |
 | `tap_hold.c` | QMK's tap-hold hooks: the HID cmd 44 terms, Caps Word's letter test, Chordal Hold's hand per key. |

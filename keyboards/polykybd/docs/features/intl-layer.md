@@ -3,9 +3,12 @@
 Extracted from `CLAUDE.md` 2026-09-14. The prose is unchanged; only heading levels
 and relative links were adjusted to suit a standalone file.
 
-## Intl latin-variation picker (`poly_keymap.c`, `_ADDLANG1`)
+## Intl latin-variation picker (`keys_com/latin_picker.c`, `_ADDLANG1`)
 Holding **Intl** shows each letter's selected accented variation; tapping **Ctrl**
 (`LATIN_PICKER_MOD`) turns the number row into a picker of that letter's variations.
+`process_record_user()` hands the Intl keys to `latin_picker_record_early()` (the remap
+prompt, the remap key, the latch release) and `latin_picker_record_pressed()` (the
+letters, the latch toggle, the open picker) in `latin_picker.c`.
 The mechanism is worth knowing because it is not the obvious implementation:
 
 - ⚠️ **The picker modifier is `MOD_MASK_CTRL` and must not go back to Alt.** The

@@ -10,6 +10,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "quantum.h"   // keyrecord_t
+
 int8_t latin_picker_slot(uint16_t keycode);
 uint8_t latin_variation_count(uint8_t row);
 uint8_t latin_page_count(uint8_t row);
@@ -22,3 +24,12 @@ void latin_remap_apply(uint8_t slot, uint8_t letter);
 void latin_remap_reset_all(void);
 void latin_picker_reset_page(void);
 const uint32_t* latin_variation(uint16_t keycode, bool upper_case);
+
+// The Intl keys in process_record_user(). Each returns true when it decided the event,
+// with process_record_user()'s return value in *ret.
+bool latin_picker_record_early(uint16_t keycode, keyrecord_t *record, bool addlang, bool *ret);
+bool latin_picker_record_pressed(uint16_t keycode, bool addlang, bool *ret);
+// The picker's Ctrl latch: true only while the Ctrl it rides on was registered by the
+// latch. latin_picker_latch_release() drops it, if the latch holds it.
+bool latin_picker_latched(void);
+void latin_picker_latch_release(void);

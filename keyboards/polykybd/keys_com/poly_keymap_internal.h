@@ -43,7 +43,6 @@ void poly_tutorial_publish_active(void);
 void poly_tutorial_push_sync(void);
 void poly_tutorial_finish_if_done(void);
 void poly_apply_draw_script(void);
-bool poly_picker_latched(void);   // the Intl picker holds the Ctrl it latched
 
 // Defined in poly_keymap.c and used by tutorial_board.c too.
 uint16_t poly_keycode_at(uint8_t layer, uint8_t row, uint8_t col);

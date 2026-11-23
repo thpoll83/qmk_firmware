@@ -125,11 +125,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-// The KC_OS_* keycode range and enum poly_os bind POSITIONALLY to the
-// polymod_os_actions module's own two index spaces (its rows and columns) — the
-// module owns no keyboard enum, so these asserts are the whole contract. Every
-// row is pinned (not just first/last/count): both enums are append-only, but a
-// middle insertion on one side alone would silently shift every action after it.
 
 #include "latin_picker.h"
 #include "poly_keymap_internal.h"

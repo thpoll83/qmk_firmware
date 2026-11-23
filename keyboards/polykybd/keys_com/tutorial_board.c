@@ -121,11 +121,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-// The KC_OS_* keycode range and enum poly_os bind POSITIONALLY to the
-// polymod_os_actions module's own two index spaces (its rows and columns) — the
-// module owns no keyboard enum, so these asserts are the whole contract. Every
-// row is pinned (not just first/last/count): both enums are append-only, but a
-// middle insertion on one side alone would silently shift every action after it.
 
 #include "latin_picker.h"
 #include "poly_keymap_internal.h"
@@ -1034,8 +1029,8 @@ static bool tut_tour_step_ready(void) {
     if (step < 0 || step >= s_tour_n) return true;
     const uint8_t need = tut_step_info(step)->need;
     if ((need & TUT_NEED_INTL) && !IS_LAYER_ON(_ADDLANG1)) return false;
-    if ((need & TUT_NEED_PICKER) && !poly_picker_latched()) return false;
-    if ((need & TUT_NEED_CLOSED) && poly_picker_latched()) return false;
+    if ((need & TUT_NEED_PICKER) && !latin_picker_latched()) return false;
+    if ((need & TUT_NEED_CLOSED) && latin_picker_latched()) return false;
     return true;
 }
 
@@ -1060,7 +1055,7 @@ static void poly_tutorial_tour_rewind_if_let_go(void) {
         for (int16_t i = step - 1; i >= 0; --i) {
             if (s_tour_kind[i] == want) { back = (uint8_t)i; break; }
         }
-    } else if ((need & TUT_NEED_PICKER) && !poly_picker_latched()) {
+    } else if ((need & TUT_NEED_PICKER) && !latin_picker_latched()) {
         for (int16_t i = step - 1; i >= 0; --i) {
             if (s_tour_kind[i] == TUT_TOUR_INTL_CTRL) { back = (uint8_t)i; break; }
         }

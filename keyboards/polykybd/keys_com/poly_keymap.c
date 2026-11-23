@@ -40,6 +40,7 @@
 #    include "hardware/structs/timer.h"   // timer_hw->timerawl — raw 1 MHz us counter
 #endif
 #include "lib/fw_update/split_fw_up.h"
+#include "lib/fw_update/fw_apply.h"   // fw_apply_tick(), fw_apply_screen_tick()
 #ifdef POLYKYBD_BULK_PIPE
 #    include "lib/hid/poly_pipe.h"
 #endif
@@ -277,9 +278,6 @@ void set_displays(uint8_t contrast, bool idle);
 void set_selected_displays(int8_t old_value, int8_t new_value);
 void toggle_stagger(bool new_state);
 void oled_update_buffer(void);
-void oled_fw_apply_screen(void);   // oled_helper.c — firmware-apply status screen
-void oled_fw_restart_screen(void); // oled_helper.c — "Restart Now" before mcu_reset()
-void oled_fw_failed_screen(void);  // oled_helper.c — "Update FAILED", the apply was refused
 void poly_suspend(void);
 
 
@@ -400,139 +398,6 @@ static void flash_rgb_tick(void) {
 }
 
 #endif
-
-// Force the orange "applying — you cannot type" cue onto the LEDs synchronously.
-//
-// rgb_matrix_indicators_kb() already picks orange while commit_pending, but that
-// only runs from the next rgb_matrix_task() — and on the apply path there is no
-// next task: the blocking self-flash / mcu_reset never returns. So the cue the
-// code appears to implement was in practice never seen. Push it out here, the
-// same way oled_fw_apply_screen() flushes the status OLED in one pass.
-//
-// No-op on a variant without an RGB matrix (split42), so callers stay unguarded.
-static void poly_flash_rgb_now(void) {
-#ifdef RGB_MATRIX_ENABLE
-    if (!rgb_matrix_is_enabled()) rgb_matrix_enable_noeeprom();
-    rgb_matrix_set_color_all(24, 6, 0);      // same orange as the bootloader cue
-    rgb_matrix_update_pwm_buffers();
-#endif
-}
-
-// How long a firmware notice that does NOT end in a reboot stays on the status OLED.
-// Only the failure notice needs it: every other caller is followed by a self-flash or
-// a reset, so the panel simply stops being repainted. 5 s is long enough to read two
-// words and short enough that the board does not look wedged.
-#define POLY_FW_NOTICE_MS 5000
-
-// How long the panel is left UNTOUCHED after a firmware phase ends, so the gap before
-// the next phase does not show as a flash of the status screen. Deliberately equal to
-// FLASH_RGB_HOLD_MS: the LEDs already bridge these gaps with exactly this timer, and a
-// panel that went back to normal while the matrix was still orange was the visible
-// half of that asymmetry.
-#define POLY_FW_HOLD_MS 2500
-
-static uint16_t s_fw_notice_at = 0;
-static bool     s_fw_notice_armed = false;
-static uint16_t s_fw_phase_at   = 0;
-static bool     s_fw_phase_seen = false;
-
-// Why the last apply was refused, and the numbers behind it. Kept here rather than
-// passed down the call because oled_fw_failed_screen() repaints from them on EVERY
-// tick the notice is held — the housekeeping pass that recorded them is long gone by
-// the second repaint.
-static fw_apply_verdict_t s_fw_fail_why  = FW_APPLY_OK;
-static uint32_t           s_fw_fail_size = 0;
-static uint32_t           s_fw_fail_want = 0;
-static uint32_t           s_fw_fail_got  = 0;
-
-fw_apply_verdict_t poly_fw_failure_detail(uint32_t *size, uint32_t *want, uint32_t *got) {
-    if (size) *size = s_fw_fail_size;
-    if (want) *want = s_fw_fail_want;
-    if (got)  *got  = s_fw_fail_got;
-    return s_fw_fail_why;
-}
-
-// The phase that is live RIGHT NOW, in priority order.
-//
-// ⚠️ CONFIRM is tested first and from TWO sources. The synced poly_sync_t.fw_confirm
-// is what both halves agree on, but the MASTER only sets it from housekeeping — one
-// pass AFTER fw_staging_awaiting_confirm() goes true, and COMMIT has already cleared
-// fw_up_active by then. That one-pass hole put a status screen between the progress
-// bar and the prompt, which is exactly how this was reported from hardware.
-static poly_fw_screen_t fw_screen_live(void) {
-    if (get_local_state()->fw_confirm || fw_staging_awaiting_confirm()) return POLY_FW_SCREEN_CONFIRM;
-    if (fw_staging_fw_up_active())                                      return POLY_FW_SCREEN_UPDATE;
-    if (fw_staging_reboot_pending())                                    return POLY_FW_SCREEN_RESTART;
-    if (fw_staging_commit_pending())                                    return POLY_FW_SCREEN_APPLY;
-    return POLY_FW_SCREEN_NONE;
-}
-
-// Stamp the "a firmware phase was live" clock; runs every housekeeping pass.
-//
-// ⚠️ fw_staging_confirm_in_progress() is deliberately NOT stamped here, though it is
-// exactly the second gap (answered prompt -> the host's FW_UP_APPLY). It clears only
-// inside fw_staging_finalize(), i.e. only when the host sends another COMMIT — so a
-// host that disappears right after the user presses A leaves it true FOREVER, and
-// stamping on it would freeze the status OLED on the confirm screen for good. The
-// last CONFIRM pass already stamped, so the plain POLY_FW_HOLD_MS window bridges that
-// gap anyway, and it cannot latch.
-static void fw_screen_tick(void) {
-    if (fw_screen_live() != POLY_FW_SCREEN_NONE) {
-        s_fw_phase_at   = timer_read();
-        s_fw_phase_seen = true;
-    }
-}
-
-poly_fw_screen_t poly_fw_screen(void) {
-    const poly_fw_screen_t live = fw_screen_live();
-    if (live != POLY_FW_SCREEN_NONE) return live;
-    // The refusal notice is LATCHED rather than derived: commit_pending is already
-    // clear by the time it is raised, so nothing in the live state describes it.
-    if (s_fw_notice_armed && timer_elapsed(s_fw_notice_at) < POLY_FW_NOTICE_MS) {
-        return POLY_FW_SCREEN_FAILED;
-    }
-    s_fw_notice_armed = false;
-    return POLY_FW_SCREEN_NONE;
-}
-
-bool poly_fw_hold_active(void) {
-    if (!s_fw_phase_seen) return false;
-    if (timer_elapsed(s_fw_phase_at) < POLY_FW_HOLD_MS) return true;
-    s_fw_phase_seen = false;
-    return false;
-}
-
-// The board is about to stop being usable: latch the orange cue AND blank every
-// keycap, so the two halves say the same thing at once.
-//
-// ⚠️ The keycaps are the half that used to be missing. The orange RGB says "you
-// cannot type", while 72 displays went on showing a full, inviting legend set for
-// the whole apply — the one moment the keys genuinely do nothing. Both are pushed
-// out SYNCHRONOUSLY here for the same reason: the callers are about to enter a
-// blocking self-flash or a reset, so anything left to the next housekeeping pass is
-// never painted (see poly_flash_rgb_now()'s own note). clear_all_displays() is one
-// broadcast write over the shift-register chip-select, not 72 of them.
-//
-// NOT used for the staging transfer: the board still runs there, the cue is cyan
-// rather than orange, and poly_prepare_for_flash() has deliberately just drawn
-// legible base legends so you CAN keep typing.
-static void poly_board_unusable_cue(void) {
-    // Take the keycaps off whatever else owns them FIRST, or that writer paints the
-    // blank straight back. update_displays() early-returns for both of these, which
-    // is precisely the sign that they are writers in their own right — and the idle
-    // pulse is a third, reached through set_displays(contrast, idle) -> kdisp_idle()
-    // rather than through update_displays() at all. A standalone "apply staged image"
-    // can arrive on an idling board with no preceding transfer, so none of this is
-    // hypothetical: poly_prepare_for_flash() does the same teardown for the same
-    // reason at the START of an update, and this is its counterpart at the end.
-    demo_stop();               // the showroom demo, too: the apply owns the board now
-    doom_screensaver_stop();   // self-guards: only an active attract demo
-    startup_anim_stop();       // looping Eden (and a one-shot mid-flight)
-    poly_sync_t* local_state = access_local_state();
-    local_state->flags &= ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);
-    poly_flash_rgb_now();
-    clear_all_displays();
-}
 
 #ifdef RGB_MATRIX_ENABLE
 #define RGB_REPEAT_INITIAL_DELAY_MS 400
@@ -923,21 +788,6 @@ void sync_and_refresh_displays(void) {
 // bare Ctrl tap does nothing in the same apps. LATIN_PICKER_MOD is defined in
 // poly_keymap_internal.h, which render_key.c shares.
 
-// True only while the Ctrl the picker is riding on was registered BY the latch, so
-// dropping it on layer exit can never release a Ctrl the user is really holding.
-static bool s_picker_latched = false;
-bool poly_picker_latched(void) {
-    return s_picker_latched;
-}
-
-// Drop the picker's Ctrl latch, if WE hold it. Gated on ownership, never on the key:
-// releasing a Ctrl the user is really holding would leave it stuck (docs/features/intl-layer.md).
-static void picker_latch_release(void) {
-    if (s_picker_latched) {
-        unregister_mods(MOD_MASK_CTRL);
-        s_picker_latched = false;
-    }
-}
 
 // Sets layer state variable tracking the active keyboard layer.
 
@@ -958,7 +808,7 @@ layer_state_t layer_state_set_user(layer_state_t state) {
         // Leaving Intl closes the picker. Without this the latched Ctrl would stay
         // registered with the layer gone, so every following keystroke reaches the
         // host as Ctrl+key.
-        picker_latch_release();
+        latin_picker_latch_release();
         // Reset the page unconditionally, NOT only when we owned the latch: the
         // user can hold Ctrl themselves and page, in which case s_picker_latched is
         // false and the page would survive to the next visit to the layer.
@@ -1157,7 +1007,7 @@ void housekeeping_task_user(void) {
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
     tutorial_rgb_tick(); // …and own it through the first-run show and the lesson
 #endif
-    fw_screen_tick();   // ...and keep the status OLED on the matching firmware screen
+    fw_apply_screen_tick();   // ...and keep the status OLED on the matching firmware screen
 
     boot_banner_housekeeping_tick();   // re-emit the boot banner for a late console
 #ifdef POLYKYBD_BULK_PIPE
@@ -1182,186 +1032,11 @@ void housekeeping_task_user(void) {
         poly_macro_label_sync_tick();
     }
 
-    // fw_up state machine: apply on success path, advance deferred erase.
-    // Both must run regardless of fw_up_active so the slave's erase actually
-    // progresses and the master's apply-and-reboot fires after a successful
-    // commit.
-    // Split across housekeeping passes ON PURPOSE, one stage per pass.
-    //
-    // Two reasons, and the second is why it is worth the three extra passes. (1) The
-    // console only leaves this board from the main loop, so a marker printed
-    // immediately before a call that never returns is simply lost -- which is how a
-    // hang here has repeatedly been invisible. Returning between stages gives each
-    // marker a main loop to go out on, so the log names the stage that wedged.
-    // (2) EVERY stage below touches flash or the split link, and they must not be
-    // interleaved with the rest of housekeeping while core1 is locked out.
-    // ⚠️ FUNCTION-SCOPE, not inside the `if`: the sequence below only advances
-    // while the apply is armed, and BOTH fw_staging_begin_target() and
-    // fw_staging_begin_deferred_target() clear s_commit_pending. A host that
-    // abandons an update and starts a fresh one mid-sequence would otherwise
-    // leave this stuck at 1-3, and the NEXT apply would resume there -- skipping
-    // clear_keyboard() (a key down at that moment auto-repeats on the host until
-    // USB drops) and save_all_dirty(). The else-branch below puts it back.
-    static uint8_t apply_step = 0;
-    if (fw_staging_commit_pending()) {
-        switch (apply_step) {
-            case 0:
-                // Release anything still held. From here the main loop never scans the
-                // matrix again (the self-flash below does not return), so a key that is
-                // physically down when the apply is armed would never have its release
-                // reported — the host keeps it registered and auto-repeats until USB
-                // drops at the reboot (field: hundreds of repetitions).
-                clear_keyboard();
-                // Orange cue AND 72 blanked keycaps. From here the matrix is never
-                // scanned again, so a keycap still showing its legend is advertising a
-                // key that does nothing — for the whole multi-second copy.
-                poly_board_unusable_cue();
-                // Paint the "⟳Applying / Firmware⟳" notice and flush it fully BEFORE the
-                // blocking self-flash below (which never returns), so the status OLED is
-                // completely refreshed — not torn mid-transition — as the apply begins.
-                // Runs on both halves; each draws its own side's word. Its ~26 ms of I2C
-                // also gives the clear_keyboard() report time to leave over USB.
-                oled_fw_apply_screen();
-                uprintf("APPLY 1/4: keys cleared, RGB + keycaps blanked, OLED flushed\n");
-                apply_step = 1;
-                return;
-            case 1:
-                // Persist MRU/settings before the firmware swap — this path resets via
-                // watchdog (never returns) and skips shutdown_quantum. Transfer is done
-                // by commit, so the blocking flash write is safe here.
-                //
-                // ⚠️ Under the core1 lockout: this can force a wear-levelling
-                // CONSOLIDATION, i.e. a flash erase, and QMK's backing store does not
-                // lock core1 out itself. Core1 was relaunched moments ago by the staging
-                // erase, so it is free to be fetching from XIP exactly when the QSPI
-                // leaves XIP mode — the bus then stalls and the erase never returns.
-                //
-                // ⚠️ The lockout is RELEASED before returning, not held across the
-                // remaining stages. Each stage hands control back to the main loop,
-                // which can service a raw-HID overlay -- and a compressed one is
-                // dispatched to core1 through a BLOCKING FIFO push plus a spin on
-                // core1's completion counter. With core1 in PSM reset nothing drains
-                // it, so core0 would hang before the apply could even start. The
-                // window is a pass or two; the failure is permanent. Holding it here
-                // bought nothing either: fw_staging_do_apply() halts core1 itself.
-                core1_hold();
-                save_all_dirty();
-                core1_release();
-                uprintf("APPLY 2/4: EEPROM flushed with core1 held off\n");
-                apply_step = 2;
-                return;
-            case 2: {
-                // Verify the staged bytes IN FLASH and report them, then RETURN so the
-                // line actually goes out. Everything below this point is a call that
-                // does not come back, and the console only drains from the main loop --
-                // a marker printed immediately before it is simply lost, which is how
-                // "did it enter the copy?" stayed unanswerable for several rounds.
-                uint32_t size = 0, want = 0, got = 0;
-                // ⚠️ The out-params stay UNTOUCHED on FW_APPLY_NO_IMAGE (there is no
-                // header to read), which is why they are initialised above.
-                const fw_apply_verdict_t why = fw_staging_verify_staged_flash(&size, &want, &got);
-                uprintf("APPLY 3/4: staged %lu B (%lu sectors) crc want=%08lx got=%08lx -> %s\n",
-                        (unsigned long)size,
-                        (unsigned long)((size + 4095u) / 4096u),
-                        (unsigned long)want, (unsigned long)got,
-                        why == FW_APPLY_OK      ? "OK"
-                        : why == FW_APPLY_NO_IMAGE ? "NO IMAGE"
-                                                   : "MISMATCH");
-                if (why != FW_APPLY_OK) {
-                    // Refuse rather than erase a working firmware with an image we
-                    // cannot vouch for. The board stays usable and the host can retry.
-                    uprintf("APPLY: refusing to overwrite firmware from a bad staged image\n");
-                    fw_staging_cancel_apply();
-                    apply_step = 0;
-                    // ⚠️ This is the ONE apply path that comes back, so it is the one
-                    // that has to undo the "board is unusable" cue it just put up.
-                    // Say WHY on the panel — until now the refusal existed only as the
-                    // console line above, so from the outside the update simply did
-                    // nothing — and hand the keycaps their legends back, since stage 0
-                    // blanked them for an apply that is not going to happen.
-                    s_fw_fail_why  = why;
-                    s_fw_fail_size = size;
-                    s_fw_fail_want = want;
-                    s_fw_fail_got  = got;
-                    oled_fw_failed_screen();
-                    s_fw_notice_at = timer_read();
-                    s_fw_notice_armed = true;
-                    set_displays(get_local_state()->contrast, false);
-                    request_disp_refresh();
-                    return;
-                }
-                apply_step = 3;
-                return;
-            }
-            default:
-                // ⚠️ THE LAST PAINTABLE INSTANT. fw_staging_do_apply() below runs with
-                // interrupts off for SECONDS and resets from inside itself, so there is
-                // no window after the copy and before the reboot — the panel keeps
-                // whatever is on it right now for the whole write and then the board is
-                // gone. That is why "Restart Now" was never seen on an update: it lived
-                // on fw_staging_arm_reboot()'s path, which an APPLY does not take.
-                //
-                // So the reboot is named on the apply screen itself, which is already
-                // up and stays up for the whole copy — no second paint is needed here,
-                // and none is possible after the copy. See oled_fw_apply_screen().
-                // Nothing but the call: if the 3/4 line above is the last thing in the
-                // log, the copy was entered and did not come back.
-                apply_step = 0;
-                fw_staging_apply_and_reboot();
-                // Only reached when the apply was refused (no valid staged image /
-                // failed flash CRC); it disarms itself there and the board keeps
-                // running. Stage 2 already handed core1 back, and the refusal checks
-                // sit above the PSM halt inside do_apply, so this relaunches a service
-                // that is already running today -- kept because it is the one path
-                // where a future halt-then-refuse would otherwise leave the RLE
-                // service down for good. It respects any outstanding hold.
-                (void)core1_restore_service();
-                // ...and it is now also the path that has to take the screen back. The
-                // board is alive and the panel is showing a restart that is not coming,
-                // with the keycaps still blanked from stage 0.
-                // Ask which of its two refusals it was rather than assuming. It returns
-                // on a missing header OR a failed re-verify, and stage 2 passed moments
-                // ago, so whichever it is the user needs the real one. The extra ~25 ms
-                // CRC only ever runs on a path that has already failed.
-                s_fw_fail_size = s_fw_fail_want = s_fw_fail_got = 0;
-                s_fw_fail_why  = fw_staging_verify_staged_flash(&s_fw_fail_size,
-                                                               &s_fw_fail_want,
-                                                               &s_fw_fail_got);
-                if (s_fw_fail_why == FW_APPLY_OK) s_fw_fail_why = FW_APPLY_NO_IMAGE;
-                oled_fw_failed_screen();
-                s_fw_notice_at    = timer_read();
-                s_fw_notice_armed = true;
-                set_displays(get_local_state()->contrast, false);
-                request_disp_refresh();
-                break;
-        }
-    } else if (apply_step != 0) {
-        // Disarmed from another path (a new BEGIN) part-way through. Start the
-        // next apply from stage 0 rather than resuming mid-sequence.
-        uprintf("APPLY: disarmed at stage %u — sequence reset\n", (unsigned)apply_step);
-        apply_step = 0;
-    }
-    if (fw_staging_reboot_pending()) {
-        clear_keyboard();   // same as above: no further matrix scan before the reset
-        poly_board_unusable_cue();
-        // This path had no status-OLED state at all: it went orange and reset while the
-        // panel still showed the ordinary status screen. Flushed synchronously, like the
-        // apply notice, because mcu_reset() below never returns.
-        oled_fw_restart_screen();
-        // A handedness change arrives on this path (the reset-sync carrier). The
-        // handler only records it -- it runs inside a split-transaction callback
-        // with a ~20 ms budget, and this write can erase a sector.
-        poly_hand_flush_pending();
-        save_all_dirty();   // persist before the full-chip reset — this path skips shutdown_quantum too
-        mcu_reset();   // QK_REBOOT slave path — clean full-chip reset; never returns
-    }
-    fw_staging_process_deferred();
-
-    // Drain the slave's deferred FONTPACK reload (the ~50 ms full-body verify was
-    // moved off the COMMIT split-transaction callback so it can't overrun the
-    // ~20 ms window). Refresh the keycaps once the new pack's fonts are live.
-    if (fw_staging_process_fontpack_reload()) {
-        request_disp_refresh();
+    // The firmware apply step machine, the reboot path, deferred staging and the
+    // slave's font-pack reload (lib/fw_update/fw_apply.c). True = a stage ran and
+    // this pass ends here, one stage per pass, as when the code was inline.
+    if (fw_apply_tick()) {
+        return;
     }
 
     // FW-2: drive the unsigned-image confirmation prompt. The master owns the
@@ -4452,93 +4127,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
     }
 
     const bool addlang = get_highest_layer(get_local_layer()->layer)==_ADDLANG1;
-    const poly_layer_t* global_layer = get_global_layer();
 
-    // --- Intl letter remap ----------------------------------------------------
-    // Runs BEFORE the letter / picker handling below, because in remap mode a
-    // letter press means "this one", not "emit your variation".
-    if(addlang && access_local_layer()->remap_mode != LATIN_REMAP_OFF) {
-        // ⚠️ Modifiers and LAYER keys must fall through — this block used to
-        // `return false` for every release, which swallowed the release of
-        // MO(_ADDLANG1) ITSELF.  QMK therefore never unregistered the layer: Intl
-        // went down and never came back up, so releasing it did not leave the
-        // prompt and there was no way out of the mode (field).  A held Shift was
-        // stuck the same way.  This is the picker's documented "gate the swallow on
-        // OWNERSHIP, not on the keycode" rule, which this block ignored.
-        if(IS_MODIFIER_KEYCODE(keycode) || IS_QK_MOMENTARY(keycode) || IS_QK_TO(keycode)) {
-            return true;
-        }
-        if(!record->event.pressed) {
-            return false;                   // swallow the release of whatever we consumed
-        }
-        const int8_t slot = latin_target_slot(keycode);
-        if(keycode == KC_LAT_REMAP) {
-            latin_remap_cancel();           // tap the remap key again to back out
-        } else if(slot >= 0) {
-            poly_layer_t* ll = access_local_layer();
-            if(ll->remap_mode == LATIN_REMAP_PICKKEY) {
-                ll->remap_target = (uint8_t)slot;
-                ll->remap_mode   = LATIN_REMAP_PICKLTR;
-            } else if((uint8_t)slot == ll->remap_target || slot < LATIN_LETTER_TARGETS) {
-                // Only a LETTER can be a source, so a punctuation key is inert as a
-                // choice here (and renders blank) — with one exception: the TARGET
-                // itself, which is how a key is cleared. For a letter that is
-                // "re-pick your own letter"; for a punctuation key, which has no own
-                // letter, it is the only per-key way back to plain typing. Both land
-                // on LATIN_ASSIGN_NONE inside latin_remap_apply().
-                latin_remap_apply(ll->remap_target, (uint8_t)slot);
-                latin_remap_cancel();
-            }
-            request_disp_refresh();
-        }
-        // Everything else is inert while the prompt is up — the board is a dialog.
-        return false;
-    }
-    if(keycode == KC_LAT_REMAP) {
-        if(record->event.pressed && addlang) {
-            // Shift+remap clears EVERY assignment. Once the board is remapped the
-            // Intl legends no longer match the printed letters, so there has to be
-            // one way back that does not depend on remembering what was changed.
-            // (The per-key reset needs no gesture of its own: re-assigning a key to
-            // its own letter is the same thing, and latin_remap_apply stores
-            // LATIN_ASSIGN_NONE for it.)
-            if((get_mods() & MOD_MASK_SHIFT) != 0) {
-                latin_remap_reset_all();
-                return false;
-            }
-            // Held with Intl: open remap mode. The Intl layer is the only place the
-            // key exists, so there is no "outside the layer" case to guard.
-            poly_layer_t* ll = access_local_layer();
-            ll->remap_mode   = LATIN_REMAP_PICKKEY;
-            ll->remap_target = 0;
-            // ⚠️ The prompt swallows every non-modifier release from here on, so a key
-            // QMK had ALREADY registered when the mode opened would never be
-            // unregistered — the host would hold it down and auto-repeat until USB
-            // dropped. Reachable: a letter with no variation falls through to QMK on
-            // this layer, so it can genuinely be down at this moment. Same remedy the
-            // firmware-confirm prompt and doom_begin() use for the same reason.
-            clear_keyboard();
-            // Drop the variation picker if it was open: the two prompts would
-            // otherwise both claim the keycaps.
-            picker_latch_release();
-            latin_picker_reset_page();
-            request_disp_refresh();
-        }
-        return false;
-    }
-    // The latch toggles on the PRESS, so the release of the tap that ARMED it must
-    // be swallowed too — otherwise QMK unregisters the modifier we just registered
-    // and the latch is over before the finger lifts.
-    //
-    // ⚠️ Gated on s_picker_latched, i.e. on us owning the modifier — NOT on the key
-    // alone. A Ctrl held down before Intl was pressed is registered by QMK, and
-    // swallowing that release would leave it registered forever, turning every
-    // later keystroke into Ctrl+key. The other two cases fall through harmlessly:
-    // the toggle-OFF press already unregistered, so QMK's release handler just
-    // unregisters nothing.
-    if(addlang && !record->event.pressed && s_picker_latched &&
-       (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL)) {
-        return false;
+    // The Intl remap prompt, the remap key and the picker latch's release
+    // (latin_picker.c). Before the settings gate, as when this code was inline here.
+    bool intl_ret;
+    if (latin_picker_record_early(keycode, record, addlang, &intl_ret)) {
+        return intl_ret;
     }
     // A gated settings key is BLANK, so it must also be INERT — swallow both edges
     // before anything can act on it.
@@ -4609,157 +4203,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t* record) {
                 uprintf("Master: slave reboot ack=0x%02x\n", ack);
                 return true;   // let QMK's QK_REBOOT handler reset the master
             }
-            case KC_A ... KC_Z:
-            case KC_MINUS ... KC_SLASH:
-                // A punctuation key is a target too, but ONLY once it has been
-                // mapped. Until then it must behave exactly as it does everywhere
-                // else — never become the picker's subject, never swallow its own
-                // keystroke — so it leaves here before touching any of that. The
-                // guard is a no-op for letters, which always host themselves.
-                if(!latin_has_row(keycode)) {
-                    break;
-                }
-                // A different letter has a different variation count, so the page
-                // that was showing may not exist on it.  Reset here rather than in
-                // the picker-open branch below: this case runs on EVERY letter press,
-                // picker open or not, so it cannot be bypassed.
-                if(keycode != get_local_last_latin_keycode()) {
-                    latin_picker_reset_page();
-                }
-                set_local_last_latin_keycode(keycode);
-                if((get_mods() & LATIN_PICKER_MOD) == 0 && addlang) {
-                    const bool lshift = get_mods() == MOD_BIT(KC_LEFT_SHIFT);
-                    const bool rshift = get_mods() == MOD_BIT(KC_RIGHT_SHIFT);
-                    const bool upper_case = lshift || rshift || global_layer->led_state.caps_lock;
-                    const uint32_t* variation = latin_variation(keycode, upper_case);
-                    if(variation!=NULL) {
-                        //this is a work-around (at least for I-Bus on Linux we need to remove the shift, otherwise the Unicode sequence will not be recognized!)
-                        if(lshift) unregister_code16(KC_LEFT_SHIFT);
-                        if(rshift) unregister_code16(KC_RIGHT_SHIFT);
-                        register_unicode(variation[0]);
-                        if(lshift) register_code16(KC_LEFT_SHIFT);
-                        if(rshift) register_code16(KC_RIGHT_SHIFT);
-                        return false;
-                    }
-                }
-                break;
             default:
                 break;
         }
-        uint16_t last_latin_keycode = get_local_last_latin_keycode();
-
-        // The picker LATCHES: tap Ctrl to open it, tap again to close, and it also
-        // closes as soon as a variation is chosen. Holding Intl+Ctrl+Shift+digit is
-        // four keys at once, which is what made it awkward in practice.
-        //
-        // It latches by registering the REAL modifier rather than a private flag,
-        // because poly_layer_t.mods is already synced to the other half — the slave
-        // draws the picker digits on ITS keys from that same bit, and both flag
-        // bytes in base/com.h are full, so a private flag would have nowhere to
-        // ride. s_picker_latched only records that WE registered it, so leaving the
-        // layer never unregisters a Ctrl the user is genuinely holding.
-        if(addlang && (keycode == KC_LEFT_CTRL || keycode == KC_RIGHT_CTRL)) {
-            if(s_picker_latched) {
-                unregister_mods(MOD_MASK_CTRL);
-                s_picker_latched = false;
-            } else if((get_mods() & LATIN_PICKER_MOD) == 0) {
-                register_mods(MOD_BIT(KC_LEFT_CTRL));
-                s_picker_latched = true;
-            }
-            request_disp_refresh();
-            return false;   // swallow: the tap is the toggle, not a modifier press
-        }
-
-        if((get_mods() & LATIN_PICKER_MOD) != 0 && addlang) {
-            // A modifier must still reach QMK while the picker is open.  This
-            // block used to `return false` for EVERY press, so the Shift PRESS
-            // was swallowed, get_mods() never gained the bit, and pick_upper
-            // below could only ever be true if Shift had been held BEFORE the
-            // picker was opened — "press Shift first or you cannot choose the
-            // capital".  Letting it through also flips the keycaps to the
-            // upper-case row for free: `mods` is part of poly_layer_t, so the
-            // change shows up as a layer_diff and housekeeping redraws.
-            if(IS_MODIFIER_KEYCODE(keycode)) {
-                return true;
-            }
-            // ⚠️ NOT a `case KC_LAT0 ... KC_LAT11` range — KC_LAT10/11 are appended
-            // elsewhere in the enum, so the picker slots are resolved by helper.
-            const int8_t pick_slot = latin_picker_slot(keycode);
-            if(pick_slot >= 0) {
-                if( latin_has_row(last_latin_keycode)) {
-                    const bool pick_upper = ((get_mods() & MOD_MASK_SHIFT) != 0) || global_layer->led_state.caps_lock;
-                    const uint8_t pick_row = latin_picker_row(last_latin_keycode, pick_upper);
-                    // Only the slots that exist are drawn on the picker keycaps
-                    // (render_key returns false for the rest), so a press on an
-                    // empty one is a press on a blank key.  Ignore it — storing
-                    // the index would leave ex[] pointing at a NULL cell, which
-                    // the letter then "emits" as whatever lies at address 0.
-                    // On a paged row this also covers the tail slots of the last
-                    // page, which are blank for exactly the same reason.
-                    const int8_t pick_idx = latin_picker_index(pick_row, get_local_layer()->picker_page, pick_slot);
-                    if(pick_idx >= 0) {
-                        latin_sync_t* global_latin_table = access_global_latin_table();
-                        // The ABSOLUTE variation index is what gets stored, not the
-                        // slot — so a pick made on page 1 still reads back correctly,
-                        // and on a variant with a different LATIN_PICKER_SLOTS.
-                        // ⚠️ Stored against the KEY's field, read from the HOSTED
-                        // row (pick_row above). Writing it at pick_row would work
-                        // only while nothing is remapped, then silently overwrite
-                        // the pick of whichever key owns that letter.
-                        const int8_t pick_target = latin_target_slot(last_latin_keycode);
-                        latin_pick_set(global_latin_table->ex, latin_pick_field(pick_target, pick_upper), (uint8_t)pick_idx);
-                        latin_publish();
-
-                        // "or an alternative character has been selected"
-                        picker_latch_release();
-                        latin_picker_reset_page();
-                        mark_latin_dirty();
-                        request_disp_refresh();
-                    }
-                }
-                return false;
-            }
-            switch(keycode) {
-                case KC_LAT_PAGE_PREV:
-                case KC_LAT_PAGE_NEXT:
-                    if( latin_has_row(last_latin_keycode)) {
-                        const bool pg_upper = ((get_mods() & MOD_MASK_SHIFT) != 0) || global_layer->led_state.caps_lock;
-                        const uint8_t pages = latin_page_count(latin_picker_row(last_latin_keycode, pg_upper));
-                        if(pages > 1) {
-                            // Wrap both ways, like the language/emoji layers: with at
-                            // most two pages on the current table, "next" and "prev"
-                            // are the same gesture and a dead end at either edge would
-                            // just be a key that sometimes does nothing.
-                            poly_layer_t* lyr = access_local_layer();
-                            uint8_t page = lyr->picker_page;
-                            // Same clamp as latin_picker_index(): the case may have
-                            // changed since the page was set, so start the wrap from a
-                            // page that exists on THIS row.
-                            if(page >= pages) {
-                                page = (uint8_t)(pages - 1);
-                            }
-                            page = (keycode==KC_LAT_PAGE_NEXT) ? (uint8_t)((page + 1) % pages)
-                                                               : (uint8_t)((page + pages - 1) % pages);
-                            lyr->picker_page = page;
-                            request_disp_refresh();
-                        }
-                    }
-                    break;
-                case KC_A ... KC_Z:
-                case KC_MINUS ... KC_SLASH:
-                    // Switching the picker's subject: redraw so the slots show the
-                    // new row. Punctuation is included because a mapped one is a
-                    // subject like any letter; an unmapped one already left the
-                    // outer switch without becoming one, so this is just a repaint.
-                    request_disp_refresh();
-                    break;
-                default:
-                    break;
-            }
-
-            return false;
-        } else {
-            set_local_last_latin_keycode(0);
+        // The Intl letters, the picker latch and the open picker (latin_picker.c).
+        if (latin_picker_record_pressed(keycode, addlang, &intl_ret)) {
+            return intl_ret;
         }
     }
 

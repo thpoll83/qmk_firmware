@@ -14,4 +14,4 @@ the crypto fails on the host instead of bricking a signature check on hardware.
 
 ## Subfolders
 
-- [`tests/`](tests/README.md): the host unit tests, against the RFC 8032 Ed25519 and FIPS 180-2 SHA-512 vectors.
+- [`tests/`](tests/): the host unit tests, against the RFC 8032 Ed25519 and FIPS 180-2 SHA-512 vectors.

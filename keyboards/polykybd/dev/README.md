@@ -7,13 +7,13 @@ run on a developer machine, in CI (`.github/workflows/`) or on the HIL rig.
 
 ## Subfolders
 
-- [`diag/`](diag/README.md): test-only diagnostics that run on the keyboard
+- [`diag/`](diag/): test-only diagnostics that run on the keyboard
   (`crash_test`, `usb_stress`), each behind its own `-e POLYKYBD_*=yes` flag.
-- [`profiling/`](profiling/README.md): the main-loop timing profiler
+- [`profiling/`](profiling/): the main-loop timing profiler
   (`-e POLYKYBD_LOOP_PROFILE=yes`, read over HID cmd 32).
-- [`tools/`](tools/README.md): the Python tools: glyph and icon generators, source
+- [`tools/`](tools/): the Python tools: glyph and icon generators, source
   checks, previews, signing and release gates.
-- [`scripts/`](scripts/README.md): shell wrappers that regenerate the cog blocks
+- [`scripts/`](scripts/): shell wrappers that regenerate the cog blocks
   (`run_cog.sh`) and the fonts (`create_fonts.sh`).
 
 ## Core concepts

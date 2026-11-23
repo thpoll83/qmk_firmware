@@ -35,23 +35,23 @@ modules never include files from there, except `polymod_os_actions/tests`, which
 
 ## Subfolders
 
-- [`polymod_cirque_gestures/`](polymod_cirque_gestures/README.md): the Cirque
+- [`polymod_cirque_gestures/`](polymod_cirque_gestures/): the Cirque
   absolute-mode gesture layer (tap, corner right-click, scroll dial). split72 only.
-- [`polymod_core1/`](polymod_core1/README.md): the RP2040 core1 launcher and the core1
+- [`polymod_core1/`](polymod_core1/): the RP2040 core1 launcher and the core1
   owner (`core1_hold()` / `core1_release()`).
-- [`polymod_crc32/`](polymod_crc32/README.md): table-driven CRC-32 (`crc32_1byte()`,
+- [`polymod_crc32/`](polymod_crc32/): table-driven CRC-32 (`crc32_1byte()`,
   `crc32_large()`).
-- [`polymod_ltr559/`](polymod_ltr559/README.md): the optional LTR-559 light and
+- [`polymod_ltr559/`](polymod_ltr559/): the optional LTR-559 light and
   proximity sensor driver.
-- [`polymod_monocypher/`](polymod_monocypher/README.md): vendored Monocypher, used for
+- [`polymod_monocypher/`](polymod_monocypher/): vendored Monocypher, used for
   the Ed25519 firmware signature check.
-- [`polymod_oled_i2c_diag/`](polymod_oled_i2c_diag/README.md): diagnostics for failed
+- [`polymod_oled_i2c_diag/`](polymod_oled_i2c_diag/): diagnostics for failed
   OLED I2C writes.
-- [`polymod_os_actions/`](polymod_os_actions/README.md): the per-OS chord table
+- [`polymod_os_actions/`](polymod_os_actions/): the per-OS chord table
   (`emit_os_action()`).
-- [`polymod_prc/`](polymod_prc/README.md): the PRC 1-bit image decoder, its table and
+- [`polymod_prc/`](polymod_prc/): the PRC 1-bit image decoder, its table and
   the Python trainer.
-- [`polymod_rle/`](polymod_rle/README.md): the bit-level RLE decoder for keycap
+- [`polymod_rle/`](polymod_rle/): the bit-level RLE decoder for keycap
   overlays (`rle_decompress()`).
 
 ## Important

@@ -20,7 +20,7 @@ pack loader.
 
 ## Subfolders
 
-- [`tests/`](tests/README.md): the `polymod_crc32` unit-test suite.
+- [`tests/`](tests/): the `polymod_crc32` unit-test suite.
 
 ## Core concepts
 

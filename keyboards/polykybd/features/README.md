@@ -11,13 +11,13 @@ This folder has no code files of its own.
 
 ## Subfolders
 
-- [`anim/`](anim/README.md): the Eden startup animation, the first-run tutorial, the
+- [`anim/`](anim/): the Eden startup animation, the first-run tutorial, the
   showroom demo mode, the focus ring and the other keycap animations.
-- [`modes/`](modes/README.md): AI mode (cmd 45 / 46), the MIDI key legends and the Mines
+- [`modes/`](modes/): AI mode (cmd 45 / 46), the MIDI key legends and the Mines
   game.
-- [`emoji/`](emoji/README.md): the emoji layer, its search mode and the tools that build
+- [`emoji/`](emoji/): the emoji layer, its search mode and the tools that build
   the emoji search dictionary.
-- [`hints/`](hints/README.md): the OS shortcut-hint table that is shown while a modifier is
+- [`hints/`](hints/): the OS shortcut-hint table that is shown while a modifier is
   held.
 
 ## Core concepts

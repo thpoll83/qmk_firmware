@@ -33,4 +33,4 @@ the hand stamp, firmware staging, `multicore_exec.c` and the DOOM easter egg.
 
 ## Subfolders
 
-- [`tests/`](tests/README.md): the host unit tests of the core1 owner.
+- [`tests/`](tests/): the host unit tests of the core1 owner.

@@ -41,7 +41,7 @@ OLEDs. Build it with `qmk compile -kb polykybd/split72 -km default`. The keyboar
 
 ## Subfolders
 
-- [`keymaps/default/`](keymaps/default/README.md): the layer data, the encoder map and
+- [`keymaps/default/`](keymaps/default/): the layer data, the encoder map and
   the RGB LED positions of this variant.
 
 ## Core concepts

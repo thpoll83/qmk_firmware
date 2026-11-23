@@ -107,5 +107,5 @@ nothing without a font pack; check with `PolyKybdHost/tools/gfx_font.py` against
 
 ## Subfolders
 
-- [`scripts/`](scripts/README.md): the scripts that edit `lang_lut.xlsx`.
-- [`tests/`](tests/README.md): `latin_pick_test.c` and `shift_preview_test.py`.
+- [`scripts/`](scripts/): the scripts that edit `lang_lut.xlsx`.
+- [`tests/`](tests/): `latin_pick_test.c` and `shift_preview_test.py`.

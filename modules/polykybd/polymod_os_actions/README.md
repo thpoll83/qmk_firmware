@@ -23,4 +23,4 @@ GNOME/KDE fold helper.
 
 ## Subfolders
 
-- [`tests/`](tests/README.md): the host unit tests of the per-OS chord table.
+- [`tests/`](tests/): the host unit tests of the per-OS chord table.

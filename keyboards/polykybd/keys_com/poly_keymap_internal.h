@@ -84,3 +84,9 @@ void fw_confirm_sync_tick(void);
 void ltr559_housekeeping_tick(void);
 void idle_fade_tick(void);
 void master_state_sync_tick(void);
+
+// Defined in poly_keymap.c (uni.h for process_unicodemap_poly()) and called from the
+// key event path in record.c.
+uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col);
+bool     settings_more_hidden(uint16_t keycode);
+bool     process_unicodemap_poly(uint16_t keycode, keyrecord_t* record);

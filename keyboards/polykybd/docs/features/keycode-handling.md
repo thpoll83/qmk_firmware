@@ -82,7 +82,7 @@ its keys, and the function returns whether one of them owned the keycode.
 
 ## The order in `process_record_user()`
 
-`process_record_user()` in `keys_com/poly_keymap.c` is a dispatcher. It calls these
+`process_record_user()` in `keys_com/record.c` is a dispatcher. It calls these
 steps in this order, and the first step that decides the event ends the dispatch:
 
 1. `record_board_modes()`: the crash-test chord, the startup animation, the confirm

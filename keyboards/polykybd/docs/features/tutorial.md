@@ -244,10 +244,12 @@ only the `TIER_TUTORIAL` tests (`station/first_run_tutorial.py`):
   row, then press `KC_EDEN` (0x7FA0). Both values are pinned in `keycode_helper.h`.
   `KC_EDEN` plays Eden and starts the tutorial;
 - answer chapter 1 with the three letters the console names
-  (`Tutorial slotN: ... letter=X`), chapter 2 with left and then right Shift, and
-  chapter 3 with a held Fn;
+  (`Tutorial slotN: ... letter=X`) and chapter 2 with left and then right Shift;
+- let the board reveal and the language preview run to `TOUR_WAIT` (or `FINALE`). The
+  layer chapter is postponed (`tutorial_plan.c`), so nothing waits for Fn;
 - hold Esc for longer than `TUT_SKIP_HOLD_MS` to skip, then wait for
-  `Tutorial skipped; displays handed back`.
+  `Tutorial skipped; displays handed back`, and check that GET_LANG reports the same
+  language as before the lesson.
 
 The test follows the steps through `Tutorial phase <NAME>` lines, which
 `tutorial_tick()` prints on the master at each step change (`k_tut_phase_names[]` in

@@ -24,7 +24,10 @@ status OLED files and `features/` call into this folder.
 - `latin_picker.c` / `latin_picker.h`: the Intl latin-variation picker on `_ADDLANG1`.
   It resolves a picker keycode to a slot (`latin_picker_slot()`), pages the picker row
   (`latin_page_count()`), returns the variation a key shows (`latin_variation()`) and
-  runs the remap mode (`latin_remap_apply()`, `latin_remap_cancel()`).
+  runs the remap mode (`latin_remap_apply()`, `latin_remap_cancel()`). It also handles
+  the Intl keys for `process_record_user()` (`latin_picker_record_early()`,
+  `latin_picker_record_pressed()`) and owns the picker's Ctrl latch
+  (`latin_picker_latched()`, `latin_picker_latch_release()`).
 - `tutorial_board.c`: the keyboard side of the first-run tutorial. It has the callbacks
   that `features/anim/tutorial.c` calls (`tutorial_slot_letter()`,
   `tutorial_draw_board_legend()`, `tutorial_tour_build()`), chapter 3's language and

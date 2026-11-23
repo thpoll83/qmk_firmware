@@ -10,16 +10,14 @@ status OLED files and `features/` call into this folder.
 ## Files
 
 - `poly_keymap.c` / `poly_keymap.h`: the shared keymap logic. It holds the QMK
-  callbacks (`process_record_user()`, `housekeeping_task_user()`), the display refresh (`update_displays()`,
-  `sync_and_refresh_displays()`), idle and suspend (`kdisp_idle()`, `poly_suspend()`,
-  `display_wakeup()`), the overlays (`copy_overlay_to_buffer()`), the language
-  selection, and the resting legend of each key (`to_static_text()`). `poly_ime_family()`
-  and `poly_keycode_at()` are here too. `poly_keymap.h` declares its exports; QMK's own
+  callbacks (`housekeeping_task_user()`), the display refresh (`update_displays()`), idle (`kdisp_idle()`),
+  the language selection, and the resting legend of each key (`to_static_text()`).
+  `poly_ime_family()` is here too. `poly_keymap.h` declares its exports; QMK's own
   `*_user` / `*_kb` callbacks are not in it.
 - `render_key.c`: `render_key()`, which draws the keys that need more than a text
   legend, and the menu, macro-picker, macro, MRU and region-tab renderers
-  (`render_menu_key()`, `render_macro_picker_key()`, `draw_mru_top_bar()`). It reaches
-  the fonts through `extern` declarations.
+  (`render_menu_key()`, `render_macro_picker_key()`). It reaches the fonts through
+  `extern` declarations.
 - `latin_picker.c` / `latin_picker.h`: the Intl latin-variation picker on `_ADDLANG1`.
   It resolves a picker keycode to a slot (`latin_picker_slot()`), pages the picker row
   (`latin_page_count()`), returns the variation a key shows (`latin_variation()`) and
@@ -43,6 +41,14 @@ status OLED files and `features/` call into this folder.
   family: settings toggles, base layer, brightness, OS selection, display style,
   Eden and the demos, and the language layer. Each handler owns both edges of its keys
   and acts on the release.
+- `power.c`: suspend, wake and shutdown. `set_displays()` sets the keycap contrast.
+  The wake paths are `display_wakeup()` (a key press), `poly_wake_from_idle()` (HID
+  cmd 15, the demo) and `suspend_wakeup_init_kb()` (USB resume), which releases core1
+  first. `suspend_power_down_kb()` feeds the watchdog, calls `poly_suspend()` and
+  `core1_suspend_tick()`, and flushes the dirty EEPROM state when
+  `core1_suspend_flush_ready()` allows it. `shutdown_user()` flushes before every
+  reset and then stops the watchdog. `poly_suspend()` records whether it switched the
+  app overlays off, and `restore_suspended_overlays()` switches them back on.
 - `housekeeping.c`: phases of `housekeeping_task_user()` that need nothing private to
   `poly_keymap.c`. `macro_rec_sync_tick()` and `fw_confirm_sync_tick()` copy the macro
   recorder and the FW-2 / FW-9 confirm prompt into the synced state.
@@ -57,9 +63,41 @@ status OLED files and `features/` call into this folder.
   displays, the first-run intro and the watchdog. `eeconfig_init_kb()` and
   `eeconfig_init_user()` write a fresh EEPROM; `oled_init_user()` prepares the status
   OLED.
+- `display_sync.c`: `sync_and_refresh_displays()`, split into phases (the master's
+  pushes of the synced state, the MRU lists, the latin table, the layer state and the
+  last key; `apply_state_diff()`; the overlay-burst hold; `run_refresh()`), and
+  `latin_publish()`. It also holds the Eden idle loop (`eden_idle_tick()`), the
+  hand-off from Eden to the tutorial (`arm_tutorial_after_intro()`,
+  `poly_arm_tutorial_after_intro()`) and `housekeeping_display_tick()`, which picks
+  Eden, the chapter 1 tutorial or the normal sync and render each pass.
+- `key_render_helpers.c`: the helpers that `update_displays()` and `kdisp_idle()` call.
+  It binds the legend-size planner to the fonts (`plan_main_legend()`), draws the overlay
+  icons and records which overlay slots are on screen (`copy_overlay_to_buffer()`,
+  `overlay_slot_displayed()`), and draws the language flag key, the FW-2 confirm key and
+  the MRU bar (`render_lang_flag_key()`, `render_fw_confirm_key()`, `draw_mru_top_bar()`).
+  It holds the keycode resolvers (`poly_keycode_at()`, `keymap_key_to_keycode()`,
+  `display_keycode_at()`) with split72's F-row alignment, the idle legend relocation
+  (`render_idle_key()`, `eden_idle_erase_legend()`) and the centred legend draw
+  (`draw_legend_cx_cy()`).
+- `record.c`: the key event path. `process_record_user()` calls its handlers in a fixed
+  order (`record_board_modes()`, `record_macros()`, the Doom hook and `KC_IME`,
+  `record_apple_swap()`, `record_action_keys()`, `record_auto_shift()`,
+  `record_reset_keys()`), and `post_process_record_user()` repaints after Shift, Caps
+  Lock, `RM_NEXT` and `RM_PREV`, and turns `_LL` off on an F-key release. It owns the
+  state only these use: the macOS GUI/Alt swap latch, the macro picker's pending press
+  and the held `KC_IME` strokes. The `RM_*` adjust keys call `rgb_adjust_key_down()` /
+  `rgb_adjust_key_up()` in `rgb.c`, which holds the repeat state. The order is in
+  `docs/features/keycode-handling.md`.
+- `rgb.c`: the key-matrix LEDs, compiled only with `RGB_MATRIX_ENABLE`.
+  `rgb_matrix_indicators_kb()` picks what the LEDs show each frame: the flash cue, the
+  Doom cue, the slave's bootloader and display-off states, the tutorial and AI mode.
+  `flash_rgb_tick()`, called from `housekeeping_task_user()`, drives the flash cue.
+  `rgb_adjust_key_down()` / `rgb_adjust_key_up()` apply the `RM_*` adjust keys for
+  `process_record_user()` and repeat them while held. `poly_keymap_internal.h` declares
+  these three.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
   out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`,
-  `custom_keys.c`): `latin_publish()`, the `housekeeping.c` phases,
+  `custom_keys.c`, `record.c`, `key_render_helpers.c`, `display_sync.c`, `board_init.c`): `latin_publish()`, the `housekeeping.c` phases,
   `render_lang_flag_key()`, `plan_main_legend()`, `poly_keycode_at()`,
   `display_keycode_at()`, the `poly_tutorial_*()` calls, `keymaps[]`,
   `FW_CONFIRM_ROW`/`FW_CONFIRM_COL` and `LATIN_PICKER_MOD`. Only files in `keys_com/`

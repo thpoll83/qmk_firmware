@@ -35,7 +35,7 @@
 // (poly_keymap.c). ASCII, resident.
 extern const GFXfont NotoSans_Regular_Mid_19px7b;
 
-bool display_wakeup(keyrecord_t *record);   // poly_keymap.c
+bool display_wakeup(keyrecord_t *record);   // keys_com/power.c
 
 _Static_assert(KC_1 == AI_HID_KC_1 && KC_0 == AI_HID_KC_0 && KC_ESC == AI_HID_KC_ESC &&
                    KC_MINUS == AI_HID_KC_MINUS && KC_EQUAL == AI_HID_KC_EQUAL,

@@ -97,3 +97,7 @@ void flash_rgb_tick(void);
 void rgb_adjust_key_down(uint16_t keycode);
 void rgb_adjust_key_up(void);
 #endif
+
+// Suspend and wake, in power.c. poly_set_awake_state(), suspend_wakeup_init_kb() and
+// poly_prepare_for_flash() call it; true when it switched the overlays back on.
+bool restore_suspended_overlays(poly_sync_t* local_state);

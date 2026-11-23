@@ -11,9 +11,9 @@ status OLED files and `features/` call into this folder.
 
 - `poly_keymap.c` / `poly_keymap.h`: the shared keymap logic. It holds the QMK
   callbacks (`housekeeping_task_user()`, `keyboard_post_init_user()`), the display
-  refresh (`update_displays()`, `sync_and_refresh_displays()`), idle and suspend
-  (`kdisp_idle()`, `poly_suspend()`, `display_wakeup()`), the overlays (`copy_overlay_to_buffer()`), the language
-  selection, and the resting legend of each key (`to_static_text()`). `poly_ime_family()`
+  refresh (`update_displays()`, `sync_and_refresh_displays()`), idle (`kdisp_idle()`),
+  the overlays (`copy_overlay_to_buffer()`), the language selection, and the resting
+  legend of each key (`to_static_text()`). `poly_ime_family()`
   and `poly_keycode_at()` are here too. `poly_keymap.h` declares its exports; QMK's own
   `*_user` / `*_kb` callbacks are not in it.
 - `render_key.c`: `render_key()`, which draws the keys that need more than a text
@@ -43,6 +43,14 @@ status OLED files and `features/` call into this folder.
   family: settings toggles, base layer, brightness, OS selection, display style,
   Eden and the demos, and the language layer. Each handler owns both edges of its keys
   and acts on the release.
+- `power.c`: suspend, wake and shutdown. `set_displays()` sets the keycap contrast.
+  The wake paths are `display_wakeup()` (a key press), `poly_wake_from_idle()` (HID
+  cmd 15, the demo) and `suspend_wakeup_init_kb()` (USB resume), which releases core1
+  first. `suspend_power_down_kb()` feeds the watchdog, calls `poly_suspend()` and
+  `core1_suspend_tick()`, and flushes the dirty EEPROM state when
+  `core1_suspend_flush_ready()` allows it. `shutdown_user()` flushes before every
+  reset and then stops the watchdog. `poly_suspend()` records whether it switched the
+  app overlays off, and `restore_suspended_overlays()` switches them back on.
 - `housekeeping.c`: phases of `housekeeping_task_user()` that need nothing private to
   `poly_keymap.c`. `macro_rec_sync_tick()` and `fw_confirm_sync_tick()` copy the macro
   recorder and the FW-2 / FW-9 confirm prompt into the synced state.
@@ -56,8 +64,10 @@ status OLED files and `features/` call into this folder.
   `record_apple_swap()`, `record_action_keys()`, `record_auto_shift()`,
   `record_reset_keys()`), and `post_process_record_user()` repaints after Shift, Caps
   Lock, `RM_NEXT` and `RM_PREV`, and turns `_LL` off on an F-key release. It owns the
-  state only these use: the macOS GUI/Alt swap latch, the macro picker's pending press,
-  the RGB adjust repeat and the held `KC_IME` strokes. The order is in `docs/features/keycode-handling.md`.
+  state only these use: the macOS GUI/Alt swap latch, the macro picker's pending press
+  and the held `KC_IME` strokes. The `RM_*` adjust keys call `rgb_adjust_key_down()` /
+  `rgb_adjust_key_up()` in `rgb.c`, which holds the repeat state. The order is in
+  `docs/features/keycode-handling.md`.
 - `rgb.c`: the key-matrix LEDs, compiled only with `RGB_MATRIX_ENABLE`.
   `rgb_matrix_indicators_kb()` picks what the LEDs show each frame: the flash cue, the
   Doom cue, the slave's bootloader and display-off states, the tutorial and AI mode.

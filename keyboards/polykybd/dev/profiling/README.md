@@ -206,7 +206,7 @@ All are no-ops unless `POLYKYBD_LOOP_PROFILE` is defined:
 | `loop_profile_tick()` | `poly_keymap.c` `housekeeping_task_user()`, at the very top | Closes the previous iteration's measurement, updates the histograms, emits the summary. At the top so it measures the FULL previous iteration (matrix scan, HID, bridge, render). |
 | `loop_profile_note_overlay_cmd()` | `hid_com.c` `raw_hid_receive()`, the classifier `switch` | Tags this iteration as overlay-handling (cmds 10/11/12/16/17/18/19/21/33/41/42). |
 | `loop_profile_add_bridge_us(us)` | `bridge_helper.c` `send_to_bridge()`, around `transaction_rpc_exec()` | Accumulates blocking bridge microseconds for this iteration. |
-| `loop_profile_add_render_us(us)` | `poly_keymap.c` `sync_and_refresh_displays()`, around the `update_displays()` calls | Accumulates render microseconds for this iteration. |
+| `loop_profile_add_render_us(us)` | `keys_com/display_sync.c` `run_refresh()` (called from `sync_and_refresh_displays()`), around the `update_displays()` calls | Accumulates render microseconds for this iteration. |
 | `loop_profile_reset()` / `_snapshot()` / `_log_now()` | `hid_com.c` `raw_hid_receive()` case 32 | The on-demand control API above. ⚠️ Unlike the four hooks, these have **no `#else` stubs** — the call site itself is `#ifdef`-guarded so the command NACKs on a normal build. |
 
 ## Tuning the profiler itself

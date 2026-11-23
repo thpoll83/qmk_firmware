@@ -11,8 +11,7 @@ status OLED files and `features/` call into this folder.
 
 - `poly_keymap.c` / `poly_keymap.h`: the shared keymap logic. It holds the QMK
   callbacks (`process_record_user()`, `housekeeping_task_user()`,
-  `keyboard_post_init_user()`), the display refresh (`update_displays()`,
-  `sync_and_refresh_displays()`), idle and suspend (`kdisp_idle()`, `poly_suspend()`,
+  `keyboard_post_init_user()`), the display refresh (`update_displays()`), idle and suspend (`kdisp_idle()`, `poly_suspend()`,
   `display_wakeup()`), the overlays (`copy_overlay_to_buffer()`), the language
   selection, and the resting legend of each key (`to_static_text()`). `poly_ime_family()`
   and `poly_keycode_at()` are here too. `poly_keymap.h` declares its exports; QMK's own
@@ -52,6 +51,13 @@ status OLED files and `features/` call into this folder.
   suspend. `master_state_sync_tick()` writes the master-authoritative fields (active OS,
   glyph script, size and placement, idle style and timeout, Doom state).
   `housekeeping_task_user()` calls them in that order.
+- `display_sync.c`: `sync_and_refresh_displays()`, split into phases (the master's
+  pushes of the synced state, the MRU lists, the latin table, the layer state and the
+  last key; `apply_state_diff()`; the overlay-burst hold; `run_refresh()`), and
+  `latin_publish()`. It also holds the Eden idle loop (`eden_idle_tick()`), the
+  hand-off from Eden to the tutorial (`arm_tutorial_after_intro()`,
+  `poly_arm_tutorial_after_intro()`) and `housekeeping_display_tick()`, which picks
+  Eden, the chapter 1 tutorial or the normal sync and render each pass.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
   out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`,
   `custom_keys.c`): `latin_publish()`, the `housekeeping.c` phases,

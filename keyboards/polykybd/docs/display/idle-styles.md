@@ -278,7 +278,7 @@ converges into the "EDEN" letters. It has **two lifetimes**, sharing one engine:
   `features/anim/startup_anim.h`: play the intro after the boot splash with a fade-in).
 - **Looping screensaver** — `IDLE_STYLE_EDEN` (3): `startup_anim_start_loop(contrast)`
   holds the opening comet field open forever at the idle brightness, no letters/
-  converge/fade. `eden_idle_tick()` in `poly_keymap.c` drives it; it is a **no-op
+  converge/fade. `eden_idle_tick()` in `keys_com/display_sync.c` drives it; it is a **no-op
   while awake** (only runs when `idle_style == EDEN` and idle). While the animation
   owns the keycaps (`startup_anim_active()`), `update_displays()` early-returns.
 - ⚠️ **The looping idle frame is TIME-SLICED — never render it as one blocking unit.**

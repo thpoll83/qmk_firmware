@@ -52,6 +52,13 @@ status OLED files and `features/` call into this folder.
   suspend. `master_state_sync_tick()` writes the master-authoritative fields (active OS,
   glyph script, size and placement, idle style and timeout, Doom state).
   `housekeeping_task_user()` calls them in that order.
+- `rgb.c`: the key-matrix LEDs, compiled only with `RGB_MATRIX_ENABLE`.
+  `rgb_matrix_indicators_kb()` picks what the LEDs show each frame: the flash cue, the
+  Doom cue, the slave's bootloader and display-off states, the tutorial and AI mode.
+  `flash_rgb_tick()`, called from `housekeeping_task_user()`, drives the flash cue.
+  `rgb_adjust_key_down()` / `rgb_adjust_key_up()` apply the `RM_*` adjust keys for
+  `process_record_user()` and repeat them while held. `poly_keymap_internal.h` declares
+  these three.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
   out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`,
   `custom_keys.c`): `latin_publish()`, the `housekeeping.c` phases,

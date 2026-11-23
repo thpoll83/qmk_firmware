@@ -214,5 +214,6 @@ in `docs/features/tutorial.md`; this is the checklist.
 | `features/anim/focus_ring.h` / `.c` | the reusable "point at this key" ripple — general, not tutorial-only |
 | `docs/features/tutorial.md` | design + per-round post-mortems |
 | `keys_com/tutorial_board.c` | the keymap-facing half: slot resolution, the lit-set gate, layout park/restore, the key tour, the preview |
-| `poly_keymap.c` | the calls from `housekeeping_task_user()` and `process_record_user()` |
+| `poly_keymap.c` | the calls from `housekeeping_task_user()` |
+| `keys_com/record.c` | the calls from `process_record_user()` |
 | `oled_helper.c` | `oled_tutorial_screen()` — the status panels |

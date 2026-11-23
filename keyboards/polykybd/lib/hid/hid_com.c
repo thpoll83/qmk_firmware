@@ -832,7 +832,7 @@ static void hid_cmd_15(uint8_t *data, uint8_t length, const poly_layer_t *local_
         // Self-guards: only an active attract demo is affected; a no-op
         // inline stub on a non-doom build.
         // The wake itself is shared with the demo's end-of-idle segment:
-        // poly_wake_from_idle() (poly_keymap.c) does exactly what this
+        // poly_wake_from_idle() (keys_com/power.c) does exactly what this
         // branch used to do inline, the doom stop included.
         poly_wake_from_idle();
         uprint("Stop idle.\n");

@@ -3,8 +3,8 @@
 The display output that is not a plain keycap legend: the HID overlay images and their
 decode on core1, the core1 command loop, and the status OLED screens. `lib/hid/hid_com.c`
 calls `fill_overlay` for the overlay commands, `lib/split_link/split_sync.c` calls it
-for the same data on the slave, and `keys_com/poly_keymap.c` calls the core1 suspend
-hooks and `status_idle_task()`. QMK calls `oled_task_user()`. The drawing itself goes
+for the same data on the slave, and `keys_com/power.c` calls the core1 suspend
+hooks and `keys_com/poly_keymap.c` calls `status_idle_task()`. QMK calls `oled_task_user()`. The drawing itself goes
 through `lib/drivers/disp_array.h`.
 
 ## Files

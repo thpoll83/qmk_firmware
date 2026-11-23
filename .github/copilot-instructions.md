@@ -4,6 +4,21 @@ excludeAgent:
   - "coding-agent"
 ---
 # GitHub Copilot Instructions for QMK Pull Request Review
+
+> **This repository is the PolyKybd fork of QMK (thpoll83/qmk_firmware).** The rules below are
+> upstream QMK's checklist for PRs to qmk/qmk_firmware. In this fork:
+>
+> - The default branch is `PolyKybd`. Every PolyKybd PR targets `PolyKybd`. There is no
+>   `develop` branch flow here. Do not report the target branch, and do not ask to retarget a
+>   PR to `develop` or `master`.
+> - `keyboards/polykybd/` is the fork's own firmware, maintained in this repository. The
+>   upstream rules for community keyboards do not apply to it: do not flag `<keyboard>.c`,
+>   extra keymap code, extra source files or the folder layout as "advanced code", and do not
+>   defer anything to a QMK Collaborator. Review that code for correctness like any other code.
+> - Changes outside `keyboards/` (CI workflows, scripts, community modules) are in scope. Review
+>   them instead of deferring them.
+> - The upstream checklist still applies to keyboards other than `keyboards/polykybd/`.
+
 This document provides automated review guidance based on the [QMK PR Checklist](https://docs.qmk.fm/pr_checklist) and it is intended only for use by GitHub Copilot code-review agent during pull request reviews.
 
 > **Scope**: This review applies **only to changes within the `keyboards/` folder**. Changes outside `keyboards/` (e.g., core code, quantum, platforms, drivers) must be flagged and deferred to a QMK Collaborator — do not review them.

@@ -7,7 +7,7 @@
 //
 // Header-only and pure (no config.h, no quantum.h), so the ranges and the encoding
 // are unit-tested on the host (make test:polykybd_tap_terms). The live values and
-// the QMK hooks that return them are in state.c and poly_keymap.c.
+// the QMK hooks that return them are in state.c and keys_com/tap_hold.c.
 //
 // Both ranges are CLOSED: the HID command NACKs a value outside them, because an
 // accepted value is persisted and then used for every tap-hold key.

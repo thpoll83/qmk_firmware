@@ -122,7 +122,7 @@ Each check exits 1 on a failure, so it can gate a commit.
   generator starts after the font's last glyph that is not its own, and a test reads
   the codepoint from `lang/named_glyphs.h`, never a literal.
 - ⚠️ `tutorial_name_sheet.py`'s `ITEMS` is a copy of `s_tut_preview_all[]` in
-  `keys_com/poly_keymap.c`. Change both.
+  `keys_com/tutorial_board.c`. Change both.
 - ⚠️ Retiring a hint icon renumbers every slot after it. Re-paste the `ICON_HINT_*`
   block in `lang/named_glyphs.h` from `hint_icons.py --macros`.
 - ⚠️ A gate that scans source must strip comments first, or it matches its own

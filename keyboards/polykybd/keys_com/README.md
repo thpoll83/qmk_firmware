@@ -25,9 +25,23 @@ status OLED files and `features/` call into this folder.
   It resolves a picker keycode to a slot (`latin_picker_slot()`), pages the picker row
   (`latin_page_count()`), returns the variation a key shows (`latin_variation()`) and
   runs the remap mode (`latin_remap_apply()`, `latin_remap_cancel()`).
-- `poly_keymap_internal.h`: helpers that `poly_keymap.c`, `render_key.c` and
-  `latin_picker.c` share (`latin_publish()`, `render_lang_flag_key()`,
-  `plan_main_legend()`, `LATIN_PICKER_MOD`). Only files in `keys_com/` include it.
+- `tutorial_board.c`: the keyboard side of the first-run tutorial. It has the callbacks
+  that `features/anim/tutorial.c` calls (`tutorial_slot_letter()`,
+  `tutorial_draw_board_legend()`, `tutorial_tour_build()`), chapter 3's language and
+  glyph-script preview (`s_tut_preview_all[]`, `poly_tutorial_apply_preview()`), the
+  name spelled on the keys, and the tutorial branch of `process_record_user()`
+  (`poly_tutorial_record()`). It also holds the preview's language bookkeeping:
+  `poly_reported_lang()`, `poly_persisted_lang()` and `poly_set_host_lang()`.
+- `tap_hold.c`: QMK's tap-hold hooks. `get_tapping_term()`, `get_quick_tap_term()` and
+  `get_flow_tap_term()` return the terms set over HID cmd 44; `caps_word_press_user()`
+  tests letters in the active language; `chordal_hold_handedness()` derives the hand
+  from the row.
+- `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
+  out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`): `latin_publish()`,
+  `render_lang_flag_key()`, `plan_main_legend()`, `poly_keycode_at()`,
+  `display_keycode_at()`, the `poly_tutorial_*()` calls, `keymaps[]`,
+  `FW_CONFIRM_ROW`/`FW_CONFIRM_COL` and `LATIN_PICKER_MOD`. Only files in `keys_com/`
+  include it.
 - `keycode_helper.c` / `keycode_helper.h`: the custom keycode enum (`enum my_keycodes`:
   `KC_LANG`, `KC_LAT0`..`KC_LAT11`, the `KCL_*` language keys, the emoji and language
   layer ranges, `KC_IME`) and `keycode_to_static_text()`, the legend for each keycode.

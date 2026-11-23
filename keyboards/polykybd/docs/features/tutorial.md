@@ -372,7 +372,7 @@ the same grammar `render_key()` already implements for the letter-remap prompt.
 The payoff is *"see how the keys react"*, so the reaction has to be the keyboard's own.
 The tutorial therefore does **not** draw its own A–Z: it calls the real legend renderer
 per key, through a new `tutorial_draw_key_legend(slot)` beside `tutorial_slot_letter()`
-in `poly_keymap.c`.
+in `keys_com/tutorial_board.c`.
 
 ⚠️ **That callback must reproduce the `to_static_text()` / `render_key()` PAIRING**, not
 just call `render_key()` — they are consulted in that order and a key that has a static

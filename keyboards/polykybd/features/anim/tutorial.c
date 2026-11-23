@@ -57,7 +57,7 @@ static uint32_t    s_sync_at;                       // last push
 // heavy work to housekeeping (fw_staging_finalize_defer_reload). Same fix here: the
 // handler only records the intent, tutorial_tick() acts on it.
 static bool        s_start_pending;
-// The preview item's row in poly_keymap.c's table, as the SLAVE was told it. The slave
+// The preview item's row in keys_com/tutorial_board.c's table, as the SLAVE was told it. The slave
 // never builds the table's renderable subset (only the master does, at start), so it is
 // sent the absolute row: both halves hold the same const table.
 static uint8_t     s_preview_tbl = 0xFFu;

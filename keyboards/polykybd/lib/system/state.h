@@ -901,7 +901,7 @@ void note_idle_timeout(uint8_t value);
 // ---- Tap-hold timing (HID cmd 44, base/tap_terms.h) ----
 
 // The live tapping term and Flow Tap term in milliseconds. get_tapping_term(),
-// get_quick_tap_term() and get_flow_tap_term() in poly_keymap.c return these.
+// get_quick_tap_term() and get_flow_tap_term() in keys_com/tap_hold.c return these.
 uint16_t get_poly_tapping_term(void);
 uint16_t get_poly_flow_tap_term(void);
 
@@ -993,16 +993,16 @@ bool boot_intro_pending(void);
 // The language to REPORT (GET_LANG) and PERSIST: the user's own, even while the
 // tutorial's chapter 3 is previewing another one on the keycaps. The host switches the
 // OS layout to whatever GET_LANG says, so reading local_state->lang there would carry a
-// board-only preview into the OS. Defined in poly_keymap.c.
+// board-only preview into the OS. Defined in keys_com/tutorial_board.c.
 uint8_t poly_reported_lang(void);
 // The language to PERSIST: poly_reported_lang(), except on the slave while the tutorial
 // runs, where it is the language already stored (the slave cannot tell a synced
-// preview from the real one). Defined in poly_keymap.c.
+// preview from the real one). Defined in keys_com/tutorial_board.c.
 uint8_t poly_persisted_lang(void);
 // The HOST chose a language (SET_LANG). Writes it and, while a board-only preview is
 // on the keycaps, records it as the real language too: a host choice that EQUALS the
 // preview (en-US during the tutorial) is otherwise indistinguishable from the preview
-// and would be dropped when the lesson ends. Defined in poly_keymap.c.
+// and would be dropped when the lesson ends. Defined in keys_com/tutorial_board.c.
 void poly_set_host_lang(uint8_t lang);
 // Persist BOOT_INTRO_DONE (one-time tail-byte write) so the intro won't replay.
 void mark_boot_intro_done(void);

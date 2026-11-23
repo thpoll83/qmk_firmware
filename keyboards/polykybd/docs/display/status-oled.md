@@ -155,8 +155,8 @@ readable as thin text on 128×64. Raising it rescales the map without moving the
 
 ⚠️ **The "dim for no reason, but only sometimes" bug (fixed 2026-09-16).** Idle ENTRY
 called `oled_set_brightness(0)` and nothing restored it on idle EXIT. The only code
-that raised the panel again was the `STATUS_DISP_ON` branch, and the idle block in
-housekeeping sets `STATUS_DISP_ON` on **every pass** — so that flag never flips across
+that raised the panel again was the `STATUS_DISP_ON` branch, and the idle fade in
+housekeeping (`idle_fade_tick()`) sets `STATUS_DISP_ON` on **every pass** — so that flag never flips across
 an idle→wake cycle, and the panel stayed at contrast register 0 until the status
 display was toggled or the board rebooted. Register 0 on an SSD1306 is "barely
 visible", **not off**, which is why it read as a brightness fault rather than a dead

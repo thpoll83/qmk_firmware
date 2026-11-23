@@ -24,6 +24,14 @@ in `lib/drivers/fw_staging.c`.
   also has `USER_SYNC_RESET` (`poly_reset_sync_t`, `RESET_ACTION_APPLY` or
   `RESET_ACTION_REBOOT` with an optional handedness change), sent by
   `fw_up_send_slave_reset()` and handled by `user_sync_reset_handler()`.
+- `fw_apply.c` / `fw_apply.h`: the keyboard side of an apply. `fw_apply_tick()` runs the
+  apply step machine one stage per housekeeping pass (keys cleared and the board blanked,
+  EEPROM flushed with core1 held off, the staged image verified in flash, then
+  `fw_staging_apply_and_reboot()`), the reboot path, deferred staging and the slave's
+  font-pack reload; it returns true when a stage ran and housekeeping must end the pass.
+  It also owns the status-OLED firmware screens and their timers (`poly_fw_screen()`,
+  `poly_fw_hold_active()`, `poly_fw_failure_detail()`, `fw_apply_screen_tick()`) and
+  `poly_board_unusable_cue()`.
 
 ## Core concepts
 

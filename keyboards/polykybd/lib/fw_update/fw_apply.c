@@ -8,122 +8,19 @@
 
 #include QMK_KEYBOARD_H
 
-#include "quantum/quantum_keycodes.h"
-#include "quantum/keymap_extras/keymap_german.h"
-#include "quantum/keymap_introspection.h"
-#include "quantum/via.h"
-
-#include "raw_hid.h"
-#include "oled_driver.h"
-#include "version.h"
 #include "print.h"
-#include "debug.h"
 
-#include <transactions.h>
-#include "split_util.h"   // is_transport_connected() — gate the boot layer-resync one-shot
-#include <hardware/flash.h>
-
-#include "polykybd.h"
-#include "features/hints/os_hints.h"
-#include "keys_com/poly_keymap.h"   // poly_fw_screen(), poly_fw_hold_active(), poly_fw_failure_detail(), set_displays()
-#include "status_oled.h"
-#include "lib/split_link/bridge_helper.h"
-#include "dev/profiling/loop_profile.h"
-#ifdef POLYKYBD_LOOP_PROFILE
-#    include "hardware/structs/timer.h"   // timer_hw->timerawl — raw 1 MHz us counter
-#endif
-#include "lib/fw_update/split_fw_up.h"
-#ifdef POLYKYBD_BULK_PIPE
-#    include "lib/hid/poly_pipe.h"
-#endif
-#include "lib/drivers/fw_staging.h"
-#include "polymod_core1_owner.h"
-#include "lib/split_link/side.h"
-#include "lib/display/fill_overlay.h"
-#include "lib/system/poly_util.h"
-
-#include "base/com.h"
-#include "lib/hid/mac_compose.h"   // mac_compose_set (protocol v38)
-#include "polymod_rle.h"
-#include "lib/drivers/e2prom.h"
-#include "base/overlay.h"
-#include "lib/drivers/disp_array.h"
-#include "lib/drivers/helpers.h"
-#include "base/update.h"
-#include "lib/drivers/spi_helper.h"
-#include "lib/drivers/shift_reg.h"
-#include "base/text_helper.h"
-#include "base/fontpack.h"                // g_all_fonts/g_all_font_count + loader
-#include "features/modes/midi_legend.h"                 // QK_MIDI_* legends from the synced MIDI settings
-#include "base/legend_plan.h"            // the pure keycap legend-SIZE planner
-#include "base/ime_key_plan.h"           // what KC_IME sends, per language and OS
-#include "base/ime_held_slots.h"         // which KC_IME key holds which usage
-// Country flags (NotoColorEmoji_Regular_LangFlags, codepoints FLAG_CP_BASE+glyph)
-// now ship in the external-flash font pack, resolved via g_all_fonts — they are
-// NOT compiled in. The tiny label font stays resident (no-pack fallback label).
-#include "polymod_core1.h"
-#include "features/anim/tutorial.h"
-#include "features/anim/demo_mode.h"              // the showroom demo loop (KC_DEMO)
-#include "features/modes/mines_mode.h"                   // the idle-screen mine sweeper (hold Hyper while idle)
-#include "features/modes/ai_mode.h"                      // AI mode: agent cards on the number row (KC_AI)
-#include "features/anim/key_attention.h"            // cmd 47: the focus ripple on a key
-#include "features/anim/host_tutorial.h"            // cmd 49: the host tutorial (text, spotlight, events)
-#include "features/anim/focus_ring.h"                 // the reusable "point at this key" ripple
-#include "base/tutorial_plan.h"             // TUT_SLOT / TUT_SKIP_HOLD_MS
-#include "features/anim/menu_cascade.h"             // menu_cascade_hidden() / _tick()
-#include "features/anim/lang_sparkle.h"             // lang_sparkle_tick()
-#include "features/anim/tutorial_rgb.h"             // the key LEDs during the show and the lesson
-#include "lib/system/boot_diag.h"                    // emit_boot_banner(), splash_progress(), SPLASH_DONE
-#include "lib/drivers/crash_record.h"            // crash_record_init(), the watchdog, the phase breadcrumb
-#include "dev/diag/usb_stress.h"              // no-op unless -e POLYKYBD_USB_STRESS=yes
-#include "base/hand_stamp.h"              // handedness that survives an EEPROM wipe
-#include "lib/drivers/hw_uid.h"                  // flash unique ID, read once here (cmd 50)
-#include "base/status_brightness.h"      // one brightness scale for keycaps + status OLED
-#include "usb_util.h"                     // usb_vbus_state() — the suspend-time power check
-#include "dev/diag/crash_test.h"              // POLYKYBD_CRASH_TEST: deliberate faults (no-op inlines otherwise)
-#include "lib/split_link/slave_data.h"                   // slave_data_register(), slave_data_crash_pull_tick()
-#include "polymod_crc32.h"
-
-// The LTR-559 driver is the polykybd/polymod_ltr559 community module; the build
-// defines COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE when a variant lists it, and the
-// module probes + polls the part from its own hooks. Everything below is the
-// PolyKybd-side POLICY on top of it (auto-brightness, idle-inhibit, telemetry).
-#ifdef COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE
-#    include "polymod_ltr559.h"
-#    define LTR559_LOG_MS 600000   // sensor telemetry log cadence: 10 min
-#endif
-#include "lib/peripherals/ltr559_policy.h"        // the POLICY on the module (POLYKYBD_LTR559_DRIVE)
-
-#include "lib/system/state.h"
-#include "keys_com/poly_macro.h"
-#include "keys_com/poly_macro_record.h"
-#include "lib/display/multicore_exec.h"
-#include "lib/split_link/split_sync.h"
-
-#include "lang/lang_lut.h"
-#include "base/caps_word_letter.h"
-#include "keys_com/poly_combos.h"
-#include "lang/lang_lut_ext.h"
-
-#include "keys_com/layers.h"
-#include "keys_com/keycode_helper.h"
-#include "doom/doom_mode.h"   // Doom easter egg (inline no-ops unless POLYKYBD_DOOM)
-#include "features/anim/startup_anim.h"   // one-time procedural boot animation (split72; no-op stubs on split42)
-#include "lib/display/status_idle.h"          // the status panel's idle screen (split72 only)
-#include "polymod_os_actions.h"
-#include "features/emoji/emoji_layer.h"
-#include "keys_com/lang_layer.h"
-#include "keys_com/mru.h"
-
-#include <stdint.h>
-#include <string.h>
-#include <stdbool.h>
-
-// The KC_OS_* keycode range and enum poly_os bind POSITIONALLY to the
-// polymod_os_actions module's own two index spaces (its rows and columns) — the
-// module owns no keyboard enum, so these asserts are the whole contract. Every
-// row is pinned (not just first/last/count): both enums are append-only, but a
-// middle insertion on one side alone would silently shift every action after it.
+#include "keys_com/poly_keymap.h"           // poly_fw_screen_t, set_displays()
+#include "lib/drivers/fw_staging.h"         // the staging and apply state
+#include "lib/system/poly_util.h"           // clear_all_displays()
+#include "base/com.h"                        // DISP_IDLE, IDLE_TRANSITION
+#include "lib/system/state.h"               // poly_sync_t, save_all_dirty()
+#include "base/update.h"                    // request_disp_refresh()
+#include "polymod_core1_owner.h"            // core1_hold() / core1_release()
+#include "features/anim/demo_mode.h"        // demo_stop()
+#include "features/anim/startup_anim.h"     // startup_anim_stop()
+#include "doom/doom_mode.h"                 // doom_screensaver_stop()
+#include "base/hand_stamp.h"                // poly_hand_flush_pending()
 
 #include "lib/fw_update/fw_apply.h"
 

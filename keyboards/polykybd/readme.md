@@ -436,7 +436,7 @@ logs each roll their own trigger:
 
 - The **split-link health counter** (`bridge_helper.c`) logs every
   `LINK_STATS_LOG_EVERY` (200) frames — *count*-based, not time-based.
-- The **LTR-559 sensor telemetry** (`poly_keymap.c` `housekeeping_task_user()`,
+- The **LTR-559 sensor telemetry** (`keys_com/housekeeping.c` `ltr559_housekeeping_tick()`,
   gated on `ltr559_available()`) logs every `LTR559_LOG_MS` (10 min) via a
   self-contained `static uint32_t` + `timer_elapsed32()` guard.
 

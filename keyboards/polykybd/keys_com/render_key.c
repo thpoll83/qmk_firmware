@@ -96,7 +96,6 @@
 // PolyKybd-side POLICY on top of it (auto-brightness, idle-inhibit, telemetry).
 #ifdef COMMUNITY_MODULE_POLYMOD_LTR559_ENABLE
 #    include "polymod_ltr559.h"
-#    define LTR559_LOG_MS 600000   // sensor telemetry log cadence: 10 min
 #endif
 #include "lib/peripherals/ltr559_policy.h"        // the POLICY on the module (POLYKYBD_LTR559_DRIVE)
 

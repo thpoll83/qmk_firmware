@@ -183,9 +183,9 @@ change generalise well beyond this setting:
     language-layer flags no longer disappear on the first idle cycle).
   - **No shared offset, so nothing extra crosses the UART.** Each half runs
     `kdisp_idle()` on its own keys with the synced pulse `contrast`; only the **style
-    bit** is synced (`poly_sync_t.idle_style`, set from `housekeeping_task_user()` on
-    the master, adopted by the slave's `copy_local_state`) so the slave jitters iff
-    the master's style says so. The legend is **re-derived from the keycode** on every
+    bit** is synced (`poly_sync_t.idle_style`, set from `idle_fade_tick()` and
+    `master_state_sync_tick()` in `keys_com/housekeeping.c` on the master, adopted by
+    the slave's `copy_local_state`) so the slave jitters iff the master's style says so. The legend is **re-derived from the keycode** on every
     relocation — nothing is stored in the OLED's own memory (the panel only holds the
     last frame we send).
   - `update_displays()` **early-returns while `DISP_IDLE` is set** (it would otherwise

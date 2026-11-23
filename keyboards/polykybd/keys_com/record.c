@@ -37,34 +37,6 @@
 #include "latin_picker.h"
 #include "poly_keymap_internal.h"
 
-#ifdef RGB_MATRIX_ENABLE
-#define RGB_REPEAT_INITIAL_DELAY_MS 400
-#define RGB_REPEAT_RATE_MS          40
-
-static uint16_t rgb_held_keycode        = KC_NO;
-static deferred_token rgb_repeat_token  = INVALID_DEFERRED_TOKEN;
-
-static void apply_rgb_adjust(uint16_t keycode) {
-    switch (keycode) {
-        case RM_VALU: rgb_matrix_increase_val_noeeprom();   break;
-        case RM_VALD: rgb_matrix_decrease_val_noeeprom();   break;
-        case RM_HUEU: rgb_matrix_increase_hue_noeeprom();   break;
-        case RM_HUED: rgb_matrix_decrease_hue_noeeprom();   break;
-        case RM_SATU: rgb_matrix_increase_sat_noeeprom();   break;
-        case RM_SATD: rgb_matrix_decrease_sat_noeeprom();   break;
-        case RM_SPDU: rgb_matrix_increase_speed_noeeprom(); break;
-        case RM_SPDD: rgb_matrix_decrease_speed_noeeprom(); break;
-        default: break;
-    }
-}
-
-static uint32_t rgb_repeat_callback(uint32_t trigger_time, void* cb_arg) {
-    if (rgb_held_keycode == KC_NO) return 0;
-    apply_rgb_adjust(rgb_held_keycode);
-    return RGB_REPEAT_RATE_MS;
-}
-#endif
-
 // The press the open picker is waiting to see released, so an answer is only ever
 // taken from a press/release PAIR the picker itself observed.
 #define POLY_PICK_NO_PRESS 0xFFu
@@ -362,14 +334,9 @@ static bool record_action_keys(uint16_t keycode, keyrecord_t* record) {
         case RM_SATU: case RM_SATD:
         case RM_SPDU: case RM_SPDD:
             if (record->event.pressed) {
-                rgb_held_keycode = keycode;
-                apply_rgb_adjust(keycode);
-                rgb_repeat_token = defer_exec(RGB_REPEAT_INITIAL_DELAY_MS, rgb_repeat_callback, NULL);
+                rgb_adjust_key_down(keycode);
             } else {
-                rgb_held_keycode = KC_NO;
-                cancel_deferred_exec(rgb_repeat_token);
-                rgb_repeat_token = INVALID_DEFERRED_TOKEN;
-                eeconfig_update_rgb_matrix(&rgb_matrix_config);
+                rgb_adjust_key_up();
             }
             return true;
         // The settings layer's four effect presets. These are the legacy UNDERGLOW

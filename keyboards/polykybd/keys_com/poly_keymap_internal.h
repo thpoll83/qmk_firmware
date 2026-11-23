@@ -90,3 +90,10 @@ void master_state_sync_tick(void);
 uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col);
 bool     settings_more_hidden(uint16_t keycode);
 bool     process_unicodemap_poly(uint16_t keycode, keyrecord_t* record);
+
+// The key-matrix LEDs, in rgb.c (RGB_MATRIX_ENABLE builds only).
+#ifdef RGB_MATRIX_ENABLE
+void flash_rgb_tick(void);
+void rgb_adjust_key_down(uint16_t keycode);
+void rgb_adjust_key_up(void);
+#endif

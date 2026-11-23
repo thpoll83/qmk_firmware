@@ -58,6 +58,13 @@ status OLED files and `features/` call into this folder.
   Lock, `RM_NEXT` and `RM_PREV`, and turns `_LL` off on an F-key release. It owns the
   state only these use: the macOS GUI/Alt swap latch, the macro picker's pending press,
   the RGB adjust repeat and the held `KC_IME` strokes. The order is in `docs/features/keycode-handling.md`.
+- `rgb.c`: the key-matrix LEDs, compiled only with `RGB_MATRIX_ENABLE`.
+  `rgb_matrix_indicators_kb()` picks what the LEDs show each frame: the flash cue, the
+  Doom cue, the slave's bootloader and display-off states, the tutorial and AI mode.
+  `flash_rgb_tick()`, called from `housekeeping_task_user()`, drives the flash cue.
+  `rgb_adjust_key_down()` / `rgb_adjust_key_up()` apply the `RM_*` adjust keys for
+  `process_record_user()` and repeat them while held. `poly_keymap_internal.h` declares
+  these three.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
   out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`,
   `custom_keys.c`, `record.c`): `latin_publish()`, the `housekeeping.c` phases,

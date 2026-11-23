@@ -31,7 +31,7 @@ the concepts behind them. Every source includes other sources by their path from
   `render_key.c` draws the keycaps that need more than a text legend, and
   `latin_picker.c` holds the Intl latin-variation picker, `tutorial_board.c` the keyboard
   side of the first-run tutorial, `tap_hold.c` the tap-hold hooks, `custom_keys.c` the
-  settings and utility keycodes, `power.c` suspend and wake, and `key_render_helpers.c` the keycap render helpers. Next to them: the legend for each
+  settings and utility keycodes, `power.c` suspend and wake, `key_render_helpers.c` the keycap render helpers, and `board_init.c` the boot and EEPROM-init callbacks. Next to them: the legend for each
   keycode (`keycode_helper`), the language layer and Unicode map (`lang_layer`,
   `uni.h`), layer names (`layer_names`), macros (`poly_macro*`), combos
   (`poly_combos*`), the overlay cache (`mru`) and the layer enum (`layers.h`).

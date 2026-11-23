@@ -588,7 +588,7 @@ unsigned char poly_unicode_key_mac(void);
 // DYNAMIC_KEYMAP_LAYER_COUNT and calls nvm_dynamic_keymap_update_keycode(), whose bound
 // check is also DYNAMIC_KEYMAP_LAYER_COUNT, so it writes layers 9..12 straight over the
 // encoder map and the macro buffer. It is still reachable from eeconfig_init_quantum();
-// eeconfig_init_kb() repairs after it (see poly_keymap.c). Do not add a third call site.
+// eeconfig_init_kb() repairs after it (see keys_com/board_init.c). Do not add a third call site.
 #define DYNAMIC_KEYMAP_ENCODER_EEPROM_ADDR \
     (DYNAMIC_KEYMAP_EEPROM_ADDR + (DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT * MATRIX_ROWS * MATRIX_COLS * 2))
 #define DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR \

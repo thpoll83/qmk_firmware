@@ -3,7 +3,7 @@
 //
 // Helpers poly_keymap.c shares with the files split out of it (latin_picker.c,
 // render_key.c, tutorial_board.c, housekeeping.c, custom_keys.c,
-// key_render_helpers.c, display_sync.c). Not a public API: only keys_com/ includes this.
+// key_render_helpers.c, display_sync.c, board_init.c). Not a public API: only keys_com/ includes this.
 #pragma once
 
 #include <stdbool.h>
@@ -119,3 +119,10 @@ extern uint8_t g_force_resync_tries;
 void    eden_idle_tick(void);
 void    housekeeping_display_tick(void);
 uint8_t status_oled_level(bool idle);
+
+// Board init, in board_init.c. The boot layer resync flags and status_oled_level()
+// above are shared with it too. The resident font table: fonts/gfx_used_fonts.h
+// defines it, and only poly_keymap.c includes that header (a second include links
+// every resident font twice).
+extern const GFXfont* const RESIDENT_FONTS[];
+extern const uint8_t        resident_font_count;   // RESIDENT_FONT_COUNT

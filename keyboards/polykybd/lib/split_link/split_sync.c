@@ -432,7 +432,7 @@ uint8_t dynamic_keymap_migrate_layers_poly(uint8_t first, uint8_t last, uint16_t
 // The encoder map is reset over the same capped range for the same reason. The macro
 // buffer is zeroed because a keymap reset is exactly when a stale macro body would
 // otherwise survive — and because this is the repair path for QMK's unbounded reset
-// (eeconfig_init_kb, poly_keymap.c).
+// (eeconfig_init_kb, keys_com/board_init.c).
 void dynamic_keymap_reset_poly(void) {
     for (uint8_t layer = 0; layer < DYNAMIC_KEYMAP_UPDATE_MAX_LAYER_COUNT; layer++) {
         // ⚠️ Fed per layer: at boot this runs under the late-boot watchdog guard

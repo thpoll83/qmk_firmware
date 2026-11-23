@@ -10,8 +10,7 @@ status OLED files and `features/` call into this folder.
 ## Files
 
 - `poly_keymap.c` / `poly_keymap.h`: the shared keymap logic. It holds the QMK
-  callbacks (`housekeeping_task_user()`, `keyboard_post_init_user()`), the display
-  refresh (`update_displays()`), idle (`kdisp_idle()`),
+  callbacks (`housekeeping_task_user()`), the display refresh (`update_displays()`), idle (`kdisp_idle()`),
   the language selection, and the resting legend of each key (`to_static_text()`).
   `poly_ime_family()` is here too. `poly_keymap.h` declares its exports; QMK's own
   `*_user` / `*_kb` callbacks are not in it.
@@ -58,6 +57,12 @@ status OLED files and `features/` call into this folder.
   suspend. `master_state_sync_tick()` writes the master-authoritative fields (active OS,
   glyph script, size and placement, idle style and timeout, Doom state).
   `housekeeping_task_user()` calls them in that order.
+- `board_init.c`: the boot and EEPROM-init callbacks. `keyboard_pre_init_user()` runs
+  first (crash record, handedness, font pack, keycap displays, splash).
+  `keyboard_post_init_user()` runs the `post_init_*()` steps in boot order, then the
+  displays, the first-run intro and the watchdog. `eeconfig_init_kb()` and
+  `eeconfig_init_user()` write a fresh EEPROM; `oled_init_user()` prepares the status
+  OLED.
 - `display_sync.c`: `sync_and_refresh_displays()`, split into phases (the master's
   pushes of the synced state, the MRU lists, the latin table, the layer state and the
   last key; `apply_state_diff()`; the overlay-burst hold; `run_refresh()`), and
@@ -92,7 +97,7 @@ status OLED files and `features/` call into this folder.
   these three.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
   out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`,
-  `custom_keys.c`, `record.c`, `key_render_helpers.c`, `display_sync.c`): `latin_publish()`, the `housekeeping.c` phases,
+  `custom_keys.c`, `record.c`, `key_render_helpers.c`, `display_sync.c`, `board_init.c`): `latin_publish()`, the `housekeeping.c` phases,
   `render_lang_flag_key()`, `plan_main_legend()`, `poly_keycode_at()`,
   `display_keycode_at()`, the `poly_tutorial_*()` calls, `keymaps[]`,
   `FW_CONFIRM_ROW`/`FW_CONFIRM_COL` and `LATIN_PICKER_MOD`. Only files in `keys_com/`

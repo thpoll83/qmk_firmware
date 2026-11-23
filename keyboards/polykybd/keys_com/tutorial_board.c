@@ -486,8 +486,8 @@ static bool tutorial_matrix_of(uint8_t slot, uint8_t *row, uint8_t *col) {
     return display_index_to_matrix(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot), row, col);
 }
 
-// draw_legend_cx_cy() and display_keycode_at() are in poly_keymap.c
-// (poly_keymap_internal.h), beside update_displays()' own use of them.
+// draw_legend_cx_cy() and display_keycode_at() are in key_render_helpers.c
+// (poly_keymap_internal.h), and update_displays() uses them too.
 
 // The focus ripple repaints keys outside update_displays()' own pass and needs their
 // ordinary legend back under the arc — the same draw, so the same function.

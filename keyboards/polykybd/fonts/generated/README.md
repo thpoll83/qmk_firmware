@@ -4,7 +4,7 @@ Generated font headers and the JSON records that go with them. Every file here i
 written by a generator. Do not edit any of them by hand: regenerate them. The
 firmware includes the font headers through `fonts/gfx_used_fonts.h`.
 `fontpack_layout.h` is included by `config.h`, `base/fontpack.h` and others, and
-`lang_flag_glyph.h` by `keys_com/poly_keymap.c`. `fonts/fontpack.py`, the tools in
+`lang_flag_glyph.h` by `keys_com/key_render_helpers.c`. `fonts/fontpack.py`, the tools in
 `dev/tools/` and the host app read the JSON files.
 
 ## Files

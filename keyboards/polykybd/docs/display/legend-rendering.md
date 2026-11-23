@@ -130,7 +130,7 @@ interpreter — and counting pixels outside the 72x40 window. Require **0**.
     turn the mode on without answering that question, and so a phase cannot leak
     into the next keycap of the same pass.
   - **The Eden legend rolls it off the SAME `epoch` as its position drift**
-    (`poly_keymap.c`, a third salt `0x2000` on `jitter_axis`, so it is uncorrelated
+    (`key_render_helpers.c`, a third salt `0x2000` on `jitter_axis`, so it is uncorrelated
     with dx/dy): the stripe flip then lands on the very frame the letter jumps
     anyway, which is what keeps it invisible instead of a shimmer. The boot splash
     passes phase 0 deliberately — it runs for a few seconds, so a fixed alignment
@@ -638,11 +638,11 @@ holding **Shift** swaps the icon to `ICON_FONT_SMALLER` and reverses the step, s
 
 ---
 
-## Keycap legend size (`base/legend_plan.c` + `poly_keymap.c`, HID cmd 34, protocol v13+)
+## Keycap legend size (`base/legend_plan.c` + `key_render_helpers.c`, HID cmd 34, protocol v13+)
 
 *(The planner — `glyph_size_remap()` / `plan_main_legend()` — is pure in
 `base/legend_plan.c` since #237, behind has-glyph/bbox callbacks with the firmware
-binding kept as wrappers in `poly_keymap.c`; `make test:polykybd_legend_plan` pins
+binding kept as wrappers in `key_render_helpers.c`; `make test:polykybd_legend_plan` pins
 the tier bases, the all-or-nothing fallback and the origin clamps.)
 
 Three sizes for a key's **MAIN** legend — `GLYPH_SIZE_S` (0, the 27 px face the board

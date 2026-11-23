@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Helpers poly_keymap.c shares with the files split out of it (latin_picker.c,
-// render_key.c, tutorial_board.c, housekeeping.c, custom_keys.c). Not a public API: only keys_com/
-// includes this.
+// render_key.c, tutorial_board.c, housekeeping.c, custom_keys.c,
+// key_render_helpers.c). Not a public API: only keys_com/ includes this.
 #pragma once
 
 #include <stdbool.h>
@@ -52,7 +52,7 @@ void arm_tutorial_after_intro(void);
 // true means the keycode was ours and is swallowed.
 bool poly_custom_key_action(uint16_t keycode, keyrecord_t* record);
 
-// Defined in poly_keymap.c and used by tutorial_board.c too.
+// Defined in key_render_helpers.c and used by poly_keymap.c and tutorial_board.c.
 uint16_t poly_keycode_at(uint8_t layer, uint8_t row, uint8_t col);
 uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t col);
 void     draw_legend_cx_cy(const uint32_t* text, int8_t y, int8_t cy_radius);
@@ -86,8 +86,8 @@ void idle_fade_tick(void);
 void master_state_sync_tick(void);
 
 // Defined in poly_keymap.c (uni.h for process_unicodemap_poly()) and called from the
-// key event path in record.c.
-uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col);
+// key event path in record.c. macro_picker_keycode_at() is declared with the
+// key_render_helpers.c block below.
 bool     settings_more_hidden(uint16_t keycode);
 bool     process_unicodemap_poly(uint16_t keycode, keyrecord_t* record);
 
@@ -101,3 +101,11 @@ void rgb_adjust_key_up(void);
 // Suspend and wake, in power.c. poly_set_awake_state(), suspend_wakeup_init_kb() and
 // poly_prepare_for_flash() call it; true when it switched the overlays back on.
 bool restore_suspended_overlays(poly_sync_t* local_state);
+
+// Keycap render helpers in key_render_helpers.c that update_displays() and kdisp_idle()
+// in poly_keymap.c call.
+void     clear_displayed_slots(void);
+void     render_macro_rec_cancel_key(void);
+uint16_t macro_picker_keycode_at(uint8_t row, uint8_t col);
+bool     render_idle_key(uint16_t keycode, led_t state, uint32_t seed);
+void     draw_legend_cx(const uint32_t* text, int8_t y);

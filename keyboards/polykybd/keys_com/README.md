@@ -12,14 +12,13 @@ status OLED files and `features/` call into this folder.
 - `poly_keymap.c` / `poly_keymap.h`: the shared keymap logic. It holds the QMK
   callbacks (`housekeeping_task_user()`, `keyboard_post_init_user()`), the display
   refresh (`update_displays()`, `sync_and_refresh_displays()`), idle (`kdisp_idle()`),
-  the overlays (`copy_overlay_to_buffer()`), the language selection, and the resting
-  legend of each key (`to_static_text()`). `poly_ime_family()`
-  and `poly_keycode_at()` are here too. `poly_keymap.h` declares its exports; QMK's own
+  the language selection, and the resting legend of each key (`to_static_text()`).
+  `poly_ime_family()` is here too. `poly_keymap.h` declares its exports; QMK's own
   `*_user` / `*_kb` callbacks are not in it.
 - `render_key.c`: `render_key()`, which draws the keys that need more than a text
   legend, and the menu, macro-picker, macro, MRU and region-tab renderers
-  (`render_menu_key()`, `render_macro_picker_key()`, `draw_mru_top_bar()`). It reaches
-  the fonts through `extern` declarations.
+  (`render_menu_key()`, `render_macro_picker_key()`). It reaches the fonts through
+  `extern` declarations.
 - `latin_picker.c` / `latin_picker.h`: the Intl latin-variation picker on `_ADDLANG1`.
   It resolves a picker keycode to a slot (`latin_picker_slot()`), pages the picker row
   (`latin_page_count()`), returns the variation a key shows (`latin_variation()`) and
@@ -59,6 +58,15 @@ status OLED files and `features/` call into this folder.
   suspend. `master_state_sync_tick()` writes the master-authoritative fields (active OS,
   glyph script, size and placement, idle style and timeout, Doom state).
   `housekeeping_task_user()` calls them in that order.
+- `key_render_helpers.c`: the helpers that `update_displays()` and `kdisp_idle()` call.
+  It binds the legend-size planner to the fonts (`plan_main_legend()`), draws the overlay
+  icons and records which overlay slots are on screen (`copy_overlay_to_buffer()`,
+  `overlay_slot_displayed()`), and draws the language flag key, the FW-2 confirm key and
+  the MRU bar (`render_lang_flag_key()`, `render_fw_confirm_key()`, `draw_mru_top_bar()`).
+  It holds the keycode resolvers (`poly_keycode_at()`, `keymap_key_to_keycode()`,
+  `display_keycode_at()`) with split72's F-row alignment, the idle legend relocation
+  (`render_idle_key()`, `eden_idle_erase_legend()`) and the centred legend draw
+  (`draw_legend_cx_cy()`).
 - `record.c`: the key event path. `process_record_user()` calls its handlers in a fixed
   order (`record_board_modes()`, `record_macros()`, the Doom hook and `KC_IME`,
   `record_apple_swap()`, `record_action_keys()`, `record_auto_shift()`,
@@ -77,7 +85,7 @@ status OLED files and `features/` call into this folder.
   these three.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
   out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`,
-  `custom_keys.c`, `record.c`): `latin_publish()`, the `housekeeping.c` phases,
+  `custom_keys.c`, `record.c`, `key_render_helpers.c`): `latin_publish()`, the `housekeeping.c` phases,
   `render_lang_flag_key()`, `plan_main_legend()`, `poly_keycode_at()`,
   `display_keycode_at()`, the `poly_tutorial_*()` calls, `keymaps[]`,
   `FW_CONFIRM_ROW`/`FW_CONFIRM_COL` and `LATIN_PICKER_MOD`. Only files in `keys_com/`

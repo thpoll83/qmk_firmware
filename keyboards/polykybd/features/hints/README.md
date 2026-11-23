@@ -2,7 +2,7 @@
 
 The OS shortcut-hint table: the icon a keycap shows while a modifier is held (Win+L lock,
 Cmd+Tab app switch, Alt+Left word left), and the modifier badge on a mod-tap key. One
-caller: `keycode_to_disp_overlay()` in `keys_com/poly_keymap.c`, which passes the local
+caller: `keycode_to_disp_overlay()` in `keys_com/key_render_helpers.c`, which passes the local
 modifier bits and `poly_sync_t.active_os`.
 
 ## Files

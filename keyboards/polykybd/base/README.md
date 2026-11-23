@@ -28,6 +28,10 @@ Macros:
   `auto_shift_pack`.
 - `caps_word_letter.h`: header-only. Caps Word's letter test (`legend_first_char`,
   `is_case_pair`), used by `caps_word_press_user()` in `keys_com/tap_hold.c`.
+- `latin_bits.h`: header-only. The Intl latin variation packing: 6-bit pick and
+  assignment fields, their sizes (`LATIN_PICK_BYTES`, `LATIN_ASSIGN_BYTES` and the
+  base/extension split) and accessors (`latin_pick_get`/`_set`,
+  `latin_assign_get`/`_set`). `lib/system/state.h` includes it.
 
 Legends and fonts:
 

@@ -159,6 +159,15 @@ polykybd_tap_terms_INC := \
 	$(POLY_BASE_PATH) \
 	keyboards/polykybd
 
+# latin_bits.h is header-only and pure: the 6-bit Intl pick and assignment packing
+# that lib/system/state.h includes.
+polykybd_latin_bits_SRC := \
+	$(POLY_BASE_PATH)/tests/latin_bits_tests.cpp
+
+polykybd_latin_bits_INC := \
+	$(POLY_BASE_PATH) \
+	keyboards/polykybd
+
 # combo_store.h is header-only and pure: the cmd 48 records and the tap-dance plan.
 polykybd_combo_store_SRC := \
 	$(POLY_BASE_PATH)/tests/combo_store_tests.cpp

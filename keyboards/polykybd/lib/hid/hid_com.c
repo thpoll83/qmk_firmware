@@ -734,6 +734,38 @@ static void hid_cmd_13(uint8_t *data, uint8_t length, const poly_layer_t *local_
     return;
 }
 
+// The keys cmd 14 pressed and has not released, with the position each press used. A
+// release goes to the same position, the way a real key's would: a press can change
+// the layer (TO(_SL)), and looking the keycode up again on the new layer then finds a
+// different key or none.
+#define CMD14_HELD_MAX 6
+static struct { uint16_t keycode; uint8_t row, col; bool used; } s_cmd14_held[CMD14_HELD_MAX];
+
+static bool cmd14_take_held(uint16_t keycode, uint8_t *row, uint8_t *col) {
+    for (uint8_t i = 0; i < CMD14_HELD_MAX; ++i) {
+        if (s_cmd14_held[i].used && s_cmd14_held[i].keycode == keycode) {
+            *row = s_cmd14_held[i].row;
+            *col = s_cmd14_held[i].col;
+            s_cmd14_held[i].used = false;
+            return true;
+        }
+    }
+    return false;
+}
+
+static void cmd14_put_held(uint16_t keycode, uint8_t row, uint8_t col) {
+    for (uint8_t i = 0; i < CMD14_HELD_MAX; ++i) {
+        if (!s_cmd14_held[i].used) {
+            s_cmd14_held[i].keycode = keycode;
+            s_cmd14_held[i].row     = row;
+            s_cmd14_held[i].col     = col;
+            s_cmd14_held[i].used    = true;
+            return;
+        }
+    }
+    // Full: the release falls back to the keycode lookup.
+}
+
 static void hid_cmd_14(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //key press
     // SECURITY: this injects a real key event into QMK (action_exec), i.e.
     // the keyboard types into the host's focused app on the host's command —
@@ -743,10 +775,15 @@ static void hid_cmd_14(uint8_t *data, uint8_t length, const poly_layer_t *local_
     if (debug_enable) {
         uint16_t keycode = ((uint16_t)data[HID_DATA_IDX])<<8 | data[HID_DATA_IDX+1];
         uint8_t r = 0, c = 0;
-        enum key_split_pos pos = get_split_matrix_pos(keycode, get_highest_layer(local_layer->layer), &r, &c, is_left_side());
         const bool pressed = data[HID_DATA_IDX+2] == 0;
-        if(pos==POS_NOT_FOUND) {
-            pos = get_split_matrix_pos(keycode, local_layer->def_layer, &r, &c, is_left_side());
+        enum key_split_pos pos = POS_NOT_FOUND;
+        if (!pressed && cmd14_take_held(keycode, &r, &c)) {
+            pos = (r < MATRIX_ROWS_PER_SIDE) ? POS_LEFT : POS_RIGHT;
+        } else {
+            pos = get_split_matrix_pos(keycode, get_highest_layer(local_layer->layer), &r, &c, is_left_side());
+            if(pos==POS_NOT_FOUND) {
+                pos = get_split_matrix_pos(keycode, local_layer->def_layer, &r, &c, is_left_side());
+            }
         }
         // A keycode on neither layer has no key to press. NACK it: injecting at the
         // (0, 0) the lookup leaves behind pressed whatever that position holds.
@@ -769,6 +806,7 @@ static void hid_cmd_14(uint8_t *data, uint8_t length, const poly_layer_t *local_
             send_to_bridge(USER_SYNC_DYNAMIC_KEYMAP_DATA, (void*)&sync_data, sizeof(sync_data.crc32)+data_len, 3);
         }
 
+        if (pressed) cmd14_put_held(keycode, r, c);
         action_exec(MAKE_KEYEVENT(r, c, pressed));
         switch_events_poly(r,c, pressed);
         memset(data, 0, length);

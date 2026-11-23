@@ -341,7 +341,19 @@ bool fw_apply_tick(void) {
         // handler only records it -- it runs inside a split-transaction callback
         // with a ~20 ms budget, and this write can erase a sector.
         poly_hand_flush_pending();
+        // ⚠️ Under the core1 lockout, like stage 1 of the apply: this can force a
+        // wear-levelling consolidation (a flash erase), and core1 fetching from XIP
+        // while the QSPI is out of XIP mode stalls the bus, so the erase never
+        // returns. poly_hand_flush_pending() above holds core1 itself.
+        // ⚠️ RELEASE before mcu_reset(). core1_hold() sets the PSM FRCE_OFF bit for
+        // core1, and a processor reset does not clear the PSM: the next boot's
+        // multicore_launch_core1() then waits for a core1 that is still forced off
+        // and the slave never comes back. Holding without the release (4b5c184) did
+        // exactly that on the rig; the reboot_core1_hold probe confirmed both halves
+        // of this (hold only: slave dead after one reboot; hold + release: 6 of 6).
+        core1_hold();
         save_all_dirty();   // persist before the full-chip reset — this path skips shutdown_quantum too
+        core1_release();
         mcu_reset();   // QK_REBOOT slave path — clean full-chip reset; never returns
     }
     fw_staging_process_deferred();

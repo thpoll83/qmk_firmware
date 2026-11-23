@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Helpers poly_keymap.c shares with the files split out of it (latin_picker.c,
-// render_key.c, tutorial_board.c, custom_keys.c). Not a public API: only keys_com/
+// render_key.c, tutorial_board.c, housekeeping.c, custom_keys.c). Not a public API: only keys_com/
 // includes this.
 #pragma once
 
@@ -77,3 +77,10 @@ static inline void layer_reset_to(uint8_t layer) {
     layer_clear();
     layer_on(layer);
 }
+
+// Phases of housekeeping_task_user(), in housekeeping.c. Called in this order.
+void macro_rec_sync_tick(void);
+void fw_confirm_sync_tick(void);
+void ltr559_housekeeping_tick(void);
+void idle_fade_tick(void);
+void master_state_sync_tick(void);

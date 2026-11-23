@@ -44,8 +44,17 @@ status OLED files and `features/` call into this folder.
   family: settings toggles, base layer, brightness, OS selection, display style,
   Eden and the demos, and the language layer. Each handler owns both edges of its keys
   and acts on the release.
+- `housekeeping.c`: phases of `housekeeping_task_user()` that need nothing private to
+  `poly_keymap.c`. `macro_rec_sync_tick()` and `fw_confirm_sync_tick()` copy the macro
+  recorder and the FW-2 / FW-9 confirm prompt into the synced state.
+  `ltr559_housekeeping_tick()` logs the LTR-559 reading and drives auto-brightness.
+  `idle_fade_tick()` runs the idle fade, the screensaver entry and the `TURN_OFF_TIME`
+  suspend. `master_state_sync_tick()` writes the master-authoritative fields (active OS,
+  glyph script, size and placement, idle style and timeout, Doom state).
+  `housekeeping_task_user()` calls them in that order.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
-  out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `custom_keys.c`): `latin_publish()`,
+  out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`,
+  `custom_keys.c`): `latin_publish()`, the `housekeeping.c` phases,
   `render_lang_flag_key()`, `plan_main_legend()`, `poly_keycode_at()`,
   `display_keycode_at()`, the `poly_tutorial_*()` calls, `keymaps[]`,
   `FW_CONFIRM_ROW`/`FW_CONFIRM_COL` and `LATIN_PICKER_MOD`. Only files in `keys_com/`

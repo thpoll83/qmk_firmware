@@ -164,6 +164,22 @@ void poly_board_unusable_cue(void) {
     clear_all_displays();
 }
 
+// A refused apply: record why for the status OLED, which repaints the failure screen
+// from these on every tick the notice is held, show it now, and give the keycaps their
+// legends back (stage 0 blanked them for an apply that is not going to happen). The
+// two refusal paths in fw_apply_tick() both end here.
+static void fw_apply_show_refusal(fw_apply_verdict_t why, uint32_t size, uint32_t want, uint32_t got) {
+    s_fw_fail_why  = why;
+    s_fw_fail_size = size;
+    s_fw_fail_want = want;
+    s_fw_fail_got  = got;
+    oled_fw_failed_screen();
+    s_fw_notice_at    = timer_read();
+    s_fw_notice_armed = true;
+    set_displays(get_local_state()->contrast, false);
+    request_disp_refresh();
+}
+
 // One housekeeping pass of the firmware apply. Returns true when a stage ran and the
 // pass must end here: the stages are split across passes ON PURPOSE (see below).
 bool fw_apply_tick(void) {
@@ -264,15 +280,7 @@ bool fw_apply_tick(void) {
                     // console line above, so from the outside the update simply did
                     // nothing — and hand the keycaps their legends back, since stage 0
                     // blanked them for an apply that is not going to happen.
-                    s_fw_fail_why  = why;
-                    s_fw_fail_size = size;
-                    s_fw_fail_want = want;
-                    s_fw_fail_got  = got;
-                    oled_fw_failed_screen();
-                    s_fw_notice_at = timer_read();
-                    s_fw_notice_armed = true;
-                    set_displays(get_local_state()->contrast, false);
-                    request_disp_refresh();
+                    fw_apply_show_refusal(why, size, want, got);
                     return true;
                 }
                 apply_step = 3;
@@ -308,16 +316,12 @@ bool fw_apply_tick(void) {
                 // on a missing header OR a failed re-verify, and stage 2 passed moments
                 // ago, so whichever it is the user needs the real one. The extra ~25 ms
                 // CRC only ever runs on a path that has already failed.
-                s_fw_fail_size = s_fw_fail_want = s_fw_fail_got = 0;
-                s_fw_fail_why  = fw_staging_verify_staged_flash(&s_fw_fail_size,
-                                                               &s_fw_fail_want,
-                                                               &s_fw_fail_got);
-                if (s_fw_fail_why == FW_APPLY_OK) s_fw_fail_why = FW_APPLY_NO_IMAGE;
-                oled_fw_failed_screen();
-                s_fw_notice_at    = timer_read();
-                s_fw_notice_armed = true;
-                set_displays(get_local_state()->contrast, false);
-                request_disp_refresh();
+                {
+                    uint32_t size = 0, want = 0, got = 0;
+                    fw_apply_verdict_t why = fw_staging_verify_staged_flash(&size, &want, &got);
+                    if (why == FW_APPLY_OK) why = FW_APPLY_NO_IMAGE;
+                    fw_apply_show_refusal(why, size, want, got);
+                }
                 break;
         }
     } else if (apply_step != 0) {

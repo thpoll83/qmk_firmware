@@ -50,4 +50,4 @@ code.
 
 ## Subfolders
 
-- [`tests/`](tests/README.md): the host unit tests of the bookkeeping and wording.
+- [`tests/`](tests/): the host unit tests of the bookkeeping and wording.

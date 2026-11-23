@@ -7,21 +7,21 @@ build switch, for example `lib/hid/poly_pipe.c` with `POLYKYBD_BULK_PIPE`.
 
 ## Subfolders
 
-- [`system/`](system/README.md): the state that both halves share (`state.h`), its
+- [`system/`](system/): the state that both halves share (`state.h`), its
   EEPROM storage, the boot banner and the boot splash.
-- [`split_link/`](split_link/README.md): the link between the halves. State sync,
+- [`split_link/`](split_link/): the link between the halves. State sync,
   the retrying `send_to_bridge()`, the slave-to-master pull channel and which side
   this half is.
-- [`hid/`](hid/README.md): the raw HID command handler (`hid_com.c`), the font-pack
+- [`hid/`](hid/): the raw HID command handler (`hid_com.c`), the font-pack
   transfer, the bulk pipe and MacCompose.
-- [`fw_update/`](fw_update/README.md): firmware update over HID and its relay to the
+- [`fw_update/`](fw_update/): firmware update over HID and its relay to the
   slave half.
-- [`display/`](display/README.md): the keycap OLED output: overlay fill, the core1
+- [`display/`](display/): the keycap OLED output: overlay fill, the core1
   executor and the status-display idle style.
-- [`drivers/`](drivers/README.md): hardware drivers: shift registers, SPI, external
+- [`drivers/`](drivers/): hardware drivers: shift registers, SPI, external
   EEPROM, firmware staging in flash, the crash record, the flash unique ID.
-- [`peripherals/`](peripherals/README.md): the LTR-559 light sensor policy.
-- [`chibios_overrides/`](chibios_overrides/README.md): a patched copy of
+- [`peripherals/`](peripherals/): the LTR-559 light sensor policy.
+- [`chibios_overrides/`](chibios_overrides/): a patched copy of
   ChibiOS-Contrib's RP2040 USB driver, used through `PLATFORM_MK` in `rules.mk`.
 
 ## Important

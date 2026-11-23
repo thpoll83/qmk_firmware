@@ -1,7 +1,7 @@
 # lib/chibios_overrides/
 
 A replacement for ChibiOS-Contrib's RP2040 platform makefile. It builds the RP2040 USB
-device driver from a patched copy in [`USBDv1/`](USBDv1/README.md) instead of from the
+device driver from a patched copy in [`USBDv1/`](USBDv1/) instead of from the
 `lib/chibios-contrib` submodule. `keyboards/polykybd/rules.mk` selects it with
 `PLATFORM_MK`. No C code in the keyboard calls into this folder; ChibiOS's USB HAL
 uses the driver.
@@ -14,7 +14,7 @@ uses the driver.
 
 ## Subfolders
 
-- [`USBDv1/`](USBDv1/README.md): the vendored RP2040 USB driver, with the reset/SETUP
+- [`USBDv1/`](USBDv1/): the vendored RP2040 USB driver, with the reset/SETUP
   order fix and opt-in diagnostics.
 
 ## Core concepts

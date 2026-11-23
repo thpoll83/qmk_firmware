@@ -38,12 +38,10 @@ OLEDs. Build it with `qmk compile -kb polykybd/split72 -km default`. The keyboar
 - `halconf.h` / `mcuconf.h`: ChibiOS HAL and RP2040 MCU settings: I2C and SPI on,
   `SERIAL_PIO_USE_PIO1`, `PICO_FLASH_SIZE_BYTES` (8 MB) and the IRQ priorities. Both
   files are identical to the split42 copies.
-- `vphya.json`: a keyboard definition in VIA format (`menus`, `customKeycodes`,
-  `matrix`, `layouts`). No build step or tool in this repo reads it.
 
 ## Subfolders
 
-- [`keymaps/default/`](keymaps/default/README.md): the layer data, the encoder map and
+- [`keymaps/default/`](keymaps/default/): the layer data, the encoder map and
   the RGB LED positions of this variant.
 
 ## Core concepts
@@ -72,8 +70,7 @@ OLEDs. Build it with `qmk compile -kb polykybd/split72 -km default`. The keyboar
 - ⚠️ `TAPPING_TERM` and `FLOW_TAP_TERM` are only the defaults. They are runtime
   settings (HID cmd 44); read them through `get_poly_tapping_term()`.
   `HOLD_ON_OTHER_KEY_PRESS` is not defined on purpose.
-- ⚠️ VIA is not supported, although `vphya.json` has the VIA format. Remapping goes
-  through PolyKybdHost.
+- ⚠️ VIA is not supported. Remapping goes through PolyKybdHost.
 - ⚠️ Check a change to `status_oled.c` with `dev/tools/status_oled_preview.py --diag`
   before you flash it. It shows every pixel drawn outside the 128×64 panel in red.
 

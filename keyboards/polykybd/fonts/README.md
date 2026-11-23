@@ -390,4 +390,4 @@ skill handles a reship; it needs no `fontconvert`.
 
 ## Subfolders
 
-- [`generated/`](generated/README.md): the generated font headers; regenerate them, never edit them.
+- [`generated/`](generated/): the generated font headers; regenerate them, never edit them.

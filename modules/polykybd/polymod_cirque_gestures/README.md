@@ -52,4 +52,4 @@ pad numbers against the decision code (46 tests).
 
 ## Subfolders
 
-- [`tests/`](tests/README.md): the host unit tests of the gesture decision.
+- [`tests/`](tests/): the host unit tests of the gesture decision.

@@ -15,7 +15,7 @@ modifier bits and `poly_sync_t.active_os`.
 
 ## Subfolders
 
-- [`tests/`](tests/README.md): the `polykybd_os_hints` unit test and the pre-extraction
+- [`tests/`](tests/): the `polykybd_os_hints` unit test and the pre-extraction
   reference table it compares against.
 
 ## Core concepts

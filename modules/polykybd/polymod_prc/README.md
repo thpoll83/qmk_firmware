@@ -88,5 +88,5 @@ host's on the full set of PolyKybd templates (1007 cells, identical tables).
 
 ## Subfolders
 
-- [`tests/`](tests/README.md): the host unit tests of the decoder.
-- [`tools/`](tools/README.md): `prc_tool.py`, which trains the PRC probability tables and encodes 1-bit images.
+- [`tests/`](tests/): the host unit tests of the decoder.
+- [`tools/`](tools/): `prc_tool.py`, which trains the PRC probability tables and encodes 1-bit images.

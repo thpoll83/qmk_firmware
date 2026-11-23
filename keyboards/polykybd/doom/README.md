@@ -1315,5 +1315,5 @@ hardware-test log). What remains, in order:
 
 ## Subfolders
 
-- [`pack/`](pack/README.md): the engine-pack build: `build_pack.sh` and the pack format.
-- [`tools/`](tools/README.md): host-side scripts: the DOOM data download, the UF2 conversion, the keycap display map, and the menu, logo and weapon-icon previews.
+- [`pack/`](pack/): the engine-pack build: `build_pack.sh` and the pack format.
+- [`tools/`](tools/): host-side scripts: the DOOM data download, the UF2 conversion, the keycap display map, and the menu, logo and weapon-icon previews.

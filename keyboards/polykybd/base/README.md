@@ -157,7 +157,7 @@ Other:
 
 ## Subfolders
 
-- [`tests/`](tests/README.md): the host googletest suites for this folder and the suite
+- [`tests/`](tests/): the host googletest suites for this folder and the suite
   registration (`testlist.mk`, `test_rules.mk`).
 
 ## Core concepts

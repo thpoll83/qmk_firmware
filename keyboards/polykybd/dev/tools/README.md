@@ -4,7 +4,7 @@ The Python tools for the PolyKybd firmware. They generate glyph headers, check t
 generated tables and the source agree, draw previews of the displays, sign release
 images and gate a release. Developers run most of them by hand. CI runs the signing
 tools, `ram_report.py`, `require_fwapply_run.py` and `make_hand_uf2.py`, and runs
-the tests in [`tests/`](tests/README.md). Each file's docstring has its exact command
+the tests in [`tests/`](tests/). Each file's docstring has its exact command
 line.
 
 ## Files
@@ -91,9 +91,9 @@ Each check exits 1 on a failure, so it can gate a commit.
 
 ## Subfolders
 
-- [`hil_probes/`](hil_probes/README.md): one-off probes the HIL rig runs against a
+- [`hil_probes/`](hil_probes/): one-off probes the HIL rig runs against a
   flashed keyboard (`qmk-test.yml`, `tier: debug`).
-- [`tests/`](tests/README.md): offline `unittest` suites for these tools and for
+- [`tests/`](tests/): offline `unittest` suites for these tools and for
   other Python generators in the keyboard.
 
 ## Core concepts

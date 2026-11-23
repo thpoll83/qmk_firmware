@@ -78,4 +78,4 @@ module only provides the readings.
 
 ## Subfolders
 
-- [`tests/`](tests/README.md): the host unit tests of the driver against a mock bus.
+- [`tests/`](tests/): the host unit tests of the driver against a mock bus.

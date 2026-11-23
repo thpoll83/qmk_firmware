@@ -2,7 +2,7 @@
 
 A copy of ChibiOS-Contrib's RP2040 USB device driver (`os/hal/ports/RP/LLD/USBDv1`, taken
 at Contrib commit `5a9ad82b`), with one fix and opt-in diagnostics.
-[`../platform.mk`](../README.md) includes `driver.mk` from here, so every PolyKybd build
+[`../platform.mk`](../platform.mk) includes `driver.mk` from here, so every PolyKybd build
 compiles this driver instead of Contrib's. ChibiOS's USB HAL (`hal_usb.c`) and QMK's USB
 stack call it through the `usb_lld_*` functions. The diagnostics are read by
 `dev/diag/usb_stress.c`.

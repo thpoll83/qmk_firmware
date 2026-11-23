@@ -49,7 +49,7 @@ band-by-band:
   on `!oled_dirty`), so it only pays the ~26 ms full-frame I2C cost on an actual full
   swap, never per idle tick. ⚠️ Don't reintroduce a per-frame `oled_clear()` — it defeats
   the diffing and makes `oled_render_dirty(true)` re-push the whole frame every tick.
-- The other `oled_clear()` (`poly_keymap.c` `oled_init_user`) is harmless: QMK calls
+- The other `oled_clear()` (`keys_com/board_init.c` `oled_init_user`) is harmless: QMK calls
   `oled_init_user` at the **top** of `oled_init`, before `oled_initialized = true`, so
   the `oled_off/render/on` around it are early-return no-ops (it only touches RAM).
 - The DOOM status path uses diff-based `oled_write_raw` (no `oled_clear`) and

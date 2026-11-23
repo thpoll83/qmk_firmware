@@ -84,3 +84,14 @@ void fw_confirm_sync_tick(void);
 void ltr559_housekeeping_tick(void);
 void idle_fade_tick(void);
 void master_state_sync_tick(void);
+
+// Board init, in board_init.c. These are defined in poly_keymap.c and used by both.
+// The bounded try budget of the boot layer resync (see sync_and_refresh_displays()).
+#define FORCE_LAYER_RESYNC_TRIES 12
+extern bool    g_force_layer_resync;
+extern uint8_t g_force_resync_tries;
+uint8_t status_oled_level(bool idle);
+// The resident font table. fonts/gfx_used_fonts.h defines it, and only poly_keymap.c
+// includes that header (a second include links every resident font twice).
+extern const GFXfont* const RESIDENT_FONTS[];
+extern const uint8_t        resident_font_count;   // RESIDENT_FONT_COUNT

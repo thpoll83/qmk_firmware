@@ -10,8 +10,7 @@ status OLED files and `features/` call into this folder.
 ## Files
 
 - `poly_keymap.c` / `poly_keymap.h`: the shared keymap logic. It holds the QMK
-  callbacks (`process_record_user()`, `housekeeping_task_user()`,
-  `keyboard_post_init_user()`), the display refresh (`update_displays()`,
+  callbacks (`process_record_user()`, `housekeeping_task_user()`), the display refresh (`update_displays()`,
   `sync_and_refresh_displays()`), idle and suspend (`kdisp_idle()`, `poly_suspend()`,
   `display_wakeup()`), the overlays (`copy_overlay_to_buffer()`), the language
   selection, and the resting legend of each key (`to_static_text()`). `poly_ime_family()`
@@ -52,6 +51,12 @@ status OLED files and `features/` call into this folder.
   suspend. `master_state_sync_tick()` writes the master-authoritative fields (active OS,
   glyph script, size and placement, idle style and timeout, Doom state).
   `housekeeping_task_user()` calls them in that order.
+- `board_init.c`: the boot and EEPROM-init callbacks. `keyboard_pre_init_user()` runs
+  first (crash record, handedness, font pack, keycap displays, splash).
+  `keyboard_post_init_user()` runs the `post_init_*()` steps in boot order, then the
+  displays, the first-run intro and the watchdog. `eeconfig_init_kb()` and
+  `eeconfig_init_user()` write a fresh EEPROM; `oled_init_user()` prepares the status
+  OLED.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
   out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`,
   `custom_keys.c`): `latin_publish()`, the `housekeeping.c` phases,

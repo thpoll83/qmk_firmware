@@ -20,7 +20,7 @@
 //   qmk CLAUDE.md "boot-time busy window" notes) and with USB-enumeration timing, so
 //   it needs care to not delay enumeration or stall the master main loop. Pick up
 //   from where startup_anim_start() is invoked and wire a boot trigger in
-//   keyboard_post_init_user() / the splash path in poly_keymap.c.
+//   keyboard_post_init_user() (keys_com/board_init.c) / the splash path in poly_keymap.c.
 //   Plan: start the intro AFTER the boot splash (splash → Eden), and add a short
 //   "fade in" at the head of the one-shot animation so the comet field ramps up from
 //   black instead of popping in — smooths the splash→Eden hand-off. The fade-in would

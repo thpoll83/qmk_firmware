@@ -39,6 +39,11 @@ status OLED files and `features/` call into this folder.
   `get_flow_tap_term()` return the terms set over HID cmd 44; `caps_word_press_user()`
   tests letters in the active language; `chordal_hold_handedness()` derives the hand
   from the row.
+- `custom_keys.c`: the settings and utility keycodes. `poly_custom_key_action()` is
+  called from `process_record_user()` and hands each keycode to one handler per
+  family: settings toggles, base layer, brightness, OS selection, display style,
+  Eden and the demos, and the language layer. Each handler owns both edges of its keys
+  and acts on the release.
 - `housekeeping.c`: phases of `housekeeping_task_user()` that need nothing private to
   `poly_keymap.c`. `macro_rec_sync_tick()` and `fw_confirm_sync_tick()` copy the macro
   recorder and the FW-2 / FW-9 confirm prompt into the synced state.
@@ -48,9 +53,10 @@ status OLED files and `features/` call into this folder.
   glyph script, size and placement, idle style and timeout, Doom state).
   `housekeeping_task_user()` calls them in that order.
 - `poly_keymap_internal.h`: helpers that `poly_keymap.c` shares with the files split
-  out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`):
-  `latin_publish()`, the `housekeeping.c` phases, `render_lang_flag_key()`,
-  `plan_main_legend()`, `poly_keycode_at()`, `display_keycode_at()`, the `poly_tutorial_*()` calls, `keymaps[]`,
+  out of it (`render_key.c`, `latin_picker.c`, `tutorial_board.c`, `housekeeping.c`,
+  `custom_keys.c`): `latin_publish()`, the `housekeeping.c` phases,
+  `render_lang_flag_key()`, `plan_main_legend()`, `poly_keycode_at()`,
+  `display_keycode_at()`, the `poly_tutorial_*()` calls, `keymaps[]`,
   `FW_CONFIRM_ROW`/`FW_CONFIRM_COL` and `LATIN_PICKER_MOD`. Only files in `keys_com/`
   include it.
 - `keycode_helper.c` / `keycode_helper.h`: the custom keycode enum (`enum my_keycodes`:

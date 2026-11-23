@@ -341,12 +341,6 @@ bool fw_apply_tick(void) {
         // handler only records it -- it runs inside a split-transaction callback
         // with a ~20 ms budget, and this write can erase a sector.
         poly_hand_flush_pending();
-        // ⚠️ Under the core1 lockout, like stage 1 of the apply: this can force a
-        // wear-levelling consolidation (a flash erase), and core1 fetching from XIP
-        // while the QSPI is out of XIP mode stalls the bus, so the erase never returns
-        // and the reset below never comes. poly_hand_flush_pending() above holds core1
-        // itself. No release: mcu_reset() does not return.
-        core1_hold();
         save_all_dirty();   // persist before the full-chip reset — this path skips shutdown_quantum too
         mcu_reset();   // QK_REBOOT slave path — clean full-chip reset; never returns
     }

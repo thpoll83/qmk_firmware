@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   review:
-    # GitHub gives fork PRs no secrets, so GEMINI_API_KEY would be empty there.
+    # GitHub gives fork PRs no secrets, so the review credentials would be empty there.
     # Skip drafts and Dependabot as well.
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
@@ -33,6 +33,10 @@ jobs:
       # itself is not pinned by this SHA.
       - uses: pgup-ai/jbot-review-action@134542a97c6088aa3f42e62dbad575908606132c # v0
         with:
-          model: ${{ vars.JBOT_REVIEW_MODEL || 'google/gemini-3.8-flash' }}
+          # Codex: a ChatGPT Plus/Pro `codex login`. CODEX_AUTH_JSON is the whole
+          # ~/.codex/auth.json. Set JBOT_REVIEW_MODEL to a google/... id to go
+          # back to Gemini without editing this file.
+          model: ${{ vars.JBOT_REVIEW_MODEL || 'codex/default' }}
+          codex-auth: ${{ secrets.CODEX_AUTH_JSON }}
           gemini-api-key: ${{ secrets.GEMINI_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

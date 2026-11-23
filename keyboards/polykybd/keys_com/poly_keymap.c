@@ -4977,7 +4977,13 @@ static void boot_trace(const uint32_t* digit) {
 
 // Initializes keyboard state after reset: enables debug, sets CPI, loads layer/unicode defaults.
 // Global variables: com
-void keyboard_post_init_user(void) {
+// ---- keyboard_post_init_user(), in the order it runs -----------------------------
+// Each step is called once, from keyboard_post_init_user() below. The order is the
+// boot order; the splash and sub-step numbers in the steps are what a hang report names.
+
+// The tables that come from flash and EEPROM before anything draws: MIDI octave,
+// handedness repair, combos, macro labels.
+static void post_init_tables(void) {
 #ifdef MIDI_ENABLE
     // QMK starts at octave index 4 (OCTAVE_2), where MI_C plays MIDI note 48, C3. One
     // index higher puts MI_C on middle C (60, C4), which is what the MIDI layer's home
@@ -5012,6 +5018,11 @@ void keyboard_post_init_user(void) {
 #ifdef FW_UP_BOOT_TRACE
     boot_trace(U"1");
 #endif
+}
+
+// QMK debug flags (debug_enable: POLYKYBD_DEBUG builds start with it on) and the
+// pointing device CPI.
+static void post_init_debug_flags(void) {
     // Customise these values to desired behaviour
     // SECURITY: default OFF. debug_enable now gates keystroke logging to the HID
     // console (process_record_user) and the host-driven active-control HID commands
@@ -5032,7 +5043,11 @@ void keyboard_post_init_user(void) {
     pointing_device_set_cpi(650);
 #endif
     //pimoroni_trackball_set_rgbw(0,0,255,100);
+}
 
+// The default layer, this half's role and side, the boot banner (splash step 2) and
+// the LTR-559 report.
+static void post_init_layers_and_side(void) {
     layer_state_t default_layer = persistent_default_layer_get();
     access_local_layer()->def_layer = default_layer;
     access_local_state()->unicode_mode = get_unicode_input_mode();
@@ -5063,8 +5078,11 @@ void keyboard_post_init_user(void) {
         uprint("LTR-559 sensor detected.\n");
     }
 #endif
+}
 
-
+// Encoder pins, the emoji/language/MRU tables, the overlay pool, and core1 (splash
+// steps 3 to 5).
+static void post_init_peripherals_and_core1(void) {
     //encoder pins
     gpio_set_pin_input_high(GP25);
     gpio_set_pin_input_high(GP29);
@@ -5093,7 +5111,10 @@ void keyboard_post_init_user(void) {
     boot_trace(U"3");
 #endif
     splash_progress(5);                 // core1 up
+}
 
+// The split-link RPCs and fw-staging (boot sub-steps 1 to 4, splash step 6).
+static void post_init_split_rpcs(void) {
     // ⚠️ Sub-steps, because 63% -> 75% is the gap a boot hang has repeatedly landed
     // in and "somewhere in these four calls" is as far as the milestone can narrow
     // it. Everything here is cheap on paper — array writes and XIP reads — which is
@@ -5127,42 +5148,49 @@ void keyboard_post_init_user(void) {
     fw_staging_init();
     boot_substep(4, 4);                    // fw_staging_init() returned (apply-log + done-record read)
     splash_progress(6);                 // split RPCs registered, fw-staging up
+}
 
-    poly_eeconf_t ee = load_user_eeconf();
+// The persisted settings from the user EEPROM block: language, brightness, idle,
+// tap terms, Auto Shift, glyph script and size, emoji search mode.
+static void post_init_load_settings(poly_eeconf_t* ee) {
     poly_sync_t* local_state = access_local_state();
-    local_state->lang = ee.lang;
-    local_state->contrast = ee.brightness;
-    note_user_brightness(ee.brightness);
+    local_state->lang = ee->lang;
+    local_state->contrast = ee->brightness;
+    note_user_brightness(ee->brightness);
     // If host-auto brightness was engaged before the reboot, come up in auto mode
     // at the last auto value instead of the deliberate manual brightness (which the
     // host never refreshes, so a stale low manual value would otherwise show until
     // the host re-engages). Overrides local_state->contrast when auto was on.
-    load_auto_brightness(ee.auto_brightness);
-    note_idle_style(ee.idle_style);
-    note_idle_timeout(ee.idle_timeout);   // BEFORE the banner below, which prints it
+    load_auto_brightness(ee->auto_brightness);
+    note_idle_style(ee->idle_style);
+    note_idle_timeout(ee->idle_timeout);   // BEFORE the banner below, which prints it
     // The tail bytes (tapping_term..emj_search_mode) may hold old keymap data on a
     // board older than 2026-08-13 (state.h, tail_fmt): use their "never chosen"
     // value and stamp the marker, once.
-    if (ee.tail_fmt != TAIL_FMT_OK) {
+    if (ee->tail_fmt != TAIL_FMT_OK) {
         uprintf("Settings tail unmarked (tail_fmt 0x%02X): tap terms and emoji search mode reset to defaults\n",
-                (unsigned)ee.tail_fmt);
-        ee.tapping_term    = 0;
-        ee.flow_tap_term   = 0;
-        ee.emj_search_mode = 0;
+                (unsigned)ee->tail_fmt);
+        ee->tapping_term    = 0;
+        ee->flow_tap_term   = 0;
+        ee->emj_search_mode = 0;
         stamp_tail_fmt();
     }
-    note_poly_tap_terms(tapping_term_unpack(ee.tapping_term), flow_tap_term_unpack(ee.flow_tap_term));
+    note_poly_tap_terms(tapping_term_unpack(ee->tapping_term), flow_tap_term_unpack(ee->flow_tap_term));
     // auto_shift is after tail_fmt, so it has its own marker (state.h, tail2_fmt).
-    if (ee.tail2_fmt != TAIL2_FMT_OK) {
-        ee.auto_shift = 0;
+    if (ee->tail2_fmt != TAIL2_FMT_OK) {
+        ee->auto_shift = 0;
         stamp_tail2_fmt();
     }
-    note_poly_auto_shift(auto_shift_unpack_on(ee.auto_shift), auto_shift_unpack_ms(ee.auto_shift));
+    note_poly_auto_shift(auto_shift_unpack_on(ee->auto_shift), auto_shift_unpack_ms(ee->auto_shift));
     emit_idle_config();   // the style is only known here — the banner tick re-emits it
-    note_glyph_script(ee.glyph_script);
-    note_glyph_size(ee.glyph_size);
-    note_glyph_place(ee.glyph_place);
-    note_emj_search_mode(ee.emj_search_mode);
+    note_glyph_script(ee->glyph_script);
+    note_glyph_size(ee->glyph_size);
+    note_glyph_place(ee->glyph_place);
+    note_emj_search_mode(ee->emj_search_mode);
+}
+
+// The stored keymap's format check and its one-time migrations.
+static void post_init_keymap_storage(poly_eeconf_t* ee) {
     // The dynamic keymap is stored BY LAYER INDEX and QMK does not version it, so a
     // build whose layer enum has shifted would read the previous occupant of every
     // slot above the change. Discard it once, then stamp the revision so the next
@@ -5179,7 +5207,7 @@ void keyboard_post_init_user(void) {
     // USB driver"). No console is attached yet either: the one-shot uprintf below is
     // usually lost, so a board that spends a long time here (or never leaves) looks
     // simply dead.
-    const uint8_t  stored_fmt = ee.keymap_layers_fmt;
+    const uint8_t  stored_fmt = ee->keymap_layers_fmt;
     const bool     need_reset = (stored_fmt != KEYMAP_STORAGE_CURRENT);
     const uint32_t reset_t0   = timer_read32();
     if (need_reset) {
@@ -5197,7 +5225,7 @@ void keyboard_post_init_user(void) {
     // takes priority over the defaults, so a board that stored one gets the change
     // once here: only keys that still hold Hyper at those positions change, the rest
     // of the keymap and the macros stay (state.h, keymap_mig).
-    if (ee.keymap_mig < KEYMAP_MIG_AI_KEY) {
+    if (ee->keymap_mig < KEYMAP_MIG_AI_KEY) {
         const uint8_t moved = dynamic_keymap_migrate_poly(KC_HYPR, KC_AI);
         stamp_keymap_mig(KEYMAP_MIG_AI_KEY);
         note_keymap_migration(KEYMAP_MIG_AI_KEY, moved);   // printed on the banner tick
@@ -5207,16 +5235,21 @@ void keyboard_post_init_user(void) {
     // transparent: change it there once, and only where it is still transparent.
     // Only on _FL: the utility layer has TO(_ML) too, and a transparent key a user
     // put there stays.
-    if (ee.keymap_mig < KEYMAP_MIG_FN_MIDI) {
+    if (ee->keymap_mig < KEYMAP_MIG_FN_MIDI) {
         const uint8_t moved = dynamic_keymap_migrate_layers_poly(_FL, _FL + 1, KC_TRNS, TO(_ML));
         stamp_keymap_mig(KEYMAP_MIG_FN_MIDI);
         note_keymap_migration(KEYMAP_MIG_FN_MIDI, moved);
     }
+}
+
+// The OS state and the synced fields the first render reads.
+static void post_init_seed_state(poly_eeconf_t* ee) {
+    poly_sync_t* local_state = access_local_state();
     // Restore the active-OS state (auto/manual + last known OS). Auto by default, so
     // a fresh EEPROM re-resolves per host via detection / host push; a manual pin
     // (e.g. Android) sticks. Seed local_state->active_os so the first render before
     // housekeeping runs already reflects the restored OS.
-    load_os_state(ee.os_state);
+    load_os_state(ee->os_state);
     // Seed with the same OS|auto-flag encoding housekeeping uses, so the first
     // render/sync before housekeeping runs shows the correct auto/pin badge.
     local_state->active_os = (uint8_t)(get_active_os() | (get_os_auto_mode() ? POLY_OS_AUTO_FLAG : 0));
@@ -5232,7 +5265,10 @@ void keyboard_post_init_user(void) {
 #else
     local_state->flags = STATUS_DISP_ON;   // no RGB on this variant
 #endif
+}
 
+// The persisted Intl latin picks and assignments: migrate and normalise.
+static void post_init_latin_table(poly_eeconf_t* ee) {
     // Normalise the persisted latin-variation picks.  Each nibble can hold 0..15
     // while only LATIN_EX_VARIATIONS slots exist, and a row may have lost entries
     // since the byte was written, so a stale EEPROM can name a slot that is empty
@@ -5258,25 +5294,25 @@ void keyboard_post_init_user(void) {
     // arrays is filled from the ext block further down — unconditionally, because
     // the ASSIGN split is not byte-aligned (26 x 6 = 156 bits), so the 20th base
     // byte carries four bits of the first punctuation field with it.
-    if(ee.latin_pick_migrated == LATIN_PICK_ASSIGN_OK) {
-        memcpy(latin_table->assign, ee.latin_assign, LATIN_ASSIGN_BASE_BYTES);
+    if(ee->latin_pick_migrated == LATIN_PICK_ASSIGN_OK) {
+        memcpy(latin_table->assign, ee->latin_assign, LATIN_ASSIGN_BASE_BYTES);
     } else {
         // Includes LATIN_PICK_INTERLEAVED, whose stored map is the persisted
         // all-zero garbage described in state.h — discarding it is the recovery.
         memset(latin_table->assign, LATIN_ASSIGN_FILL, sizeof(latin_table->assign));
         latin_normalised = true;           // re-stamp at the next flush
     }
-    if(ee.latin_pick_migrated == LATIN_PICK_ASSIGN_OK ||
-       ee.latin_pick_migrated == LATIN_PICK_INTERLEAVED) {
-        memcpy(latin_table->ex, ee.latin_ex_wide, LATIN_PICK_BASE_BYTES);
-    } else if(ee.latin_pick_migrated == LATIN_PICK_MIGRATED) {
+    if(ee->latin_pick_migrated == LATIN_PICK_ASSIGN_OK ||
+       ee->latin_pick_migrated == LATIN_PICK_INTERLEAVED) {
+        memcpy(latin_table->ex, ee->latin_ex_wide, LATIN_PICK_BASE_BYTES);
+    } else if(ee->latin_pick_migrated == LATIN_PICK_MIGRATED) {
         // Re-index case-BLOCKED (case*26 + letter) to case-INTERLEAVED (slot*2 +
         // case). Same 52 values, same width -- only the field numbering moves, so
         // every pick is preserved.
         memset(latin_table->ex, 0, sizeof(latin_table->ex));
         for(uint8_t i = 0; i < 26; i++) {
-            latin_pick_set(latin_table->ex, latin_pick_field(i, true),  latin_bits_get(ee.latin_ex_wide, LATIN_PICK_BASE_BYTES, i));
-            latin_pick_set(latin_table->ex, latin_pick_field(i, false), latin_bits_get(ee.latin_ex_wide, LATIN_PICK_BASE_BYTES, (uint8_t)(26 + i)));
+            latin_pick_set(latin_table->ex, latin_pick_field(i, true),  latin_bits_get(ee->latin_ex_wide, LATIN_PICK_BASE_BYTES, i));
+            latin_pick_set(latin_table->ex, latin_pick_field(i, false), latin_bits_get(ee->latin_ex_wide, LATIN_PICK_BASE_BYTES, (uint8_t)(26 + i)));
         }
         latin_normalised = true;           // force the flush that stamps the new version
     } else {
@@ -5285,8 +5321,8 @@ void keyboard_post_init_user(void) {
         // it lands in the wider field unchanged and the user keeps their picks.
         memset(latin_table->ex, 0, sizeof(latin_table->ex));
         for(uint8_t i = 0; i < 26; i++) {
-            latin_pick_set(latin_table->ex, latin_pick_field(i, true),  (uint8_t)(ee.latin_ex[i] >> 4));
-            latin_pick_set(latin_table->ex, latin_pick_field(i, false), (uint8_t)(ee.latin_ex[i] & 0x0F));
+            latin_pick_set(latin_table->ex, latin_pick_field(i, true),  (uint8_t)(ee->latin_ex[i] >> 4));
+            latin_pick_set(latin_table->ex, latin_pick_field(i, false), (uint8_t)(ee->latin_ex[i] & 0x0F));
         }
         latin_normalised = true;
     }
@@ -5295,11 +5331,11 @@ void keyboard_post_init_user(void) {
     // 0xFF — see state.h), which is why "never written" is decided by the format
     // byte and not by the bytes: zeroed assignments would mean "every punctuation
     // key hosts A", the exact failure the letter map already shipped once.
-    if(ee.latin_ext_fmt == LATIN_EXT_OK) {
-        memcpy(latin_table->ex + LATIN_PICK_BASE_BYTES, ee.latin_ex_ext, LATIN_PICK_EXT_BYTES);
+    if(ee->latin_ext_fmt == LATIN_EXT_OK) {
+        memcpy(latin_table->ex + LATIN_PICK_BASE_BYTES, ee->latin_ex_ext, LATIN_PICK_EXT_BYTES);
         for(uint8_t i = 0; i < LATIN_PUNCT_TARGETS; i++) {
             latin_assign_set(latin_table->assign, (uint8_t)(LATIN_LETTER_TARGETS + i),
-                             latin_bits_get(ee.latin_assign_ext, LATIN_ASSIGN_EXT_BYTES, i));
+                             latin_bits_get(ee->latin_assign_ext, LATIN_ASSIGN_EXT_BYTES, i));
         }
     } else {
         memset(latin_table->ex + LATIN_PICK_BASE_BYTES, 0, LATIN_PICK_EXT_BYTES);
@@ -5342,7 +5378,20 @@ void keyboard_post_init_user(void) {
         // unresponsive -- see the readme).  A corrupt byte thus converges once.
         mark_latin_dirty();
     }
+}
 
+void keyboard_post_init_user(void) {
+    post_init_tables();
+    post_init_debug_flags();
+    post_init_layers_and_side();
+    post_init_peripherals_and_core1();
+    post_init_split_rpcs();
+    poly_eeconf_t ee = load_user_eeconf();
+    post_init_load_settings(&ee);
+    post_init_keymap_storage(&ee);
+    post_init_seed_state(&ee);
+    post_init_latin_table(&ee);
+    poly_sync_t* local_state = access_local_state();
     // Restore the MRU recents and schedule a one-time push to the slave half.
     mru_load(ee.mru_emoji, ee.mru_lang);
     splash_progress(7);                 // EEPROM config (brightness/lang/OS/MRU) loaded

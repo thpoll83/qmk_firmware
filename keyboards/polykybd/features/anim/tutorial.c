@@ -57,7 +57,8 @@ static uint32_t    s_sync_at;                       // last push
 // heavy work to housekeeping (fw_staging_finalize_defer_reload). Same fix here: the
 // handler only records the intent, tutorial_tick() acts on it.
 static bool        s_start_pending;
-// The preview item's row in poly_keymap.c's table, as the SLAVE was told it. The slave
+static uint8_t     s_logged_phase = 0xFFu;   // the step tutorial_tick() printed last; 0xFF = none
+// The preview item's row in keys_com/tutorial_board.c's table, as the SLAVE was told it. The slave
 // never builds the table's renderable subset (only the master does, at start), so it is
 // sent the absolute row: both halves hold the same const table.
 static uint8_t     s_preview_tbl = 0xFFu;
@@ -252,6 +253,7 @@ void tutorial_start(uint32_t seed) {
         }
     }
     s_active     = true;
+    s_logged_phase = 0xFFu;
     s_sync_dirty = is_usb_host_side();
     s_seen_seq   = s_st.ripple_seq;
 
@@ -497,6 +499,41 @@ void tutorial_skip(void) {
     s_sync_dirty = true;
 }
 
+// The step names for the console log, in tut_phase_t order (base/tutorial_plan.h).
+// The rig's tutorial test (polykybd-ctnd station/first_run_tutorial.py) waits on them.
+static const char *const k_tut_phase_names[] = {
+    "BLANK",
+    "TEXT",
+    "LETTER_IN",
+    "LETTER_WAIT",
+    "RIPPLE",
+    "GAP",
+    "REVEAL",
+    "SHIFT_WAIT",
+    "SHIFT_SWEEP",
+    "SHIFT_HELD",
+    "SHIFT_AGAIN",
+    "LAYER_WAIT",
+    "LAYER_SWEEP",
+    "LAYER_HELD",
+    "NOTATION",
+    "BOARD_REVEAL",
+    "BOARD_SHOW",
+    "LANG_INTRO",
+    "LANG_DARK",
+    "LANG_NAME",
+    "LANG_WIPE",
+    "LANG_SHOW",
+    "LANG_MORE",
+    "LANG_MORE2",
+    "TOUR_WAIT",
+    "TOUR_SEEN",
+    "FINALE",
+    "DONE",
+};
+_Static_assert(sizeof(k_tut_phase_names) / sizeof(k_tut_phase_names[0]) == TUT_DONE + 1,
+               "k_tut_phase_names must list every tut_phase_t");
+
 void tutorial_tick(void) {
     // Drain a start the split handler asked for (it must not do this itself).
     if (s_start_pending) {
@@ -509,6 +546,12 @@ void tutorial_tick(void) {
     // The master owns the step machine; the slave's phase arrives over the link.
     if (is_usb_host_side()) {
         if (tut_tick(&s_st, now)) s_sync_dirty = true;
+        // One line per step change, from the timer or from a press. The press handlers
+        // change the step outside this function, so the line comes on the next pass.
+        if (s_st.phase != s_logged_phase) {
+            s_logged_phase = (uint8_t)s_st.phase;
+            uprintf("Tutorial phase %s\n", k_tut_phase_names[s_st.phase]);
+        }
         // Chapter 2's pointing ring is raised by tut_tick() on a timer, so the master
         // has no press to hang a poly_focus_start() on — this is where it lands.
         tutorial_arm_ring_if_new();

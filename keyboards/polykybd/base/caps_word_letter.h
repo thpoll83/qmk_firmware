@@ -1,7 +1,7 @@
 // Copyright 2026 Thomas Pollak
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Caps Word's letter test (poly_keymap.c caps_word_press_user()): a key is a letter
+// Caps Word's letter test (keys_com/tap_hold.c caps_word_press_user()): a key is a letter
 // when its plain and shifted legends are the lower- and upper-case forms of one
 // letter. Header-only and pure, so it is unit-tested on the host
 // (make test:polykybd_caps_word_letter).

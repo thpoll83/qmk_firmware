@@ -341,7 +341,7 @@ unsigned char poly_unicode_key_mac(void);
 #define POLY_ANIM_IDLE  2
 
 // The tap-hold terms are runtime settings (cmd 44): QMK asks the get_*_term()
-// hooks in poly_keymap.c for every tap-hold decision.
+// hooks in keys_com/tap_hold.c for every tap-hold decision.
 #define TAPPING_TERM_PER_KEY
 #define QUICK_TAP_TERM_PER_KEY
 

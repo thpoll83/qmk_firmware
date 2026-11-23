@@ -196,7 +196,7 @@ in `docs/features/tutorial.md`; this is the checklist.
   array (`kdisp_write_gfx_char` baseline-aligns to `fonts[0]`), and `IconsFont` is
   reached by `extern`, never by including the font header a second time.
 - ⚠️ **`tut_*` is pure logic with no keymap access.** Anything it must know about keys —
-  the letter slots, the Shift slots — is resolved in `poly_keymap.c` and handed in. Both
+  the letter slots, the Shift slots — is resolved in `keys_com/tutorial_board.c` and handed in. Both
   halves resolve them, because both answer `tut_hold()`'s "is this the key I am pointing
   at".
 - ⚠️ **Test the PHASE, not `tut_tick()`'s return**, on a waiting phase: the pointing ring
@@ -213,5 +213,6 @@ in `docs/features/tutorial.md`; this is the checklist.
 | `features/anim/tutorial.h` / `.c` | the firmware binding: lifecycle, split sync, status prose |
 | `features/anim/focus_ring.h` / `.c` | the reusable "point at this key" ripple — general, not tutorial-only |
 | `docs/features/tutorial.md` | design + per-round post-mortems |
-| `poly_keymap.c` | the keymap-facing half: slot resolution, the lit-set gate, layout park/restore, the housekeeping hook |
+| `keys_com/tutorial_board.c` | the keymap-facing half: slot resolution, the lit-set gate, layout park/restore, the key tour, the preview |
+| `poly_keymap.c` | the calls from `housekeeping_task_user()` and `process_record_user()` |
 | `oled_helper.c` | `oled_tutorial_screen()` — the status panels |

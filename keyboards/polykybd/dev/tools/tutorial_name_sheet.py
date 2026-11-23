@@ -10,7 +10,7 @@ drawn with the host preview renderer (PolyKybdHost/tools/oled_preview.py); pre-r
 names are read straight out of features/anim/tutorial_names_gen.h, so the sheet shows the bytes the
 firmware carries.
 
-⚠️ ITEMS below is a replica of s_tut_preview_all[] in poly_keymap.c — change both.
+⚠️ ITEMS below is a replica of s_tut_preview_all[] in keys_com/tutorial_board.c — change both.
 
     python3 dev/tools/tutorial_name_sheet.py --out sheet.png
 """

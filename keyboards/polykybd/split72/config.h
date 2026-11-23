@@ -297,8 +297,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Baseline hold threshold, used when none of the rules below has already decided.
 // Since protocol v28 this is only the DEFAULT: the live value is a setting (HID
-// cmd 44, base/tap_terms.h) returned by get_tapping_term() in poly_keymap.c.
-// poly_keymap.c asserts it equals POLY_DEFAULT_TAPPING_TERM_MS.
+// cmd 44, base/tap_terms.h) returned by get_tapping_term() in keys_com/tap_hold.c.
+// keys_com/tap_hold.c asserts it equals POLY_DEFAULT_TAPPING_TERM_MS.
 #define TAPPING_TERM 200
 
 // The opposite-hands rule, and the single biggest reason home row mods are usable:
@@ -306,7 +306,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Same-hand rolls -- `as`, `ht`, `ne` on this layout -- therefore type their letters
 // instead of firing a modifier, which is the misfire everyone meets first.
 // Handedness is DERIVED, not tabulated: see chordal_hold_handedness() in
-// poly_keymap.c.
+// keys_com/tap_hold.c.
 #define CHORDAL_HOLD
 
 // Settle as held as soon as another key is pressed AND released inside the tapping
@@ -320,7 +320,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // this "particularly useful for home row mods to avoid accidental mod triggers" and
 // recommend 150 ms as the starting point.
 // Since protocol v29 this enables Flow Tap and is the DEFAULT term; the live value
-// is a setting (HID cmd 44) returned by get_flow_tap_term() in poly_keymap.c.
+// is a setting (HID cmd 44) returned by get_flow_tap_term() in keys_com/tap_hold.c.
 #define FLOW_TAP_TERM 150
 
 // ⚠️ HOLD_ON_OTHER_KEY_PRESS is deliberately NOT defined. It settles as held on ANY

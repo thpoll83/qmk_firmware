@@ -98,7 +98,7 @@ void tutorial_skip(void);
 // Chapter 3: the preview item the MASTER should show right now, or -1 for none (also
 // -1 on the slave, which only renders what the sync carries).
 int16_t tutorial_preview_index(void);
-// The preview item being named or shown, as a row of poly_keymap.c's table (0xFF: none).
+// The preview item being named or shown, as a row of tutorial_board.c's table (0xFF: none).
 // Both halves answer: the master from its own state, the slave from the sync.
 uint8_t tutorial_preview_entry(void);
 // True while the board spells the next item's name (and during the wipe that replaces it).
@@ -109,7 +109,7 @@ uint8_t tutorial_rgb_phase(void);
 bool    tutorial_showing_name(void);
 // The key the lesson is pulsing right now (TUT_SLOT packing), or TUT_SLOT_NONE.
 uint8_t tutorial_pulsed_slot(void);
-// Provided by poly_keymap.c: does this key carry a letter of the spelled name?
+// Provided by tutorial_board.c: does this key carry a letter of the spelled name?
 bool    tutorial_is_name_key(uint8_t row, uint8_t col);
 // True where the wipe's ring has already turned this key into the new item.
 bool tutorial_wipe_covers(uint8_t row, uint8_t col);
@@ -175,7 +175,7 @@ const uint32_t *tutorial_line_key(uint8_t which);
 // its own clock, so the caller only has to redraw. A resident IconsFont glyph.
 uint32_t tutorial_line_lead_icon(uint8_t which);
 
-// ---- provided by poly_keymap.c (it owns the keymap and the display map) ----
+// ---- provided by keys_com/tutorial_board.c (it reads the keymap and the display map) ----
 // Fill `out` with the packed slots of keys hosting a plain A-Z letter on the base
 // layer, both halves, skipping keys with no OLED behind them. Returns the count.
 uint8_t tutorial_collect_candidates(uint8_t *out, uint8_t max);
@@ -221,12 +221,12 @@ uint8_t tutorial_slot_at(uint8_t row, uint8_t col);
 // Is this one of the two chrome keys with a label to show right now (Esc, or the
 // top-right outer key)? And draw that label into the selected, cleared buffer.
 bool tutorial_is_chrome_key(uint8_t row, uint8_t col);
-// Provided by poly_keymap.c: a menu's recents key (an MRU entry or its Preset/Clear
+// Provided by tutorial_board.c: a menu's recents key (an MRU entry or its Preset/Clear
 // control) on the layer this key currently shows. The lesson keeps them dark.
 bool tutorial_hides_recent(uint8_t row, uint8_t col);
 void tutorial_draw_chrome(uint8_t row, uint8_t col);
 
-// ---- chapter 3 (master side; the table lives with the fonts in poly_keymap.c) ----
+// ---- chapter 3 (master side; the table is in keys_com/tutorial_board.c) ----
 // Build the list of languages and glyph scripts this board can actually draw, and
 // return how many. Called once at tutorial_start() on the master.
 uint8_t tutorial_preview_prepare(void);
@@ -239,7 +239,7 @@ const uint32_t *tutorial_preview_phrase(void);
 // Map a position in the renderable subset (master only) to its table row.
 uint8_t tutorial_preview_table_row(uint8_t pos);
 
-// ---- the key tour (poly_keymap.c resolves the keys from the keymap) ----
+// ---- the key tour (tutorial_board.c resolves the keys from the keymap) ----
 // Fill `out` with the tour's steps in the order they are asked for and return how many.
 // Called on BOTH halves at tutorial_start(); `seed` picks the Intl chapter's letter and
 // accent on the master (the slave is sent the keys, so its seed does not matter).

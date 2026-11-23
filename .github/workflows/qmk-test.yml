@@ -105,7 +105,7 @@ on:
         description: "Which tier to run (dispatch only; 'all' = previous behaviour)"
         type: choice
         default: all
-        options: [all, default, extended, perf, doom, fwapply, debug]
+        options: [all, default, extended, perf, doom, fwapply, debug, tutorial]
       probe:
         description: "tier=debug only: probe name under keyboards/polykybd/dev/tools/hil_probes/"
         type: string
@@ -889,6 +889,120 @@ jobs:
             --doom \
             --plyx-valid "firmware/$PLYX" \
             2>&1 | tee /tmp/doom-test.log
+
+  # ── first-run tutorial on the rig (opt-in) ─────────────────────────────────
+  # A separate rig configuration: HIL images built with POLYKYBD_DEBUG=yes, which
+  # boot with debug_enable on, so cmd 14 can press keys. The ctnd runner's
+  # --tutorial flag runs only the TIER_TUTORIAL tests: press Fn, TO(_SL) and
+  # KC_EDEN to start Eden and the tutorial, then answer the steps the console names
+  # (`Tutorial phase …`, `Tutorial slotN: … letter=X`). The default suite already
+  # ran on the normal images in hil-test, so it is not repeated here.
+  # Opt-in like doom: dispatch tier `tutorial` (or `all`), the `hil-tutorial` PR
+  # label, or `[hil-tutorial]` in a pushed commit message. A label is safe here for
+  # the same reason as `hil-doom`: it runs the PR's own firmware through the fixed
+  # ctnd suite, not code from the PR on the rig (compare the debug probe below).
+  build-tutorial:
+    name: Build debug HIL images (tutorial)
+    if: >-
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.tier == 'all' || inputs.tier == 'tutorial')) ||
+      contains(github.event.pull_request.labels.*.name, 'hil-tutorial') ||
+      contains(github.event.head_commit.message, '[hil-tutorial]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      hil_left: ${{ steps.names.outputs.hil_left }}
+      hil_right: ${{ steps.names.outputs.hil_right }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Build split72 (debug HIL left/master)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_DEBUG=yes -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_debug_hil_left
+
+      - name: Build split72 (debug HIL right/slave)
+        uses: docker://qmkfm/qmk_cli
+        with:
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_DEBUG=yes -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_debug_hil_right
+
+      - id: names
+        run: |
+          echo "hil_left=$(ls polykybd_split72_debug_hil_left*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+          echo "hil_right=$(ls polykybd_split72_debug_hil_right*.uf2 2>/dev/null | head -1)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: firmware-tutorial
+          path: polykybd_split72_debug_hil_*.uf2
+          retention-days: 7
+
+  tutorial-test:
+    name: First-run tutorial (split72, debug build)
+    # Ordered after hil-test for the same reason as doom-test; `!cancelled()` so it
+    # still runs when hil-test was skipped (a pure `hil-tutorial` label run).
+    needs: [build-tutorial, hil-test]
+    if: ${{ !cancelled() && needs.build-tutorial.result == 'success' }}
+    runs-on: [self-hosted, polykybd-ctnd]
+    # Flash (~2 min), Eden and the tutorial up to the skip (~1 min). A hung flash must
+    # not hold the rig for GitHub's 6 h default.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Locate station directory
+        id: ctnd
+        run: |
+          dir="${CTND_DIR:-}"
+          if [ -z "$dir" ]; then
+            for candidate in /opt/polykybd-ctnd "$HOME/polykybd-ctnd"; do
+              if [ -f "$candidate/venv/bin/python" ]; then
+                dir="$candidate"
+                break
+              fi
+            done
+          fi
+          if [ -z "$dir" ]; then
+            echo "ERROR: could not find a polykybd-ctnd install with a venv." >&2
+            exit 1
+          fi
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      - name: Sync station to current ctnd main
+        run: |
+          dir="${{ steps.ctnd.outputs.dir }}"
+          if [ ! -d "$dir/.git" ]; then
+            echo "WARNING: $dir is not a git checkout — running the installed station as-is" >&2
+            exit 0
+          fi
+          git -C "$dir" fetch --quiet origin main \
+            && git -C "$dir" checkout -q -f -B main origin/main \
+            && echo "station synced to $(git -C "$dir" rev-parse --short HEAD)" \
+            || echo "WARNING: could not sync $dir to origin/main" >&2
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: firmware-tutorial
+          path: ${{ steps.ctnd.outputs.dir }}/firmware
+
+      - name: Flash and run the tutorial set
+        # Filenames through env vars, not ${{ }} in the script (same as doom-test).
+        env:
+          CTND_DIR: ${{ steps.ctnd.outputs.dir }}
+          HIL_LEFT: ${{ needs.build-tutorial.outputs.hil_left }}
+          HIL_RIGHT: ${{ needs.build-tutorial.outputs.hil_right }}
+        run: |
+          cd "$CTND_DIR"
+          set -o pipefail
+          venv/bin/python -u -m station.test_runner \
+            --left  "firmware/$HIL_LEFT" \
+            --right "firmware/$HIL_RIGHT" \
+            --tutorial \
+            2>&1 | tee /tmp/tutorial-test.log
 
   # ── ad-hoc debug probe (dispatch-only) ──────────────────────────────────────
   # The debug loop. A PROBE is a Python file committed on this branch under

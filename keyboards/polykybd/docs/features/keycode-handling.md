@@ -28,7 +28,7 @@ char chordal_hold_handedness(keypos_t key) {
 ```
 
 That is the split `LAYOUT_TO_INDEX()` and `is_left_side()` already assume, so it cannot
-drift from the matrix the way a table can. It lives in `poly_keymap.c` under an
+drift from the matrix the way a table can. It is in `keys_com/tap_hold.c` under an
 `#ifdef CHORDAL_HOLD`, and the override alone links — the table is never referenced.
 
 ⚠️ **`HOLD_ON_OTHER_KEY_PRESS` is deliberately NOT defined**, and the reason survives any
@@ -84,7 +84,7 @@ keycode; `process_record_user()` calls it last, before `display_wakeup()`.
 Both are QMK features, enabled in each variant's `keyboard.json`.
 
 - **Caps Word** turns on with `CW_TOGG` or both Shift keys (`BOTH_SHIFTS_TURNS_ON_CAPS_WORD`).
-  `caps_word_press_user()` in `poly_keymap.c` decides which keys are letters from the
+  `caps_word_press_user()` in `keys_com/tap_hold.c` decides which keys are letters from the
   active language's table: a key is a letter when its plain and shifted legends are
   the two cases of one letter (`base/caps_word_letter.h`, unit-tested). On de-DE that
   makes ö, ä and ü letters, and comma and period not; QMK's default knows only

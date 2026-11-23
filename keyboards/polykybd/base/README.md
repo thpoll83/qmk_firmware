@@ -27,7 +27,7 @@ Macros:
   Tap term and Auto Shift (HID cmd 44): `tapping_term_valid`, `tap_term_pack`,
   `auto_shift_pack`.
 - `caps_word_letter.h`: header-only. Caps Word's letter test (`legend_first_char`,
-  `is_case_pair`), used by `caps_word_press_user()` in `keys_com/poly_keymap.c`.
+  `is_case_pair`), used by `caps_word_press_user()` in `keys_com/tap_hold.c`.
 
 Legends and fonts:
 

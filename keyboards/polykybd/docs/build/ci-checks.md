@@ -59,7 +59,8 @@ in either shape, so "not failed" is never "passed".
     `if:` at once (each names `github.event_name == 'workflow_dispatch'`).
     ⚠️ **Since the `tier` input (2026-09-01) that is what `tier: all` does, and `all`
     is the DEFAULT**, so an ordinary dispatch still behaves exactly as described here.
-    The narrower values (`default`, `extended`, `perf`, `doom`, `fwapply`, `debug`)
+    The narrower values (`default`, `extended`, `perf`, `doom`, `fwapply`, `debug`,
+    `tutorial`)
     each drive one opt-in, and `tier` is read **only** under
     `github.event_name == 'workflow_dispatch'` — push and pull_request keep their
     label/marker gating untouched. `debug` is the odd one out: it **skips the graded
@@ -118,6 +119,13 @@ in either shape, so "not failed" is never "passed".
     rather than a boolean, so the job silently stops matching its trigger. The
     `build-doom` `if:` (the `hil-doom` opt-in) is the same shape and deserves the same
     check.
+  - **The first-run tutorial is its own rig configuration (`hil-tutorial`).**
+    `build-tutorial` builds the HIL pair with `-e POLYKYBD_DEBUG=yes` (boots with
+    `debug_enable` on, so cmd 14 can press keys), and `tutorial-test` runs the ctnd
+    runner with `--tutorial`, which runs only the `TIER_TUTORIAL` tests. Opt in with the
+    `hil-tutorial` label, `[hil-tutorial]` in a pushed commit message, or a dispatch with
+    tier `tutorial` (or `all`). The `build-tutorial` `if:` has the same folded `>-` shape
+    as `build-doom`. What the test does: `docs/features/tutorial.md` → *The rig*.
   - **The FW-9 doom set is a THIRD opt-in tier (`hil-doom`), and it signs its test
     artifact with an EPHEMERAL key — never the production one.** `build-doom` +
     `doom-test` (mirroring `build-perf`/`perf-test`) build a doom-flavour HIL image

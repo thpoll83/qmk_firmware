@@ -80,6 +80,27 @@ its keys, and the function returns whether one of them owned the keycode.
   already answers.
 
 
+## The order in `process_record_user()`
+
+`process_record_user()` in `keys_com/poly_keymap.c` is a dispatcher. It calls these
+steps in this order, and the first step that decides the event ends the dispatch:
+
+1. `record_board_modes()`: the crash-test chord, the startup animation, the confirm
+   prompt, the demo, the first-run tutorial, the mine sweeper and AI mode.
+2. `record_macros()`: the macro abort, the slot picker, `KC_MACRO_REC` and the macro
+   keycodes.
+3. The Doom hook and `KC_IME`.
+4. `record_debug_log()`, `record_apple_swap()`, the emoji and Unicode keys, then
+   `record_action_keys()` (RGB, line editing, OS action keys).
+5. `latin_picker_record_early()`, the settings gate, `record_auto_shift()`.
+6. On a press: `record_reset_keys()` (`QK_BOOTLOADER`, `QK_REBOOT`), then
+   `latin_picker_record_pressed()`.
+7. `display_wakeup()`, then `poly_custom_key_action()`.
+
+- ⚠️ The order is the behaviour. A mode that swallows every key must come before the
+  keys it would otherwise let through, and the settings gate must come before
+  `record_reset_keys()`.
+
 ## Caps Word and Auto Shift
 
 Both are QMK features, enabled in each variant's `keyboard.json`.

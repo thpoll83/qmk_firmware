@@ -56,7 +56,13 @@ New corpus entries go to `build/corpus_<target>/`, crash inputs to
   these files does not run them.
 - **From the Actions tab** → *PolyKybd fuzz* → *Run workflow*: choose the branch,
   the target (or `all`) and the run time per target (default 300 s). The job limit
-  is 15 min, so stay at or below about 600 s.
+  is 360 min, so stay at or below about 20 000 s (5 h 30 min).
+- **Every Wednesday and Sunday at 01:43 UTC** on `PolyKybd`: every target for 5 h.
+  A crash fails that target's job and uploads the input.
+
+Manual and scheduled runs restore each target's corpus (`build/corpus_<target>/`)
+from the previous run and save it at the end, so a long run continues where the
+last one stopped. GitHub deletes a cache that has not been used for 7 days.
 
 The replay suite (`make test:polykybd_fuzz_replay`) runs on every PR.
 

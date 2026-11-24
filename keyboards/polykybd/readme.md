@@ -85,6 +85,7 @@ the concepts behind them. Every source includes other sources by their path from
     ([`tools/tests/`](dev/tools/tests/)).
   - [`diag/`](dev/diag/): diagnostic builds (crash test, USB stress), off by default.
   - [`profiling/`](dev/profiling/): the main-loop profiler (`POLYKYBD_LOOP_PROFILE=yes`, HID cmd 32).
+  - [`fuzz/`](dev/fuzz/): libFuzzer harnesses for the parsers of host and flash data.
 - [`docs/`](docs/): the firmware documentation, by topic.
 
 # Build Notes

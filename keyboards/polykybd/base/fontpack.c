@@ -32,10 +32,6 @@
 #    define FONTPACK_XIP_BASE ((const uint8_t *)(XIP_BASE + FW_RESOURCE_OFFSET))
 #endif
 
-// Upper bound on resident + pack fonts. RAM cost: FONTPACK_MAX_FONTS * (20 + 4)
-// bytes of static state (~4.8 KB at 200). Current need is ~14 resident + ~119
-// pack = 133.
-#define FONTPACK_MAX_FONTS 200
 
 static GFXfont        s_pack[FONTPACK_MAX_FONTS];   // GFXfonts built from all bundles
 static uint16_t       s_pack_gidx[FONTPACK_MAX_FONTS]; // each font's global ALL_FONTS index
@@ -186,10 +182,13 @@ void fontpack_assemble(const GFXfont *const *resident, uint8_t n_resident) {
     // small insertion sort on an index array keeps the GFXfont structs put.
     uint8_t order[FONTPACK_MAX_FONTS];
     for (uint8_t i = 0; i < s_pack_count; ++i) order[i] = i;
+    // ⚠️ `j` must hold -1 .. FONTPACK_MAX_FONTS-1. As an int8_t it went negative
+    // from i = 129 on, and `order[j + 1] = v` wrote below the array (a stack write
+    // at boot from a flashed pack with more than 129 fonts; see dev/fuzz/).
     for (uint8_t i = 1; i < s_pack_count; ++i) {
         uint8_t  v  = order[i];
         uint16_t vg = s_pack_gidx[v];
-        int8_t   j  = (int8_t)i - 1;
+        int16_t  j  = (int16_t)i - 1;
         while (j >= 0 && s_pack_gidx[order[j]] > vg) {
             order[j + 1] = order[j];
             --j;

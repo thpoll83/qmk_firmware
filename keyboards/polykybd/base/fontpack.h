@@ -5,6 +5,11 @@
 #include <stdint.h>
 #include "fonts/gfxfont.h"
 
+// Upper bound on resident + pack fonts. RAM cost: FONTPACK_MAX_FONTS * (20 + 4)
+// bytes of static state (~4.8 KB at 200). Current need is ~14 resident + ~119
+// pack = 133.
+#define FONTPACK_MAX_FONTS 200
+
 // ── PolyKybd "PlyF" font pack — on-flash format (position-independent) ───────
 //
 // The font pack is the bulk glyph-bitmap data (emoji, symbols, CJK, Indic,

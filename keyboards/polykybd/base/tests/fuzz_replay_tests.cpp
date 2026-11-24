@@ -40,7 +40,7 @@ struct Target {
 const Target kTargets[] = {
     {"overlay_roi", poly_fuzz_overlay_roi, 6},
     {"prc_report", poly_fuzz_prc_report, 9},
-    {"fontpack", poly_fuzz_fontpack, 3},
+    {"fontpack", poly_fuzz_fontpack, 4},
     {"iconlib", poly_fuzz_iconlib, 3},
     {"emjdict", poly_fuzz_emjdict, 3},
 };
@@ -158,6 +158,53 @@ TEST(FuzzReplay, EmptyAndTinyInputs) {
             EXPECT_EQ(t.fn(zero, n), POLY_FUZZ_OK) << t.name << " size " << n;
         }
     }
+}
+
+// A PlyF image with `n` one-glyph fonts whose global indices (`reserved`) run
+// backwards, so fontpack_assemble() has to reverse them.
+std::vector<uint8_t> reversed_pack(uint32_t n) {
+    const uint32_t       table = 32 + 20 * n;
+    const uint32_t       total = table + 8 * n + 4 * n;
+    std::vector<uint8_t> b(total, 0);
+    fontpack_header_t    h = {};
+    memcpy(h.magic, "PlyF", 4);
+    h.abi_version    = FONTPACK_ABI_VERSION;
+    h.font_count     = n;
+    h.font_table_off = 32;
+    h.total_size     = total;
+    for (uint32_t i = 0; i < n; ++i) {
+        fontpack_font_t f = {};
+        f.glyph_off       = table + 8 * i;
+        f.bitmap_off      = table + 8 * n + 4 * i;
+        f.first = f.last = 0x10000u + i;
+        f.yAdvance        = 8;
+        f.reserved        = (uint16_t)(n - 1 - i);
+        memcpy(&b[32 + 20 * i], &f, sizeof f);
+    }
+    h.crc32 = crc32_large(&b[32], total - 32, 0);
+    memcpy(&b[0], &h, sizeof h);
+    return b;
+}
+
+// Regression: fontpack_assemble() sorted with an int8_t index. From the 130th
+// font on (i = 129) the index went negative, the sort wrote order[-127] (below
+// the stack array) and the fonts after it kept their table order. Found while
+// writing the fontpack fuzzer's order invariant (UBSan reports the write);
+// dev/fuzz/corpus/fontpack/regress_130_fonts_reversed is the same input.
+TEST(FuzzReplay, AssembleSortsPacksWithMoreThan128Fonts) {
+    for (uint32_t n : {2u, 127u, 128u, 129u, 130u, 199u}) {
+        auto pack = reversed_pack(n);
+        ASSERT_TRUE(fontpack_load_at(pack.data())) << n;
+        fontpack_assemble(nullptr, 0);
+        ASSERT_EQ(g_all_font_count, n);
+        for (uint32_t k = 0; k < n; ++k) {
+            // Global index k is the font with first == 0x10000 + (n - 1 - k).
+            ASSERT_EQ(g_all_fonts[k]->first, 0x10000u + (n - 1 - k)) << "n=" << n << " position " << k;
+        }
+        EXPECT_EQ(poly_fuzz_fontpack(pack.data(), pack.size()), POLY_FUZZ_OK) << n;
+    }
+    (void)fontpack_load_at(nullptr);
+    fontpack_assemble(nullptr, 0);
 }
 
 } // namespace

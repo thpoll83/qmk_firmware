@@ -120,6 +120,12 @@ def fontpack_seeds():
     many = [(0x100 * i, 0x100 * i, 8, (i * 7) % 11) for i in range(12)]
     pack = bundle(b"PlyF", many, [glyph(0, 1, 1, 1, 0, 0)] * 12, [b"\x80"] * 12)
     write("fontpack", "twelve_fonts", pack)
+    # Regression: 130 fonts in reverse global order. fontpack_assemble() wrote
+    # below its sort array from the 130th font on (int8_t index).
+    n = 130
+    rev = [(0x10000 + i, 0x10000 + i, 8, n - 1 - i) for i in range(n)]
+    pack = bundle(b"PlyF", rev, [glyph(0, 1, 1, 1, 0, 0)] * n, [b"\x80"] * n)
+    write("fontpack", "regress_130_fonts_reversed", pack)
 
 
 def iconlib_seeds():

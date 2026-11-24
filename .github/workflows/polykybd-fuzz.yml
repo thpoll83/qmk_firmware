@@ -15,8 +15,16 @@ permissions:
 
 on:
   pull_request:
+    # The fuzzed sources (dev/fuzz/Makefile SRC) and every header they include.
+    # The header list is what `clang -MM` reports in the Makefile (HDRS); add
+    # a path here when a fuzzed source starts to include a new header.
     paths:
       - 'keyboards/polykybd/dev/fuzz/**'
+      - 'keyboards/polykybd/config.h'
+      - 'keyboards/polykybd/fonts/gfxfont.h'
+      - 'keyboards/polykybd/base/font_lookup.h'
+      - 'keyboards/polykybd/base/map_codec.h'
+      - 'platforms/progmem.h'
       - 'keyboards/polykybd/base/overlay.c'
       - 'keyboards/polykybd/base/overlay.h'
       - 'keyboards/polykybd/base/prc_record.c'

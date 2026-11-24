@@ -1,7 +1,7 @@
 # PolyKybd firmware docs
 
 The docs for `keyboards/polykybd/`. A folder's `README.md` next to its code
-(`doom/`, `fonts/`, `lang/`, `profiling/`, `diag/`, `tools/hil_probes/`) stays there.
+(`doom/`, `fonts/`, `lang/`, `profiling/`, `diag/`, `fuzz/`, `tools/hil_probes/`) stays there.
 The keyboard overview is [`../readme.md`](../readme.md).
 
 ## build/

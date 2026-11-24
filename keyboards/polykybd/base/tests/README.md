@@ -92,6 +92,11 @@ Suites (run with `make test:<suite>` from the repo root):
   bundles.
 - `polykybd_host_unicode_mode`: the cmd 20 mode values and the MacCompose flag
   (`host_unicode_mode.h`).
+- `polykybd_fuzz_replay`: the fuzz entry points of `dev/fuzz/poly_fuzz.c` (ROI overlay,
+  PRC records, font pack, icon library, emoji dictionary) on the fuzz corpus, 2000
+  mutated and 2000 random inputs per target from a fixed seed, and the font-pack sort
+  regression. No sanitizers here: run the fuzzers for memory errors
+  ([`../../dev/fuzz/README.md`](../../dev/fuzz/README.md)).
 
 ## Core concepts
 

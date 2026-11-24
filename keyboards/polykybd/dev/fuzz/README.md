@@ -73,6 +73,8 @@ New corpus entries go to `build/corpus_<target>/`, crash inputs to
   is 360 min, so stay at or below about 20 000 s (5 h 30 min).
 - **Every Wednesday and Sunday at 01:43 UTC** on `PolyKybd`: every target for 5 h.
   A crash fails that target's job and uploads the input.
+  It also opens an issue `Fuzz crash: <target>` (label `fuzz-crash`), or comments on the
+  open one for that target, with links to the run and its crash-input artifact.
 
 Manual and scheduled runs restore each target's corpus (`build/corpus_<target>/`)
 from the previous run and save it at the end, so a long run continues where the

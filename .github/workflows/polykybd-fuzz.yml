@@ -122,3 +122,47 @@ jobs:
           name: fuzz-crash-${{ matrix.target }}
           path: keyboards/polykybd/dev/fuzz/build/artifacts_${{ matrix.target }}/
           if-no-files-found: ignore
+
+  # After a scheduled run with a failed fuzz job, open one issue per failed target
+  # (label fuzz-crash), or comment on the open issue for that target if there is one.
+  # A separate job, so the job that builds and runs code never gets issues: write;
+  # this one checks out nothing and only reads the run's job list.
+  report-crash:
+    name: report fuzz crashes
+    needs: fuzz
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: Open or update one issue per failed target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          gh label create fuzz-crash --repo "$REPO" --color B60205 \
+            --description "A scheduled fuzz run found a crash" 2>/dev/null || true
+          failed=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
+            --jq '.jobs[] | select(.conclusion == "failure" and (.name | startswith("fuzz "))) | .name | ltrimstr("fuzz ")')
+          if [ -z "$failed" ]; then echo "No failed fuzz job found."; exit 0; fi
+          for target in $failed; do
+            title="Fuzz crash: $target"
+            body="The scheduled fuzz run $RUN_URL failed on target \`$target\`.
+
+          The crash input is the run's artifact \`fuzz-crash-$target\`. Replay it with
+          \`./build/fuzz_$target <file>\` in \`keyboards/polykybd/dev/fuzz\`; what to do next is in
+          that directory's README (\"When a fuzzer finds a crash\")."
+            num=$(gh issue list --repo "$REPO" --state open --label fuzz-crash \
+              --search "\"$title\" in:title" --json number,title \
+              --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+            if [ -n "$num" ]; then
+              gh issue comment "$num" --repo "$REPO" --body "Failed again: $RUN_URL"
+            else
+              gh issue create --repo "$REPO" --title "$title" --label fuzz-crash --body "$body"
+            fi
+          done

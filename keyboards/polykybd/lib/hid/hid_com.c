@@ -394,179 +394,188 @@ static void hid_cmd_6(uint8_t *data, uint8_t length, const poly_layer_t *local_l
 }
 
 static void hid_cmd_7(uint8_t *data, uint8_t length, const poly_layer_t *local_layer, poly_sync_t *local_state) { //lang
+    // The 4-character code ("enUS") of each language, indexed by enum lang
+    // (lang_lut.h). Both are generated from the same workbook row in the same
+    // order. Each entry has no NUL terminator.
+    static const char k_lang_codes[][4] = {
+        /*[[[cog
+        for lang in languages:
+            cog.outl(f'"{lang}",')
+        ]]]*/
+        "enUS",
+        "deDE",
+        "frFR",
+        "esES",
+        "ptPT",
+        "itIT",
+        "trTR",
+        "koKR",
+        "jaJP",
+        "arSA",
+        "elGR",
+        "ukUA",
+        "ruRU",
+        "beBY",
+        "kkKZ",
+        "bgBG",
+        "plPL",
+        "roRO",
+        "zhCN",
+        "nlNL",
+        "heIL",
+        "svSE",
+        "fiFI",
+        "nnNO",
+        "daDK",
+        "huHU",
+        "csCZ",
+        "hrHR",
+        "skSK",
+        "ltLT",
+        "lvLV",
+        "etEE",
+        "ptBR",
+        "srRS",
+        "mkMK",
+        "faIR",
+        "hiIN",
+        "mrIN",
+        "neNP",
+        "mnMN",
+        "urPK",
+        "enGB",
+        "esMX",
+        "deCH",
+        "frBE",
+        "frCA",
+        "thTH",
+        "bnIN",
+        "teIN",
+        "taIN",
+        "zhTW",
+        "kaGE",
+        "hyAM",
+        "idID",
+        "azAZ",
+        "isIS",
+        "viVN",
+        "zhHK",
+        "enAU",
+        "enNZ",
+        "miNZ",
+        "smWS",
+        "fjFJ",
+        "tlPH",
+        "hwUS",
+        "enZA",
+        "afZA",
+        "arEG",
+        "swKE",
+        "amET",
+        "yoNG",
+        "enNG",
+        "arMA",
+        "arIQ",
+        "kuIQ",
+        "msMY",
+        "uzUZ",
+        "enCA",
+        "esAR",
+        "enPG",
+        "tyPF",
+        "esCO",
+        "esPE",
+        "esVE",
+        "esCL",
+        "esEC",
+        "esGT",
+        "esDO",
+        "esBO",
+        "esPY",
+        "esCR",
+        "esSV",
+        "esHN",
+        "esPA",
+        "esUY",
+        "esNI",
+        "deAT",
+        "nlBE",
+        "caES",
+        "enIE",
+        "bsBA",
+        "frCH",
+        "slSI",
+        "foFO",
+        "arAE",
+        "arSY",
+        "arJO",
+        "arLB",
+        "arYE",
+        "arKW",
+        "arOM",
+        "arPS",
+        "arQA",
+        "arBH",
+        "arDZ",
+        "arSD",
+        "arTN",
+        "arLY",
+        "frCD",
+        "frCI",
+        "frCM",
+        "frSN",
+        "frMG",
+        "enGH",
+        "enUG",
+        "enZM",
+        "swTZ",
+        "ptAO",
+        "ptMZ",
+        "bnBD",
+        "enIN",
+        "enPK",
+        "enPH",
+        "enSG",
+        "enLK",
+        "kyKG",
+        "tgTJ",
+        "enGU",
+        "enSB",
+        "enVU",
+        "enFM",
+        "frNC",
+        "toTO",
+        "euES",
+        "glES",
+        "rmCH",
+        "cyGB",
+        "gaIE",
+        "mtMT",
+        "lbLU",
+        "seNO",
+        "gnPY",
+        "quPE",
+        "ayBO",
+        "nvUS",
+        "nhMX",
+        "psAF",
+        "iuCA",
+        "crCA",
+        "ckUS",
+        "jaUS",
+        //[[[end]]]
+    };
+    _Static_assert(sizeof(k_lang_codes) / sizeof(k_lang_codes[0]) == NUM_LANG,
+                   "k_lang_codes must have one entry per enum lang value");
     memset(data, 0, length);
     // poly_reported_lang(), not local_state->lang: the host switches the OS
     // layout to this answer, and the tutorial may be previewing another one.
-    switch(poly_reported_lang()) {
-        /*[[[cog
-        for lang in languages:
-            cog.outl(f'case LANG_{lang.upper()}: memcpy(data, "P\\x07.{lang}", 7); break;')
-        ]]]*/
-        case LANG_ENUS: memcpy(data, "P\x07.enUS", 7); break;
-        case LANG_DEDE: memcpy(data, "P\x07.deDE", 7); break;
-        case LANG_FRFR: memcpy(data, "P\x07.frFR", 7); break;
-        case LANG_ESES: memcpy(data, "P\x07.esES", 7); break;
-        case LANG_PTPT: memcpy(data, "P\x07.ptPT", 7); break;
-        case LANG_ITIT: memcpy(data, "P\x07.itIT", 7); break;
-        case LANG_TRTR: memcpy(data, "P\x07.trTR", 7); break;
-        case LANG_KOKR: memcpy(data, "P\x07.koKR", 7); break;
-        case LANG_JAJP: memcpy(data, "P\x07.jaJP", 7); break;
-        case LANG_ARSA: memcpy(data, "P\x07.arSA", 7); break;
-        case LANG_ELGR: memcpy(data, "P\x07.elGR", 7); break;
-        case LANG_UKUA: memcpy(data, "P\x07.ukUA", 7); break;
-        case LANG_RURU: memcpy(data, "P\x07.ruRU", 7); break;
-        case LANG_BEBY: memcpy(data, "P\x07.beBY", 7); break;
-        case LANG_KKKZ: memcpy(data, "P\x07.kkKZ", 7); break;
-        case LANG_BGBG: memcpy(data, "P\x07.bgBG", 7); break;
-        case LANG_PLPL: memcpy(data, "P\x07.plPL", 7); break;
-        case LANG_RORO: memcpy(data, "P\x07.roRO", 7); break;
-        case LANG_ZHCN: memcpy(data, "P\x07.zhCN", 7); break;
-        case LANG_NLNL: memcpy(data, "P\x07.nlNL", 7); break;
-        case LANG_HEIL: memcpy(data, "P\x07.heIL", 7); break;
-        case LANG_SVSE: memcpy(data, "P\x07.svSE", 7); break;
-        case LANG_FIFI: memcpy(data, "P\x07.fiFI", 7); break;
-        case LANG_NNNO: memcpy(data, "P\x07.nnNO", 7); break;
-        case LANG_DADK: memcpy(data, "P\x07.daDK", 7); break;
-        case LANG_HUHU: memcpy(data, "P\x07.huHU", 7); break;
-        case LANG_CSCZ: memcpy(data, "P\x07.csCZ", 7); break;
-        case LANG_HRHR: memcpy(data, "P\x07.hrHR", 7); break;
-        case LANG_SKSK: memcpy(data, "P\x07.skSK", 7); break;
-        case LANG_LTLT: memcpy(data, "P\x07.ltLT", 7); break;
-        case LANG_LVLV: memcpy(data, "P\x07.lvLV", 7); break;
-        case LANG_ETEE: memcpy(data, "P\x07.etEE", 7); break;
-        case LANG_PTBR: memcpy(data, "P\x07.ptBR", 7); break;
-        case LANG_SRRS: memcpy(data, "P\x07.srRS", 7); break;
-        case LANG_MKMK: memcpy(data, "P\x07.mkMK", 7); break;
-        case LANG_FAIR: memcpy(data, "P\x07.faIR", 7); break;
-        case LANG_HIIN: memcpy(data, "P\x07.hiIN", 7); break;
-        case LANG_MRIN: memcpy(data, "P\x07.mrIN", 7); break;
-        case LANG_NENP: memcpy(data, "P\x07.neNP", 7); break;
-        case LANG_MNMN: memcpy(data, "P\x07.mnMN", 7); break;
-        case LANG_URPK: memcpy(data, "P\x07.urPK", 7); break;
-        case LANG_ENGB: memcpy(data, "P\x07.enGB", 7); break;
-        case LANG_ESMX: memcpy(data, "P\x07.esMX", 7); break;
-        case LANG_DECH: memcpy(data, "P\x07.deCH", 7); break;
-        case LANG_FRBE: memcpy(data, "P\x07.frBE", 7); break;
-        case LANG_FRCA: memcpy(data, "P\x07.frCA", 7); break;
-        case LANG_THTH: memcpy(data, "P\x07.thTH", 7); break;
-        case LANG_BNIN: memcpy(data, "P\x07.bnIN", 7); break;
-        case LANG_TEIN: memcpy(data, "P\x07.teIN", 7); break;
-        case LANG_TAIN: memcpy(data, "P\x07.taIN", 7); break;
-        case LANG_ZHTW: memcpy(data, "P\x07.zhTW", 7); break;
-        case LANG_KAGE: memcpy(data, "P\x07.kaGE", 7); break;
-        case LANG_HYAM: memcpy(data, "P\x07.hyAM", 7); break;
-        case LANG_IDID: memcpy(data, "P\x07.idID", 7); break;
-        case LANG_AZAZ: memcpy(data, "P\x07.azAZ", 7); break;
-        case LANG_ISIS: memcpy(data, "P\x07.isIS", 7); break;
-        case LANG_VIVN: memcpy(data, "P\x07.viVN", 7); break;
-        case LANG_ZHHK: memcpy(data, "P\x07.zhHK", 7); break;
-        case LANG_ENAU: memcpy(data, "P\x07.enAU", 7); break;
-        case LANG_ENNZ: memcpy(data, "P\x07.enNZ", 7); break;
-        case LANG_MINZ: memcpy(data, "P\x07.miNZ", 7); break;
-        case LANG_SMWS: memcpy(data, "P\x07.smWS", 7); break;
-        case LANG_FJFJ: memcpy(data, "P\x07.fjFJ", 7); break;
-        case LANG_TLPH: memcpy(data, "P\x07.tlPH", 7); break;
-        case LANG_HWUS: memcpy(data, "P\x07.hwUS", 7); break;
-        case LANG_ENZA: memcpy(data, "P\x07.enZA", 7); break;
-        case LANG_AFZA: memcpy(data, "P\x07.afZA", 7); break;
-        case LANG_AREG: memcpy(data, "P\x07.arEG", 7); break;
-        case LANG_SWKE: memcpy(data, "P\x07.swKE", 7); break;
-        case LANG_AMET: memcpy(data, "P\x07.amET", 7); break;
-        case LANG_YONG: memcpy(data, "P\x07.yoNG", 7); break;
-        case LANG_ENNG: memcpy(data, "P\x07.enNG", 7); break;
-        case LANG_ARMA: memcpy(data, "P\x07.arMA", 7); break;
-        case LANG_ARIQ: memcpy(data, "P\x07.arIQ", 7); break;
-        case LANG_KUIQ: memcpy(data, "P\x07.kuIQ", 7); break;
-        case LANG_MSMY: memcpy(data, "P\x07.msMY", 7); break;
-        case LANG_UZUZ: memcpy(data, "P\x07.uzUZ", 7); break;
-        case LANG_ENCA: memcpy(data, "P\x07.enCA", 7); break;
-        case LANG_ESAR: memcpy(data, "P\x07.esAR", 7); break;
-        case LANG_ENPG: memcpy(data, "P\x07.enPG", 7); break;
-        case LANG_TYPF: memcpy(data, "P\x07.tyPF", 7); break;
-        case LANG_ESCO: memcpy(data, "P\x07.esCO", 7); break;
-        case LANG_ESPE: memcpy(data, "P\x07.esPE", 7); break;
-        case LANG_ESVE: memcpy(data, "P\x07.esVE", 7); break;
-        case LANG_ESCL: memcpy(data, "P\x07.esCL", 7); break;
-        case LANG_ESEC: memcpy(data, "P\x07.esEC", 7); break;
-        case LANG_ESGT: memcpy(data, "P\x07.esGT", 7); break;
-        case LANG_ESDO: memcpy(data, "P\x07.esDO", 7); break;
-        case LANG_ESBO: memcpy(data, "P\x07.esBO", 7); break;
-        case LANG_ESPY: memcpy(data, "P\x07.esPY", 7); break;
-        case LANG_ESCR: memcpy(data, "P\x07.esCR", 7); break;
-        case LANG_ESSV: memcpy(data, "P\x07.esSV", 7); break;
-        case LANG_ESHN: memcpy(data, "P\x07.esHN", 7); break;
-        case LANG_ESPA: memcpy(data, "P\x07.esPA", 7); break;
-        case LANG_ESUY: memcpy(data, "P\x07.esUY", 7); break;
-        case LANG_ESNI: memcpy(data, "P\x07.esNI", 7); break;
-        case LANG_DEAT: memcpy(data, "P\x07.deAT", 7); break;
-        case LANG_NLBE: memcpy(data, "P\x07.nlBE", 7); break;
-        case LANG_CAES: memcpy(data, "P\x07.caES", 7); break;
-        case LANG_ENIE: memcpy(data, "P\x07.enIE", 7); break;
-        case LANG_BSBA: memcpy(data, "P\x07.bsBA", 7); break;
-        case LANG_FRCH: memcpy(data, "P\x07.frCH", 7); break;
-        case LANG_SLSI: memcpy(data, "P\x07.slSI", 7); break;
-        case LANG_FOFO: memcpy(data, "P\x07.foFO", 7); break;
-        case LANG_ARAE: memcpy(data, "P\x07.arAE", 7); break;
-        case LANG_ARSY: memcpy(data, "P\x07.arSY", 7); break;
-        case LANG_ARJO: memcpy(data, "P\x07.arJO", 7); break;
-        case LANG_ARLB: memcpy(data, "P\x07.arLB", 7); break;
-        case LANG_ARYE: memcpy(data, "P\x07.arYE", 7); break;
-        case LANG_ARKW: memcpy(data, "P\x07.arKW", 7); break;
-        case LANG_AROM: memcpy(data, "P\x07.arOM", 7); break;
-        case LANG_ARPS: memcpy(data, "P\x07.arPS", 7); break;
-        case LANG_ARQA: memcpy(data, "P\x07.arQA", 7); break;
-        case LANG_ARBH: memcpy(data, "P\x07.arBH", 7); break;
-        case LANG_ARDZ: memcpy(data, "P\x07.arDZ", 7); break;
-        case LANG_ARSD: memcpy(data, "P\x07.arSD", 7); break;
-        case LANG_ARTN: memcpy(data, "P\x07.arTN", 7); break;
-        case LANG_ARLY: memcpy(data, "P\x07.arLY", 7); break;
-        case LANG_FRCD: memcpy(data, "P\x07.frCD", 7); break;
-        case LANG_FRCI: memcpy(data, "P\x07.frCI", 7); break;
-        case LANG_FRCM: memcpy(data, "P\x07.frCM", 7); break;
-        case LANG_FRSN: memcpy(data, "P\x07.frSN", 7); break;
-        case LANG_FRMG: memcpy(data, "P\x07.frMG", 7); break;
-        case LANG_ENGH: memcpy(data, "P\x07.enGH", 7); break;
-        case LANG_ENUG: memcpy(data, "P\x07.enUG", 7); break;
-        case LANG_ENZM: memcpy(data, "P\x07.enZM", 7); break;
-        case LANG_SWTZ: memcpy(data, "P\x07.swTZ", 7); break;
-        case LANG_PTAO: memcpy(data, "P\x07.ptAO", 7); break;
-        case LANG_PTMZ: memcpy(data, "P\x07.ptMZ", 7); break;
-        case LANG_BNBD: memcpy(data, "P\x07.bnBD", 7); break;
-        case LANG_ENIN: memcpy(data, "P\x07.enIN", 7); break;
-        case LANG_ENPK: memcpy(data, "P\x07.enPK", 7); break;
-        case LANG_ENPH: memcpy(data, "P\x07.enPH", 7); break;
-        case LANG_ENSG: memcpy(data, "P\x07.enSG", 7); break;
-        case LANG_ENLK: memcpy(data, "P\x07.enLK", 7); break;
-        case LANG_KYKG: memcpy(data, "P\x07.kyKG", 7); break;
-        case LANG_TGTJ: memcpy(data, "P\x07.tgTJ", 7); break;
-        case LANG_ENGU: memcpy(data, "P\x07.enGU", 7); break;
-        case LANG_ENSB: memcpy(data, "P\x07.enSB", 7); break;
-        case LANG_ENVU: memcpy(data, "P\x07.enVU", 7); break;
-        case LANG_ENFM: memcpy(data, "P\x07.enFM", 7); break;
-        case LANG_FRNC: memcpy(data, "P\x07.frNC", 7); break;
-        case LANG_TOTO: memcpy(data, "P\x07.toTO", 7); break;
-        case LANG_EUES: memcpy(data, "P\x07.euES", 7); break;
-        case LANG_GLES: memcpy(data, "P\x07.glES", 7); break;
-        case LANG_RMCH: memcpy(data, "P\x07.rmCH", 7); break;
-        case LANG_CYGB: memcpy(data, "P\x07.cyGB", 7); break;
-        case LANG_GAIE: memcpy(data, "P\x07.gaIE", 7); break;
-        case LANG_MTMT: memcpy(data, "P\x07.mtMT", 7); break;
-        case LANG_LBLU: memcpy(data, "P\x07.lbLU", 7); break;
-        case LANG_SENO: memcpy(data, "P\x07.seNO", 7); break;
-        case LANG_GNPY: memcpy(data, "P\x07.gnPY", 7); break;
-        case LANG_QUPE: memcpy(data, "P\x07.quPE", 7); break;
-        case LANG_AYBO: memcpy(data, "P\x07.ayBO", 7); break;
-        case LANG_NVUS: memcpy(data, "P\x07.nvUS", 7); break;
-        case LANG_NHMX: memcpy(data, "P\x07.nhMX", 7); break;
-        case LANG_PSAF: memcpy(data, "P\x07.psAF", 7); break;
-        case LANG_IUCA: memcpy(data, "P\x07.iuCA", 7); break;
-        case LANG_CRCA: memcpy(data, "P\x07.crCA", 7); break;
-        case LANG_CKUS: memcpy(data, "P\x07.ckUS", 7); break;
-        case LANG_JAUS: memcpy(data, "P\x07.jaUS", 7); break;
-        //[[[end]]]
-        default:
-            hid_reply(data, 0x07, false);
-            break;
+    const uint8_t lang = poly_reported_lang();
+    if (lang < NUM_LANG) {
+        memcpy(data, "P\x07.", 3);
+        memcpy(data + 3, k_lang_codes[lang], 4);
+    } else {
+        hid_reply(data, 0x07, false);
     }
     raw_hid_send(data, length);
     return;

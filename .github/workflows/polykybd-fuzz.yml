@@ -1,6 +1,10 @@
-# Runs each libFuzzer harness of keyboards/polykybd/dev/fuzz/ for 60 s on a PR
-# that changes one of the fuzzed parsers or the harnesses. The googletest replay
-# of the corpus (make test:polykybd_fuzz_replay) runs in polykybd-unit-test.yml.
+# Runs the libFuzzer harnesses of keyboards/polykybd/dev/fuzz/ on demand only:
+# - Actions tab -> "PolyKybd fuzz" -> "Run workflow": choose the branch, the
+#   target (or "all") and the run time per target.
+# - On a PR: add the label "fuzz". Each target runs for 60 s on the PR's code.
+#   Remove and add the label again to run it on a later push.
+# The googletest replay of the corpus (make test:polykybd_fuzz_replay) still
+# runs on every PR in polykybd-unit-test.yml.
 # A crash input is uploaded as an artifact; dev/fuzz/README.md says what to do
 # with it.
 name: PolyKybd fuzz
@@ -10,34 +14,32 @@ permissions:
 
 on:
   pull_request:
-    paths:
-      - 'keyboards/polykybd/dev/fuzz/**'
-      - 'keyboards/polykybd/base/overlay.c'
-      - 'keyboards/polykybd/base/overlay.h'
-      - 'keyboards/polykybd/base/prc_record.c'
-      - 'keyboards/polykybd/base/prc_record.h'
-      - 'keyboards/polykybd/base/fontpack.c'
-      - 'keyboards/polykybd/base/fontpack.h'
-      - 'keyboards/polykybd/base/icon_lib.c'
-      - 'keyboards/polykybd/base/icon_lib.h'
-      - 'keyboards/polykybd/base/emoji_dict.c'
-      - 'keyboards/polykybd/base/emoji_dict.h'
-      - 'modules/polykybd/polymod_prc/**'
-      - 'modules/polykybd/polymod_rle/**'
-      - 'modules/polykybd/polymod_crc32/**'
-      - 'keyboards/polykybd/lib/drivers/disp_array.h'
-      - '.github/workflows/polykybd-fuzz.yml'
+    types: [labeled]
   workflow_dispatch:
+    inputs:
+      target:
+        description: 'Fuzz target'
+        type: choice
+        default: all
+        options: [all, overlay_roi, prc_report, fontpack, iconlib, emjdict]
+      seconds:
+        description: 'Run time per target, in seconds'
+        type: number
+        default: 300
 
 jobs:
   fuzz:
     name: fuzz ${{ matrix.target }}
+    if: >-
+      (github.event_name == 'pull_request' && github.event.label.name == 'fuzz') ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        target: [overlay_roi, prc_report, fontpack, iconlib, emjdict]
+        # One target when the manual run names one, else all five.
+        target: ${{ fromJSON((inputs.target && inputs.target != 'all') && format('["{0}"]', inputs.target) || '["overlay_roi","prc_report","fontpack","iconlib","emjdict"]') }}
 
     steps:
       - uses: actions/checkout@v7
@@ -51,9 +53,11 @@ jobs:
         working-directory: keyboards/polykybd/dev/fuzz
         run: make CC=clang-18 build/fuzz_${{ matrix.target }}
 
-      - name: Run the fuzzer for 60 s
+      - name: Run the fuzzer
         working-directory: keyboards/polykybd/dev/fuzz
-        run: make CC=clang-18 run-${{ matrix.target }} FUZZ_SECONDS=60
+        env:
+          FUZZ_SECONDS: ${{ inputs.seconds || 60 }}
+        run: make CC=clang-18 run-${{ matrix.target }} FUZZ_SECONDS="$FUZZ_SECONDS"
 
       - name: Upload crash inputs
         if: failure()

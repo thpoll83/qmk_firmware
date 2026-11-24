@@ -46,6 +46,18 @@ make run FUZZ_SECONDS=300         # every target, 300 s each
 New corpus entries go to `build/corpus_<target>/`, crash inputs to
 `build/artifacts_<target>/`. Replay one input with `./build/fuzz_<target> <file>`.
 
+## Running the fuzzers in CI
+
+`.github/workflows/polykybd-fuzz.yml` runs only on demand, never on a push:
+
+- **Actions tab** → *PolyKybd fuzz* → *Run workflow*: choose the branch, the target
+  (or `all`) and the run time per target (default 300 s). The job limit is 15 min,
+  so stay at or below about 600 s.
+- **On a PR**: add the label `fuzz`. Each target runs for 60 s. To run again after a
+  later push, remove the label and add it again.
+
+The replay suite (`make test:polykybd_fuzz_replay`) still runs on every PR.
+
 ## When a fuzzer finds a crash
 
 1. Fix the parser in its own commit.

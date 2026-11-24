@@ -35,9 +35,22 @@
 // 47 reports; a compressed one can need more.
 #define ROI_MAX_REPORTS   128
 
+// Abort on allocation failure, so it never reaches a parser as a NULL pointer.
+static void *xmalloc(size_t size) {
+    void *p = malloc(size ? size : 1);
+    if (!p) abort();
+    return p;
+}
+
+static void *xcalloc(size_t size) {
+    void *p = calloc(size ? size : 1, 1);
+    if (!p) abort();
+    return p;
+}
+
 static uint8_t *dup_exact(const uint8_t *data, size_t size) {
-    uint8_t *p = (uint8_t *)malloc(size ? size : 1);
-    if (p && size) memcpy(p, data, size);
+    uint8_t *p = (uint8_t *)xmalloc(size);
+    if (size) memcpy(p, data, size);
     return p;
 }
 
@@ -65,9 +78,8 @@ int poly_fuzz_overlay_roi(const uint8_t *data, size_t size) {
         return 1;
     }
 
-    uint8_t *row  = (uint8_t *)malloc(OVERLAY_ROW_BYTES);
-    uint8_t *orig = (uint8_t *)malloc(OVERLAY_ROW_BYTES);
-    if (!row || !orig) abort();
+    uint8_t *row  = (uint8_t *)xmalloc(OVERLAY_ROW_BYTES);
+    uint8_t *orig = (uint8_t *)xmalloc(OVERLAY_ROW_BYTES);
     for (int i = 0; i < OVERLAY_ROW_BYTES; ++i) orig[i] = (uint8_t)(0xA5u ^ (uint8_t)i);
     memcpy(row, orig, OVERLAY_ROW_BYTES);
 
@@ -80,8 +92,7 @@ int poly_fuzz_overlay_roi(const uint8_t *data, size_t size) {
             bit_index = (uint16_t)(roi.y * SCREEN_WIDTH + roi.x);
             data_len  = ROI_START;
         }
-        uint8_t *chunk = (uint8_t *)calloc(data_len, 1);
-        if (!chunk) abort();
+        uint8_t *chunk = (uint8_t *)xcalloc(data_len);
         size_t   n     = size - pos < data_len ? size - pos : data_len;
         memcpy(chunk, data + pos, n);
         pos += n;
@@ -118,7 +129,7 @@ int poly_fuzz_overlay_roi(const uint8_t *data, size_t size) {
 int poly_fuzz_prc_report(const uint8_t *data, size_t size) {
     if (size > ROI_MAX) size = ROI_MAX;
     uint8_t *report = dup_exact(data, size);
-    uint8_t *frame  = (uint8_t *)malloc(PRC_FRAME_BYTES);
+    uint8_t *frame  = (uint8_t *)xmalloc(PRC_FRAME_BYTES);
     int      rc     = POLY_FUZZ_OK;
     uint8_t  avail  = (uint8_t)size;
     uint8_t  pos    = 0;
@@ -260,7 +271,7 @@ int poly_fuzz_iconlib(const uint8_t *data, size_t size) {
     uint16_t ver   = 0;
 
     if (iconlib_load_at(b, (uint32_t)bsize, &ver)) {
-        uint8_t *frame = (uint8_t *)malloc(ICONLIB_FRAME_BYTES);
+        uint8_t *frame = (uint8_t *)xmalloc(ICONLIB_FRAME_BYTES);
         uint16_t count = iconlib_count();
         // 1: an id past the library is refused.
         if (iconlib_blit(count, frame)) rc = 1;
@@ -268,7 +279,7 @@ int poly_fuzz_iconlib(const uint8_t *data, size_t size) {
             (void)iconlib_blit(id, frame);
         }
         free(frame);
-        for (int i = 0; i < ICON_FUZZ_SLOTS; ++i) s_icon_slots[i] = (uint8_t *)malloc(ICONLIB_FRAME_BYTES);
+        for (int i = 0; i < ICON_FUZZ_SLOTS; ++i) s_icon_slots[i] = (uint8_t *)xmalloc(ICONLIB_FRAME_BYTES);
         uint8_t bad = iconlib_fill_pairs(pairs, n, width, ICON_FUZZ_SLOTS, icon_slot_ptr);
         // 2: the result is "all applied" or the index of a pair in the list.
         if (rc == POLY_FUZZ_OK && bad != ICONLIB_FILL_OK && width >= 8 && width <= 16 &&

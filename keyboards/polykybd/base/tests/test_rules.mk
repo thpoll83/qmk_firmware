@@ -417,8 +417,10 @@ polykybd_emoji_dict_INC := \
 
 # The fuzz entry points (dev/fuzz/poly_fuzz.c) on the corpus and a fixed-seed set of
 # mutated inputs: the ROI overlay header and copy (cmd 18/19), the PRC record list
-# (cmd 41), the PlyF font pack loader, the PlyI icon library (cmd 42) and the emoji
-# dictionary. The libFuzzer build of the same entry points is dev/fuzz/Makefile.
+# (cmd 41), the PlyF font pack loader, the PlyI icon library (cmd 42), the emoji
+# dictionary, the host tutorial (cmd 49), the macro buffer, the key attention guide
+# (cmd 47), AI mode (cmd 45/46), the combo records (cmd 48) and the overlay-mapping
+# codec (cmd 21/33). The libFuzzer build of the same entry points is dev/fuzz/Makefile.
 POLY_FUZZ_PATH := keyboards/polykybd/dev/fuzz
 
 polykybd_fuzz_replay_SRC := \
@@ -428,6 +430,10 @@ polykybd_fuzz_replay_SRC := \
 	$(POLY_BASE_PATH)/fontpack.c \
 	$(POLY_BASE_PATH)/icon_lib.c \
 	$(POLY_BASE_PATH)/emoji_dict.c \
+	$(POLY_BASE_PATH)/host_tutorial_plan.c \
+	$(POLY_BASE_PATH)/macro_decode.c \
+	$(POLY_BASE_PATH)/attn_guide.c \
+	$(POLY_BASE_PATH)/ai_events.c \
 	modules/polykybd/polymod_prc/polymod_prc.c \
 	modules/polykybd/polymod_rle/polymod_rle.c \
 	$(POLY_CRC32_PATH)/polymod_crc32.c \

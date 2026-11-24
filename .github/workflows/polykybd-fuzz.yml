@@ -40,6 +40,16 @@ on:
       - 'keyboards/polykybd/base/icon_lib.h'
       - 'keyboards/polykybd/base/emoji_dict.c'
       - 'keyboards/polykybd/base/emoji_dict.h'
+      - 'keyboards/polykybd/base/host_tutorial_plan.c'
+      - 'keyboards/polykybd/base/host_tutorial_plan.h'
+      - 'keyboards/polykybd/base/macro_decode.c'
+      - 'keyboards/polykybd/base/macro_decode.h'
+      - 'keyboards/polykybd/base/attn_guide.c'
+      - 'keyboards/polykybd/base/attn_guide.h'
+      - 'keyboards/polykybd/base/ai_events.c'
+      - 'keyboards/polykybd/base/ai_events.h'
+      - 'keyboards/polykybd/base/combo_store.h'
+      - 'keyboards/polykybd/features/anim/key_attention.h'
       - 'keyboards/polykybd/lib/drivers/disp_array.h'
       - 'modules/polykybd/polymod_prc/**'
       - 'modules/polykybd/polymod_rle/**'
@@ -53,7 +63,8 @@ on:
         description: 'Fuzz target'
         type: choice
         default: all
-        options: [all, overlay_roi, prc_report, fontpack, iconlib, emjdict]
+        options: [all, overlay_roi, prc_report, fontpack, iconlib, emjdict, host_tut, macro_decode, attn_guide,
+                  ai_events, combo_store, map_codec]
       seconds:
         description: 'Run time per target, in seconds'
         type: number
@@ -68,8 +79,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One target when the manual run names one, else all five.
-        target: ${{ fromJSON((inputs.target && inputs.target != 'all') && format('["{0}"]', inputs.target) || '["overlay_roi","prc_report","fontpack","iconlib","emjdict"]') }}
+        # One target when the manual run names one, else all of them.
+        target: ${{ fromJSON((inputs.target && inputs.target != 'all') && format('["{0}"]', inputs.target) || '["overlay_roi","prc_report","fontpack","iconlib","emjdict","host_tut","macro_decode","attn_guide","ai_events","combo_store","map_codec"]') }}
 
     steps:
       - uses: actions/checkout@v7
@@ -111,3 +122,49 @@ jobs:
           name: fuzz-crash-${{ matrix.target }}
           path: keyboards/polykybd/dev/fuzz/build/artifacts_${{ matrix.target }}/
           if-no-files-found: ignore
+
+  # After a scheduled run with a failed fuzz job, open one issue per target whose
+  # "Run the fuzzer" step failed (label fuzz-crash), or comment on the open issue for
+  # that target. A job that failed earlier (install, build, cache) is not a crash and
+  # opens no issue; GitHub's failed-workflow notification still reports it.
+  # A separate job, so the job that builds and runs code never gets issues: write;
+  # this one checks out nothing and only reads the run's job list.
+  report-crash:
+    name: report fuzz crashes
+    needs: fuzz
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - name: Open or update one issue per failed target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          gh label create fuzz-crash --repo "$REPO" --color B60205 \
+            --description "A scheduled fuzz run found a crash" 2>/dev/null || true
+          failed=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
+            --jq '.jobs[] | select((.name | startswith("fuzz ")) and any(.steps[]?; .name == "Run the fuzzer" and .conclusion == "failure")) | .name | ltrimstr("fuzz ")')
+          if [ -z "$failed" ]; then echo "No fuzzer step failed (the failure was elsewhere)."; exit 0; fi
+          for target in $failed; do
+            title="Fuzz crash: $target"
+            body="The scheduled fuzz run $RUN_URL failed on target \`$target\`.
+
+          The crash input is the run's artifact \`fuzz-crash-$target\`. Replay it with
+          \`./build/fuzz_$target <file>\` in \`keyboards/polykybd/dev/fuzz\`; what to do next is in
+          that directory's README (\"When a fuzzer finds a crash\")."
+            num=$(gh issue list --repo "$REPO" --state open --label fuzz-crash \
+              --search "\"$title\" in:title" --json number,title \
+              --jq "map(select(.title == \"$title\")) | .[0].number // empty")
+            if [ -n "$num" ]; then
+              gh issue comment "$num" --repo "$REPO" --body "Failed again: $RUN_URL"
+            else
+              gh issue create --repo "$REPO" --title "$title" --label fuzz-crash --body "$body"
+            fi
+          done

@@ -22,7 +22,8 @@ CFLAGS  := -g -O1 -std=gnu11 -Wall -Wno-unused-function $(SAN) \
            -I$(ROOT)/modules/polykybd/polymod_crc32 \
            -I$(ROOT)/platforms
 
-TARGETS := overlay_roi prc_report fontpack iconlib emjdict
+TARGETS := overlay_roi prc_report fontpack iconlib emjdict \
+           host_tut macro_decode attn_guide ai_events combo_store map_codec
 FUZZ_SECONDS ?= 60
 
 SRC := poly_fuzz.c \
@@ -31,6 +32,10 @@ SRC := poly_fuzz.c \
        $(POLY)/base/fontpack.c \
        $(POLY)/base/icon_lib.c \
        $(POLY)/base/emoji_dict.c \
+       $(POLY)/base/host_tutorial_plan.c \
+       $(POLY)/base/macro_decode.c \
+       $(POLY)/base/attn_guide.c \
+       $(POLY)/base/ai_events.c \
        $(ROOT)/modules/polykybd/polymod_prc/polymod_prc.c \
        $(ROOT)/modules/polykybd/polymod_rle/polymod_rle.c \
        $(ROOT)/modules/polykybd/polymod_crc32/polymod_crc32.c

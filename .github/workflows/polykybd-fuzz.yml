@@ -3,7 +3,12 @@
 #   paths: list below): every target for 60 s, in parallel with the other CI
 #   jobs. A PR that changes none of these files does not run it.
 # - Actions tab -> "PolyKybd fuzz" -> "Run workflow": choose the branch, the
-#   target (or "all") and the run time per target.
+#   target (or "all") and the run time per target, up to about 5 h 45 min (the
+#   job limit is 360 min, GitHub's maximum).
+# - Every Wednesday and Sunday at 01:43 UTC: every target for 5 h on PolyKybd.
+# Manual and scheduled runs restore each target's corpus from the previous run
+# (actions/cache) and save it at the end, so a long run continues where the
+# last one stopped. PR runs restore it but do not save it.
 # The googletest replay of the corpus (make test:polykybd_fuzz_replay) still
 # runs on every PR in polykybd-unit-test.yml.
 # A crash input is uploaded as an artifact; dev/fuzz/README.md says what to do
@@ -40,6 +45,8 @@ on:
       - 'modules/polykybd/polymod_rle/**'
       - 'modules/polykybd/polymod_crc32/**'
       - '.github/workflows/polykybd-fuzz.yml'
+  schedule:
+    - cron: '43 1 * * 0,3'   # Sunday and Wednesday, 01:43 UTC
   workflow_dispatch:
     inputs:
       target:
@@ -56,7 +63,8 @@ jobs:
   fuzz:
     name: fuzz ${{ matrix.target }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # PR runs fuzz 60 s per target; manual and scheduled runs up to 5 h.
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 360 }}
     strategy:
       fail-fast: false
       matrix:
@@ -75,11 +83,26 @@ jobs:
         working-directory: keyboards/polykybd/dev/fuzz
         run: make CC=clang-18 build/fuzz_${{ matrix.target }}
 
+      - name: Restore the corpus of the previous long run
+        uses: actions/cache/restore@v6
+        with:
+          path: keyboards/polykybd/dev/fuzz/build/corpus_${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: fuzz-corpus-${{ matrix.target }}-
+
       - name: Run the fuzzer
         working-directory: keyboards/polykybd/dev/fuzz
         env:
-          FUZZ_SECONDS: ${{ inputs.seconds || 60 }}
+          # schedule: 5 h; workflow_dispatch: the input; pull_request: 60 s.
+          FUZZ_SECONDS: ${{ github.event_name == 'schedule' && 18000 || inputs.seconds || 60 }}
         run: make CC=clang-18 run-${{ matrix.target }} FUZZ_SECONDS="$FUZZ_SECONDS"
+
+      - name: Save the corpus for the next long run
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/cache/save@v6
+        with:
+          path: keyboards/polykybd/dev/fuzz/build/corpus_${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
 
       - name: Upload crash inputs
         if: failure()

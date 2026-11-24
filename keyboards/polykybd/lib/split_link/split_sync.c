@@ -495,8 +495,21 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     request_disp_refresh();
                     break;
                 case id_dynamic_keymap_set_buffer: {
-                    uint16_t offset = (command_data[0] << 8) | command_data[1];
-                    uint16_t size   = command_data[2]; // size <= 28
+                    // SECURITY (FW-13): `size` is a peer byte (0..255). The master clamps it
+                    // (FW-5, hid_com.c), but this side must not rely on that. A frame whose
+                    // `size` is more than it holds after crc32 (4), command (1), offset (2)
+                    // and size (1), or more than commands[] holds, is refused without writing
+                    // anything, so the master sees a NACK instead of an ACK for a partial write.
+                    // A frame too short to hold offset and size is refused before they
+                    // are read: the RPC buffer is shared, so the missing bytes would be
+                    // stale data from an earlier frame.
+                    const uint16_t hdr = (uint16_t)(sizeof(uint32_t) + 4u);
+                    if (in_len < hdr) { refused = true; break; }
+                    const uint16_t offset = (uint16_t)((command_data[0] << 8) | command_data[1]);
+                    const uint16_t size   = command_data[2];
+                    uint16_t       avail  = (uint16_t)(in_len - hdr);
+                    if (avail > sizeof(data->commands) - 4u) avail = sizeof(data->commands) - 4u;
+                    if (size > avail) { refused = true; break; }
                     dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
                     request_disp_refresh();
                     break;

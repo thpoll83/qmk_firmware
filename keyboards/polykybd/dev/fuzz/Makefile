@@ -35,11 +35,10 @@ SRC := poly_fuzz.c \
        $(ROOT)/modules/polykybd/polymod_rle/polymod_rle.c \
        $(ROOT)/modules/polykybd/polymod_crc32/polymod_crc32.c
 
-# Every header the sources can include, so a header change rebuilds the fuzzers.
-HDRS := $(wildcard *.h stubs/*.h $(POLY)/*.h $(POLY)/base/*.h \
-          $(ROOT)/modules/polykybd/polymod_prc/*.h \
-          $(ROOT)/modules/polykybd/polymod_rle/*.h \
-          $(ROOT)/modules/polykybd/polymod_crc32/*.h)
+# Every header the sources include, directly or not, as the compiler reports
+# it (-MM), so a change to any of them rebuilds the fuzzers.
+HDRS := $(filter %.h,$(shell $(CC) $(filter-out $(SAN),$(CFLAGS)) \
+          -DPOLY_FUZZ_TARGET=poly_fuzz_prc_report -MM fuzz_main.c $(SRC) 2>/dev/null))
 
 .PHONY: all run seeds clean $(addprefix run-,$(TARGETS))
 

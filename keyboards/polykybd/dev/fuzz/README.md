@@ -48,15 +48,17 @@ New corpus entries go to `build/corpus_<target>/`, crash inputs to
 
 ## Running the fuzzers in CI
 
-`.github/workflows/polykybd-fuzz.yml` runs only on demand, never on a push:
+`.github/workflows/polykybd-fuzz.yml` runs in two cases:
 
-- **Actions tab** → *PolyKybd fuzz* → *Run workflow*: choose the branch, the target
-  (or `all`) and the run time per target (default 300 s). The job limit is 15 min,
-  so stay at or below about 600 s.
-- **On a PR**: add the label `fuzz`. Each target runs for 60 s. To run again after a
-  later push, remove the label and add it again.
+- **On a PR that changes a fuzzed parser, a harness or the workflow** (its `paths:`
+  list): each target for 60 s. The five jobs run in parallel with the builds and
+  the unit tests, so they do not make CI take longer. A PR that changes none of
+  these files does not run them.
+- **From the Actions tab** → *PolyKybd fuzz* → *Run workflow*: choose the branch,
+  the target (or `all`) and the run time per target (default 300 s). The job limit
+  is 15 min, so stay at or below about 600 s.
 
-The replay suite (`make test:polykybd_fuzz_replay`) still runs on every PR.
+The replay suite (`make test:polykybd_fuzz_replay`) runs on every PR.
 
 ## When a fuzzer finds a crash
 

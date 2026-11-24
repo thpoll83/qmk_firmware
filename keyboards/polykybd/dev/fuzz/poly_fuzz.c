@@ -405,8 +405,9 @@ int poly_fuzz_host_tut(const uint8_t *data, size_t size) {
     for (unsigned gi = 0; rc == POLY_FUZZ_OK && gi < N_GEOMS; ++gi) {
         const poly_fuzz_geom_t g = k_geoms[gi];
 
-        // SPOTLIGHT.
-        bool     on = false;
+        // SPOTLIGHT. `on` starts true here; a refused report is parsed again with it
+        // false, so a write to *on before the refusal is caught whichever value it writes.
+        bool     on = true;
         uint8_t *mask = (uint8_t *)xmalloc(HOST_TUT_MASK_BYTES);
         memset(mask, 0x5A, HOST_TUT_MASK_BYTES);
         if (host_tut_parse_spotlight(r, length, g.rows, g.cols, &on, mask)) {
@@ -432,9 +433,12 @@ int poly_fuzz_host_tut(const uint8_t *data, size_t size) {
                 }
             }
         } else {
+            // 7: a refused SPOTLIGHT leaves both outputs alone, the mask and `on`.
             for (unsigned k = 0; k < HOST_TUT_MASK_BYTES; ++k) {
-                if (mask[k] != 0x5A) rc = 7;   // 7: a refused SPOTLIGHT leaves the mask alone
+                if (mask[k] != 0x5A) rc = 7;
             }
+            bool on2 = false;
+            if (!on || host_tut_parse_spotlight(r, length, g.rows, g.cols, &on2, mask) || on2) rc = 7;
         }
         free(mask);
         if (rc != POLY_FUZZ_OK) break;
@@ -686,9 +690,13 @@ int poly_fuzz_ai_events(const uint8_t *data, size_t size) {
         uint8_t  state[AI_NUM_KEYS], flags = 0xFF, left[AI_NUM_KEYS] = {0};
         uint16_t slot[AI_NUM_CARDS];
         ai_set_keys_decode(payload, state, &flags, slot);
-        // 2: the decoded values are in range and are the payload's.
+        // 2: the decoded values are the payload's: each slot is the little-endian
+        // pair at its own offset, and in range.
         if (memcmp(state, payload, AI_NUM_KEYS) != 0 || flags != payload[AI_NUM_KEYS]) rc = 2;
         for (unsigned i = 0; i < AI_NUM_CARDS; ++i) {
+            const unsigned want = payload[AI_NUM_KEYS + 1u + 2u * i] |
+                                  (unsigned)payload[AI_NUM_KEYS + 2u + 2u * i] << 8;
+            if (slot[i] != want) rc = 2;
             if (slot[i] != AI_SLOT_NONE && slot[i] >= NUM_OVERLAY_SLOTS) rc = 2;
         }
         // 3: a finished agent rings at most AI_DONE_RIPPLES times.

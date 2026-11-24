@@ -67,6 +67,7 @@ int poly_fuzz_overlay_roi(const uint8_t *data, size_t size) {
 
     uint8_t *row  = (uint8_t *)malloc(OVERLAY_ROW_BYTES);
     uint8_t *orig = (uint8_t *)malloc(OVERLAY_ROW_BYTES);
+    if (!row || !orig) abort();
     for (int i = 0; i < OVERLAY_ROW_BYTES; ++i) orig[i] = (uint8_t)(0xA5u ^ (uint8_t)i);
     memcpy(row, orig, OVERLAY_ROW_BYTES);
 
@@ -80,6 +81,7 @@ int poly_fuzz_overlay_roi(const uint8_t *data, size_t size) {
             data_len  = ROI_START;
         }
         uint8_t *chunk = (uint8_t *)calloc(data_len, 1);
+        if (!chunk) abort();
         size_t   n     = size - pos < data_len ? size - pos : data_len;
         memcpy(chunk, data + pos, n);
         pos += n;

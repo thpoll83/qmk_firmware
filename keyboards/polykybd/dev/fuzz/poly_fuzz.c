@@ -462,7 +462,8 @@ int poly_fuzz_host_tut(const uint8_t *data, size_t size) {
                 else if (k->kind != HOST_TUT_COND_KEYCODE) ok = false;
                 if (!ok) rc = 8;
             }
-            // 9: matching marks only conditions that exist.
+            // 9: matching marks exactly the conditions that exist. Every key is pressed,
+            // every condition's keycode is sent and every layer is on, so all of them match.
             if (rc == POLY_FUZZ_OK) {
                 for (unsigned row = 0; row < g.rows; ++row) {
                     for (unsigned col = 0; col < g.cols; ++col) {
@@ -473,7 +474,7 @@ int poly_fuzz_host_tut(const uint8_t *data, size_t size) {
                     host_tut_note_key(&c, 0, 0, (uint16_t)(c.cond[i].a | c.cond[i].b << 8), true);
                 }
                 host_tut_note_layers(&c, 0xFFFFFFFFu);
-                if (c.matched & (uint8_t)~((1u << c.count) - 1u)) rc = 9;
+                if (c.matched != (uint8_t)((1u << c.count) - 1u)) rc = 9;
             }
         } else if (memcmp(&c, &cbefore, sizeof c) != 0) {
             rc = 10;   // 10: a refused ARM leaves the output alone
@@ -521,11 +522,19 @@ int poly_fuzz_macro_decode(const uint8_t *data, size_t size) {
     // 2: intact is "the last byte is NUL".
     if (rc == POLY_FUZZ_OK && poly_macro_buffer_intact(macro_rd, &m, end) != (end > 0 && b[end - 1] == 0)) rc = 2;
 
-    // 3: macro id starts after its id-th NUL, or is `end`; starts never go down.
-    // Once one id is past the buffer, so is every later one (checked for id 255).
+    // 3: macro id starts right after its id-th NUL (a model scans for it), or is
+    // `end`; starts never go down. Once one id is past the buffer, so is every later
+    // one (checked for id 255).
     uint16_t prev = 0;
     for (unsigned id = 0; rc == POLY_FUZZ_OK && id < 256u; ++id) {
-        const uint16_t s = poly_macro_find(macro_rd, &m, (uint8_t)id, end);
+        const uint16_t s    = poly_macro_find(macro_rd, &m, (uint8_t)id, end);
+        uint16_t       want = 0;
+        for (unsigned nul = 0; nul < id && want < end; ++want) {
+            if (b[want] == 0) ++nul;
+            if (nul == id) { ++want; break; }
+        }
+        if (want > end) want = end;
+        if (s != want) rc = 3;
         if (s > end || s < prev || (id == 0 && s != 0) || (id > 0 && s < end && b[s - 1] != 0)) rc = 3;
         prev = s;
         if (s == end && id < 255u) {
@@ -538,6 +547,24 @@ int poly_fuzz_macro_decode(const uint8_t *data, size_t size) {
     // and what it decodes is the buffer's bytes.
     for (uint16_t cur = 0; rc == POLY_FUZZ_OK && cur <= end; ++cur) {
         const poly_macro_step_t st = poly_macro_decode(macro_rd, &m, cur, end);
+        // END is right exactly at the buffer end, at a NUL, or at a prefix whose op is
+        // missing, or is a keycode op without its keycode byte, or is unknown.
+        bool want_end = cur >= end || b[cur] == 0;
+        if (!want_end && b[cur] == POLY_MACRO_PREFIX) {
+            if (cur + 1u >= end) {
+                want_end = true;
+            } else {
+                const uint8_t op = b[cur + 1u];
+                if (op != POLY_MACRO_OP_DELAY) {
+                    want_end = cur + 2u >= end ||
+                               (op != POLY_MACRO_OP_TAP && op != POLY_MACRO_OP_DOWN && op != POLY_MACRO_OP_UP);
+                }
+            }
+        }
+        if ((st.kind == POLY_MACRO_STEP_END) != want_end) {
+            rc = 4;
+            break;
+        }
         if (st.kind == POLY_MACRO_STEP_END) {
             if (st.next != cur) rc = 4;
             continue;
@@ -703,8 +730,13 @@ int poly_fuzz_ai_events(const uint8_t *data, size_t size) {
         uint8_t prev[AI_NUM_KEYS];
         for (unsigned i = 0; i < AI_NUM_KEYS; ++i) prev[i] = (uint8_t)((state[i] + 1u) % AI_STATE_COUNT);
         ai_done_rings_update(prev, state, left);
+        // 3: exactly the keys that went from working/stale to done/idle ring, AI_DONE_RIPPLES
+        // times. done -> idle and any unfinished key do not (left starts at 0).
         for (unsigned i = 0; i < AI_NUM_KEYS; ++i) {
-            if (left[i] > AI_DONE_RIPPLES) rc = 3;
+            const bool finished = state[i] == AI_STATE_DONE || state[i] == AI_STATE_IDLE;
+            const bool was_busy = prev[i] == AI_STATE_WORKING || prev[i] == AI_STATE_STALE;
+            const bool rings    = finished && was_busy && !(prev[i] == AI_STATE_DONE && state[i] == AI_STATE_IDLE);
+            if (left[i] != (rings ? AI_DONE_RIPPLES : 0u)) rc = 3;
         }
     }
     // 4: the page bytes are valid when no page count is sent or the page is below it.
@@ -717,8 +749,15 @@ int poly_fuzz_ai_events(const uint8_t *data, size_t size) {
         uint8_t prev = 0, left = 0;
         bool    seen = false;
         ai_elsewhere_rings_update(tail[AI_DONE_SEQ_BYTE], tail[AI_PAGES_BYTE], &prev, &seen, &left);
-        ai_elsewhere_rings_update((uint8_t)~tail[AI_DONE_SEQ_BYTE], tail[AI_PAGES_BYTE], &prev, &seen, &left);
-        if (left > AI_DONE_RIPPLES) rc = 4;
+        const uint8_t seq2 = (uint8_t)~tail[AI_DONE_SEQ_BYTE];
+        ai_elsewhere_rings_update(seq2, tail[AI_PAGES_BYTE], &prev, &seen, &left);
+        // The first update only records the sequence; the second one always differs, so it
+        // rings unless the new sequence is 0. With no pages nothing changes.
+        if (tail[AI_PAGES_BYTE] == 0) {
+            if (prev != 0 || seen || left != 0) rc = 4;
+        } else if (prev != seq2 || !seen || left != (seq2 != 0 ? AI_DONE_RIPPLES : 0u)) {
+            rc = 4;
+        }
     }
     free(payload);
     free(tail);

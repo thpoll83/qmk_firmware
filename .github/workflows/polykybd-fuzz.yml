@@ -24,6 +24,8 @@ on:
       - 'keyboards/polykybd/base/emoji_dict.h'
       - 'modules/polykybd/polymod_prc/**'
       - 'modules/polykybd/polymod_rle/**'
+      - 'modules/polykybd/polymod_crc32/**'
+      - 'keyboards/polykybd/lib/drivers/disp_array.h'
       - '.github/workflows/polykybd-fuzz.yml'
   workflow_dispatch:
 

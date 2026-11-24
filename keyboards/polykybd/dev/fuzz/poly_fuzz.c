@@ -187,17 +187,18 @@ int poly_fuzz_fontpack(const uint8_t *data, size_t size) {
     }
     static const GFXfont resident_font = {0};
     static const GFXfont *const resident[2] = {&resident_font, &resident_font};
+    const uint8_t n_res = (uint8_t)(sizeof resident / sizeof resident[0]);
 
     if (fontpack_load_at(b)) {
-        fontpack_assemble(resident, 2);
+        fontpack_assemble(resident, n_res);
         const fontpack_header_t *h   = (const fontpack_header_t *)b;
         const fontpack_font_t   *tbl = (const fontpack_font_t *)(b + h->font_table_off);
         const uint8_t            n   = fontpack_font_count();
-        // The table holds FONTPACK_MAX_FONTS (200, private to fontpack.c) entries:
-        // pack fonts past it are dropped, the first `m` in global order are kept.
-        const uint8_t            m   = n > 200u - 2u ? 200u - 2u : n;
+        // The table holds FONTPACK_MAX_FONTS entries: pack fonts past it are
+        // dropped, the first `m` in global order are kept.
+        const uint8_t            m   = n > FONTPACK_MAX_FONTS - n_res ? FONTPACK_MAX_FONTS - n_res : n;
         // 1: every pack font that fits is in the table, after the resident fonts.
-        if (n != h->font_count || g_all_font_count != 2u + m) {
+        if (n != h->font_count || g_all_font_count != n_res + m) {
             rc = 1;
         }
         // 2: every glyph array lies inside the image.

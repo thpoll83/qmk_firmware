@@ -32,10 +32,6 @@
 #    define FONTPACK_XIP_BASE ((const uint8_t *)(XIP_BASE + FW_RESOURCE_OFFSET))
 #endif
 
-// Upper bound on resident + pack fonts. RAM cost: FONTPACK_MAX_FONTS * (20 + 4)
-// bytes of static state (~4.8 KB at 200). Current need is ~14 resident + ~119
-// pack = 133.
-#define FONTPACK_MAX_FONTS 200
 
 static GFXfont        s_pack[FONTPACK_MAX_FONTS];   // GFXfonts built from all bundles
 static uint16_t       s_pack_gidx[FONTPACK_MAX_FONTS]; // each font's global ALL_FONTS index

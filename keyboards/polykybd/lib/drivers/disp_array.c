@@ -198,13 +198,15 @@ int16_t get_scratch_buffer_size(void) {
     return BUFFER_BYTE_WIDTH * BUFFER_BYTE_HEIGHT;
 }
 
-// Blit a glyph at half resolution (2x2-OR downsample) with its top-left at buffer
-// coords (x,y). Each destination pixel is lit if ANY of the four source pixels in
-// its 2x2 block is set — this keeps thin strokes (e.g. the reload arrows) visible
-// where plain decimation would drop them. No baseline align: (x,y) is the literal
-// top-left, so the caller places it precisely (used for the Win+Ctrl+Shift+B
-// reload glyph composited into the monitor's screen).
-void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch) {
+// Shared body of kdisp_draw_glyph_half_at (any_of_block = true) and
+// kdisp_draw_glyph_thin_at (any_of_block = false): the glyph lookup, the halved
+// size and the destination loop are the same, only the rule that turns one 2x2
+// source block into one destination pixel differs. always_inline and a constant
+// argument at both call sites, so each public function gets its own copy with the
+// branch on any_of_block removed at compile time; the inner loop stays the same
+// as when the two were written out separately.
+static inline void __attribute__((always_inline))
+draw_glyph_halved_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch, bool any_of_block) {
     const GFXfont *font = NULL;
     const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
     if (glyph == NULL || font == NULL) return;
@@ -213,49 +215,49 @@ void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, in
     int16_t w = glyph_width(glyph);
     int16_t h = glyph_height(glyph);
     // Round up so an odd source width/height keeps its trailing column/row (the
-    // 2x2 block at the edge is just partially populated); the sx/sy bounds check
-    // below guards the out-of-range half of that block.
+    // 2x2 block at the edge is just partially populated); in the OR mode the sx/sy
+    // bounds check below guards the out-of-range half of that block.
     int16_t hw = (w + 1) / 2, hh = (h + 1) / 2;
     const uint8_t cb = glyph_col_bytes((uint8_t)h);   // column-major page-bytes per column
     for (int16_t dy = 0; dy < hh; ++dy) {
         for (int16_t dx = 0; dx < hw; ++dx) {
             bool lit = false;
-            for (int16_t oy = 0; oy < 2 && !lit; ++oy) {
-                for (int16_t ox = 0; ox < 2; ++ox) {
-                    int16_t sx = dx * 2 + ox, sy = dy * 2 + oy;
-                    if (sx >= w || sy >= h) continue;
-                    // Column-major (OLED page) source read: byte holds 8 vertical px.
-                    uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]);
-                    if (byte & (1u << (sy & 7))) { lit = true; break; }
+            if (any_of_block) {
+                for (int16_t oy = 0; oy < 2 && !lit; ++oy) {
+                    for (int16_t ox = 0; ox < 2; ++ox) {
+                        int16_t sx = dx * 2 + ox, sy = dy * 2 + oy;
+                        if (sx >= w || sy >= h) continue;
+                        // Column-major (OLED page) source read: byte holds 8 vertical px.
+                        uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]);
+                        if (byte & (1u << (sy & 7))) { lit = true; break; }
+                    }
                 }
+            } else {
+                // Top-left pixel of the block only; no bounds check is needed on the
+                // source index because (hw-1)*2 <= w-1 by construction.
+                const int16_t sx = dx * 2, sy = dy * 2;
+                uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]);
+                if (byte & (1u << (sy & 7))) { lit = true; }
             }
             if (lit) { kdisp_plot_ink(x + dx, y + dy); }
         }
     }
 }
 
+// Blit a glyph at half resolution (2x2-OR downsample) with its top-left at buffer
+// coords (x,y). Each destination pixel is lit if ANY of the four source pixels in
+// its 2x2 block is set — this keeps thin strokes (e.g. the reload arrows) visible
+// where plain decimation would drop them. No baseline align: (x,y) is the literal
+// top-left, so the caller places it precisely (used for the Win+Ctrl+Shift+B
+// reload glyph composited into the monitor's screen).
+void kdisp_draw_glyph_half_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch) {
+    draw_glyph_halved_at(fonts, num_fonts, x, y, ch, true);
+}
+
 // Decimating sibling of kdisp_draw_glyph_half_at — see the header for when each
-// is the right one. Samples the top-left pixel of every 2x2 block; no rounding
-// games are needed on the source index because (hw-1)*2 <= w-1 by construction.
+// is the right one. Samples the top-left pixel of every 2x2 block.
 void kdisp_draw_glyph_thin_at(const GFXfont *const *fonts, uint8_t num_fonts, int8_t x, int8_t y, uint32_t ch) {
-    const GFXfont *font = NULL;
-    const GFXglyph *glyph = kdisp_gfx_glyph_font(fonts, num_fonts, ch, &font);
-    if (glyph == NULL || font == NULL) return;
-    const uint8_t *bitmap = pgm_read_bitmap_ptr(font);
-    uint16_t bo = glyph_bitmap_offset(glyph);
-    int16_t w = glyph_width(glyph);
-    int16_t h = glyph_height(glyph);
-    // Round up so an odd source width/height keeps its trailing column/row.
-    int16_t hw = (w + 1) / 2, hh = (h + 1) / 2;
-    const uint8_t cb = glyph_col_bytes((uint8_t)h);   // column-major page-bytes per column
-    for (int16_t dy = 0; dy < hh; ++dy) {
-        const int16_t sy = dy * 2;
-        for (int16_t dx = 0; dx < hw; ++dx) {
-            const int16_t sx = dx * 2;
-            uint8_t byte = pgm_read_byte(&bitmap[bo + (uint16_t)sx * cb + (sy >> 3)]);
-            if (byte & (1u << (sy & 7))) { kdisp_plot_ink(x + dx, y + dy); }
-        }
-    }
+    draw_glyph_halved_at(fonts, num_fonts, x, y, ch, false);
 }
 
 // Rotate a glyph COUNTER-CLOCKWISE by step*15 degrees, then halve it, and plot the

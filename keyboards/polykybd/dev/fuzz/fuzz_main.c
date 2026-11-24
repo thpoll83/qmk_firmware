@@ -11,6 +11,8 @@
 #include <stdlib.h>
 
 #ifndef POLY_FUZZ_TARGET
+// cppcheck reads this file without the Makefile's -D, so it would stop here.
+// cppcheck-suppress preprocessorErrorDirective
 #    error "build with -DPOLY_FUZZ_TARGET=poly_fuzz_<target>"
 #endif
 

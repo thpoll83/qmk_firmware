@@ -496,7 +496,15 @@ void user_sync_dynamic_keymap_data_handler(uint8_t in_len, const void* in_data, 
                     break;
                 case id_dynamic_keymap_set_buffer: {
                     uint16_t offset = (command_data[0] << 8) | command_data[1];
-                    uint16_t size   = command_data[2]; // size <= 28
+                    uint16_t size   = command_data[2];
+                    // SECURITY (FW-13): `size` is a peer byte (0..255). The master clamps it
+                    // (FW-5, hid_com.c), but this side must not rely on that: copy no more
+                    // than the frame holds after crc32 (4), command (1), offset (2) and
+                    // size (1), and never past commands[].
+                    const uint16_t hdr   = (uint16_t)(sizeof(uint32_t) + 4u);
+                    uint16_t       avail = in_len > hdr ? (uint16_t)(in_len - hdr) : 0u;
+                    if (avail > sizeof(data->commands) - 4u) avail = sizeof(data->commands) - 4u;
+                    if (size > avail) size = avail;
                     dynamic_keymap_set_buffer_poly(offset, size, &command_data[3]);
                     request_disp_refresh();
                     break;

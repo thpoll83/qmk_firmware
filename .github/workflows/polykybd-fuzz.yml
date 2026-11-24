@@ -123,8 +123,10 @@ jobs:
           path: keyboards/polykybd/dev/fuzz/build/artifacts_${{ matrix.target }}/
           if-no-files-found: ignore
 
-  # After a scheduled run with a failed fuzz job, open one issue per failed target
-  # (label fuzz-crash), or comment on the open issue for that target if there is one.
+  # After a scheduled run with a failed fuzz job, open one issue per target whose
+  # "Run the fuzzer" step failed (label fuzz-crash), or comment on the open issue for
+  # that target. A job that failed earlier (install, build, cache) is not a crash and
+  # opens no issue; GitHub's failed-workflow notification still reports it.
   # A separate job, so the job that builds and runs code never gets issues: write;
   # this one checks out nothing and only reads the run's job list.
   report-crash:
@@ -148,8 +150,8 @@ jobs:
           gh label create fuzz-crash --repo "$REPO" --color B60205 \
             --description "A scheduled fuzz run found a crash" 2>/dev/null || true
           failed=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" \
-            --jq '.jobs[] | select(.conclusion == "failure" and (.name | startswith("fuzz "))) | .name | ltrimstr("fuzz ")')
-          if [ -z "$failed" ]; then echo "No failed fuzz job found."; exit 0; fi
+            --jq '.jobs[] | select((.name | startswith("fuzz ")) and any(.steps[]?; .name == "Run the fuzzer" and .conclusion == "failure")) | .name | ltrimstr("fuzz ")')
+          if [ -z "$failed" ]; then echo "No fuzzer step failed (the failure was elsewhere)."; exit 0; fi
           for target in $failed; do
             title="Fuzz crash: $target"
             body="The scheduled fuzz run $RUN_URL failed on target \`$target\`.

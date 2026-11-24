@@ -43,6 +43,12 @@ const Target kTargets[] = {
     {"fontpack", poly_fuzz_fontpack, 4},
     {"iconlib", poly_fuzz_iconlib, 3},
     {"emjdict", poly_fuzz_emjdict, 3},
+    {"host_tut", poly_fuzz_host_tut, 8},
+    {"macro_decode", poly_fuzz_macro_decode, 6},
+    {"attn_guide", poly_fuzz_attn_guide, 3},
+    {"ai_events", poly_fuzz_ai_events, 3},
+    {"combo_store", poly_fuzz_combo_store, 3},
+    {"map_codec", poly_fuzz_map_codec, 5},
 };
 
 // make test runs from the repository root.

@@ -40,6 +40,16 @@ on:
       - 'keyboards/polykybd/base/icon_lib.h'
       - 'keyboards/polykybd/base/emoji_dict.c'
       - 'keyboards/polykybd/base/emoji_dict.h'
+      - 'keyboards/polykybd/base/host_tutorial_plan.c'
+      - 'keyboards/polykybd/base/host_tutorial_plan.h'
+      - 'keyboards/polykybd/base/macro_decode.c'
+      - 'keyboards/polykybd/base/macro_decode.h'
+      - 'keyboards/polykybd/base/attn_guide.c'
+      - 'keyboards/polykybd/base/attn_guide.h'
+      - 'keyboards/polykybd/base/ai_events.c'
+      - 'keyboards/polykybd/base/ai_events.h'
+      - 'keyboards/polykybd/base/combo_store.h'
+      - 'keyboards/polykybd/features/anim/key_attention.h'
       - 'keyboards/polykybd/lib/drivers/disp_array.h'
       - 'modules/polykybd/polymod_prc/**'
       - 'modules/polykybd/polymod_rle/**'
@@ -53,7 +63,8 @@ on:
         description: 'Fuzz target'
         type: choice
         default: all
-        options: [all, overlay_roi, prc_report, fontpack, iconlib, emjdict]
+        options: [all, overlay_roi, prc_report, fontpack, iconlib, emjdict, host_tut, macro_decode, attn_guide,
+                  ai_events, combo_store, map_codec]
       seconds:
         description: 'Run time per target, in seconds'
         type: number
@@ -68,8 +79,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One target when the manual run names one, else all five.
-        target: ${{ fromJSON((inputs.target && inputs.target != 'all') && format('["{0}"]', inputs.target) || '["overlay_roi","prc_report","fontpack","iconlib","emjdict"]') }}
+        # One target when the manual run names one, else all of them.
+        target: ${{ fromJSON((inputs.target && inputs.target != 'all') && format('["{0}"]', inputs.target) || '["overlay_roi","prc_report","fontpack","iconlib","emjdict","host_tut","macro_decode","attn_guide","ai_events","combo_store","map_codec"]') }}
 
     steps:
       - uses: actions/checkout@v7

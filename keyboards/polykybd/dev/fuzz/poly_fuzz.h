@@ -45,6 +45,29 @@ int poly_fuzz_iconlib(const uint8_t *data, size_t size);
 // search (emjdict_search). CRC as above.
 int poly_fuzz_emjdict(const uint8_t *data, size_t size);
 
+// cmd 49: the host tutorial's TEXT, SPOTLIGHT and ARM parsers
+// (host_tut_parse_text, host_tut_parse_spotlight, host_tut_parse_arm) and the
+// matching of the conditions ARM sets. Input: one report.
+int poly_fuzz_host_tut(const uint8_t *data, size_t size);
+
+// The dynamic-macro buffer: poly_macro_used, poly_macro_buffer_intact,
+// poly_macro_find and poly_macro_decode, through the read callback.
+int poly_fuzz_macro_decode(const uint8_t *data, size_t size);
+
+// cmd 47 op 2: the key attention guide (attn_guide_parse, attn_guide_select).
+int poly_fuzz_attn_guide(const uint8_t *data, size_t size);
+
+// cmd 45/46: AI mode's op 1 checks (ai_set_keys_valid, ai_set_keys_page_valid),
+// the cmd 46 card header (ai_card_header) and the event ring (ai_ring_read).
+int poly_fuzz_ai_events(const uint8_t *data, size_t size);
+
+// cmd 48: combo and tap-dance records (poly_combo_rec_valid, poly_td_rec_valid),
+// the tap-dance plan (poly_td_plan) and the store slot pick (poly_combo_pick_slot).
+int poly_fuzz_combo_store(const uint8_t *data, size_t size);
+
+// cmd 21/33: the packed overlay-mapping codec (map_codec_read, map_codec_write).
+int poly_fuzz_map_codec(const uint8_t *data, size_t size);
+
 #ifdef __cplusplus
 }
 #endif

@@ -161,6 +161,123 @@ def emjdict_seeds(scratch):
     write("emjdict", "wipe_sentinel", bytes([3, 0]) + b"cat" + header(b"PlyF", 1, 1, 0, 32, b""))
 
 
+# ── HID command parsers ─────────────────────────────────────────────────────
+# The fixtures of the googletests in base/tests/, in the harnesses' layouts.
+def report(cmd, op, args=b""):
+    """A 64-byte raw HID report: 'P', the command, the op, the arguments."""
+    return (bytes([ord("P"), cmd, op]) + bytes(args)).ljust(64, b"\0")
+
+
+def host_tut_seeds():
+    """host_tutorial_plan_tests.cpp: TEXT, SPOTLIGHT and ARM reports (cmd 49)."""
+    def text(a, b):
+        return report(49, 1, bytes([len(a)]) + a + bytes([len(b)]) + b)
+    write("host_tut", "text_two_lines", text(b"Hold Fn", b"then tap"))
+    write("host_tut", "text_empty", text(b"", b""))
+    write("host_tut", "text_longest", text(b"i" * 59, b"")[:64])
+    mask = bytearray(10)
+    for row, col in ((2, 0), (8, 7)):                  # split72: bit = row * 8 + col
+        b = row * 8 + col
+        mask[b // 8] |= 1 << (b % 8)
+    write("host_tut", "spotlight_two_keys", report(49, 2, bytes([1]) + mask))
+    write("host_tut", "spotlight_off", report(49, 2, bytes(11)))
+    conds = bytes([1, 2, 0, 2, 5, 0, 3, 0x04, 0x00])   # key (2,0), layer 5, KC_A
+    write("host_tut", "arm_three", report(49, 4, bytes([3]) + conds))
+    write("host_tut", "arm_none", report(49, 4, bytes([0])))
+    write("host_tut", "arm_short", report(49, 4, bytes([2, 1, 1, 1, 1, 1, 2]))[:9])
+
+
+def macro_seeds():
+    """macro_decode_tests.cpp: NUL-terminated macros in a zero-padded buffer."""
+    def tap(kc):
+        return bytes([1, 1, kc])
+
+    def down(kc):
+        return bytes([1, 2, kc])
+
+    def up(kc):
+        return bytes([1, 3, kc])
+
+    def delay(digits):
+        return bytes([1, 4]) + digits
+
+    def buf(macros, size=64):
+        return b"".join(m + b"\0" for m in macros).ljust(size, b"\0")
+
+    write("macro_decode", "chord_and_delay",
+          buf([down(0xE0) + tap(0x06) + up(0xE0) + delay(b"50") + b"ok"]))
+    write("macro_decode", "three_macros", buf([b"hello", b"", tap(0x04) + down(0xE0) + up(0xE0)]))
+    write("macro_decode", "delay_clamped", buf([delay(b"9999999") + b"x"]))
+    write("macro_decode", "unknown_op", buf([bytes([1, 0x7F]) + b"XY"]))
+    # Cut short mid-write: the last byte is POLY_MACRO_INCOMPLETE.
+    write("macro_decode", "incomplete", buf([b"abc" + tap(0x05)], 32)[:-1] + b"\xff")
+    write("macro_decode", "truncated_prefix", b"ab\0\x01")
+
+
+def attn_guide_seeds():
+    """attn_guide_tests.cpp: fn_then_midi() and a four-step guide (cmd 47 op 2)."""
+    def guide(count, period, target, steps):
+        flat = bytes(v for s in steps for v in s)
+        return (bytes([0, 47, 2, count, period, target, len(steps)]) + flat).ljust(64, b"\0")
+    write("attn_guide", "fn_then_midi", guide(12, 25, 8, [(2, 0, 4), (8, 7, 5)]))
+    write("attn_guide", "four_steps", guide(0, 100, 12, [(0, 0, 0), (1, 1, 1), (7, 5, 2), (3, 4, 3)]))
+    write("attn_guide", "one_step_exact", guide(1, 23, 1, [(4, 2, 0)])[:10])
+
+
+def ai_seeds():
+    """ai_events_tests.cpp: make_payload(), the page bytes, a card header, ring ops."""
+    def payload(state, flags, slot):
+        return bytes([state] * 10) + bytes([flags]) + struct.pack("<H", slot) * 12
+
+    # Five pushes, read since 3, then 12 pushes (overflow), read since 0 and since 7.
+    ops = list(range(5)) + [0x80, 3] + [i % 11 for i in range(12)] + [0x80, 0, 0x80, 7]
+    write("ai_events", "stale_all_slots",
+          payload(5, 0x0F, 599) + bytes([1, 3, 7]) + struct.pack("<H", (5 << 12) | 599) + bytes(ops))
+    write("ai_events", "empty_no_slot",
+          payload(0, 0, 0xFFFF) + bytes([0, 0, 0]) + struct.pack("<H", 0) + bytes([0x80, 0]))
+    write("ai_events", "wrap_seq", payload(2, 2, 0) + bytes([0, 2, 1]) + struct.pack("<H", 0x1000 | 42)
+          + bytes([i % 13 for i in range(260)] + [0x80, 255, 0x80, 1]))
+
+
+def combo_seeds():
+    """combo_store_tests.cpp: records and the slot-pick cases (cmd 48)."""
+    A, B, C, ESC, MO1, TG2, TO3, LSFT_A = 0x04, 0x05, 0x06, 0x29, 0x5221, 0x5262, 0x5203, 0x0204
+
+    def rec(ctl, words):
+        return bytes([ctl]) + struct.pack("<5H", *words)
+    combos = (rec(0, [A, B, 0, 0, ESC]) + rec(0, [A, B, C, MO1, ESC]) + rec(0, [0, 0, 0, 0, 0])
+              + rec(0, [A, 0, B, 0, ESC]) + rec(0, [A, A, 0, 0, ESC]))
+    write("combo_store", "combos", combos)
+    dances = b"".join(rec(1 | (count << 1) | (0x10 if held else 0), [A, LSFT_A, TG2, MO1, 200])
+                      for count in range(4) for held in (False, True))
+    dances += rec(1 | (3 << 1), [A, 0, 0, 0, 0]) + rec(1, [TO3, 0x2204, 0, 0, 105])
+    write("combo_store", "tap_dances", dances)
+    # Slot pick: clean / tried bits of both sectors and the newest sector.
+    picks = b"".join(bytes([0, c0, c1, t0, t1, newest]) + bytes(5)
+                     for c0, c1, t0, t1, newest in ((0xFF, 0xFF, 0, 0, 2), (0xF0, 0xFF, 0, 0, 0),
+                                                    (0, 0xFF, 0, 0, 0), (0, 0, 0, 0, 1),
+                                                    (0x01, 0, 0x01, 0, 0), (0, 0, 0, 0x03, 0)))
+    write("combo_store", "slot_picks", picks)
+
+
+def map_codec_seeds():
+    """map_codec_tests.cpp: cmd 21 10-bit pairs and cmd 33 streams at 8, 9, 11 and 16 bits."""
+    def pack(values, width, nbytes):
+        acc, nbits = 0, 0
+        for v in values:
+            acc |= (v & ((1 << width) - 1)) << nbits
+            nbits += width
+        return acc.to_bytes(nbytes, "little")
+    # Width selector: width = 8 + selector % 9.
+    pairs = [v for i in range(24) for v in (i * 61 % 1440, i * 25 % 1200)]
+    write("map_codec", "cmd21_w10", bytes([2]) + pack(pairs, 10, 62))
+    write("map_codec", "cmd33_w8", bytes([0]) + pack([i * 7 % 256 for i in range(61)], 8, 61))
+    write("map_codec", "cmd33_w9", bytes([1]) + pack([(i * 37) % 512 for i in range(54)], 9, 61))
+    write("map_codec", "cmd33_w11_no_legend",
+          bytes([3]) + pack([v for i in range(22) for v in (i * 65, 600 + i * 27)], 11, 61))
+    write("map_codec", "cmd33_w16", bytes([8]) + pack([0xFFFF, 0, 0x8001, 1440] * 7, 16, 61))
+
+
 def main():
     import tempfile
     overlay_seeds()
@@ -169,6 +286,12 @@ def main():
     iconlib_seeds()
     with tempfile.TemporaryDirectory() as scratch:
         emjdict_seeds(scratch)
+    host_tut_seeds()
+    macro_seeds()
+    attn_guide_seeds()
+    ai_seeds()
+    combo_seeds()
+    map_codec_seeds()
     for d in sorted(CORPUS.iterdir()):
         print(f"{d.name}: {len(list(d.iterdir()))} seeds")
 

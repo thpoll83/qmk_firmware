@@ -27,6 +27,8 @@
 #include "features/modes/ai_mode.h"          // ai_reset_keys()
 #include "doom/doom_mode.h"                  // doom_screensaver_stop()
 
+#include "hardware/structs/usb.h"            // usb_hw: SOF_RD, INTE (the stuck-suspend watch)
+
 // Progressive boot splash — an always-on boot-progress indicator (no compile
 // flag). The splash fills in ONE glyph at a time as boot advances, so a boot that
 // HANGS freezes the reveal at the exact glyph where it stalled — count the lit
@@ -174,6 +176,77 @@ void poly_suspend(void) {
     reset_idle_jitter();
 }
 
+// ── The stuck-suspend watch ────────────────────────────────────────────────────
+// QMK's suspend loop (protocol_pre_task) runs `while (USB_DRIVER.state ==
+// USB_SUSPENDED)`, and this hook feeds the watchdog on every pass. So if the driver
+// misses the host's resume or bus reset, the board waits in suspend for ever:
+// displays dark, no USB interface, keys ignored, no watchdog reset and no record.
+// Field, 2026-11-25: a PC shut down overnight behind a powered hub (VBUS stays up),
+// and at the next PC start the keyboard stayed dark until it was replugged.
+//
+// A host sends start-of-frame (SOF) packets once per ms while the bus is active,
+// and the SIE counts them in SOF_RD whether or not the interrupt runs. A frame
+// number that keeps advancing for SUSPEND_STUCK_MS while the driver still says
+// SUSPENDED means the host is awake and the driver missed it. Then record a HALT
+// (phase SUSPEND, arg = seconds spent suspended) and reboot: the board
+// re-enumerates by itself and the host reads the record. A real resume leaves
+// SUSPENDED within a few ms of the first SOF, and an asleep host sends no SOF.
+//
+// ⚠️ Reading SOF_RD clears a pending SOF interrupt. When the driver has the SOF
+// interrupt enabled (a sof_cb, or after a remote wakeup) its ISR wakes the driver
+// on the first SOF, so the watch does not read the register then.
+#define SUSPEND_STUCK_MS   2000u   // agreed with the maintainer, 2026-11-25
+#define SUSPEND_GAP_MS      100u   // a longer gap between calls is a new suspend
+
+static bool     s_sw_tracking;
+static uint16_t s_sw_frame;
+static uint32_t s_sw_moving_since;   // 0 = frame number not advancing
+static uint32_t s_sw_suspend_start;
+static uint32_t s_sw_last_call;
+
+static void suspend_watch_reset(void) {
+    s_sw_tracking = false;
+}
+
+static void suspend_watch_tick(void) {
+    if (!is_keyboard_master()) {
+        return;   // the slave has no USB of its own
+    }
+    uint32_t now = timer_read32();
+    if (s_sw_tracking && TIMER_DIFF_32(now, s_sw_last_call) > SUSPEND_GAP_MS) {
+        s_sw_tracking = false;   // the loop was left without a wakeup callback
+    }
+    s_sw_last_call = now;
+    if (usb_hw->inte & USB_INTE_DEV_SOF_BITS) {
+        s_sw_tracking = false;   // the ISR owns the SOF flag (see above)
+        return;
+    }
+    uint16_t frame = (uint16_t)(usb_hw->sof_rd & USB_SOF_RD_BITS);
+    if (!s_sw_tracking) {
+        s_sw_tracking      = true;
+        s_sw_frame         = frame;
+        s_sw_moving_since  = 0;
+        s_sw_suspend_start = now;
+        return;
+    }
+    if (frame == s_sw_frame) {
+        s_sw_moving_since = 0;   // bus idle: a sleeping host
+        return;
+    }
+    s_sw_frame = frame;
+    if (s_sw_moving_since == 0) {
+        s_sw_moving_since = now ? now : 1;
+        return;
+    }
+    if (TIMER_DIFF_32(now, s_sw_moving_since) < SUSPEND_STUCK_MS) {
+        return;
+    }
+    uint32_t secs = TIMER_DIFF_32(now, s_sw_suspend_start) / 1000u;
+    uprintf("suspend: host sends SOF for %lu ms but USB is still SUSPENDED after %lu s -- rebooting\n",
+            (unsigned long)SUSPEND_STUCK_MS, (unsigned long)secs);
+    crash_record_halt(secs > 0xFFFFu ? 0xFFFFu : (uint16_t)secs);
+}
+
 // Suspends keyboard: suspends power down, disables RGB, calls housekeeping, resets update timer.
 void suspend_power_down_kb(void) {
     // QMK's suspend loop (protocol_pre_task) calls this every ~17 ms INSTEAD of
@@ -181,6 +254,7 @@ void suspend_power_down_kb(void) {
     // suspend would read as a hang.
     crash_watchdog_feed();
     (void)crash_phase_enter(CRASH_PHASE_SUSPEND, 0);
+    suspend_watch_tick();
     // USB suspend fires on slave when master enters bootloader; skip to keep displays lit.
     if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
         return;
@@ -286,6 +360,7 @@ bool shutdown_user(bool jump_to_bootloader) {
 
 // Resumes keyboard on wakeup: restores display state, brightness, RGB settings, calls housekeeping.
 void suspend_wakeup_init_kb(void) {
+    suspend_watch_reset();
     // First, so the woken board decodes overlays on a fresh core1. A no-op unless the
     // suspend took the hold (multicore_exec.h).
     core1_resume();

@@ -1,8 +1,15 @@
 name: J-Bot Code Review
 
+# On demand only: comment "/jbot" on a pull request, or run this workflow
+# from the Actions tab with the PR number. No automatic review on push.
 on:
-  pull_request:
-    types: [opened, reopened, ready_for_review, synchronize]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: Pull request number to review
+        required: true
 
 permissions:
   contents: read
@@ -11,28 +18,40 @@ permissions:
   checks: read
 
 concurrency:
-  group: jbot-review-${{ github.event.pull_request.number }}
+  group: jbot-review-${{ github.event.issue.number || inputs.pr-number }}
   cancel-in-progress: true
 
 jobs:
   review:
-    # GitHub gives fork PRs no secrets, so the review credentials would be empty there.
-    # Skip drafts and Dependabot PRs (by PR author, not by who triggered the run).
+    # A comment counts only on a pull request, only when it starts with
+    # /jbot, and only from the owner or a collaborator.
     if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      !github.event.pull_request.draft &&
-      github.event.pull_request.user.login != 'dependabot[bot]'
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/jbot') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      PR: ${{ github.event.issue.number || inputs.pr-number }}
     steps:
+      # The review job holds the Codex login, so it never reviews code from a fork.
+      - name: Require a same-repo PR head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          fork=$(gh api "repos/${{ github.repository }}/pulls/$PR" --jq '.head.repo.full_name != .base.repo.full_name')
+          if [ "$fork" = "true" ]; then echo "::error::PR #$PR comes from a fork; J-Bot does not review forks."; exit 1; fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: refs/pull/${{ env.PR }}/head
           fetch-depth: 0
       # Pinned to the commit of tag v0 (2026-10-04). This action's action.yml
       # still runs the image ghcr.io/pgup-ai/jbot-review:latest, so the image
       # itself is not pinned by this SHA.
       - uses: pgup-ai/jbot-review-action@134542a97c6088aa3f42e62dbad575908606132c # v0
         with:
+          pr-number: ${{ env.PR }}
           # Codex: a ChatGPT Plus/Pro `codex login`. CODEX_AUTH_JSON is the whole
           # ~/.codex/auth.json. Set JBOT_REVIEW_MODEL to a google/... id to go
           # back to Gemini without editing this file.

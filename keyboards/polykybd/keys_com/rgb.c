@@ -27,6 +27,13 @@
 // with a short hold (so the brief gaps between the six bundles don't flicker it) and
 // re-enables RGB if it was off, disabling it again afterwards.
 #define FLASH_RGB_HOLD_MS 2500
+// The slave shows the cue this much later, to match the master. While a flash
+// stages, the master's main loop relays every chunk to the slave and runs its LED
+// task only about every 80 ms (the slave: every frame), so each brightness the
+// master shows is about 50 ms old. The HIL rig measured the master 47.6 to 60.2 ms
+// behind the slave over seven runs (2026-11-26); agreed with the maintainer. If
+// staging gets faster or slower, re-measure: the rig's phase check reports it.
+#define FLASH_RGB_SLAVE_LAG_MS 50u
 static bool     s_flash_rgb_active      = false;
 static bool     s_flash_rgb_was_enabled = false;
 static uint16_t s_flash_rgb_seen        = 0;
@@ -40,7 +47,9 @@ bool rgb_matrix_indicators_kb(void) {
         // The split's shared clock, so both halves breathe in step. Each half's own
         // timer_read32() counts from its own boot, and the halves boot at different
         // moments: they breathed up to a whole cycle apart (744 ms measured, 2026-11-26).
-        uint8_t phase = (uint8_t)(sync_timer_read32() >> 3);    // ~2 s cycle
+        uint32_t now = sync_timer_read32();
+        if (!is_keyboard_master()) now -= FLASH_RGB_SLAVE_LAG_MS;   // see the define
+        uint8_t phase = (uint8_t)(now >> 3);                    // ~2 s cycle
         uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);  // triangle breath 0..127..0
         uint8_t v     = 5 + (tri >> 2);                         // ~5..36 (half brightness — bright enough)
         if (fw_staging_commit_pending() || get_local_state()->fw_confirm) {

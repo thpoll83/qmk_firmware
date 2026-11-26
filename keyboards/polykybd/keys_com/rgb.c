@@ -37,7 +37,10 @@ static uint16_t s_flash_rgb_seen        = 0;
 // ensuring LEDs stay dark regardless of what the transport wrote to enable.
 bool rgb_matrix_indicators_kb(void) {
     if (s_flash_rgb_active) {
-        uint8_t phase = (uint8_t)(timer_read32() >> 3);         // ~2 s cycle
+        // The split's shared clock, so both halves breathe in step. Each half's own
+        // timer_read32() counts from its own boot, and the halves boot at different
+        // moments: they breathed up to a whole cycle apart (744 ms measured, 2026-11-26).
+        uint8_t phase = (uint8_t)(sync_timer_read32() >> 3);    // ~2 s cycle
         uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);  // triangle breath 0..127..0
         uint8_t v     = 5 + (tri >> 2);                         // ~5..36 (half brightness — bright enough)
         if (fw_staging_commit_pending() || get_local_state()->fw_confirm) {

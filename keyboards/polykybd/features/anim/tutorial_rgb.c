@@ -221,7 +221,10 @@ bool tutorial_rgb_paint(void) {
     s_last              = now;
     const uint32_t down = (dt * 255u) / TRGB_FALL_MS;
     // The pulse follows the keycap's own (tut_pulse_level(), same clock, same curve).
-    const uint8_t  wave = tut_pulse_level(now, 255u);
+    // The clock is the split's shared one, so the name keys on both halves breathe in
+    // step; each half's timer_read32() counts from its own boot.
+    const uint32_t beat = sync_timer_read32();
+    const uint8_t  wave = tut_pulse_level(beat, 255u);
 
     // The pointed-at key: its own colour for as long as it is asked for. Both halves
     // know the slot and the phase from the sync, so both pick the same colour.
@@ -265,7 +268,7 @@ bool tutorial_rgb_paint(void) {
             const uint8_t in    = menu_cascade_key_level(TUT_SLOT_RIGHT(slot), TUT_SLOT_IDX(slot));
             // Full pulse depth, floor to peak: at a peak of 16 that is about 7..16, still
             // "very lightly", and the per-key stagger needs the depth to be seen at all.
-            const uint8_t kwave = tut_pulse_level(now + (uint32_t)slot * TRGB_NAME_STAGGER_MS, 255u);
+            const uint8_t kwave = tut_pulse_level(beat + (uint32_t)slot * TRGB_NAME_STAGGER_MS, 255u);
             target = (uint8_t)(((uint16_t)in * pulse_lvl(nhue, TRGB_NAME_VAL, kwave)) / 255u);
             hue    = nhue;
             val    = TRGB_NAME_VAL;

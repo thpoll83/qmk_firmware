@@ -33,6 +33,12 @@ static int32_t  s_best_cur;
 static int32_t  s_best_prev;
 static uint32_t s_bucket_at;
 static bool     s_have;
+// QMK starts sync_timer_ms at 0, before the first update from the master. The filter
+// starts only once the value differs from the first one seen here; until then
+// poly_sync_clock_ms() returns QMK's own sync_timer_read32(), which is right in
+// that window. (A true offset of 0 that never moves needs no filter.)
+static int32_t s_first;
+static bool    s_seen_first;
 
 static int32_t best_offset(void) {
     return s_best_cur > s_best_prev ? s_best_cur : s_best_prev;
@@ -42,6 +48,14 @@ void poly_sync_clock_task(void) {
     if (is_keyboard_master()) return;
     const int32_t  off = sync_timer_ms;
     const uint32_t now = timer_read32();
+    if (!s_have) {
+        if (!s_seen_first) {
+            s_first      = off;
+            s_seen_first = true;
+            return;
+        }
+        if (off == s_first) return;   // no update from the master yet
+    }
     if (!s_have || off < best_offset() - SYNC_CLOCK_JUMP_MS) {
         s_best_cur = s_best_prev = off;
         s_bucket_at              = now;

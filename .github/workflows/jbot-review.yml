@@ -18,7 +18,10 @@ permissions:
   checks: read
 
 concurrency:
-  group: jbot-review-${{ github.event.issue.number || inputs.pr-number }}
+  # The group applies before the job's if:, so every comment's run joins it. The
+  # suffix keeps a non-/jbot comment out of a real J-Bot run's group, so it can
+  # no longer cancel that run.
+  group: jbot-review-${{ github.event.issue.number || inputs.pr-number }}-${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.comment.body, '/jbot') }}
   cancel-in-progress: true
 
 jobs:

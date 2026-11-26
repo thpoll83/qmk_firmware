@@ -569,8 +569,10 @@ jobs:
       # The JSON is what you commit to polykybd-ctnd's perf/baselines/split72.json
       # to move the baseline — there is deliberately no automatic baseline update
       # (an auto-updating baseline ratchets a slow regression in silently).
+      # !cancelled(), not always(): the report still goes out after a failed run,
+      # but a cancelled run stops here (GitHub support's advice, 2026-11-26).
       - name: Upload perf report
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v6
         with:
           name: perf-report
@@ -581,7 +583,7 @@ jobs:
           retention-days: 30
 
       - name: Post perf report as PR comment
-        if: always() && github.event_name == 'pull_request'
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         uses: actions/github-script@v8
         with:
           script: |

@@ -157,7 +157,9 @@ static void tutorial_pulse_tick(uint32_t now) {
     }
     if (s_pulse_idx == 0xFFu || (uint32_t)(now - s_pulse_at) < TUT_PULSE_TICK_MS) return;
     s_pulse_at = now;
-    tut_panel_contrast(s_pulse_idx, tut_pulse_level(now, tut_normal_contrast()));
+    // The split's shared clock, like the key's LED (tutorial_rgb.c), so panel and LED
+    // pulse together on either half.
+    tut_panel_contrast(s_pulse_idx, tut_pulse_level(sync_timer_read32(), tut_normal_contrast()));
 }
 
 // The outermost key of display row `dr` on one half: the lowest board x on the left, the

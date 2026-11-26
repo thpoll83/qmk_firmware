@@ -18,7 +18,11 @@ permissions:
   checks: read
 
 concurrency:
-  group: jbot-review-${{ github.event.issue.number || inputs.pr-number }}
+  # The group applies before the job's if:, so every comment's run joins it.
+  # Runs that pass the job's if: keep the plain name; every other comment run
+  # gets "-other", so it can no longer cancel a running review. Keep this
+  # condition equal to the job's if:.
+  group: jbot-review-${{ github.event.issue.number || inputs.pr-number }}${{ !(github.event_name == 'workflow_dispatch' || (github.event.issue.pull_request && startsWith(github.event.comment.body, '/jbot') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))) && '-other' || '' }}
   cancel-in-progress: true
 
 jobs:

@@ -105,7 +105,8 @@ run on it (`test_no_crash_record`). What is worth knowing:
     `REASON` without it would have made every UF2 flash — the recovery path this
     whole feature points users at — open with a phantom crash dialog.
 - **The watchdog is 8 s** (`CRASH_WATCHDOG_MS`), started after the boot splash
-  and fed from **housekeeping and the suspend loop only**. Two places disarm it,
+  and fed from **housekeeping and the suspend loop only** (the suspend loop also
+  runs the stuck-suspend watch, see *A board that stays dark after the PC starts*). Two places disarm it,
   and both are load-bearing: `shutdown_user()` (the bootloader jump / `mcu_reset`
   would otherwise be racing an 8 s timer) and `fw_staging.c` right before
   `fw_staging_do_apply()` (the self-apply never returns to housekeeping; a
@@ -394,6 +395,33 @@ run on it (`test_no_crash_record`). What is worth knowing:
     brought it back. `WD_FORCE` set with `WD_TIMER` clear is the informative half
     (and is the qmk#271 discriminator working); leading with POR reads as a power
     cycle and would send a real diagnosis the wrong way.
+
+## A board that stays dark after the PC starts: the stuck-suspend watch
+
+Field, 2026-11-25: the PC was shut down overnight behind a powered hub, so the keyboard
+kept VBUS and stayed in USB suspend with its displays off. At the next PC start it stayed
+dark, Windows listed no raw HID interface (`'No Interface'` in `daemon.txt`), keys did
+nothing, and only a replug brought it back (`reset: cause=power-on`). No record: QMK's
+suspend loop (`protocol_pre_task`, `while (USB_DRIVER.state == USB_SUSPENDED)`) calls
+`suspend_power_down_kb()`, which feeds the watchdog, so a driver that misses the host's
+resume or bus reset waits there for ever.
+
+`suspend_watch_tick()` (`keys_com/power.c`, master only) reads the SIE's frame counter
+`SOF_RD` on every pass of that loop. A host sends one SOF per ms while the bus is
+active, and the counter advances whether or not the interrupt runs. If it keeps
+advancing for 2 s (`SUSPEND_STUCK_MS`, agreed with the maintainer) while the driver
+still says `SUSPENDED`, the firmware records `kind=halt phase=7:0xNNNN` and reboots.
+`NNNN` is the time spent suspended in seconds (capped at `0xFFFF`). The board then
+re-enumerates by itself, and the host shows the record.
+
+- A sleeping host sends no SOF, so an overnight suspend never trips the watch.
+- ⚠️ Reading `SOF_RD` clears a pending SOF interrupt. The watch skips the read while
+  the driver has `USB_INTE_DEV_SOF` enabled, because the ISR then wakes the driver on
+  the first SOF itself.
+- A gap of more than 100 ms between two passes starts a new measurement, so a
+  suspend that ended without `suspend_wakeup_init_kb()` cannot carry an old start time.
+- The watch cannot catch a hang where the host sends no SOF (pull-up off, PHY
+  powered down). That case still looks like a dark board with no record.
 
 ## A reset with no record: the `reset:` banner line (fw 1.9.11+, #402)
 

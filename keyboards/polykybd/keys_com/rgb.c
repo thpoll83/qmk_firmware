@@ -47,12 +47,15 @@ bool rgb_matrix_indicators_kb(void) {
         // The split's shared clock, so both halves breathe in step. Each half's own
         // timer_read32() counts from its own boot, and the halves boot at different
         // moments: they breathed up to a whole cycle apart (744 ms measured, 2026-11-26).
-        uint32_t now = sync_timer_read32();
-        if (!is_keyboard_master()) now -= FLASH_RGB_SLAVE_LAG_MS;   // see the define
+        // The apply and the FW-2 prompt stream no chunks, so the master's LED task
+        // runs every frame there and the slave needs no delay.
+        bool     cant_type = fw_staging_commit_pending() || get_local_state()->fw_confirm;
+        uint32_t now       = sync_timer_read32();
+        if (!is_keyboard_master() && !cant_type) now -= FLASH_RGB_SLAVE_LAG_MS;   // see the define
         uint8_t phase = (uint8_t)(now >> 3);                    // ~2 s cycle
         uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);  // triangle breath 0..127..0
         uint8_t v     = 5 + (tri >> 2);                         // ~5..36 (half brightness — bright enough)
-        if (fw_staging_commit_pending() || get_local_state()->fw_confirm) {
+        if (cant_type) {
             // Applying the staged firmware → reboot imminent, you can't type → orange.
             // The FW-2 confirmation prompt joins it: while it is up every key except
             // A/R is swallowed, which is exactly the "can't type" state orange means.

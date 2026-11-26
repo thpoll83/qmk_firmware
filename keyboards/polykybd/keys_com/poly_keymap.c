@@ -26,6 +26,7 @@
 #endif
 #include "uni.h"
 #include "lib/split_link/side.h"
+#include "lib/split_link/sync_clock.h"   // poly_sync_clock_task()
 #include "lib/display/fill_overlay.h"
 #include "lib/hid/mac_compose.h"   // mac_compose_set (protocol v38)
 #include "lib/drivers/disp_array.h"
@@ -371,6 +372,7 @@ void housekeeping_task_user(void) {
     crash_watchdog_feed();
     (void)crash_phase_enter(CRASH_PHASE_LOOP, 0);
     usb_stress_task();   // test builds only (POLYKYBD_USB_STRESS)
+    poly_sync_clock_task();   // the slave's filtered copy of the master's clock (sync_clock.c)
 #ifdef RGB_MATRIX_ENABLE
     flash_rgb_tick();   // light the matrix while a font-pack/firmware flash runs
     tutorial_rgb_tick(); // …and own it through the first-run show and the lesson

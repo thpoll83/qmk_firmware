@@ -15,6 +15,7 @@
 #include "lib/drivers/shift_reg.h"
 #include "base/tutorial_plan.h"
 #include "lib/split_link/side.h"
+#include "lib/split_link/sync_clock.h"   // poly_sync_clock_ms()
 #include "lib/split_link/bridge_helper.h"          // is_usb_host_side()
 #include QMK_KEYBOARD_H             // get_key_disp_bitmask, NUM_SHIFT_REGISTERS
 #include "startup_anim.h"           // sa_geom_t / startup_anim_key_geom
@@ -159,7 +160,7 @@ static void tutorial_pulse_tick(uint32_t now) {
     s_pulse_at = now;
     // The split's shared clock, like the key's LED (tutorial_rgb.c), so panel and LED
     // pulse together on either half.
-    tut_panel_contrast(s_pulse_idx, tut_pulse_level(sync_timer_read32(), tut_normal_contrast()));
+    tut_panel_contrast(s_pulse_idx, tut_pulse_level(poly_sync_clock_ms(), tut_normal_contrast()));
 }
 
 // The outermost key of display row `dr` on one half: the lowest board x on the left, the

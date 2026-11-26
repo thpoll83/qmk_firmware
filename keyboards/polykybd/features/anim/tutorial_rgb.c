@@ -12,6 +12,7 @@
 #include "tutorial.h"
 #include "menu_cascade.h"           // menu_cascade_key_level()
 #include "focus_ring.h"             // poly_focus_sweep_band()
+#include "lib/split_link/sync_clock.h"   // poly_sync_clock_ms()
 
 // Raw LED values, not scaled by RGB_MATRIX_MAXIMUM_BRIGHTNESS. For scale, the flash
 // cue breathes at 5..36.
@@ -223,7 +224,7 @@ bool tutorial_rgb_paint(void) {
     // The pulse follows the keycap's own (tut_pulse_level(), same clock, same curve).
     // The clock is the split's shared one, so the name keys on both halves breathe in
     // step; each half's timer_read32() counts from its own boot.
-    const uint32_t beat = sync_timer_read32();
+    const uint32_t beat = poly_sync_clock_ms();
     const uint8_t  wave = tut_pulse_level(beat, 255u);
 
     // The pointed-at key: its own colour for as long as it is asked for. Both halves

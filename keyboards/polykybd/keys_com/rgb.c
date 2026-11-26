@@ -11,6 +11,7 @@
 
 #include "keys_com/poly_keymap_internal.h"   // flash_rgb_tick(), rgb_adjust_key_down/up()
 #include "lib/system/state.h"                // get_local_state()
+#include "lib/split_link/sync_clock.h"       // poly_sync_clock_ms()
 #include "lib/drivers/fw_staging.h"          // fw_staging_commit_pending(), fw_staging_fw_up_active()
 #include "base/com.h"                        // STATUS_DISP_ON, BOOTLOADER_DISPLAY
 #include "features/anim/tutorial_rgb.h"      // tutorial_rgb_paint()
@@ -40,7 +41,9 @@ bool rgb_matrix_indicators_kb(void) {
         // The split's shared clock, so both halves breathe in step. Each half's own
         // timer_read32() counts from its own boot, and the halves boot at different
         // moments: they breathed up to a whole cycle apart (744 ms measured, 2026-11-26).
-        uint8_t phase = (uint8_t)(sync_timer_read32() >> 3);    // ~2 s cycle
+        // poly_sync_clock_ms(), not sync_timer_read32(): see sync_clock.c for the
+        // ~50 ms lag the slave's late sync updates left during staging.
+        uint8_t phase = (uint8_t)(poly_sync_clock_ms() >> 3);   // ~2 s cycle
         uint8_t tri   = phase < 128 ? phase : (uint8_t)(255 - phase);  // triangle breath 0..127..0
         uint8_t v     = 5 + (tri >> 2);                         // ~5..36 (half brightness — bright enough)
         if (fw_staging_commit_pending() || get_local_state()->fw_confirm) {

@@ -27,6 +27,10 @@ runs the periodic sync. `lib/hid/`, `lib/display/fill_overlay.c`, `lib/fw_update
   pull channel. The request is a `kind` byte (`enum slave_data_kind`): the LTR-559
   reading, the crash record, and the crash acknowledgement.
   `slave_data_crash_pull_tick()` pulls the slave's crash record once per link-up.
+- `sync_clock.c` / `sync_clock.h`: `poly_sync_clock_ms()`, QMK's shared split clock
+  with the slave's late sync updates filtered out (the largest offset of the last
+  5 to 10 s). Use it for effects both halves show in step: the flash cue and the
+  tutorial pulses.
 - `side.c` / `side.h`: which side this half is (`enum side_state`, `set_side()`,
   `is_left_side()`) and `enum key_split_pos` with `is_on_current_side()` /
   `is_on_other_side()`. `poly_keymap.c` sets the side from the handedness stamp.

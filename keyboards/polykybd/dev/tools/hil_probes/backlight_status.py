@@ -8,9 +8,9 @@ A. Backlight (VIA RGB matrix, protocol 39): white, solid effect, brightness 0 /
    64 / 128 / 255, then off. Per half: the mean luma at the LED positions. The
    halves' pictures at full brightness and off go into the log as PNG.
 B. Status displays: lights off, 240 s with no HID traffic, a 0.3 s clip every
-   10 s. Per half: the 99th percentile luma more than 7 mm from any LED (the
-   status display when lit). A picture of both halves whenever a half changes
-   between lit and dark. The master's console lines about idle, display and
+   10 s. Per half: the 95th percentile luma in the status display's box (from
+   the first run: lit about 90, after DISPLAY_OFF about 2). A picture of both
+   halves every 30 s and whenever a half changes between lit and dark. The master's console lines about idle, display and
    sleep are logged as they come.
 C. DISPLAY_OFF (what the rig sends after a passing run), 30 s.
 
@@ -41,6 +41,18 @@ def _emit(log, name, png):
         log(f"IMG {name} {i + 1}/{len(parts)} {part}")
 
 
+# The status display's box on each board, in mm (measured from the lit picture of
+# the first run, with 3 mm margin).
+DISPLAY_BOX = {"left": (151, 39, 183, 57), "right": (7, 32, 38, 50)}
+
+
+def _box_p95(img, ow, oh, box, px_per_mm):
+    x0, y0, x1, y1 = (int(v * px_per_mm) for v in box)
+    vals = sorted(img[y * ow + x] for y in range(max(0, y0), min(oh, y1))
+                  for x in range(max(0, x0), min(ow, x1)))
+    return vals[int(len(vals) * 0.95)] if vals else 0
+
+
 class _Halves:
     def __init__(self, camera, s):
         self.camera, self.s = camera, s
@@ -52,13 +64,7 @@ class _Halves:
         ow, oh, img = c.rectify(luma, w, h, self.s, side, self.boards[side], px_per_mm=1.0)
         leds = [(int(l["x"]), int(l["y"])) for l in self.boards[side]["leds"]]
         at = [img[y * ow + x] for x, y in leds if 0 <= x < ow and 0 <= y < oh]
-        key = (side, ow, oh)
-        if key not in self._far:
-            self._far[key] = [y * ow + x for y in range(oh) for x in range(ow)
-                              if all((x - lx) ** 2 + (y - ly) ** 2 > 49 for lx, ly in leds)]
-        far = sorted(img[i] for i in self._far[key])
-        p99 = far[int(len(far) * 0.99)] if far else 0
-        return (sum(at) / len(at) if at else 0.0), p99
+        return (sum(at) / len(at) if at else 0.0), _box_p95(img, ow, oh, DISPLAY_BOX[side], 1.0)
 
     def clip(self, label, seconds=0.3):
         rec = self.camera.record(self.s, seconds=seconds, label={"text": label})
@@ -133,10 +139,13 @@ def probe(raw, log):
         _rgb_set(raw, EFFECT, 0)            # B and C watch with the lights off
     log(f"  RGB restored except the effect (off for B): {[_rgb_get(raw, v) for v in (BRIGHT, COLOR)]}")
 
-    log("  -- B: status displays, 240 s without HID traffic --")
+    up = raw.send(bytes([0x02, 0x01, 0, 0, 0, 0]))
+    if up and up[0] == 0x02:
+        log(f"  keyboard uptime at B: {int.from_bytes(up[2:6], 'big') / 1000:.1f} s")
+    log("  -- B: status displays, 300 s without HID traffic --")
     lit, top = {}, {"left": 0, "right": 0}
     t0 = time.monotonic()
-    while time.monotonic() - t0 < 240:
+    while time.monotonic() - t0 < 300:
         mark = TAP.mark()
         try:
             rec, luma, st = halves.clip("probe status displays")
@@ -150,12 +159,12 @@ def probe(raw, log):
         changed = False
         for sd in st:
             top[sd] = max(top[sd], st[sd][1])
-            now = st[sd][1] >= 0.5 * top[sd] and top[sd] > 40
+            now = st[sd][1] >= 30
             if sd in lit and lit[sd] != now:
                 log(f"  ** {sd} status display went {'lit' if now else 'dark'} at +{dt:.0f} s")
                 changed = True
             lit[sd] = now
-        if changed or dt < 1:
+        if changed or int(dt) // 30 != int(dt - STEP_S) // 30 or dt < STEP_S:
             halves.pictures(log, f"status_{int(dt):03d}", rec, luma)
         _console(log, mark)
         time.sleep(max(0.0, STEP_S - 1.5))

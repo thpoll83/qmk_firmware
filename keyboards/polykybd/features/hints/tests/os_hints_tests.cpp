@@ -111,6 +111,11 @@ const uint32_t* added_chord_icon(uint16_t kc, uint8_t mods_raw, uint8_t os_packe
         {KC_LEFT,  MOD_LCTL,            reinterpret_cast<const uint32_t*>(ICON_HINT_DESKTOP_PREV)},
         {KC_RIGHT, MOD_LCTL,            reinterpret_cast<const uint32_t*>(ICON_HINT_DESKTOP_NEXT)},
         {KC_UP,    MOD_LCTL,            reinterpret_cast<const uint32_t*>(ICON_HINT_WINDOW_SWITCH)},
+        {KC_DOWN,  MOD_LCTL,            reinterpret_cast<const uint32_t*>(ICON_HINT_APP_EXPOSE)},
+        {KC_Q,     MOD_LGUI | MOD_LSFT, reinterpret_cast<const uint32_t*>(ICON_HINT_LOG_OUT)},
+        {KC_ESC,   MOD_LGUI | MOD_LALT, reinterpret_cast<const uint32_t*>(ICON_HINT_FORCE_QUIT)},
+        {KC_3,     MOD_LGUI | MOD_LCTL | MOD_LSFT, reinterpret_cast<const uint32_t*>(ICON_HINT_SCREENSHOT_CLIP)},
+        {KC_4,     MOD_LGUI | MOD_LCTL | MOD_LSFT, reinterpret_cast<const uint32_t*>(ICON_HINT_SNIP_CLIP)},
     };
     for (const Added& a : kAdded) {
         if (a.kc == kc && a.mods == m) return a.icon;
@@ -275,7 +280,8 @@ TEST(OsHints, AppShortcutsHaveNoBuiltInHint) {
         for (unsigned mods = 0; mods < 256; ++mods) {
             for (uint8_t os : os_values()) {
                 if (!is_app_chord(kc, static_cast<uint8_t>(mods), os)) continue;
-                // Cmd+Shift+3/4/5 are the macOS screenshot chords, not app shortcuts.
+                // Cmd+Shift+3/4/5 (screenshots) and Cmd+Shift+Q (log out) are macOS
+                // system chords, not app shortcuts.
                 if (added_chord_icon(kc, static_cast<uint8_t>(mods), os) != nullptr) continue;
                 ASSERT_EQ(os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os), nullptr)
                     << describe(kc, mods, os) << " is an app shortcut and must be left to the overlay";
@@ -295,7 +301,7 @@ TEST(OsHints, AppShortcutsHaveNoBuiltInHint) {
 // spaces-plus-emoji string, or a slot outside the block, fails here.
 TEST(OsHints, EveryShortcutHintIsOneIconGlyph) {
     const uint32_t first = static_cast<uint32_t>(ICON_HINT_SEARCH[0]);
-    const uint32_t last  = static_cast<uint32_t>(ICON_HINT_QUICK_ASSIST[0]);
+    const uint32_t last  = static_cast<uint32_t>(ICON_HINT_APP_EXPOSE[0]);
     ASSERT_LT(first, last);
     size_t hits = 0;
     for (uint16_t kc : interesting_keycodes()) {
@@ -422,6 +428,11 @@ TEST(OsHints, MacSystemChordsShowTheirIcon) {
     EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_LEFT, ctl, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_DESKTOP_PREV)));
     EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_RIGHT, ctl, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_DESKTOP_NEXT)));
     EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_UP, ctl, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_WINDOW_SWITCH)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_DOWN, ctl, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_APP_EXPOSE)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_Q, cmd | sft, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_LOG_OUT)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_ESC, cmd | opt, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_FORCE_QUIT)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_3, cmd | ctl | sft, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_SCREENSHOT_CLIP)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_4, cmd | ctl | sft, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_SNIP_CLIP)));
     // Cmd+Shift+other digits stay app shortcuts, and Windows does not get the Mac chords.
     EXPECT_EQ(os_hint_for_keycode(KC_6, cmd | sft, mac), nullptr);
     EXPECT_EQ(os_hint_for_keycode(KC_3, cmd | sft, POLY_OS_WINDOWS), nullptr);

@@ -98,7 +98,14 @@ void flash_rgb_tick(void) {
     // reboot cue even though no chunks are streaming.
     // ...and while the FW-2 confirmation prompt is up (synced, so both halves glow):
     // the board is modal there, so it belongs to the same "can't type" cue.
-    if (fw_staging_fw_up_active() || fw_staging_commit_pending() ||
+    // ⚠️ Staging lights the cue from the FIRST WRITTEN CHUNK, not from BEGIN. During
+    // the erase after BEGIN the master's main loop runs only between erase units and
+    // the host's BEGIN polls, so its LED task hardly runs: the rig camera saw the
+    // slave light 601 ms before the master in two runs, then the master hold one
+    // level for 1.35 s (2026-11-27). Chunks flow only once both halves finished
+    // erasing, so both start within one relayed chunk. The status OLED still shows
+    // the update screen from BEGIN.
+    if ((fw_staging_fw_up_active() && fw_staging_written()) || fw_staging_commit_pending() ||
         get_local_state()->fw_confirm) {
         s_flash_rgb_seen   = timer_read();
     }

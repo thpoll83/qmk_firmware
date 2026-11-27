@@ -132,6 +132,27 @@ bool poly_fw_hold_active(void) {
     return false;
 }
 
+// The keycap half of the cue, without the orange RGB. The slave's plain-reboot path
+// uses it alone: orange means "a firmware is being applied", and on QK_REBOOT the
+// master resets within microseconds with its LEDs unchanged, so an orange slave was
+// the only half that lit up (reported from hardware 2026-11-27).
+static void poly_board_blank_keycaps(void) {
+    // Take the keycaps off whatever else owns them FIRST, or that writer paints the
+    // blank straight back. update_displays() early-returns for both of these, which
+    // is precisely the sign that they are writers in their own right — and the idle
+    // pulse is a third, reached through set_displays(contrast, idle) -> kdisp_idle()
+    // rather than through update_displays() at all. A standalone "apply staged image"
+    // can arrive on an idling board with no preceding transfer, so none of this is
+    // hypothetical: poly_prepare_for_flash() does the same teardown for the same
+    // reason at the START of an update, and this is its counterpart at the end.
+    demo_stop();               // the showroom demo, too: the apply owns the board now
+    doom_screensaver_stop();   // self-guards: only an active attract demo
+    startup_anim_stop();       // looping Eden (and a one-shot mid-flight)
+    poly_sync_t* local_state = access_local_state();
+    local_state->flags &= ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);
+    clear_all_displays();
+}
+
 // The board is about to stop being usable: latch the orange cue AND blank every
 // keycap, so the two halves say the same thing at once.
 //
@@ -147,21 +168,8 @@ bool poly_fw_hold_active(void) {
 // rather than orange, and poly_prepare_for_flash() has deliberately just drawn
 // legible base legends so you CAN keep typing.
 void poly_board_unusable_cue(void) {
-    // Take the keycaps off whatever else owns them FIRST, or that writer paints the
-    // blank straight back. update_displays() early-returns for both of these, which
-    // is precisely the sign that they are writers in their own right — and the idle
-    // pulse is a third, reached through set_displays(contrast, idle) -> kdisp_idle()
-    // rather than through update_displays() at all. A standalone "apply staged image"
-    // can arrive on an idling board with no preceding transfer, so none of this is
-    // hypothetical: poly_prepare_for_flash() does the same teardown for the same
-    // reason at the START of an update, and this is its counterpart at the end.
-    demo_stop();               // the showroom demo, too: the apply owns the board now
-    doom_screensaver_stop();   // self-guards: only an active attract demo
-    startup_anim_stop();       // looping Eden (and a one-shot mid-flight)
-    poly_sync_t* local_state = access_local_state();
-    local_state->flags &= ~((uint8_t)DISP_IDLE) & ~((uint8_t)IDLE_TRANSITION);
+    poly_board_blank_keycaps();
     poly_flash_rgb_now();
-    clear_all_displays();
 }
 
 // A refused apply: record why for the status OLED, which repaints the failure screen
@@ -332,9 +340,10 @@ bool fw_apply_tick(void) {
     }
     if (fw_staging_reboot_pending()) {
         clear_keyboard();   // same as above: no further matrix scan before the reset
-        poly_board_unusable_cue();
-        // This path had no status-OLED state at all: it went orange and reset while the
-        // panel still showed the ordinary status screen. Flushed synchronously, like the
+        // No orange here: a plain reboot is not an apply, and the master shows no cue.
+        poly_board_blank_keycaps();
+        // This path had no status-OLED state at all: it reset while the panel still
+        // showed the ordinary status screen. Flushed synchronously, like the
         // apply notice, because mcu_reset() below never returns.
         oled_fw_restart_screen();
         // A handedness change arrives on this path (the reset-sync carrier). The

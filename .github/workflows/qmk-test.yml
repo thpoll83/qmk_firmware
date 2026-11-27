@@ -134,6 +134,17 @@ jobs:
       github.event.action != 'labeled' ||
       github.event.label.name == 'hil-extended'
     runs-on: ubuntu-latest
+    # The qmkfm/qmk_cli container runs as root on a checkout the runner user
+    # owns, so git refuses the repo ("dubious ownership") and `git describe`
+    # fails: QMK_GIT_HASH becomes "Unknown" and the boot banner's build line
+    # reads <branch>@Unknown. actions/checkout marks the repo safe only in the
+    # runner's own git config, at the runner's path. '*' also covers the
+    # submodules (lib/chibios ...), whose versions QMK reads the same way.
+    # Only GitHub-hosted jobs set it; the self-hosted rig jobs do not.
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: '*'
     outputs:
       split72: ${{ steps.names.outputs.split72 }}
       split72_bin: ${{ steps.names.outputs.split72_bin }}
@@ -215,6 +226,11 @@ jobs:
       github.event.action != 'labeled' ||
       github.event.label.name == 'hil-extended'
     runs-on: ubuntu-latest
+    # The container's checkout is safe for git: see the `build` job.
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: '*'
     permissions:
       contents: read
     steps:
@@ -465,6 +481,11 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'hil-perf') ||
       contains(github.event.head_commit.message, '[hil-perf]')
     runs-on: ubuntu-latest
+    # The container's checkout is safe for git: see the `build` job.
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: '*'
     outputs:
       hil_left: ${{ steps.names.outputs.hil_left }}
       hil_right: ${{ steps.names.outputs.hil_right }}
@@ -629,6 +650,11 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'hil-doom') ||
       contains(github.event.head_commit.message, '[hil-doom]')
     runs-on: ubuntu-latest
+    # The container's checkout is safe for git: see the `build` job.
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: '*'
     # Least privilege: this job only checks out, builds and uploads an artifact —
     # it needs no write scopes. Matches the explicit permissions the rig test jobs
     # (hil-test / perf-test / doom-test) already carry.
@@ -731,6 +757,11 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'hil-fwapply') ||
       contains(github.event.head_commit.message, '[hil-fwapply]')
     runs-on: ubuntu-latest
+    # The container's checkout is safe for git: see the `build` job.
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: '*'
     permissions:
       contents: read
     outputs:
@@ -911,6 +942,11 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'hil-tutorial') ||
       contains(github.event.head_commit.message, '[hil-tutorial]')
     runs-on: ubuntu-latest
+    # The container's checkout is safe for git: see the `build` job.
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: '*'
     permissions:
       contents: read
     outputs:

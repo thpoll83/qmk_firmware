@@ -222,6 +222,7 @@ static bool via_rgb_matrix_value(bool set, uint8_t *value_id_and_data) {
 // id_get_keyboard_value (0x02), device indication on id_set_keyboard_value (0x03).
 enum {
     POLY_VIA_UPTIME            = 0x01,   // via.h id_uptime
+    POLY_VIA_SWITCH_MATRIX     = 0x03,   // via.h id_switch_matrix_state
     POLY_VIA_DEVICE_INDICATION = 0x05,   // via.h id_device_indication
 };
 
@@ -240,6 +241,24 @@ bool legacy_command_kb(uint8_t *data, uint8_t length) {
                 command_data[2] = (value >> 16) & 0xFF;
                 command_data[3] = (value >> 8) & 0xFF;
                 command_data[4] = value & 0xFF;
+            } else if (length >= 32 && command_data[0] == POLY_VIA_SWITCH_MATRIX && debug_enable) {
+                // Switch matrix state (VIA's layout): data[2] is the first row, then
+                // as many whole rows as fit in data[3..30], each big-endian. On the
+                // master matrix_get_row() covers both halves.
+                // SECURITY: this reads which keys are down, so a host program could
+                // log what the user types. VIA hides it behind VIA_INSECURE; here it
+                // needs debug_enable (DB_TOGG, or a POLYKYBD_DEBUG test build), the
+                // same gate as cmd 14. With debug off it is answered as unhandled.
+                const uint8_t offset = command_data[1];
+                const uint8_t bytes_per_row = (MATRIX_COLS + 7) / 8;
+                const uint8_t rows = 28 / bytes_per_row;
+                uint8_t i = 2;
+                for (uint8_t row = 0; row < rows && row + offset < MATRIX_ROWS; row++) {
+                    const matrix_row_t value = matrix_get_row(row + offset);
+                    for (int8_t b = bytes_per_row - 1; b >= 0; b--) {
+                        command_data[i++] = (value >> (8 * b)) & 0xFF;
+                    }
+                }
             } else {
                 *command_id = id_unhandled;
             }

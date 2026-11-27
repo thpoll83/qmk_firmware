@@ -621,17 +621,21 @@ reading before you change either one.
     restores the stored settings. The slave follows through `SPLIT_TRANSPORT_MIRROR`.
   - Any other channel or value id is answered as VIA does, with `data[0]` set to
     `id_unhandled` (`0xFF`).
-  - Two of VIA's keyboard values come along, also ported from `quantum/via.c`:
+  - Three of VIA's keyboard values come along, also ported from `quantum/via.c`:
     - `0x02` (`id_get_keyboard_value`) value `0x01` (`id_uptime`): this half's
       `timer_read32()`, ms since boot, big-endian in `data[2..5]`. It wraps after about
       49.7 days.
     - `0x03` (`id_set_keyboard_value`) value `0x05` (`id_device_indication`): toggles
       the RGB matrix, RAM only. VIA sends it six times, 200 ms apart, so the matrix ends
       as it started.
-    - Any other value id is answered with `id_unhandled`. VIA's switch matrix state
-      (`id_switch_matrix_state`) is NOT ported: any program on the host can read the
-      raw HID interface, so a live matrix is a keylogger, and VIA itself answers zeros
-      unless built with `VIA_INSECURE`.
+    - `0x02` value `0x03` (`id_switch_matrix_state`): `data[2]` is the first row, then
+      as many whole rows as fit in `data[3..30]`, each big-endian (1 byte per row on
+      both variants, so all rows fit). On the master the rows cover both halves. Any
+      program on the host can read the raw HID interface, so a live matrix is a
+      keylogger. VIA answers zeros unless built with `VIA_INSECURE`; here the value is
+      answered only while `debug_enable` is on (the DB_TOGG key, or a `POLYKYBD_DEBUG`
+      test build), the same gate as cmd 14. With debug off it is `id_unhandled`.
+    - Any other value id is answered with `id_unhandled`.
   - A v38 or older firmware sends no reply to `0x02`, `0x03`, `0x07` or `0x08` (the
     legacy handler did not know them), so the host and the rig use them only from v39.
 

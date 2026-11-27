@@ -72,12 +72,11 @@ def probe(raw, log):
         base, first, rows, nxt = {}, {}, [], 0.0
         for t, luma in zip(ts, rec.lumas):
             t -= ts[0]
-            if t < nxt:
-                continue
-            nxt += 50.0
             lv = {sd: camera.half_levels(luma, rec.width, rec.height, s, sd, boards[sd])[0]
                   for sd in boards}
-            rows.append((t, lv))
+            if t >= nxt:   # every frame is checked for the onset; one row per 50 ms
+                nxt += 50.0
+                rows.append((t, lv))
             for sd, v in lv.items():
                 if t < 1000.0:
                     base[sd] = max(base.get(sd, 0.0), v)

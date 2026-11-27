@@ -178,7 +178,13 @@ static bool via_rgb_matrix_value(bool set, uint8_t *value_id_and_data) {
                 const uint8_t val = (uint8_t)(((uint16_t)value_data[0] * (RGB_MATRIX_MAXIMUM_BRIGHTNESS + 1)) >> 8);
                 rgb_matrix_sethsv_noeeprom(rgb_matrix_get_hue(), rgb_matrix_get_sat(), val);
             } else {
-                value_data[0] = ((uint16_t)rgb_matrix_get_val() * UINT8_MAX) / RGB_MATRIX_MAXIMUM_BRIGHTNESS;
+                // Rounded UP, not VIA's floor: with the floor a get followed by a set
+                // of the same value lowered the brightness one step at 31 of the 101
+                // levels (stored 1 read as 2, which set stores as 0). Rounded up, a
+                // set of any value a get returned restores the stored level exactly.
+                uint16_t v = rgb_matrix_get_val();
+                if (v > RGB_MATRIX_MAXIMUM_BRIGHTNESS) v = RGB_MATRIX_MAXIMUM_BRIGHTNESS;
+                value_data[0] = (v * UINT8_MAX + RGB_MATRIX_MAXIMUM_BRIGHTNESS - 1) / RGB_MATRIX_MAXIMUM_BRIGHTNESS;
             }
             return true;
         case POLY_VIA_RGB_MATRIX_EFFECT:

@@ -613,7 +613,9 @@ reading before you change either one.
   because `VIA_ENABLE` is off. The report is VIA's: `data[0]` the id, `data[1]` the
   channel (`3`, `id_qmk_rgb_matrix_channel`), `data[2]` the value id, `data[3..]` the
   value. The reply is the same report, with the value filled in for a get.
-  - Value ids: `1` brightness (0..255, scaled to `RGB_MATRIX_MAXIMUM_BRIGHTNESS`), `2`
+  - Value ids: `1` brightness (0..255, scaled to `RGB_MATRIX_MAXIMUM_BRIGHTNESS`; the
+    get rounds up where VIA rounds down, so a set of a value a get returned restores
+    the stored level exactly), `2`
     effect (`0` switches the matrix off, any other value switches it on with that
     effect, clamped to the built effects), `3` speed, `4` colour (hue, saturation).
   - RAM only: the `_noeeprom` setters. VIA's save (`id_custom_save`, `0x09`) is taken

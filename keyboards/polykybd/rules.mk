@@ -594,7 +594,7 @@ OPT_DEFS += -DPOLY_GIT_BRANCH=\"$(or $(POLY_GIT_BRANCH),unknown)\"
 # a key, so the lesson would never finish and would own the displays, the brightness
 # and the layer stack for every graded test after the boot. A HIL build that wants it
 # can still pass `-e POLYKYBD_BOOT_INTRO=yes`.
-ifneq ($(filter yes left right,$(strip $(POLYKYBD_HIL))),)
+ifneq ($(filter yes left right stamp,$(strip $(POLYKYBD_HIL))),)
     POLYKYBD_BOOT_INTRO ?= no
 endif
 POLYKYBD_BOOT_INTRO ?= yes

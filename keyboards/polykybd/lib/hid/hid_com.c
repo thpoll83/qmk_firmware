@@ -147,12 +147,155 @@ void raw_hid_send_before_reset(uint8_t *data, uint8_t length) {
     }
 }
 
+// VIA's RGB matrix channel (protocol v39), ported from quantum/via.c
+// (via_qmk_rgb_matrix_get_value / _set_value), which is not built: VIA_ENABLE is
+// off. Report: data[0] id_custom_set_value / id_custom_get_value, data[1] the
+// channel (id_qmk_rgb_matrix_channel, 3), data[2] the value id, data[3..] the
+// value. Effect 0 switches the matrix off, any other effect switches it on.
+//
+// RAM only (the _noeeprom setters): VIA's save (id_custom_save, 0x09) is taken by
+// the PolyKybd command dispatch, so nothing here is written to EEPROM; a reboot
+// restores the stored settings. The master's settings reach the slave through
+// SPLIT_TRANSPORT_MIRROR, as every other RGB change does.
+//
+// A channel or value id this does not know is answered as VIA does: data[0] set
+// to id_unhandled (0xFF). Older firmware sends no reply at all to 0x07 / 0x08.
+enum {
+    POLY_VIA_RGB_MATRIX_CHANNEL    = 3,   // via.h id_qmk_rgb_matrix_channel
+    POLY_VIA_RGB_MATRIX_BRIGHTNESS = 1,   // id_qmk_rgb_matrix_brightness
+    POLY_VIA_RGB_MATRIX_EFFECT     = 2,   // id_qmk_rgb_matrix_effect
+    POLY_VIA_RGB_MATRIX_SPEED      = 3,   // id_qmk_rgb_matrix_effect_speed
+    POLY_VIA_RGB_MATRIX_COLOR      = 4,   // id_qmk_rgb_matrix_color
+};
+
+static bool via_rgb_matrix_value(bool set, uint8_t *value_id_and_data) {
+#if defined(RGB_MATRIX_ENABLE)
+    uint8_t *value_data = &value_id_and_data[1];
+    switch (value_id_and_data[0]) {
+        case POLY_VIA_RGB_MATRIX_BRIGHTNESS:
+            if (set) {
+                // VIA's scale8(v, MAX): lib8tion's (v * (1 + MAX)) >> 8, written out.
+                const uint8_t val = (uint8_t)(((uint16_t)value_data[0] * (RGB_MATRIX_MAXIMUM_BRIGHTNESS + 1)) >> 8);
+                rgb_matrix_sethsv_noeeprom(rgb_matrix_get_hue(), rgb_matrix_get_sat(), val);
+            } else {
+                // Rounded UP, not VIA's floor: with the floor a get followed by a set
+                // of the same value lowered the brightness one step at 31 of the 101
+                // levels (stored 1 read as 2, which set stores as 0). Rounded up, a
+                // set of any value a get returned restores the stored level exactly.
+                uint16_t v = rgb_matrix_get_val();
+                if (v > RGB_MATRIX_MAXIMUM_BRIGHTNESS) v = RGB_MATRIX_MAXIMUM_BRIGHTNESS;
+                value_data[0] = (v * UINT8_MAX + RGB_MATRIX_MAXIMUM_BRIGHTNESS - 1) / RGB_MATRIX_MAXIMUM_BRIGHTNESS;
+            }
+            return true;
+        case POLY_VIA_RGB_MATRIX_EFFECT:
+            if (set) {
+                if (value_data[0] == 0) {
+                    rgb_matrix_disable_noeeprom();
+                } else {
+                    rgb_matrix_enable_noeeprom();
+                    rgb_matrix_mode_noeeprom(value_data[0]);   // clamped to the built effects
+                }
+            } else {
+                value_data[0] = rgb_matrix_is_enabled() ? rgb_matrix_get_mode() : 0;
+            }
+            return true;
+        case POLY_VIA_RGB_MATRIX_SPEED:
+            if (set) {
+                rgb_matrix_set_speed_noeeprom(value_data[0]);
+            } else {
+                value_data[0] = rgb_matrix_get_speed();
+            }
+            return true;
+        case POLY_VIA_RGB_MATRIX_COLOR:
+            if (set) {
+                rgb_matrix_sethsv_noeeprom(value_data[0], value_data[1], rgb_matrix_get_val());
+            } else {
+                value_data[0] = rgb_matrix_get_hue();
+                value_data[1] = rgb_matrix_get_sat();
+            }
+            return true;
+        default:
+            return false;
+    }
+#else
+    (void)set;
+    (void)value_id_and_data;
+    return false;
+#endif
+}
+
+// VIA's keyboard values (protocol v39), ported from quantum/via.c: uptime on
+// id_get_keyboard_value (0x02), device indication on id_set_keyboard_value (0x03).
+enum {
+    POLY_VIA_UPTIME            = 0x01,   // via.h id_uptime
+    POLY_VIA_SWITCH_MATRIX     = 0x03,   // via.h id_switch_matrix_state
+    POLY_VIA_DEVICE_INDICATION = 0x05,   // via.h id_device_indication
+};
+
 bool legacy_command_kb(uint8_t *data, uint8_t length) {
     uint8_t *command_id   = &(data[0]);
     uint8_t *command_data = &(data[1]);
     uint8_t data_len = 0;
 
     switch(*command_id) {
+        case id_get_keyboard_value: {
+            // Uptime: this half's timer_read32(), ms since boot, big-endian in
+            // data[2..5] (VIA's layout). Wraps after ~49.7 days.
+            if (length >= 6 && command_data[0] == POLY_VIA_UPTIME) {
+                const uint32_t value = timer_read32();
+                command_data[1] = (value >> 24) & 0xFF;
+                command_data[2] = (value >> 16) & 0xFF;
+                command_data[3] = (value >> 8) & 0xFF;
+                command_data[4] = value & 0xFF;
+            } else if (length >= 32 && command_data[0] == POLY_VIA_SWITCH_MATRIX && debug_enable) {
+                // Switch matrix state (VIA's layout): data[2] is the first row, then
+                // as many whole rows as fit in data[3..30], each big-endian. On the
+                // master matrix_get_row() covers both halves.
+                // SECURITY: this reads which keys are down, so a host program could
+                // log what the user types. VIA hides it behind VIA_INSECURE; here it
+                // needs debug_enable (DB_TOGG, or a POLYKYBD_DEBUG test build), the
+                // same gate as cmd 14. With debug off it is answered as unhandled.
+                const uint8_t offset = command_data[1];
+                const uint8_t bytes_per_row = (MATRIX_COLS + 7) / 8;
+                const uint8_t rows = 28 / bytes_per_row;
+                uint8_t i = 2;
+                for (uint8_t row = 0; row < rows && row + offset < MATRIX_ROWS; row++) {
+                    const matrix_row_t value = matrix_get_row(row + offset);
+                    for (int8_t b = bytes_per_row - 1; b >= 0; b--) {
+                        command_data[i++] = (value >> (8 * b)) & 0xFF;
+                    }
+                }
+            } else {
+                *command_id = id_unhandled;
+            }
+            raw_hid_send(data, length);
+            return true;
+        }
+        case id_set_keyboard_value: {
+            // Device indication: toggles the RGB matrix, RAM only. VIA sends it six
+            // times, 200 ms apart, so the matrix ends as it started; data[2] is the
+            // call's index. The slave follows through SPLIT_TRANSPORT_MIRROR.
+            if (length >= 3 && command_data[0] == POLY_VIA_DEVICE_INDICATION) {
+#if defined(RGB_MATRIX_ENABLE)
+                rgb_matrix_toggle_noeeprom();
+#endif
+            } else {
+                *command_id = id_unhandled;
+            }
+            raw_hid_send(data, length);
+            return true;
+        }
+        case id_custom_set_value:
+        case id_custom_get_value: {
+            // A report too short for channel + value id + two value bytes is refused.
+            const bool ok = length >= 5 && command_data[0] == POLY_VIA_RGB_MATRIX_CHANNEL
+                            && via_rgb_matrix_value(*command_id == id_custom_set_value, &command_data[1]);
+            if (!ok) {
+                *command_id = id_unhandled;
+            }
+            raw_hid_send(data, length);
+            return true;
+        }
         case id_dynamic_keymap_reset:
             dynamic_keymap_reset_poly();
             data_len = 1;

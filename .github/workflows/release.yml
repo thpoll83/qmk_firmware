@@ -23,6 +23,16 @@ permissions:
 env:
   KB: polykybd/split72
   KM: default
+  # The qmkfm/qmk_cli container runs as root on a checkout the runner user
+  # owns, so git refuses the repo ("dubious ownership") and `git describe`
+  # fails: QMK_GIT_HASH becomes "Unknown" and the boot banner's build line
+  # reads <branch>@Unknown. actions/checkout marks the repo safe only in the
+  # runner's own git config, at the runner's path. '*' also covers the
+  # submodules (lib/chibios ...), whose versions QMK reads the same way.
+  # Only GitHub-hosted jobs set it; the self-hosted rig jobs do not.
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: safe.directory
+  GIT_CONFIG_VALUE_0: '*'
 
 jobs:
   release:

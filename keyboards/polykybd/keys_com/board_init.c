@@ -12,6 +12,9 @@
 #include <transactions.h>
 
 #include "print.h"
+#if defined(RGB_MATRIX_ENABLE) && defined(WS2812_VENDOR)
+#    include "ws2812.h"
+#endif
 
 #include "poly_keymap.h"
 #include "base/com.h"
@@ -576,6 +579,18 @@ void keyboard_pre_init_user(void) {
     // not been launched yet (see crash_record.h) -- keep this ahead of
     // post_init's multicore_launch_core1().
     crash_record_init();
+
+#if defined(RGB_MATRIX_ENABLE) && defined(WS2812_VENDOR)
+    // Blank the LEDs now. They keep the last colour they were sent until the
+    // first rgb_matrix flush, and QMK runs rgb_matrix_init() only after
+    // split_pre_init(). On a Rev.2 board the slave waits 2 s there for USB
+    // (is_keyboard_master_impl(), polykybd.c), so after an apply its orange cue
+    // stayed on about 2 s longer than the master's (reported from hardware
+    // 2026-11-27). ws2812_init() runs once; rgb_matrix_init()'s call is a no-op.
+    ws2812_init();
+    ws2812_set_color_all(0, 0, 0);
+    ws2812_flush();
+#endif
 
     // Resolve handedness while the EEPROM's own verdict is still readable. It has
     // to be HERE, in keyboard_setup(), because keyboard_init() later runs

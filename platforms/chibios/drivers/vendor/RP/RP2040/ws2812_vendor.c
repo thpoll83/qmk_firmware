@@ -178,6 +178,14 @@ static void ws2812_dma_callback(void* p, uint32_t ct) {
 }
 
 void ws2812_init(void) {
+    // PolyKybd: the keyboard starts the driver early, in keyboard_pre_init_user(),
+    // to blank the LEDs before split_pre_init() (keys_com/board_init.c). Each call
+    // claims a state machine, a program slot and a DMA channel, so only the first
+    // call runs; rgb_matrix_init() calls it again.
+    static bool initialised = false;
+    if (initialised) return;
+    initialised = true;
+
     uint pio_idx = pio_get_index(pio);
     /* Get PIOx peripheral out of reset state. */
     hal_lld_peripheral_unreset(pio_idx == 0 ? RESETS_ALLREG_PIO0 : RESETS_ALLREG_PIO1);

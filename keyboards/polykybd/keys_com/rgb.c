@@ -37,6 +37,9 @@
 static bool     s_flash_rgb_active      = false;
 static bool     s_flash_rgb_was_enabled = false;
 static uint16_t s_flash_rgb_seen        = 0;
+static uint16_t s_flash_rgb_first       = 0;      // when this episode's cue was first wanted
+static bool     s_flash_rgb_first_set   = false;
+static bool     s_flash_rgb_staging     = false;  // the episode began with staged chunks
 
 // Continuously suppress RGB on the bridge when display is off.
 // The split transport may re-enable RGB by copying master's rgb_matrix_config; this
@@ -98,18 +101,41 @@ void flash_rgb_tick(void) {
     // reboot cue even though no chunks are streaming.
     // ...and while the FW-2 confirmation prompt is up (synced, so both halves glow):
     // the board is modal there, so it belongs to the same "can't type" cue.
-    if (fw_staging_fw_up_active() || fw_staging_commit_pending() ||
-        get_local_state()->fw_confirm) {
+    // ⚠️ Staging lights the cue from the FIRST WRITTEN CHUNK, not from BEGIN. During
+    // the erase after BEGIN the master's main loop runs only between erase units and
+    // the host's BEGIN polls, so its LED task hardly runs: the rig camera saw the
+    // slave light 601 ms before the master in two runs, then the master hold one
+    // level for 1.35 s (2026-11-27). Chunks flow only once both halves finished
+    // erasing, so both start within one relayed chunk. The status OLED still shows
+    // the update screen from BEGIN.
+    const bool staging = fw_staging_fw_up_active() && fw_staging_written();
+    if (staging || fw_staging_commit_pending() || get_local_state()->fw_confirm) {
         s_flash_rgb_seen   = timer_read();
+        if (!s_flash_rgb_first_set) {
+            s_flash_rgb_first     = s_flash_rgb_seen;
+            s_flash_rgb_first_set = true;
+            s_flash_rgb_staging   = staging;
+        }
     }
-    bool want = (s_flash_rgb_seen != 0) && (timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS);
+    // The slave also starts and ends the cue FLASH_RGB_SLAVE_LAG_MS later, as it
+    // breathes that much later. It writes each relayed chunk before the master
+    // writes its own, and the master's LED task runs only about every 98 ms while
+    // chunks stream: the slave lit 49 ms first in two rig runs (2026-11-27).
+    // Only an episode that began with staged chunks: a standalone apply or prompt
+    // streams none, so both halves start and end on the same pass there.
+    const uint16_t lag  = (is_keyboard_master() || !s_flash_rgb_staging) ? 0 : FLASH_RGB_SLAVE_LAG_MS;
+    const bool     held = s_flash_rgb_first_set &&
+                          timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS + lag;
+    if (!held) s_flash_rgb_first_set = false;   // the next episode starts afresh
+    // Once on, the start is not checked again: timer_elapsed() wraps after 65 s,
+    // and a staging takes longer than that.
+    bool want = held && (s_flash_rgb_active || timer_elapsed(s_flash_rgb_first) >= lag);
     if (want && !s_flash_rgb_active) {
         s_flash_rgb_active      = true;
         s_flash_rgb_was_enabled = rgb_matrix_is_enabled();
         if (!s_flash_rgb_was_enabled) rgb_matrix_enable_noeeprom();
     } else if (!want && s_flash_rgb_active) {
         s_flash_rgb_active = false;
-        s_flash_rgb_seen   = 0;
         if (!s_flash_rgb_was_enabled) rgb_matrix_disable_noeeprom();  // mode/color auto-restore
     }
 }

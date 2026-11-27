@@ -37,6 +37,8 @@
 static bool     s_flash_rgb_active      = false;
 static bool     s_flash_rgb_was_enabled = false;
 static uint16_t s_flash_rgb_seen        = 0;
+static uint16_t s_flash_rgb_first       = 0;      // when this episode's cue was first wanted
+static bool     s_flash_rgb_first_set   = false;
 
 // Continuously suppress RGB on the bridge when display is off.
 // The split transport may re-enable RGB by copying master's rgb_matrix_config; this
@@ -108,15 +110,28 @@ void flash_rgb_tick(void) {
     if ((fw_staging_fw_up_active() && fw_staging_written()) || fw_staging_commit_pending() ||
         get_local_state()->fw_confirm) {
         s_flash_rgb_seen   = timer_read();
+        if (!s_flash_rgb_first_set) {
+            s_flash_rgb_first     = s_flash_rgb_seen;
+            s_flash_rgb_first_set = true;
+        }
     }
-    bool want = (s_flash_rgb_seen != 0) && (timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS);
+    // The slave also starts and ends the cue FLASH_RGB_SLAVE_LAG_MS later, as it
+    // breathes that much later. It writes each relayed chunk before the master
+    // writes its own, and the master's LED task runs only about every 98 ms while
+    // chunks stream: the slave lit 49 ms first in two rig runs (2026-11-27).
+    const uint16_t lag  = is_keyboard_master() ? 0 : FLASH_RGB_SLAVE_LAG_MS;
+    const bool     held = s_flash_rgb_first_set &&
+                          timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS + lag;
+    if (!held) s_flash_rgb_first_set = false;   // the next episode starts afresh
+    // Once on, the start is not checked again: timer_elapsed() wraps after 65 s,
+    // and a staging takes longer than that.
+    bool want = held && (s_flash_rgb_active || timer_elapsed(s_flash_rgb_first) >= lag);
     if (want && !s_flash_rgb_active) {
         s_flash_rgb_active      = true;
         s_flash_rgb_was_enabled = rgb_matrix_is_enabled();
         if (!s_flash_rgb_was_enabled) rgb_matrix_enable_noeeprom();
     } else if (!want && s_flash_rgb_active) {
         s_flash_rgb_active = false;
-        s_flash_rgb_seen   = 0;
         if (!s_flash_rgb_was_enabled) rgb_matrix_disable_noeeprom();  // mode/color auto-restore
     }
 }

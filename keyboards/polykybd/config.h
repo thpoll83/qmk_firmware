@@ -170,7 +170,7 @@ unsigned char poly_unicode_key_mac(void);
 //######################################
 //#          PolyKybd specific         #
 //######################################
-#define FW_VERSION "1.13.39"
+#define FW_VERSION "1.13.40"
 // v2: adds GET_LANG_LIST_PACKED (cmd 27) — language list as 2-byte ISO index pairs.
 // v3: SEND_OVERLAY_MAPPING (cmd 21) no longer ACKs per chunk — like every other
 //     bulk overlay command (10, 16/17, 18/19) it is silent. The per-chunk ACK
@@ -335,7 +335,13 @@ unsigned char poly_unicode_key_mac(void);
 //  v38 cmd 20 value 6, MacCompose: the macOS unicode mode with F20 held instead of
 //      Option, so the host types the character (base/host_unicode_mode.h). Older
 //      firmware NACKs value 6.
-#define PROTOCOL_VERSION 38
+//  v39 VIA's RGB matrix channel on the legacy ids 0x07 / 0x08 (id_custom_set_value /
+//      id_custom_get_value, channel 3): on/off, brightness, effect, speed, colour, RAM
+//      only (lib/hid/hid_com.c). Also VIA's uptime (0x02, value 0x01) and device
+//      indication (0x03, value 0x05), and switch matrix state (0x02, value 0x03) only
+//      while debug_enable is on. Older firmware sends no reply to 0x02 / 0x03 / 0x07 /
+//      0x08.
+#define PROTOCOL_VERSION 39
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2

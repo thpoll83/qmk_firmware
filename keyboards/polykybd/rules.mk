@@ -237,12 +237,20 @@ endif
 #   -e POLYKYBD_HIL=left    left half  -> forced master
 #   -e POLYKYBD_HIL=right   right half -> forced slave (usb_disconnect)
 #   -e POLYKYBD_HIL=yes      alias for 'left' (master)
+#   -e POLYKYBD_HIL=stamp    role from this half's handedness stamp: LEFT -> master,
+#                            RIGHT -> slave. One image runs on either half, so a
+#                            firmware apply (which copies the master's image to the
+#                            slave) leaves the slave a slave. The fwapply job uses it,
+#                            with POLYKYBD_FORCE_HAND=right on the right image.
 # Applies to all polykybd variants (split72, split42). Normal builds leave it
 # unset and keep stock USB_VBUS_PIN detection. The override lives in polykybd.c.
-ifneq ($(filter yes left right,$(strip $(POLYKYBD_HIL))),)
+ifneq ($(filter yes left right stamp,$(strip $(POLYKYBD_HIL))),)
     OPT_DEFS += -DPOLYKYBD_HIL
     ifeq ($(strip $(POLYKYBD_HIL)), right)
         OPT_DEFS += -DPOLYKYBD_HIL_SLAVE
+    endif
+    ifeq ($(strip $(POLYKYBD_HIL)), stamp)
+        OPT_DEFS += -DPOLYKYBD_HIL_STAMP
     endif
 endif
 

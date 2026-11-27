@@ -14,7 +14,6 @@ C. Device reset (HID cmd 43) with the lights off: per-half LED luma every 50 ms
 
 Reports only; passes when it got through.
 """
-import glob
 import os
 import threading
 import time
@@ -32,9 +31,15 @@ RESET_S = 12.0
 
 
 def _bin():
-    bins = sorted(glob.glob(os.path.join("firmware", "*.bin")))
-    pick = [b for b in bins if "split72" in b and "left" in b] or bins
-    return bins, (pick[0] if pick else None)
+    """The image the rig flashed on the master, as a .bin (the uf2 payload)."""
+    from station.uf2 import uf2_file_to_bin
+    uf2 = os.path.join("firmware", os.environ.get("HIL_LEFT", "polykybd_split72_hil_left.uf2"))
+    data = uf2_file_to_bin(uf2).rstrip(b"\xff")
+    data += b"\x00" * (-len(data) % 4)
+    path = "/tmp/orange_cue_probe.bin"
+    with open(path, "wb") as fh:
+        fh.write(data)
+    return uf2, path
 
 
 def _phase(camera, s, rec, log, what):
@@ -90,10 +95,8 @@ def probe(raw, log):
     if not s.quads:
         log("  no outlines saved in Adjust view: cannot tell the halves apart; stopping")
         return False
-    bins, bin_path = _bin()
-    log(f"  images: {bins}; staging {bin_path}")
-    if not bin_path:
-        return False
+    uf2, bin_path = _bin()
+    log(f"  staging the payload of {uf2} ({os.path.getsize(bin_path)} B)")
 
     log("  -- A + B: staging, then the FW-2 prompt --")
     mark = TAP.mark()

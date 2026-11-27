@@ -607,6 +607,34 @@ reading before you change either one.
     as in the macOS mode, and the host combines the pair.
   - A v37 or older firmware NACKs value `6`, so the host sends it only from v38.
 
+  **v39** handles **VIA's RGB matrix channel** on the legacy report ids `0x07`
+  (`id_custom_set_value`) and `0x08` (`id_custom_get_value`), ported from QMK's
+  `quantum/via.c` (`via_qmk_rgb_matrix_set_value` / `_get_value`), which is not built
+  because `VIA_ENABLE` is off. The report is VIA's: `data[0]` the id, `data[1]` the
+  channel (`3`, `id_qmk_rgb_matrix_channel`), `data[2]` the value id, `data[3..]` the
+  value. The reply is the same report, with the value filled in for a get.
+  - Value ids: `1` brightness (0..255, scaled to `RGB_MATRIX_MAXIMUM_BRIGHTNESS`), `2`
+    effect (`0` switches the matrix off, any other value switches it on with that
+    effect, clamped to the built effects), `3` speed, `4` colour (hue, saturation).
+  - RAM only: the `_noeeprom` setters. VIA's save (`id_custom_save`, `0x09`) is taken
+    by the PolyKybd command dispatch, so nothing is written to EEPROM, and a reboot
+    restores the stored settings. The slave follows through `SPLIT_TRANSPORT_MIRROR`.
+  - Any other channel or value id is answered as VIA does, with `data[0]` set to
+    `id_unhandled` (`0xFF`).
+  - Two of VIA's keyboard values come along, also ported from `quantum/via.c`:
+    - `0x02` (`id_get_keyboard_value`) value `0x01` (`id_uptime`): this half's
+      `timer_read32()`, ms since boot, big-endian in `data[2..5]`. It wraps after about
+      49.7 days.
+    - `0x03` (`id_set_keyboard_value`) value `0x05` (`id_device_indication`): toggles
+      the RGB matrix, RAM only. VIA sends it six times, 200 ms apart, so the matrix ends
+      as it started.
+    - Any other value id is answered with `id_unhandled`. VIA's switch matrix state
+      (`id_switch_matrix_state`) is NOT ported: any program on the host can read the
+      raw HID interface, so a live matrix is a keylogger, and VIA itself answers zeros
+      unless built with `VIA_INSECURE`.
+  - A v38 or older firmware sends no reply to `0x02`, `0x03`, `0x07` or `0x08` (the
+    legacy handler did not know them), so the host and the rig use them only from v39.
+
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)

@@ -104,7 +104,7 @@ python3 dev/tools/check_icon_slots.py          # no macro between the two icon f
   the chord and the icon.
 - A new icon used by a pre-extraction chord goes in `kExpected` instead.
 - `EveryShortcutHintIsOneIconGlyph` bounds the block by its first and last macro
-  (`ICON_HINT_SEARCH`, `ICON_HINT_QUICK_ASSIST`). An icon appended at the end is
+  (`ICON_HINT_SEARCH`, `ICON_HINT_APP_EXPOSE`). An icon appended at the end is
   the new last: update that line.
 
 ```bash

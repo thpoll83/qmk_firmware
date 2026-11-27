@@ -91,6 +91,38 @@ bool is_app_chord(uint16_t kc, uint8_t mods_raw, uint8_t os_packed) {
 // overlays that have them draw them, and the built-in table answers nothing.
 bool is_app_key(uint16_t kc) { return kc == KC_F2 || kc == KC_F5; }
 
+// macOS chords added after the extraction, so the frozen reference lacks them.
+// Returns the icon the chord must show, or nullptr for any other chord. Written
+// out independently of os_hints.c so the two can disagree.
+const uint32_t* added_chord_icon(uint16_t kc, uint8_t mods_raw, uint8_t os_packed) {
+    if ((os_packed & POLY_OS_VALUE_MASK) != POLY_OS_MACOS) return nullptr;
+    const uint8_t m = static_cast<uint8_t>((mods_raw | (mods_raw >> 4)) & 0x0F);
+    struct Added { uint16_t kc; uint8_t mods; const uint32_t* icon; };
+    static const Added kAdded[] = {
+        {KC_3,     MOD_LGUI | MOD_LSFT, reinterpret_cast<const uint32_t*>(ICON_HINT_SCREENSHOT)},
+        {KC_4,     MOD_LGUI | MOD_LSFT, reinterpret_cast<const uint32_t*>(ICON_HINT_SNIP)},
+        {KC_5,     MOD_LGUI | MOD_LSFT, reinterpret_cast<const uint32_t*>(ICON_HINT_SCREEN_RECORD)},
+        {KC_SPACE, MOD_LGUI | MOD_LCTL, reinterpret_cast<const uint32_t*>(ICON_HINT_EMOJI)},
+        {KC_H,     MOD_LGUI | MOD_LALT, reinterpret_cast<const uint32_t*>(ICON_HINT_MINIMIZE_OTHERS)},
+        {KC_M,     MOD_LGUI | MOD_LALT, reinterpret_cast<const uint32_t*>(ICON_HINT_MINIMIZE_ALL)},
+        {KC_D,     MOD_LGUI | MOD_LALT, reinterpret_cast<const uint32_t*>(ICON_HINT_TRAY)},
+        {KC_F5,    MOD_LGUI | MOD_LALT, reinterpret_cast<const uint32_t*>(ICON_HINT_ACCESSIBILITY)},
+        {KC_F5,    MOD_LGUI,            reinterpret_cast<const uint32_t*>(ICON_HINT_NARRATOR)},
+        {KC_LEFT,  MOD_LCTL,            reinterpret_cast<const uint32_t*>(ICON_HINT_DESKTOP_PREV)},
+        {KC_RIGHT, MOD_LCTL,            reinterpret_cast<const uint32_t*>(ICON_HINT_DESKTOP_NEXT)},
+        {KC_UP,    MOD_LCTL,            reinterpret_cast<const uint32_t*>(ICON_HINT_WINDOW_SWITCH)},
+        {KC_DOWN,  MOD_LCTL,            reinterpret_cast<const uint32_t*>(ICON_HINT_APP_EXPOSE)},
+        {KC_Q,     MOD_LGUI | MOD_LSFT, reinterpret_cast<const uint32_t*>(ICON_HINT_LOG_OUT)},
+        {KC_ESC,   MOD_LGUI | MOD_LALT, reinterpret_cast<const uint32_t*>(ICON_HINT_FORCE_QUIT)},
+        {KC_3,     MOD_LGUI | MOD_LCTL | MOD_LSFT, reinterpret_cast<const uint32_t*>(ICON_HINT_SCREENSHOT_CLIP)},
+        {KC_4,     MOD_LGUI | MOD_LCTL | MOD_LSFT, reinterpret_cast<const uint32_t*>(ICON_HINT_SNIP_CLIP)},
+    };
+    for (const Added& a : kAdded) {
+        if (a.kc == kc && a.mods == m) return a.icon;
+    }
+    return nullptr;
+}
+
 // What each pre-extraction hint became. Keyed by the reference's glyph with its
 // leading spacing stripped, because the restyle changed every hint's content on
 // purpose: the presence comparison alone would pass a table that drew the WRONG
@@ -208,6 +240,16 @@ TEST(OsHintsExtraction, ShowsAHintForExactlyThePreExtractionChords) {
             for (uint8_t os : os_values()) {
                 const uint32_t* got  = os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os);
                 const uint32_t* ref  = os_hint_reference(kc, static_cast<uint8_t>(mods), os);
+                const uint32_t* added = added_chord_icon(kc, static_cast<uint8_t>(mods), os);
+                if (added != nullptr) {
+                    // The reference never had a macOS hint for these chords, except the
+                    // F5 refresh hint it showed under every modifier.
+                    ASSERT_TRUE(ref == nullptr || is_app_key(kc)) << describe(kc, mods, os) << " is not a new chord";
+                    ASSERT_TRUE(same_hint(got, added)) << describe(kc, mods, os) << " shows the wrong icon";
+                    ++hits;
+                    ++compared;
+                    continue;
+                }
                 const bool app = is_app_key(kc) || is_app_chord(kc, static_cast<uint8_t>(mods), os);
                 const uint32_t* want = app ? nullptr : ref;
                 ASSERT_EQ(got != nullptr, want != nullptr) << describe(kc, mods, os);
@@ -238,6 +280,9 @@ TEST(OsHints, AppShortcutsHaveNoBuiltInHint) {
         for (unsigned mods = 0; mods < 256; ++mods) {
             for (uint8_t os : os_values()) {
                 if (!is_app_chord(kc, static_cast<uint8_t>(mods), os)) continue;
+                // Cmd+Shift+3/4/5 (screenshots) and Cmd+Shift+Q (log out) are macOS
+                // system chords, not app shortcuts.
+                if (added_chord_icon(kc, static_cast<uint8_t>(mods), os) != nullptr) continue;
                 ASSERT_EQ(os_hint_for_keycode(kc, static_cast<uint8_t>(mods), os), nullptr)
                     << describe(kc, mods, os) << " is an app shortcut and must be left to the overlay";
                 ++checked;
@@ -256,7 +301,7 @@ TEST(OsHints, AppShortcutsHaveNoBuiltInHint) {
 // spaces-plus-emoji string, or a slot outside the block, fails here.
 TEST(OsHints, EveryShortcutHintIsOneIconGlyph) {
     const uint32_t first = static_cast<uint32_t>(ICON_HINT_SEARCH[0]);
-    const uint32_t last  = static_cast<uint32_t>(ICON_HINT_QUICK_ASSIST[0]);
+    const uint32_t last  = static_cast<uint32_t>(ICON_HINT_APP_EXPOSE[0]);
     ASSERT_LT(first, last);
     size_t hits = 0;
     for (uint16_t kc : interesting_keycodes()) {
@@ -340,12 +385,15 @@ TEST(OsHints, ExtraModifierNeverLeaksTheNarrowerHint) {
 }
 
 // F2 and F5 carried a built-in rename/refresh hint under every modifier and OS.
-// They are app keys now: no modifier and no OS brings a hint back.
+// They are app keys now: no modifier and no OS brings a hint back. The one
+// exception is the macOS OS chords on F5 (Cmd+F5 VoiceOver, Opt+Cmd+F5
+// accessibility shortcuts), which are not refresh.
 TEST(OsHints, F2AndF5HaveNoBuiltInHint) {
     for (unsigned mods = 0; mods < 256; ++mods) {
         for (uint8_t os = 0; os < POLY_OS_COUNT; ++os) {
             EXPECT_EQ(os_hint_for_keycode(KC_F2, static_cast<uint8_t>(mods), os), nullptr)
                 << describe(KC_F2, static_cast<uint8_t>(mods), os);
+            if (added_chord_icon(KC_F5, static_cast<uint8_t>(mods), os) != nullptr) continue;
             EXPECT_EQ(os_hint_for_keycode(KC_F5, static_cast<uint8_t>(mods), os), nullptr)
                 << describe(KC_F5, static_cast<uint8_t>(mods), os);
         }
@@ -361,6 +409,35 @@ TEST(OsHints, NoModifiersMeansNoHint) {
             EXPECT_EQ(os_hint_for_keycode(kc, 0, os), nullptr) << describe(kc, 0, os);
         }
     }
+}
+
+// The macOS system chords, by name. Cmd is MOD_LGUI and Option is MOD_LALT in the
+// byte the table receives (the keymap swaps the two keys on macOS).
+TEST(OsHints, MacSystemChordsShowTheirIcon) {
+    const uint8_t mac = POLY_OS_MACOS;
+    const uint8_t cmd = MOD_BIT_LGUI, opt = MOD_BIT_LALT, ctl = MOD_BIT_LCTRL, sft = MOD_BIT_LSHIFT;
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_3, cmd | sft, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_SCREENSHOT)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_4, cmd | sft, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_SNIP)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_5, cmd | sft, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_SCREEN_RECORD)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_SPACE, cmd | ctl, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_EMOJI)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_H, cmd | opt, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_MINIMIZE_OTHERS)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_M, cmd | opt, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_MINIMIZE_ALL)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_D, cmd | opt, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_TRAY)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_F5, cmd | opt, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_ACCESSIBILITY)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_F5, cmd, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_NARRATOR)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_LEFT, ctl, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_DESKTOP_PREV)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_RIGHT, ctl, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_DESKTOP_NEXT)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_UP, ctl, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_WINDOW_SWITCH)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_DOWN, ctl, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_APP_EXPOSE)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_Q, cmd | sft, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_LOG_OUT)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_ESC, cmd | opt, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_FORCE_QUIT)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_3, cmd | ctl | sft, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_SCREENSHOT_CLIP)));
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_4, cmd | ctl | sft, mac), reinterpret_cast<const uint32_t*>(ICON_HINT_SNIP_CLIP)));
+    // Cmd+Shift+other digits stay app shortcuts, and Windows does not get the Mac chords.
+    EXPECT_EQ(os_hint_for_keycode(KC_6, cmd | sft, mac), nullptr);
+    EXPECT_EQ(os_hint_for_keycode(KC_3, cmd | sft, POLY_OS_WINDOWS), nullptr);
+    // Ctrl+Left is still word left off macOS.
+    EXPECT_TRUE(same_hint(os_hint_for_keycode(KC_LEFT, ctl, POLY_OS_WINDOWS), reinterpret_cast<const uint32_t*>(ICON_HINT_WORD_LEFT)));
 }
 
 // An OS index the firmware does not know behaves as the NON-APPLE default, i.e. it

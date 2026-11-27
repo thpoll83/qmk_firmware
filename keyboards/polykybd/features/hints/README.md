@@ -28,6 +28,10 @@ modifier bits and `poly_sync_t.active_os`.
 - App shortcuts get no hint here: a letter or digit with Ctrl or Alt (Shift may be
   added), or with Cmd on macOS. Those keys stay free for the host's app overlay.
   F2 and F5 have no hint for the same reason.
+- macOS screenshots are Cmd+Shift+3/4/5. The table answers them before the
+  app-shortcut rule, which would otherwise mask Cmd+Shift+digit. Ctrl+Cmd+Shift+3/4
+  (copy to clipboard) get no hint: the exact-set rule forbids a wider chord showing
+  the same icon as a narrower one.
 - The OS comes from `active_os_packed`. The function masks `POLY_OS_AUTO_FLAG` with
   `POLY_OS_VALUE_MASK` itself. `POLY_OS_UNKNOWN` gets the
   Windows hints.

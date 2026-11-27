@@ -54,6 +54,18 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
     // whatever the focused app says it means, so the keycap stays free for the
     // overlay the host sends (copy_overlay_to_buffer()). Shift alone is typing, and
     // a chord with Win/Super (or Ctrl+Cmd on macOS) is the OS's, so those stay.
+    // macOS screenshots are Cmd+Shift+digit, which the app-shortcut rule below would
+    // mask, so they are answered first. The same chords with Ctrl added copy the
+    // image to the clipboard instead of a file; they get no hint, because the exact-set
+    // rule forbids a wider chord showing the narrower chord's icon.
+    if (apple && mods_now == (MOD_LGUI | MOD_LSFT)) {
+        switch(keycode) {
+            case KC_3: return ICON_HINT_SCREENSHOT;      // Cmd+Shift+3 whole screen
+            case KC_4: return ICON_HINT_SNIP;            // Cmd+Shift+4 region
+            case KC_5: return ICON_HINT_SCREEN_RECORD;   // Cmd+Shift+5 capture and record toolbar
+            default: break;
+        }
+    }
     if (keycode >= KC_A && keycode <= KC_0) {          // KC_A..KC_Z, KC_1..KC_0
         const uint8_t app = (uint8_t)(mods_now & (uint8_t)~MOD_LSFT);
         if (app == MOD_LCTL || app == MOD_LALT || (apple && app == MOD_LGUI)) return NULL;
@@ -65,6 +77,23 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
             switch(keycode) {
                 case KC_Q: return ICON_HINT_LOCK;       // Ctrl+Cmd+Q = lock screen
                 case KC_F: return ICON_HINT_FULLSCREEN;  // Ctrl+Cmd+F = fullscreen
+                case KC_SPACE: return ICON_HINT_EMOJI;   // Ctrl+Cmd+Space emoji and symbols
+                default: break;
+            }
+        } else if (mods_now == (MOD_LGUI | MOD_LALT)) {
+            switch(keycode) {
+                case KC_H:  return ICON_HINT_MINIMIZE_OTHERS;  // Opt+Cmd+H hide other apps
+                case KC_M:  return ICON_HINT_MINIMIZE_ALL;     // Opt+Cmd+M minimize all windows of the app
+                case KC_D:  return ICON_HINT_TRAY;             // Opt+Cmd+D show/hide the Dock
+                case KC_F5: return ICON_HINT_ACCESSIBILITY;    // Opt+Cmd+F5 accessibility shortcuts
+                default: break;
+            }
+        } else if (mods_now == MOD_LCTL) {
+            // Mission Control. Ctrl+Left/Right switch Spaces here, not words.
+            switch(keycode) {
+                case KC_LEFT:  return ICON_HINT_DESKTOP_PREV;   // Ctrl+Left  previous Space
+                case KC_RIGHT: return ICON_HINT_DESKTOP_NEXT;   // Ctrl+Right next Space
+                case KC_UP:    return ICON_HINT_WINDOW_SWITCH;  // Ctrl+Up    Mission Control
                 default: break;
             }
         } else if (mods_now == MOD_LALT) {
@@ -81,6 +110,7 @@ const uint32_t* os_hint_for_keycode(uint16_t keycode, uint8_t mods_raw, uint8_t 
                 case KC_GRV:   return ICON_HINT_WINDOW_SWITCH; // Cmd+` window switcher
                 case KC_LEFT:  return ICON_HINT_LINE_START;    // Cmd+Left  line start
                 case KC_RIGHT: return ICON_HINT_LINE_END;   // Cmd+Right line end
+                case KC_F5:    return ICON_HINT_NARRATOR;   // Cmd+F5 VoiceOver
                 default: break;
             }
         }

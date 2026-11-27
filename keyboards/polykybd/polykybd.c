@@ -32,7 +32,7 @@ bool is_keyboard_left_impl(void) {
 #ifdef POLYKYBD_HIL
 #    include "usb_util.h"
 
-// HIL test station only (enabled by the CI build via `-e POLYKYBD_HIL=left|right`).
+// HIL test station only (enabled by the CI build via `-e POLYKYBD_HIL=left|right|stamp`).
 //
 // On the test rig both halves are cabled to the host's USB, so each half reads
 // 5 V on USB_VBUS_PIN (GP24). QMK's default master detection is purely VBUS
@@ -40,8 +40,8 @@ bool is_keyboard_left_impl(void) {
 // forms. The Raspberry Pi 4's built-in USB ports cannot drop that VBUS via
 // uhubctl, so power switching can't disambiguate the halves either.
 //
-// The two halves are identical hardware and the rig provisions no handedness at
-// all, so the role cannot be read from stored state (an unprovisioned half reads
+// For left|right the role does not come from stored state: in those builds the
+// rig provisions no handedness (an unprovisioned half reads
 // as "not left", which would make *both* halves slaves and leave zero masters). Instead the role is fixed at compile time per side: the
 // station flashes the POLYKYBD_HIL=left image (master) to the left board and the
 // POLYKYBD_HIL=right image (slave) to the right board. This runs in
@@ -52,7 +52,15 @@ bool is_keyboard_left_impl(void) {
 // VBUS detection, so plugging USB into either half still makes that half the
 // master.
 bool is_keyboard_master_impl(void) {
-#    ifdef POLYKYBD_HIL_SLAVE
+#    if defined(POLYKYBD_HIL_STAMP)
+    // Stamp mode: the handedness stamp, written by the rig's right image
+    // (POLYKYBD_FORCE_HAND=right) and kept across reflashes, picks the role. The
+    // same image then runs on both halves, so the firmware apply round-trip keeps
+    // one master. poly_hand_is_left() resolves on first use, so it is valid here.
+    const bool master = poly_hand_is_left();
+    if (!master) usb_disconnect();
+    return master;
+#    elif defined(POLYKYBD_HIL_SLAVE)
     // Right half: drop its USB so it does not enumerate as a second keyboard on
     // the test host and confuse HID discovery.
     usb_disconnect();

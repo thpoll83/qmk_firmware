@@ -536,10 +536,10 @@ def _(I):
     # The dashes are 2 px: they are content inside the 3 px board.
     _clipboard(I)
     for x in range(8, 26, 4):
-        I.F(x, 11, x + 1, 12); I.F(x, 26, x + 1, 27)
+        I.F(x, 11, x + 1, 12); I.F(x, 27, x + 1, 28)
     for y in range(11, 28, 4):
         I.F(7, y, 8, y + 1); I.F(25, y, 26, y + 1)
-    I.F(15, 14, 18, 23); I.F(12, 17, 21, 20)
+    I.F(15, 15, 18, 24); I.F(12, 18, 21, 21)
 
 @icon("force_quit")
 def _(I):

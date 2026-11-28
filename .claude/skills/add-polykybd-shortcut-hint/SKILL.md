@@ -75,9 +75,18 @@ python3 -B $SK/compare_sheet.py /tmp/cmp.png --base <rev> clip_history emoji
 ```
 
 12× with row numbers, before and after side by side. Send it to the maintainer.
-For "give me variations", draw each variant as its own `@icon` name in a scratch
-copy and render them on one sheet; never rewrite-and-reload one module (see
-Pitfalls). A whole-set overview at 4×: `python3 dev/tools/hint_icons.py --sheet /tmp/all.png --style d`.
+For "give me variations" or a NEW icon, draw each candidate under its own name in a
+scratch file outside the repo (a `VARIANTS` dict, layout in the script's docstring)
+and render them on one sheet, with any shipped icon beside them for comparison:
+
+```bash
+python3 -B $SK/variant_sheet.py /tmp/v.png /tmp/scratch.py A_snip B_snip stage:snip
+```
+
+Copy the picked drawing into `hint_icons_stage.py`, then use `compare_sheet.py`.
+Never rewrite-and-reload one module (see Pitfalls). A placeholder in the four other
+style modules is one line before their `def render(`, so the name is appended at
+the end: `ICONS["snip_clip"] = ICONS["snip"]`. A whole-set overview at 4×: `python3 dev/tools/hint_icons.py --sheet /tmp/all.png --style d`.
 
 ## 3. Regenerate and check
 
@@ -99,9 +108,22 @@ python3 dev/tools/check_icon_slots.py          # no macro between the two icon f
   (keycode × mods × OS) against a frozen copy of the pre-extraction table, and a
   chord that table lacked fails as "shows a hint the reference did not". Keep the
   reference file verbatim (its value is being unedited) and admit the new chord the
-  same way the app-shortcut rule masks its chords: a small `is_added_chord()`
-  predicate written independently of `os_hints.c`, plus a positive test that names
-  the chord and the icon.
+  same way the app-shortcut rule masks its chords: `added_chord_icon()` in the test
+  (a table of keycode, exact modifier set and icon, written independently of
+  `os_hints.c`), plus a positive test that names the chord and the icon.
+- **A chord with one more modifier cannot show the same icon.**
+  `ExtraModifierNeverLeaksTheNarrowerHint` fails if Ctrl+Cmd+Shift+3 shows the
+  Cmd+Shift+3 icon. A variant chord (copy to clipboard, reverse direction) needs its
+  own icon or no hint (2026-11-27: `screenshot_clip` and `snip_clip` were drawn for
+  this reason).
+- **macOS Cmd+Shift+letter/digit is masked as an app shortcut** before any OS
+  branch runs. An OS chord there (Cmd+Shift+3 screenshot, Cmd+Shift+Q log out) must
+  be answered ABOVE the app-shortcut rule in `os_hints.c`, and
+  `AppShortcutsHaveNoBuiltInHint` must skip it through `added_chord_icon()`.
+- **A new chord on F5 needs two test exceptions.** The frozen reference shows the
+  old refresh hint on F5 under EVERY modifier, so the extraction test must accept a
+  non-null reference for it (`is_app_key(kc)`), and `F2AndF5HaveNoBuiltInHint` must
+  skip it (2026-11-27: Cmd+F5 VoiceOver).
 - A new icon used by a pre-extraction chord goes in `kExpected` instead.
 - `EveryShortcutHintIsOneIconGlyph` bounds the block by its first and last macro
   (`ICON_HINT_SEARCH`, `ICON_HINT_APP_EXPOSE`). An icon appended at the end is

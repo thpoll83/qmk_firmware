@@ -641,6 +641,25 @@ reading before you change either one.
   - A v38 or older firmware sends no reply to `0x02`, `0x03`, `0x07` or `0x08` (the
     legacy handler did not know them), so the host and the rig use them only from v39.
 
+  **v40** adds an **image per physical key** to the overlay mapping (cmd `33`), with
+  no new command and no new byte: a `from` of `OVERLAY_MAP_KEY_BASE` (1456) +
+  `row * MATRIX_COLS + col` names that matrix position, whatever keycode it sends.
+  It is for the host's "always show this on that key" drawings (PolyKybdHost
+  `docs/mcp-server-plan.md`, version 2b).
+  - The entry is stored after the 1440 keycode positions in `display_to_pool[]`
+    (`OVERLAY_MAP_TABLE_CNT`), so the no-legend `to` offset (v25), the dim flag (v23)
+    and the slave repair work on it unchanged. The repair writes the wire value back
+    (`map_codec_index_from()`).
+  - `update_displays()` draws it only where the key's keycode has no image
+    (`copy_key_overlay_to_buffer()` after `copy_overlay_to_buffer()`), in every
+    modifier state, so an app's own icon stays on top.
+  - 1440..1455 name nothing: the host pads a report with 1440/1440. `MAPPING_ALLSET`
+    leaves the physical-key entries off.
+  - The highest value is 1535, so a physical-key pair needs width 11.
+  - Compatibility: a v39 or older keyboard ignores every `from` from 1440 up as
+    padding, so a host that sends these pairs to it gets no image, not a wrong one.
+    The host still sends them only from v40.
+
 ## HID protocol (host → firmware)
 - 64-byte raw HID reports; byte 0 = Report ID, byte 1 = Command ID, byte 2+ = payload
 - All responses are prefixed `"P\xNN."` (ACK) or `"P\xNN!"` (NACK)

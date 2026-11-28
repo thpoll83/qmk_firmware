@@ -133,6 +133,8 @@ bool overlay_present(uint16_t keycode, uint8_t mods) {
     return slot >= 0 && display_has_overlay(adjust_overlay_idx_to_mod((uint16_t)slot, mods));
 }
 
+static bool draw_display_overlay(uint16_t idx);
+
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     const int16_t slot = overlay_key_slot(keycode);
     if(slot < 0) {
@@ -147,6 +149,39 @@ bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods) {
     if(!display_has_overlay(idx)) {
         return false;
     }
+    return draw_display_overlay(idx);
+}
+
+_Static_assert(MATRIX_ROWS * MATRIX_COLS <= OVERLAY_MAP_KEY_CNT,
+               "every matrix position needs a physical-key image entry (config.h)");
+
+// v40: the display_to_pool[] index of a physical key's own image (config.h,
+// OVERLAY_MAP_KEY_BASE), or -1 off the matrix.
+static int32_t key_overlay_index(uint8_t row, uint8_t col) {
+    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) {
+        return -1;
+    }
+    return (int32_t)OVERLAY_MAP_IDX_CNT + (int32_t)row * MATRIX_COLS + col;
+}
+
+bool key_overlay_present(uint8_t row, uint8_t col) {
+    const int32_t idx = key_overlay_index(row, col);
+    return idx >= 0 && display_has_overlay((uint16_t)idx);
+}
+
+// The image the host gave this physical key (matrix row and column, both halves'
+// numbering), in every modifier state. The caller draws it only where the key's
+// keycode has no image, so an app's own icon stays on top.
+bool copy_key_overlay_to_buffer(uint8_t row, uint8_t col) {
+    if (!key_overlay_present(row, col)) {
+        return false;
+    }
+    return draw_display_overlay((uint16_t)key_overlay_index(row, col));
+}
+
+// Draws display position `idx` (a keycode position or, since v40, a physical key)
+// over the legend already in the buffer. `idx` must have its usage bit set.
+static bool draw_display_overlay(uint16_t idx) {
     const bool dim = display_is_dim(idx);
     const bool no_legend = display_is_no_legend(idx);
     idx = get_display_pool_slot(idx);

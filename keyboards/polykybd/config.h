@@ -341,7 +341,10 @@ unsigned char poly_unicode_key_mac(void);
 //      indication (0x03, value 0x05), and switch matrix state (0x02, value 0x03) only
 //      while debug_enable is on. Older firmware sends no reply to 0x02 / 0x03 / 0x07 /
 //      0x08.
-#define PROTOCOL_VERSION 39
+//  v40 cmd 33 `from` OVERLAY_MAP_KEY_BASE + row * MATRIX_COLS + col: an image per
+//      physical key, drawn where the key's keycode has no image. Older firmware ignores
+//      a `from` from 1440 up as padding, so the image stays off there.
+#define PROTOCOL_VERSION 40
 #define POLY_ANIM_NONE  0
 #define POLY_ANIM_INTRO 1
 #define POLY_ANIM_IDLE  2
@@ -538,6 +541,19 @@ unsigned char poly_unicode_key_mac(void);
 #define OVERLAY_MAP_VALUES(bytes, width) ((uint16_t)((bytes)*8/(width)))
 // Width the master's own repair packer uses — the widest, so any index fits.
 #define OVERLAY_MAP_REPAIR_WIDTH 11
+// v40: an image per PHYSICAL key. A mapping `from` of OVERLAY_MAP_KEY_BASE + row *
+// MATRIX_COLS + col names that matrix position, whatever keycode it sends; the
+// key draws it when its keycode has no image (copy_key_overlay_to_buffer()). The
+// entries follow the keycode positions in display_to_pool[], so the no-legend
+// offset, the dim flag and the slave repair work on them unchanged. 1440..1455
+// stay free: the host pads a report with 1440/1440, and older keyboards ignore
+// every `from` from 1440 up, so these pairs are a no-op there. The highest value,
+// 1456 + 80 - 1, fits the repair width (11 bits). 80 is the split72 matrix (10 x 8);
+// a fixed number, because the fuzz and unit-test builds of overlay.c have no matrix.
+// key_render_helpers.c asserts MATRIX_ROWS * MATRIX_COLS fits.
+#define OVERLAY_MAP_KEY_BASE  (OVERLAY_MAP_IDX_CNT + 16)
+#define OVERLAY_MAP_KEY_CNT   80
+#define OVERLAY_MAP_TABLE_CNT (OVERLAY_MAP_IDX_CNT + OVERLAY_MAP_KEY_CNT)
 #define UNSET_OVERLAY_MAPPING 0xffff
 
 #define PICO_FLASH_SIZE_BYTES (8 * 1024 * 1024)

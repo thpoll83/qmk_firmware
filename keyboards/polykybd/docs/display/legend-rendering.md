@@ -169,6 +169,8 @@ interpreter — and counting pixels outside the 72x40 window. Require **0**.
   5, so the Ctrl at `[4,0]` takes the *bottom-row* one and fixing only the obvious
   call site changes nothing.
 - **A thumb-row legend is centred only while no app overlay is drawn on that key.**
+  Since v40 a physical key's own image counts too (`key_overlay_present()`, drawn by
+  `copy_key_overlay_to_buffer()` where the keycode has no image).
   `update_displays()` asks `overlay_present(keycode, mods)` (the lookup
   `copy_overlay_to_buffer()` uses, without drawing or recording) and, when an icon will
   follow, draws the legend at `BUFFER_X` like every other row's. The overlay sets put

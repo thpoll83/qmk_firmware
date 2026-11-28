@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // The key-matrix LEDs: rgb_matrix_indicators_kb() picks what the LEDs show each frame
-// (the flash cue, the Doom cue, the slave's bootloader and display-off states, the
-// tutorial and AI mode), flash_rgb_tick() drives the flash cue from housekeeping, and
+// (the flash cue, the Doom cue, the slave's display-off state, the tutorial and AI
+// mode; a bootloader entry keeps the running effect), flash_rgb_tick() drives the flash cue from housekeeping, and
 // the RM_* adjust keys repeat while held. Moved out of keys_com/poly_keymap.c. Compiled
 // only with RGB_MATRIX_ENABLE.
 
@@ -12,7 +12,7 @@
 #include "keys_com/poly_keymap_internal.h"   // flash_rgb_tick(), rgb_adjust_key_down/up()
 #include "lib/system/state.h"                // get_local_state()
 #include "lib/drivers/fw_staging.h"          // fw_staging_commit_pending(), fw_staging_fw_up_active()
-#include "base/com.h"                        // STATUS_DISP_ON, BOOTLOADER_DISPLAY
+#include "base/com.h"                        // STATUS_DISP_ON
 #include "features/anim/tutorial_rgb.h"      // tutorial_rgb_paint()
 #include "features/modes/ai_mode.h"          // ai_rgb_paint()
 #include "doom/doom_mode.h"                  // doom_rgb_indicators()
@@ -66,7 +66,7 @@ bool rgb_matrix_indicators_kb(void) {
         } else {
             // Staging a font pack OR firmware: the board still runs and you can keep
             // typing, so use the calm cyan/green-blue cue (orange is reserved for the
-            // apply + bootloader = "can't type" states).
+            // apply and the FW-2 prompt = "can't type" states).
             rgb_matrix_set_color_all(0, v, v);                 // breathing cyan
         }
         return false;
@@ -79,11 +79,6 @@ bool rgb_matrix_indicators_kb(void) {
         return false;
     }
     if (!is_keyboard_master()) {
-        if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
-            // Bootloader: no typing possible — force orange (matches the firmware-flash cue).
-            rgb_matrix_set_color_all(24, 6, 0);
-            return false;
-        }
         if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
             rgb_matrix_set_color_all(0, 0, 0);
             return false;

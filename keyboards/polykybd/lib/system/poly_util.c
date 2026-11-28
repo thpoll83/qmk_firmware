@@ -52,14 +52,9 @@ void clear_all_displays(void) {
     kdisp_send_buffer();
 }
 
+// The LEDs keep the current effect on both halves: the master's last frame stays
+// latched through the BOOTSEL jump, and the slave keeps running the mirrored effect.
 void display_bootloader_message(void) {
-    #ifdef RGB_MATRIX_ENABLE
-        rgb_matrix_enable_noeeprom();
-        rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-        rgb_matrix_set_color_all(0, 5, 3);
-        rgb_matrix_update_pwm_buffers();
-    #endif
-
     clear_all_displays();
     // Contrast 10 → SETCONTRAST 9/255; contrast 1 tested unreadable.
     set_displays(20, false);

@@ -108,9 +108,6 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
     // bridge transaction arriving before housekeeping runs would have its
     // display_has_overlay_bits bits wiped by a later deferred clear_display_has_overlay().
     uint8_t newly_set     = (incoming->overlay_flags & ~current->overlay_flags);
-#ifdef RGB_MATRIX_ENABLE
-    uint8_t newly_cleared = (current->overlay_flags  & ~incoming->overlay_flags);
-#endif
     // Doom control-pad mode flipped on the master (strip legends down to the
     // game controls / restore the full set), or the weapon-pad state changed
     // (picked up / switched weapon) -> re-render this half's legends.
@@ -202,12 +199,6 @@ void user_sync_poly_data_handler(uint8_t in_len, const void* in_data, uint8_t ou
         // Edge-consumed: clear locally so it doesn't linger as a diff.
         access_local_state()->overlay_flags &= ~SAVE_EEPROM;
     }
-#ifdef RGB_MATRIX_ENABLE
-    // Disable RGB so the normal split transport restores master's config cleanly.
-    if(newly_cleared & BOOTLOADER_DISPLAY) {
-        rgb_matrix_disable_noeeprom();
-    }
-#endif
     ((poly_sync_reply_t*)out_data)->ack = SYNC_ACK;
 }
 

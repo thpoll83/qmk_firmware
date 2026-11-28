@@ -185,6 +185,7 @@ void ws2812_init(void) {
     static bool initialised = false;
     if (initialised) return;
     initialised = true;
+
     uint pio_idx = pio_get_index(pio);
     /* Get PIOx peripheral out of reset state. */
     hal_lld_peripheral_unreset(pio_idx == 0 ? RESETS_ALLREG_PIO0 : RESETS_ALLREG_PIO1);

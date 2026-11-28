@@ -2479,3 +2479,8 @@
 #define ICON_HINT_FEEDBACK                U"\x100130"
 #define ICON_HINT_COPILOT                 U"\x100131"
 #define ICON_HINT_QUICK_ASSIST            U"\x100132"
+#define ICON_HINT_SCREENSHOT_CLIP         U"\x100133"
+#define ICON_HINT_SNIP_CLIP               U"\x100134"
+#define ICON_HINT_FORCE_QUIT              U"\x100135"
+#define ICON_HINT_LOG_OUT                 U"\x100136"
+#define ICON_HINT_APP_EXPOSE              U"\x100137"

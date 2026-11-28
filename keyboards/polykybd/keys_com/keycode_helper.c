@@ -358,12 +358,16 @@ const uint32_t* keycode_to_static_text(uint16_t keycode, led_t state, uint8_t st
         case KC_AUDIO_MUTE:                 return ICON_MUTE;
         case KC_AUDIO_VOL_DOWN:             return U"  " PRIVATE_VOL_DOWN;
         case KC_AUDIO_VOL_UP:               return U"  " PRIVATE_VOL_UP;
-        case KC_PRINT_SCREEN:               return U"  " PRIVATE_IMAGE;
+        // macOS has no Print Screen, Scroll Lock or Pause. It reads the three keys as
+        // F13, F14 and F15: F13 has no default action (screenshots are Cmd+Shift+3/4/5,
+        // see features/hints/os_hints.c), F14 lowers and F15 raises the display
+        // brightness. The legend shows that, with the same suns as KC_DDIM/KC_DBRI.
+        case KC_PRINT_SCREEN:               return kc_os_is_apple() ? U" F13" : U"  " PRIVATE_IMAGE;
         // "Scr" plus a badge that goes solid while the lock is engaged — the same
         // shape as the Caps Lock and Num Lock keys above, which is why it reads at a
         // glance. Drawn rather than baked: the resident icon band has no free slots.
-        case KC_SCROLL_LOCK:                return state.scroll_lock ? ICON_SCRLOCK_ON : ICON_SCRLOCK_OFF;
-        case KC_PAUSE:                      return ICON_PAUSE_TEXT;
+        case KC_SCROLL_LOCK:                return kc_os_is_apple() ? ICON_BRIGHT_DOWN : (state.scroll_lock ? ICON_SCRLOCK_ON : ICON_SCRLOCK_OFF);
+        case KC_PAUSE:                      return kc_os_is_apple() ? ICON_BRIGHT_UP : ICON_PAUSE_TEXT;
         case KC_INSERT:                     return U"Ins";
         case KC_HOME:                       return ARROWS_LEFTSTOP;
         case KC_END:                        return U"   " ARROWS_RIGHTSTOP;

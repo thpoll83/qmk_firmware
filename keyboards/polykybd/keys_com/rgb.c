@@ -39,6 +39,7 @@ static bool     s_flash_rgb_was_enabled = false;
 static uint16_t s_flash_rgb_seen        = 0;
 static uint16_t s_flash_rgb_first       = 0;      // when this episode's cue was first wanted
 static bool     s_flash_rgb_first_set   = false;
+static bool     s_flash_rgb_staging     = false;  // the episode began with staged chunks
 
 // Continuously suppress RGB on the bridge when display is off.
 // The split transport may re-enable RGB by copying master's rgb_matrix_config; this
@@ -107,19 +108,22 @@ void flash_rgb_tick(void) {
     // level for 1.35 s (2026-11-27). Chunks flow only once both halves finished
     // erasing, so both start within one relayed chunk. The status OLED still shows
     // the update screen from BEGIN.
-    if ((fw_staging_fw_up_active() && fw_staging_written()) || fw_staging_commit_pending() ||
-        get_local_state()->fw_confirm) {
+    const bool staging = fw_staging_fw_up_active() && fw_staging_written();
+    if (staging || fw_staging_commit_pending() || get_local_state()->fw_confirm) {
         s_flash_rgb_seen   = timer_read();
         if (!s_flash_rgb_first_set) {
             s_flash_rgb_first     = s_flash_rgb_seen;
             s_flash_rgb_first_set = true;
+            s_flash_rgb_staging   = staging;
         }
     }
     // The slave also starts and ends the cue FLASH_RGB_SLAVE_LAG_MS later, as it
     // breathes that much later. It writes each relayed chunk before the master
     // writes its own, and the master's LED task runs only about every 98 ms while
     // chunks stream: the slave lit 49 ms first in two rig runs (2026-11-27).
-    const uint16_t lag  = is_keyboard_master() ? 0 : FLASH_RGB_SLAVE_LAG_MS;
+    // Only an episode that began with staged chunks: a standalone apply or prompt
+    // streams none, so both halves start and end on the same pass there.
+    const uint16_t lag  = (is_keyboard_master() || !s_flash_rgb_staging) ? 0 : FLASH_RGB_SLAVE_LAG_MS;
     const bool     held = s_flash_rgb_first_set &&
                           timer_elapsed(s_flash_rgb_seen) < FLASH_RGB_HOLD_MS + lag;
     if (!held) s_flash_rgb_first_set = false;   // the next episode starts afresh

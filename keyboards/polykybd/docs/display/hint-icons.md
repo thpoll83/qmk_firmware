@@ -66,6 +66,15 @@ settle any of them.
 | Emoji (Win+. and Win+;) | The face fills the whole grid (`ring(0, 0, 33, 33, ch=9, w=3)`) | The mouth is computed, not drawn: every empty pixel below row 19 at least 4 px from the outline. So its gap to the border is the same at the sides, the diagonals and the bottom. |
 | Folder (Ctrl+O) | Retired | It was cut off on the right, and Ctrl+O is an app shortcut now anyway. |
 
+## macOS icons (2026-11, not yet checked on a keycap)
+
+| Icon | What it is | Why |
+|---|---|---|
+| Screenshot / region to clipboard (Ctrl+Cmd+Shift+3/4) | The clipboard-history board and clip, with the screenshot camera or the snip's dashed region inside | The corner-badge version (a clipboard cut out of the corner octagon) read as a plain square at 8×. The region's dashes are 2 px: they are content inside the 3 px board. |
+| Force Quit (Opt+Cmd+Esc) | A solid stop octagon with an X cut out | Close is a window with an X; Force Quit has no window stage, so the two stay apart. |
+| Log out (Cmd+Shift+Q) | A 3 px door open on the right, a solid arrow leaving it | |
+| App Exposé (Ctrl+Down) | Four 3 px windows, each with the same small solid app mark | Win+Tab (window switch) is four tiles with one solid, so it needed a different sign. |
+
 ## Retired: the app shortcuts
 
 Copy, cut, paste, undo, redo, select all, find, save, open, print, delete, rename

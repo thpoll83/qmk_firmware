@@ -483,6 +483,15 @@ def _(I):
     I.F(28, 28, 30, 32); I.F(18, 30, 30, 32); I.F(12, 29, 19, 33)
 
 
+
+# Placeholders for the macOS icons added 2026-11; style D draws the real ones.
+ICONS["screenshot_clip"] = ICONS["screenshot"]
+ICONS["snip_clip"] = ICONS["snip"]
+ICONS["force_quit"] = ICONS["close"]
+ICONS["log_out"] = ICONS["lock"]
+ICONS["app_expose"] = ICONS["window_switch"]
+
+
 def render(name):
     I = Icon()
     ICONS[name](I)

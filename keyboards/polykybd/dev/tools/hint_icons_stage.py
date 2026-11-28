@@ -516,6 +516,55 @@ def _(I):
     I.solid(12, 29, 19, 33, ch=1)
 
 
+
+# ===================== macOS gaps =====================
+def _clipboard(I):
+    """The clipboard-history board and clip, as the stage of a copy-to-clipboard capture."""
+    I.thin(3, 4, 30, 33)
+    I.F(10, 1, 23, 8, 0); I.thin(11, 1, 22, 7, ch=1)
+
+@icon("screenshot_clip")
+def _(I):
+    # Ctrl+Cmd+Shift+3: the screenshot's camera, small, on the clipboard board
+    _clipboard(I)
+    I.solid(8, 14, 25, 28, ch=2); I.solid(12, 11, 18, 14, ch=1)
+    I.oct(16.5, 21, 4, c=0); I.oct(16.5, 21, 2)
+
+@icon("snip_clip")
+def _(I):
+    # Ctrl+Cmd+Shift+4: the snip's dashed region and cross on the clipboard board.
+    # The dashes are 2 px: they are content inside the 3 px board.
+    _clipboard(I)
+    for x in range(8, 26, 4):
+        I.F(x, 11, x + 1, 12); I.F(x, 27, x + 1, 28)
+    for y in range(11, 28, 4):
+        I.F(7, y, 8, y + 1); I.F(25, y, 26, y + 1)
+    I.F(15, 15, 18, 24); I.F(12, 18, 21, 21)
+
+@icon("force_quit")
+def _(I):
+    # Opt+Cmd+Esc: a solid stop octagon with an X cut out. No window stage: the
+    # close icon is the window with an X, and this must not read as close.
+    I.oct(16.5, 16.5, 16)
+    for t in range(14):
+        I.F(9 + t, 9 + t, 12 + t, 12 + t, 0); I.F(21 - t, 9 + t, 24 - t, 12 + t, 0)
+
+@icon("log_out")
+def _(I):
+    # Cmd+Shift+Q: the door (3 px stage, open on the right) and the arrow leaving it
+    I.F(0, 0, 19, 2); I.F(0, 0, 2, 33); I.F(0, 31, 19, 33)
+    I.F(17, 0, 19, 9); I.F(17, 24, 19, 33)
+    I.F(8, 15, 25, 18); I.wedge(33, 16.5, "r", s=9)
+
+@icon("app_expose")
+def _(I):
+    # Ctrl+Down: four windows of ONE app, each with the same solid app mark. Win+Tab
+    # (window_switch) is four tiles with one solid, so the two stay apart.
+    for x0, y0 in ((0, 0), (19, 0), (0, 19), (19, 19)):
+        I.thin(x0, y0, x0 + 14, y0 + 14)
+        I.solid(x0 + 5, y0 + 5, x0 + 9, y0 + 9, ch=1)
+
+
 def render(name):
     I = Icon()
     ICONS[name](I)

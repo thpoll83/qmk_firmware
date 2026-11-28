@@ -796,15 +796,20 @@ jobs:
             --force
           echo "ephemeral pubkey baked into base/fw_pubkey.h"
 
+      # Stamp mode (rules.mk, POLYKYBD_HIL=stamp): each half takes its role from its
+      # handedness stamp, so the applied image -- the master's, copied to both
+      # halves -- leaves the slave a slave and the post-apply link is measured. The
+      # right image stamps RIGHT at boot (POLYKYBD_FORCE_HAND=right); the left image
+      # must not force a side, because the apply installs it on the right half too.
       - name: Build split72 (HIL left/master)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=left -e TARGET=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_left
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=stamp -e TARGET=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_left
 
       - name: Build split72 (HIL right/slave)
         uses: docker://qmkfm/qmk_cli
         with:
-          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=right -e TARGET=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_right
+          args: qmk compile -kb polykybd/split72 -km default -e POLYKYBD_DOOM_PACK=yes -e POLYKYBD_HIL=stamp -e POLYKYBD_FORCE_HAND=right -e TARGET=polykybd_split72_fwapply_${{ steps.sha.outputs.short }}_hil_right
 
       # The rig stages the raw image, not the UF2 wrapper, and applies it to a
       # master already running it — so this .bin must come from the SAME ELF as

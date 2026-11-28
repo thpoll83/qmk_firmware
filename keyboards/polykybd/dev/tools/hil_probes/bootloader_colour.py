@@ -7,7 +7,7 @@ then jumps to BOOTSEL, so its LEDs keep that last frame. The slave paints the sa
 every following frame. On the hardware the two halves look alike to the eye.
 
 One recording, lights off first. Two reference colours through VIA (solid orange
-and solid teal), lights off, then HID cmd 23. Per half, the mean Y, U and V at the
+and solid teal), then HID cmd 23 with the teal still on. Per half, the mean Y, U and V at the
 LED positions every 100 ms, with a rough RGB conversion. Then both halves are reset
 through RUN, so the rig gets back to the firmware.
 
@@ -89,7 +89,6 @@ def probe(raw, log):
         at(2.5, "solid on", lambda: (via(EFFECT, SOLID), via(BRIGHTNESS, 96)))
         at(2.7, "ref orange (hue 11)", lambda: via(COLOR, 11, 255))
         at(5.5, "ref teal (hue 111)", lambda: via(COLOR, 111, 255))
-        at(8.5, "lights off", lambda: via(EFFECT, 0))
         at(10.5, "cmd 23", lambda: raw.send(bytes([POLY, CMD_BOOTLOADER]), attempts=1))
 
     camera.split_yuv420 = split

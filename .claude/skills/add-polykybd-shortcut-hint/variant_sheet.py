@@ -20,16 +20,17 @@ defines the candidates in a dict named VARIANTS, drawn with the style-D primitiv
         STAGE["snip"](I)                              # reuse a shipped icon
 
 `stage:<name>` puts a shipped icon on the sheet beside the candidates, for
-comparison. Give every variant its own NAME and render with -B: the module is loaded
-under a unique name each run, so a same-size edit in the same second cannot re-run
-old bytecode (the reload trap in docs/display/hint-icons.md). When a candidate is
-picked, copy it into hint_icons_stage.py and use compare_sheet.py from then on.
+comparison. Give every variant its own NAME. Both the scratch file and
+hint_icons_stage.py are compiled from their source text on every run, never from a
+.pyc: Python's bytecode cache is keyed by the source path and (mtime, size), so a
+same-size edit in the same second would otherwise render the old drawing (the
+reload trap in docs/display/hint-icons.md). When a candidate is picked, copy it into
+hint_icons_stage.py and use compare_sheet.py from then on.
 """
 import argparse
-import importlib.util
 import os
 import sys
-import time
+import types
 
 from PIL import Image, ImageDraw
 
@@ -43,16 +44,27 @@ def repo_root():
     return d
 
 
+sys.dont_write_bytecode = True
+
+
+def load_source(path, name):
+    """Compile `path` from its text, with no bytecode cache read or written."""
+    mod = types.ModuleType(name)
+    mod.__file__ = path
+    sys.modules[name] = mod
+    with open(path, encoding="utf-8") as f:
+        exec(compile(f.read(), path, "exec"), mod.__dict__)
+    return mod
+
+
 TOOLS = os.path.join(repo_root(), "keyboards", "polykybd", "dev", "tools")
-sys.path.insert(0, TOOLS)
-import hint_icons_stage as stage  # noqa: E402
+# Registered under its real name, so `from hint_icons_stage import ...` in the
+# scratch file gets this fresh copy rather than an import from a .pyc.
+stage = load_source(os.path.join(TOOLS, "hint_icons_stage.py"), "hint_icons_stage")
 
 
 def load_scratch(path):
-    name = "hint_variants_%d" % time.time_ns()
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    mod = load_source(path, "hint_variants")
     if not isinstance(getattr(mod, "VARIANTS", None), dict):
         sys.exit(f"{path} defines no VARIANTS dict")
     return mod.VARIANTS
@@ -68,10 +80,15 @@ def main():
 
     variants = load_scratch(a.scratch)
     names = a.names or list(variants)
-    S, k, pad = stage.S, a.scale, 4
-    sheet = Image.new("RGB", (len(names) * (S + pad) * k, (S + 6) * k), (40, 40, 40))
+    S, k, gap, label_h = stage.S, a.scale, 16, 24
+    measure = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+    # Each cell is as wide as its icon or its label, whichever is wider, and the
+    # labels get their own band below the icons, so no scale clips or overlaps them.
+    widths = [max(S * k, int(measure.textlength(n)) + 8) for n in names]
+    sheet = Image.new("RGB", (sum(widths) + gap * (len(names) - 1), S * k + label_h), (40, 40, 40))
     dr = ImageDraw.Draw(sheet)
-    for i, n in enumerate(names):
+    x = 0
+    for n, w in zip(names, widths):
         if n.startswith("stage:"):
             fn = stage.ICONS.get(n[6:])
         else:
@@ -80,9 +97,9 @@ def main():
             sys.exit(f"unknown icon: {n}")
         I = stage.Icon()
         fn(I)
-        x = i * (S + pad) * k
         sheet.paste(I.im.convert("RGB").resize((S * k, S * k), Image.NEAREST), (x, 0))
-        dr.text((x + 4, S * k + 8), n, fill=(255, 255, 255))
+        dr.text((x + 4, S * k + 6), n, fill=(255, 255, 255))
+        x += w + gap
     sheet.save(a.out)
     print(f"{len(names)} icon(s) -> {a.out}")
 

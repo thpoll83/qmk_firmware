@@ -12,7 +12,7 @@
 #include "keys_com/poly_keymap_internal.h"   // flash_rgb_tick(), rgb_adjust_key_down/up()
 #include "lib/system/state.h"                // get_local_state()
 #include "lib/drivers/fw_staging.h"          // fw_staging_commit_pending(), fw_staging_fw_up_active()
-#include "base/com.h"                        // STATUS_DISP_ON, BOOTLOADER_DISPLAY
+#include "base/com.h"                        // STATUS_DISP_ON
 #include "features/anim/tutorial_rgb.h"      // tutorial_rgb_paint()
 #include "features/modes/ai_mode.h"          // ai_rgb_paint()
 #include "doom/doom_mode.h"                  // doom_rgb_indicators()
@@ -79,11 +79,6 @@ bool rgb_matrix_indicators_kb(void) {
         return false;
     }
     if (!is_keyboard_master()) {
-        if (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY) {
-            // Bootloader: no typing possible — force orange (matches the firmware-flash cue).
-            rgb_matrix_set_color_all(24, 6, 0);
-            return false;
-        }
         if ((get_local_state()->flags & STATUS_DISP_ON) == 0) {
             rgb_matrix_set_color_all(0, 0, 0);
             return false;

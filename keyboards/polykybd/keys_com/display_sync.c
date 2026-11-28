@@ -104,24 +104,11 @@ void latin_publish(void) {
 bool g_force_layer_resync = true;
 uint8_t g_force_resync_tries = FORCE_LAYER_RESYNC_TRIES;
 
-// Freeze slave display while bootloader is active; re-assert RGB each cycle.
-// True = the slave is frozen and sync_and_refresh_displays() does nothing else.
+// Freeze the slave's displays while the bootloader message is up. The LEDs keep
+// the mirrored effect. True = the slave is frozen and sync_and_refresh_displays()
+// does nothing else.
 static bool slave_bootloader_freeze(void) {
-    if (!is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY)) {
-#ifdef RGB_MATRIX_ENABLE
-        if (!rgb_matrix_is_enabled()) {
-            rgb_matrix_enable_noeeprom();
-        }
-        if (rgb_matrix_get_mode() != RGB_MATRIX_SOLID_COLOR) {
-            rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-        }
-        if (rgb_matrix_get_val() != 24) {
-            rgb_matrix_sethsv_noeeprom(0, 255, 24);
-        }
-#endif
-        return true;
-    }
-    return false;
+    return !is_usb_host_side() && (get_local_state()->overlay_flags & BOOTLOADER_DISPLAY);
 }
 
 // Master: copy the master-side values into the local synced state. Returns the

@@ -1413,7 +1413,8 @@ void update_displays(enum refresh_mode mode) {
                         } else if (r == MATRIX_ROWS_PER_SIDE - 1 &&
                                    !(display_overlays && !add_lang && !tutorial_active() &&
                                      (overlay_present(keycode, mods) ||
-                                      key_overlay_present((uint8_t)(r + offset), c)))) {
+                                      (!settings_more_hidden(keycode) &&
+                                       key_overlay_present((uint8_t)(r + offset), c))))) {
                             // Bottom (thumb) row: centre the legend horizontally, unless
                             // an app overlay is drawn on the key below. Then the legend
                             // goes top-left like every other row's, clear of the icon in
@@ -1445,9 +1446,11 @@ void update_displays(enum refresh_mode mode) {
                         if(!add_lang && !tutorial_active()) {
                             if(display_overlays) {
                                 // v40: the key's own image where its keycode has none,
-                                // then the built-in hints.
+                                // then the built-in hints. A hidden advanced settings
+                                // key stays blank (hidden means blank AND inert).
                                 if(!copy_overlay_to_buffer(keycode, mods) &&
-                                   !copy_key_overlay_to_buffer((uint8_t)(r + offset), c)) {
+                                   (settings_more_hidden(keycode) ||
+                                    !copy_key_overlay_to_buffer((uint8_t)(r + offset), c))) {
                                     text = keycode_to_disp_overlay(keycode); //fallback to hardcoded
                                 }
                             } else {

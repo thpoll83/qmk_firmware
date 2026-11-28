@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // The key-matrix LEDs: rgb_matrix_indicators_kb() picks what the LEDs show each frame
-// (the flash cue, the Doom cue, the slave's bootloader and display-off states, the
-// tutorial and AI mode), flash_rgb_tick() drives the flash cue from housekeeping, and
+// (the flash cue, the Doom cue, the slave's display-off state, the tutorial and AI
+// mode; a bootloader entry keeps the running effect), flash_rgb_tick() drives the flash cue from housekeeping, and
 // the RM_* adjust keys repeat while held. Moved out of keys_com/poly_keymap.c. Compiled
 // only with RGB_MATRIX_ENABLE.
 
@@ -66,7 +66,7 @@ bool rgb_matrix_indicators_kb(void) {
         } else {
             // Staging a font pack OR firmware: the board still runs and you can keep
             // typing, so use the calm cyan/green-blue cue (orange is reserved for the
-            // apply + bootloader = "can't type" states).
+            // apply and the FW-2 prompt = "can't type" states).
             rgb_matrix_set_color_all(0, v, v);                 // breathing cyan
         }
         return false;

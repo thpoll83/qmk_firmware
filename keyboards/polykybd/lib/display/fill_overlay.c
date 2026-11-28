@@ -100,8 +100,11 @@ static bool overlay_visible(uint16_t base_slot, uint8_t ctx_mod) {
 // the enable-overlays refresh (case 11 / the synced DISPLAY_OVERLAYS state change).
 // Works on both halves (the slave also has local_layer->mods + the displayed set).
 static bool overlay_from_index_visible(uint16_t from) {
+    if (from >= OVERLAY_MAP_TABLE_CNT) {
+        return false;   // out of range
+    }
     if (from >= OVERLAY_MAP_IDX_CNT) {
-        return false;   // host padding / out of range
+        return true;    // v40: a physical key's own image, shown in every modifier state
     }
     uint16_t base_slot = from % NUM_OVERLAYS;
     uint8_t  variant   = (uint8_t)(from / NUM_OVERLAYS);
@@ -381,7 +384,12 @@ bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t w
         if(from==UNSET_OVERLAY_MAPPING) {
             from = to;
         } else {
-            if(from < OVERLAY_MAP_IDX_CNT) {
+            // v40: a physical-key `from` becomes its table index past the keycode
+            // positions; the host's padding and anything else becomes NO_INDEX.
+            const uint16_t wire_from = from;
+            from = map_codec_from_index(wire_from, OVERLAY_MAP_IDX_CNT, OVERLAY_MAP_KEY_BASE,
+                                        OVERLAY_MAP_KEY_CNT);
+            if(from != MAP_CODEC_NO_INDEX) {
                 // v25: a `to` of NUM_OVERLAY_SLOTS..2*NUM_OVERLAY_SLOTS-1 is pool slot
                 // `to - NUM_OVERLAY_SLOTS`, drawn without the key legend
                 // (OVERLAY_MAP_NO_LEGEND_OFFSET in config.h).
@@ -410,7 +418,7 @@ bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t w
                         // length it WOULD write; a value >= rem means truncation → skip it
                         // and let the "(N, M shown)" line below flag the omission).
                         int rem = (int)sizeof(map_log) - map_log_n;
-                        int w   = snprintf(map_log + map_log_n, rem, " %u>%u", from, to);
+                        int w   = snprintf(map_log + map_log_n, rem, " %u>%u", wire_from, to);
                         if (w > 0 && w < rem) {
                             map_log_n += w;
                             ++map_shown;
@@ -418,10 +426,10 @@ bool set_packed_overlay_mapping(const uint8_t* mapping, uint8_t bytes, uint8_t w
                     }
                 } else {
                     uprintf("REJECTED overlay mapping from %u to %u (to out of pool, max %u)\n",
-                            from, to, NUM_OVERLAY_SLOTS - 1);
+                            wire_from, to, NUM_OVERLAY_SLOTS - 1);
                 }
             }
-            // from >= OVERLAY_MAP_IDX_CNT is the host's deliberate noop padding (e.g. 1440/1440); silent.
+            // Anything else (the host's 1440/1440 padding, an unknown index) is silent.
             from = UNSET_OVERLAY_MAPPING;
         }
     }
@@ -527,10 +535,12 @@ void overlay_map_repair_tick(void) {
         msg.width = (uint8_t)(width | (s_repair_dim_pass ? OVERLAY_MAP_SYNC_DIM : 0u));
         msg.bytes = (uint8_t)sizeof(msg.mapping);
         // Collect up to one report's worth of used entries from the cursor.
-        while (s_repair_from < OVERLAY_MAP_IDX_CNT && slot + 1 < values) {
+        while (s_repair_from < OVERLAY_MAP_TABLE_CNT && slot + 1 < values) {
             if (display_has_overlay(s_repair_from) &&
                 display_is_dim(s_repair_from) == s_repair_dim_pass) {
-                last_from = s_repair_from;
+                // v40: a physical-key entry goes out as its wire `from` again.
+                last_from = map_codec_index_from(s_repair_from, OVERLAY_MAP_IDX_CNT,
+                                                 OVERLAY_MAP_KEY_BASE);
                 last_to   = map_codec_to_value(get_display_pool_slot(s_repair_from),
                                                display_is_no_legend(s_repair_from),
                                                OVERLAY_MAP_NO_LEGEND_OFFSET);   // fits OVERLAY_MAP_REPAIR_WIDTH

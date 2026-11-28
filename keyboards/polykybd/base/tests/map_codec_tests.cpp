@@ -296,4 +296,54 @@ TEST(MapCodecEntryTest, APlainEntryHasNoFlag) {
     EXPECT_EQ(map_codec_entry_slot(599), 599);
 }
 
+// --- Images per physical key (protocol v40) ----------------------------------
+// Values from config.h for the split72: OVERLAY_MAP_IDX_CNT 1440,
+// OVERLAY_MAP_KEY_BASE 1440 + 16, OVERLAY_MAP_KEY_CNT 10 * 8.
+constexpr uint16_t kIdxCnt = 1440;
+constexpr uint16_t kKeyBase = 1456;
+constexpr uint16_t kKeyCnt = 80;
+
+TEST(MapCodecKeyTest, AKeycodePositionKeepsItsIndex) {
+    for (uint16_t from : {0, 1, 599, 600, 1439}) {
+        EXPECT_EQ(map_codec_from_index(from, kIdxCnt, kKeyBase, kKeyCnt), from);
+    }
+}
+
+TEST(MapCodecKeyTest, ThePaddingAndTheGapNameNothing) {
+    // The host pads a report with 1440/1440; 1441..1455 stay unused.
+    for (uint16_t from : {1440, 1441, 1455}) {
+        EXPECT_EQ(map_codec_from_index(from, kIdxCnt, kKeyBase, kKeyCnt), MAP_CODEC_NO_INDEX);
+    }
+}
+
+TEST(MapCodecKeyTest, APhysicalKeyFollowsTheKeycodePositions) {
+    EXPECT_EQ(map_codec_from_index(kKeyBase, kIdxCnt, kKeyBase, kKeyCnt), kIdxCnt);
+    EXPECT_EQ(map_codec_from_index(kKeyBase + 79, kIdxCnt, kKeyBase, kKeyCnt), kIdxCnt + 79);
+    EXPECT_EQ(map_codec_from_index(kKeyBase + 80, kIdxCnt, kKeyBase, kKeyCnt), MAP_CODEC_NO_INDEX);
+    EXPECT_EQ(map_codec_from_index(0xFFFF, kIdxCnt, kKeyBase, kKeyCnt), MAP_CODEC_NO_INDEX);
+}
+
+TEST(MapCodecKeyTest, TheRepairWritesTheWireValueBack) {
+    for (uint16_t idx = 0; idx < kIdxCnt + kKeyCnt; ++idx) {
+        const uint16_t from = map_codec_index_from(idx, kIdxCnt, kKeyBase);
+        EXPECT_EQ(map_codec_from_index(from, kIdxCnt, kKeyBase, kKeyCnt), idx);
+        EXPECT_LT(from, 1u << 11);   // OVERLAY_MAP_REPAIR_WIDTH
+    }
+}
+
+TEST(MapCodecKeyTest, AKeyPairRoundTripsAtWidthEleven) {
+    uint8_t buf[8] = {0};
+    map_codec_write(buf, 0, kKeyBase + 79, 11);
+    map_codec_write(buf, 1, map_codec_to_value(599, true, kSlots), 11);
+    EXPECT_EQ(map_codec_from_index(map_codec_read(buf, 0, 11), kIdxCnt, kKeyBase, kKeyCnt),
+              kIdxCnt + 79);
+    bool flag = false;
+    EXPECT_EQ(map_codec_split_to(map_codec_read(buf, 1, 11), kSlots, &flag), 599);
+    EXPECT_TRUE(flag);
+}
+
+TEST(MapCodecEntryTest, ATableIndexWithAKeyStaysBelowTheFlag) {
+    EXPECT_LT(kIdxCnt + kKeyCnt, MAP_CODEC_ENTRY_NO_LEGEND);
+}
+
 }  // namespace

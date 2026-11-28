@@ -58,6 +58,7 @@ uint16_t display_keycode_at(const poly_layer_t* lyr, uint8_t row, uint8_t col);
 void     draw_legend_cx_cy(const uint32_t* text, int8_t y, int8_t cy_radius);
 void     render_fw_confirm_key(bool accept);
 bool     overlay_present(uint16_t keycode, uint8_t mods);
+bool     key_overlay_present(uint8_t row, uint8_t col);   // v40: a physical key's own image
 
 // Variant data, defined in each variant's keymaps/default/keymap.c.
 extern const uint16_t keymaps[][MATRIX_ROWS][MATRIX_COLS];

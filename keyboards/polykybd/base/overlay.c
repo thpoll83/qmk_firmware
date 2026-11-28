@@ -13,10 +13,12 @@
 // correct if the display geometry ever changes.
 #define OVERLAY_BIT_CAPACITY (SCREEN_WIDTH * SCREEN_HEIGHT)
 
-static volatile uint8_t display_has_overlay_bits[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
+// Sized for the keycode positions AND, since v40, one entry per physical key after
+// them (OVERLAY_MAP_TABLE_CNT, config.h).
+static volatile uint8_t display_has_overlay_bits[(OVERLAY_MAP_TABLE_CNT/8)+1];
 // Display positions whose overlay is drawn dimmed (cmd 33's OVERLAY_MAP_W_DIM, v23).
 // Indexed like display_has_overlay_bits and cleared with it.
-static volatile uint8_t display_dim_bits[(NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP/8)+1];
+static volatile uint8_t display_dim_bits[(OVERLAY_MAP_TABLE_CNT/8)+1];
 // ⚠️ overlay_pool[] IS the doom easter-egg's entire game arena (borrowed as RAM). Its
 // size = NUM_OVERLAY_SLOTS*360 = 216,000 B today. If you SHRINK the pool
 // to reclaim RAM, keep it >= ~205 KB or the doom build won't fit: the engine floor
@@ -49,11 +51,15 @@ static uint8_t overlay_pool [NUM_OVERLAY_SLOTS][72*40/8] __attribute__((section(
 static /*volatile*/ uint8_t overlay_pool [NUM_OVERLAY_SLOTS][72*40/8]; // ResX*ResY/PixelPerByte
 #define OVERLAY_POOL_SIZE sizeof(overlay_pool)
 #endif
-static uint16_t display_to_pool [NUM_OVERLAYS*NUM_VARIATIONS_WITH_MAP];
+static uint16_t display_to_pool [OVERLAY_MAP_TABLE_CNT];
+_Static_assert(OVERLAY_MAP_KEY_BASE + OVERLAY_MAP_KEY_CNT - 1 < (1u << OVERLAY_MAP_REPAIR_WIDTH),
+               "a physical-key `from` must fit the repair width");
+_Static_assert(OVERLAY_MAP_KEY_BASE > OVERLAY_MAP_IDX_CNT,
+               "the host pads with OVERLAY_MAP_IDX_CNT; it must not name a key");
 // v25: bit 15 of a display_to_pool[] entry (MAP_CODEC_ENTRY_NO_LEGEND) marks a
 // position whose overlay is drawn without the key legend. The flag costs no RAM.
 // Every plain write (set_display_pool_slot, the resets) clears it.
-_Static_assert(OVERLAY_MAP_IDX_CNT <= MAP_CODEC_ENTRY_NO_LEGEND,
+_Static_assert(OVERLAY_MAP_TABLE_CNT <= MAP_CODEC_ENTRY_NO_LEGEND,
                "display_to_pool values must stay below the no-legend bit");
 
 static overlay_fragment_context_t g_fragment_context = {0};
@@ -210,6 +216,12 @@ void set_all_display_has_overlay(void) {
         display_has_overlay_bits[i] = 0xff;
         display_dim_bits[i] = 0;
     }
+    // MAPPING_ALLSET is the legacy identity mode (pool slot == display position).
+    // It never covers the physical-key entries: they map to slot 0 until the host
+    // assigns them, so lighting them would draw slot 0 on every key.
+    for(uint16_t i = OVERLAY_MAP_IDX_CNT; i < OVERLAY_MAP_TABLE_CNT; ++i) {
+        display_has_overlay_bits[i/8] &= (uint8_t)~(1u << (i%8));
+    }
 }
 
 // Reset every (keycode-slot, modifier-variant) -> pool-slot association to the
@@ -238,7 +250,7 @@ void reset_display_to_pool(void) {
     // Flat indices past the pool can never be an upload destination (the host only
     // ever addresses slots < capacity), so they just need to be in range. Rendering
     // is gated on the usage bits, which every caller clears alongside this.
-    for(int16_t i = NUM_OVERLAY_SLOTS; i < OVERLAY_MAP_IDX_CNT; ++i) {
+    for(int16_t i = NUM_OVERLAY_SLOTS; i < OVERLAY_MAP_TABLE_CNT; ++i) {
         display_to_pool[i] = 0;
     }
 }

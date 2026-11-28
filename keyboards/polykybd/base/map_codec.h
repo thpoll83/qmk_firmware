@@ -99,3 +99,33 @@ static inline uint16_t map_codec_entry_with_no_legend(uint16_t entry, bool no_le
     return no_legend ? (uint16_t)(entry | MAP_CODEC_ENTRY_NO_LEGEND)
                      : map_codec_entry_slot(entry);
 }
+
+// --- Images per physical key (protocol v40) -----------------------------------
+//
+// A mapping `from` of key_base..key_base+key_cnt-1 names a physical key, the
+// matrix position `from - key_base` (row * MATRIX_COLS + col), not a keycode. Its
+// entry sits after the keycode positions: display_to_pool[idx_cnt + key]. The
+// render draws it on that key when the key's keycode has no image.
+//
+// ⚠️ key_base must stay above idx_cnt plus the host's padding value (1440/1440):
+// an older keyboard ignores every `from` at or past idx_cnt, so these pairs are a
+// no-op there, and the padding must never name a key here.
+#define MAP_CODEC_NO_INDEX 0xffffu
+
+// The display_to_pool[] index of a wire `from`, or MAP_CODEC_NO_INDEX for padding
+// and anything else out of range.
+static inline uint16_t map_codec_from_index(uint16_t from, uint16_t idx_cnt,
+                                            uint16_t key_base, uint16_t key_cnt) {
+    if (from < idx_cnt) {
+        return from;
+    }
+    if (from >= key_base && (uint32_t)from < (uint32_t)key_base + key_cnt) {
+        return (uint16_t)(idx_cnt + (from - key_base));
+    }
+    return MAP_CODEC_NO_INDEX;
+}
+
+// The wire `from` of a display_to_pool[] index (the inverse, for the slave repair).
+static inline uint16_t map_codec_index_from(uint16_t idx, uint16_t idx_cnt, uint16_t key_base) {
+    return idx < idx_cnt ? idx : (uint16_t)(key_base + (idx - idx_cnt));
+}

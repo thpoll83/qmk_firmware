@@ -112,6 +112,9 @@ uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key);
 // Blits the overlay image for (keycode, mods) into the scratch buffer. Returns false
 // when no overlay is mapped or the slot is unused.
 bool copy_overlay_to_buffer(uint16_t keycode, uint8_t mods);
+// v40: the image of one physical key (matrix row, column), drawn where its keycode has
+// none. False when the host gave the key no image.
+bool copy_key_overlay_to_buffer(uint8_t row, uint8_t col);
 
 // True if overlay keycode-slot `base_slot` (0..89, pre-modifier/mapping) is currently
 // on screen — i.e. some physical key resolves to that keycode under the active layer.
